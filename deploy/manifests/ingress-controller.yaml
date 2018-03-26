@@ -1,0 +1,132 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-ingress-controller
+  namespace: kong
+spec:
+  type: NodePort
+  ports:
+  - name: kong-admin
+    port: 8001
+    targetPort: 8001
+    protocol: TCP
+  selector:
+    app: ingress-kong
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: ingress-kong
+  name: kong-ingress-controller
+  namespace: kong
+spec:
+  selector:
+    matchLabels:
+      app: ingress-kong
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        # the returned metrics are related to the kong ingress controller not kong itself
+        prometheus.io/port: "10254"
+        prometheus.io/scrape: "true"
+      labels:
+        app: ingress-kong
+    spec:
+      serviceAccountName: kong-serviceaccount
+      initContainers:
+      - name: kong-migration
+        image: kong:0.13.0-centos
+        env:
+          - name: KONG_PG_PASSWORD
+            value: kong
+          - name: KONG_PG_HOST
+            value: postgres
+        command: [ "/bin/sh", "-c", "kong migrations up" ]
+      containers:
+      - name: admin-api
+        image: kong:0.13.0-centos
+        env:
+          - name: KONG_PG_PASSWORD
+            value: kong
+          - name: KONG_PG_HOST
+            value: postgres
+          - name: KONG_ADMIN_ACCESS_LOG
+            value: /dev/stdout
+          - name: KONG_ADMIN_ERROR_LOG
+            value: /dev/stderr
+          - name: KONG_ADMIN_LISTEN
+            value: 0.0.0.0:8001
+          - name: KONG_PROXY_LISTEN
+            value: 'off'
+        ports:
+        - name: kong-admin
+          containerPort: 8001
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: 8001
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: 8001
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+      - name: ingress-controller
+        args:
+        - /kong-ingress-controller
+        # the kong URL points to the kong admin api server
+        - --kong-url=http://localhost:8001
+        # the default service is the kong proxy service
+        - --default-backend-service=kong/kong-proxy
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.0.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+
+---

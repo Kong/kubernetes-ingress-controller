@@ -1,0 +1,39 @@
+
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: kong
+spec:
+  template:
+    metadata:
+      labels:
+        name: kong
+        app: kong
+    spec:
+      containers:
+      - name: kong-proxy
+        image: kong:0.13.0-centos
+        env:
+          - name: KONG_PG_PASSWORD
+            value: kong
+          - name: KONG_PG_HOST
+            value: postgres
+          - name: KONG_PROXY_ACCESS_LOG
+            value: "/dev/stdout"
+          - name: KONG_PROXY_ERROR_LOG
+            value: "/dev/stderr"
+          - name: KONG_ADMIN_LISTEN
+            value: 'off'
+        ports:
+        - name: proxy
+          containerPort: 8000
+          protocol: TCP
+        - name: proxy-ssl
+          containerPort: 8443
+          protocol: TCP
+
+---

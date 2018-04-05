@@ -21,7 +21,8 @@ kubectl get nodes
 **Deploy the required components**
 
 ```bash
-kubectl create -f deploy/single/all-in-one-postgres.yaml
+curl https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/single/all-in-one-postgres.yaml \
+  | kubectl create -f -
 ```
 
 This commands create:
@@ -61,7 +62,8 @@ export HTTPS_PORT=$(minikube service -n kong kong-proxy --url --format "{{ .Port
 **Deploy a dummy application**
 
 ```bash
-kubectl create -f deploy/manifests/dummy-application.yaml
+curl https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/dummy-application.yaml \
+  | kubectl create -f -
 ```
 
 This application just returns information about the pod and details from the HTTP request.

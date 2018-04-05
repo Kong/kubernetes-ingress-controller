@@ -34,6 +34,7 @@ metadata:
   name: <object name>
   namespace: <object namespace>
 consumerRef: <name of an existing consumer>
+disabled: <boolean>
 config:
     key: value
 ```
@@ -42,6 +43,7 @@ config:
 - The value of the field must reference an existing consumer in the same namespace.
 - When `consumerRef` is empty it implies the plugin is global. This means, all the requests will use the plugin.
 - The field `config` contains a list of `key` and `value` required to configure the plugin.
+- The field `disabled` allows us to change the state of the plugin in Kong.
 
 **Important:** the validation of the fields is left to the user. Setting invalid fields avoid the plugin configuration.
 

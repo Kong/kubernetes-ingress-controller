@@ -40,8 +40,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubernetes/pkg/kubelet/util/sliceutils"
 
-	"github.com/kong/ingress-controller/internal/k8s"
-	"github.com/kong/ingress-controller/internal/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
 const (

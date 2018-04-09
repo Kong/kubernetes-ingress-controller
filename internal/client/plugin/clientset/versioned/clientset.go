@@ -20,7 +20,7 @@ package versioned
 
 import (
 	glog "github.com/golang/glog"
-	configurationv1 "github.com/kong/ingress-controller/internal/client/plugin/clientset/versioned/typed/plugin/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/typed/plugin/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

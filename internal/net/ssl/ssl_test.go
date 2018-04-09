@@ -25,7 +25,7 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/cert/triple"
 
-	"github.com/kong/ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
 )
 
 // generateRSACerts generates a self signed certificate using a self generated ca

@@ -22,7 +22,7 @@ import (
 
 	extensions "k8s.io/api/extensions/v1beta1"
 
-	"github.com/kong/ingress-controller/internal/ingress/errors"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/errors"
 )
 
 var (

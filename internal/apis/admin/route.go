@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	adminv1 "github.com/kong/ingress-controller/internal/apis/admin/v1"
+	adminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
 )
 
 type RouteGetter interface {

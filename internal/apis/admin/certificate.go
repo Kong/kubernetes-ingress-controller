@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 
-	adminv1 "github.com/kong/ingress-controller/internal/apis/admin/v1"
+	adminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
 )
 
 type CertificateGetter interface {

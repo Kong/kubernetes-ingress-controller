@@ -35,7 +35,7 @@ ifndef COMMIT
   COMMIT := git-$(shell git rev-parse --short HEAD)
 endif
 
-PKG=github.com/kong/ingress-controller
+PKG=github.com/kong/kubernetes-ingress-controller
 
 ARCH ?= $(shell go env GOARCH)
 GOARCH = ${ARCH}

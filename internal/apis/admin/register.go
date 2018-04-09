@@ -3,7 +3,7 @@ package admin
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	adminv1 "github.com/kong/ingress-controller/internal/apis/admin/v1"
+	adminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
 )
 
 const GroupName = "konghq.com"

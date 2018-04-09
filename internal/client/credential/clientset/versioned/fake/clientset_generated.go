@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/kong/ingress-controller/internal/client/credential/clientset/versioned"
-	configurationv1 "github.com/kong/ingress-controller/internal/client/credential/clientset/versioned/typed/credential/v1"
-	fakeconfigurationv1 "github.com/kong/ingress-controller/internal/client/credential/clientset/versioned/typed/credential/v1/fake"
+	clientset "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned/typed/credential/v1"
+	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned/typed/credential/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

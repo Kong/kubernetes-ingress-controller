@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/kong/ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 )
 
 // SSLCertTracker holds a store of referenced Secrets in Ingress rules

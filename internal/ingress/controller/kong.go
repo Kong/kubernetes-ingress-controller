@@ -27,10 +27,10 @@ import (
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	kong "github.com/kong/ingress-controller/internal/apis/admin"
-	kongadminv1 "github.com/kong/ingress-controller/internal/apis/admin/v1"
-	"github.com/kong/ingress-controller/internal/ingress"
-	"github.com/kong/ingress-controller/internal/ingress/annotations"
+	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
+	kongadminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.

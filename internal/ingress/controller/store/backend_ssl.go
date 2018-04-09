@@ -27,10 +27,10 @@ import (
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/ingress-controller/internal/file"
-	"github.com/kong/ingress-controller/internal/ingress"
-	"github.com/kong/ingress-controller/internal/k8s"
-	"github.com/kong/ingress-controller/internal/net/ssl"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
 )
 
 // syncSecret keeps in sync Secrets used by Ingress rules with the files on

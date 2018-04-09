@@ -19,8 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	v1 "github.com/kong/ingress-controller/internal/apis/plugin/v1"
-	"github.com/kong/ingress-controller/internal/client/plugin/clientset/versioned/scheme"
+	v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
+	"github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )

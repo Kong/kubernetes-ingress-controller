@@ -19,7 +19,7 @@ limitations under the License.
 package scheme
 
 import (
-	configurationv1 "github.com/kong/ingress-controller/internal/apis/credential/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

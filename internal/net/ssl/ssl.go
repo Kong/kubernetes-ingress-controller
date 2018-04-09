@@ -36,8 +36,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/kong/ingress-controller/internal/file"
-	"github.com/kong/ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 )
 
 var (

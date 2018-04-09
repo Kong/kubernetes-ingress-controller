@@ -26,9 +26,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
 
-	"github.com/kong/ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/ingress-controller/internal/k8s"
-	"github.com/kong/ingress-controller/internal/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
 func buildLoadBalancerIngressByIP() []apiv1.LoadBalancerIngress {

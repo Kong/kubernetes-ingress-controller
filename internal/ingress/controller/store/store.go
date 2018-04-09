@@ -39,17 +39,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
-	consumerv1 "github.com/kong/ingress-controller/internal/apis/consumer/v1"
-	credentialv1 "github.com/kong/ingress-controller/internal/apis/credential/v1"
-	pluginv1 "github.com/kong/ingress-controller/internal/apis/plugin/v1"
-	consumerclientv1 "github.com/kong/ingress-controller/internal/client/consumer/clientset/versioned"
-	credentialclientv1 "github.com/kong/ingress-controller/internal/client/credential/clientset/versioned"
-	pluginclientv1 "github.com/kong/ingress-controller/internal/client/plugin/clientset/versioned"
-	"github.com/kong/ingress-controller/internal/file"
-	"github.com/kong/ingress-controller/internal/ingress"
-	"github.com/kong/ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/ingress-controller/internal/ingress/annotations/parser"
-	"github.com/kong/ingress-controller/internal/k8s"
+	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
+	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
+	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
+	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
+	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
+	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/parser"
+	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
 )
 
 // Storer is the interface that wraps the required methods to gather information

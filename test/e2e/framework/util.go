@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
-	"github.com/kong/ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
 )
 
 const (

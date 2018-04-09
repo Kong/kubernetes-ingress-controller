@@ -33,12 +33,12 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/kubernetes/pkg/util/filesystem"
 
-	"github.com/kong/ingress-controller/internal/file"
-	"github.com/kong/ingress-controller/internal/ingress"
-	"github.com/kong/ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/ingress-controller/internal/ingress/controller/store"
-	"github.com/kong/ingress-controller/internal/ingress/status"
-	"github.com/kong/ingress-controller/internal/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
+	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
 // NewNGINXController creates a new NGINX Ingress controller.

@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/ingress-controller/internal/file"
-	"github.com/kong/ingress-controller/internal/ingress/controller"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 )
 
 func TestCreateApiserverClient(t *testing.T) {

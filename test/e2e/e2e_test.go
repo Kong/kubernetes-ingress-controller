@@ -22,7 +22,7 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/kong/ingress-controller/test/e2e/framework"
+	"github.com/kong/kubernetes-ingress-controller/test/e2e/framework"
 )
 
 func init() {

@@ -19,7 +19,7 @@ package controller
 import (
 	api "k8s.io/api/core/v1"
 
-	"github.com/kong/ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 )
 
 // newUpstream creates an upstream without servers.

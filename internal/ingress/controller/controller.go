@@ -32,12 +32,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientset "k8s.io/client-go/kubernetes"
 
-	kong "github.com/kong/ingress-controller/internal/apis/admin"
-	consumerclientv1 "github.com/kong/ingress-controller/internal/client/consumer/clientset/versioned"
-	credentialclientv1 "github.com/kong/ingress-controller/internal/client/credential/clientset/versioned"
-	pluginclientv1 "github.com/kong/ingress-controller/internal/client/plugin/clientset/versioned"
-	"github.com/kong/ingress-controller/internal/ingress"
-	"github.com/kong/ingress-controller/internal/task"
+	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
+	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
+	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
+	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
 const (

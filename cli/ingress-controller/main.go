@@ -41,17 +41,17 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	kong "github.com/kong/ingress-controller/internal/apis/admin"
-	consumerclientv1 "github.com/kong/ingress-controller/internal/client/consumer/clientset/versioned"
-	credentialclientv1 "github.com/kong/ingress-controller/internal/client/credential/clientset/versioned"
-	pluginclientv1 "github.com/kong/ingress-controller/internal/client/plugin/clientset/versioned"
-	consumerintscheme "github.com/kong/ingress-controller/internal/client/plugin/clientset/versioned/scheme"
-	pluginintscheme "github.com/kong/ingress-controller/internal/client/plugin/clientset/versioned/scheme"
-	"github.com/kong/ingress-controller/internal/file"
-	"github.com/kong/ingress-controller/internal/ingress/controller"
-	"github.com/kong/ingress-controller/internal/k8s"
-	"github.com/kong/ingress-controller/internal/net/ssl"
-	"github.com/kong/ingress-controller/version"
+	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
+	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
+	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
+	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
+	consumerintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
+	pluginintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
+	"github.com/kong/kubernetes-ingress-controller/internal/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
+	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
+	"github.com/kong/kubernetes-ingress-controller/version"
 )
 
 func main() {

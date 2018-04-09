@@ -27,8 +27,8 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 
-	"github.com/kong/ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/ingress-controller/internal/ingress/controller"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 )
 
 func parseFlags() (bool, *controller.Configuration, error) {

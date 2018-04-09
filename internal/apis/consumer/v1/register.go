@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	info "github.com/kong/ingress-controller/internal/apis/group"
+	info "github.com/kong/kubernetes-ingress-controller/internal/apis/group"
 )
 
 var (

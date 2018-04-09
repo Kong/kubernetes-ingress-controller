@@ -59,16 +59,21 @@ required = [
 
 [[constraint]]
   name = "k8s.io/kubernetes"
-  revision = "master"
+  version = "v1.10.0"
 
 [[constraint]]
   name = "k8s.io/api"
-  revision = "kubernetes-1.10.0-rc.1"
+  revision = "kubernetes-1.10.0"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  revision = "kubernetes-1.10.0-rc.1"
+  revision = "kubernetes-1.10.0"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  revision = "kubernetes-1.10.0-rc.1"
+  revision = "release-7.0"
+
+
+[[constraint]]
+  name = "k8s.io/apiextensions-apiserver"
+  revision = "kubernetes-1.10.0"

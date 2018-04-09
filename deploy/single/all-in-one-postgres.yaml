@@ -171,6 +171,16 @@ rules:
       - ingresses/status
     verbs:
       - update
+  - apiGroups:
+      - "configuration.konghq.com"
+    resources:
+      - kongplugins
+      - kongcredentials
+      - kongconsumers
+    verbs:
+      - get
+      - list
+      - watch
 
 ---
 

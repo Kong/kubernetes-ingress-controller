@@ -28,7 +28,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -39,12 +38,16 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
 	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
 	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
+	consumerinformer "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/informers/externalversions"
 	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
+	credentialinformer "github.com/kong/kubernetes-ingress-controller/internal/client/credential/informers/externalversions"
 	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
+	plugininformer "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
@@ -85,6 +88,8 @@ type Storer interface {
 
 	GetKongConsumer(namespace, name string) (*consumerv1.KongConsumer, error)
 
+	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
+
 	ListKongConsumers() []*consumerv1.KongConsumer
 
 	ListKongCredentials() []*credentialv1.KongCredential
@@ -119,23 +124,26 @@ type Lister struct {
 	Secret   SecretLister
 
 	Kong struct {
-		Plugin     cache.Store
-		Consumer   cache.Store
-		Credential cache.Store
+		Plugin        cache.Store
+		Consumer      cache.Store
+		Credential    cache.Store
+		Configuration cache.Store
 	}
 }
 
 // Informer defines the required SharedIndexInformers that interact with the API server.
 type Informer struct {
-	Ingress  cache.SharedIndexInformer
-	Endpoint cache.SharedIndexInformer
-	Service  cache.SharedIndexInformer
-	Secret   cache.SharedIndexInformer
+	Ingress       cache.SharedIndexInformer
+	Endpoint      cache.SharedIndexInformer
+	Service       cache.SharedIndexInformer
+	Secret        cache.SharedIndexInformer
+	Configuration cache.SharedIndexInformer
 
 	Kong struct {
-		Plugin     cache.Controller
-		Consumer   cache.Controller
-		Credential cache.Controller
+		Plugin        cache.SharedIndexInformer
+		Consumer      cache.SharedIndexInformer
+		Credential    cache.SharedIndexInformer
+		Configuration cache.SharedIndexInformer
 	}
 }
 
@@ -148,6 +156,7 @@ func (c *Informer) Run(stopCh chan struct{}) {
 	go c.Kong.Plugin.Run(stopCh)
 	go c.Kong.Consumer.Run(stopCh)
 	go c.Kong.Credential.Run(stopCh)
+	go c.Kong.Configuration.Run(stopCh)
 
 	// Wait for all involved caches to be synced, before processing items from the queue is started
 	if !cache.WaitForCacheSync(stopCh,
@@ -157,6 +166,7 @@ func (c *Informer) Run(stopCh chan struct{}) {
 		c.Kong.Plugin.HasSynced,
 		c.Kong.Consumer.HasSynced,
 		c.Kong.Credential.HasSynced,
+		c.Kong.Configuration.HasSynced,
 	) {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
@@ -205,9 +215,6 @@ func New(checkOCSP bool,
 	namespace, configmap, tcp, udp, defaultSSLCertificate string,
 	resyncPeriod time.Duration,
 	client clientset.Interface,
-	pluginClient pluginclientv1.Interface,
-	consumerClient consumerclientv1.Interface,
-	credentialClient credentialclientv1.Interface,
 	fs file.Filesystem,
 	updateCh *channels.RingChannel) Storer {
 
@@ -421,17 +428,29 @@ func New(checkOCSP bool,
 		},
 	}
 
-	store.listers.Kong.Plugin, store.informers.Kong.Plugin = cache.NewInformer(
-		cache.NewListWatchFromClient(pluginClient.ConfigurationV1().RESTClient(), "kongplugins", namespace, fields.Everything()),
-		&pluginv1.KongPlugin{}, resyncPeriod, crdEventHandler)
+	pc := pluginclientv1.New(client.Discovery().RESTClient())
+	pluginFactory := plugininformer.NewFilteredSharedInformerFactory(pc, resyncPeriod, namespace,
+		func(*metav1.ListOptions) {})
 
-	store.listers.Kong.Consumer, store.informers.Kong.Consumer = cache.NewInformer(
-		cache.NewListWatchFromClient(consumerClient.ConfigurationV1().RESTClient(), "kongconsumers", namespace, fields.Everything()),
-		&consumerv1.KongConsumer{}, resyncPeriod, crdEventHandler)
+	store.informers.Kong.Plugin = pluginFactory.Configuration().V1().KongPlugins().Informer()
+	store.listers.Kong.Plugin = store.informers.Kong.Plugin.GetStore()
+	store.informers.Kong.Plugin.AddEventHandler(crdEventHandler)
 
-	store.listers.Kong.Credential, store.informers.Kong.Credential = cache.NewInformer(
-		cache.NewListWatchFromClient(credentialClient.ConfigurationV1().RESTClient(), "kongcredentials", namespace, fields.Everything()),
-		&credentialv1.KongCredential{}, resyncPeriod, crdEventHandler)
+	cc := consumerclientv1.New(client.Discovery().RESTClient())
+	consumerFactory := consumerinformer.NewFilteredSharedInformerFactory(cc, resyncPeriod, namespace,
+		func(*metav1.ListOptions) {})
+
+	store.informers.Kong.Consumer = consumerFactory.Configuration().V1().KongConsumers().Informer()
+	store.listers.Kong.Consumer = store.informers.Kong.Consumer.GetStore()
+	store.informers.Kong.Consumer.AddEventHandler(crdEventHandler)
+
+	credClient := credentialclientv1.New(client.Discovery().RESTClient())
+	credentialFactory := credentialinformer.NewFilteredSharedInformerFactory(credClient, resyncPeriod, namespace,
+		func(*metav1.ListOptions) {})
+
+	store.informers.Kong.Credential = credentialFactory.Configuration().V1().KongCredentials().Informer()
+	store.listers.Kong.Credential = store.informers.Kong.Credential.GetStore()
+	store.informers.Kong.Credential.AddEventHandler(crdEventHandler)
 
 	return store
 }
@@ -498,6 +517,18 @@ func (s k8sStore) GetKongPlugin(namespace, name string) (*pluginv1.KongPlugin, e
 		return nil, fmt.Errorf("plugin %v was not found", key)
 	}
 	return p.(*pluginv1.KongPlugin), nil
+}
+
+func (s k8sStore) GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	p, exists, err := s.listers.Kong.Configuration.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("ingress configuration %v was not found", key)
+	}
+	return p.(*configurationv1.KongIngress), nil
 }
 
 func (s k8sStore) GetKongConsumer(namespace, name string) (*consumerv1.KongConsumer, error) {

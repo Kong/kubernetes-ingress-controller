@@ -33,9 +33,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 
 	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
-	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
-	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
-	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
@@ -47,11 +44,8 @@ const (
 )
 
 type Kong struct {
-	URL              string
-	Client           *kong.RestClient
-	PluginClient     pluginclientv1.Interface
-	ConsumerClient   consumerclientv1.Interface
-	CredentialClient credentialclientv1.Interface
+	URL    string
+	Client *kong.RestClient
 }
 
 // Configuration contains all the settings required by an Ingress controller

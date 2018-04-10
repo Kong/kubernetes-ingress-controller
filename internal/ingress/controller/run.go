@@ -79,9 +79,6 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 		"",
 		config.ResyncPeriod,
 		config.Client,
-		config.Kong.PluginClient,
-		config.Kong.ConsumerClient,
-		config.Kong.CredentialClient,
 		fs,
 		n.updateCh)
 

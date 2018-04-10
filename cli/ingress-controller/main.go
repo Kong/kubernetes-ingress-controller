@@ -42,9 +42,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
-	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
-	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
-	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
 	consumerintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
 	pluginintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
 	"github.com/kong/kubernetes-ingress-controller/internal/file"
@@ -162,24 +159,6 @@ func main() {
 	glog.Infof("kong version: %s", v)
 	conf.Kong.Client = kongClient
 
-	kongPluginClient, err := createKongPluginClient(conf.APIServerHost, conf.KubeConfigFile)
-	if err != nil {
-		glog.Fatalf("%v", err)
-	}
-	conf.Kong.PluginClient = kongPluginClient
-
-	kongConsumerClient, err := createKongConsumerClient(conf.APIServerHost, conf.KubeConfigFile)
-	if err != nil {
-		glog.Fatalf("%v", err)
-	}
-	conf.Kong.ConsumerClient = kongConsumerClient
-
-	kongCredentialClient, err := createKongCredentialClient(conf.APIServerHost, conf.KubeConfigFile)
-	if err != nil {
-		glog.Fatalf("%v", err)
-	}
-	conf.Kong.CredentialClient = kongCredentialClient
-
 	ngx := controller.NewNGINXController(conf, fs)
 
 	go handleSigterm(ngx, func(code int) {
@@ -227,7 +206,8 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*kubernetes
 
 	cfg.QPS = defaultQPS
 	cfg.Burst = defaultBurst
-	cfg.ContentType = "application/vnd.kubernetes.protobuf"
+
+	// cfg.ContentType = "application/vnd.kubernetes.protobuf"
 
 	glog.Infof("Creating API client for %s", cfg.Host)
 
@@ -277,51 +257,6 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*kubernetes
 		v.Major, v.Minor, v.GitVersion, v.GitTreeState, v.GitCommit, v.Platform)
 
 	return client, nil
-}
-
-func createKongPluginClient(apiserverHost string, kubeConfig string) (*pluginclientv1.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.QPS = defaultQPS
-	cfg.Burst = defaultBurst
-
-	// TODO: protobuf do not works with update events
-	//cfg.ContentType = "application/vnd.kubernetes.protobuf"
-
-	return pluginclientv1.NewForConfig(cfg)
-}
-
-func createKongConsumerClient(apiserverHost string, kubeConfig string) (*consumerclientv1.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.QPS = defaultQPS
-	cfg.Burst = defaultBurst
-
-	// TODO: protobuf do not works with update events
-	//cfg.ContentType = "application/vnd.kubernetes.protobuf"
-
-	return consumerclientv1.NewForConfig(cfg)
-}
-
-func createKongCredentialClient(apiserverHost string, kubeConfig string) (*credentialclientv1.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.QPS = defaultQPS
-	cfg.Burst = defaultBurst
-
-	// TODO: protobuf do not works with update events
-	//cfg.ContentType = "application/vnd.kubernetes.protobuf"
-
-	return credentialclientv1.NewForConfig(cfg)
 }
 
 const (

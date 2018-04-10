@@ -9,6 +9,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KongIngress is a top-level type. A client is created for it.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type KongIngress struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -21,6 +22,7 @@ type KongIngress struct {
 
 // KongIngressList is a top-level list type. The client methods for
 // lists are automatically created.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type KongIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

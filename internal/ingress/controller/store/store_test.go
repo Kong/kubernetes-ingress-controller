@@ -56,21 +56,6 @@ func TestStore(t *testing.T) {
 		t.Errorf("unexpected error creating ingress client: %v", err)
 	}
 
-	kongPluginClient, err := createKongPluginClient("", kubeConfigFile)
-	if err != nil {
-		t.Errorf("unexpected error creating Kong controller: %v", err)
-	}
-
-	kongConsumerClient, err := createKongConsumerClient("", kubeConfigFile)
-	if err != nil {
-		t.Errorf("unexpected error creating Kong controller: %v", err)
-	}
-
-	kongCredentialClient, err := createKongCredentialClient("", kubeConfigFile)
-	if err != nil {
-		t.Errorf("unexpected error creating Kong controller: %v", err)
-	}
-
 	t.Run("should return an error searching for non existing objects", func(t *testing.T) {
 		ns := createNamespace(clientSet, t)
 		defer deleteNamespace(ns, clientSet, t)
@@ -93,9 +78,6 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
-			kongPluginClient,
-			kongConsumerClient,
-			kongCredentialClient,
 			fs,
 			updateCh)
 
@@ -183,9 +165,6 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
-			kongPluginClient,
-			kongConsumerClient,
-			kongCredentialClient,
 			fs,
 			updateCh)
 
@@ -327,9 +306,6 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
-			kongPluginClient,
-			kongConsumerClient,
-			kongCredentialClient,
 			fs,
 			updateCh)
 
@@ -416,9 +392,6 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
-			kongPluginClient,
-			kongConsumerClient,
-			kongCredentialClient,
 			fs,
 			updateCh)
 

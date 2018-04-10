@@ -267,7 +267,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			plugins := annotations.ExtractKongPluginAnnotations(location.Service.GetAnnotations())
 
 			if len(plugins) == 0 {
-				glog.Infof("service %v/%v does not contains any pluging. Checking if is required to remove plugins...",
+				glog.Infof("service %v/%v does not contain any plugins. Checking if it is required to remove plugins...",
 					location.Service.Namespace, location.Service.Name)
 				// remove all the plugins from the service.
 				plugins, err := client.Plugins().GetAllByService(svc.ID)
@@ -604,7 +604,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			plugins := annotations.ExtractKongPluginAnnotations(location.Ingress.GetAnnotations())
 
 			if len(plugins) == 0 {
-				glog.Errorf("Route %v does not contains any pluging. Checking if is required to remove plugins...", route.ID)
+				glog.Errorf("Route %v does not contain any plugins. Checking if it is required to remove plugins...", route.ID)
 				plugins, err := client.Plugins().GetAllByRoute(route.ID)
 				if err != nil {
 					glog.Errorf("Unexpected error obtaining Kong plugins for route %v: %v", route.ID, err)

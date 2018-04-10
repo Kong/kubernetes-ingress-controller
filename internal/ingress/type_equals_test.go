@@ -36,22 +36,12 @@ func TestEqualConfiguration(t *testing.T) {
 		t.Errorf("unexpected error reading JSON file: %v", err)
 	}
 
-	cp, _ := filepath.Abs("../../test/manifests/configuration-c.json")
-	c, err := readJSON(cp)
-	if err != nil {
-		t.Errorf("unexpected error reading JSON file: %v", err)
-	}
-
 	if !a.Equal(b) {
 		t.Errorf("expected equal configurations (configuration-a.json and configuration-b.json)")
 	}
 
 	if !b.Equal(a) {
 		t.Errorf("expected equal configurations (configuration-b.json and configuration-a.json)")
-	}
-
-	if a.Equal(c) {
-		t.Errorf("expected equal configurations (configuration-a.json and configuration-c.json)")
 	}
 }
 

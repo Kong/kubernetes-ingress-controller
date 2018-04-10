@@ -78,6 +78,7 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
+			kubeConfig,
 			fs,
 			updateCh)
 
@@ -165,6 +166,7 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
+			kubeConfig,
 			fs,
 			updateCh)
 
@@ -306,6 +308,7 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
+			kubeConfig,
 			fs,
 			updateCh)
 
@@ -392,6 +395,7 @@ func TestStore(t *testing.T) {
 			"",
 			10*time.Minute,
 			clientSet,
+			kubeConfig,
 			fs,
 			updateCh)
 

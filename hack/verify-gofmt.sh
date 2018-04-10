@@ -30,6 +30,7 @@ find_files() {
         -wholename './.git' \
         -o -wholename '*/vendor/*' \
         -o -wholename '*bindata.go' \
+        -o -wholename '*/internal/*' \
       \) -prune \
     \) -name '*.go'
 }

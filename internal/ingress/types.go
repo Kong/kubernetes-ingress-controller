@@ -29,9 +29,9 @@ import (
 type Configuration struct {
 	// Backends are a list of backends used by all the Ingress rules in the
 	// ingress controller. This list includes the default backend
-	Backends []*Backend `json:"backends,omitEmpty"`
+	Backends []*Backend `json:"backends,omitempty"`
 	// Servers
-	Servers []*Server `json:"servers,omitEmpty"`
+	Servers []*Server `json:"servers,omitempty"`
 }
 
 // Backend describes one or more remote server/s (endpoints) associated with a service

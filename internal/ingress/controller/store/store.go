@@ -35,6 +35,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
@@ -217,6 +218,7 @@ func New(checkOCSP bool,
 	namespace, configmap, tcp, udp, defaultSSLCertificate string,
 	resyncPeriod time.Duration,
 	client clientset.Interface,
+	clientConf *rest.Config,
 	fs file.Filesystem,
 	updateCh *channels.RingChannel) Storer {
 
@@ -430,33 +432,29 @@ func New(checkOCSP bool,
 		},
 	}
 
-	pc := pluginclientv1.New(client.Discovery().RESTClient())
-	pluginFactory := plugininformer.NewFilteredSharedInformerFactory(pc, resyncPeriod, namespace,
-		func(*metav1.ListOptions) {})
+	pluginClient, _ := pluginclientv1.NewForConfig(clientConf)
+	pluginFactory := plugininformer.NewFilteredSharedInformerFactory(pluginClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Plugin = pluginFactory.Configuration().V1().KongPlugins().Informer()
 	store.listers.Kong.Plugin = store.informers.Kong.Plugin.GetStore()
 	store.informers.Kong.Plugin.AddEventHandler(crdEventHandler)
 
-	cc := consumerclientv1.New(client.Discovery().RESTClient())
-	consumerFactory := consumerinformer.NewFilteredSharedInformerFactory(cc, resyncPeriod, namespace,
-		func(*metav1.ListOptions) {})
+	consumerClient, _ := consumerclientv1.NewForConfig(clientConf)
+	consumerFactory := consumerinformer.NewFilteredSharedInformerFactory(consumerClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Consumer = consumerFactory.Configuration().V1().KongConsumers().Informer()
 	store.listers.Kong.Consumer = store.informers.Kong.Consumer.GetStore()
 	store.informers.Kong.Consumer.AddEventHandler(crdEventHandler)
 
-	credClient := credentialclientv1.New(client.Discovery().RESTClient())
-	credentialFactory := credentialinformer.NewFilteredSharedInformerFactory(credClient, resyncPeriod, namespace,
-		func(*metav1.ListOptions) {})
+	credClient, _ := credentialclientv1.NewForConfig(clientConf)
+	credentialFactory := credentialinformer.NewFilteredSharedInformerFactory(credClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Credential = credentialFactory.Configuration().V1().KongCredentials().Informer()
 	store.listers.Kong.Credential = store.informers.Kong.Credential.GetStore()
 	store.informers.Kong.Credential.AddEventHandler(crdEventHandler)
 
-	confClient := configurationclientv1.New(client.Discovery().RESTClient())
-	configFactory := configurationinformer.NewFilteredSharedInformerFactory(confClient, resyncPeriod, namespace,
-		func(*metav1.ListOptions) {})
+	confClient, _ := configurationclientv1.NewForConfig(clientConf)
+	configFactory := configurationinformer.NewFilteredSharedInformerFactory(confClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Configuration = configFactory.Configuration().V1().KongIngresses().Informer()
 	store.listers.Kong.Configuration = store.informers.Kong.Configuration.GetStore()

@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
@@ -54,7 +55,8 @@ type Configuration struct {
 
 	APIServerHost  string
 	KubeConfigFile string
-	Client         clientset.Interface
+	KubeClient     clientset.Interface
+	KubeConf       *rest.Config
 
 	ResyncPeriod time.Duration
 

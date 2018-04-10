@@ -16,6 +16,7 @@ The content of the annotation, in this case, `add-ratelimiting-to-route` indicat
 - the suffix must be `.plugin.konghq.com`
 - the end of the line must be `|` if we want to add multiple plugins.
 - each line should contain a valid `KongPlugin` in the Kubernetes cluster.
+- `KongPlugin` k8s resources must be unique to each service/ ingress that use any kong plugin
 
 Setting annotations in Ingress rules set ups plugins in `Kong Routes`. Sometimes, we could need to apply plugins in `Kong Services`. To achieve this, we can use the same annotations but applied to the Kubernetes service itself.
 

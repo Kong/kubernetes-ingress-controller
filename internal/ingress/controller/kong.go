@@ -446,7 +446,19 @@ func (n *NGINXController) syncConsumers() error {
 }
 
 // set of valid authentication plugins for consumers
-var validCredentialTypes = sets.NewString("oauth2", "jwt", "basic-auth", "acl", "key-auth", "hmac-auth")
+var validCredentialTypes = sets.NewString(
+	// Kong CE and EE
+	"oauth2",
+	"jwt",
+	"basic-auth",
+	"acl",
+	"key-auth",
+	"hmac-auth",
+	"ldap-authentication",
+	// Kong EE only
+	"openid-connect",
+	"oauth2-introspection",
+)
 
 // syncCredentials synchronizes the state between KongCredential (Kubernetes CRD) and Kong credentials.
 func (n *NGINXController) syncCredentials() error {

@@ -36,6 +36,7 @@ jobs:
     - test/e2e/up.sh
     script:
     - if ! go get github.com/jteeuwen/go-bindata/...; then github.com/jteeuwen/go-bindata/...;fi
+    - kubectl create -f deploy/manifests/custom-types.yaml
     - make cover
 #  - stage: e2e
 #    before_script:

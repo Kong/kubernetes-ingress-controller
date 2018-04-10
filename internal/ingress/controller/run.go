@@ -48,7 +48,7 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
-		Interface: config.Client.CoreV1().Events(config.Namespace),
+		Interface: config.KubeClient.CoreV1().Events(config.Namespace),
 	})
 
 	n := &NGINXController{
@@ -78,7 +78,8 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 		"",
 		"",
 		config.ResyncPeriod,
-		config.Client,
+		config.KubeClient,
+		config.KubeConf,
 		fs,
 		n.updateCh)
 
@@ -86,7 +87,7 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 
 	if config.UpdateStatus {
 		n.syncStatus = status.NewStatusSyncer(status.Config{
-			Client:                 config.Client,
+			Client:                 config.KubeClient,
 			PublishService:         config.PublishService,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,

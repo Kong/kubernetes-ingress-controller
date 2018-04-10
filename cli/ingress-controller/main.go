@@ -70,7 +70,7 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	kubeClient, err := createApiserverClient(conf.APIServerHost, conf.KubeConfigFile)
+	kubeCfg, kubeClient, err := createApiserverClient(conf.APIServerHost, conf.KubeConfigFile)
 	if err != nil {
 		handleFatalInitError(err)
 	}
@@ -137,7 +137,8 @@ func main() {
 	conf.FakeCertificatePath = c.PemFileName
 	conf.FakeCertificateSHA = c.PemSHA
 
-	conf.Client = kubeClient
+	conf.KubeClient = kubeClient
+	conf.KubeConf = kubeCfg
 
 	kongClient, err := kong.NewRESTClient(&rest.Config{
 		Host:    conf.Kong.URL,
@@ -198,10 +199,10 @@ func handleSigterm(ngx *controller.NGINXController, exit exiter) {
 //
 // apiserverHost param is in the format of protocol://address:port/pathPrefix, e.g.http://localhost:8001.
 // kubeConfig location of kubeconfig file
-func createApiserverClient(apiserverHost string, kubeConfig string) (*kubernetes.Clientset, error) {
+func createApiserverClient(apiserverHost string, kubeConfig string) (*rest.Config, *kubernetes.Clientset, error) {
 	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cfg.QPS = defaultQPS
@@ -213,7 +214,7 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*kubernetes
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var v *discovery.Info
@@ -245,7 +246,7 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*kubernetes
 
 	// err is not null only if there was a timeout in the exponential backoff (ErrWaitTimeout)
 	if err != nil {
-		return nil, lastErr
+		return nil, nil, lastErr
 	}
 
 	// this should not happen, warn the user
@@ -256,7 +257,7 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*kubernetes
 	glog.Infof("Running in Kubernetes Cluster version v%v.%v (%v) - git (%v) commit %v - platform %v",
 		v.Major, v.Minor, v.GitVersion, v.GitTreeState, v.GitCommit, v.Platform)
 
-	return client, nil
+	return cfg, client, nil
 }
 
 const (

@@ -31,15 +31,15 @@ func TestCreateApiserverClient(t *testing.T) {
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
-	cli, err := createApiserverClient("", kubeConfigFile)
+	_, kubeClient, err := createApiserverClient("", kubeConfigFile)
 	if err != nil {
 		t.Fatalf("unexpected error creating api server client: %v", err)
 	}
-	if cli == nil {
+	if kubeClient == nil {
 		t.Fatalf("expected a kubernetes client but none returned")
 	}
 
-	_, err = createApiserverClient("", "")
+	_, _, err = createApiserverClient("", "")
 	if err == nil {
 		t.Fatalf("expected an error creating api server client without an api server URL or kubeconfig file")
 	}
@@ -49,7 +49,7 @@ func TestHandleSigterm(t *testing.T) {
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
-	cli, err := createApiserverClient("", kubeConfigFile)
+	kubeConf, kubeClient, err := createApiserverClient("", kubeConfigFile)
 	if err != nil {
 		t.Fatalf("unexpected error creating api server client: %v", err)
 	}
@@ -69,7 +69,8 @@ func TestHandleSigterm(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating Kong controller: %v", err)
 	}
-	conf.Client = cli
+	conf.KubeClient = kubeClient
+	conf.KubeConf = kubeConf
 
 	conf.Kong = controller.Kong{}
 

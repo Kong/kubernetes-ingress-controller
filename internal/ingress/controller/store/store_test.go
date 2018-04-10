@@ -17,7 +17,6 @@ limitations under the License.
 package store
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"sync/atomic"
@@ -35,14 +34,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
+	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
 	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/test/e2e/framework"
 )
-
-func init() {
-	flag.Set("logtostderr", "true")
-}
 
 func TestStore(t *testing.T) {
 	// TODO: find a way to avoid the need to use a real api server
@@ -66,6 +62,11 @@ func TestStore(t *testing.T) {
 	}
 
 	kongConsumerClient, err := createKongConsumerClient("", kubeConfigFile)
+	if err != nil {
+		t.Errorf("unexpected error creating Kong controller: %v", err)
+	}
+
+	kongCredentialClient, err := createKongCredentialClient("", kubeConfigFile)
 	if err != nil {
 		t.Errorf("unexpected error creating Kong controller: %v", err)
 	}
@@ -94,6 +95,7 @@ func TestStore(t *testing.T) {
 			clientSet,
 			kongPluginClient,
 			kongConsumerClient,
+			kongCredentialClient,
 			fs,
 			updateCh)
 
@@ -183,6 +185,7 @@ func TestStore(t *testing.T) {
 			clientSet,
 			kongPluginClient,
 			kongConsumerClient,
+			kongCredentialClient,
 			fs,
 			updateCh)
 
@@ -326,6 +329,7 @@ func TestStore(t *testing.T) {
 			clientSet,
 			kongPluginClient,
 			kongConsumerClient,
+			kongCredentialClient,
 			fs,
 			updateCh)
 
@@ -414,6 +418,7 @@ func TestStore(t *testing.T) {
 			clientSet,
 			kongPluginClient,
 			kongConsumerClient,
+			kongCredentialClient,
 			fs,
 			updateCh)
 
@@ -575,4 +580,13 @@ func createKongConsumerClient(apiserverHost string, kubeConfig string) (*consume
 	}
 
 	return consumerclientv1.NewForConfig(cfg)
+}
+
+func createKongCredentialClient(apiserverHost string, kubeConfig string) (*credentialclientv1.Clientset, error) {
+	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return credentialclientv1.NewForConfig(cfg)
 }

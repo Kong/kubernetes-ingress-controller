@@ -82,9 +82,15 @@ func TestHandleSigterm(t *testing.T) {
 		t.Errorf("unexpected error creating Kong controller: %v", err)
 	}
 
+	kongCredentialClient, err := createKongCredentialClient("", kubeConfigFile)
+	if err != nil {
+		t.Errorf("unexpected error creating Kong controller: %v", err)
+	}
+
 	conf.Kong = controller.Kong{
-		ConsumerClient: kongConsumerClient,
-		PluginClient:   kongPluginClient,
+		ConsumerClient:   kongConsumerClient,
+		CredentialClient: kongCredentialClient,
+		PluginClient:     kongPluginClient,
 	}
 
 	fs, err := file.NewFakeFS()

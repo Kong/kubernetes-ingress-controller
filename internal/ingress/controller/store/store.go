@@ -42,6 +42,8 @@ import (
 	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
 	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
 	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
+	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
 	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
 	consumerinformer "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/informers/externalversions"
 	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
@@ -451,6 +453,14 @@ func New(checkOCSP bool,
 	store.informers.Kong.Credential = credentialFactory.Configuration().V1().KongCredentials().Informer()
 	store.listers.Kong.Credential = store.informers.Kong.Credential.GetStore()
 	store.informers.Kong.Credential.AddEventHandler(crdEventHandler)
+
+	confClient := configurationclientv1.New(client.Discovery().RESTClient())
+	configFactory := configurationinformer.NewFilteredSharedInformerFactory(confClient, resyncPeriod, namespace,
+		func(*metav1.ListOptions) {})
+
+	store.informers.Kong.Configuration = configFactory.Configuration().V1().KongIngresses().Informer()
+	store.listers.Kong.Configuration = store.informers.Kong.Configuration.GetStore()
+	store.informers.Kong.Configuration.AddEventHandler(crdEventHandler)
 
 	return store
 }

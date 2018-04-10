@@ -20,7 +20,7 @@ set -o pipefail
 set -x
 
 GOPATH=$(go env GOPATH)
-PACKAGE_NAME=github.com/kong/ingress-controller
+PACKAGE_NAME=github.com/kong/kubernetes-ingress-controller
 REPO_ROOT="$GOPATH/src/$PACKAGE_NAME"
 
 
@@ -43,17 +43,22 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
   --output-base "$GOPATH/src" \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
 
-${CODEGEN_PKG}/generate-groups.sh "deepcopy,client" \
+${CODEGEN_PKG}/generate-groups.sh "all" \
   ${PACKAGE_NAME}/internal/client/plugin ${PACKAGE_NAME}/internal/apis \
   plugin:v1 \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
 
-${CODEGEN_PKG}/generate-groups.sh "deepcopy,client" \
+${CODEGEN_PKG}/generate-groups.sh "all" \
   ${PACKAGE_NAME}/internal/client/consumer ${PACKAGE_NAME}/internal/apis \
   consumer:v1 \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
 
-${CODEGEN_PKG}/generate-groups.sh "deepcopy,client" \
+${CODEGEN_PKG}/generate-groups.sh "all" \
   ${PACKAGE_NAME}/internal/client/credential ${PACKAGE_NAME}/internal/apis \
   credential:v1 \
+  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
+
+${CODEGEN_PKG}/generate-groups.sh "all" \
+  ${PACKAGE_NAME}/internal/client/configuration ${PACKAGE_NAME}/internal/apis \
+  configuration:v1 \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt

@@ -9,7 +9,7 @@ language: go
 
 notifications:
   email:
-    on_failure: always
+    on_failure: never
     on_success: never
 
 go:

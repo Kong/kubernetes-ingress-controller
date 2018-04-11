@@ -95,7 +95,7 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 
 	// trigger a new sync event to ensure routes and services are up to date
 	// this is required because the plugins configuration could be incorrect
-	// if some delete occured.
+	// if some delete occurred.
 	if checkServices || checkRoutes {
 		defer func() {
 			n.syncQueue.Enqueue(&extensions.Ingress{})
@@ -637,7 +637,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				for p := range sa {
 					_, ok := plugins[p]
 					if ok {
-						glog.Warningf("Plugin %v is already configured in service %v/%v. Omiting plugin creation in Kong Route",
+						glog.Warningf("Plugin %v is already configured in service %v/%v. Omitting plugin creation in Kong Route",
 							p, location.Service.Namespace, location.Service.Name)
 						delete(plugins, p)
 						pluginsInService = append(pluginsInService, p)

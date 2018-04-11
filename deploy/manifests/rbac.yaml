@@ -63,6 +63,7 @@ rules:
       - kongplugins
       - kongcredentials
       - kongconsumers
+      - kongingresses
     verbs:
       - get
       - list

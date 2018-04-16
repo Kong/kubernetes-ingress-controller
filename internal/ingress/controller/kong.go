@@ -406,15 +406,16 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 func (n *NGINXController) syncConsumers() error {
 	// List existing Consumers in Kubernetes
 	for _, consumer := range n.store.ListKongConsumers() {
-
+		glog.Infof("checking if Kong consumer %v exists", consumer.Name)
 		consumerID := fmt.Sprintf("%v", consumer.GetUID())
 		kc, res := n.cfg.Kong.Client.Consumers().Get(consumerID)
 		if res.StatusCode == http.StatusNotFound {
+			glog.Infof("Creating Kong consumer %v", consumerID)
 			c := &kongadminv1.Consumer{
 				Username: consumer.Username,
 				CustomID: consumer.CustomID,
 				Required: kongadminv1.Required{
-					ID: fmt.Sprintf("%v", consumer.GetUID()),
+					ID: consumerID,
 				},
 			}
 
@@ -468,21 +469,18 @@ func (n *NGINXController) syncCredentials() error {
 			glog.Errorf("the credential does contains a valid type: %v", credential.Type)
 			continue
 		}
-
 		credentialID := fmt.Sprintf("%v", credential.GetUID())
 
-		// TODO: allow changes in credentials?
-		_, res := n.cfg.Kong.Client.Credentials().GetByType(credentialID, credential.Type)
-		if res.StatusCode == http.StatusNotFound {
-			consumer, err := n.store.GetKongConsumer(credential.Namespace, credential.ConsumerRef)
-			if err != nil {
-				glog.Errorf("Unexpected error searching KongConsumer: %v", err)
-				continue
-			}
+		consumer, err := n.store.GetKongConsumer(credential.Namespace, credential.ConsumerRef)
+		if err != nil {
+			glog.Errorf("Unexpected error searching KongConsumer: %v", err)
+			continue
+		}
+		consumerID := fmt.Sprintf("%v", consumer.GetUID())
 
-			// there is no credential for consumer configured
-			// create a new one
-			consumerID := fmt.Sprintf("%v", consumer.GetUID())
+		// TODO: allow changes in credentials?
+		_, res := n.cfg.Kong.Client.Credentials().GetByType(consumerID, credentialID, credential.Type)
+		if res.StatusCode == http.StatusNotFound {
 			// use the configuration
 			data := credential.Config
 			// create a credential with the same id of k8s
@@ -676,15 +674,6 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 							},
 						}
 
-						if k8sPlugin.ConsumerRef != "" {
-							consumer, err := n.store.GetKongConsumer(k8sPlugin.Namespace, k8sPlugin.ConsumerRef)
-							if err != nil {
-								glog.Errorf("Unexpected error searching plugin %v for route %v: %v", plugin, svc.ID, err)
-							} else {
-								p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
-							}
-						}
-
 						_, res := client.Plugins().CreateInRoute(route.ID, p)
 						if res.StatusCode != http.StatusCreated {
 							glog.Errorf("Unexpected error creating plugin %v for route %v: %v", plugin, route.ID, res)
@@ -703,15 +692,6 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 							Enabled: !k8sPlugin.Disabled,
 							Service: "",
 							Route:   route.ID,
-						}
-
-						if k8sPlugin.ConsumerRef != "" && configuredPlugin.Consumer == "" {
-							consumer, err := n.store.GetKongConsumer(k8sPlugin.Namespace, k8sPlugin.ConsumerRef)
-							if err != nil {
-								glog.Errorf("Unexpected error searching plugin %v for service %v: %v", plugin, svc.ID, err)
-								continue
-							}
-							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
 						}
 
 						_, res := client.Plugins().Patch(configuredPlugin.ID, p)

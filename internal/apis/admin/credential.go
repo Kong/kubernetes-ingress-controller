@@ -16,7 +16,7 @@ type CredentialGetter interface {
 
 type CredentialInterface interface {
 	List(string, url.Values) (*adminv1.CredentialList, error)
-	GetByType(string, string) (*adminv1.Credential, *APIResponse)
+	GetByType(string, string, string) (*adminv1.Credential, *APIResponse)
 	CreateByType(map[string]interface{}, string, string) *APIResponse
 }
 
@@ -47,10 +47,11 @@ func (a *credentialAPI) CreateByType(obj map[string]interface{}, consumer, name 
 	return response
 }
 
-func (a *credentialAPI) GetByType(id, name string) (*adminv1.Credential, *APIResponse) {
+// GetByType returns a credential of a particular type applied to a consumer
+func (a *credentialAPI) GetByType(consumerID, credentialID, credentialType string) (*adminv1.Credential, *APIResponse) {
 	resp := a.client.Get().
-		Resource(name).
-		Name(id).
+		Resource("consumers").
+		SubResource(consumerID, credentialType, credentialID).
 		Do()
 	statusCode := reflect.ValueOf(resp).FieldByName("statusCode").Int()
 	raw, err := resp.Raw()

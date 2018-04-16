@@ -23,15 +23,15 @@ type consumerAPI struct {
 	client APIInterface
 }
 
-func (a *consumerAPI) Create(route *adminv1.Consumer) (*adminv1.Consumer, *APIResponse) {
+func (a *consumerAPI) Create(consumer *adminv1.Consumer) (*adminv1.Consumer, *APIResponse) {
 	out := &adminv1.Consumer{}
-	err := a.client.Create(route, out)
+	err := a.client.Create(consumer, out)
 	return out, err
 }
 
-func (a *consumerAPI) Patch(id string, route *adminv1.Consumer) (*adminv1.Consumer, *APIResponse) {
+func (a *consumerAPI) Patch(id string, consumer *adminv1.Consumer) (*adminv1.Consumer, *APIResponse) {
 	out := &adminv1.Consumer{}
-	err := a.client.Patch(id, route, out)
+	err := a.client.Patch(id, consumer, out)
 	return out, err
 }
 

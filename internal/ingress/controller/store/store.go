@@ -564,7 +564,7 @@ func (s k8sStore) ListKongConsumers() []*consumerv1.KongConsumer {
 
 func (s k8sStore) ListKongCredentials() []*credentialv1.KongCredential {
 	var credentials []*credentialv1.KongCredential
-	for _, item := range s.listers.Kong.Consumer.List() {
+	for _, item := range s.listers.Kong.Credential.List() {
 		if c, ok := item.(*credentialv1.KongCredential); ok {
 			credentials = append(credentials, c)
 		}

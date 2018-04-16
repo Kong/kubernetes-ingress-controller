@@ -18,13 +18,13 @@ type PluginInterface interface {
 	Get(id string) (*adminv1.Plugin, *APIResponse)
 	CreateInRoute(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	CreateInService(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
-	Patch(id string, plugin *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
-	Delete(id string) error
+	Patch(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
+	Delete(string) error
 
 	GetByID(string) (*adminv1.Plugin, error)
 
-	GetAllByRoute(routeID string) ([]adminv1.Plugin, error)
-	GetByRoute(name, routeID string) (*adminv1.Plugin, error)
+	GetAllByRoute(string) ([]adminv1.Plugin, error)
+	GetByRoute(string, string) (*adminv1.Plugin, error)
 
 	GetAllByService(serviceID string) ([]adminv1.Plugin, error)
 	GetByService(name, serviceID string) (*adminv1.Plugin, error)

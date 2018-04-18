@@ -93,7 +93,7 @@ func TestStore(t *testing.T) {
 			t.Errorf("expected an Ingres but none returned")
 		}
 
-		ls, err := storer.GetLocalSecret(key)
+		ls, err := storer.GetLocalSSLCert(key)
 		if err == nil {
 			t.Errorf("expected an error but none returned")
 		}
@@ -266,7 +266,7 @@ func TestStore(t *testing.T) {
 		close(stopCh)
 	})
 
-	t.Run("should not receive events from new secret no referenced from ingress", func(t *testing.T) {
+	t.Run("should not receive events from secret not referenced from ingress", func(t *testing.T) {
 		ns := createNamespace(clientSet, t)
 		defer deleteNamespace(ns, clientSet, t)
 
@@ -320,7 +320,10 @@ func TestStore(t *testing.T) {
 			t.Errorf("unexpected error creating secret: %v", err)
 		}
 
-		time.Sleep(1 * time.Second)
+		err = framework.WaitForSecretInNamespace(clientSet, ns.Name, secretName)
+		if err != nil {
+			t.Errorf("unexpected error waiting for secret: %v", err)
+		}
 
 		if atomic.LoadUint64(&add) != 0 {
 			t.Errorf("expected 0 events of type Create but %v occurred", add)
@@ -475,7 +478,7 @@ func TestStore(t *testing.T) {
 			}
 
 			secretName := fmt.Sprintf("%v/%v", ns.Name, name)
-			sslCert, err := storer.GetLocalSecret(secretName)
+			sslCert, err := storer.GetLocalSSLCert(secretName)
 			if err != nil {
 				t.Errorf("unexpected error reading local secret %v: %v", secretName, err)
 			}

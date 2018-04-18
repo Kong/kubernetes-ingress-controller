@@ -39,7 +39,7 @@ func ParseNameNS(input string) (string, string, error) {
 }
 
 // GetNodeIPOrName returns the IP address or the name of a node in the cluster
-func GetNodeIPOrName(kubeClient clientset.Interface, name string, useInternalIP bool) string {
+func GetNodeIPOrName(kubeClient clientset.Interface, name string) string {
 	node, err := kubeClient.CoreV1().Nodes().Get(name, metav1.GetOptions{})
 	if err != nil {
 		return ""
@@ -56,13 +56,16 @@ func GetNodeIPOrName(kubeClient clientset.Interface, name string, useInternalIP 
 		}
 	}
 
-	if useInternalIP {
-		for _, address := range node.Status.Addresses {
-			if address.Type == apiv1.NodeInternalIP {
-				if address.Address != "" {
-					ip = address.Address
-					break
-				}
+	// Report the external IP address of the node
+	if ip != "" {
+		return ip
+	}
+
+	for _, address := range node.Status.Addresses {
+		if address.Type == apiv1.NodeInternalIP {
+			if address.Address != "" {
+				ip = address.Address
+				break
 			}
 		}
 	}
@@ -98,7 +101,7 @@ func GetPodDetails(kubeClient clientset.Interface) (*PodInfo, error) {
 	return &PodInfo{
 		Name:      podName,
 		Namespace: podNs,
-		NodeIP:    GetNodeIPOrName(kubeClient, pod.Spec.NodeName, true),
+		NodeIP:    GetNodeIPOrName(kubeClient, pod.Spec.NodeName),
 		Labels:    pod.GetLabels(),
 	}, nil
 }

@@ -76,10 +76,6 @@ the flag --watch-namespace.`)
 			`Indicates if the ingress controller should update the Ingress status 
 IP/hostname when the controller is being stopped. Default is true`)
 
-		useNodeInternalIP = flags.Bool("report-node-internal-ip-address", false,
-			`Defines if the nodes IP address to be returned in the ingress status should 
-be the internal instead of the external IP address`)
-
 		showVersion = flags.Bool("version", false,
 			`Shows release information about the Kong Ingress controller`)
 
@@ -152,7 +148,6 @@ The controller will set the endpoint records on the ingress using this address.`
 		PublishStatusAddress:     *publishStatusAddress,
 		ForceNamespaceIsolation:  *forceIsolation,
 		UpdateStatusOnShutdown:   *updateStatusOnShutdown,
-		UseNodeInternalIP:        *useNodeInternalIP,
 		SyncRateLimit:            *syncRateLimit,
 	}
 

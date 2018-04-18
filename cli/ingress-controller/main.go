@@ -93,27 +93,29 @@ func main() {
 	}
 	glog.Infof("validated %v as the default backend", conf.DefaultService)
 
-	if conf.PublishService != "" {
-		ns, name, err := k8s.ParseNameNS(conf.PublishService)
-		if err != nil {
-			glog.Fatal(err)
-		}
+	if conf.PublishService == "" {
+		glog.Fatal("flag --publish-address is mandatory")
+	}
 
-		svc, err := kubeClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
-		if err != nil {
-			glog.Fatalf("unexpected error getting information about service %v: %v", conf.PublishService, err)
-		}
+	ns, name, err = k8s.ParseNameNS(conf.PublishService)
+	if err != nil {
+		glog.Fatal(err)
+	}
 
-		if len(svc.Status.LoadBalancer.Ingress) == 0 {
-			if len(svc.Spec.ExternalIPs) > 0 {
-				glog.Infof("service %v validated as assigned with externalIP", conf.PublishService)
-			} else {
-				// We could poll here, but we instead just exit and rely on k8s to restart us
-				glog.Fatalf("service %s does not (yet) have ingress points", conf.PublishService)
-			}
+	svc, err := kubeClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+	if err != nil {
+		glog.Fatalf("unexpected error getting information about service %v: %v", conf.PublishService, err)
+	}
+
+	if len(svc.Status.LoadBalancer.Ingress) == 0 {
+		if len(svc.Spec.ExternalIPs) > 0 {
+			glog.Infof("service %v validated as assigned with externalIP", conf.PublishService)
 		} else {
-			glog.Infof("service %v validated as source of Ingress status", conf.PublishService)
+			// We could poll here, but we instead just exit and rely on k8s to restart us
+			glog.Fatalf("service %s does not (yet) have ingress points", conf.PublishService)
 		}
+	} else {
+		glog.Infof("service %v validated as source of Ingress status", conf.PublishService)
 	}
 
 	if conf.Namespace != "" {

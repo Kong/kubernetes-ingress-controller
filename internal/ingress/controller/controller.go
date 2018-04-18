@@ -73,7 +73,6 @@ type Configuration struct {
 	PublishStatusAddress string
 
 	UpdateStatus           bool
-	UseNodeInternalIP      bool
 	ElectionID             string
 	UpdateStatusOnShutdown bool
 

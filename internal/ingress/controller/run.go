@@ -95,7 +95,6 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 			IngressClass:           class.IngressClass,
 			DefaultIngressClass:    class.DefaultClass,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
-			UseNodeInternalIP:      config.UseNodeInternalIP,
 		})
 	} else {
 		glog.Warning("Update of ingress status is disabled (flag --update-status=false was specified)")

@@ -25,11 +25,10 @@ import (
 	"github.com/eapache/channels"
 	"github.com/golang/glog"
 
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
@@ -62,12 +61,12 @@ import (
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
 	// GetSecret returns a Secret using the namespace and name as key
-	GetSecret(key string) (*apiv1.Secret, error)
+	GetSecret(key string) (*corev1.Secret, error)
 
 	// GetService returns a Service using the namespace and name as key
-	GetService(key string) (*apiv1.Service, error)
+	GetService(key string) (*corev1.Service, error)
 
-	GetServiceEndpoints(svc *apiv1.Service) (*apiv1.Endpoints, error)
+	GetServiceEndpoints(svc *corev1.Service) (*corev1.Endpoints, error)
 
 	// GetSecret returns an Ingress using the namespace and name as key
 	GetIngress(key string) (*extensions.Ingress, error)
@@ -75,17 +74,14 @@ type Storer interface {
 	// ListIngresses returns the list of Ingresses
 	ListIngresses() []*extensions.Ingress
 
-	// GetLocalSecret returns the local copy of a Secret
-	GetLocalSecret(name string) (*ingress.SSLCert, error)
+	// GetLocalSSLCert returns the local copy of a SSLCert
+	GetLocalSSLCert(name string) (*ingress.SSLCert, error)
 
-	// ListLocalSecrets returns the list of local Secrets
-	ListLocalSecrets() []*ingress.SSLCert
+	// ListLocalSSLCerts returns the list of local SSLCerts
+	ListLocalSSLCerts() []*ingress.SSLCert
 
 	// Run initiates the synchronization of the controllers
 	Run(stopCh chan struct{})
-
-	// ReadSecrets extracts information about secrets from an Ingress rule
-	ReadSecrets(*extensions.Ingress)
 
 	GetKongPlugin(namespace, name string) (*pluginv1.KongPlugin, error)
 
@@ -202,7 +198,7 @@ type k8sStore struct {
 
 	// secretIngressMap contains information about which ingress references a
 	// secret in the annotations.
-	secretIngressMap map[string]sets.String
+	secretIngressMap ObjectRefMap
 
 	filesystem file.Filesystem
 
@@ -230,7 +226,7 @@ func New(checkOCSP bool,
 		filesystem:         fs,
 		updateCh:           updateCh,
 		mu:                 &sync.Mutex{},
-		secretIngressMap:   make(map[string]sets.String),
+		secretIngressMap:   NewObjectRefMap(),
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -238,27 +234,31 @@ func New(checkOCSP bool,
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: client.CoreV1().Events(namespace),
 	})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{
 		Component: "kong-ingress-controller",
 	})
 
 	ingEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			addIng := obj.(*extensions.Ingress)
-			if !class.IsValid(addIng) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, addIng)
-				glog.Infof("ignoring add for ingress %v based on annotation %v with value %v", addIng.Name, class.IngressKey, a)
+			ing := obj.(*extensions.Ingress)
+			if !class.IsValid(ing) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, ing)
+				glog.Infof("ignoring add for ingress %v based on annotation %v with value %v", ing.Name, class.IngressKey, a)
 				return
 			}
 
-			recorder.Eventf(addIng, apiv1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", addIng.Namespace, addIng.Name))
+			recorder.Eventf(ing, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", ing.Namespace, ing.Name))
+
+			store.updateSecretIngressMap(ing)
+			store.syncSecrets(ing)
+
 			updateCh.In() <- Event{
 				Type: CreateEvent,
 				Obj:  obj,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			delIng, ok := obj.(*extensions.Ingress)
+			ing, ok := obj.(*extensions.Ingress)
 			if !ok {
 				// If we reached here it means the ingress was deleted but its final state is unrecorded.
 				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -266,17 +266,21 @@ func New(checkOCSP bool,
 					glog.Errorf("couldn't get object from tombstone %#v", obj)
 					return
 				}
-				delIng, ok = tombstone.Obj.(*extensions.Ingress)
+				ing, ok = tombstone.Obj.(*extensions.Ingress)
 				if !ok {
 					glog.Errorf("Tombstone contained object that is not an Ingress: %#v", obj)
 					return
 				}
 			}
-			if !class.IsValid(delIng) {
-				glog.Infof("ignoring delete for ingress %v based on annotation %v", delIng.Name, class.IngressKey)
+			if !class.IsValid(ing) {
+				glog.Infof("ignoring delete for ingress %v based on annotation %v", ing.Name, class.IngressKey)
 				return
 			}
-			recorder.Eventf(delIng, apiv1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", delIng.Namespace, delIng.Name))
+			recorder.Eventf(ing, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", ing.Namespace, ing.Name))
+
+			key := k8s.MetaNamespaceKey(ing)
+			store.secretIngressMap.Delete(key)
+
 			updateCh.In() <- Event{
 				Type: DeleteEvent,
 				Obj:  obj,
@@ -289,13 +293,16 @@ func New(checkOCSP bool,
 			validCur := class.IsValid(curIng)
 			if !validOld && validCur {
 				glog.Infof("creating ingress %v based on annotation %v", curIng.Name, class.IngressKey)
-				recorder.Eventf(curIng, apiv1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
+				recorder.Eventf(curIng, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			} else if validOld && !validCur {
 				glog.Infof("removing ingress %v based on annotation %v", curIng.Name, class.IngressKey)
-				recorder.Eventf(curIng, apiv1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
+				recorder.Eventf(curIng, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			} else if validCur && !reflect.DeepEqual(old, cur) {
-				recorder.Eventf(curIng, apiv1.EventTypeNormal, "UPDATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
+				recorder.Eventf(curIng, corev1.EventTypeNormal, "UPDATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			}
+
+			store.updateSecretIngressMap(curIng)
+			store.syncSecrets(curIng)
 
 			updateCh.In() <- Event{
 				Type: UpdateEvent,
@@ -305,31 +312,52 @@ func New(checkOCSP bool,
 	}
 
 	secrEventHandler := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			sec := obj.(*corev1.Secret)
+			key := k8s.MetaNamespaceKey(sec)
+
+			// find references in ingresses and update local ssl certs
+			if ings := store.secretIngressMap.Reference(key); len(ings) > 0 {
+				glog.Infof("secret %v was added and it is used in ingress annotations. Parsing...", key)
+				for _, ingKey := range ings {
+					ing, err := store.GetIngress(ingKey)
+					if err != nil {
+						glog.Errorf("could not find Ingress %v in local store", ingKey)
+						continue
+					}
+					store.syncSecrets(ing)
+				}
+				updateCh.In() <- Event{
+					Type: CreateEvent,
+					Obj:  obj,
+				}
+			}
+		},
 		UpdateFunc: func(old, cur interface{}) {
 			if !reflect.DeepEqual(old, cur) {
-				sec := cur.(*apiv1.Secret)
-				key := fmt.Sprintf("%v/%v", sec.Namespace, sec.Name)
+				sec := cur.(*corev1.Secret)
+				key := k8s.MetaNamespaceKey(sec)
 
-				if _, ok := store.secretIngressMap[key]; ok {
-					glog.Infof("secret %v changed and it is used in ingress annotations. Parsing...", key)
-					_, err := store.GetLocalSecret(k8s.MetaNamespaceKey(sec))
-					if err == nil {
-						store.syncSecret(key)
-						updateCh.In() <- Event{
-							Type: UpdateEvent,
-							Obj:  cur,
+				// find references in ingresses and update local ssl certs
+				if ings := store.secretIngressMap.Reference(key); len(ings) > 0 {
+					glog.Infof("secret %v was updated and it is used in ingress annotations. Parsing...", key)
+					for _, ingKey := range ings {
+						ing, err := store.GetIngress(ingKey)
+						if err != nil {
+							glog.Errorf("could not find Ingress %v in local store", ingKey)
+							continue
 						}
+						store.syncSecrets(ing)
 					}
-
 					updateCh.In() <- Event{
-						Type: ConfigurationEvent,
+						Type: UpdateEvent,
 						Obj:  cur,
 					}
 				}
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			sec, ok := obj.(*apiv1.Secret)
+			sec, ok := obj.(*corev1.Secret)
 			if !ok {
 				// If we reached here it means the secret was deleted but its final state is unrecorded.
 				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -337,13 +365,15 @@ func New(checkOCSP bool,
 					glog.Errorf("couldn't get object from tombstone %#v", obj)
 					return
 				}
-				sec, ok = tombstone.Obj.(*apiv1.Secret)
+				sec, ok = tombstone.Obj.(*corev1.Secret)
 				if !ok {
 					glog.Errorf("Tombstone contained object that is not a Secret: %#v", obj)
 					return
 				}
 			}
+
 			store.sslStore.Delete(k8s.MetaNamespaceKey(sec))
+
 			updateCh.In() <- Event{
 				Type: DeleteEvent,
 				Obj:  obj,
@@ -365,8 +395,8 @@ func New(checkOCSP bool,
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
-			oep := old.(*apiv1.Endpoints)
-			ocur := cur.(*apiv1.Endpoints)
+			oep := old.(*corev1.Endpoints)
+			ocur := cur.(*corev1.Endpoints)
 			if !reflect.DeepEqual(ocur.Subsets, oep.Subsets) {
 				updateCh.In() <- Event{
 					Type: UpdateEvent,
@@ -464,7 +494,7 @@ func New(checkOCSP bool,
 }
 
 // GetSecret returns a Secret using the namespace and name as key
-func (s k8sStore) GetSecret(key string) (*apiv1.Secret, error) {
+func (s k8sStore) GetSecret(key string) (*corev1.Secret, error) {
 	return s.listers.Secret.ByKey(key)
 }
 
@@ -481,7 +511,7 @@ func (s k8sStore) ListLocalSecrets() []*ingress.SSLCert {
 }
 
 // GetService returns a Service using the namespace and name as key
-func (s k8sStore) GetService(key string) (*apiv1.Service, error) {
+func (s k8sStore) GetService(key string) (*corev1.Service, error) {
 	return s.listers.Service.ByKey(key)
 }
 
@@ -506,13 +536,68 @@ func (s k8sStore) ListIngresses() []*extensions.Ingress {
 	return ingresses
 }
 
-// GetLocalSecret returns the local copy of a Secret
-func (s k8sStore) GetLocalSecret(key string) (*ingress.SSLCert, error) {
-	return s.sslStore.ByKey(key)
+func (s k8sStore) GetServiceEndpoints(svc *corev1.Service) (*corev1.Endpoints, error) {
+	return s.listers.Endpoint.GetServiceEndpoints(svc)
 }
 
-func (s k8sStore) GetServiceEndpoints(svc *apiv1.Service) (*apiv1.Endpoints, error) {
-	return s.listers.Endpoint.GetServiceEndpoints(svc)
+// Run initiates the synchronization of the controllers
+// and the initial synchronization of the secrets.
+func (s k8sStore) Run(stopCh chan struct{}) {
+	// start informers
+	s.informers.Run(stopCh)
+
+	if s.isOCSPCheckEnabled {
+		go wait.Until(s.checkSSLChainIssues, 60*time.Second, stopCh)
+	}
+}
+
+// syncSecrets synchronizes data from all Secrets referenced by the given
+// Ingress with the local store and file system.
+func (s k8sStore) syncSecrets(ing *extensions.Ingress) {
+	key := k8s.MetaNamespaceKey(ing)
+	for _, secrKey := range s.secretIngressMap.ReferencedBy(key) {
+		s.syncSecret(secrKey)
+	}
+}
+
+// updateSecretIngressMap takes an Ingress and updates all Secret objects it
+// references in secretIngressMap.
+func (s *k8sStore) updateSecretIngressMap(ing *extensions.Ingress) {
+	key := k8s.MetaNamespaceKey(ing)
+	glog.V(3).Infof("updating references to secrets for ingress %v", key)
+
+	// delete all existing references first
+	s.secretIngressMap.Delete(key)
+
+	var refSecrets []string
+
+	for _, tls := range ing.Spec.TLS {
+		secrName := tls.SecretName
+		if secrName != "" {
+			secrKey := fmt.Sprintf("%v/%v", ing.Namespace, secrName)
+			refSecrets = append(refSecrets, secrKey)
+		}
+	}
+
+	// populate map with all secret references
+	s.secretIngressMap.Insert(key, refSecrets...)
+}
+
+// ListLocalSSLCerts returns the list of local SSLCerts
+func (s k8sStore) ListLocalSSLCerts() []*ingress.SSLCert {
+	var certs []*ingress.SSLCert
+	for _, item := range s.sslStore.List() {
+		if s, ok := item.(*ingress.SSLCert); ok {
+			certs = append(certs, s)
+		}
+	}
+
+	return certs
+}
+
+// GetLocalSSLCert returns the local copy of a SSLCert
+func (s k8sStore) GetLocalSSLCert(key string) (*ingress.SSLCert, error) {
+	return s.sslStore.ByKey(key)
 }
 
 func (s k8sStore) GetKongPlugin(namespace, name string) (*pluginv1.KongPlugin, error) {
@@ -571,24 +656,4 @@ func (s k8sStore) ListKongCredentials() []*credentialv1.KongCredential {
 	}
 
 	return credentials
-}
-
-// Run initiates the synchronization of the controllers
-// and the initial synchronization of the secrets.
-func (s k8sStore) Run(stopCh chan struct{}) {
-	// start informers
-	s.informers.Run(stopCh)
-
-	// initial sync of secrets to avoid unnecessary reloads
-	glog.Info("running initial sync of secrets")
-	for _, ing := range s.ListIngresses() {
-		s.ReadSecrets(ing)
-	}
-
-	// start goroutine to check for missing local secrets
-	go wait.Until(s.checkMissingSecrets, 10*time.Second, stopCh)
-
-	if s.isOCSPCheckEnabled {
-		go wait.Until(s.checkSSLChainIssues, 60*time.Second, stopCh)
-	}
 }

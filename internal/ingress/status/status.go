@@ -52,6 +52,8 @@ const (
 type Sync interface {
 	Run()
 	Shutdown()
+
+	IsLeader() bool
 }
 
 type ingressLister interface {
@@ -98,6 +100,11 @@ type statusSync struct {
 // Run starts the loop to keep the status in sync
 func (s statusSync) Run() {
 	s.elector.Run()
+}
+
+// IsLeader returns if it is the current leader
+func (s statusSync) IsLeader() bool {
+	return s.elector.IsLeader()
 }
 
 // Shutdown stop the sync. In case the instance is the leader it will remove the current IP

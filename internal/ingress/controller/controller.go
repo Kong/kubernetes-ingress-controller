@@ -106,6 +106,11 @@ func (n *NGINXController) syncIngress(interface{}) error {
 		return nil
 	}
 
+	if !n.syncStatus.IsLeader() {
+		glog.V(2).Infof("skipping synchronization of configuration because I am not the leader.")
+		return nil
+	}
+
 	// Sort ingress rules using the ResourceVersion field
 	ings := n.store.ListIngresses()
 	sort.SliceStable(ings, func(i, j int) bool {
@@ -122,7 +127,6 @@ func (n *NGINXController) syncIngress(interface{}) error {
 	}
 
 	glog.Infof("syncing Ingress configuration...")
-
 	err := n.OnUpdate(&pcfg)
 	if err != nil {
 		glog.Errorf("unexpected failure updating Kong configuration: \n%v", err)

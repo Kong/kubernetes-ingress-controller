@@ -282,7 +282,7 @@ func TestStatusActions(t *testing.T) {
 	os.Setenv("POD_NAMESPACE", apiv1.NamespaceDefault)
 	c := Config{
 		Client:                 buildSimpleClientSet(),
-		PublishService:         "",
+		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
 		IngressLister:          buildIngressLister(),
 		DefaultIngressClass:    "nginx",
 		IngressClass:           "",
@@ -302,8 +302,7 @@ func TestStatusActions(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	// execute sync
 	fk.sync("just-test")
-	// PublishService is empty, so the running address is: ["11.0.0.2"]
-	// after updated, the ingress's ip should only be "11.0.0.2"
+
 	newIPs := []apiv1.LoadBalancerIngress{{
 		IP: "11.0.0.2",
 	}}
@@ -366,16 +365,19 @@ func TestRunningAddresessWithPublishService(t *testing.T) {
 		t.Fatalf("returned nil but expected valid []string")
 	}
 	rl := len(r)
-	if len(r) != 4 {
-		t.Errorf("returned %v but expected %v", rl, 4)
+	if len(r) != 1 {
+		t.Errorf("returned %v but expected %v", rl, 1)
 	}
 }
 
 func TestRunningAddresessWithPods(t *testing.T) {
 	fk := buildStatusSync()
-	fk.PublishService = ""
+	fk.PublishService = apiv1.NamespaceDefault + "/" + "foo"
 
-	r, _ := fk.runningAddresses()
+	r, err := fk.runningAddresses()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if r == nil {
 		t.Fatalf("returned nil but expected valid []string")
 	}
@@ -408,32 +410,6 @@ func TestRunningAddresessWithPublishStatusAddress(t *testing.T) {
 	}
 }
 
-/*
-TODO: this test requires a refactoring
-func TestUpdateStatus(t *testing.T) {
-	fk := buildStatusSync()
-	newIPs := buildLoadBalancerIngressByIP()
-	fk.updateStatus(newIPs)
-
-	fooIngress1, err1 := fk.Client.Extensions().Ingresses(apiv1.NamespaceDefault).Get("foo_ingress_1", metav1.GetOptions{})
-	if err1 != nil {
-		t.Fatalf("unexpected error")
-	}
-	fooIngress1CurIPs := fooIngress1.Status.LoadBalancer.Ingress
-	if !ingressSliceEqual(fooIngress1CurIPs, newIPs) {
-		t.Fatalf("returned %v but expected %v", fooIngress1CurIPs, newIPs)
-	}
-
-	fooIngress2, err2 := fk.Client.Extensions().Ingresses(apiv1.NamespaceDefault).Get("foo_ingress_2", metav1.GetOptions{})
-	if err2 != nil {
-		t.Fatalf("unexpected error")
-	}
-	fooIngress2CurIPs := fooIngress2.Status.LoadBalancer.Ingress
-	if !ingressSliceEqual(fooIngress2CurIPs, []apiv1.LoadBalancerIngress{}) {
-		t.Fatalf("returned %v but expected %v", fooIngress2CurIPs, []apiv1.LoadBalancerIngress{})
-	}
-}
-*/
 func TestSliceToStatus(t *testing.T) {
 	fkEndpoints := []string{
 		"10.0.0.1",

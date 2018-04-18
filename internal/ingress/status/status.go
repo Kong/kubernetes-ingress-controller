@@ -71,8 +71,6 @@ type Config struct {
 
 	UpdateStatusOnShutdown bool
 
-	UseNodeInternalIP bool
-
 	IngressLister ingressLister
 
 	DefaultIngressClass string
@@ -236,13 +234,19 @@ func NewStatusSyncer(config Config) Sync {
 func (s *statusSync) runningAddresses() ([]string, error) {
 	addrs := []string{}
 
-	if s.PublishService != "" {
-		ns, name, _ := k8s.ParseNameNS(s.PublishService)
-		svc, err := s.Client.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
+	if s.PublishStatusAddress != "" {
+		addrs = append(addrs, s.PublishStatusAddress)
+		return addrs, nil
+	}
 
+	ns, name, _ := k8s.ParseNameNS(s.PublishService)
+	svc, err := s.Client.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	switch svc.Spec.Type {
+	case apiv1.ServiceTypeLoadBalancer:
 		for _, ip := range svc.Status.LoadBalancer.Ingress {
 			if ip.IP == "" {
 				addrs = append(addrs, ip.Hostname)
@@ -253,34 +257,29 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 
 		addrs = append(addrs, svc.Spec.ExternalIPs...)
 		return addrs, nil
-	}
+	default:
+		// get information about all the pods running the ingress controller
+		pods, err := s.Client.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
+			LabelSelector: labels.SelectorFromSet(s.pod.Labels).String(),
+		})
+		if err != nil {
+			return nil, err
+		}
 
-	if s.PublishStatusAddress != "" {
-		addrs = append(addrs, s.PublishStatusAddress)
+		for _, pod := range pods.Items {
+			// only Running pods are valid
+			if pod.Status.Phase != apiv1.PodRunning {
+				continue
+			}
+
+			name := k8s.GetNodeIPOrName(s.Client, pod.Spec.NodeName)
+			if !sliceutils.StringInSlice(name, addrs) {
+				addrs = append(addrs, name)
+			}
+		}
+
 		return addrs, nil
 	}
-
-	// get information about all the pods running the ingress controller
-	pods, err := s.Client.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(s.pod.Labels).String(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, pod := range pods.Items {
-		// only Running pods are valid
-		if pod.Status.Phase != apiv1.PodRunning {
-			continue
-		}
-
-		name := k8s.GetNodeIPOrName(s.Client, pod.Spec.NodeName, s.UseNodeInternalIP)
-		if !sliceutils.StringInSlice(name, addrs) {
-			addrs = append(addrs, name)
-		}
-	}
-
-	return addrs, nil
 }
 
 func (s *statusSync) isRunningMultiplePods() bool {

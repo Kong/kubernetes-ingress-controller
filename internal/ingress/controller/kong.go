@@ -803,19 +803,44 @@ func syncUpstreams(locations []*ingress.Location, backends []*ingress.Backend, c
 // rules with Kong certificates.
 // This process only create or update certificates in Kong
 func syncCertificate(server *ingress.Server, client *kong.RestClient) error {
-	kongCertificates, err := client.Certificates().List(nil)
-	if err != nil {
-		return err
+	if server.SSLCert == nil {
+		return nil
 	}
 
-	if isCertificateInKong(server.Hostname, kongCertificates.Items) {
-		// TODO: add support to update certificates
+	if server.SSLCert.ID == "" {
 		return nil
 	}
 
 	sc := bytes.NewBuffer(server.SSLCert.Raw.Cert).String()
 	sk := bytes.NewBuffer(server.SSLCert.Raw.Key).String()
+
+	kongCertificate, res := client.Certificates().Get(server.SSLCert.ID)
+	if res.StatusCode == http.StatusOK {
+		// check if an update is required
+		if sc != kongCertificate.Cert || sk != kongCertificate.Key {
+			cert := &kongadminv1.Certificate{
+				Cert: sc,
+				Key:  sk,
+			}
+
+			_, res = client.Certificates().Patch(server.SSLCert.ID, cert)
+			if res.StatusCode != http.StatusOK {
+				return errors.Wrap(res.Error(), "patching a Kong consumer")
+			}
+		}
+
+		return nil
+	}
+
+	if res.StatusCode != http.StatusNotFound {
+		glog.Errorf("Unexpected response searching a Kong Certificate: %v", res)
+		return res.Error()
+	}
+
 	cert := &kongadminv1.Certificate{
+		Required: kongadminv1.Required{
+			ID: server.SSLCert.ID,
+		},
 		Cert:  sc,
 		Key:   sk,
 		Hosts: []string{server.Hostname},
@@ -823,7 +848,7 @@ func syncCertificate(server *ingress.Server, client *kong.RestClient) error {
 
 	glog.Infof("creating Kong SSL Certificate for host %v", server.Hostname)
 
-	cert, res := client.Certificates().Create(cert)
+	cert, res = client.Certificates().Create(cert)
 	if res.StatusCode != http.StatusCreated {
 		glog.Errorf("Unexpected error creating Kong Certificate: %v", res)
 		return res.Error()

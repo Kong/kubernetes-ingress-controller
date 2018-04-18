@@ -27,7 +27,11 @@ import (
 // SSLCert describes a SSL certificate to be used in a server
 type SSLCert struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Certificate       *x509.Certificate `json:"certificate,omitempty"`
+
+	// ID contains the object metadata UID from the Kubenretes Secret
+	ID string `json:"id,omitempty"`
+
+	Certificate *x509.Certificate `json:"certificate,omitempty"`
 	// CAFileName contains the path to the file with the root certificate
 	CAFileName string `json:"caFileName"`
 	// PemFileName contains the path to the file with the certificate and key concatenated

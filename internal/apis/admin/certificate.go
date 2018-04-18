@@ -15,6 +15,7 @@ type CertificateInterface interface {
 	List(params url.Values) (*adminv1.CertificateList, error)
 	Get(name string) (*adminv1.Certificate, *APIResponse)
 	Create(sni *adminv1.Certificate) (*adminv1.Certificate, *APIResponse)
+	Patch(string, *adminv1.Certificate) (*adminv1.Certificate, *APIResponse)
 	Delete(name string) error
 }
 
@@ -31,6 +32,12 @@ func (a *certificateAPI) Create(target *adminv1.Certificate) (*adminv1.Certifica
 func (a *certificateAPI) Get(name string) (*adminv1.Certificate, *APIResponse) {
 	out := &adminv1.Certificate{}
 	err := a.client.Get(name, out)
+	return out, err
+}
+
+func (a *certificateAPI) Patch(id string, cert *adminv1.Certificate) (*adminv1.Certificate, *APIResponse) {
+	out := &adminv1.Certificate{}
+	err := a.client.Patch(id, cert, out)
 	return out, err
 }
 

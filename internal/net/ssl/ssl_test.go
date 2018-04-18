@@ -68,7 +68,7 @@ func TestAddOrUpdateCertAndKey(t *testing.T) {
 	c := certutil.EncodeCertPEM(cert.Cert)
 	k := certutil.EncodePrivateKeyPEM(cert.Key)
 
-	ngxCert, err := AddOrUpdateCertAndKey(name, c, k, []byte{}, fs)
+	ngxCert, err := AddOrUpdateCertAndKey("", name, c, k, []byte{}, fs)
 	if err != nil {
 		t.Fatalf("unexpected error checking SSL certificate: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestCACert(t *testing.T) {
 	k := certutil.EncodePrivateKeyPEM(cert.Key)
 	ca := certutil.EncodeCertPEM(CA.Cert)
 
-	ngxCert, err := AddOrUpdateCertAndKey(name, c, k, ca, fs)
+	ngxCert, err := AddOrUpdateCertAndKey("", name, c, k, ca, fs)
 	if err != nil {
 		t.Fatalf("unexpected error checking SSL certificate: %v", err)
 	}

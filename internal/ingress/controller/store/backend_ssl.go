@@ -97,7 +97,7 @@ func (s k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error)
 
 		// If 'ca.crt' is also present, it will allow this secret to be used in the
 		// 'nginx.ingress.kubernetes.io/auth-tls-secret' annotation
-		sslCert, err = ssl.AddOrUpdateCertAndKey(nsSecName, cert, key, ca, s.filesystem)
+		sslCert, err = ssl.AddOrUpdateCertAndKey(fmt.Sprintf("%v", secret.GetUID()), nsSecName, cert, key, ca, s.filesystem)
 		if err != nil {
 			return nil, fmt.Errorf("unexpected error creating pem file: %v", err)
 		}

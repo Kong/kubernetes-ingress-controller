@@ -8,7 +8,6 @@ The order is not related to their priority.
 - Allow custom upstream configurations (Kong Service).
 - Leader election to allow multiple instances of the ingress controller.
 - Status update of Ingress.
-- Add support to update Kong certificates
 - Use and [admission controller][0] to validate custom types
 
 [0]: https://kubernetes.io/docs/admin/extensible-admission-controllers/

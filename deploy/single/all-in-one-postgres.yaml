@@ -371,7 +371,7 @@ spec:
         # the default service is the kong proxy service
         - --default-backend-service=kong/kong-proxy
         # Service from were we extract the IP address/es to use in Ingress status
-        - --publish-service=kong/kong-proxy
+        # - --publish-service=kong/kong-proxy
         env:
         - name: POD_NAME
           valueFrom:

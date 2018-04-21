@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/imdario/mergo"
@@ -34,6 +36,7 @@ import (
 	kongadminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
@@ -63,8 +66,9 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 		}
 
 		// check the certificate is present in kong
-		if server.SSLCertificate != "" {
-			err := syncCertificate(server, n.cfg.Kong.Client)
+		if server.SSLCert != nil {
+			glog.Infof("syncing SSL Certificate %v", server.SSLCert.ID)
+			err := n.syncCertificate(server)
 			if err != nil {
 				return err
 			}
@@ -203,6 +207,11 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			}
 
 			ingress := location.Ingress
+			if ingress == nil {
+				// location is the default backend (not mapped against Kong)
+				continue
+			}
+
 			kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
@@ -553,7 +562,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 		}
 
 		protos := []string{"http"}
-		if server.SSLCertificate != "" {
+		if server.SSLCert != nil {
 			protos = append(protos, "https")
 		}
 
@@ -565,6 +574,11 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			}
 
 			ingress := location.Ingress
+			if ingress == nil {
+				// location is the default backend (not mapped against Kong)
+				continue
+			}
+
 			kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
@@ -629,7 +643,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 					if !found {
 						glog.Infof("updating Kong Route for host %v, path %v and service %v (change in protocols)", server.Hostname, location.Path, svc.ID)
 						route.Protocols = protos
-						_, res := client.Routes().Patch(route)
+						_, res := client.Routes().Patch(route.ID, route)
 						if res.StatusCode != http.StatusOK {
 							glog.Errorf("Unexpected error updating Kong Route: %v", res)
 							return false, res.Error()
@@ -812,6 +826,11 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 		}
 
 		ingress := location.Ingress
+		if ingress == nil {
+			// location is the default backend (not mapped against Kong)
+			continue
+		}
+
 		kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
 		if err != nil {
 			glog.V(5).Infof("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
@@ -878,14 +897,17 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 // syncCertificate synchronizes the state of referenced secrets by Ingress
 // rules with Kong certificates.
 // This process only create or update certificates in Kong
-func syncCertificate(server *ingress.Server, client *kong.RestClient) error {
+func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 	if server.SSLCert == nil {
 		return nil
 	}
 
 	if server.SSLCert.ID == "" {
+		glog.Warningf("certificate %v/%v is invalid", server.SSLCert.Namespace, server.SSLCert.Name)
 		return nil
 	}
+
+	client := n.cfg.Client
 
 	sc := bytes.NewBuffer(server.SSLCert.Raw.Cert).String()
 	sk := bytes.NewBuffer(server.SSLCert.Raw.Key).String()
@@ -893,7 +915,26 @@ func syncCertificate(server *ingress.Server, client *kong.RestClient) error {
 	kongCertificate, res := client.Certificates().Get(server.SSLCert.ID)
 	if res.StatusCode == http.StatusOK {
 		// check if an update is required
-		if sc != kongCertificate.Cert || sk != kongCertificate.Key {
+		name := fmt.Sprintf("temporal-cert-%v", time.Now().UnixNano())
+		pem, err := ssl.AddOrUpdateCertAndKey(name,
+			[]byte(strings.TrimSpace(kongCertificate.Cert)),
+			[]byte(strings.TrimSpace(kongCertificate.Key)),
+			[]byte{},
+			n.fileSystem)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			os.Remove(pem.PemFileName)
+			os.Remove(pem.FullChainPemFileName)
+		}()
+
+		glog.Infof("SHA %v", server.SSLCert.PemSHA != pem.PemSHA)
+		glog.Infof("SHA %v", server.SSLCert.PemSHA)
+		glog.Infof("SHA %v", pem.PemSHA)
+
+		if server.SSLCert.PemSHA != pem.PemSHA {
 			cert := &kongadminv1.Certificate{
 				Cert: sc,
 				Key:  sk,

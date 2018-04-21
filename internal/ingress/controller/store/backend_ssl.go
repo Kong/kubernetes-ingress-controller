@@ -17,6 +17,7 @@ limitations under the License.
 package store
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -95,9 +96,15 @@ func (s k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error)
 			return nil, fmt.Errorf("secret %v has no 'tls.key'", secretName)
 		}
 
+		sc := bytes.NewBuffer(cert).String()
+		sc = strings.TrimSpace(sc)
+
+		sk := bytes.NewBuffer(key).String()
+		sk = strings.TrimSpace(sk)
+
 		// If 'ca.crt' is also present, it will allow this secret to be used in the
 		// 'nginx.ingress.kubernetes.io/auth-tls-secret' annotation
-		sslCert, err = ssl.AddOrUpdateCertAndKey(fmt.Sprintf("%v", secret.GetUID()), nsSecName, cert, key, ca, s.filesystem)
+		sslCert, err = ssl.AddOrUpdateCertAndKey(nsSecName, []byte(sc), []byte(sk), ca, s.filesystem)
 		if err != nil {
 			return nil, fmt.Errorf("unexpected error creating pem file: %v", err)
 		}
@@ -123,6 +130,7 @@ func (s k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error)
 
 	sslCert.Name = secret.Name
 	sslCert.Namespace = secret.Namespace
+	sslCert.ID = fmt.Sprintf("%v", secret.GetUID())
 
 	return sslCert, nil
 }

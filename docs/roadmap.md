@@ -5,7 +5,6 @@ The order is not related to their priority.
 
 - Use tags in resources created in Kong.
 - Do not replace object manually created in the Kong admin API.
-- Allow custom upstream configurations (Kong Service).
-- Use and [admission controller][0] to validate custom types
+- Use and [admission controller][0] to validate custom types and default values
 
 [0]: https://kubernetes.io/docs/admin/extensible-admission-controllers/

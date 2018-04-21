@@ -44,6 +44,9 @@ func (a *routeAPI) Get(name string) (*adminv1.Route, *APIResponse) {
 }
 
 func (a *routeAPI) List(params url.Values) (*adminv1.RouteList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
 	routeList := &adminv1.RouteList{}
 	request := a.client.RestClient().Get().Resource("routes")
 	for k, vals := range params {

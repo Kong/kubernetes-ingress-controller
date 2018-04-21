@@ -35,6 +35,10 @@ func (a *upstreamAPI) Get(name string) (*adminv1.Upstream, *APIResponse) {
 }
 
 func (a *upstreamAPI) List(params url.Values) (*adminv1.UpstreamList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	upstreamList := &adminv1.UpstreamList{}
 	request := a.client.RestClient().Get().Resource("upstreams")
 	for k, vals := range params {

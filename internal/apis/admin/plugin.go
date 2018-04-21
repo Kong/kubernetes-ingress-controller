@@ -82,6 +82,10 @@ func (a *pluginAPI) Get(name string) (*adminv1.Plugin, *APIResponse) {
 }
 
 func (a *pluginAPI) List(params url.Values) (*adminv1.PluginList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	PluginList := &adminv1.PluginList{}
 	request := a.client.RestClient().Get().Resource("plugins")
 	for k, vals := range params {

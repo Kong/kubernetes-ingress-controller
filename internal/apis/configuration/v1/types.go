@@ -67,7 +67,7 @@ type ActiveHealthCheck struct {
 }
 
 type Passive struct {
-	Healthy   Healthy    `json:"healthy,omitempty"`
+	Healthy   *Healthy   `json:"healthy,omitempty"`
 	Unhealthy *Unhealthy `json:"unhealthy,omitempty"`
 }
 

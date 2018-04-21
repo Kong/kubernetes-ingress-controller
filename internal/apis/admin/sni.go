@@ -35,6 +35,10 @@ func (a *sniAPI) Get(name string) (*adminv1.SNI, *APIResponse) {
 }
 
 func (a *sniAPI) List(params url.Values) (*adminv1.SNIList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	targets := &adminv1.SNIList{}
 	request := a.client.RestClient().Get().Resource("snis")
 	for k, vals := range params {

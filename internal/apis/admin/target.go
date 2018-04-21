@@ -62,6 +62,10 @@ func (a *targetAPI) Get(name string) (*adminv1.Target, *APIResponse) {
 }
 
 func (a *targetAPI) List(params url.Values, upstream string) (*adminv1.TargetList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	targets := &adminv1.TargetList{}
 	request := a.client.
 		RestClient().

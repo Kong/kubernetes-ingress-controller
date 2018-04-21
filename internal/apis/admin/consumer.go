@@ -42,6 +42,10 @@ func (a *consumerAPI) Get(name string) (*adminv1.Consumer, *APIResponse) {
 }
 
 func (a *consumerAPI) List(params url.Values) (*adminv1.ConsumerList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	ConsumerList := &adminv1.ConsumerList{}
 	request := a.client.RestClient().Get().Resource("consumers")
 	for k, vals := range params {

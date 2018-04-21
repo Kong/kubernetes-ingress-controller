@@ -42,6 +42,10 @@ func (a *certificateAPI) Patch(id string, cert *adminv1.Certificate) (*adminv1.C
 }
 
 func (a *certificateAPI) List(params url.Values) (*adminv1.CertificateList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	list := &adminv1.CertificateList{}
 	request := a.client.RestClient().Get().Resource("consumers")
 	for k, vals := range params {

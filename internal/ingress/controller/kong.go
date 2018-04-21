@@ -22,6 +22,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/imdario/mergo"
+
+	"github.com/fatih/structs"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -67,7 +70,7 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 			}
 		}
 
-		err := syncUpstreams(server.Locations, ingressCfg.Backends, n.cfg.Kong.Client)
+		err := n.syncUpstreams(server.Locations, ingressCfg.Backends)
 		if err != nil {
 			return err
 		}
@@ -211,6 +214,12 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				continue
 			}
 
+			ingress := location.Ingress
+			kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
+			if err != nil {
+				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
+			}
+
 			name := buildName(backend, location)
 			for _, upstream := range ingressCfg.Backends {
 				if upstream.Name != backend {
@@ -237,6 +246,24 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 						Retries:  5,
 					}
 
+					if kongIngress != nil && kongIngress.Proxy != nil {
+						if kongIngress.Proxy.ConnectTimeout > 0 {
+							s.ConnectTimeout = kongIngress.Proxy.ConnectTimeout
+						}
+
+						if kongIngress.Proxy.ReadTimeout > 0 {
+							s.ReadTimeout = kongIngress.Proxy.ReadTimeout
+						}
+
+						if kongIngress.Proxy.WriteTimeout > 0 {
+							s.WriteTimeout = kongIngress.Proxy.WriteTimeout
+						}
+
+						if kongIngress.Proxy.Retries > 0 {
+							s.Retries = kongIngress.Proxy.Retries
+						}
+					}
+
 					glog.Infof("creating Kong Service name %v", name)
 					_, res := client.Services().Create(s)
 					if res.StatusCode != http.StatusCreated {
@@ -244,6 +271,8 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 						return false, res.Error()
 					}
 				}
+
+				//TODO: check if an update is required
 
 				kongServices, err = client.Services().List(nil)
 				if err != nil {
@@ -542,6 +571,12 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				continue
 			}
 
+			ingress := location.Ingress
+			kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
+			if err != nil {
+				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
+			}
+
 			name := buildName(backend, location)
 			svc := getKongService(name, kongServices.Items)
 			if svc == nil {
@@ -554,6 +589,24 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				Protocols: protos,
 				Hosts:     []string{server.Hostname},
 				Service:   kongadminv1.InlineService{ID: svc.ID},
+			}
+
+			if kongIngress != nil {
+				if len(kongIngress.Route.Methods) > 0 {
+					r.Methods = kongIngress.Route.Methods
+				}
+
+				if kongIngress.Route.PreserveHost != r.PreserveHost {
+					r.PreserveHost = kongIngress.Route.PreserveHost
+				}
+
+				if kongIngress.Route.RegexPriority != r.RegexPriority {
+					r.RegexPriority = kongIngress.Route.RegexPriority
+				}
+
+				if kongIngress.Route.StripPath != r.StripPath {
+					r.StripPath = kongIngress.Route.StripPath
+				}
 			}
 
 			if !isRouteInKong(r, kongRoutes.Items) {
@@ -590,6 +643,8 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 						}
 					}
 				}
+
+				//TODO: check if an update is required
 			}
 
 			kongRoutes, err = client.Routes().List(nil)
@@ -751,7 +806,9 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 // syncUpstreams synchronizes the state of Ingress backends against Kong upstreams
 // This process only creates new Kong upstreams and synchronizes targets (Kubernetes endpoints)
-func syncUpstreams(locations []*ingress.Location, backends []*ingress.Backend, client *kong.RestClient) error {
+func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends []*ingress.Backend) error {
+	client := n.cfg.Kong.Client
+
 	glog.V(3).Infof("syncing Kong upstreams")
 	kongUpstreams, err := client.Upstreams().List(nil)
 	if err != nil {
@@ -765,6 +822,12 @@ func syncUpstreams(locations []*ingress.Location, backends []*ingress.Backend, c
 			continue
 		}
 
+		ingress := location.Ingress
+		kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
+		if err != nil {
+			glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
+		}
+
 		for _, upstream := range backends {
 			if upstream.Name != backend {
 				continue
@@ -773,8 +836,32 @@ func syncUpstreams(locations []*ingress.Location, backends []*ingress.Backend, c
 			upstreamName := buildName(backend, location)
 
 			if !isUpstreamInKong(upstreamName, kongUpstreams.Items) {
-				upstream := &kongadminv1.Upstream{
-					Name: upstreamName,
+				upstream := kongadminv1.NewUpstream(upstreamName)
+
+				if kongIngress != nil && kongIngress.Upstream != nil {
+					if kongIngress.Upstream.HashOn != "" {
+						upstream.HashOn = kongIngress.Upstream.HashOn
+					}
+
+					if kongIngress.Upstream.HashFallback != "" {
+						upstream.HashFallback = kongIngress.Upstream.HashFallback
+					}
+
+					if kongIngress.Upstream.Slots != 0 {
+						upstream.Slots = kongIngress.Upstream.Slots
+					}
+
+					if kongIngress.Upstream.Healthchecks != nil {
+						if kongIngress.Upstream.Healthchecks.Active != nil {
+							m := structs.Map(kongIngress.Upstream.Healthchecks.Active)
+							mergo.MapWithOverwrite(upstream.Healthchecks.Active, m)
+						}
+
+						if kongIngress.Upstream.Healthchecks.Passive != nil {
+							m := structs.Map(kongIngress.Upstream.Healthchecks.Passive)
+							mergo.MapWithOverwrite(upstream.Healthchecks.Passive, m)
+						}
+					}
 				}
 
 				glog.Infof("creating Kong Upstream with name %v", upstreamName)
@@ -793,6 +880,8 @@ func syncUpstreams(locations []*ingress.Location, backends []*ingress.Backend, c
 			if err != nil {
 				return errors.Wrap(err, "syncing targets")
 			}
+
+			//TODO: check if an update is required
 		}
 	}
 

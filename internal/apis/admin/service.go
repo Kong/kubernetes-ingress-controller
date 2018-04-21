@@ -35,6 +35,10 @@ func (a *serviceAPI) Get(name string) (*adminv1.Service, *APIResponse) {
 }
 
 func (a *serviceAPI) List(params url.Values) (*adminv1.ServiceList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	ServiceList := &adminv1.ServiceList{}
 	request := a.client.RestClient().Get().Resource("services")
 	for k, vals := range params {

@@ -65,6 +65,8 @@ type ingressLister interface {
 type Config struct {
 	Client clientset.Interface
 
+	OnStartedLeading func()
+
 	PublishService string
 
 	PublishStatusAddress string
@@ -95,6 +97,8 @@ type statusSync struct {
 	// workqueue used to keep in sync the status IP/s
 	// in the Ingress rules
 	syncQueue *task.Queue
+
+	onStartedLeading func()
 }
 
 // Run starts the loop to keep the status in sync
@@ -174,6 +178,8 @@ func NewStatusSyncer(config Config) Sync {
 		pod: pod,
 
 		Config: config,
+
+		onStartedLeading: config.OnStartedLeading,
 	}
 	st.syncQueue = task.NewCustomTaskQueue(st.sync, st.keyfunc)
 
@@ -193,6 +199,8 @@ func NewStatusSyncer(config Config) Sync {
 				st.syncQueue.Enqueue("sync status")
 				return false, nil
 			}, stop)
+
+			st.onStartedLeading()
 		},
 		OnStoppedLeading: func() {
 			glog.V(2).Infof("I am not status update leader anymore")

@@ -181,19 +181,8 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 // if there was any changes to the kong plugins applied to the service
 func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool, error) {
 	client := n.cfg.Kong.Client
-	kongServices, err := client.Services().List(nil)
-	if err != nil {
-		return false, err
-	}
 
-	// create a copy of the existing services in kong to be able to run a
-	// comparison between the referenced k8s services from Ingress and kong.
-	servicesToRemove := sets.NewString()
-	for _, old := range kongServices.Items {
-		if !servicesToRemove.Has(old.Name) {
-			servicesToRemove.Insert(old.Name)
-		}
-	}
+	servicesToKeep := sets.NewString()
 
 	// triggerReload indicates if the sync process altered configuration with services
 	// and require an additional run
@@ -235,7 +224,8 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 					port = 443
 				}
 
-				if !isServiceInKong(name, kongServices.Items) {
+				_, res := client.Services().Get(name)
+				if res.StatusCode == http.StatusNotFound {
 					s := &kongadminv1.Service{
 						Name:     name,
 						Path:     "/",
@@ -271,23 +261,16 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 					}
 				}
 
-				//TODO: check if an update is required
-
-				kongServices, err = client.Services().List(nil)
-				if err != nil {
-					return false, err
-				}
-
 				// do not remove the service
-				if servicesToRemove.Has(name) {
-					servicesToRemove.Delete(name)
+				if !servicesToKeep.Has(name) {
+					servicesToKeep.Insert(name)
 				}
 
 				break
 			}
 
-			svc := getKongService(name, kongServices.Items)
-			if svc == nil {
+			svc, res := client.Services().Get(name)
+			if res.StatusCode == http.StatusNotFound || svc == nil {
 				glog.Warningf("service %v does not exists in kong", name)
 				continue
 			}
@@ -399,10 +382,26 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 		}
 	}
 
+	kongServices, err := client.Services().List(nil)
+	if err != nil {
+		return false, err
+	}
+
+	serviceNames := sets.NewString()
+
+	for _, svc := range kongServices.Items {
+		if !serviceNames.Has(svc.Name) {
+			serviceNames.Insert(svc.Name)
+		}
+	}
+
+	servicesToRemove := serviceNames.Difference(servicesToKeep)
+
 	// remove all those services that are present in Kong but not in the current Kubernetes state
 	for _, svcName := range servicesToRemove.List() {
-		svc := getKongService(svcName, kongServices.Items)
-		if svc == nil {
+		svc, res := client.Services().Get(svcName)
+		if res.StatusCode == http.StatusNotFound || svc == nil {
+			glog.Warningf("service %v does not exists in kong", svcName)
 			continue
 		}
 
@@ -546,11 +545,6 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 		}
 	}
 
-	kongServices, err := client.Services().List(nil)
-	if err != nil {
-		return false, err
-	}
-
 	// Routes
 	for _, server := range ingressCfg.Servers {
 		if server.Hostname == "_" {
@@ -577,9 +571,9 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			}
 
 			name := buildName(backend, location)
-			svc := getKongService(name, kongServices.Items)
-			if svc == nil {
-				glog.V(3).Infof("there is no Kong service with name %v", name)
+			svc, res := client.Services().Get(name)
+			if res.StatusCode == http.StatusNotFound || svc == nil {
+				glog.Warningf("service %v does not exists in kong", name)
 				continue
 			}
 
@@ -972,17 +966,6 @@ func getKongRoute(hostname, path string, routes []kongadminv1.Route) *kongadminv
 	return nil
 }
 
-// getKongService returns a Service from a list using the name field as filter
-func getKongService(name string, services []kongadminv1.Service) *kongadminv1.Service {
-	for _, svc := range services {
-		if svc.Name == name {
-			return &svc
-		}
-	}
-
-	return nil
-}
-
 // getUpstreamTarget returns a Target from a list using the target field (IP:port) as filter
 func getUpstreamTarget(target string, targets []kongadminv1.Target) *kongadminv1.Target {
 	for _, ut := range targets {
@@ -1010,17 +993,6 @@ func isCertificateInKong(host string, certs []kongadminv1.Certificate) bool {
 	for _, cert := range certs {
 		s := sets.NewString(cert.Hosts...)
 		if s.Has(host) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isServiceInKong checks if a service exists or not in Kong
-func isServiceInKong(name string, services []kongadminv1.Service) bool {
-	for _, svc := range services {
-		if svc.Name == name {
 			return true
 		}
 	}

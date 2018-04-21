@@ -112,12 +112,11 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 // kong comparing the endpoints in Kubernetes and the targets in a
 // particular kong upstream. To avoid downtimes we create the new targets
 // first and then remove the killed ones.
-func syncTargets(upstream string, kongUpstreams []kongadminv1.Upstream,
-	ingressEndpopint *ingress.Backend, client *kong.RestClient) error {
+func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kong.RestClient) error {
 	glog.V(3).Infof("syncing Kong targets")
-	b := getKongUpstream(upstream, kongUpstreams)
-	if b == nil {
-		glog.Errorf("there is no upstream for hostname %v", upstream)
+	b, res := client.Upstreams().Get(upstream)
+	if res.StatusCode == http.StatusNotFound {
+		glog.Errorf("there is no upstream with name %v in Kong", upstream)
 		return nil
 	}
 
@@ -810,10 +809,6 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 	client := n.cfg.Kong.Client
 
 	glog.V(3).Infof("syncing Kong upstreams")
-	kongUpstreams, err := client.Upstreams().List(nil)
-	if err != nil {
-		return err
-	}
 
 	for _, location := range locations {
 		backend := location.Backend
@@ -825,7 +820,7 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 		ingress := location.Ingress
 		kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
 		if err != nil {
-			glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
+			glog.V(5).Infof("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
 		}
 
 		for _, upstream := range backends {
@@ -835,7 +830,8 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 
 			upstreamName := buildName(backend, location)
 
-			if !isUpstreamInKong(upstreamName, kongUpstreams.Items) {
+			_, res := client.Upstreams().Get(upstreamName)
+			if res.StatusCode == http.StatusNotFound {
 				upstream := kongadminv1.NewUpstream(upstreamName)
 
 				if kongIngress != nil && kongIngress.Upstream != nil {
@@ -866,17 +862,14 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 
 				glog.Infof("creating Kong Upstream with name %v", upstreamName)
 
-				u, res := client.Upstreams().Create(upstream)
+				_, res := client.Upstreams().Create(upstream)
 				if res.StatusCode != http.StatusCreated {
 					glog.Errorf("Unexpected error creating Kong Upstream: %v", res)
 					return res.Error()
 				}
-
-				// Add the new upstream to avoid new requests inside the for loop
-				kongUpstreams.Items = append(kongUpstreams.Items, *u)
 			}
 
-			err := syncTargets(upstreamName, kongUpstreams.Items, upstream, client)
+			err := syncTargets(upstreamName, upstream, client)
 			if err != nil {
 				return errors.Wrap(err, "syncing targets")
 			}
@@ -990,17 +983,6 @@ func getKongService(name string, services []kongadminv1.Service) *kongadminv1.Se
 	return nil
 }
 
-// getKongUpstream returns an Upstream from a list using the name field as filter
-func getKongUpstream(name string, upstreams []kongadminv1.Upstream) *kongadminv1.Upstream {
-	for _, upstream := range upstreams {
-		if upstream.Name == name {
-			return &upstream
-		}
-	}
-
-	return nil
-}
-
 // getUpstreamTarget returns a Target from a list using the target field (IP:port) as filter
 func getUpstreamTarget(target string, targets []kongadminv1.Target) *kongadminv1.Target {
 	for _, ut := range targets {
@@ -1028,17 +1010,6 @@ func isCertificateInKong(host string, certs []kongadminv1.Certificate) bool {
 	for _, cert := range certs {
 		s := sets.NewString(cert.Hosts...)
 		if s.Has(host) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isUpstreamInKong checks if an upstream exists or not in Kong
-func isUpstreamInKong(name string, upstreams []kongadminv1.Upstream) bool {
-	for _, upstream := range upstreams {
-		if upstream.Name == name {
 			return true
 		}
 	}

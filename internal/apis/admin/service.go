@@ -55,7 +55,7 @@ func (a *serviceAPI) List(params url.Values) (*adminv1.ServiceList, error) {
 	}
 
 	if len(ServiceList.NextPage) > 0 {
-		params.Add("offset", ServiceList.Offset)
+		params.Set("offset", ServiceList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

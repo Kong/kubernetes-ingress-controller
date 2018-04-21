@@ -102,7 +102,7 @@ func (a *pluginAPI) List(params url.Values) (*adminv1.PluginList, error) {
 	}
 
 	if len(PluginList.NextPage) > 0 {
-		params.Add("offset", PluginList.Offset)
+		params.Set("offset", PluginList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

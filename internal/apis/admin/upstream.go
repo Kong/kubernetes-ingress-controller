@@ -55,7 +55,7 @@ func (a *upstreamAPI) List(params url.Values) (*adminv1.UpstreamList, error) {
 	}
 
 	if len(upstreamList.NextPage) > 0 {
-		params.Add("offset", upstreamList.Offset)
+		params.Set("offset", upstreamList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

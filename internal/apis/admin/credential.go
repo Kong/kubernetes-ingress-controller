@@ -91,7 +91,7 @@ func (a *credentialAPI) List(name string, params url.Values) (*adminv1.Credentia
 	}
 
 	if len(credentials.NextPage) > 0 {
-		params.Add("offset", credentials.Offset)
+		params.Set("offset", credentials.Offset)
 		result, err := a.List(name, params)
 		if err != nil {
 			return nil, err

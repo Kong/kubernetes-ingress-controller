@@ -62,7 +62,7 @@ func (a *certificateAPI) List(params url.Values) (*adminv1.CertificateList, erro
 	}
 
 	if len(list.NextPage) > 0 {
-		params.Add("offset", list.Offset)
+		params.Set("offset", list.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

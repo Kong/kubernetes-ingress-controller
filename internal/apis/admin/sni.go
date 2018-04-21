@@ -55,7 +55,7 @@ func (a *sniAPI) List(params url.Values) (*adminv1.SNIList, error) {
 	}
 
 	if len(targets.NextPage) > 0 {
-		params.Add("offset", targets.Offset)
+		params.Set("offset", targets.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

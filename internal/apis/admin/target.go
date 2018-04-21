@@ -87,7 +87,7 @@ func (a *targetAPI) List(params url.Values, upstream string) (*adminv1.TargetLis
 	}
 
 	if len(targets.NextPage) > 0 {
-		params.Add("offset", targets.Offset)
+		params.Set("offset", targets.Offset)
 		result, err := a.List(params, upstream)
 		if err != nil {
 			return nil, err

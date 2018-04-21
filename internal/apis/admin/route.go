@@ -63,7 +63,7 @@ func (a *routeAPI) List(params url.Values) (*adminv1.RouteList, error) {
 	}
 
 	if len(routeList.NextPage) > 0 {
-		params.Add("offset", routeList.Offset)
+		params.Set("offset", routeList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

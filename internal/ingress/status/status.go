@@ -200,7 +200,9 @@ func NewStatusSyncer(config Config) Sync {
 	callbacks := leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(stop <-chan struct{}) {
 			glog.V(2).Infof("I am the new status update leader")
-			st.Config.OnStartedLeading()
+			if st.Config.OnStartedLeading != nil {
+				st.Config.OnStartedLeading()
+			}
 			go st.syncQueue.Run(time.Second, stop)
 			wait.PollUntil(updateInterval, func() (bool, error) {
 				// send a dummy object to the queue to force a sync

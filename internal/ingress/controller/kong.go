@@ -930,10 +930,6 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 			os.Remove(pem.FullChainPemFileName)
 		}()
 
-		glog.Infof("SHA %v", server.SSLCert.PemSHA != pem.PemSHA)
-		glog.Infof("SHA %v", server.SSLCert.PemSHA)
-		glog.Infof("SHA %v", pem.PemSHA)
-
 		if server.SSLCert.PemSHA != pem.PemSHA {
 			cert := &kongadminv1.Certificate{
 				Cert: sc,
@@ -1005,40 +1001,6 @@ func getKongRoute(hostname, path string, routes []kongadminv1.Route) *kongadminv
 	}
 
 	return nil
-}
-
-// getUpstreamTarget returns a Target from a list using the target field (IP:port) as filter
-func getUpstreamTarget(target string, targets []kongadminv1.Target) *kongadminv1.Target {
-	for _, ut := range targets {
-		if ut.Target == target {
-			return &ut
-		}
-	}
-
-	return nil
-}
-
-// isTargetInKong checks if a target exists or not in Kong
-func isTargetInKong(host, port string, targets []kongadminv1.Target) bool {
-	for _, t := range targets {
-		if t.Target == fmt.Sprintf("%v:%v", host, port) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isCertificateInKong checks if a SSL certificate exists or not in Kong
-func isCertificateInKong(host string, certs []kongadminv1.Certificate) bool {
-	for _, cert := range certs {
-		s := sets.NewString(cert.Hosts...)
-		if s.Has(host) {
-			return true
-		}
-	}
-
-	return false
 }
 
 // isRouteInKong checks if a route exists or not in Kong

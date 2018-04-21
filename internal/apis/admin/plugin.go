@@ -15,7 +15,7 @@ type PluginGetter interface {
 
 type PluginInterface interface {
 	List(url.Values) (*adminv1.PluginList, error)
-	Get(id string) (*adminv1.Plugin, *APIResponse)
+	Get(string) (*adminv1.Plugin, *APIResponse)
 	CreateInRoute(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	CreateInService(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	Patch(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)

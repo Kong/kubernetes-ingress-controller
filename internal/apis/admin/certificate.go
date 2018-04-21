@@ -12,11 +12,11 @@ type CertificateGetter interface {
 }
 
 type CertificateInterface interface {
-	List(params url.Values) (*adminv1.CertificateList, error)
-	Get(name string) (*adminv1.Certificate, *APIResponse)
-	Create(sni *adminv1.Certificate) (*adminv1.Certificate, *APIResponse)
+	List(url.Values) (*adminv1.CertificateList, error)
+	Get(string) (*adminv1.Certificate, *APIResponse)
+	Create(*adminv1.Certificate) (*adminv1.Certificate, *APIResponse)
 	Patch(string, *adminv1.Certificate) (*adminv1.Certificate, *APIResponse)
-	Delete(name string) error
+	Delete(string) error
 }
 
 type certificateAPI struct {

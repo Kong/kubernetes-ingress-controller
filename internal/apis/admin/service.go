@@ -12,10 +12,10 @@ type ServiceGetter interface {
 }
 
 type ServiceInterface interface {
-	List(params url.Values) (*adminv1.ServiceList, error)
-	Get(name string) (*adminv1.Service, *APIResponse)
-	Create(service *adminv1.Service) (*adminv1.Service, *APIResponse)
-	Delete(name string) error
+	List(url.Values) (*adminv1.ServiceList, error)
+	Get(string) (*adminv1.Service, *APIResponse)
+	Create(*adminv1.Service) (*adminv1.Service, *APIResponse)
+	Delete(string) error
 }
 
 type serviceAPI struct {

@@ -15,10 +15,10 @@ type TargetGetter interface {
 }
 
 type TargetInterface interface {
-	List(params url.Values, upstream string) (*adminv1.TargetList, error)
-	Get(name string) (*adminv1.Target, *APIResponse)
-	Create(target *adminv1.Target, upstream string) (*adminv1.Target, *APIResponse)
-	Delete(name, upstream string) error
+	List(url.Values, string) (*adminv1.TargetList, error)
+	Get(string) (*adminv1.Target, *APIResponse)
+	Create(*adminv1.Target, string) (*adminv1.Target, *APIResponse)
+	Delete(string, string) error
 }
 
 type targetAPI struct {

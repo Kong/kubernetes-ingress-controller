@@ -2,7 +2,6 @@ package admin
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 
 	adminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
@@ -13,11 +12,11 @@ type RouteGetter interface {
 }
 
 type RouteInterface interface {
-	List(params url.Values) (*adminv1.RouteList, error)
-	Get(route string) (*adminv1.Route, *APIResponse)
-	Create(route *adminv1.Route) (*adminv1.Route, *APIResponse)
-	Patch(route *adminv1.Route) (*adminv1.Route, *APIResponse)
-	Delete(route string) error
+	List(url.Values) (*adminv1.RouteList, error)
+	Get(string) (*adminv1.Route, *APIResponse)
+	Create(*adminv1.Route) (*adminv1.Route, *APIResponse)
+	Patch(string, *adminv1.Route) (*adminv1.Route, *APIResponse)
+	Delete(string) error
 }
 
 type routeAPI struct {
@@ -30,9 +29,8 @@ func (a *routeAPI) Create(route *adminv1.Route) (*adminv1.Route, *APIResponse) {
 	return out, err
 }
 
-func (a *routeAPI) Patch(route *adminv1.Route) (*adminv1.Route, *APIResponse) {
+func (a *routeAPI) Patch(id string, route *adminv1.Route) (*adminv1.Route, *APIResponse) {
 	out := &adminv1.Route{}
-	id := fmt.Sprintf("%v", route.GetUID())
 	err := a.client.Patch(id, route, out)
 	return out, err
 }

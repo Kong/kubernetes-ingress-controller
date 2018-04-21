@@ -12,10 +12,10 @@ type UpstreamGetter interface {
 }
 
 type UpstreamInterface interface {
-	List(params url.Values) (*adminv1.UpstreamList, error)
-	Get(name string) (*adminv1.Upstream, *APIResponse)
-	Create(route *adminv1.Upstream) (*adminv1.Upstream, *APIResponse)
-	Delete(name string) error
+	List(url.Values) (*adminv1.UpstreamList, error)
+	Get(string) (*adminv1.Upstream, *APIResponse)
+	Create(*adminv1.Upstream) (*adminv1.Upstream, *APIResponse)
+	Delete(string) error
 }
 
 type upstreamAPI struct {

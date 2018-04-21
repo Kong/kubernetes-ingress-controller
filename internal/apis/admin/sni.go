@@ -12,10 +12,10 @@ type SNIGetter interface {
 }
 
 type SNIInterface interface {
-	List(params url.Values) (*adminv1.SNIList, error)
-	Get(name string) (*adminv1.SNI, *APIResponse)
-	Create(sni *adminv1.SNI) (*adminv1.SNI, *APIResponse)
-	Delete(name string) error
+	List(url.Values) (*adminv1.SNIList, error)
+	Get(string) (*adminv1.SNI, *APIResponse)
+	Create(*adminv1.SNI) (*adminv1.SNI, *APIResponse)
+	Delete(string) error
 }
 
 type sniAPI struct {

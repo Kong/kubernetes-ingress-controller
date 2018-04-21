@@ -568,8 +568,28 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 			}
 
 			if !found {
-				// does not contains a TLS section but none of the host match
-				continue
+				// does not contains a TLS section but none of the
+				// host match or there is no hosts in the TLS section
+				// as last resort we valide the host against the certificate
+				// if is valid we use it.
+				for _, tls := range ing.Spec.TLS {
+					key := fmt.Sprintf("%v/%v", ing.Namespace, tls.SecretName)
+					cert, err := n.store.GetLocalSSLCert(key)
+					if err != nil {
+						glog.Warningf("ssl certificate \"%v\" does not exist in local store", key)
+						continue
+					}
+
+					if sets.NewString(cert.CN...).Has(host) {
+						tlsSecretName = tls.SecretName
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					continue
+				}
 			}
 
 			if tlsSecretName == "" {

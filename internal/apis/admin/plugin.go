@@ -15,7 +15,7 @@ type PluginGetter interface {
 
 type PluginInterface interface {
 	List(url.Values) (*adminv1.PluginList, error)
-	Get(id string) (*adminv1.Plugin, *APIResponse)
+	Get(string) (*adminv1.Plugin, *APIResponse)
 	CreateInRoute(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	CreateInService(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	Patch(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
@@ -82,6 +82,10 @@ func (a *pluginAPI) Get(name string) (*adminv1.Plugin, *APIResponse) {
 }
 
 func (a *pluginAPI) List(params url.Values) (*adminv1.PluginList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	PluginList := &adminv1.PluginList{}
 	request := a.client.RestClient().Get().Resource("plugins")
 	for k, vals := range params {
@@ -98,7 +102,7 @@ func (a *pluginAPI) List(params url.Values) (*adminv1.PluginList, error) {
 	}
 
 	if len(PluginList.NextPage) > 0 {
-		params.Add("offset", PluginList.Offset)
+		params.Set("offset", PluginList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

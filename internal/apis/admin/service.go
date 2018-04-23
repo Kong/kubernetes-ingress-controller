@@ -12,10 +12,10 @@ type ServiceGetter interface {
 }
 
 type ServiceInterface interface {
-	List(params url.Values) (*adminv1.ServiceList, error)
-	Get(name string) (*adminv1.Service, *APIResponse)
-	Create(service *adminv1.Service) (*adminv1.Service, *APIResponse)
-	Delete(name string) error
+	List(url.Values) (*adminv1.ServiceList, error)
+	Get(string) (*adminv1.Service, *APIResponse)
+	Create(*adminv1.Service) (*adminv1.Service, *APIResponse)
+	Delete(string) error
 }
 
 type serviceAPI struct {
@@ -35,6 +35,10 @@ func (a *serviceAPI) Get(name string) (*adminv1.Service, *APIResponse) {
 }
 
 func (a *serviceAPI) List(params url.Values) (*adminv1.ServiceList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	ServiceList := &adminv1.ServiceList{}
 	request := a.client.RestClient().Get().Resource("services")
 	for k, vals := range params {
@@ -51,7 +55,7 @@ func (a *serviceAPI) List(params url.Values) (*adminv1.ServiceList, error) {
 	}
 
 	if len(ServiceList.NextPage) > 0 {
-		params.Add("offset", ServiceList.Offset)
+		params.Set("offset", ServiceList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

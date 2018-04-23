@@ -45,7 +45,7 @@ var (
 )
 
 // AddOrUpdateCertAndKey creates a .pem file wth the cert and the key with the specified name
-func AddOrUpdateCertAndKey(id, name string, cert, key, ca []byte,
+func AddOrUpdateCertAndKey(name string, cert, key, ca []byte,
 	fs file.Filesystem) (*ingress.SSLCert, error) {
 
 	pemName := fmt.Sprintf("%v.pem", name)
@@ -163,7 +163,6 @@ func AddOrUpdateCertAndKey(id, name string, cert, key, ca []byte,
 		defer caFile.Close()
 
 		return &ingress.SSLCert{
-			ID:          id,
 			Certificate: pemCert,
 			CAFileName:  pemFileName,
 			PemFileName: pemFileName,
@@ -178,7 +177,6 @@ func AddOrUpdateCertAndKey(id, name string, cert, key, ca []byte,
 	}
 
 	s := &ingress.SSLCert{
-		ID:          id,
 		Certificate: pemCert,
 		PemFileName: pemFileName,
 		PemSHA:      file.SHA1(pemFileName),

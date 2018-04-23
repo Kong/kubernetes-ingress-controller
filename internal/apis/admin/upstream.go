@@ -12,10 +12,10 @@ type UpstreamGetter interface {
 }
 
 type UpstreamInterface interface {
-	List(params url.Values) (*adminv1.UpstreamList, error)
-	Get(name string) (*adminv1.Upstream, *APIResponse)
-	Create(route *adminv1.Upstream) (*adminv1.Upstream, *APIResponse)
-	Delete(name string) error
+	List(url.Values) (*adminv1.UpstreamList, error)
+	Get(string) (*adminv1.Upstream, *APIResponse)
+	Create(*adminv1.Upstream) (*adminv1.Upstream, *APIResponse)
+	Delete(string) error
 }
 
 type upstreamAPI struct {
@@ -35,6 +35,10 @@ func (a *upstreamAPI) Get(name string) (*adminv1.Upstream, *APIResponse) {
 }
 
 func (a *upstreamAPI) List(params url.Values) (*adminv1.UpstreamList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	upstreamList := &adminv1.UpstreamList{}
 	request := a.client.RestClient().Get().Resource("upstreams")
 	for k, vals := range params {
@@ -51,7 +55,7 @@ func (a *upstreamAPI) List(params url.Values) (*adminv1.UpstreamList, error) {
 	}
 
 	if len(upstreamList.NextPage) > 0 {
-		params.Add("offset", upstreamList.Offset)
+		params.Set("offset", upstreamList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

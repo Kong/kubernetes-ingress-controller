@@ -12,10 +12,10 @@ type SNIGetter interface {
 }
 
 type SNIInterface interface {
-	List(params url.Values) (*adminv1.SNIList, error)
-	Get(name string) (*adminv1.SNI, *APIResponse)
-	Create(sni *adminv1.SNI) (*adminv1.SNI, *APIResponse)
-	Delete(name string) error
+	List(url.Values) (*adminv1.SNIList, error)
+	Get(string) (*adminv1.SNI, *APIResponse)
+	Create(*adminv1.SNI) (*adminv1.SNI, *APIResponse)
+	Delete(string) error
 }
 
 type sniAPI struct {
@@ -35,6 +35,10 @@ func (a *sniAPI) Get(name string) (*adminv1.SNI, *APIResponse) {
 }
 
 func (a *sniAPI) List(params url.Values) (*adminv1.SNIList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	targets := &adminv1.SNIList{}
 	request := a.client.RestClient().Get().Resource("snis")
 	for k, vals := range params {
@@ -51,7 +55,7 @@ func (a *sniAPI) List(params url.Values) (*adminv1.SNIList, error) {
 	}
 
 	if len(targets.NextPage) > 0 {
-		params.Add("offset", targets.Offset)
+		params.Set("offset", targets.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

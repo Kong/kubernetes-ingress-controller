@@ -24,6 +24,8 @@ import (
 // pluginAnnotationSuffix sufix of kong annotations to configure plugins
 const pluginAnnotationSuffix = "plugin.konghq.com"
 
+const configurationAnnotation = "configuration.konghq.com"
+
 // ExtractKongPluginAnnotations extracts information about kong plugins
 // configured using annotations.
 func ExtractKongPluginAnnotations(anns map[string]string) map[string][]string {
@@ -43,4 +45,10 @@ func ExtractKongPluginAnnotations(anns map[string]string) map[string][]string {
 	}
 
 	return ka
+}
+
+// ExtractConfigurationName extracts the name of the KongIngress object that holds
+// information about the configuration to use in Routes, Services and Upstreams
+func ExtractConfigurationName(anns map[string]string) string {
+	return anns[configurationAnnotation]
 }

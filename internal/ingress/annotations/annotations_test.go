@@ -35,3 +35,14 @@ func TestExtractKongPluginAnnotations(t *testing.T) {
 		t.Errorf("expected a rate limiting plugin but none returned")
 	}
 }
+
+func TestExtractConfigurationName(t *testing.T) {
+	data := map[string]string{
+		"configuration.konghq.com": "demo",
+	}
+
+	cn := ExtractConfigurationName(data)
+	if cn != "demo" {
+		t.Errorf("expected demo as configuration name but got %v", cn)
+	}
+}

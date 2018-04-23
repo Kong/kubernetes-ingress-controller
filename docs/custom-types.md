@@ -108,8 +108,74 @@ config:
   second: 100
 ```
 
+### KongIngress
+
+This option allows us to configure setting from kong related to the [Upstream](5), [Service](6) and [routes](7) that are defined in the Kubernetes Ingress specification.
+To use this feature we just need to create a `KongIngress` object in the same namespace of the Ingress rule using the same name. With this convention we can avoid an additional annotation in the Ingress
+This is useful but requires one `KongIngress` definition per Ingress, which could become hard to maintain when have multiple rules. For this reason we can create just one or more `KongIngress` object and map which one should be used using the annotation `ingress.plugin.konghq.com: <name>`.
+
+*Note:* Is not required to define the complete object, we can define the `upstream`, `proxy` or `route` sections
+
+Example:
+
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  name: configuration-demo
+upstream:
+  hash_on: none
+  hash_fallback: none
+  healthchecks:
+    active:
+      concurrency: 10
+      healthy:
+      http_statuses:
+        - 200
+        - 302
+      interval: 0
+      successes: 0
+      http_path: "/"
+      timeout: 1
+      unhealthy:
+        http_failures: 0
+        http_statuses:
+        - 429
+        interval: 0
+        tcp_failures: 0
+        timeouts: 0
+    passive:
+      healthy:
+      http_statuses:
+        - 200
+      successes: 0
+      unhealthy:
+        http_failures: 0
+        http_statuses:
+        - 429
+        - 503
+        tcp_failures: 0
+        timeouts: 0
+    slots: 10
+proxy:
+  connect_timeout: 10000
+  retries: 10
+  read_timeout: 10000
+  write_timeout: 10000
+route:
+  methods:
+  - POST
+  - GET
+  regex_priority: 0
+  strip_path: false
+  preserve_host: true
+```
+
 [0]: https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/
 [1]: https://getkong.org/docs/0.13.x/admin-api/#consumer-object
 [2]: https://getkong.org/docs/0.13.x/admin-api/#plugin-object
 [3]: https://getkong.org/docs/0.13.x/admin-api/#add-plugin
 [4]: https://kubernetes.io/docs/reference/kubectl/overview/
+[5]: https://getkong.org/docs/0.13.x/admin-api/#upstream-objects
+[6]: https://getkong.org/docs/0.13.x/admin-api/#service-object
+[7]: https://getkong.org/docs/0.13.x/admin-api/#route-object

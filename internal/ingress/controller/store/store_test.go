@@ -31,11 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
-	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
-	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
-	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/test/e2e/framework"
 )
@@ -542,31 +538,4 @@ func newFS(t *testing.T) file.Filesystem {
 		t.Fatalf("unexpected error creating filesystem: %v", err)
 	}
 	return fs
-}
-
-func createKongPluginClient(apiserverHost string, kubeConfig string) (*pluginclientv1.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return pluginclientv1.NewForConfig(cfg)
-}
-
-func createKongConsumerClient(apiserverHost string, kubeConfig string) (*consumerclientv1.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return consumerclientv1.NewForConfig(cfg)
-}
-
-func createKongCredentialClient(apiserverHost string, kubeConfig string) (*credentialclientv1.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return credentialclientv1.NewForConfig(cfg)
 }

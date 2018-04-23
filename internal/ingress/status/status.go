@@ -65,6 +65,8 @@ type ingressLister interface {
 type Config struct {
 	Client clientset.Interface
 
+	OnStartedLeading func()
+
 	PublishService string
 
 	PublishStatusAddress string
@@ -91,7 +93,8 @@ type statusSync struct {
 	// pod contains runtime information about this pod
 	pod *k8s.PodInfo
 
-	elector *leaderelection.LeaderElector
+	electionID string
+	elector    *leaderelection.LeaderElector
 	// workqueue used to keep in sync the status IP/s
 	// in the Ingress rules
 	syncQueue *task.Queue
@@ -114,6 +117,14 @@ func (s statusSync) Shutdown() {
 	// remove IP from Ingress
 	if !s.elector.IsLeader() {
 		return
+	}
+
+	// on shutdown we remove information about the leader election to
+	// avoid up to 30 seconds of delay in start the synchronization process
+	c, err := s.Client.CoreV1().ConfigMaps(s.pod.Namespace).Get(s.electionID, metav1.GetOptions{})
+	if err == nil {
+		c.Annotations = map[string]string{}
+		s.Client.CoreV1().ConfigMaps(s.pod.Namespace).Update(c)
 	}
 
 	if !s.UpdateStatusOnShutdown {
@@ -184,9 +195,14 @@ func NewStatusSyncer(config Config) Sync {
 		electionID = fmt.Sprintf("%v-%v", config.ElectionID, config.IngressClass)
 	}
 
+	st.electionID = electionID
+
 	callbacks := leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(stop <-chan struct{}) {
 			glog.V(2).Infof("I am the new status update leader")
+			if st.Config.OnStartedLeading != nil {
+				st.Config.OnStartedLeading()
+			}
 			go st.syncQueue.Run(time.Second, stop)
 			wait.PollUntil(updateInterval, func() (bool, error) {
 				// send a dummy object to the queue to force a sync

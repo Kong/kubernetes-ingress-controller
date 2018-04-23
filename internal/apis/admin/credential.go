@@ -68,6 +68,10 @@ func (a *credentialAPI) GetByType(consumerID, credentialID, credentialType strin
 }
 
 func (a *credentialAPI) List(name string, params url.Values) (*adminv1.CredentialList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	plural := fmt.Sprintf("%vs", name)
 	credentials := &adminv1.CredentialList{}
 	request := a.client.Get().Resource(plural)
@@ -87,7 +91,7 @@ func (a *credentialAPI) List(name string, params url.Values) (*adminv1.Credentia
 	}
 
 	if len(credentials.NextPage) > 0 {
-		params.Add("offset", credentials.Offset)
+		params.Set("offset", credentials.Offset)
 		result, err := a.List(name, params)
 		if err != nil {
 			return nil, err

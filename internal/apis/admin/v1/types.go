@@ -106,11 +106,57 @@ type ServiceList struct {
 	Offset   string    `json:"offset"`
 }
 
+func NewUpstream(name string) *Upstream {
+	return &Upstream{
+		Name:         name,
+		HashOn:       "none",
+		HashFallback: "none",
+		Slots:        1000,
+	}
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Upstream struct {
 	Required `json:",inline"`
 
 	Name string `json:"name"`
+
+	HashOn       string        `json:"hash_on,omitempty"`
+	HashFallback string        `json:"hash_fallback,omitempty"`
+	Healthchecks *Healthchecks `json:"healthchecks,omitempty"`
+	Slots        int           `json:"slots,omitempty"`
+}
+
+type Healthchecks struct {
+	Active  *ActiveHealthCheck `json:"active,omitempty"`
+	Passive *Passive           `json:"passive,omitempty"`
+}
+
+type ActiveHealthCheck struct {
+	Concurrency int        `json:"concurrency,omitempty"`
+	Healthy     *Healthy   `json:"healthy,omitempty"`
+	HTTPPath    string     `json:"http_path,omitempty"`
+	Timeout     int        `json:"timeout,omitempty"`
+	Unhealthy   *Unhealthy `json:"unhealthy,omitempty"`
+}
+
+type Passive struct {
+	Healthy   Healthy    `json:"healthy,omitempty"`
+	Unhealthy *Unhealthy `json:"unhealthy,omitempty"`
+}
+
+type Healthy struct {
+	HTTPStatuses []int `json:"http_statuses,omitempty"`
+	Interval     int   `json:"interval,omitempty"`
+	Successes    int   `json:"successes,omitempty"`
+}
+
+type Unhealthy struct {
+	HTTPFailures int   `json:"http_failures,omitempty"`
+	HTTPStatuses []int `json:"http_statuses,omitempty"`
+	Interval     int   `json:"interval,omitempty"`
+	TCPFailures  int   `json:"tcp_failures,omitempty"`
+	Timeouts     int   `json:"timeouts,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -131,8 +177,9 @@ type Route struct {
 	Paths     []string `json:"paths"`
 	Methods   []string `json:"methods"`
 
-	PreserveHost bool `json:"preserve_host"`
-	StripPath    bool `json:"strip_path"`
+	PreserveHost  bool `json:"preserve_host"`
+	StripPath     bool `json:"strip_path"`
+	RegexPriority int  `json:"regex_priority"`
 
 	Service InlineService `json:"service"`
 }

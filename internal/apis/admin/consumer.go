@@ -42,6 +42,10 @@ func (a *consumerAPI) Get(name string) (*adminv1.Consumer, *APIResponse) {
 }
 
 func (a *consumerAPI) List(params url.Values) (*adminv1.ConsumerList, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+
 	ConsumerList := &adminv1.ConsumerList{}
 	request := a.client.RestClient().Get().Resource("consumers")
 	for k, vals := range params {
@@ -58,7 +62,7 @@ func (a *consumerAPI) List(params url.Values) (*adminv1.ConsumerList, error) {
 	}
 
 	if len(ConsumerList.NextPage) > 0 {
-		params.Add("offset", ConsumerList.Offset)
+		params.Set("offset", ConsumerList.Offset)
 		result, err := a.List(params)
 		if err != nil {
 			return nil, err

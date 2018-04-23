@@ -18,7 +18,6 @@ package controller
 
 import (
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
@@ -95,6 +94,10 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 			IngressClass:           class.IngressClass,
 			DefaultIngressClass:    class.DefaultClass,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
+			OnStartedLeading: func() {
+				// force a sync
+				n.syncQueue.Enqueue(&extensions.Ingress{})
+			},
 		})
 	} else {
 		glog.Warning("Update of ingress status is disabled (flag --update-status=false was specified)")
@@ -128,11 +131,6 @@ type NGINXController struct {
 
 	// runningConfig contains the running configuration in the Backend
 	runningConfig *ingress.Configuration
-
-	resolver []net.IP
-
-	// returns true if IPV6 is enabled in the pod
-	isIPV6Enabled bool
 
 	isShuttingDown bool
 

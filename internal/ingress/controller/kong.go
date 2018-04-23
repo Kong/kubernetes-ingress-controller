@@ -28,6 +28,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/golang/glog"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -211,7 +212,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				continue
 			}
 
-			kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
+			kongIngress, err := n.getKongIngress(ingress)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
 			}
@@ -578,7 +579,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				continue
 			}
 
-			kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
+			kongIngress, err := n.getKongIngress(ingress)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
 			}
@@ -830,7 +831,7 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 			continue
 		}
 
-		kongIngress, err := n.store.GetKongIngress(ingress.Namespace, ingress.Name)
+		kongIngress, err := n.getKongIngress(ingress)
 		if err != nil {
 			glog.V(5).Infof("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
 		}
@@ -1075,4 +1076,15 @@ func pluginDeepEqual(config map[string]interface{}, kong *kongadminv1.Plugin) bo
 	}
 
 	return true
+}
+
+// getKongIngress checks if the Ingress contains an annotation for configuration
+// or if exists a KongIngress object with the same name than the Ingress
+func (n *NGINXController) getKongIngress(ing *extensions.Ingress) (*configurationv1.KongIngress, error) {
+	confName := annotations.ExtractConfigurationName(ing.Annotations)
+	if confName != "" {
+		return n.store.GetKongIngress(ing.Namespace, confName)
+	}
+
+	return n.store.GetKongIngress(ing.Namespace, ing.Name)
 }

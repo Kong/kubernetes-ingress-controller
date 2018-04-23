@@ -18,7 +18,6 @@ package controller
 
 import (
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
@@ -132,11 +131,6 @@ type NGINXController struct {
 
 	// runningConfig contains the running configuration in the Backend
 	runningConfig *ingress.Configuration
-
-	resolver []net.IP
-
-	// returns true if IPV6 is enabled in the pod
-	isIPV6Enabled bool
 
 	isShuttingDown bool
 

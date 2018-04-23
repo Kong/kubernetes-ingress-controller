@@ -97,7 +97,7 @@ spec:
         # the default service is the kong proxy service
         - --default-backend-service=kong/kong-proxy
         # Service from were we extract the IP address/es to use in Ingress status
-        # - --publish-service=kong/kong-proxy
+        - --publish-service=kong/kong-proxy
         env:
         - name: POD_NAME
           valueFrom:
@@ -109,7 +109,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.0.1
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.0.2
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

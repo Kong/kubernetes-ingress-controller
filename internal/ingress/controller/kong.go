@@ -212,6 +212,11 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				continue
 			}
 
+			if backend == "" {
+				glog.Warningf("the service defined in the ingress %v/%v does not exists", ingress.Namespace, ingress.Name)
+				continue
+			}
+
 			kongIngress, err := n.getKongIngress(ingress)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
@@ -279,7 +284,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			}
 
 			svc, res := client.Services().Get(name)
-			if res.StatusCode == http.StatusNotFound || svc == nil {
+			if res.StatusCode == http.StatusNotFound || svc.ID == "" {
 				glog.Warningf("service %v does not exists in kong", name)
 				continue
 			}
@@ -579,6 +584,11 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				continue
 			}
 
+			if backend == "" {
+				glog.Warningf("the service defined in the ingress %v/%v does not exists", ingress.Namespace, ingress.Name)
+				continue
+			}
+
 			kongIngress, err := n.getKongIngress(ingress)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
@@ -586,7 +596,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 			name := buildName(backend, location)
 			svc, res := client.Services().Get(name)
-			if res.StatusCode == http.StatusNotFound || svc == nil {
+			if res.StatusCode == http.StatusNotFound || svc.ID == "" {
 				glog.Warningf("service %v does not exists in kong", name)
 				continue
 			}
@@ -598,7 +608,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				Service:   kongadminv1.InlineService{ID: svc.ID},
 			}
 
-			if kongIngress != nil {
+			if kongIngress != nil && kongIngress.Route != nil {
 				if len(kongIngress.Route.Methods) > 0 {
 					r.Methods = kongIngress.Route.Methods
 				}
@@ -651,7 +661,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 					}
 				}
 
-				//TODO: check if an update is required
+				//TODO: check if an update is required (change in kongIngress)
 			}
 
 			kongRoutes, err = client.Routes().List(nil)
@@ -831,6 +841,11 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 			continue
 		}
 
+		if backend == "" {
+			glog.Warningf("the service defined in the ingress %v/%v does not exists", ingress.Namespace, ingress.Name)
+			continue
+		}
+
 		kongIngress, err := n.getKongIngress(ingress)
 		if err != nil {
 			glog.V(5).Infof("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
@@ -887,7 +902,7 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 				return errors.Wrap(err, "syncing targets")
 			}
 
-			//TODO: check if an update is required
+			//TODO: check if an update is required (change in kongIngress)
 		}
 	}
 

@@ -67,7 +67,6 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 
 		// check the certificate is present in kong
 		if server.SSLCert != nil {
-			glog.Infof("syncing SSL Certificate %v", server.SSLCert.ID)
 			err := n.syncCertificate(server)
 			if err != nil {
 				return err
@@ -931,6 +930,9 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 		}()
 
 		if server.SSLCert.PemSHA != pem.PemSHA {
+			glog.Infof("updating Kong SSL Certificate for host %v located in Secret %v/%v",
+				server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
+
 			cert := &kongadminv1.Certificate{
 				Cert: sc,
 				Key:  sk,
@@ -959,7 +961,8 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 		Hosts: []string{server.Hostname},
 	}
 
-	glog.Infof("creating Kong SSL Certificate for host %v", server.Hostname)
+	glog.Infof("creating Kong SSL Certificate for host %v located in Secret %v/%v",
+		server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
 	cert, res = client.Certificates().Create(cert)
 	if res.StatusCode != http.StatusCreated {

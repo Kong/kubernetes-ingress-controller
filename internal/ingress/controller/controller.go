@@ -18,8 +18,6 @@ package controller
 
 import (
 	"fmt"
-	"net"
-	"reflect"
 	"sort"
 	"strconv"
 	"time"
@@ -151,7 +149,7 @@ func (n *NGINXController) getDefaultUpstream() *ingress.Backend {
 		return upstream
 	}
 
-	endps := n.getEndpoints(svc, &svc.Spec.Ports[0], apiv1.ProtocolTCP)
+	endps := getEndpoints(svc, &svc.Spec.Ports[0], apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
 	if len(endps) == 0 {
 		glog.Warningf("service %v does not have any active endpoints", svcKey)
 	}
@@ -252,7 +250,7 @@ func (n *NGINXController) getBackendServers(ingresses []*extensions.Ingress) ([]
 						// check if the location contains endpoints and a custom default backend
 						if location.DefaultBackend != nil {
 							sp := location.DefaultBackend.Spec.Ports[0]
-							endps := n.getEndpoints(location.DefaultBackend, &sp, apiv1.ProtocolTCP)
+							endps := getEndpoints(location.DefaultBackend, &sp, apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
 							if len(endps) > 0 {
 								glog.V(3).Infof("using custom default backend in server %v location %v (service %v/%v)",
 									server.Hostname, location.Path, location.DefaultBackend.Namespace, location.DefaultBackend.Name)
@@ -416,7 +414,7 @@ func (n *NGINXController) serviceEndpoints(svcKey, backendPort string) ([]ingres
 			servicePort.TargetPort.String() == backendPort ||
 			servicePort.Name == backendPort {
 
-			endps := n.getEndpoints(svc, &servicePort, apiv1.ProtocolTCP)
+			endps := getEndpoints(svc, &servicePort, apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
 			if len(endps) == 0 {
 				glog.Warningf("service %v does not have any active endpoints", svcKey)
 			}
@@ -439,7 +437,7 @@ func (n *NGINXController) serviceEndpoints(svcKey, backendPort string) ([]ingres
 			Port:       int32(externalPort),
 			TargetPort: intstr.FromString(backendPort),
 		}
-		endps := n.getEndpoints(svc, &servicePort, apiv1.ProtocolTCP)
+		endps := getEndpoints(svc, &servicePort, apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
 		if len(endps) == 0 {
 			glog.Warningf("service %v does not have any active endpoints", svcKey)
 			return upstreams, nil
@@ -639,90 +637,4 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 	}
 
 	return servers
-}
-
-// getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
-func (n *NGINXController) getEndpoints(
-	s *apiv1.Service,
-	servicePort *apiv1.ServicePort,
-	proto apiv1.Protocol) []ingress.Endpoint {
-
-	upsServers := []ingress.Endpoint{}
-
-	// avoid duplicated upstream servers when the service
-	// contains multiple port definitions sharing the same
-	// targetport.
-	adus := make(map[string]bool)
-
-	// ExternalName services
-	if s.Spec.Type == apiv1.ServiceTypeExternalName {
-		glog.V(3).Info("Ingress using a service %v of type=ExternalName : %v", s.Name)
-
-		targetPort := servicePort.TargetPort.IntValue()
-		// check for invalid port value
-		if targetPort <= 0 {
-			glog.Errorf("ExternalName service with an invalid port: %v", targetPort)
-			return upsServers
-		}
-
-		if net.ParseIP(s.Spec.ExternalName) == nil {
-			_, err := net.LookupHost(s.Spec.ExternalName)
-			if err != nil {
-				glog.Errorf("unexpected error resolving host %v: %v", s.Spec.ExternalName, err)
-				return upsServers
-			}
-		}
-
-		return append(upsServers, ingress.Endpoint{
-			Address: s.Spec.ExternalName,
-			Port:    fmt.Sprintf("%v", targetPort),
-		})
-	}
-
-	glog.V(3).Infof("getting endpoints for service %v/%v and port %v", s.Namespace, s.Name, servicePort.String())
-	ep, err := n.store.GetServiceEndpoints(s)
-	if err != nil {
-		glog.Warningf("unexpected error obtaining service endpoints: %v", err)
-		return upsServers
-	}
-
-	for _, ss := range ep.Subsets {
-		for _, epPort := range ss.Ports {
-
-			if !reflect.DeepEqual(epPort.Protocol, proto) {
-				continue
-			}
-
-			var targetPort int32
-
-			if servicePort.Name == "" {
-				// ServicePort.Name is optional if there is only one port
-				targetPort = epPort.Port
-			} else if servicePort.Name == epPort.Name {
-				targetPort = epPort.Port
-			}
-
-			// check for invalid port value
-			if targetPort <= 0 {
-				continue
-			}
-
-			for _, epAddress := range ss.Addresses {
-				ep := fmt.Sprintf("%v:%v", epAddress.IP, targetPort)
-				if _, exists := adus[ep]; exists {
-					continue
-				}
-				ups := ingress.Endpoint{
-					Address: epAddress.IP,
-					Port:    fmt.Sprintf("%v", targetPort),
-					Target:  epAddress.TargetRef,
-				}
-				upsServers = append(upsServers, ups)
-				adus[ep] = true
-			}
-		}
-	}
-
-	glog.V(3).Infof("endpoints found: %v", upsServers)
-	return upsServers
 }

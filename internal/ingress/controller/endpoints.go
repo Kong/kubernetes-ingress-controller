@@ -18,7 +18,6 @@ package controller
 
 import (
 	"fmt"
-	"net"
 	"reflect"
 
 	"github.com/golang/glog"
@@ -56,14 +55,6 @@ func getEndpoints(
 		if targetPort <= 0 {
 			glog.Errorf("ExternalName service with an invalid port: %v", targetPort)
 			return upsServers
-		}
-
-		if net.ParseIP(s.Spec.ExternalName) == nil {
-			_, err := net.LookupHost(s.Spec.ExternalName)
-			if err != nil {
-				glog.Errorf("unexpected error resolving host %v: %v", s.Spec.ExternalName, err)
-				return upsServers
-			}
 		}
 
 		return append(upsServers, ingress.Endpoint{

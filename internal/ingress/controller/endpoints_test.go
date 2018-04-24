@@ -111,30 +111,6 @@ func TestGetEndpoints(t *testing.T) {
 			},
 		},
 		{
-			"a service type ServiceTypeExternalName with an invalid ExternalName value should return one endpoint",
-			&corev1.Service{
-				Spec: corev1.ServiceSpec{
-					Type:         corev1.ServiceTypeExternalName,
-					ExternalName: "foo.bar",
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "default",
-							TargetPort: intstr.FromInt(80),
-						},
-					},
-				},
-			},
-			&corev1.ServicePort{
-				Name:       "default",
-				TargetPort: intstr.FromInt(80),
-			},
-			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
-				return &corev1.Endpoints{}, nil
-			},
-			[]ingress.Endpoint{},
-		},
-		{
 			"should return no endpoints when there is an error searching for endpoints",
 			&corev1.Service{
 				Spec: corev1.ServiceSpec{

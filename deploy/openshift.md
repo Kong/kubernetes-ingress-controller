@@ -25,17 +25,19 @@ oc new-project kong-api
 3. Deploy a postgresql database
 
 ```bash
-oc create --namespace kong-api -f postgres.yaml
+oc create --namespace kong-api \
+  -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/single/postgres-openshift.yaml
 ```
 
 4. Deploy Kong
 
-You need to execute the next command with `admin` permissions. The reason for this is the creation of a role cluster and the required [Custom Resource Definitions](1) 
+You need to execute the next command with `admin` permissions. The reason for this is the creation of a role cluster and the required [Custom Resource Definitions](1)
 
 **Example:** `oc login -u system:admin`
 
 ```bash
-oc create --namespace kong-api -f kong.yaml
+oc create --namespace kong-api \
+  -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/single/kong-resources-openshift.yaml
 ```
 
 5. Expose Kong Admin API and Proxy ports

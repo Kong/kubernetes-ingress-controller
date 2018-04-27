@@ -332,7 +332,7 @@ spec:
         privileged: true
       containers:
       - name: kong
-        image: kong:0.13.0-centos
+        image: kong:0.13.1-centos
         env:
           - name: KONG_PG_PASSWORD
             value: kong
@@ -394,7 +394,7 @@ spec:
     spec:
       containers:
       - name: kong-migration-0130
-        image: kong:0.13.0-centos
+        image: kong:0.13.1-centos
         env:
           - name: KONG_NGINX_DAEMON
             value: 'off'

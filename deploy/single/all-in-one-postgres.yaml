@@ -318,7 +318,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       initContainers:
       - name: kong-migration
-        image: kong:0.13.0-centos
+        image: kong:0.13.1-centos
         env:
           - name: KONG_PG_PASSWORD
             value: kong
@@ -327,7 +327,7 @@ spec:
         command: [ "/bin/sh", "-c", "kong migrations up" ]
       containers:
       - name: admin-api
-        image: kong:0.13.0-centos
+        image: kong:0.13.1-centos
         env:
           - name: KONG_PG_PASSWORD
             value: kong
@@ -443,7 +443,7 @@ spec:
     spec:
       containers:
       - name: kong-proxy
-        image: kong:0.13.0-centos
+        image: kong:0.13.1-centos
         env:
           - name: KONG_PG_PASSWORD
             value: kong

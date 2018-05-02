@@ -41,6 +41,7 @@ type Route struct {
 
 type Upstream struct {
 	HashOn       string        `json:"hash_on"`
+	HashOnHeader string        `json:"hash_on_header"`
 	HashFallback string        `json:"hash_fallback"`
 	Healthchecks *Healthchecks `json:"healthchecks,omitempty"`
 	Slots        int           `json:"slots"`

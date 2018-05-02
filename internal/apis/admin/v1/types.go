@@ -122,6 +122,7 @@ type Upstream struct {
 	Name string `json:"name"`
 
 	HashOn       string        `json:"hash_on,omitempty"`
+	HashOnHeader string        `json:"hash_on_header,omitempty"`
 	HashFallback string        `json:"hash_fallback,omitempty"`
 	Healthchecks *Healthchecks `json:"healthchecks,omitempty"`
 	Slots        int           `json:"slots,omitempty"`

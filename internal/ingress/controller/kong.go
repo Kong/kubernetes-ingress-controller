@@ -867,6 +867,10 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 						upstream.HashOn = kongIngress.Upstream.HashOn
 					}
 
+					if kongIngress.Upstream.HashOnHeader != "" {
+						upstream.HashOnHeader = kongIngress.Upstream.HashOnHeader
+					}
+
 					if kongIngress.Upstream.HashFallback != "" {
 						upstream.HashFallback = kongIngress.Upstream.HashFallback
 					}

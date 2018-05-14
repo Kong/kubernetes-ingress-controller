@@ -18,7 +18,7 @@ all: all-container
 BUILDTAGS=
 
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
-TAG?=0.0.3
+TAG?=0.0.4
 REGISTRY?=kong-docker-kubernetes-ingress-controller.bintray.io
 GOOS?=linux
 DOCKER?=docker

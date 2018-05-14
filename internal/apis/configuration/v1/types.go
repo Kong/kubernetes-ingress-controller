@@ -48,10 +48,11 @@ type Upstream struct {
 }
 
 type Proxy struct {
-	ConnectTimeout int `json:"connect_timeout"`
-	Retries        int `json:"retries"`
-	ReadTimeout    int `json:"read_timeout"`
-	WriteTimeout   int `json:"write_timeout"`
+	Path           string `json:"path"`
+	ConnectTimeout int    `json:"connect_timeout"`
+	Retries        int    `json:"retries"`
+	ReadTimeout    int    `json:"read_timeout"`
+	WriteTimeout   int    `json:"write_timeout"`
 }
 
 type Healthchecks struct {

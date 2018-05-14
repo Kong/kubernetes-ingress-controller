@@ -251,7 +251,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 
 					if kongIngress != nil && kongIngress.Proxy != nil {
 						if kongIngress.Proxy.Path != "" {
-							s.Patha = kongIngress.Proxy.Path
+							s.Path = kongIngress.Proxy.Path
 						}
 
 						if kongIngress.Proxy.ConnectTimeout > 0 {

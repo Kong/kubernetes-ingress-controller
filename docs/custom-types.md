@@ -110,7 +110,7 @@ config:
 
 ### KongIngress
 
-This option allows us to configure setting from kong related to the [Upstream](5), [Service](6) and [routes](7) that are defined in the Kubernetes Ingress specification.
+This option allows us to configure setting from kong related to the [Upstream][5], [Service][6] and [routes][7] that are defined in the Kubernetes Ingress specification.
 To use this feature we just need to create a `KongIngress` object in the same namespace of the Ingress rule using the same name. With this convention we can avoid an additional annotation in the Ingress
 This is useful but requires one `KongIngress` definition per Ingress, which could become hard to maintain when have multiple rules. For this reason we can create just one or more `KongIngress` object and map which one should be used using the annotation `ingress.plugin.konghq.com: <name>`.
 

@@ -31,6 +31,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
@@ -112,11 +113,44 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 	return nil
 }
 
+// Duplicated by github.com/kubernetes/ingress-nginx/internal/ingress/controller/controller.go#getServiceClusterEndpoint
+func getServiceClusterEndpoint(svcKey string, backend *ingress.Backend) (endpoint ingress.Endpoint, err error) {
+	svc := backend.Service
+
+	if svc.Spec.ClusterIP == "" || svc.Spec.ClusterIP == "None" {
+		return endpoint, errors.Errorf("No ClusterIP found for service %s", svcKey)
+	}
+
+	endpoint.Address = svc.Spec.ClusterIP
+
+	// If the service port in the ingress uses a name, lookup
+	// the actual port in the service spec
+	if backend.Port.Type == intstr.String {
+		var port int32 = -1
+		for _, svcPort := range svc.Spec.Ports {
+			if svcPort.Name == backend.Port.String() {
+				port = svcPort.Port
+				break
+			}
+		}
+		if port == -1 {
+			return endpoint, errors.Errorf("no port mapped for service %s and port name %s", svc.Name, backend.Port.String())
+		}
+		endpoint.Port = fmt.Sprintf("%d", port)
+	} else {
+		endpoint.Port = backend.Port.String()
+	}
+
+	return endpoint, nil
+}
+
 // syncTargets reconciles the state between the ingress controller and
 // kong comparing the endpoints in Kubernetes and the targets in a
 // particular kong upstream. To avoid downtimes we create the new targets
 // first and then remove the killed ones.
-func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kong.RestClient) error {
+// If useServiceUpstream set, use service's Cluster IP and port, instead of endpoints.
+// https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md#service-upstream
+func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kong.RestClient, useServiceUpstream bool) error {
 	glog.V(3).Infof("syncing Kong targets")
 	b, res := client.Upstreams().Get(upstream)
 	if res.StatusCode == http.StatusNotFound {
@@ -137,10 +171,24 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 	}
 
 	newTargets := sets.NewString()
-	for _, endpoint := range ingressEndpopint.Endpoints {
+	if useServiceUpstream == true {
+		endpoint, err := getServiceClusterEndpoint(ingressEndpopint.Name, ingressEndpopint)
+
+		if err != nil {
+			glog.Errorf("Unexpected error getServiceClusterEndpoint: %v", ingressEndpopint.Name)
+			return err
+		}
+
 		nt := fmt.Sprintf("%v:%v", endpoint.Address, endpoint.Port)
 		if !newTargets.Has(nt) {
 			newTargets.Insert(nt)
+		}
+	} else {
+		for _, endpoint := range ingressEndpopint.Endpoints {
+			nt := fmt.Sprintf("%v:%v", endpoint.Address, endpoint.Port)
+			if !newTargets.Has(nt) {
+				newTargets.Insert(nt)
+			}
 		}
 	}
 
@@ -905,9 +953,16 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 				}
 			}
 
-			err := syncTargets(upstreamName, upstream, client)
-			if err != nil {
-				return errors.Wrap(err, "syncing targets")
+			if kongIngress != nil && kongIngress.Upstream != nil && kongIngress.Upstream.ServiceUpstream {
+				err := syncTargets(upstreamName, upstream, client, true)
+				if err != nil {
+					return errors.Wrap(err, "syncing targets (use service upstream)")
+				}
+			} else {
+				err := syncTargets(upstreamName, upstream, client, false)
+				if err != nil {
+					return errors.Wrap(err, "syncing targets")
+				}
 			}
 
 			//TODO: check if an update is required (change in kongIngress)

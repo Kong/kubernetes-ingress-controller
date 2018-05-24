@@ -1,15 +1,15 @@
 # Expose an external application
 
-This example shows how we can expose a service located outside the Kubernetes cluster using an Ingress rule similar to the Kong [Getting Started guide](0)
+This example shows how we can expose a service located outside the Kubernetes cluster using an Ingress rule similar to the Kong [Getting Started guide][0]
 
 Requirements:
 
 - working Kubernetes cluster
-- Kong Ingress controller installed. Please check the [deploy guide](1)
+- Kong Ingress controller installed. Please check the [deploy guide][1]
 
 1. Create a Kubernetes service
 
-First we need to create a Kubernetes Service [type=ExternalName](2) using the hostname of the application we want to expose
+First we need to create a Kubernetes Service [type=ExternalName][2] using the hostname of the application we want to expose
 
 ```bash
 echo "
@@ -26,7 +26,7 @@ spec:
 " | kubectl create -f -
 ```
 
-2. Configure a [request-transformer](3) plugin to remove the Host header from the original request.
+2. Configure a [request-transformer][3] plugin to remove the Host header from the original request.
 
 This removes the Host header so when the traffic reaches `mockbin.org` does not contains `foo.bar`
 

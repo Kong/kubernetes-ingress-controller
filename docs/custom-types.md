@@ -14,7 +14,7 @@ Each one of this new object in Kubernetes have a one-to-one relation with a Kong
 - [Plugin][2]
 - Credential created in each authentication plugin.
 
-Using this Kubernetes feature allows us to add additional commands to [kubectl][4] which improves the user experience:
+Using this Kubernetes feature allows us to add additional commands to [kubectl][3] which improves the user experience:
 
 ```bash
 $ kubectl get kongplugins
@@ -25,7 +25,7 @@ http-svc-consumer-ratelimiting   5h
 
 ### KongPlugin
 
-This object allows the configuration of Kong plugins in the same way we [add plugins using the admin API][3]
+This object allows the configuration of Kong plugins in the same way we [add plugins using the admin API][4]
 
 ```yaml
 apiVersion: configuration.konghq.com/v1
@@ -110,7 +110,7 @@ config:
 
 ### KongIngress
 
-This option allows us to configure setting from kong related to the [Upstream](5), [Service](6) and [routes](7) that are defined in the Kubernetes Ingress specification.
+This option allows us to configure setting from kong related to the [Upstream][5], [Service][6] and [routes][7] that are defined in the Kubernetes Ingress specification.
 To use this feature we just need to create a `KongIngress` object in the same namespace of the Ingress rule using the same name. With this convention we can avoid an additional annotation in the Ingress
 This is useful but requires one `KongIngress` definition per Ingress, which could become hard to maintain when have multiple rules. For this reason we can create just one or more `KongIngress` object and map which one should be used using the annotation `ingress.plugin.konghq.com: <name>`.
 
@@ -175,8 +175,8 @@ route:
 [0]: https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/
 [1]: https://getkong.org/docs/0.13.x/admin-api/#consumer-object
 [2]: https://getkong.org/docs/0.13.x/admin-api/#plugin-object
-[3]: https://getkong.org/docs/0.13.x/admin-api/#add-plugin
-[4]: https://kubernetes.io/docs/reference/kubectl/overview/
+[3]: https://kubernetes.io/docs/reference/kubectl/overview/
+[4]: https://getkong.org/docs/0.13.x/admin-api/#add-plugin
 [5]: https://getkong.org/docs/0.13.x/admin-api/#upstream-objects
 [6]: https://getkong.org/docs/0.13.x/admin-api/#service-object
 [7]: https://getkong.org/docs/0.13.x/admin-api/#route-object

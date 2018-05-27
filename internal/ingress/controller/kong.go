@@ -897,11 +897,26 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 					if kongIngress.Upstream.Healthchecks != nil {
 						if kongIngress.Upstream.Healthchecks.Active != nil {
 							m := structs.Map(kongIngress.Upstream.Healthchecks.Active)
+							if upstream.Healthchecks == nil {
+								upstream.Healthchecks = &kongadminv1.Healthchecks{}
+							}
+							if upstream.Healthchecks.Active == nil {
+								upstream.Healthchecks.Active = &kongadminv1.ActiveHealthCheck{}
+							}
+
 							mergo.MapWithOverwrite(upstream.Healthchecks.Active, m)
 						}
 
 						if kongIngress.Upstream.Healthchecks.Passive != nil {
 							m := structs.Map(kongIngress.Upstream.Healthchecks.Passive)
+
+							if upstream.Healthchecks == nil {
+								upstream.Healthchecks = &kongadminv1.Healthchecks{}
+							}
+							if upstream.Healthchecks.Passive == nil {
+								upstream.Healthchecks.Passive = &kongadminv1.Passive{}
+							}
+
 							mergo.MapWithOverwrite(upstream.Healthchecks.Passive, m)
 						}
 					}

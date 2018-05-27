@@ -238,9 +238,9 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 					port = 443
 				}
 
-				_, res := client.Services().Get(name)
+				s, res := client.Services().Get(name)
 				if res.StatusCode == http.StatusNotFound {
-					s := &kongadminv1.Service{
+					s = &kongadminv1.Service{
 						Name:     name,
 						Path:     "/",
 						Protocol: proto,
@@ -248,7 +248,9 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 						Port:     port,
 						Retries:  5,
 					}
+				}
 
+				if s != nil {
 					if kongIngress != nil && kongIngress.Proxy != nil {
 						if kongIngress.Proxy.Path != "" {
 							s.Path = kongIngress.Proxy.Path
@@ -271,11 +273,20 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 						}
 					}
 
-					glog.Infof("creating Kong Service name %v", name)
-					_, res := client.Services().Create(s)
-					if res.StatusCode != http.StatusCreated {
-						glog.Errorf("Unexpected error creating Kong Service: %v", res)
-						return false, res.Error()
+					if res.StatusCode == http.StatusNotFound {
+						glog.Infof("Creating Kong Service name %v", name)
+						_, res := client.Services().Create(s)
+						if res.StatusCode != http.StatusCreated {
+							glog.Errorf("Unexpected error creating Kong Service: %v", res)
+							return false, res.Error()
+						}
+					} else {
+						glog.Infof("Patching Kong Service name %v", name)
+						_, res := client.Services().Patch(s.ID, s)
+						if res.StatusCode != http.StatusOK {
+							glog.Errorf("Unexpected error patching Kong Service: %v", res)
+							return false, res.Error()
+						}
 					}
 				}
 

@@ -15,6 +15,7 @@ type ServiceInterface interface {
 	List(url.Values) (*adminv1.ServiceList, error)
 	Get(string) (*adminv1.Service, *APIResponse)
 	Create(*adminv1.Service) (*adminv1.Service, *APIResponse)
+	Patch(string, *adminv1.Service) (*adminv1.Service, *APIResponse)
 	Delete(string) error
 }
 
@@ -25,6 +26,12 @@ type serviceAPI struct {
 func (a *serviceAPI) Create(service *adminv1.Service) (*adminv1.Service, *APIResponse) {
 	out := &adminv1.Service{}
 	err := a.client.Create(service, out)
+	return out, err
+}
+
+func (a *serviceAPI) Patch(id string, service *adminv1.Service) (*adminv1.Service, *APIResponse) {
+	out := &adminv1.Service{}
+	err := a.client.Patch(id, service, out)
 	return out, err
 }
 

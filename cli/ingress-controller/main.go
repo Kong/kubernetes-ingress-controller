@@ -144,7 +144,7 @@ func main() {
 		glog.Fatalf("%v", err)
 	}
 
-	if !(v.GTE(semver.MustParse("0.13.0") || v.GTE(semver.MustParse("0.32.0")) {
+	if !(v.GTE(semver.MustParse("0.13.0")) || v.GTE(semver.MustParse("0.32.0"))) {
 		glog.Fatalf("The version %s is not compatible with the Kong Ingress Controller. It requires Kong CE 0.13.0 or higher, or Kong EE 0.32 or higher.", v)
 	}
 

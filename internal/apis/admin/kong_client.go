@@ -138,8 +138,15 @@ func (c *RestClient) GetVersion() (semver.Version, error) {
 
 	if version, ok := info["version"]; ok {
 		v := version.(string)
+		
+		// fix enterprise edition semver adding patch number
+		re := regexp.MustCompile(`([\d\.]+)-enterprise-edition`)
+		if re.MatchString(v) {
+			v = re.ReplaceAllString(v, "$1.0-enterprise")
+		}
+
 		// fix bad version formats like 0.13.0preview1
-		re := regexp.MustCompile(`(.*\d)(preview.*|rc.*)`)
+		re = regexp.MustCompile(`(.*\d)(preview.*|rc.*)`)
 		if re.MatchString(v) {
 			v = re.ReplaceAllString(v, "$1-$2")
 		}

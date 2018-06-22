@@ -201,6 +201,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 
 		for _, location := range server.Locations {
 			backend := location.Backend
+			serviceName := location.Service.Name
 			if backend == "default-backend" {
 				// there is no default backend in Kong
 				continue
@@ -217,7 +218,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				continue
 			}
 
-			kongIngress, err := n.getKongIngress(ingress)
+			kongIngress, err := n.getKongIngress(ingress, serviceName)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
 			}
@@ -588,6 +589,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 		for _, location := range server.Locations {
 			backend := location.Backend
+			serviceName := location.Service.Name
 			if backend == "default-backend" {
 				// there is no default backend in Kong
 				continue
@@ -604,7 +606,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				continue
 			}
 
-			kongIngress, err := n.getKongIngress(ingress)
+			kongIngress, err := n.getKongIngress(ingress, serviceName)
 			if err != nil {
 				glog.Warningf("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
 			}
@@ -845,6 +847,7 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 
 	for _, location := range locations {
 		backend := location.Backend
+		serviceName := location.Service.Name
 		if backend == "default-backend" {
 			// there is no default backend in Kong
 			continue
@@ -861,7 +864,7 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 			continue
 		}
 
-		kongIngress, err := n.getKongIngress(ingress)
+		kongIngress, err := n.getKongIngress(ingress, serviceName)
 		if err != nil {
 			glog.V(5).Infof("there is no custom Ingress configuration for rule %v/%v", ingress.Namespace, ingress.Name)
 		}
@@ -1127,13 +1130,32 @@ func pluginDeepEqual(config map[string]interface{}, kong *kongadminv1.Plugin) bo
 	return true
 }
 
-// getKongIngress checks if the Ingress contains an annotation for configuration
-// or if exists a KongIngress object with the same name than the Ingress
-func (n *NGINXController) getKongIngress(ing *extensions.Ingress) (*configurationv1.KongIngress, error) {
+// getKongIngress gets the first KongIngress object found based on the 
+// following order.
+// 1) backend serviceName
+// 2) The configuration.konghq.com annotation of the Ingress object if present
+// 3) The name of the Ingress object
+// If no KongIngress object is found an error is returned.
+func (n *NGINXController) getKongIngress(ing *extensions.Ingress, serviceName string) (*configurationv1.KongIngress, error) {
+
+	// Check if there is a KongIngress object for the backend serviceName
+	// and return it if it exists
+	ingress, err := n.store.GetKongIngress(ing.Namespace, serviceName)
+	if err == nil {
+		return ingress, nil
+	}
+	
+	// Check if there is an annotation and if there is, check if there
+	// is a KongIngress object for it and return it
 	confName := annotations.ExtractConfigurationName(ing.Annotations)
 	if confName != "" {
-		return n.store.GetKongIngress(ing.Namespace, confName)
+		ingress, err := n.store.GetKongIngress(ing.Namespace, confName)
+		if err == nil {
+			return ingress, nil
+		}
 	}
-
+	
+	// Return the KongIngress object or error for a KongIngress
+	// having the same name as the Ingress object
 	return n.store.GetKongIngress(ing.Namespace, ing.Name)
 }

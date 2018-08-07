@@ -7,7 +7,11 @@ This repository contains an Ingress controller for Kubernetes that works by depl
 
 ## Prerequisites
 
-Tested with Kubernetes clusters running version 1.8 and later.
+- Tested with Kubernetes clusters running version `1.8` through `1.10`.
+- The Ingress Controller supports the following versions of Kong:
+   - Kong Community Edition(CE) `0.13.x`
+   - Kong Enterprise Edition(EE) `0.32.x`
+   - Kong Enterprise Edition(EE) `0.33.x`
 
 ## Get started
 

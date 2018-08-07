@@ -961,13 +961,16 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 	sc := bytes.NewBuffer(server.SSLCert.Raw.Cert).String()
 	sk := bytes.NewBuffer(server.SSLCert.Raw.Key).String()
 
-	kongCertificate, res := client.Certificates().Get(server.SSLCert.ID)
-	if res.StatusCode == http.StatusOK {
+	//sync cert
+	cert, res := client.Certificates().Get(server.SSLCert.ID)
+
+	switch res.StatusCode {
+	case http.StatusOK:
 		// check if an update is required
 		name := fmt.Sprintf("temporal-cert-%v", time.Now().UnixNano())
 		pem, err := ssl.AddOrUpdateCertAndKey(name,
-			[]byte(strings.TrimSpace(kongCertificate.Cert)),
-			[]byte(strings.TrimSpace(kongCertificate.Key)),
+			[]byte(strings.TrimSpace(cert.Cert)),
+			[]byte(strings.TrimSpace(cert.Key)),
 			[]byte{},
 			n.fileSystem)
 		if err != nil {
@@ -983,53 +986,66 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 			glog.Infof("updating Kong SSL Certificate for host %v located in Secret %v/%v",
 				server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
-			cert := &kongadminv1.Certificate{
+			cert = &kongadminv1.Certificate{
 				Cert: sc,
 				Key:  sk,
 			}
-
-			_, res = client.Certificates().Patch(server.SSLCert.ID, cert)
+			cert, res = client.Certificates().Patch(server.SSLCert.ID, cert)
 			if res.StatusCode != http.StatusOK {
 				return errors.Wrap(res.Error(), "patching a Kong consumer")
 			}
 		}
+	case http.StatusNotFound:
+		cert = &kongadminv1.Certificate{
+			Required: kongadminv1.Required{
+				ID: server.SSLCert.ID,
+			},
+			Cert:  sc,
+			Key:   sk,
+			Hosts: []string{server.Hostname},
+		}
 
-		return nil
-	}
+		glog.Infof("creating Kong SSL Certificate for host %v located in Secret %v/%v",
+			server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
-	if res.StatusCode != http.StatusNotFound {
+		cert, res = client.Certificates().Create(cert)
+		if res.StatusCode != http.StatusCreated {
+			glog.Errorf("Unexpected error creating Kong Certificate: %v", res)
+			return res.Error()
+		}
+	default:
 		glog.Errorf("Unexpected response searching a Kong Certificate: %v", res)
 		return res.Error()
 	}
 
-	cert := &kongadminv1.Certificate{
-		Required: kongadminv1.Required{
-			ID: server.SSLCert.ID,
-		},
-		Cert:  sc,
-		Key:   sk,
-		Hosts: []string{server.Hostname},
-	}
+	//sync SNI
+	sni, res := client.SNIs().Get(server.Hostname)
 
-	glog.Infof("creating Kong SSL Certificate for host %v located in Secret %v/%v",
-		server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
+	switch res.StatusCode {
+	case http.StatusOK:
+		// check if it is using the right certificate
+		if sni.Certificate != cert.ID {
+			glog.Infof("updating certificate for host %v to certificate id %v", server.Hostname, cert.ID)
 
-	cert, res = client.Certificates().Create(cert)
-	if res.StatusCode != http.StatusCreated {
-		glog.Errorf("Unexpected error creating Kong Certificate: %v", res)
-		return res.Error()
-	}
+			sni.Certificate = cert.ID
+			sni, res = client.SNIs().Patch(sni.ID, sni)
+			if res.StatusCode != http.StatusOK {
+				return errors.Wrap(res.Error(), "patching a Kong consumer")
+			}
+		}
+	case http.StatusNotFound:
+		sni = &kongadminv1.SNI{
+			Name:        server.Hostname,
+			Certificate: cert.ID,
+		}
+		glog.Infof("creating Kong SNI for host %v and certificate id %v", server.Hostname, cert.ID)
 
-	sni := &kongadminv1.SNI{
-		Name:        server.Hostname,
-		Certificate: cert.ID,
-	}
-
-	glog.Infof("creating Kong SNI for host %v and certificate id %v", server.Hostname, cert.ID)
-
-	_, res = client.SNIs().Create(sni)
-	if res.StatusCode != http.StatusCreated {
-		glog.Errorf("Unexpected error creating Kong SNI: %v", res)
+		_, res = client.SNIs().Create(sni)
+		if res.StatusCode != http.StatusCreated {
+			glog.Errorf("Unexpected error creating Kong SNI (%v): %v", server.Hostname, res)
+		}
+	default:
+		glog.Errorf("Unexpected error looking up Kong SNI: %v", res)
 		return res.Error()
 	}
 

@@ -15,6 +15,7 @@ type SNIInterface interface {
 	List(url.Values) (*adminv1.SNIList, error)
 	Get(string) (*adminv1.SNI, *APIResponse)
 	Create(*adminv1.SNI) (*adminv1.SNI, *APIResponse)
+	Patch(string, *adminv1.SNI) (*adminv1.SNI, *APIResponse)
 	Delete(string) error
 }
 
@@ -25,6 +26,12 @@ type sniAPI struct {
 func (a *sniAPI) Create(target *adminv1.SNI) (*adminv1.SNI, *APIResponse) {
 	out := &adminv1.SNI{}
 	err := a.client.Create(target, out)
+	return out, err
+}
+
+func (a *sniAPI) Patch(id string, sni *adminv1.SNI) (*adminv1.SNI, *APIResponse) {
+	out := &adminv1.SNI{}
+	err := a.client.Patch(id, sni, out)
 	return out, err
 }
 

@@ -37,6 +37,7 @@ type Route struct {
 	RegexPriority int      `json:"regex_priority"`
 	StripPath     bool     `json:"strip_path"`
 	PreserveHost  bool     `json:"preserve_host"`
+	Protocols     []string `json:"protocols"`
 }
 
 type Upstream struct {

@@ -618,7 +618,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 			r := &kongadminv1.Route{
 				Paths:     []string{location.Path},
-				Protocols: protos,
+				Protocols: []string{"http", "https"}, // default
 				Hosts:     []string{server.Hostname},
 				Service:   kongadminv1.InlineService{ID: svc.ID},
 			}
@@ -638,6 +638,9 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 				if kongIngress.Route.StripPath != r.StripPath {
 					r.StripPath = kongIngress.Route.StripPath
+				}
+				if len(kongIngress.Route.Protocols) != 0 {
+					r.Protocols = kongIngress.Route.Protocols
 				}
 			}
 

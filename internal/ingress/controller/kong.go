@@ -232,12 +232,6 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				proto := "http"
 				port := 80
 
-				// upstream servers require TLS
-				if upstream.Secure {
-					proto = "https"
-					port = 443
-				}
-
 				s, res := client.Services().Get(name)
 				if res.StatusCode == http.StatusNotFound {
 					s = &kongadminv1.Service{
@@ -254,6 +248,11 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 					if kongIngress != nil && kongIngress.Proxy != nil {
 						if kongIngress.Proxy.Path != "" {
 							s.Path = kongIngress.Proxy.Path
+						}
+
+						if kongIngress.Proxy.Protocol != "" &&
+							(kongIngress.Proxy.Protocol == "http" || kongIngress.Proxy.Protocol == "https") {
+							s.Protocol = kongIngress.Proxy.Protocol
 						}
 
 						if kongIngress.Proxy.ConnectTimeout > 0 {

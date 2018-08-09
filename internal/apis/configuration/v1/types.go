@@ -49,6 +49,7 @@ type Upstream struct {
 }
 
 type Proxy struct {
+	Protocol       string `json:"protocol"`
 	Path           string `json:"path"`
 	ConnectTimeout int    `json:"connect_timeout"`
 	Retries        int    `json:"retries"`

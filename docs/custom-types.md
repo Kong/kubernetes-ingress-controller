@@ -110,12 +110,59 @@ config:
 
 ### KongIngress
 
-This option allows us to configure setting from kong related to the [Upstream][5], [Service][6] and [routes][7] that are defined in the Kubernetes Ingress specification.
+This option allows us to configure settings from kong related to the [Upstream][5], [Service][6] and [routes][7] that are defined in the Kubernetes Ingress specification. All `KongIngress` objects must be in the same namespace as the Ingress rule using them.
 
-*There are two ways of activating this feature:*
-- We can create a `KongIngress` object in the same namespace of the Ingress rule using the same name. With this convention we can avoid an additional annotation in the Ingress. This is useful but requires one `KongIngress` definition per Ingress, which could become hard to maintain when have multiple rules. 
+*There are three ways of activating this feature:*
+- Create a `KongIngress` object with the same name as the Ingress rule and it will be applied to all paths in the Ingress rule. This is the default object that will be used.
 
-- (Alternatively) To simplify maintenance, by reusing the same KongIngress on multiple Ingress resources, we can create just one or more `KongIngress` object and map which one should be used using the annotation `ingress.plugin.konghq.com: <name>`.
+- Use a `KongIngress` object in one or more Ingress rules by using the annotation `configuration.konghq.com: <name>` in the Ingress rule. This `KongIngress` object will be used instead of a `KongIngress` object that has the same name as the Ingress rule
+
+- Create a `KongIngress` object with the same name as a backend service in an Ingress rule. This is applied to the individual backend and will be be used instead of any of the previous `KongIngress` objects. This allows us to have alternate configurations for individual backend services in the Ingress rule. While using a different `KongIngress` object listed above for the other backends in the Ingress rule. 
+
+In the following example our `clients-svc` service requires a different configuration than the rest of the backends. We would create a new `KongIngress` object named `clients-svc` that will be used for that backend service while `products-svc` and `services-svc` will use the `default` object as it is specified in the `configuration.konghq.com` annotation.
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  name: default
+route:
+  preserve_host: false
+  strip_path: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  name: clients-svc
+proxy:
+  retries: 1
+route:
+  preserve_host: true
+  strip_path: false
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: example-services
+  annotations:
+    configuration.konghq.com: default
+spec:
+  rules:
+  - host: "example.com"
+    http:
+      paths:
+      - path: /products
+        backend:
+          serviceName: products-svc
+          servicePort: 80
+      - path: /clients
+        backend:
+          serviceName: clients-svc
+          servicePort: 80
+      - path: /services
+        backend:
+          serviceName: services-svc
+          servicePort: 80
+```
 
 *Note:* Is not required to define the complete object, we can define the `upstream`, `proxy` or `route` sections
 

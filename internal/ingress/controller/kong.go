@@ -457,14 +457,29 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 
 // syncConsumers synchronizes the state between KongConsumer (Kubernetes CRD) type and Kong consumers.
 // This loop only creates new consumers in Kong.
-// TODO: we need to delete consumers not being used?
 func (n *NGINXController) syncConsumers() error {
+
+	consumersInKong := make(map[string]*kongadminv1.Consumer)
+	client := n.cfg.Kong.Client
+
+	// List all consumers in Kong
+	kongConsumers, err := client.Consumers().List(nil)
+	if err != nil {
+		return err
+	}
+
+	for i := range kongConsumers.Items {
+		consumersInKong[kongConsumers.Items[i].ID] = &kongConsumers.Items[i]
+	}
+
 	// List existing Consumers in Kubernetes
 	for _, consumer := range n.store.ListKongConsumers() {
 		glog.Infof("checking if Kong consumer %v exists", consumer.Name)
 		consumerID := fmt.Sprintf("%v", consumer.GetUID())
-		kc, res := n.cfg.Kong.Client.Consumers().Get(consumerID)
-		if res.StatusCode == http.StatusNotFound {
+
+		kc, ok := consumersInKong[consumerID]
+
+		if !ok {
 			glog.Infof("Creating Kong consumer %v", consumerID)
 			c := &kongadminv1.Consumer{
 				Username: consumer.Username,
@@ -478,26 +493,27 @@ func (n *NGINXController) syncConsumers() error {
 			if res.StatusCode != http.StatusCreated {
 				return errors.Wrap(res.Error(), "creating a Kong consumer")
 			}
-
-			continue
-		}
-
-		if kc == nil {
-			glog.Warningf("the is no consumer in Kong with id %v", consumerID)
-			continue
-		}
-
-		// check the consumers are equals
-		if consumer.Username != kc.Username || consumer.CustomID != kc.CustomID {
-			kc.Username = consumer.Username
-			kc.CustomID = consumer.CustomID
-			_, res := n.cfg.Kong.Client.Consumers().Patch(consumerID, kc)
-			if res.StatusCode != http.StatusOK {
-				return errors.Wrap(res.Error(), "patching a Kong consumer")
+		} else {
+			// check the consumers are equals
+			if consumer.Username != kc.Username || consumer.CustomID != kc.CustomID {
+				kc.Username = consumer.Username
+				kc.CustomID = consumer.CustomID
+				_, res := n.cfg.Kong.Client.Consumers().Patch(consumerID, kc)
+				if res.StatusCode != http.StatusOK {
+					return errors.Wrap(res.Error(), "patching a Kong consumer")
+				}
 			}
 		}
+		delete(consumersInKong, consumerID)
 	}
+	// remaining entries in the map should be deleted
 
+	for _, consumer := range consumersInKong {
+		err := client.Consumers().Delete(consumer.ID)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

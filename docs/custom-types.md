@@ -115,7 +115,7 @@ This option allows us to configure setting from kong related to the [Upstream][5
 *There are two ways of activating this feature:*
 - We can create a `KongIngress` object in the same namespace of the Ingress rule using the same name. With this convention we can avoid an additional annotation in the Ingress. This is useful but requires one `KongIngress` definition per Ingress, which could become hard to maintain when have multiple rules. 
 
-- (Alternatively) To simplify maintenance, by reusing the same KongIngress on multiple Ingress resources, we can create just one or more `KongIngress` object and map which one should be used using the annotation `ingress.plugin.konghq.com: <name>`.
+- (Alternatively) To simplify maintenance, by reusing the same KongIngress on multiple Ingress resources, we can create just one or more `KongIngress` object and map which one should be used using the annotation `configuration.konghq.com: <name>`.
 
 *Note:* Is not required to define the complete object, we can define the `upstream`, `proxy` or `route` sections
 

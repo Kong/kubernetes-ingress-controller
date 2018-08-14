@@ -70,7 +70,7 @@ metadata:
   name: <object name>
   namespace: <object namespace>
 username: <user name>
-customId: <custom ID>
+custom_id: <custom ID>
 ```
 
 *Example:*

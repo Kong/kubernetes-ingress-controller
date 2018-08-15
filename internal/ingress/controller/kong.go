@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -667,34 +669,63 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 					return false, res.Error()
 				}
 			} else {
-				// the route could exists but the protocols could be different (we are adding ssl)
+				// the route exists but the properties could have changed
 				route := getKongRoute(server.Hostname, location.Path, kongRoutes.Items)
 
 				if routesToRemove.Has(route.ID) {
 					routesToRemove.Delete(route.ID)
 				}
+				outOfSync := false
+				sort.Strings(protos)
+				sort.Strings(route.Protocols)
 
-				for _, proto := range protos {
-					found := false
-					for _, rp := range route.Protocols {
-						if proto == rp {
-							found = true
-							break
+				if !reflect.DeepEqual(protos, route.Protocols) {
+					outOfSync = true
+					route.Protocols = protos
+				}
+
+				if kongIngress != nil && kongIngress.Route != nil {
+					if kongIngress.Route.Methods != nil {
+						sort.Strings(kongIngress.Route.Methods)
+						sort.Strings(route.Methods)
+						if !reflect.DeepEqual(route.Methods, kongIngress.Route.Methods) {
+							outOfSync = true
+							route.Methods = kongIngress.Route.Methods
 						}
 					}
 
-					if !found {
-						glog.Infof("updating Kong Route for host %v, path %v and service %v (change in protocols)", server.Hostname, location.Path, svc.ID)
-						route.Protocols = protos
-						_, res := client.Routes().Patch(route.ID, route)
-						if res.StatusCode != http.StatusOK {
-							glog.Errorf("Unexpected error updating Kong Route: %v", res)
-							return false, res.Error()
+					if kongIngress.Route.PreserveHost != route.PreserveHost {
+						outOfSync = true
+						route.PreserveHost = kongIngress.Route.PreserveHost
+					}
+
+					if kongIngress.Route.RegexPriority != route.RegexPriority {
+						outOfSync = true
+						route.RegexPriority = kongIngress.Route.RegexPriority
+					}
+
+					if kongIngress.Route.StripPath != route.StripPath {
+						outOfSync = true
+						route.StripPath = kongIngress.Route.StripPath
+					}
+					if len(kongIngress.Route.Protocols) > 0 {
+						sort.Strings(kongIngress.Route.Protocols)
+						if !reflect.DeepEqual(route.Protocols, kongIngress.Route.Protocols) {
+							outOfSync = true
+							glog.Infof("protocols changed form ", route.Protocols, " to ", kongIngress.Route.Protocols)
+							route.Protocols = kongIngress.Route.Protocols
 						}
 					}
 				}
 
-				//TODO: check if an update is required (change in kongIngress)
+				if outOfSync {
+					glog.Infof("updating Kong Route for host %v, path %v and service %v", server.Hostname, location.Path, svc.ID)
+					_, res := client.Routes().Patch(route.ID, route)
+					if res.StatusCode != http.StatusOK {
+						glog.Errorf("Unexpected error updating Kong Route: %v", res)
+						return false, res.Error()
+					}
+				}
 			}
 
 			kongRoutes, err = client.Routes().List(nil)

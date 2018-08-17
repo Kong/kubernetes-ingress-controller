@@ -17,7 +17,8 @@ FROM BASEIMAGE
 CROSS_BUILD_COPY qemu-QEMUARCH-static /usr/bin/
 
 RUN clean-install \
-  dumb-init
+  dumb-init \
+  ca-certificates
 
 COPY . /
 

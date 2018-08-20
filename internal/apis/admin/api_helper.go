@@ -75,6 +75,30 @@ func (a *apiClient) Create(obj, out interface{}) *APIResponse {
 	return response
 }
 
+func (a *apiClient) Put(id string, obj, out interface{}) *APIResponse {
+	rawData, err := json.Marshal(obj)
+	if err != nil {
+		return &APIResponse{err: err}
+	}
+	resp := a.client.Put().
+		Resource(a.resource.Name).
+		Name(id).
+		Body(rawData).
+		SetHeader("Content-Type", "application/json").
+		Do()
+
+	statusCode := reflect.ValueOf(resp).FieldByName("statusCode").Int()
+	raw, err := resp.Raw()
+	response := &APIResponse{StatusCode: int(statusCode), err: err}
+	if err != nil {
+		response.Raw = raw
+		return response
+	}
+
+	response.err = json.Unmarshal(raw, out)
+	return response
+}
+
 func (a *apiClient) Get(name string, out interface{}) *APIResponse {
 	resp := a.client.Get().
 		Resource(a.resource.Name).

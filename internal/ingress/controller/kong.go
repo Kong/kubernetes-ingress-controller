@@ -1073,10 +1073,10 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 	switch res.StatusCode {
 	case http.StatusOK:
 		// check if it is using the right certificate
-		if sni.Certificate != cert.ID {
+		if sni.Certificate.ID != cert.ID {
 			glog.Infof("updating certificate for host %v to certificate id %v", server.Hostname, cert.ID)
 
-			sni.Certificate = cert.ID
+			sni.Certificate.ID = cert.ID
 			sni, res = client.SNIs().Patch(sni.ID, sni)
 			if res.StatusCode != http.StatusOK {
 				return errors.Wrap(res.Error(), "patching a Kong consumer")
@@ -1085,7 +1085,7 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 	case http.StatusNotFound:
 		sni = &kongadminv1.SNI{
 			Name:        server.Hostname,
-			Certificate: cert.ID,
+			Certificate: kongadminv1.InlineCertificate{ID: cert.ID},
 		}
 		glog.Infof("creating Kong SNI for host %v and certificate id %v", server.Hostname, cert.ID)
 

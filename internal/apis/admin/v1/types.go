@@ -37,8 +37,12 @@ type RequiredList struct {
 type SNI struct {
 	Required `json:",inline"`
 
-	Name        string `json:"name"`
-	Certificate string `json:"ssl_certificate_id"`
+	Name        string            `json:"name"`
+	Certificate InlineCertificate `json:"certificate"`
+}
+
+type InlineCertificate struct {
+	ID string `json:"id"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

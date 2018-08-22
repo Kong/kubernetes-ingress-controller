@@ -25,7 +25,7 @@ type consumerAPI struct {
 
 func (a *consumerAPI) Create(consumer *adminv1.Consumer) (*adminv1.Consumer, *APIResponse) {
 	out := &adminv1.Consumer{}
-	err := a.client.Create(consumer, out)
+	err := a.client.Put(consumer.ID, consumer, out)
 	return out, err
 }
 

@@ -25,7 +25,7 @@ type certificateAPI struct {
 
 func (a *certificateAPI) Create(target *adminv1.Certificate) (*adminv1.Certificate, *APIResponse) {
 	out := &adminv1.Certificate{}
-	err := a.client.Create(target, out)
+	err := a.client.Put(target.ID, target, out)
 	return out, err
 }
 

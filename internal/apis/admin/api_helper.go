@@ -12,6 +12,7 @@ import (
 type APIInterface interface {
 	Get(string, interface{}) *APIResponse
 	Create(interface{}, interface{}) *APIResponse
+	Put(string, interface{}, interface{}) *APIResponse
 	Patch(string, interface{}, interface{}) *APIResponse
 	Delete(string) error
 

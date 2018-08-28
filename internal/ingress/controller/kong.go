@@ -1184,7 +1184,7 @@ func pluginDeepEqual(config map[string]interface{}, kong *kongadminv1.Plugin) bo
 			return false
 		}
 
-		if fmt.Sprintf("%v", v) != fmt.Sprintf("%v", kv) {
+		if !reflect.DeepEqual(v, kv) {
 			return false
 		}
 	}

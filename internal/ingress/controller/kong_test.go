@@ -27,7 +27,7 @@ func TestPluginDeepEqual(t *testing.T) {
 
 	equal = pluginDeepEqual(map[string]interface{}{}, &kongadminv1.Plugin{Config: map[string]interface{}{}})
 	if !equal {
-		t.Errorf("Comparing empty maps failed on pluginDeepEqual")
+		t.Errorf("Comparing empty maps failed")
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{
@@ -40,7 +40,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		"key3": "value3",
 	}})
 	if !equal {
-		t.Errorf("Comparing maps with same keys and same order failed on pluginDeepEqual")
+		t.Errorf("Comparing maps with same keys and same order failed")
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{
@@ -53,7 +53,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		"key1": "vaule1",
 	}})
 	if !equal {
-		t.Errorf("Comparing maps with same keys and different order failed on pluginDeepEqual")
+		t.Errorf("Comparing maps with same keys and different order failed")
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{
@@ -70,7 +70,67 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 	}})
 	if !equal {
-		t.Errorf("Comparing maps with nested map failed on pluginDeepEqual")
+		t.Errorf("Comparing maps with nested map failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": map[string]string{},
+		"key2": "value2",
+		"key3": "value3",
+	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key3": "value3",
+		"key1": map[string]string{},
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with empty map failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": [3]string{
+			"arr1", "arr2", "arr3",
+		},
+		"key2": "value2",
+		"key3": "value3",
+	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key3": "value3",
+		"key1": [3]string{
+			"arr1", "arr2", "arr3",
+		},
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with nested array failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": [3]string{
+			"arr1", "arr2", "arr3",
+		},
+		"key2": "value2",
+		"key3": "value3",
+	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key3": "value3",
+		"key1": [3]string{
+			"arr2", "arr3", "arr1",
+		},
+	}})
+	if equal {
+		t.Errorf("Comparing maps with nested array with different order failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": []string{},
+		"key2": "value2",
+		"key3": "value3",
+	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key3": "value3",
+		"key1": []string{},
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with empty array failed")
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{
@@ -86,7 +146,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 	}})
 	if equal {
-		t.Errorf("Comparing maps with missing keys failed on pluginDeepEqual")
+		t.Errorf("Comparing maps with missing keys failed")
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{
@@ -103,6 +163,6 @@ func TestPluginDeepEqual(t *testing.T) {
 		"key4": "value4",
 	}})
 	if equal {
-		t.Errorf("Comparing maps with unmatched keys failed on pluginDeepEqual")
+		t.Errorf("Comparing maps with unmatched keys failed")
 	}
 }

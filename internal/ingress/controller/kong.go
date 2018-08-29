@@ -247,7 +247,12 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				}
 
 				if s != nil {
+					// if kongIngress object does not exist, don't create the service in Kong
+					outOfSync := false
 					if kongIngress != nil && kongIngress.Proxy != nil {
+						// check if we need to patch KongService later
+						outOfSync = !reflect.DeepEqual(s, kongIngress.Proxy)
+
 						if kongIngress.Proxy.Path != "" {
 							s.Path = kongIngress.Proxy.Path
 						}
@@ -273,7 +278,6 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							s.Retries = kongIngress.Proxy.Retries
 						}
 					}
-
 					if res.StatusCode == http.StatusNotFound {
 						glog.Infof("Creating Kong Service name %v", name)
 						_, res := client.Services().Create(s)
@@ -281,7 +285,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							glog.Errorf("Unexpected error creating Kong Service: %v", res)
 							return false, res.Error()
 						}
-					} else {
+					} else if outOfSync {
 						glog.Infof("Patching Kong Service name %v", name)
 						_, res := client.Services().Patch(s.ID, s)
 						if res.StatusCode != http.StatusOK {

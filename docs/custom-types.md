@@ -161,6 +161,7 @@ upstream:
         timeouts: 0
     slots: 10
 proxy:
+  protocol: http
   path: /
   connect_timeout: 10000
   retries: 10

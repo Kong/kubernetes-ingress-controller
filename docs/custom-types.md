@@ -133,11 +133,11 @@ upstream:
     active:
       concurrency: 10
       healthy:
-      http_statuses:
+        http_statuses:
         - 200
         - 302
-      interval: 0
-      successes: 0
+        interval: 0
+        successes: 0
       http_path: "/"
       timeout: 1
       unhealthy:
@@ -149,9 +149,9 @@ upstream:
         timeouts: 0
     passive:
       healthy:
-      http_statuses:
+        http_statuses:
         - 200
-      successes: 0
+        successes: 0
       unhealthy:
         http_failures: 0
         http_statuses:
@@ -174,6 +174,8 @@ route:
   regex_priority: 0
   strip_path: false
   preserve_host: true
+  protocols:
+  - http
 ```
 
 [0]: https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/

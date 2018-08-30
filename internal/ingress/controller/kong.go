@@ -247,19 +247,19 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				}
 
 				if s != nil {
-					// if kongIngress object does not exist, don't create the service in Kong
+					// the flag that if we need to patch KongService later
 					outOfSync := false
 					if kongIngress != nil && kongIngress.Proxy != nil {
-						// check if we need to patch KongService later
-						outOfSync = !reflect.DeepEqual(s, kongIngress.Proxy)
-
-						if kongIngress.Proxy.Path != "" {
+						if kongIngress.Proxy.Path != "" && s.Path != kongIngress.Proxy.Path {
 							s.Path = kongIngress.Proxy.Path
+							outOfSync = true
 						}
 
 						if kongIngress.Proxy.Protocol != "" &&
-							(kongIngress.Proxy.Protocol == "http" || kongIngress.Proxy.Protocol == "https") {
+							(kongIngress.Proxy.Protocol == "http" || kongIngress.Proxy.Protocol == "https") &&
+							s.Protocol != kongIngress.Proxy.Protocol {
 							s.Protocol = kongIngress.Proxy.Protocol
+							outOfSync = true
 						}
 
 						if kongIngress.Proxy.ConnectTimeout > 0 {
@@ -274,10 +274,12 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							s.WriteTimeout = kongIngress.Proxy.WriteTimeout
 						}
 
-						if kongIngress.Proxy.Retries > 0 {
+						if kongIngress.Proxy.Retries > 0 && s.Retries != kongIngress.Proxy.Retries {
 							s.Retries = kongIngress.Proxy.Retries
+							outOfSync = true
 						}
 					}
+
 					if res.StatusCode == http.StatusNotFound {
 						glog.Infof("Creating Kong Service name %v", name)
 						_, res := client.Services().Create(s)

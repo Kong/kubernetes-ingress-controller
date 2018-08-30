@@ -18,6 +18,7 @@ type PluginInterface interface {
 	Get(string) (*adminv1.Plugin, *APIResponse)
 	CreateInRoute(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	CreateInService(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
+	CreateGlobal(*adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	Patch(string, *adminv1.Plugin) (*adminv1.Plugin, *APIResponse)
 	Delete(string) error
 
@@ -67,6 +68,12 @@ func (a *pluginAPI) CreateInRoute(id string, plugin *adminv1.Plugin) (*adminv1.P
 
 func (a *pluginAPI) CreateInService(id string, plugin *adminv1.Plugin) (*adminv1.Plugin, *APIResponse) {
 	return a.create("services", id, plugin)
+}
+
+func (a *pluginAPI) CreateGlobal(plugin *adminv1.Plugin) (*adminv1.Plugin, *APIResponse) {
+	out := &adminv1.Plugin{}
+	err := a.client.Create(plugin, out)
+	return out, err
 }
 
 func (a *pluginAPI) Patch(id string, route *adminv1.Plugin) (*adminv1.Plugin, *APIResponse) {

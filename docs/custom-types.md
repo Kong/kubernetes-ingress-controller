@@ -176,6 +176,7 @@ route:
   preserve_host: true
   protocols:
   - http
+  - https
 ```
 
 [0]: https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/

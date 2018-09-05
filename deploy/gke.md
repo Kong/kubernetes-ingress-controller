@@ -1,4 +1,4 @@
-## Install Kong on a Google Kubernetes Engine cluster
+## Install Kong Ingress on a Google Kubernetes Engine cluster
 
 #### Requirements
 
@@ -7,7 +7,7 @@
 2. Basic understanding of kubernetes
 4. A working kubectl linked to the GKE kubernetes cluster we will work on. For information, you can associate a new kubectl context by using `gcloud container clusters get-credentials <my-cluster-name> --zone <my-zone> --project <my-project-id>`
 
-#### Deploy Kong
+#### Deploy Kong Ingress
 
 ##### Downloads basic ressource
 
@@ -140,11 +140,14 @@ kong-proxy                LoadBalancer   10.42.42.2   35.204.42.1   80:30095/TCP
 postgres                  ClusterIP      10.42.42.3   <none>         5432/TCP                    
 ```
 
-Now, if you use
+Now, 
+
 ```
 curl 35.204.42.1
 ```
-if should display:
+
+should display:
+
 ```
 {"message":"no route and no API found with those values"}
 ```

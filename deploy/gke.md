@@ -2,16 +2,16 @@
 
 ### Requirements
 
-1. A fully functional GKE cluster. The easiest way to do this is to do it via the web UI: Go to Google Cloud's console > Kubernetes Engine > Cluster > Create a new cluster. This documentation has been tested on a zonal cluster in europe-west-4a using 1.10.5-gke.4 as Master version. The default pool has been assigned 2 nodes of kind 1VCPU with 3.75GB memory (default setting). The OS used is COS (Container Optimized OS) and the auto-scaling has been enabled. Defaults settings are being used except for `HTTP load balancing` which has been disabled (you probably wanna use Kong features for this). For more information on GKE clusters, refer to [the GKE documentation](https://cloud.google.com/kubernetes-engine/docs/)
+1. A fully functional GKE cluster. The easiest way to do this is to do it via the web UI: Go to Google Cloud's console > Kubernetes Engine > Cluster > Create a new cluster. This documentation has been tested on a zonal cluster in europe-west-4a using 1.10.5-gke.4 as Master version. The default pool has been assigned 2 nodes of kind 1VCPU with 3.75GB memory (default setting). The OS used is COS (Container Optimized OS) and the auto-scaling has been enabled. Default settings are being used except for `HTTP load balancing` which has been disabled (you probably wanna use Kong features for this). For more information on GKE clusters, refer to [the GKE documentation](https://cloud.google.com/kubernetes-engine/docs/)
 3. If you wish to use a static IP for Kong, you have to reserve a static IP address (in Google Cloud's console > VPC network > External IP addresses). For information, you must create a regional IP (global is not supported as `loadBalancerIP ` yet)
 2. Basic understanding of Kubernetes
 4. A working `kubectl`  linked to the GKE Kubernetes cluster we will work on. For information, you can associate a new `kubectl` context by using `gcloud container clusters get-credentials <my-cluster-name> --zone <my-zone> --project <my-project-id>`
 
 ### Deploy Kong Ingress Controller
 
-#### Downloads basics resources
+#### Downloads basic resources
 
-It's recommended to keep your Kuberenetes configuration versioned, so we will first download basics resources.
+It's recommended to keep your Kuberenetes configuration versioned, so we will first download basic resources.
 
 In your project directory:
 
@@ -74,9 +74,9 @@ spec:
 
 #### Update User Permissions
 
- >Because of the way Kubernetes Engine checks permissions when you create a Role or ClusterRole, you must first create a RoleBinding that grants you all of the permissions included in the role you want to create.
+ >[Because of the way Kubernetes Engine checks permissions when you create a Role or ClusterRole, you must first create a RoleBinding that grants you all of the permissions included in the role you want to create.
 An example workaround is to create a RoleBinding that gives your Google identity a cluster-admin role before attempting to create additional Role or ClusterRole permissions.
-This is a known issue in RBAC in Kubernetes and Kubernetes Engine versions 1.6 and later. (@see https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control).
+This is a known issue in RBAC in Kubernetes and Kubernetes Engine versions 1.6 and later.]( https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control).
 
 A fast workaround:
 

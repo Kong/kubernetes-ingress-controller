@@ -171,7 +171,7 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-    - host: dummy.dummy.com
+    - host: dummy.kong.example
       http:
         paths:
           - path: "/"
@@ -183,10 +183,10 @@ spec:
 Edit your /etc/hosts and add:
 
 ```
-35.204.42.1 dummy.dummy.com
+35.204.42.1 dummy.kong.example
 ```
 
-Now, access to dummy.dummy.com should display some informations.
+Now, access to dummy.kong.example should display some informations.
 
 #### Bonus: Expose the Kong admin API
 
@@ -203,7 +203,7 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-    - host: kong.dummy.com
+    - host: dummy.kong.example
       http:
         paths:
           - path: "/"

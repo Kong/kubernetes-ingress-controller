@@ -268,12 +268,16 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							outOfSync = true
 						}
 
-						if kongIngress.Proxy.ReadTimeout > 0 {
+						if kongIngress.Proxy.ReadTimeout > 0 &&
+							s.ReadTimeout != kongIngress.Proxy.ReadTimeout {
 							s.ReadTimeout = kongIngress.Proxy.ReadTimeout
+							outOfSync = true
 						}
 
-						if kongIngress.Proxy.WriteTimeout > 0 {
+						if kongIngress.Proxy.WriteTimeout > 0 &&
+							s.WriteTimeout != kongIngress.Proxy.WriteTimeout {
 							s.WriteTimeout = kongIngress.Proxy.WriteTimeout
+							outOfSync = true
 						}
 
 						if kongIngress.Proxy.Retries > 0 && s.Retries != kongIngress.Proxy.Retries {

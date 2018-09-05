@@ -1,32 +1,32 @@
 ## Install Kong Ingress on a Google Kubernetes Engine cluster
 
-#### Requirements
+### Requirements
 
-1. A fully functionnal GKE cluster. The easyest way to do this is to do it via the web UI : Go to google cloud's console > Kubernetes Engine > Cluster > Create a new cluster. This documentation has been tested on a zonal cluster in europe-west-4a using 1.10.5-gke.4 as Master version. The default pool has been assigned 2 nodes of kind 1VCPU with 3.75GB memory (default setting). The OS used is the cos (Container Optimized OS) and the auto-scaling has been enabled. Defaults setting are being used except for HTTP load balancing which has been disabled. For more information on GKE cluster, refer to [the GKE documentation](https://cloud.google.com/kubernetes-engine/docs/)
-3. If you wish to use a static IP for your ingress, you have to reserve a static IP address (google cloud's console > VPC network > External IP addresses). You must create a regional IP (global is not supported on loadbalancer yet)
-2. Basic understanding of kubernetes
-4. A working kubectl linked to the GKE kubernetes cluster we will work on. For information, you can associate a new kubectl context by using `gcloud container clusters get-credentials <my-cluster-name> --zone <my-zone> --project <my-project-id>`
+1. A fully functional GKE cluster. The easiest way to do this is to do it via the web UI: Go to Google Cloud's console > Kubernetes Engine > Cluster > Create a new cluster. This documentation has been tested on a zonal cluster in europe-west-4a using 1.10.5-gke.4 as Master version. The default pool has been assigned 2 nodes of kind 1VCPU with 3.75GB memory (default setting). The OS used is COS (Container Optimized OS) and the auto-scaling has been enabled. Defaults settings are being used except for `HTTP load balancing` which has been disabled (you probably wanna use Kong features for this). For more information on GKE clusters, refer to [the GKE documentation](https://cloud.google.com/kubernetes-engine/docs/)
+3. If you wish to use a static IP for Kong, you have to reserve a static IP address (in Google Cloud's console > VPC network > External IP addresses). For information, you must create a regional IP (global is not supported as `loadBalancerIP ` yet)
+2. Basic understanding of Kubernetes
+4. A working `kubectl`  linked to the GKE Kubernetes cluster we will work on. For information, you can associate a new `kubectl` context by using `gcloud container clusters get-credentials <my-cluster-name> --zone <my-zone> --project <my-project-id>`
 
-#### Deploy Kong Ingress
+### Deploy Kong Ingress Controller
 
-##### Downloads basic ressource
+#### Downloads basics resources
 
-It's recommanded to keep your kuberenetes configuration versionned, so let first downloads basics ressources
+It's recommended to keep your Kuberenetes configuration versioned, so we will first download basics resources.
 
 In your project directory:
+
 ``` 
 wget https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/namespace.yaml && wget https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/custom-types.yaml && wget https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/postgres.yaml && wget https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/rbac.yaml && wget https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/ingress-controller.yaml && wget https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/kong.yaml && wget https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/provider/cloud/gke-kong-proxy-loadbalancer-service.yaml
 ``` 
 
-This command should create the following files:
-  - namespace.yaml : The definition of the kong's namespace
-  - custom-types.yaml : Contain Custom Types definition 
-  - postgres.yaml : Contain posgres deployment. You are free to use a DaaS as cloud-sql if needed. If you do so, this file should not be used, but you will have to configure kong.yaml and ingress-controller.yaml accordingly
-  - rbac.yaml : Contain service account / roles definition used by kong
-  - ingress-controller.yaml : The kong ingress controller deployment file. NodePort only expose port internally into node's private nerwork, so you might edit the service `kong-ingress-controller` to use the type ClusterIP, as following:
+This command will create  followings files:
+  - namespace.yaml : The definition of the Kong's namespace
+  - custom-types.yaml : Contains Custom Types Definition 
+  - postgres.yaml : Contains PostgreSQL deployment. You are free to use a DaaS like CloudSQL if needed. If you do so, this file should not be used and you have to configure kong.yaml and ingress-controller.yaml accordingly.
+  - rbac.yaml : Contains Service-Account and Roles definitions used by Kong.
+  - ingress-controller.yaml :  Deployment file of the Kong Ingress Controller. `NodePort` exposing ports internally into node's private network, you might edit the Service `kong-ingress-controller` to use `ClusterIP` Type as following:
 
 ```
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -41,13 +41,13 @@ spec:
     protocol: TCP
   selector:
     app: ingress-kong
-
 ```
-  -  kong.yaml : Kong deployment file
-  - gke-kong-proxy-loadbalancer-service.yaml : The kong proxy service
 
-You can now edit theses files to fill your need (for example, you can edit theses files to use google's CloudSQL for the postgres database, or edit KONG_ADMIN_LISTEN if you wish to access kong's admin)
-If you want to use a static IP, add the IP value as `loadBalancerIP` in the service `kong-proxy` in the file gke-kong-proxy-loadbalancer-service.yaml. For example:
+  -  kong.yaml :  Deployment file of Kong
+  - gke-kong-proxy-loadbalancer-service.yaml : The Service associated to Kong
+
+You can now edit these files to fill your need (for example, you can edit them to use Google's CloudSQL for the PostgreSQL database, or edit `KONG_ADMIN_LISTEN` if you wish to access Kong admin API).
+If you want to use a static IP, add the IP value as `loadBalancerIP` in the Service `kong-proxy` in the file gke-kong-proxy-loadbalancer-service.yaml. For example:
 
 ```
 apiVersion: v1
@@ -72,13 +72,13 @@ spec:
     app: kong
 ```
 
-##### Update user rights
+#### Update User Permissions
 
  >Because of the way Kubernetes Engine checks permissions when you create a Role or ClusterRole, you must first create a RoleBinding that grants you all of the permissions included in the role you want to create.
 An example workaround is to create a RoleBinding that gives your Google identity a cluster-admin role before attempting to create additional Role or ClusterRole permissions.
 This is a known issue in RBAC in Kubernetes and Kubernetes Engine versions 1.6 and later. (@see https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control).
 
-A fast workarround:
+A fast workaround:
 
 ```
 echo -n "
@@ -96,9 +96,10 @@ subjects:
   namespace: kube-system" | kubectl apply -f -
 ```
 
-4. Deploy KONG
+#### Deploy Kong
 
-You can now deploy kong 
+You can now deploy Kong 
+
 ```
 kubectl apply -f namespace.yaml &&
 kubectl apply -f custom-types.yaml &&
@@ -130,7 +131,7 @@ deployment "kong" created
 service "kong-proxy" created
 ```
 
-You can now retrieve the associated IP for kong-proxy (or you can use  directly your static IP if you used one):
+You can now retrieve the associated IP for the Service `kong-proxy` (or you can use  directly your static IP if you used one):
 
 `kubectl get services -n kong` should display :
 ```
@@ -146,16 +147,18 @@ Now,
 curl 35.204.42.1
 ```
 
-should display:
+Should display:
 
 ```
 {"message":"no route and no API found with those values"}
 ```
 
-5. Test Your deployment
+>Note: It may take a while for Google to actually associate the IP address to the `kong-proxy` Service.
+
+#### Test your deployment
 
   - Deploy a dummy application : `kubectl create namespace dummy && curl https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/dummy-application.yaml -n dummy`
-  - Add an ingress:
+  - Add an Ingress:
 
 ```
 echo -n "
@@ -176,6 +179,7 @@ spec:
               serviceName: http-svc
               servicePort: http" | kubectl apply -f -
 ```
+
 Edit your /etc/hosts and add:
 
 ```
@@ -184,9 +188,9 @@ Edit your /etc/hosts and add:
 
 Now, access to dummy.dummy.com should display some informations.
 
-6. Expose the ADMIN API
+#### Bonus: Expose the Kong admin API
 
-If you want to expose the admin API, you must configure kong correctly via `KONG_ADMIN_LISTEN` and add an ingress:
+If you want to expose the Kong admin API, you must configure Kong correctly via `KONG_ADMIN_LISTEN` and add an Ingress:
 
 ```
 echo -n "

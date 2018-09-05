@@ -247,30 +247,42 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				}
 
 				if s != nil {
+					// the flag that if we need to patch KongService later
+					outOfSync := false
 					if kongIngress != nil && kongIngress.Proxy != nil {
-						if kongIngress.Proxy.Path != "" {
+						if kongIngress.Proxy.Path != "" && s.Path != kongIngress.Proxy.Path {
 							s.Path = kongIngress.Proxy.Path
+							outOfSync = true
 						}
 
 						if kongIngress.Proxy.Protocol != "" &&
-							(kongIngress.Proxy.Protocol == "http" || kongIngress.Proxy.Protocol == "https") {
+							(kongIngress.Proxy.Protocol == "http" || kongIngress.Proxy.Protocol == "https") &&
+							s.Protocol != kongIngress.Proxy.Protocol {
 							s.Protocol = kongIngress.Proxy.Protocol
+							outOfSync = true
 						}
 
-						if kongIngress.Proxy.ConnectTimeout > 0 {
+						if kongIngress.Proxy.ConnectTimeout > 0 &&
+							s.ConnectTimeout != kongIngress.Proxy.ConnectTimeout {
 							s.ConnectTimeout = kongIngress.Proxy.ConnectTimeout
+							outOfSync = true
 						}
 
-						if kongIngress.Proxy.ReadTimeout > 0 {
+						if kongIngress.Proxy.ReadTimeout > 0 &&
+							s.ReadTimeout != kongIngress.Proxy.ReadTimeout {
 							s.ReadTimeout = kongIngress.Proxy.ReadTimeout
+							outOfSync = true
 						}
 
-						if kongIngress.Proxy.WriteTimeout > 0 {
+						if kongIngress.Proxy.WriteTimeout > 0 &&
+							s.WriteTimeout != kongIngress.Proxy.WriteTimeout {
 							s.WriteTimeout = kongIngress.Proxy.WriteTimeout
+							outOfSync = true
 						}
 
-						if kongIngress.Proxy.Retries > 0 {
+						if kongIngress.Proxy.Retries > 0 && s.Retries != kongIngress.Proxy.Retries {
 							s.Retries = kongIngress.Proxy.Retries
+							outOfSync = true
 						}
 					}
 
@@ -281,7 +293,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							glog.Errorf("Unexpected error creating Kong Service: %v", res)
 							return false, res.Error()
 						}
-					} else {
+					} else if outOfSync {
 						glog.Infof("Patching Kong Service name %v", name)
 						_, res := client.Services().Patch(s.ID, s)
 						if res.StatusCode != http.StatusOK {

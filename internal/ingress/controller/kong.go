@@ -19,7 +19,7 @@ package controller
 import (
 	"bytes"
 	"fmt"
-        "net"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -408,108 +408,96 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				continue
 			}
 
-			plugins := annotations.ExtractKongPluginAnnotations(location.Service.GetAnnotations())
-
-			if len(plugins) == 0 {
-				glog.Infof("service %v/%v does not contain any plugins. Checking if it is required to remove plugins...",
-					location.Service.Namespace, location.Service.Name)
-				// remove all the plugins from the service.
-				plugins, err := client.Plugins().GetAllByService(svc.ID)
-				if err != nil {
-					glog.Errorf("Unexpected error obtaining Kong plugins for service %v: %v", svc.ID, err)
-					continue
-				}
-
-				for _, plugin := range plugins {
-					glog.Infof("Removing plugin %v from service %v", plugin.ID, svc.ID)
-					err := client.Plugins().Delete(plugin.ID)
-					if err != nil {
-						return false, errors.Wrap(err, "deleting Kong plugin")
-					}
-
-					glog.Infof("Plugin %v successfully removed from service %v", plugin.ID, svc.ID)
-				}
-			} else {
-				glog.Infof("configuring plugins '%v' for service %v...", plugins, svc.ID)
-			}
-
-			// configure plugins poresent in the service
-			for plugin, crdNames := range plugins {
+			// Get plugin annotations from k8s, these plugins should be configured for this service
+			pluginAnnotations := annotations.ExtractKongPluginAnnotations(location.Service.GetAnnotations())
+			pluginsInk8s := make(map[string]*pluginv1.KongPlugin)
+			for plugin, crdNames := range pluginAnnotations {
 				for _, crdName := range crdNames {
 					// search configured plugin CRD in k8s
 					k8sPlugin, err := n.store.GetKongPlugin(location.Ingress.Namespace, crdName)
 					if err != nil {
 						return false, errors.Wrap(err, fmt.Sprintf("searching plugin KongPlugin %v", crdName))
 					}
+					pluginsInk8s[plugin] = k8sPlugin
+				}
+			}
 
-					pluginID := fmt.Sprintf("%v", k8sPlugin.GetUID())
-					// The plugin is not defined in the service.
-					// check if the route has the plugin or is required to
-					// create a new one
-					configuredPlugin, err := client.Plugins().GetByID(pluginID)
-					if err != nil {
-						if !kong.IsPluginNotConfiguredError(err) {
-							return false, errors.Wrap(err, fmt.Sprintf("getting Kong plugin %v", pluginID))
-						}
+			// Get plugins configured in Kong currently
+			plugins, err := client.Plugins().GetAllByService(svc.ID)
+			if err != nil {
+				glog.Errorf("Unexpected error obtaining Kong plugins for service %v: %v", svc.ID, err)
+				continue
+			}
+			pluginsInKong := make(map[string]kongadminv1.Plugin)
+			for _, plugin := range plugins {
+				pluginsInKong[plugin.Name] = plugin
+			}
+			var pluginsToDelete []kongadminv1.Plugin
+			var pluginsToCreate []kongadminv1.Plugin
+			var pluginsToUpdate []kongadminv1.Plugin
 
-						// there is no plugin, create a new one
-						p := &kongadminv1.Plugin{
-							Name:    plugin,
+			// Plugins present in Kong but not in k8s should be deleted
+			for _, plugin := range pluginsInKong {
+				if _, ok := pluginsInk8s[plugin.Name]; !ok {
+					pluginsToDelete = append(pluginsToDelete, plugin)
+				}
+			}
+
+			// Plugins present in k8s but not in Kong should be created
+			for pluginName, pluginInk8s := range pluginsInk8s {
+				if pluginInKong, ok := pluginsInKong[pluginName]; !ok {
+					p := kongadminv1.Plugin{
+						Name:    pluginName,
+						Service: svc.ID,
+						Config:  kongadminv1.Configuration(pluginInk8s.Config),
+					}
+					pluginsToCreate = append(pluginsToCreate, p)
+				} else {
+					// Plugins present in Kong and k8s need should have same configuration
+					if !pluginDeepEqual(pluginInk8s.Config, &pluginInKong) ||
+						(!pluginInk8s.Disabled != pluginInKong.Enabled) ||
+						(pluginInk8s.ConsumerRef != "" && pluginInKong.Consumer == "") {
+						glog.Infof("plugin %v configuration in kong is outdated. Updating...", pluginInk8s.Name)
+						p := kongadminv1.Plugin{
+							Name:    pluginInKong.Name,
+							Config:  kongadminv1.Configuration(pluginInk8s.Config),
+							Enabled: pluginInk8s.Disabled,
 							Service: svc.ID,
-							Config:  kongadminv1.Configuration(k8sPlugin.Config),
 							Required: kongadminv1.Required{
-								ID: pluginID,
+								ID: pluginInKong.ID,
 							},
 						}
-
-						if k8sPlugin.ConsumerRef != "" {
-							consumer, err := n.store.GetKongConsumer(k8sPlugin.Namespace, k8sPlugin.ConsumerRef)
+						if pluginInk8s.ConsumerRef != "" {
+							consumer, err := n.store.GetKongConsumer(pluginInk8s.Namespace, pluginInk8s.ConsumerRef)
 							if err != nil {
-								glog.Errorf("Unexpected error searching plugin configuration %v for service %v: %v", plugin, svc.ID, err)
-							} else {
-								p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
-							}
-						}
-
-						_, res := client.Plugins().CreateInService(svc.ID, p)
-						if res.StatusCode != http.StatusCreated {
-							return false, errors.Wrap(res.Error(), fmt.Sprintf("creating a Kong plugin %v in service %v", plugin, svc.ID))
-						}
-
-						continue
-					}
-
-					// check the kong plugin configuration is up to date
-					if !pluginDeepEqual(k8sPlugin.Config, configuredPlugin) ||
-						(!k8sPlugin.Disabled != configuredPlugin.Enabled) {
-						glog.Infof("plugin %v configuration in kong is outdated. Updating...", k8sPlugin.PluginName)
-						p := &kongadminv1.Plugin{
-							Name:    configuredPlugin.Name,
-							Config:  kongadminv1.Configuration(k8sPlugin.Config),
-							Enabled: k8sPlugin.Disabled,
-							Service: svc.ID,
-							Route:   "",
-						}
-
-						if k8sPlugin.ConsumerRef != "" && configuredPlugin.Consumer == "" {
-							consumer, err := n.store.GetKongConsumer(k8sPlugin.Namespace, k8sPlugin.ConsumerRef)
-							if err != nil {
-								glog.Errorf("Unexpected error searching plugin configuration %v for service %v: %v",
-									plugin, svc.ID, err)
+								glog.Errorf("Unexpected error searching for consumer %v: %v",
+									pluginInk8s.ConsumerRef, err)
 								continue
 							}
 							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
 						}
-						_, res := client.Plugins().Patch(configuredPlugin.ID, p)
-						if res.StatusCode != http.StatusOK {
-							glog.Errorf("Unexpected error updating plugin configuration %v for service %v: %v",
-								plugin, svc.ID, res)
-						}
-
-						continue
 					}
+				}
+			}
 
-					glog.Infof("plugin %v configuration in kong is up to date.", k8sPlugin.PluginName)
+			for _, plugin := range pluginsToDelete {
+				err := client.Plugins().Delete(plugin.ID)
+				if err != nil {
+					return false, errors.Wrap(err, "deleting Kong plugin")
+				}
+			}
+
+			for _, plugin := range pluginsToCreate {
+				_, res := client.Plugins().CreateInService(svc.ID, &plugin)
+				if res.StatusCode != http.StatusCreated {
+					return false, errors.Wrap(res.Error(), fmt.Sprintf("creating a Kong plugin %v in service %v", plugin, svc.ID))
+				}
+			}
+
+			for _, plugin := range pluginsToUpdate {
+				_, res := client.Plugins().Patch(plugin.Required.ID, &plugin)
+				if res.StatusCode != http.StatusOK {
+					return false, errors.Wrap(res.Error(), fmt.Sprintf("updating a Kong plugin %v in service %v", plugin, svc.ID))
 				}
 			}
 		}
@@ -838,135 +826,101 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 			route := getKongRoute(server.Hostname, location.Path, kongRoutes.Items)
 
-			plugins := annotations.ExtractKongPluginAnnotations(location.Ingress.GetAnnotations())
-
-			if len(plugins) == 0 {
-				glog.Errorf("Route %v does not contain any plugins. Checking if it is required to remove plugins...", route.ID)
-				plugins, err := client.Plugins().GetAllByRoute(route.ID)
-				if err != nil {
-					glog.Errorf("Unexpected error obtaining Kong plugins for route %v: %v", route.ID, err)
-					continue
-				}
-
-				for _, plugin := range plugins {
-					glog.Errorf("Removing plugin %v from route %v", plugin.ID, route.ID)
-					err := client.Plugins().Delete(plugin.ID)
-					if err != nil {
-						return false, errors.Wrap(err, "deleting Kong plugin")
-					}
-
-					glog.Infof("Plugin %v successfully removed from route %v", plugin.ID, svc.ID)
-				}
-			} else {
-				glog.Infof("configuring plugins '%v' for route %v...", plugins, route.ID)
-			}
-
-			// pluginsInService contains the list of plugins configured in the
-			// service and the source of truth to remove plugins from routes
-			var pluginsInService []string
-
-			// The Ingress contains at least one plugin.
-			// Before starting to process the configuration we need to check
-			// if the service does not have the same plugin configured.
-			// In that case we need to skip the configuration in the route
-			if len(location.Service.GetAnnotations()) > 0 {
-				sa := annotations.ExtractKongPluginAnnotations(location.Service.GetAnnotations())
-				for p := range sa {
-					_, ok := plugins[p]
-					if ok {
-						glog.Warningf("Plugin %v is already configured in service %v/%v. Omitting plugin creation in Kong Route",
-							p, location.Service.Namespace, location.Service.Name)
-						delete(plugins, p)
-						pluginsInService = append(pluginsInService, p)
-					}
-				}
-			}
-
-			for plugin, crdNames := range plugins {
-				for _, crdName := range crdNames {
-					glog.Infof("configuring plugin stored in KongPlugin CRD %v", crdName)
-					// search configured plugin CRD in k8s
-					k8sPlugin, err := n.store.GetKongPlugin(location.Ingress.Namespace, crdName)
-					if err != nil {
-						glog.Errorf("Unexpected error searching plugin %v for route %v: %v", plugin, route.ID, err)
-						continue
-					}
-
-					pluginID := fmt.Sprintf("%v", k8sPlugin.GetUID())
-					// The plugin is not defined in the service.
-					// check if the route has the plugin or is required to
-					// create a new one
-					configuredPlugin, err := client.Plugins().GetByID(pluginID)
-					if err != nil {
-						if !kong.IsPluginNotConfiguredError(err) {
-							glog.Errorf("%v", err)
-							continue
-						}
-
-						// there is no plugin, create a new one
-						p := &kongadminv1.Plugin{
-							Name:   plugin,
-							Route:  route.ID,
-							Config: kongadminv1.Configuration(k8sPlugin.Config),
-							Required: kongadminv1.Required{
-								ID: pluginID,
-							},
-						}
-
-						_, res := client.Plugins().CreateInRoute(route.ID, p)
-						if res.StatusCode != http.StatusCreated {
-							glog.Errorf("Unexpected error creating plugin %v for route %v: %v", plugin, route.ID, res)
-						}
-
-						continue
-					}
-
-					// check the kong plugin configuration is up to date
-					if !pluginDeepEqual(k8sPlugin.Config, configuredPlugin) ||
-						(!k8sPlugin.Disabled != configuredPlugin.Enabled) {
-						glog.Infof("plugin %v configuration in kong is outdated. Updating...", k8sPlugin.PluginName)
-						p := &kongadminv1.Plugin{
-							Name:    configuredPlugin.Name,
-							Config:  kongadminv1.Configuration(k8sPlugin.Config),
-							Enabled: !k8sPlugin.Disabled,
-							Service: "",
-							Route:   route.ID,
-						}
-
-						_, res := client.Plugins().Patch(configuredPlugin.ID, p)
-						if res.StatusCode != http.StatusOK {
-							glog.Errorf("Unexpected error updating plugin %v for route %v: %v", plugin, route.ID, res)
-						}
-
-						continue
-					}
-
-					glog.Infof("plugin %v configuration in kong is up to date.", k8sPlugin.PluginName)
-				}
-			}
-
-			if len(pluginsInService) == 0 {
+			if route == nil {
 				continue
 			}
 
-			// delete plugins from route configured in a service
-			glog.Infof("deleting Kong Route plugins in route %v already defined in a service: '%v'", route.ID, pluginsInService)
-			for _, plugin := range pluginsInService {
-				configuredPlugin, err := client.Plugins().GetByRoute(plugin, route.ID)
-				if err != nil {
-					if !kong.IsPluginNotConfiguredError(err) {
-						glog.Errorf("%v", err)
+			pluginAnnotations := annotations.ExtractKongPluginAnnotations(location.Ingress.GetAnnotations())
+			pluginsInk8s := make(map[string]*pluginv1.KongPlugin)
+			for plugin, crdNames := range pluginAnnotations {
+				for _, crdName := range crdNames {
+					// search configured plugin CRD in k8s
+					k8sPlugin, err := n.store.GetKongPlugin(location.Ingress.Namespace, crdName)
+					if err != nil {
+						return false, errors.Wrap(err, fmt.Sprintf("searching plugin KongPlugin %v", crdName))
 					}
-					continue
+					pluginsInk8s[plugin] = k8sPlugin
 				}
+			}
 
-				err = client.Plugins().Delete(configuredPlugin.ID)
+			// Get plugins configured in Kong currently
+			plugins, err := client.Plugins().GetAllByRoute(route.ID)
+			if err != nil {
+				glog.Errorf("Unexpected error obtaining Kong plugins for route %v: %v", route.ID, err)
+				continue
+			}
+			pluginsInKong := make(map[string]kongadminv1.Plugin)
+			for _, plugin := range plugins {
+				pluginsInKong[plugin.Name] = plugin
+			}
+			var pluginsToDelete []kongadminv1.Plugin
+			var pluginsToCreate []kongadminv1.Plugin
+			var pluginsToUpdate []kongadminv1.Plugin
+
+			// Plugins present in Kong but not in k8s should be deleted
+			for _, plugin := range pluginsInKong {
+				if _, ok := pluginsInk8s[plugin.Name]; !ok {
+					pluginsToDelete = append(pluginsToDelete, plugin)
+				}
+			}
+			// Plugins present in k8s but not in Kong should be created
+			for pluginName, pluginInk8s := range pluginsInk8s {
+				if pluginInKong, ok := pluginsInKong[pluginName]; !ok {
+					p := kongadminv1.Plugin{
+						Name:   pluginName,
+						Route:  route.ID,
+						Config: kongadminv1.Configuration(pluginInk8s.Config),
+					}
+					pluginsToCreate = append(pluginsToCreate, p)
+				} else {
+					// Plugins present in Kong and k8s need should have same configuration
+					if !pluginDeepEqual(pluginInk8s.Config, &pluginInKong) ||
+						(!pluginInk8s.Disabled != pluginInKong.Enabled) ||
+						(pluginInk8s.ConsumerRef != "" && pluginInKong.Consumer == "") {
+						glog.Infof("plugin %v configuration in kong is outdated. Updating...", pluginInk8s.Name)
+						p := kongadminv1.Plugin{
+							Name:    pluginInKong.Name,
+							Config:  kongadminv1.Configuration(pluginInk8s.Config),
+							Enabled: pluginInk8s.Disabled,
+							Route:   route.ID,
+							Required: kongadminv1.Required{
+								ID: pluginInKong.ID,
+							},
+						}
+
+						if pluginInk8s.ConsumerRef != "" {
+							consumer, err := n.store.GetKongConsumer(pluginInk8s.Namespace, pluginInk8s.ConsumerRef)
+							if err != nil {
+								glog.Errorf("Unexpected error searching for consumer %v: %v",
+									pluginInk8s.ConsumerRef, err)
+								continue
+							}
+							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
+						}
+					}
+					glog.Infof("plugin %v configuration in kong is up to date.", pluginInk8s.PluginName)
+
+				}
+			}
+			for _, plugin := range pluginsToDelete {
+				err := client.Plugins().Delete(plugin.ID)
 				if err != nil {
-					glog.Errorf("Unexpected error deleting Kong plugin %v: %v", configuredPlugin.ID, err)
-					continue
+					return false, errors.Wrap(err, "deleting Kong plugin")
 				}
+			}
 
-				triggerReload = true
+			for _, plugin := range pluginsToCreate {
+				_, res := client.Plugins().CreateInRoute(route.ID, &plugin)
+				if res.StatusCode != http.StatusCreated {
+					return false, errors.Wrap(res.Error(), fmt.Sprintf("creating a Kong plugin %v in service %v", plugin, svc.ID))
+				}
+			}
+
+			for _, plugin := range pluginsToUpdate {
+				_, res := client.Plugins().Patch(plugin.Required.ID, &plugin)
+				if res.StatusCode != http.StatusOK {
+					return false, errors.Wrap(res.Error(), fmt.Sprintf("updating a Kong plugin %v in service %v", plugin, svc.ID))
+				}
 			}
 		}
 	}

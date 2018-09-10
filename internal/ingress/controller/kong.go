@@ -30,16 +30,16 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/golang/glog"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	"github.com/pkg/errors"
-	extensions "k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/util/sets"
-
 	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
 	kongadminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
+	"github.com/pkg/errors"
+	extensions "k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
@@ -92,6 +92,11 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 		return err
 	}
 
+	err = n.syncGlobalPlugins()
+	if err != nil {
+		return err
+	}
+
 	checkServices, err := n.syncServices(ingressCfg)
 	if err != nil {
 		return err
@@ -111,6 +116,91 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 		}()
 	}
 
+	return nil
+}
+
+func (n *NGINXController) syncGlobalPlugins() error {
+	glog.Infof("syncing global plugins")
+
+	targetGlobalPlugins, err := n.store.ListGlobalKongPlugins()
+	if err != nil {
+		return err
+	}
+	targetPluginMap := make(map[string]*pluginv1.KongPlugin)
+	var duplicates []string // keep track of duplicate
+
+	for i := 0; i < len(targetGlobalPlugins); i++ {
+		name := targetGlobalPlugins[i].Name
+		// empty name skip it
+		if name == "" {
+			continue
+		}
+		if _, ok := targetPluginMap[name]; ok {
+			glog.Error("Multiple KongPlugin definitions found with 'global' annotation for :", name,
+				", the plugin will not be applied")
+			duplicates = append(duplicates, name)
+			continue
+		}
+		targetPluginMap[name] = targetGlobalPlugins[i]
+	}
+
+	// remove duplicates
+	for _, plugin := range duplicates {
+		delete(targetPluginMap, plugin)
+	}
+
+	client := n.cfg.Kong.Client
+	plugins, err := client.Plugins().List(nil)
+	if err != nil {
+		return err
+	}
+
+	// plugins in Kong
+	currentGlobalPlugins := make(map[string]kongadminv1.Plugin)
+	for _, plugin := range plugins.Items {
+		if plugin.Route == "" && plugin.Service == "" && plugin.Consumer == "" {
+			currentGlobalPlugins[plugin.Name] = plugin
+		}
+	}
+
+	// sync plugins to Kong
+	for pluginName, kongPlugin := range targetPluginMap {
+		// plugin exists?
+		if pluginInKong, ok := currentGlobalPlugins[pluginName]; !ok {
+			// no, create it
+			p := &kongadminv1.Plugin{
+				Name:   pluginName,
+				Config: kongadminv1.Configuration(kongPlugin.Config),
+			}
+			_, res := client.Plugins().CreateGlobal(p)
+			if res.StatusCode != http.StatusCreated {
+				return errors.Wrap(res.Error(), fmt.Sprintf("creating a global Kong plugin %v", p))
+			}
+		} else {
+			// plugin exists, is the configuration up to date
+			if !pluginDeepEqual(kongPlugin.Config, &pluginInKong) {
+				// no, update it
+				p := &kongadminv1.Plugin{
+					Name:   pluginName,
+					Config: kongadminv1.Configuration(kongPlugin.Config),
+				}
+				_, res := client.Plugins().Patch(pluginInKong.ID, p)
+				if res.StatusCode != http.StatusOK {
+					return errors.Wrap(res.Error(), fmt.Sprintf("updating a global Kong plugin %v", p))
+				}
+			}
+		}
+		// remove from the current list, all that remain in the current list will be deleted
+		delete(currentGlobalPlugins, pluginName)
+	}
+
+	// delete the ones not configured in k8s
+	for _, plugin := range currentGlobalPlugins {
+		err := client.Plugins().Delete(plugin.ID)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

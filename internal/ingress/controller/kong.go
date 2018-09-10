@@ -131,7 +131,7 @@ func (n *NGINXController) syncGlobalPlugins() error {
 	var duplicates []string // keep track of duplicate
 
 	for i := 0; i < len(targetGlobalPlugins); i++ {
-		name := targetGlobalPlugins[i].Name
+		name := targetGlobalPlugins[i].PluginName
 		// empty name skip it
 		if name == "" {
 			continue
@@ -482,7 +482,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 					// check the kong plugin configuration is up to date
 					if !pluginDeepEqual(k8sPlugin.Config, configuredPlugin) ||
 						(!k8sPlugin.Disabled != configuredPlugin.Enabled) {
-						glog.Infof("plugin %v configuration in kong is outdated. Updating...", k8sPlugin.Name)
+						glog.Infof("plugin %v configuration in kong is outdated. Updating...", k8sPlugin.PluginName)
 						p := &kongadminv1.Plugin{
 							Name:    configuredPlugin.Name,
 							Config:  kongadminv1.Configuration(k8sPlugin.Config),
@@ -509,7 +509,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 						continue
 					}
 
-					glog.Infof("plugin %v configuration in kong is up to date.", k8sPlugin.Name)
+					glog.Infof("plugin %v configuration in kong is up to date.", k8sPlugin.PluginName)
 				}
 			}
 		}
@@ -924,7 +924,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 					// check the kong plugin configuration is up to date
 					if !pluginDeepEqual(k8sPlugin.Config, configuredPlugin) ||
 						(!k8sPlugin.Disabled != configuredPlugin.Enabled) {
-						glog.Infof("plugin %v configuration in kong is outdated. Updating...", k8sPlugin.Name)
+						glog.Infof("plugin %v configuration in kong is outdated. Updating...", k8sPlugin.PluginName)
 						p := &kongadminv1.Plugin{
 							Name:    configuredPlugin.Name,
 							Config:  kongadminv1.Configuration(k8sPlugin.Config),
@@ -941,7 +941,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 						continue
 					}
 
-					glog.Infof("plugin %v configuration in kong is up to date.", k8sPlugin.Name)
+					glog.Infof("plugin %v configuration in kong is up to date.", k8sPlugin.PluginName)
 				}
 			}
 

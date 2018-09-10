@@ -19,6 +19,7 @@ package controller
 import (
 	"bytes"
 	"fmt"
+        "net"
 	"net/http"
 	"os"
 	"reflect"
@@ -230,7 +231,7 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 
 	newTargets := sets.NewString()
 	for _, endpoint := range ingressEndpopint.Endpoints {
-		nt := fmt.Sprintf("%v:%v", endpoint.Address, endpoint.Port)
+		nt := net.JoinHostPort(endpoint.Address, endpoint.Port)
 		if !newTargets.Has(nt) {
 			newTargets.Insert(nt)
 		}

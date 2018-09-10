@@ -10,6 +10,8 @@ spec:
   names:
     kind: KongPlugin
     plural: kongplugins
+    shortNames:
+    - kp
 
 ---
 
@@ -24,6 +26,8 @@ spec:
   names:
     kind: KongConsumer
     plural: kongconsumers
+    shortNames:
+    - kc
 
 ---
 
@@ -52,5 +56,7 @@ spec:
   names:
     kind: KongIngress
     plural: kongingresses
+    shortNames:
+    - ki
 
 ---

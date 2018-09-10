@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: kong-proxy
-        image: kong:0.14.0-centos
+        image: kong:0.14.1-centos
         env:
           - name: KONG_PG_PASSWORD
             value: kong

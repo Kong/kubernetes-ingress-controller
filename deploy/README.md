@@ -24,5 +24,16 @@ This document contains several guides to install the Kong ingress controller in 
      - This setup does not provide HA for PostgreSQL
      - Because of CPU/RAM requirements, this does not work in OpenShift Online (free account)
 
+1. [Using GKE][2]:
+
+   This guide installs:
+
+     * PostgreSQL (deployment)
+     * RBAC permissions
+     * Kong deployment and job to run migrations
+     * Ingress controller deployment
+
+
 [0]: minikube.md
 [1]: openshift.md
+[2]: gke.md

@@ -36,6 +36,20 @@ func TestExtractKongPluginAnnotations(t *testing.T) {
 	}
 }
 
+func TestExtractKongPluginsFromAnnotations(t *testing.T) {
+	data := map[string]string{
+		"plugins.konghq.com": "kp-rl, kp-cors",
+	}
+
+	ka := ExtractKongPluginsFromAnnotations(data)
+	if len(ka) != 2 {
+		t.Errorf("expected two keys but %v returned", len(ka))
+	}
+	if ka[0] != "kp-rl" {
+		t.Errorf("expected first element to be 'kp-rl'")
+	}
+}
+
 func TestExtractConfigurationName(t *testing.T) {
 	data := map[string]string{
 		"configuration.konghq.com": "demo",

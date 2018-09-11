@@ -273,6 +273,37 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 	return nil
 }
 
+// getPluginsFromAnnotations extracts plugins to be applied on an ingress/service from annotations
+func (n *NGINXController) getPluginsFromAnnotations(namespace string, anns map[string]string) (map[string]*pluginv1.KongPlugin, error) {
+	pluginAnnotations := annotations.ExtractKongPluginAnnotations(anns)
+	pluginsInk8s := make(map[string]*pluginv1.KongPlugin)
+	for plugin, crdNames := range pluginAnnotations {
+		for _, crdName := range crdNames {
+			// search configured plugin CRD in k8s
+			k8sPlugin, err := n.store.GetKongPlugin(namespace, crdName)
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("searching plugin KongPlugin %v", crdName))
+			}
+			pluginsInk8s[plugin] = k8sPlugin
+		}
+	}
+	pluginList := annotations.ExtractKongPluginsFromAnnotations(anns)
+	// override plugins configured by new annotation
+	for _, plugin := range pluginList {
+		k8sPlugin, err := n.store.GetKongPlugin(namespace, plugin)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("searching plugin KongPlugin %v", plugin))
+		}
+		// ignore plugins with no name
+		if k8sPlugin.PluginName == "" {
+			glog.Errorf("KongPlugin Custom resource '%v' has no `plugin` property, the plugin will not be configured", k8sPlugin.Name)
+			continue
+		}
+		pluginsInk8s[k8sPlugin.PluginName] = k8sPlugin
+	}
+	return pluginsInk8s, nil
+}
+
 // syncServices reconciles the state between the ingress controller and
 // kong services. After the synchronization of services we also check
 // if there was any changes to the kong plugins applied to the service
@@ -409,18 +440,8 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			}
 
 			// Get plugin annotations from k8s, these plugins should be configured for this service
-			pluginAnnotations := annotations.ExtractKongPluginAnnotations(location.Service.GetAnnotations())
-			pluginsInk8s := make(map[string]*pluginv1.KongPlugin)
-			for plugin, crdNames := range pluginAnnotations {
-				for _, crdName := range crdNames {
-					// search configured plugin CRD in k8s
-					k8sPlugin, err := n.store.GetKongPlugin(location.Ingress.Namespace, crdName)
-					if err != nil {
-						return false, errors.Wrap(err, fmt.Sprintf("searching plugin KongPlugin %v", crdName))
-					}
-					pluginsInk8s[plugin] = k8sPlugin
-				}
-			}
+			anns := location.Service.GetAnnotations()
+			pluginsInk8s, err := n.getPluginsFromAnnotations(location.Ingress.Namespace, anns)
 
 			// Get plugins configured in Kong currently
 			plugins, err := client.Plugins().GetAllByService(svc.ID)
@@ -830,18 +851,8 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				continue
 			}
 
-			pluginAnnotations := annotations.ExtractKongPluginAnnotations(location.Ingress.GetAnnotations())
-			pluginsInk8s := make(map[string]*pluginv1.KongPlugin)
-			for plugin, crdNames := range pluginAnnotations {
-				for _, crdName := range crdNames {
-					// search configured plugin CRD in k8s
-					k8sPlugin, err := n.store.GetKongPlugin(location.Ingress.Namespace, crdName)
-					if err != nil {
-						return false, errors.Wrap(err, fmt.Sprintf("searching plugin KongPlugin %v", crdName))
-					}
-					pluginsInk8s[plugin] = k8sPlugin
-				}
-			}
+			anns := location.Ingress.GetAnnotations()
+			pluginsInk8s, err := n.getPluginsFromAnnotations(location.Ingress.Namespace, anns)
 
 			// Get plugins configured in Kong currently
 			plugins, err := client.Plugins().GetAllByRoute(route.ID)

@@ -182,8 +182,8 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"etc/nginx/nginx.conf": etcNginxNginxConf,
-	"etc/nginx/template/nginx.tmpl": etcNginxTemplateNginxTmpl,
+	"etc/nginx/nginx.conf":                   etcNginxNginxConf,
+	"etc/nginx/template/nginx.tmpl":          etcNginxTemplateNginxTmpl,
 	"ingress-controller/clean-nginx-conf.sh": ingressControllerCleanNginxConfSh,
 }
 
@@ -226,17 +226,18 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
-	"etc": &bintree{nil, map[string]*bintree{
-		"nginx": &bintree{nil, map[string]*bintree{
-			"nginx.conf": &bintree{etcNginxNginxConf, map[string]*bintree{}},
-			"template": &bintree{nil, map[string]*bintree{
-				"nginx.tmpl": &bintree{etcNginxTemplateNginxTmpl, map[string]*bintree{}},
+	"etc": {nil, map[string]*bintree{
+		"nginx": {nil, map[string]*bintree{
+			"nginx.conf": {etcNginxNginxConf, map[string]*bintree{}},
+			"template": {nil, map[string]*bintree{
+				"nginx.tmpl": {etcNginxTemplateNginxTmpl, map[string]*bintree{}},
 			}},
 		}},
 	}},
-	"ingress-controller": &bintree{nil, map[string]*bintree{
-		"clean-nginx-conf.sh": &bintree{ingressControllerCleanNginxConfSh, map[string]*bintree{}},
+	"ingress-controller": {nil, map[string]*bintree{
+		"clean-nginx-conf.sh": {ingressControllerCleanNginxConfSh, map[string]*bintree{}},
 	}},
 }}
 
@@ -286,4 +287,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-

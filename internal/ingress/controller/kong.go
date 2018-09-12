@@ -803,7 +803,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 						sort.Strings(kongIngress.Route.Protocols)
 						if !reflect.DeepEqual(route.Protocols, kongIngress.Route.Protocols) {
 							outOfSync = true
-							glog.Infof("protocols changed form ", route.Protocols, " to ", kongIngress.Route.Protocols)
+							glog.Infof("protocols changed form %v to %v", route.Protocols, kongIngress.Route.Protocols)
 							route.Protocols = kongIngress.Route.Protocols
 						}
 					}

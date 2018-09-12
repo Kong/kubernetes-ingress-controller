@@ -775,7 +775,7 @@
     "util/retry",
     "util/workqueue"
   ]
-  revision = "release-7.0"
+  revision = "v7.0.0"
 
 [[projects]]
   branch = "master"

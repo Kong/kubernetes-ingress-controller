@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master)](https://travis-ci.org/Kong/kubernetes-ingress-controller)
-[![codecov](https://codecov.io/gh/kong/kubernetes-ingress-controller/branch/master/graph/badge.svg)](https://codecov.io/gh/kong/kubernetes-ingress-controller)
 
 # Kubernetes Ingress Controller for Kong
 

@@ -598,7 +598,7 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 
 	for alias, host := range aliases {
 		if _, ok := servers[alias]; ok {
-			glog.Warningf("There is a conflict with server hostname '%v' and alias '%v' (in server %v). Removing alias to avoid conflicts.", alias, host)
+			glog.Warningf("There is a conflict with server hostname '%v' and alias '%v'. Removing alias to avoid conflicts.", host, alias)
 			servers[host].Alias = ""
 		}
 	}

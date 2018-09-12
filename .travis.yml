@@ -32,6 +32,7 @@ jobs:
       && git clone --depth=1 https://go.googlesource.com/lint $GOPATH/src/golang.org/x/lint
       && go get golang.org/x/lint/golint
     - go get github.com/vbatts/git-validation
+    - make deps
     - make verify-all
   - stage: Coverage
     before_script:
@@ -40,6 +41,7 @@ jobs:
     script:
     - if ! go get github.com/jteeuwen/go-bindata/...; then github.com/jteeuwen/go-bindata/...;fi
     - kubectl create -f deploy/manifests/custom-types.yaml
+    - make deps
     - make cover
 #  - stage: e2e
 #    before_script:

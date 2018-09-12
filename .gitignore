@@ -32,3 +32,6 @@ Session.vim
 e2e-tests
 
 coverage.txt
+
+# ignore vendor tree
+vendor/

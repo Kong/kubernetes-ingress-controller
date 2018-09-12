@@ -138,7 +138,7 @@ func (c *RestClient) GetVersion() (semver.Version, error) {
 
 	if version, ok := info["version"]; ok {
 		v := version.(string)
-		
+
 		// fix enterprise edition semver adding patch number
 		re := regexp.MustCompile(`([\d\.]+)-enterprise-edition`)
 		if re.MatchString(v) {

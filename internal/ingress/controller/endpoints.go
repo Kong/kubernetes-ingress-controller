@@ -48,7 +48,7 @@ func getEndpoints(
 
 	// ExternalName services
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
-		glog.V(3).Infof("Ingress using a service %v of type=ExternalName : %v", s.Name)
+		glog.V(3).Infof("Ingress using a service %v of type=ExternalName", s.Name)
 
 		targetPort := port.TargetPort.IntValue()
 		// check for invalid port value

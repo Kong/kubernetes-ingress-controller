@@ -19,8 +19,8 @@ type Required struct {
 
 	Tags []string `json:"tags,omitempty"`
 
-	CreatedAt int `json:"created_at,omitempty"`
-	UpdatedAt int `json:"updated_at,omitempty"`
+	CreatedAt int64 `json:"created_at,omitempty"`
+	UpdatedAt int64 `json:"updated_at,omitempty"`
 }
 
 // RequiredList ...

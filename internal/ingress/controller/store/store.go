@@ -22,6 +22,9 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+
 	"github.com/eapache/channels"
 	"github.com/golang/glog"
 
@@ -92,6 +95,8 @@ type Storer interface {
 	ListKongConsumers() []*consumerv1.KongConsumer
 
 	ListKongCredentials() []*credentialv1.KongCredential
+
+	ListGlobalKongPlugins() ([]*pluginv1.KongPlugin, error)
 }
 
 // EventType type of event associated with an informer
@@ -656,4 +661,25 @@ func (s k8sStore) ListKongCredentials() []*credentialv1.KongCredential {
 	}
 
 	return credentials
+}
+
+func (s k8sStore) ListGlobalKongPlugins() ([]*pluginv1.KongPlugin, error) {
+
+	var plugins []*pluginv1.KongPlugin
+	// var globalPlugins []*pluginv1.KongPlugin
+	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
+	if err != nil {
+		return nil, err
+	}
+	err = cache.ListAll(s.listers.Kong.Plugin,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			if p, ok := ob.(*pluginv1.KongPlugin); ok {
+				plugins = append(plugins, p)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return plugins, nil
 }

@@ -139,6 +139,11 @@ clean:
 code-generator:
 		go-bindata -o internal/file/bindata.go -prefix="rootfs" -pkg=file -ignore=Dockerfile -ignore=".DS_Store" rootfs/...
 
+.PHONY: deps
+deps:
+	go get github.com/golang/dep/cmd/dep
+	dep ensure -v -vendor-only
+
 .PHONY: build
 build: clean
 	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -a -installsuffix cgo \

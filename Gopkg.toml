@@ -77,3 +77,9 @@ required = [
 [[constraint]]
   name = "k8s.io/apiextensions-apiserver"
   revision = "kubernetes-1.10.0"
+
+
+# For dependency below: Refer to issue https://github.com/golang/dep/issues/1799
+[[override]]
+name = "gopkg.in/fsnotify.v1"
+source = "https://github.com/fsnotify/fsnotify.git"

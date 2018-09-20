@@ -22,6 +22,9 @@ SUMMARY_GOES_HERE
 **Kong Ingress controller version**
 
 
+**Kong or Kong Enterprise version**
+
+
 ### Kubernetes version
 
 **paste `kubectl version` output**

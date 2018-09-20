@@ -1,7 +1,33 @@
 # Kubernetes annotations
 
-To configure Kong plugins, credentials and consumers the ingress controller uses annotations to create a mapping between the Ingress and the [custom types][0].
-The prefix of the annotation shows which plugin we are trying to set up. For instance, the next code shows we want to configure the `rate-limiting` plugin:
+`KongPlugin` and `KongIngress` resources need to be associated with an Ingress resource
+for it to take effect, since these resources add value to your routing.
+
+# KongPlugin
+
+## `plugins.konghq.com` Annotation
+`KongPlugin` resource can be configured using the `plugins.konghq.com` annotation.
+This annotation was introduced in Kong Ingress Controller version 0.2.0.
+
+Following is an example on how to use the annotation:
+
+```yaml
+plugins.konghq.com: high-rate-limit, docs-site-cors
+```
+
+Here, `high-rate-limit` and `docs-site-cors` are the name of the KongPlugin resources which
+need to be applied to the Ingress.
+
+This annotation can be applied to a Service in Kubernetes as well, which
+will result in the plugin being executed at Service in Kong, meaning the plugin will be
+executed for every request that is proxied, no matter which Route it came from.
+
+## DEPRECATED `<name>.plugin.konghq.com` Annotation
+
+Before version 0.2.0, a different annotation was used to configure plugins,
+which is now deprecated.
+
+The annotation can be used as follows:
 
 ```yaml
 rate-limiting.plugin.konghq.com: |
@@ -23,9 +49,6 @@ Setting annotations in Ingress rules set ups plugins in `Kong Routes`. Sometimes
 *Please check the [Kong 0.13 release notes][1] to learn about Routes and Services*
 
 **Rules:**
-
-- If the Ingress and Kubernetes service contains the same annotation, only the defined in the service will be used.
-- When there is no overlap of plugins in Ingress and Services annotations both plugins will be configured.
 
 [0]: custom-types.md
 [1]: https://konghq.com/blog/kong-ce-0-13-0-released/

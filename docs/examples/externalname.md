@@ -87,7 +87,7 @@ http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/
 http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/default.proxy-to-mockbin.80/targets
 ```
 
-[0]: https://getkong.org/docs/0.13.x/getting-started/configuring-a-service/
+[0]: https://getkong.org/docs/0.14.x/getting-started/configuring-a-service/
 [1]: https://github.com/Kong/kubernetes-ingress-controller/tree/master/deploy
 [2]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 [3]: https://getkong.org/plugins/request-transformer/

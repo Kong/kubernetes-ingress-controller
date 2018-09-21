@@ -4,13 +4,18 @@
 
 This repository contains an Ingress controller for Kubernetes that works by deploying [Kong][0] as a reverse proxy and load balancer.
 
-## Prerequisites
+## Versions supported
 
-- Tested with Kubernetes clusters running version `1.8` through `1.10`.
-- The Ingress Controller supports the following versions of Kong:
-   - Kong Community Edition(CE) `0.14.x`
-   - Kong Enterprise Edition(EE) `0.32.x`
-   - Kong Enterprise Edition(EE) `0.33.x`
+The Ingress Controller is Tested with Kubernetes clusters running version `1.8` through `1.10`.
+
+The following matrix lists supported versions of Kong for every release of Kong Ingress Controller.
+
+| Kong Ingress Controller  | <= 0.0.4           | 0.0.5              | 0.1.x              | 0.2.x              |
+|--------------------------|:------------------:|:------------------:|:------------------:|:------------------:|
+| Kong 0.13.x              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                |
+| Kong 0.14.x              | :x:                | :x:                | :x:                | :white_check_mark: |
+| Kong Enterprise 0.32.x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                |
+| Kong Enterprise 0.33.x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                |
 
 ## Get started
 

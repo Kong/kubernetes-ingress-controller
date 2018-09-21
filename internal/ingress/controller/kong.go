@@ -1001,6 +1001,14 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 						upstream.HashOn = kongIngress.Upstream.HashOn
 					}
 
+					if kongIngress.Upstream.HashOnCookie != "" {
+						upstream.HashOnCookie = kongIngress.Upstream.HashOnCookie
+					}
+
+					if kongIngress.Upstream.HashOnCookiePath != "" {
+						upstream.HashOnCookiePath = kongIngress.Upstream.HashOnCookiePath
+					}
+
 					if kongIngress.Upstream.HashOnHeader != "" {
 						upstream.HashOnHeader = kongIngress.Upstream.HashOnHeader
 					}

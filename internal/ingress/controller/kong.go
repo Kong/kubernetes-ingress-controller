@@ -497,6 +497,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							}
 							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
 						}
+						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
 				}
 			}
@@ -908,6 +909,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 							}
 							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
 						}
+						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
 					glog.Infof("plugin %v configuration in kong is up to date.", pluginInk8s.PluginName)
 

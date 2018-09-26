@@ -1,9 +1,17 @@
 # Table of Contents
 
+ - [0.1.1](#011-20180926)
  - [0.1.0](#010-20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
+## [0.1.1] - 2018/09/26
+
+#### Fixed
+
+ - Fix version parsing for minor releases of Kong Enterprise (like 0.33-1).
+   The dash(`-`) didn't go well with the semver parsing
+   [#141](https://github.com/Kong/kubernetes-ingress-controller/pull/141)
 
 ## [0.1.0] - 2018/08/17
 
@@ -45,6 +53,7 @@
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v0.0.5...0.1.0
 [v0.0.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v0.0.4...v0.0.5
 [v0.0.4]: https://github.com/kong/kubernetes-ingress-controller/compare/7866a27f268c32c5618fba546da2c73ba74d4a46...v0.0.4

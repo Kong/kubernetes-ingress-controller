@@ -127,7 +127,7 @@ type Upstream struct {
 
 	HashOn             string        `json:"hash_on,omitempty"`
 	HashFallback       string        `json:"hash_fallback,omitempty"`
-	HashFallbackHeader string        `json:"hash_fallback_header"`
+	HashFallbackHeader string        `json:"hash_fallback_header,omitempty"`
 	HashOnHeader       string        `json:"hash_on_header,omitempty"`
 	HashOnCookie       string        `json:"hash_on_cookie,omitempty"`
 	HashOnCookiePath   string        `json:"hash_on_cookie_path,omitempty"`

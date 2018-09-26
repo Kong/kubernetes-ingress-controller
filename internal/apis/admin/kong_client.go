@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/blang/semver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,6 +127,25 @@ func (c *RestClient) Credentials() CredentialInterface {
 	return &credentialAPI{c.RESTClient()}
 }
 
+func fixVersion(v string) (semver.Version, error) {
+	// fix enterprise edition semver adding patch number
+	// fix enterprise edition version with dash
+	// fix bad version formats like 0.13.0preview1
+	re := regexp.MustCompile(`(\d+\.\d+)(?:[\.-](\d+))?(?:\-?(.+)$|$)`)
+	m := re.FindStringSubmatch(v)
+	if len(m) != 4 {
+		return semver.Version{}, fmt.Errorf("Unknown Kong version")
+	}
+	if m[2] == "" {
+		m[2] = "0"
+	}
+	if m[3] != "" {
+		m[3] = "-" + strings.Replace(m[3], "enterprise-edition", "enterprise", 1)
+	}
+	v = fmt.Sprintf("%s.%s%s", m[1], m[2], m[3])
+	return semver.Make(v)
+}
+
 func (c *RestClient) GetVersion() (semver.Version, error) {
 	var info map[string]interface{}
 	data, err := c.RESTClient().Get().RequestURI("/").DoRaw()
@@ -137,21 +157,7 @@ func (c *RestClient) GetVersion() (semver.Version, error) {
 	}
 
 	if version, ok := info["version"]; ok {
-		v := version.(string)
-		
-		// fix enterprise edition semver adding patch number
-		re := regexp.MustCompile(`([\d\.]+)-enterprise-edition`)
-		if re.MatchString(v) {
-			v = re.ReplaceAllString(v, "$1.0-enterprise")
-		}
-
-		// fix bad version formats like 0.13.0preview1
-		re = regexp.MustCompile(`(.*\d)(preview.*|rc.*)`)
-		if re.MatchString(v) {
-			v = re.ReplaceAllString(v, "$1-$2")
-		}
-
-		return semver.Make(v)
+		return fixVersion(version.(string))
 	}
 
 	return semver.Version{}, fmt.Errorf("Unknown Kong version")

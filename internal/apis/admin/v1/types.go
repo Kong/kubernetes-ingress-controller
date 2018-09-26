@@ -125,13 +125,14 @@ type Upstream struct {
 
 	Name string `json:"name"`
 
-	HashOn           string        `json:"hash_on,omitempty"`
-	HashFallback     string        `json:"hash_fallback,omitempty"`
-	HashOnHeader     string        `json:"hash_on_header,omitempty"`
-	HashOnCookie     string        `json:"hash_on_cookie,omitempty"`
-	HashOnCookiePath string        `json:"hash_on_cookie_path,omitempty"`
-	Healthchecks     *Healthchecks `json:"healthchecks,omitempty"`
-	Slots            int           `json:"slots,omitempty"`
+	HashOn             string        `json:"hash_on,omitempty"`
+	HashFallback       string        `json:"hash_fallback,omitempty"`
+	HashFallbackHeader string        `json:"hash_fallback_header"`
+	HashOnHeader       string        `json:"hash_on_header,omitempty"`
+	HashOnCookie       string        `json:"hash_on_cookie,omitempty"`
+	HashOnCookiePath   string        `json:"hash_on_cookie_path,omitempty"`
+	Healthchecks       *Healthchecks `json:"healthchecks,omitempty"`
+	Slots              int           `json:"slots,omitempty"`
 }
 
 type Healthchecks struct {

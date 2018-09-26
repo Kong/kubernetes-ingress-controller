@@ -208,6 +208,6 @@ spec:
         paths:
           - path: "/"
             backend:
-              serviceName: kong-admin
+              serviceName: kong-ingress-controller
               servicePort: 8001" | kubectl apply -f -
 ```

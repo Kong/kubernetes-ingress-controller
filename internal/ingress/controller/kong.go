@@ -1001,12 +1001,24 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 						upstream.HashOn = kongIngress.Upstream.HashOn
 					}
 
+					if kongIngress.Upstream.HashOnCookie != "" {
+						upstream.HashOnCookie = kongIngress.Upstream.HashOnCookie
+					}
+
+					if kongIngress.Upstream.HashOnCookiePath != "" {
+						upstream.HashOnCookiePath = kongIngress.Upstream.HashOnCookiePath
+					}
+
 					if kongIngress.Upstream.HashOnHeader != "" {
 						upstream.HashOnHeader = kongIngress.Upstream.HashOnHeader
 					}
 
 					if kongIngress.Upstream.HashFallback != "" {
 						upstream.HashFallback = kongIngress.Upstream.HashFallback
+					}
+
+					if kongIngress.Upstream.HashFallbackHeader != "" {
+						upstream.HashFallbackHeader = kongIngress.Upstream.HashFallbackHeader
 					}
 
 					if kongIngress.Upstream.Slots != 0 {

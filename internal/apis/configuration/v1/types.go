@@ -41,11 +41,14 @@ type Route struct {
 }
 
 type Upstream struct {
-	HashOn       string        `json:"hash_on"`
-	HashOnHeader string        `json:"hash_on_header"`
-	HashFallback string        `json:"hash_fallback"`
-	Healthchecks *Healthchecks `json:"healthchecks,omitempty"`
-	Slots        int           `json:"slots"`
+	HashOn             string        `json:"hash_on"`
+	HashOnCookie       string        `json:"hash_on_cookie"`
+	HashOnCookiePath   string        `json:"hash_on_cookie_path"`
+	HashOnHeader       string        `json:"hash_on_header"`
+	HashFallback       string        `json:"hash_fallback"`
+	HashFallbackHeader string        `json:"hash_fallback_header"`
+	Healthchecks       *Healthchecks `json:"healthchecks,omitempty"`
+	Slots              int           `json:"slots"`
 }
 
 type Proxy struct {

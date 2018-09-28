@@ -211,3 +211,61 @@ spec:
               serviceName: kong-admin
               servicePort: 8001" | kubectl apply -f -
 ```
+
+#### Setup TLS (HTTPS)
+
+You need to set your API with HTTPS in order to expose your service securely. In this section, I will explain how to secure it with [Let’s Encrypt](https://letsencrypt.org/).
+
+1. Register your domain
+
+First of all, you must register your domain with any domain registration services such as [Google Domains](https://domains.google/).
+
+2. Follow instructions of [Let’s Encrypt on GKE](https://github.com/ahmetb/gke-letsencrypt)
+
+[Let’s Encrypt on GKE](https://github.com/ahmetb/gke-letsencrypt) is a tutorial for installing `cert-manager` to get HTTPS certificates from Let’s Encrypt. There is an important things you need to configure, if you want to accomplish correctly. You should apply [KongIngress](https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/custom-types.md#kongingress) and set `preserve_host` configuration `true` so that you could keep hostname in request headers.
+
+[cert-manager](https://github.com/jetstack/cert-manager) checks equality of hostname and domain name when it creates HTTPS certificates. However, Kong remove hostname as default. I recommend you to create a `KongIngress` spec file to avoid the following error.
+
+```
+[dummy.kong.example] Invalid host 'xxx.xxx.xxx.xxx'
+```
+
+These are examples of `KongIngress` and `Ingress` spec.
+
+```sh
+echo -n "
+apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  name: sample-kong-ingress
+  namespace: kong
+proxy:
+  path: /
+route:
+  protocols:
+  - https
+  - http
+  strip_path: false
+  preserve_host: true" | kubectl apply -f -
+```
+
+```sh
+echo -n "
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: dummy
+  namespace:  dummy
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    configuration.konghq.com: sample-kong-ingress
+spec:
+  rules:
+    - host: dummy.kong.example
+      http:
+        paths:
+          - path: "/"
+            backend:
+              serviceName: http-svc
+              servicePort: http" | kubectl apply -f -
+```

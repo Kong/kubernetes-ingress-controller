@@ -30,7 +30,7 @@ This command will create  followings files:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kong-admin
+  name: kong-ingress-controller
   namespace: kong
 spec:
   type: ClusterIP
@@ -208,6 +208,6 @@ spec:
         paths:
           - path: "/"
             backend:
-              serviceName: kong-admin
+              serviceName: kong-ingress-controller
               servicePort: 8001" | kubectl apply -f -
 ```

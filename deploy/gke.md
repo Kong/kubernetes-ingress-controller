@@ -30,7 +30,7 @@ This command will create  followings files:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kong-admin
+  name: kong-ingress-controller
   namespace: kong
 spec:
   type: ClusterIP

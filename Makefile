@@ -135,10 +135,6 @@ endif
 clean:
 	$(DOCKER) rmi -f $(MULTI_ARCH_IMG):$(TAG) || true
 
-.PHONE: code-generator
-code-generator:
-		go-bindata -o internal/file/bindata.go -prefix="rootfs" -pkg=file -ignore=Dockerfile -ignore=".DS_Store" rootfs/...
-
 .PHONY: deps
 deps:
 	go get github.com/golang/dep/cmd/dep

@@ -1101,9 +1101,7 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 		name := fmt.Sprintf("temporal-cert-%v", time.Now().UnixNano())
 		pem, err := ssl.AddOrUpdateCertAndKey(name,
 			[]byte(strings.TrimSpace(cert.Cert)),
-			[]byte(strings.TrimSpace(cert.Key)),
-			[]byte{},
-			n.fileSystem)
+			[]byte(strings.TrimSpace(cert.Key)))
 		if err != nil {
 			return err
 		}

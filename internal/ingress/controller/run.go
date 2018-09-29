@@ -32,7 +32,6 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/kubernetes/pkg/util/filesystem"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
@@ -43,7 +42,7 @@ import (
 // NewNGINXController creates a new NGINX Ingress controller.
 // If the environment variable NGINX_BINARY exists it will be used
 // as source for nginx commands
-func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXController {
+func NewNGINXController(config *Configuration) *NGINXController {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
@@ -63,14 +62,11 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 
 		stopLock: &sync.Mutex{},
 
-		fileSystem: fs,
-
 		// create an empty configuration.
 		runningConfig: &ingress.Configuration{},
 	}
 
 	n.store = store.New(
-		config.EnableSSLChainCompletion,
 		config.Namespace,
 		"",
 		"",
@@ -79,7 +75,6 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 		config.ResyncPeriod,
 		config.KubeClient,
 		config.KubeConf,
-		fs,
 		n.updateCh)
 
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)

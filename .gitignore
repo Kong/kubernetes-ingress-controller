@@ -1,37 +1,36 @@
-# OSX
-._*
-.DS_Store
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
 
-# intellij files
-.idea/*
+# Folders
+_obj
+_test
 
-# Eclipse files
-.classpath
-.project
-.settings/**
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
 
-# visual studio code
-.vscode/*
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
 
-# Emacs save files
-*~
-\#*\#
-.\#*
+_testmain.go
 
-# Vim-related files
-[._]*.s[a-w][a-z]
-[._]s[a-w][a-z]
-*.un~
-Session.vim
-.netrwhist
+*.exe
+*.test
+*.prof
 
 # coverage artifacts
 .coverprofile
 /gover.coverprofile
-
 e2e-tests
 
 coverage.txt
+# for this repo only
+ingress-controller
 
 # ignore vendor tree
-vendor/
+vendor

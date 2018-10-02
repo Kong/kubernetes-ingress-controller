@@ -51,6 +51,14 @@ jobs:
 #    - test/e2e/wait-for-kong.sh
 #    script:
 #    - make e2e-test
+  - stage: Unit Test
+    # Start minikube to satisfy TestStore
+    before_script:
+    - test/e2e/up.sh
+    script:
+    - make deps
+    # wait to up to 30 minutes
+    - travis_wait 30 make test
   # split builds to avoid job timeouts
   - stage: publish amd64
     if: type = api AND branch = master AND repo = kong/ingress-controller

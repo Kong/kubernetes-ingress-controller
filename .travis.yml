@@ -54,9 +54,11 @@ jobs:
   - stage: Unit Test
     # Start minikube to satisfy TestStore
     before_script:
-    - test/e2e/up.sh
-    script:
     - make deps
+    - make e2e-image
+    - test/e2e/up.sh
+    - test/e2e/wait-for-kong.sh
+    script:
     # wait to up to 30 minutes
     - travis_wait 30 make test
   # split builds to avoid job timeouts

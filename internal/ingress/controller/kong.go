@@ -705,10 +705,6 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 	// Routes
 	for _, server := range ingressCfg.Servers {
-		if server.Hostname == "_" {
-			// there is no catch all server in kong
-			continue
-		}
 
 		protos := []string{"http"}
 		if server.SSLCert != nil {
@@ -748,8 +744,10 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			r := &kongadminv1.Route{
 				Paths:     []string{location.Path},
 				Protocols: []string{"http", "https"}, // default
-				Hosts:     []string{server.Hostname},
 				Service:   kongadminv1.InlineService{ID: svc.ID},
+			}
+			if server.Hostname != "_" {
+				r.Hosts = []string{server.Hostname}
 			}
 
 			if kongIngress != nil && kongIngress.Route != nil {
@@ -1192,9 +1190,15 @@ func buildName(backend string, location *ingress.Location) string {
 // getKongService returns a Route from a list using the path and hosts as filters
 func getKongRoute(hostname, path string, routes []kongadminv1.Route) *kongadminv1.Route {
 	for _, r := range routes {
-		if sets.NewString(r.Paths...).Has(path) &&
-			sets.NewString(r.Hosts...).Has(hostname) {
-			return &r
+		if hostname != "_" {
+			if sets.NewString(r.Paths...).Has(path) &&
+				sets.NewString(r.Hosts...).Has(hostname) {
+				return &r
+			}
+		} else {
+			if sets.NewString(r.Paths...).Has(path) {
+				return &r
+			}
 		}
 	}
 

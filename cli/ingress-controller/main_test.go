@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 )
 
@@ -74,12 +73,7 @@ func TestHandleSigterm(t *testing.T) {
 
 	conf.Kong = controller.Kong{}
 
-	fs, err := file.NewFakeFS()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	ngx := controller.NewNGINXController(conf, fs)
+	ngx := controller.NewNGINXController(conf)
 
 	go handleSigterm(ngx, func(code int) {
 		if code != 1 {

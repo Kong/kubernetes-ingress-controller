@@ -32,7 +32,6 @@ import (
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -53,7 +52,6 @@ import (
 	credentialinformer "github.com/kong/kubernetes-ingress-controller/internal/client/credential/informers/externalversions"
 	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
 	plugininformer "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/informers/externalversions"
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/parser"
@@ -188,8 +186,6 @@ func (c *Informer) Run(stopCh chan struct{}) {
 
 // k8sStore internal Storer implementation using informers and thread safe stores
 type k8sStore struct {
-	isOCSPCheckEnabled bool
-
 	// informers contains the cache Informers
 	informers *Informer
 
@@ -205,8 +201,6 @@ type k8sStore struct {
 	// secret in the annotations.
 	secretIngressMap ObjectRefMap
 
-	filesystem file.Filesystem
-
 	// updateCh
 	updateCh *channels.RingChannel
 
@@ -215,23 +209,19 @@ type k8sStore struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(checkOCSP bool,
-	namespace, configmap, tcp, udp, defaultSSLCertificate string,
+func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	resyncPeriod time.Duration,
 	client clientset.Interface,
 	clientConf *rest.Config,
-	fs file.Filesystem,
 	updateCh *channels.RingChannel) Storer {
 
 	store := &k8sStore{
-		isOCSPCheckEnabled: checkOCSP,
-		informers:          &Informer{},
-		listers:            &Lister{},
-		sslStore:           NewSSLCertTracker(),
-		filesystem:         fs,
-		updateCh:           updateCh,
-		mu:                 &sync.Mutex{},
-		secretIngressMap:   NewObjectRefMap(),
+		informers:        &Informer{},
+		listers:          &Lister{},
+		sslStore:         NewSSLCertTracker(),
+		updateCh:         updateCh,
+		mu:               &sync.Mutex{},
+		secretIngressMap: NewObjectRefMap(),
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -550,10 +540,6 @@ func (s k8sStore) GetServiceEndpoints(svc *corev1.Service) (*corev1.Endpoints, e
 func (s k8sStore) Run(stopCh chan struct{}) {
 	// start informers
 	s.informers.Run(stopCh)
-
-	if s.isOCSPCheckEnabled {
-		go wait.Until(s.checkSSLChainIssues, 60*time.Second, stopCh)
-	}
 }
 
 // syncSecrets synchronizes data from all Secrets referenced by the given

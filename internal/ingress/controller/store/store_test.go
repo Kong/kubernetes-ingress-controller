@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/test/e2e/framework"
 )
 
@@ -65,9 +64,7 @@ func TestStore(t *testing.T) {
 			}
 		}(updateCh)
 
-		fs := newFS(t)
-		storer := New(true,
-			ns.Name,
+		storer := New(ns.Name,
 			fmt.Sprintf("%v/config", ns.Name),
 			fmt.Sprintf("%v/tcp", ns.Name),
 			fmt.Sprintf("%v/udp", ns.Name),
@@ -75,7 +72,6 @@ func TestStore(t *testing.T) {
 			10*time.Minute,
 			clientSet,
 			kubeConfig,
-			fs,
 			updateCh)
 
 		storer.Run(stopCh)
@@ -153,9 +149,7 @@ func TestStore(t *testing.T) {
 			}
 		}(updateCh)
 
-		fs := newFS(t)
-		storer := New(true,
-			ns.Name,
+		storer := New(ns.Name,
 			fmt.Sprintf("%v/config", ns.Name),
 			fmt.Sprintf("%v/tcp", ns.Name),
 			fmt.Sprintf("%v/udp", ns.Name),
@@ -163,7 +157,6 @@ func TestStore(t *testing.T) {
 			10*time.Minute,
 			clientSet,
 			kubeConfig,
-			fs,
 			updateCh)
 
 		storer.Run(stopCh)
@@ -295,9 +288,7 @@ func TestStore(t *testing.T) {
 			}
 		}(updateCh)
 
-		fs := newFS(t)
-		storer := New(true,
-			ns.Name,
+		storer := New(ns.Name,
 			fmt.Sprintf("%v/config", ns.Name),
 			fmt.Sprintf("%v/tcp", ns.Name),
 			fmt.Sprintf("%v/udp", ns.Name),
@@ -305,7 +296,6 @@ func TestStore(t *testing.T) {
 			10*time.Minute,
 			clientSet,
 			kubeConfig,
-			fs,
 			updateCh)
 
 		storer.Run(stopCh)
@@ -385,9 +375,7 @@ func TestStore(t *testing.T) {
 			}
 		}(updateCh)
 
-		fs := newFS(t)
-		storer := New(true,
-			ns.Name,
+		storer := New(ns.Name,
 			fmt.Sprintf("%v/config", ns.Name),
 			fmt.Sprintf("%v/tcp", ns.Name),
 			fmt.Sprintf("%v/udp", ns.Name),
@@ -395,7 +383,6 @@ func TestStore(t *testing.T) {
 			10*time.Minute,
 			clientSet,
 			kubeConfig,
-			fs,
 			updateCh)
 
 		storer.Run(stopCh)
@@ -459,19 +446,13 @@ func TestStore(t *testing.T) {
 			t.Errorf("unexpected error creating secret: %v", err)
 		}
 
-		t.Run("should exists a secret in the local store and filesystem", func(t *testing.T) {
+		t.Run("should exists a secret in the local store ", func(t *testing.T) {
 			err := framework.WaitForSecretInNamespace(clientSet, ns.Name, name)
 			if err != nil {
 				t.Errorf("unexpected error waiting for secret: %v", err)
 			}
 
 			time.Sleep(30 * time.Second)
-
-			pemFile := fmt.Sprintf("%v/%v-%v.pem", file.DefaultSSLDirectory, ns.Name, name)
-			err = framework.WaitForFileInFS(pemFile, fs)
-			if err != nil {
-				t.Errorf("unexpected error waiting for file to exists in the filesystem: %v", err)
-			}
 
 			secretName := fmt.Sprintf("%v/%v", ns.Name, name)
 			sslCert, err := storer.GetLocalSSLCert(secretName)
@@ -481,11 +462,6 @@ func TestStore(t *testing.T) {
 
 			if sslCert == nil {
 				t.Errorf("expected a secret but none returned")
-			}
-
-			pemSHA := file.SHA1(pemFile)
-			if sslCert.PemSHA != pemSHA {
-				t.Errorf("SHA of secret on disk differs from local secret store (%v != %v)", pemSHA, sslCert.PemSHA)
 			}
 		})
 
@@ -530,12 +506,4 @@ func ensureIngress(ingress *extensions.Ingress, clientSet *kubernetes.Clientset)
 		return nil, err
 	}
 	return s, nil
-}
-
-func newFS(t *testing.T) file.Filesystem {
-	fs, err := file.NewFakeFS()
-	if err != nil {
-		t.Fatalf("unexpected error creating filesystem: %v", err)
-	}
-	return fs
 }

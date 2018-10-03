@@ -19,10 +19,12 @@ package ssl
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -32,12 +34,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/zakjan/cert-chain-resolver/certUtil"
 
-	"k8s.io/apimachinery/pkg/util/sets"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var (
@@ -45,41 +44,11 @@ var (
 )
 
 // AddOrUpdateCertAndKey creates a .pem file wth the cert and the key with the specified name
-func AddOrUpdateCertAndKey(name string, cert, key, ca []byte,
-	fs file.Filesystem) (*ingress.SSLCert, error) {
+func AddOrUpdateCertAndKey(name string, cert []byte, key []byte) (*ingress.SSLCert, error) {
 
-	pemName := fmt.Sprintf("%v.pem", name)
-	pemFileName := fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, pemName)
-	tempPemFile, err := fs.TempFile(file.DefaultSSLDirectory, pemName)
+	pemCerts := append(cert, '\n')
 
-	if err != nil {
-		return nil, fmt.Errorf("could not create temp pem file %v: %v", pemFileName, err)
-	}
-	glog.V(3).Infof("Creating temp file %v for Keypair: %v", tempPemFile.Name(), pemName)
-
-	_, err = tempPemFile.Write(cert)
-	if err != nil {
-		return nil, fmt.Errorf("could not write to pem file %v: %v", tempPemFile.Name(), err)
-	}
-	_, err = tempPemFile.Write([]byte("\n"))
-	if err != nil {
-		return nil, fmt.Errorf("could not write to pem file %v: %v", tempPemFile.Name(), err)
-	}
-	_, err = tempPemFile.Write(key)
-	if err != nil {
-		return nil, fmt.Errorf("could not write to pem file %v: %v", tempPemFile.Name(), err)
-	}
-
-	err = tempPemFile.Close()
-	if err != nil {
-		return nil, fmt.Errorf("could not close temp pem file %v: %v", tempPemFile.Name(), err)
-	}
-	defer fs.RemoveAll(tempPemFile.Name())
-
-	pemCerts, err := fs.ReadFile(tempPemFile.Name())
-	if err != nil {
-		return nil, err
-	}
+	pemCerts = append(pemCerts, key...)
 
 	pemBlock, _ := pem.Decode(pemCerts)
 	if pemBlock == nil {
@@ -125,61 +94,12 @@ func AddOrUpdateCertAndKey(name string, cert, key, ca []byte,
 		}
 	}
 
-	err = fs.Rename(tempPemFile.Name(), pemFileName)
-	if err != nil {
-		return nil, fmt.Errorf("could not move temp pem file %v to destination %v: %v", tempPemFile.Name(), pemFileName, err)
-	}
-
-	if len(ca) > 0 {
-		bundle := x509.NewCertPool()
-		bundle.AppendCertsFromPEM(ca)
-		opts := x509.VerifyOptions{
-			Roots: bundle,
-		}
-
-		_, err := pemCert.Verify(opts)
-		if err != nil {
-			oe := fmt.Sprintf("failed to verify certificate chain: \n\t%s\n", err)
-			return nil, errors.New(oe)
-		}
-
-		caData, err := fs.ReadFile(pemFileName)
-		if err != nil {
-			return nil, fmt.Errorf("could not open file %v for writing additional CA chains: %v", pemFileName, err)
-		}
-
-		caFile, err := fs.Create(pemFileName)
-		_, err = caFile.Write(caData)
-		if err != nil {
-			return nil, fmt.Errorf("could not append CA to cert file %v: %v", pemFileName, err)
-		}
-
-		_, err = caFile.Write([]byte("\n"))
-		if err != nil {
-			return nil, fmt.Errorf("could not append CA to cert file %v: %v", pemFileName, err)
-		}
-		caFile.Write(ca)
-		caFile.Write([]byte("\n"))
-		defer caFile.Close()
-
-		return &ingress.SSLCert{
-			Certificate: pemCert,
-			CAFileName:  pemFileName,
-			PemFileName: pemFileName,
-			PemSHA:      file.SHA1(pemFileName),
-			CN:          cn.List(),
-			ExpireTime:  pemCert.NotAfter,
-			Raw: ingress.RawSSLCert{
-				Cert: cert,
-				Key:  key,
-			},
-		}, nil
-	}
+	hasher := sha1.New()
+	hasher.Write(pemCerts)
 
 	s := &ingress.SSLCert{
 		Certificate: pemCert,
-		PemFileName: pemFileName,
-		PemSHA:      file.SHA1(pemFileName),
+		PemSHA:      hex.EncodeToString(hasher.Sum(nil)),
 		CN:          cn.List(),
 		ExpireTime:  pemCert.NotAfter,
 		Raw: ingress.RawSSLCert{
@@ -257,93 +177,6 @@ func parseSANExtension(value []byte) (dnsNames, emailAddresses []string, ipAddre
 	return
 }
 
-// AddCertAuth creates a .pem file with the specified CAs to be used in Cert Authentication
-// If it's already exists, it's clobbered.
-func AddCertAuth(name string, ca []byte, fs file.Filesystem) (*ingress.SSLCert, error) {
-
-	caName := fmt.Sprintf("ca-%v.pem", name)
-	caFileName := fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, caName)
-
-	pemCABlock, _ := pem.Decode(ca)
-	if pemCABlock == nil {
-		return nil, fmt.Errorf("no valid PEM formatted block found")
-	}
-	// If the first certificate does not start with 'BEGIN CERTIFICATE' it's invalid and must not be used.
-	if pemCABlock.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("CA file %v contains invalid data, and must be created only with PEM formatted certificates", name)
-	}
-
-	_, err := x509.ParseCertificate(pemCABlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	caFile, err := fs.Create(caFileName)
-	if err != nil {
-		return nil, fmt.Errorf("could not write CA file %v: %v", caFileName, err)
-	}
-	defer caFile.Close()
-
-	_, err = caFile.Write(ca)
-	if err != nil {
-		return nil, fmt.Errorf("could not write CA file %v: %v", caFileName, err)
-	}
-
-	glog.V(3).Infof("Created CA Certificate for Authentication: %v", caFileName)
-	return &ingress.SSLCert{
-		CAFileName:  caFileName,
-		PemFileName: caFileName,
-		PemSHA:      file.SHA1(caFileName),
-	}, nil
-}
-
-// AddOrUpdateDHParam creates a dh parameters file with the specified name
-func AddOrUpdateDHParam(name string, dh []byte, fs file.Filesystem) (string, error) {
-	pemName := fmt.Sprintf("%v.pem", name)
-	pemFileName := fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, pemName)
-
-	tempPemFile, err := fs.TempFile(file.DefaultSSLDirectory, pemName)
-
-	glog.V(3).Infof("Creating temp file %v for DH param: %v", tempPemFile.Name(), pemName)
-	if err != nil {
-		return "", fmt.Errorf("could not create temp pem file %v: %v", pemFileName, err)
-	}
-
-	_, err = tempPemFile.Write(dh)
-	if err != nil {
-		return "", fmt.Errorf("could not write to pem file %v: %v", tempPemFile.Name(), err)
-	}
-
-	err = tempPemFile.Close()
-	if err != nil {
-		return "", fmt.Errorf("could not close temp pem file %v: %v", tempPemFile.Name(), err)
-	}
-
-	defer fs.RemoveAll(tempPemFile.Name())
-
-	pemCerts, err := fs.ReadFile(tempPemFile.Name())
-	if err != nil {
-		return "", err
-	}
-
-	pemBlock, _ := pem.Decode(pemCerts)
-	if pemBlock == nil {
-		return "", fmt.Errorf("no valid PEM formatted block found")
-	}
-
-	// If the file does not start with 'BEGIN DH PARAMETERS' it's invalid and must not be used.
-	if pemBlock.Type != "DH PARAMETERS" {
-		return "", fmt.Errorf("certificate %v contains invalid data", name)
-	}
-
-	err = fs.Rename(tempPemFile.Name(), pemFileName)
-	if err != nil {
-		return "", fmt.Errorf("could not move temp pem file %v to destination %v: %v", tempPemFile.Name(), pemFileName, err)
-	}
-
-	return pemFileName, nil
-}
-
 // GetFakeSSLCert creates a Self Signed Certificate
 // Based in the code https://golang.org/src/crypto/tls/generate_cert.go
 func GetFakeSSLCert() ([]byte, []byte) {
@@ -392,41 +225,4 @@ func GetFakeSSLCert() ([]byte, []byte) {
 	key := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv.(*rsa.PrivateKey))})
 
 	return cert, key
-}
-
-// FullChainCert checks if a certificate file contains issues in the intermediate CA chain
-// Returns a new certificate with the intermediate certificates.
-// If the certificate does not contains issues with the chain it return an empty byte array
-func FullChainCert(in string, fs file.Filesystem) ([]byte, error) {
-	data, err := fs.ReadFile(in)
-	if err != nil {
-		return nil, err
-	}
-
-	cert, err := certUtil.DecodeCertificate(data)
-	if err != nil {
-		return nil, err
-	}
-
-	certPool := x509.NewCertPool()
-	certPool.AddCert(cert)
-
-	_, err = cert.Verify(x509.VerifyOptions{
-		Intermediates: certPool,
-	})
-	if err == nil {
-		return nil, nil
-	}
-
-	certs, err := certUtil.FetchCertificateChain(cert)
-	if err != nil {
-		return nil, err
-	}
-
-	certs, err = certUtil.AddRootCA(certs)
-	if err != nil {
-		return nil, err
-	}
-
-	return certUtil.EncodeCertificates(certs), nil
 }

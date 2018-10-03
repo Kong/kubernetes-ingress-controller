@@ -24,8 +24,6 @@ import (
 
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/cert/triple"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 )
 
 // generateRSACerts generates a self signed certificate using a self generated ca
@@ -56,7 +54,6 @@ func generateRSACerts(host string) (*triple.KeyPair, *triple.KeyPair, error) {
 }
 
 func TestAddOrUpdateCertAndKey(t *testing.T) {
-	fs := newFS(t)
 
 	cert, _, err := generateRSACerts("echoheaders")
 	if err != nil {
@@ -68,13 +65,9 @@ func TestAddOrUpdateCertAndKey(t *testing.T) {
 	c := certutil.EncodeCertPEM(cert.Cert)
 	k := certutil.EncodePrivateKeyPEM(cert.Key)
 
-	ngxCert, err := AddOrUpdateCertAndKey(name, c, k, []byte{}, fs)
+	ngxCert, err := AddOrUpdateCertAndKey(name, c, k)
 	if err != nil {
 		t.Fatalf("unexpected error checking SSL certificate: %v", err)
-	}
-
-	if ngxCert.PemFileName == "" {
-		t.Fatalf("expected path to pem file but returned empty")
 	}
 
 	if len(ngxCert.CN) == 0 {
@@ -87,9 +80,8 @@ func TestAddOrUpdateCertAndKey(t *testing.T) {
 }
 
 func TestCACert(t *testing.T) {
-	fs := newFS(t)
 
-	cert, CA, err := generateRSACerts("echoheaders")
+	cert, _, err := generateRSACerts("echoheaders")
 	if err != nil {
 		t.Fatalf("unexpected error creating SSL certificate: %v", err)
 	}
@@ -98,14 +90,10 @@ func TestCACert(t *testing.T) {
 
 	c := certutil.EncodeCertPEM(cert.Cert)
 	k := certutil.EncodePrivateKeyPEM(cert.Key)
-	ca := certutil.EncodeCertPEM(CA.Cert)
 
-	ngxCert, err := AddOrUpdateCertAndKey(name, c, k, ca, fs)
+	_, err = AddOrUpdateCertAndKey(name, c, k)
 	if err != nil {
 		t.Fatalf("unexpected error checking SSL certificate: %v", err)
-	}
-	if ngxCert.CAFileName == "" {
-		t.Fatalf("expected a valid CA file name")
 	}
 }
 
@@ -117,33 +105,4 @@ func TestGetFakeSSLCert(t *testing.T) {
 	if len(c) == 0 {
 		t.Fatalf("expected a valid certificate")
 	}
-}
-
-func TestAddCertAuth(t *testing.T) {
-	fs, err := file.NewFakeFS()
-	if err != nil {
-		t.Fatalf("unexpected error creating filesystem: %v", err)
-	}
-
-	cn := "demo-ca"
-	_, ca, err := generateRSACerts(cn)
-	if err != nil {
-		t.Fatalf("unexpected error creating SSL certificate: %v", err)
-	}
-	c := certutil.EncodeCertPEM(ca.Cert)
-	ic, err := AddCertAuth(cn, c, fs)
-	if err != nil {
-		t.Fatalf("unexpected error creating SSL certificate: %v", err)
-	}
-	if ic.CAFileName == "" {
-		t.Fatalf("expected a valid CA file name")
-	}
-}
-
-func newFS(t *testing.T) file.Filesystem {
-	fs, err := file.NewFakeFS()
-	if err != nil {
-		t.Fatalf("unexpected error creating filesystem: %v", err)
-	}
-	return fs
 }

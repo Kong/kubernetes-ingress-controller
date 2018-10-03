@@ -465,7 +465,8 @@ func TestStore(t *testing.T) {
 			}
 		})
 
-		updateCh.Close()
+		// skip closing updateCh.input channel to skip syncing with informer-started go routines
+		// updateCh.Close()
 		close(stopCh)
 	})
 

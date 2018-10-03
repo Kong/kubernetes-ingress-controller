@@ -27,6 +27,7 @@ import (
 )
 
 func TestCreateApiserverClient(t *testing.T) {
+	t.Skip("Skipping TestCreateApiserverClient.")
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
@@ -45,6 +46,7 @@ func TestCreateApiserverClient(t *testing.T) {
 }
 
 func TestHandleSigterm(t *testing.T) {
+	t.Skip("Skipping TestHandleSigterm.")
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 

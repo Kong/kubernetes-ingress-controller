@@ -110,8 +110,7 @@ func TestStore(t *testing.T) {
 			t.Errorf("expected an Ingres but none returned")
 		}
 
-		// skip closing updateCh.input channel to skip syncing with informer-started go routines
-		// updateCh.Close()
+		updateCh.Close()
 		close(stopCh)
 	})
 
@@ -253,8 +252,7 @@ func TestStore(t *testing.T) {
 			t.Errorf("expected 1 event of type Delete but %v occurred", del)
 		}
 
-		// skip closing updateCh.input channel to skip syncing with informer-started go routines
-		// updateCh.Close()
+		updateCh.Close()
 		close(stopCh)
 	})
 
@@ -341,8 +339,7 @@ func TestStore(t *testing.T) {
 			t.Errorf("expected 1 events of type Delete but %v occurred", del)
 		}
 
-		// skip closing updateCh.input channel to skip syncing with informer-started go routines
-		// updateCh.Close()
+		updateCh.Close()
 		close(stopCh)
 	})
 

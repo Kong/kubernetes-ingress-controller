@@ -36,6 +36,7 @@ import (
 )
 
 func TestStore(t *testing.T) {
+	t.Skip("Skipping tests in TestStore.")
 	// TODO: find a way to avoid the need to use a real api server
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)

@@ -86,14 +86,6 @@ func TestStore(t *testing.T) {
 			t.Errorf("expected an Ingres but none returned")
 		}
 
-		ls, err := storer.GetLocalSSLCert(key)
-		if err == nil {
-			t.Errorf("expected an error but none returned")
-		}
-		if ls != nil {
-			t.Errorf("expected an Ingres but none returned")
-		}
-
 		s, err := storer.GetSecret(key)
 		if err == nil {
 			t.Errorf("expected an error but none returned")
@@ -446,25 +438,6 @@ func TestStore(t *testing.T) {
 		if err != nil {
 			t.Errorf("unexpected error creating secret: %v", err)
 		}
-
-		t.Run("should exists a secret in the local store ", func(t *testing.T) {
-			err := framework.WaitForSecretInNamespace(clientSet, ns.Name, name)
-			if err != nil {
-				t.Errorf("unexpected error waiting for secret: %v", err)
-			}
-
-			time.Sleep(30 * time.Second)
-
-			secretName := fmt.Sprintf("%v/%v", ns.Name, name)
-			sslCert, err := storer.GetLocalSSLCert(secretName)
-			if err != nil {
-				t.Errorf("unexpected error reading local secret %v: %v", secretName, err)
-			}
-
-			if sslCert == nil {
-				t.Errorf("expected a secret but none returned")
-			}
-		})
 
 		// skip closing updateCh.input channel to skip syncing with informer-started go routines
 		// updateCh.Close()

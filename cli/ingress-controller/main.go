@@ -46,7 +46,6 @@ import (
 	pluginintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
-	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
 	"github.com/kong/kubernetes-ingress-controller/version"
 )
 
@@ -111,16 +110,6 @@ func main() {
 	if conf.ResyncPeriod.Seconds() < 10 {
 		glog.Fatalf("resync period (%vs) is too low", conf.ResyncPeriod.Seconds())
 	}
-
-	// create the default SSL certificate (dummy)
-	defCert, defKey := ssl.GetFakeSSLCert()
-	c, err := ssl.AddOrUpdateCertAndKey(fakeCertificate, defCert, defKey)
-	if err != nil {
-		glog.Fatalf("Error generating self signed certificate: %v", err)
-	}
-
-	conf.FakeCertificatePath = c.PemFileName
-	conf.FakeCertificateSHA = c.PemSHA
 
 	conf.KubeClient = kubeClient
 	conf.KubeConf = kubeCfg

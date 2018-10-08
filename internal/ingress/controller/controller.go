@@ -430,23 +430,9 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 	// remove the alias to avoid conflicts.
 	aliases := make(map[string]string, len(data))
 
-	// generated on Start() with createDefaultSSLCertificate()
-	defaultPemFileName := n.cfg.FakeCertificatePath
-	defaultPemSHA := n.cfg.FakeCertificateSHA
-
-	// Tries to fetch the default Certificate from nginx configuration.
-	// If it does not exists, use the ones generated on Start()
-	defaultCertificate, err := n.store.GetLocalSSLCert(n.cfg.DefaultSSLCertificate)
-	if err == nil {
-		defaultPemFileName = defaultCertificate.PemFileName
-		defaultPemSHA = defaultCertificate.PemSHA
-	}
-
 	// initialize the default server
 	servers[defServerName] = &ingress.Server{
-		Hostname:       defServerName,
-		SSLCertificate: defaultPemFileName,
-		SSLPemChecksum: defaultPemSHA,
+		Hostname: defServerName,
 		Locations: []*ingress.Location{
 			{
 				Path:         rootLocation,
@@ -513,7 +499,7 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 			}
 
 			// only add a certificate if the server does not have one previously configured
-			if servers[host].SSLCertificate != "" {
+			if servers[host].SSLCert != nil {
 				continue
 			}
 
@@ -533,15 +519,15 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 			}
 
 			if !found {
-				// does not contains a TLS section but none of the
+				// does contain a TLS section but none of the
 				// host match or there is no hosts in the TLS section
-				// as last resort we valide the host against the certificate
+				// as last resort we validate the host against the certificate
 				// if is valid we use it.
 				for _, tls := range ing.Spec.TLS {
 					key := fmt.Sprintf("%v/%v", ing.Namespace, tls.SecretName)
-					cert, err := n.store.GetLocalSSLCert(key)
+					cert, err := n.store.GetCertFromSecret(key)
 					if err != nil {
-						glog.Warningf("ssl certificate \"%v\" does not exist in local store", key)
+						glog.Warningf("ssl certificate \"%v\" does not exist in k8s secret store", key)
 						continue
 					}
 
@@ -557,37 +543,13 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 				}
 			}
 
-			if tlsSecretName == "" {
-				glog.V(3).Infof("host %v is listed on tls section but secretName is empty. Using default cert", host)
-				servers[host].SSLCertificate = defaultPemFileName
-				servers[host].SSLPemChecksum = defaultPemSHA
-				continue
-			}
-
 			key := fmt.Sprintf("%v/%v", ing.Namespace, tlsSecretName)
-			cert, err := n.store.GetLocalSSLCert(key)
+			cert, err := n.store.GetCertFromSecret(key)
 			if err != nil {
-				glog.Warningf("ssl certificate \"%v\" does not exist in local store", key)
+				glog.Warningf("ssl certificate \"%v\" does not exist in store", key)
 				continue
 			}
 
-			err = cert.Certificate.VerifyHostname(host)
-			if err != nil {
-				glog.Warningf("unexpected error validating SSL certificate %v for host %v. Reason: %v", key, host, err)
-				glog.Warningf("Validating certificate against DNS names. This will be deprecated in a future version.")
-				// check the common name field
-				// https://github.com/golang/go/issues/22922
-				err := verifyHostname(host, cert.Certificate)
-				if err != nil {
-					glog.Warningf("ssl certificate %v does not contain a Common Name or Subject Alternative Name for host %v. Reason: %v", key, host, err)
-					continue
-				}
-			}
-
-			servers[host].SSLCertificate = cert.PemFileName
-			servers[host].SSLFullChainCertificate = cert.FullChainPemFileName
-			servers[host].SSLPemChecksum = cert.PemSHA
-			servers[host].SSLExpireTime = cert.ExpireTime
 			servers[host].SSLCert = cert
 
 			if cert.ExpireTime.Before(time.Now().Add(240 * time.Hour)) {
@@ -604,4 +566,13 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 	}
 
 	return servers
+}
+
+// newUpstream creates an upstream without servers.
+func newUpstream(name string) *ingress.Backend {
+	return &ingress.Backend{
+		Name:      name,
+		Endpoints: []ingress.Endpoint{},
+		Service:   &apiv1.Service{},
+	}
 }

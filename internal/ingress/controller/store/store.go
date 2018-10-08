@@ -19,7 +19,6 @@ package store
 import (
 	"fmt"
 	"reflect"
-	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -55,7 +54,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/parser"
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
 )
 
 // Storer is the interface that wraps the required methods to gather information
@@ -75,11 +73,8 @@ type Storer interface {
 	// ListIngresses returns the list of Ingresses
 	ListIngresses() []*extensions.Ingress
 
-	// GetLocalSSLCert returns the local copy of a SSLCert
-	GetLocalSSLCert(name string) (*ingress.SSLCert, error)
-
-	// ListLocalSSLCerts returns the list of local SSLCerts
-	ListLocalSSLCerts() []*ingress.SSLCert
+	// Get an SSL cert from k8s secret
+	GetCertFromSecret(string) (*ingress.SSLCert, error)
 
 	// Run initiates the synchronization of the controllers
 	Run(stopCh chan struct{})
@@ -192,20 +187,8 @@ type k8sStore struct {
 	// listers contains the cache.Store used in the ingress controller
 	listers *Lister
 
-	// sslStore local store of SSL certificates (certificates used in ingress)
-	// this is required because the certificates must be present in the
-	// container filesystem
-	sslStore *SSLCertTracker
-
-	// secretIngressMap contains information about which ingress references a
-	// secret in the annotations.
-	secretIngressMap ObjectRefMap
-
 	// updateCh
 	updateCh *channels.RingChannel
-
-	// mu mutex used to avoid simultaneous incovations to syncSecret
-	mu *sync.Mutex
 }
 
 // New creates a new object store to be used in the ingress controller
@@ -216,12 +199,9 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	updateCh *channels.RingChannel) Storer {
 
 	store := &k8sStore{
-		informers:        &Informer{},
-		listers:          &Lister{},
-		sslStore:         NewSSLCertTracker(),
-		updateCh:         updateCh,
-		mu:               &sync.Mutex{},
-		secretIngressMap: NewObjectRefMap(),
+		informers: &Informer{},
+		listers:   &Lister{},
+		updateCh:  updateCh,
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -243,9 +223,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 
 			recorder.Eventf(ing, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", ing.Namespace, ing.Name))
-
-			store.updateSecretIngressMap(ing)
-			store.syncSecrets(ing)
 
 			updateCh.In() <- Event{
 				Type: CreateEvent,
@@ -273,9 +250,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 			recorder.Eventf(ing, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", ing.Namespace, ing.Name))
 
-			key := k8s.MetaNamespaceKey(ing)
-			store.secretIngressMap.Delete(key)
-
 			updateCh.In() <- Event{
 				Type: DeleteEvent,
 				Obj:  obj,
@@ -296,9 +270,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "UPDATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			}
 
-			store.updateSecretIngressMap(curIng)
-			store.syncSecrets(curIng)
-
 			updateCh.In() <- Event{
 				Type: UpdateEvent,
 				Obj:  cur,
@@ -308,67 +279,18 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 
 	secrEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			sec := obj.(*corev1.Secret)
-			key := k8s.MetaNamespaceKey(sec)
-
-			// find references in ingresses and update local ssl certs
-			if ings := store.secretIngressMap.Reference(key); len(ings) > 0 {
-				glog.Infof("secret %v was added and it is used in ingress annotations. Parsing...", key)
-				for _, ingKey := range ings {
-					ing, err := store.GetIngress(ingKey)
-					if err != nil {
-						glog.Errorf("could not find Ingress %v in local store", ingKey)
-						continue
-					}
-					store.syncSecrets(ing)
-				}
-				updateCh.In() <- Event{
-					Type: CreateEvent,
-					Obj:  obj,
-				}
+			updateCh.In() <- Event{
+				Type: CreateEvent,
+				Obj:  obj,
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
-			if !reflect.DeepEqual(old, cur) {
-				sec := cur.(*corev1.Secret)
-				key := k8s.MetaNamespaceKey(sec)
-
-				// find references in ingresses and update local ssl certs
-				if ings := store.secretIngressMap.Reference(key); len(ings) > 0 {
-					glog.Infof("secret %v was updated and it is used in ingress annotations. Parsing...", key)
-					for _, ingKey := range ings {
-						ing, err := store.GetIngress(ingKey)
-						if err != nil {
-							glog.Errorf("could not find Ingress %v in local store", ingKey)
-							continue
-						}
-						store.syncSecrets(ing)
-					}
-					updateCh.In() <- Event{
-						Type: UpdateEvent,
-						Obj:  cur,
-					}
-				}
+			updateCh.In() <- Event{
+				Type: UpdateEvent,
+				Obj:  cur,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			sec, ok := obj.(*corev1.Secret)
-			if !ok {
-				// If we reached here it means the secret was deleted but its final state is unrecorded.
-				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					glog.Errorf("couldn't get object from tombstone %#v", obj)
-					return
-				}
-				sec, ok = tombstone.Obj.(*corev1.Secret)
-				if !ok {
-					glog.Errorf("Tombstone contained object that is not a Secret: %#v", obj)
-					return
-				}
-			}
-
-			store.sslStore.Delete(k8s.MetaNamespaceKey(sec))
-
 			updateCh.In() <- Event{
 				Type: DeleteEvent,
 				Obj:  obj,
@@ -493,18 +415,6 @@ func (s k8sStore) GetSecret(key string) (*corev1.Secret, error) {
 	return s.listers.Secret.ByKey(key)
 }
 
-// ListLocalSecrets returns the list of local Secrets
-func (s k8sStore) ListLocalSecrets() []*ingress.SSLCert {
-	var certs []*ingress.SSLCert
-	for _, item := range s.sslStore.List() {
-		if s, ok := item.(*ingress.SSLCert); ok {
-			certs = append(certs, s)
-		}
-	}
-
-	return certs
-}
-
 // GetService returns a Service using the namespace and name as key
 func (s k8sStore) GetService(key string) (*corev1.Service, error) {
 	return s.listers.Service.ByKey(key)
@@ -540,55 +450,6 @@ func (s k8sStore) GetServiceEndpoints(svc *corev1.Service) (*corev1.Endpoints, e
 func (s k8sStore) Run(stopCh chan struct{}) {
 	// start informers
 	s.informers.Run(stopCh)
-}
-
-// syncSecrets synchronizes data from all Secrets referenced by the given
-// Ingress with the local store and file system.
-func (s k8sStore) syncSecrets(ing *extensions.Ingress) {
-	key := k8s.MetaNamespaceKey(ing)
-	for _, secrKey := range s.secretIngressMap.ReferencedBy(key) {
-		s.syncSecret(secrKey)
-	}
-}
-
-// updateSecretIngressMap takes an Ingress and updates all Secret objects it
-// references in secretIngressMap.
-func (s *k8sStore) updateSecretIngressMap(ing *extensions.Ingress) {
-	key := k8s.MetaNamespaceKey(ing)
-	glog.V(3).Infof("updating references to secrets for ingress %v", key)
-
-	// delete all existing references first
-	s.secretIngressMap.Delete(key)
-
-	var refSecrets []string
-
-	for _, tls := range ing.Spec.TLS {
-		secrName := tls.SecretName
-		if secrName != "" {
-			secrKey := fmt.Sprintf("%v/%v", ing.Namespace, secrName)
-			refSecrets = append(refSecrets, secrKey)
-		}
-	}
-
-	// populate map with all secret references
-	s.secretIngressMap.Insert(key, refSecrets...)
-}
-
-// ListLocalSSLCerts returns the list of local SSLCerts
-func (s k8sStore) ListLocalSSLCerts() []*ingress.SSLCert {
-	var certs []*ingress.SSLCert
-	for _, item := range s.sslStore.List() {
-		if s, ok := item.(*ingress.SSLCert); ok {
-			certs = append(certs, s)
-		}
-	}
-
-	return certs
-}
-
-// GetLocalSSLCert returns the local copy of a SSLCert
-func (s k8sStore) GetLocalSSLCert(key string) (*ingress.SSLCert, error) {
-	return s.sslStore.ByKey(key)
 }
 
 func (s k8sStore) GetKongPlugin(namespace, name string) (*pluginv1.KongPlugin, error) {

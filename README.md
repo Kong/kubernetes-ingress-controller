@@ -1,14 +1,45 @@
-[![Build Status](https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master)](https://travis-ci.org/Kong/kubernetes-ingress-controller)
-
 # Kubernetes Ingress Controller for Kong
 
-This repository contains an Ingress controller for Kubernetes that works by deploying [Kong][0] as a reverse proxy and load balancer.
+[![Build Status](https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master)](https://travis-ci.org/Kong/kubernetes-ingress-controller)
 
-## Versions supported
+Use [Kong][kong] for your Kubernetes [Ingress][ingress]
+and further configure [plugins][kong-hub], health checking,
+load balancing and more in Kong
+for your Kubernetes services, all using
+Custom Resource Definitions(CRDs).
 
-The Ingress Controller is Tested with Kubernetes clusters running version `1.8` through `1.10`.
+## Tables of content
 
-The following matrix lists supported versions of Kong for every release of Kong Ingress Controller.
+- [**Features**](#features)
+- [**Version support matrix**](#version-support-matrix)
+- [**Get started**](#get-started)
+- [**Documentation**](#documentation)
+- [**Seeking help**](#seeking-help)
+- [**Design**](#design)
+- [**License**](#license)
+- [**Roadmap**](#roadmap)
+
+## Features
+
+- **Ingress routing**: Use [Ingress][ingress] resources to configure Kong
+- **Health checking and Load-balancing**: Load balance requests across
+  your pods and supports active & passive health-checks.
+- **Configure Plugins**: Execute custom code
+  as a request is proxied to your service.
+- **Request/response transformations**: Use plugins to
+  modify your requests/responses on the fly.
+- **Authentication**: Protect your services using authentication
+  plugins.
+- **Declarative configuration for Kong** Configure all of Kong
+  using CRDs in Kubernetes and manage Kong declaratively.
+
+## Version support matrix
+
+The Ingress controller is tested on
+Kubernetes version `1.8` through `1.10`.
+
+The following matrix lists supported versions of
+Kong for every release of the Kong Ingress Controller:
 
 | Kong Ingress Controller  | <= 0.0.4           | 0.0.5              | 0.1.x              | 0.2.x              |
 |--------------------------|:------------------:|:------------------:|:------------------:|:------------------:|
@@ -19,99 +50,106 @@ The following matrix lists supported versions of Kong for every release of Kong 
 
 ## Get started
 
-Please check the [deployment documentation][1]
+You can deploy Kong Ingress Controller on any
+Kubernetes cluster which supports a Service of `type: LoadBalancer`.
 
-## How it works?
+You can use
+[Minikube](https://kubernetes.io/docs/setup/minikube/)
+on your local machine or use
+a hosted k8s service like
+[GKE](https://cloud.google.com/kubernetes-engine/).
 
-Using a standard [Kubernetes deployment][10], the Ingress controller runs multiple containers in a single pod. This allows us to define in a unit containing an [initContainer][11] to run Kong migrations, one container for the Kong admin API in control-plane mode and one container for the ingress controller itself. With this approach we simplify the deploy of the required components without user intervention.
-Once the deployment passes the readiness and liveness probes it means the Kong migrations ran and ingress controller can communicate with the Kong admin API.
+To setup Kong Ingress Controller in your k8s cluster, execute:
 
-In a different deployment we run Kong in data-plane mode. This means the Kong instances only expose the proxy ports.
-By using this approach we can deploy and scale the data-plane with the requirements of your applications, i.e. using a daemonset, a deployment with affinity rules, etc.
-
-The next diagram shows how the components interact:
-
-![kong components](docs/images/deployment.png "Kong Components")
-
-## Custom annotations
-
-Please check the [annotations][7] document.
-
-## Annotation ingress.class
-
-If you have multiple Ingress controllers in a single cluster, you can pick one by specifying the `ingress.class` annotation, eg creating an Ingress with an annotation like
-
-```yaml
-metadata:
-  name: foo
-  annotations:
-    kubernetes.io/ingress.class: "gce"
+```shell
+kubectl apply -f https://bit.ly/kong-ingress
 ```
 
-will target the GCE controller, forcing the ingress controller to ignore it, while an annotation like
+It takes a few minutes for all components to
+spin up.
+You now have set up Kong as your Ingress controller and
+all Ingress resources in your Kubernetes Cluster will be satisfied.
 
-```yaml
-metadata:
-  name: foo
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
+Please refer our [deployment documentation][deployment-doc]
+for a detailed  introduction to Kong Ingress Controller
+and Ingress spec.
+
+## Seeking help
+
+Please search through the posts on
+[Kong Nation](https://discuss.konghq.com/c/kubernetes) as it's
+likely that another user has run into the same problem.
+If you don't find an answer, please feel free to post a question.
+If you have a feature request, please post in
+[Feature Suggestions](https://discuss.konghq.com/c/feature-suggestions)
+category.
+
+If you've spotted a bug, please open an issue
+on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
+
+## Documentation
+
+All documentation around Kong Ingress Controller is present in this
+repository. Pull Requests are welcome for additions and corrections.
+
+Following are some helpful link:
+
+- [**Getting Started**][deployment-doc]:
+  Get Kubernetes Ingress setup up and running.
+- [**Deployment**][deployment-doc]:
+  Deployment guides for Minikube, GKE
+  and other types of clusters.
+- [**Custom Resources Definitions (CRDs**][crds]:
+  Use custom resources
+  to configure Kong in addition to the Ingress resource.
+- [**Annotations**][annotations]:
+  Associate plugins with your requests using annotations
+- [**FAQs**][faqs]: Frequently Asked Questions.
+
+## Design
+
+Kong Ingress Controller is built to satisfy the [Ingress][ingress]
+spec in Kubernetes.
+Kong Ingress Controller is a [Go](https://golang.org/) app
+that listens to events from the API-server of your Kubernetes cluster
+and then sets up Kong to handle your configuration accordingly,
+meaning you never have to configure Kong yourself manually.
+
+The controller can configure any Kong cluster via a
+Kong node running either in a control-plane mode
+or running both, control and data planes.
+
+For detailed design, please refer to our
+[design][design] documentation.
+
+## License
+
+```text
+Copyright 2018 Kong Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```
 
-will target the Kong Ingress controller, forcing the GCE controller to ignore it.
+## Roadmap
 
-__Note__: Deploying multiple ingress controller and not specifying the annotation will cause both controllers fighting to satisfy the Ingress.
+Please check the [roadmap][roadmap] document.
 
-## Custom Resource Definitions
-
-Please check the [custom types][8] document.
-
-### Multiple ingress controllers
-
-If you're running multiple ingress controllers, or running on a cloud provider that handles ingress, you need to specify the annotation `kubernetes.io/ingress.class: "nginx"` in all ingresses you would like this controller to claim. This mechanism also provides users the ability to run _multiple_ Kong ingress controllers (e.g. one which serves public traffic, one which serves "internal" traffic).
-When using this functionality the option `--ingress-class` should set a value unique for the cluster. Here is a partial example:
-
-```yaml
-spec:
-  template:
-     spec:
-       containers:
-         - name: kong-ingress-internal-controller
-           args:
-             - /kong-ingress-controller
-             - '--election-id=ingress-controller-leader-internal'
-             - '--ingress-class=kong-internal'
-```
-
-Not specifying the annotation will lead to multiple ingress controllers claiming the same ingress.
-Setting a value which does not match the class of any existing ingress controllers will cause all ingress controllers ignoring the ingress.
-
-### Why the default `kubernetes.io/ingress.class` is "nginx"?
-
-This is to provide out of the box compatibility with tools like [kube-lego][2]
-
-### Why endpoints and not services
-
-The Kong ingress controller does not use [Services][3] to route traffic to the pods. Instead it uses the Endpoints API to bypass [kube-proxy][4] to allow Kong features like session affinity and custom load balancing algorithms.
-It also removes overhead, such as conntrack entries for iptables DNAT.
-
-### Relation with ingress-nginx
-
-This repository uses code from [ingress-nginx][5] as the base.
-Code like annotations are not present because some features are present as [plugins][6].
-
-### Roadmap
-
-Please check the [roadmap][9] document.
-
-[0]: http://getkong.org
-[1]: deploy/README.md
-[2]: https://github.com/jetstack/kube-lego
-[3]: http://kubernetes.io/docs/user-guide/services
-[4]: http://kubernetes.io/docs/admin/kube-proxy
-[5]: https://github.com/kubernetes/ingress-nginx
-[6]: https://konghq.com/plugins/
-[7]: docs/annotations.md
-[8]: docs/custom-types.md
-[9]: docs/roadmap.md
-[10]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
-[11]: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+[ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
+[kong]: https://konghq.com/kong-community-edition/
+[kong-hub]: https://docs.konghq.com/hub/
+[deployment-doc]: deploy/README.md
+[annotations]: docs/annotations.md
+[crds]: docs/custom-types.md
+[roadmap]: docs/roadmap.md
+[design]: docs/design.md
+[faqs]: docs/faq.md

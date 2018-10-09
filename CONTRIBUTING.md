@@ -73,9 +73,9 @@ the Ingress Controller:
 #!/bin/bash
 pkill -f kubectl
 # setup proxies
-kubectl port-forward svc/kong-proxy -n kong 8443:443  2>&1 > /dev/null &
-kubectl port-forward svc/kong-proxy -n kong 8000:80  2>&1 > /dev/null &
-kubectl port-forward svc/kong-ingress-controller -n kong 8001:8001  2>&1 > /dev/null &
+kubectl port-forward svc/kong-proxy -n kong 8443:443 2>&1 > /dev/null &
+kubectl port-forward svc/kong-proxy -n kong 8000:80 2>&1 > /dev/null &
+kubectl port-forward svc/kong-ingress-controller -n kong 8001:8001 2>&1 > /dev/null &
 kubectl proxy --port=8002 2>&1 > /dev/null &
 
 export POD_NAME=`kubectl get po -n kong -o json | jq ".items[] | .metadata.name" -r | grep ingress`

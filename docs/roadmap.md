@@ -18,4 +18,3 @@
 - Use finalizers on Custom Resources(CR) to make sure that
   resources on the Kong side are deleted if a CR is deleted.
 - Use admission controller to validate custom types and default values
-

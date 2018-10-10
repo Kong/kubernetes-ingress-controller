@@ -1,4 +1,7 @@
-### Install and Start minishift
+# Kong Ingress on Openshift
+
+## Install and Start minishift
+
 1. Install [`minishift`](0)
 
    Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM.
@@ -15,9 +18,10 @@
    kubectl get nodes
    ```
 
-### Install KONG as ingress controller
+## Install Kong as ingress controller
 
-1. Download oc CLI from https://console.starter-us-west-2.openshift.com/console/command-line
+1. Download oc CLI from
+   [Openshift Console CLI](https://console.starter-us-west-2.openshift.com/console/command-line)
 
 2. Create a new project:
 
@@ -34,7 +38,8 @@
 
 4. Deploy Kong
 
-   You need to execute the next command with `admin` permissions. The reason for this is the creation of a role cluster and the required [Custom Resource Definitions](1)
+   You need to execute the next command with `admin` permissions.
+   The reason for this is the creation of a role cluster and the required [Custom Resource Definitions](1)
 
    **Example:** `oc login -u system:admin`
 
@@ -70,16 +75,16 @@ This is an example of the output:
 
    ```console
    Hostname: http-svc-7dd9588c5-gmbvh
-   
+
    Pod Information:
      node name:  minishift
      pod name: http-svc-7dd9588c5-gmbvh
      pod namespace:  default
      pod IP: 172.17.0.7
-   
+
    Server values:
      server_version=nginx: 1.13.3 - lua: 10008
-   
+
    Request Information:
      client_address=127.0.0.1
      method=GET
@@ -87,12 +92,12 @@ This is an example of the output:
      query=
      request_version=1.1
      request_uri=http://localhost:8080/
-   
+
    Request Headers:
      accept=*/*
      host=localhost:8080
      user-agent=curl/7.47.0
-   
+
    Request Body:
      -no body in request-
    ```
@@ -122,9 +127,11 @@ This is an example of the output:
    ```bash
    http ${PROXY_IP}:${HTTP_PORT} Host:foo.bar
    ```
-### How you can access the Kong admin API?
 
-The admin API is exposed using an Ingress to be able easily to add some authentication plugin and protect the API.
+## Accessing Kong's Admin API
+
+The admin API is exposed using an Ingress to be
+able easily to add some authentication plugin and protect the API.
 
 ```bash
 echo "

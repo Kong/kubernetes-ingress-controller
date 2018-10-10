@@ -5,14 +5,14 @@ using several [Custom Resource Definitions(CRDs)][k8s-crd].
 
 Following CRDs enables users to declaratively configure all aspects of Kong:
 
-- [**KongPlugin**](#KongPlugin): These resources correspond to [Plugin][kong-plugin]
+- [**KongPlugin**](#kongplugin): These resources correspond to [Plugin][kong-plugin]
   entities in Kong.
-- [**KongIngress**](#KongIngress): These resources can control routing, load-balancing,
+- [**KongIngress**](#kongingress): These resources can control routing, load-balancing,
   health checking properties in Kong.  
   It works with the Ingress resources in Kubernetes.
-- [**KongConsumer**](#KongConsumer):
+- [**KongConsumer**](#kongconsumer):
   These resources map to [Consumer][kong-consumer] entities in Kong.
-- [**KongCredential**](#KongCredential): These resources map to
+- [**KongCredential**](#kongcredential): These resources map to
   credentials (key-auth, basic-auth, etc) that belong to consumers.
 
 ## KongPlugin

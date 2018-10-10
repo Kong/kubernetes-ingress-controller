@@ -4,10 +4,10 @@ Kong Ingress Controller uses some annotations to configure Ingress resources.
 
 It supports the following annotations:
 
-- [`kubernetes.io/ingress.class`](#kubernetes.io/ingress.class)
-- [`plugins.konghq.com`](#plugins.konghq.com)
-- [`configuration.konghq.com`](#configuration.konghq.com)
-- DEPRECATED [`<name>.plugin.konghq.com`](#deprecated-<name>.plugin.konghq.com)
+- [`kubernetes.io/ingress.class`](#kubernetesioingressclass)
+- [`plugins.konghq.com`](#pluginskonghqcom)
+- [`configuration.konghq.com`](#configurationkonghqcom)
+- DEPRECATED [`<name>.plugin.konghq.com`](#deprecated-namepluginkonghqcom)
 
 ## `kubernetes.io/ingress.class`
 

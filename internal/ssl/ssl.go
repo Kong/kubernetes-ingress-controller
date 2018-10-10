@@ -17,25 +17,18 @@ limitations under the License.
 package ssl
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"math/big"
 	"net"
 	"strconv"
-	"time"
 
 	"github.com/golang/glog"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -43,9 +36,8 @@ var (
 	oidExtensionSubjectAltName = asn1.ObjectIdentifier{2, 5, 29, 17}
 )
 
-// AddOrUpdateCertAndKey creates a .pem file wth the cert and the key with the specified name
-func AddOrUpdateCertAndKey(name string, cert []byte, key []byte) (*ingress.SSLCert, error) {
-
+// ParseX509Certificate returns a *X509.Certifcate from a cert and key pair.
+func ParseX509Certificate(cert, key []byte) (*x509.Certificate, error) {
 	pemCerts := append(cert, '\n')
 
 	pemCerts = append(pemCerts, key...)
@@ -57,7 +49,7 @@ func AddOrUpdateCertAndKey(name string, cert []byte, key []byte) (*ingress.SSLCe
 
 	// If the file does not start with 'BEGIN CERTIFICATE' it's invalid and must not be used.
 	if pemBlock.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("certificate %v contains invalid data, and must be created with 'kubectl create secret tls'", name)
+		return nil, fmt.Errorf("certificate contains invalid data, and must be created with 'kubectl create secret tls'")
 	}
 
 	pemCert, err := x509.ParseCertificate(pemBlock.Bytes)
@@ -69,17 +61,21 @@ func AddOrUpdateCertAndKey(name string, cert []byte, key []byte) (*ingress.SSLCe
 	if _, err := tls.X509KeyPair(cert, key); err != nil {
 		return nil, err
 	}
+	return pemCert, nil
+}
 
-	cn := sets.NewString(pemCert.Subject.CommonName)
-	for _, dns := range pemCert.DNSNames {
+// ParseCommonNamesFromCert returns common names in cert and SAN extension
+func ParseCommonNamesFromCert(cert *x509.Certificate) []string {
+	cn := sets.NewString(cert.Subject.CommonName)
+	for _, dns := range cert.DNSNames {
 		if !cn.Has(dns) {
 			cn.Insert(dns)
 		}
 	}
 
-	if len(pemCert.Extensions) > 0 {
+	if len(cert.Extensions) > 0 {
 		glog.V(3).Info("parsing ssl certificate extensions")
-		for _, ext := range getExtension(pemCert, oidExtensionSubjectAltName) {
+		for _, ext := range getExtension(cert, oidExtensionSubjectAltName) {
 			dns, _, _, err := parseSANExtension(ext.Value)
 			if err != nil {
 				glog.Warningf("unexpected error parsing certificate extensions: %v", err)
@@ -94,21 +90,7 @@ func AddOrUpdateCertAndKey(name string, cert []byte, key []byte) (*ingress.SSLCe
 		}
 	}
 
-	hasher := sha1.New()
-	hasher.Write(pemCerts)
-
-	s := &ingress.SSLCert{
-		Certificate: pemCert,
-		PemSHA:      hex.EncodeToString(hasher.Sum(nil)),
-		CN:          cn.List(),
-		ExpireTime:  pemCert.NotAfter,
-		Raw: ingress.RawSSLCert{
-			Cert: cert,
-			Key:  key,
-		},
-	}
-
-	return s, nil
+	return cn.List()
 }
 
 func getExtension(c *x509.Certificate, id asn1.ObjectIdentifier) []pkix.Extension {
@@ -175,54 +157,4 @@ func parseSANExtension(value []byte) (dnsNames, emailAddresses []string, ipAddre
 	}
 
 	return
-}
-
-// GetFakeSSLCert creates a Self Signed Certificate
-// Based in the code https://golang.org/src/crypto/tls/generate_cert.go
-func GetFakeSSLCert() ([]byte, []byte) {
-
-	var priv interface{}
-	var err error
-
-	priv, err = rsa.GenerateKey(rand.Reader, 2048)
-
-	if err != nil {
-		glog.Fatalf("failed to generate fake private key: %s", err)
-	}
-
-	notBefore := time.Now()
-	// This certificate is valid for 365 days
-	notAfter := notBefore.Add(365 * 24 * time.Hour)
-
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-
-	if err != nil {
-		glog.Fatalf("failed to generate fake serial number: %s", err)
-	}
-
-	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject: pkix.Name{
-			Organization: []string{"Acme Co"},
-			CommonName:   "Kubernetes Ingress Controller Fake Certificate",
-		},
-		NotBefore: notBefore,
-		NotAfter:  notAfter,
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		DNSNames:              []string{"ingress.local"},
-	}
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.(*rsa.PrivateKey).PublicKey, priv)
-	if err != nil {
-		glog.Fatalf("Failed to create fake certificate: %s", err)
-	}
-
-	cert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-
-	key := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv.(*rsa.PrivateKey))})
-
-	return cert, key
 }

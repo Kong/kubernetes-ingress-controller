@@ -1,4 +1,3 @@
-
 # Kong Ingress Controller Design
 
 ## Overview

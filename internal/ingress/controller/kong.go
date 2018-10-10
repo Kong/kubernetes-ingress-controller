@@ -21,10 +21,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"reflect"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/imdario/mergo"
@@ -37,7 +35,6 @@ import (
 	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
 	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -1096,20 +1093,8 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 	switch res.StatusCode {
 	case http.StatusOK:
 		// check if an update is required
-		name := fmt.Sprintf("temporal-cert-%v", time.Now().UnixNano())
-		pem, err := ssl.AddOrUpdateCertAndKey(name,
-			[]byte(strings.TrimSpace(cert.Cert)),
-			[]byte(strings.TrimSpace(cert.Key)))
-		if err != nil {
-			return err
-		}
 
-		defer func() {
-			os.Remove(pem.PemFileName)
-			os.Remove(pem.FullChainPemFileName)
-		}()
-
-		if server.SSLCert.PemSHA != pem.PemSHA {
+		if cert.Cert != sc || cert.Key != sk {
 			glog.Infof("updating Kong SSL Certificate for host %v located in Secret %v/%v",
 				server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
@@ -1122,6 +1107,7 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 				return errors.Wrap(res.Error(), "patching a Kong consumer")
 			}
 		}
+
 	case http.StatusNotFound:
 		cert = &kongadminv1.Certificate{
 			Required: kongadminv1.Required{

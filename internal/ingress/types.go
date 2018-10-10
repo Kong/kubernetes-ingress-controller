@@ -17,10 +17,12 @@ limitations under the License.
 package ingress
 
 import (
+	"crypto/x509"
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -73,21 +75,9 @@ type Endpoint struct {
 type Server struct {
 	// Hostname returns the FQDN of the server
 	Hostname string `json:"hostname"`
-	// SSLCertificate path to the SSL certificate on disk
-	SSLCertificate string `json:"sslCertificate"`
-	// SSLFullChainCertificate path to the SSL certificate on disk
-	// This certificate contains the full chain (ca + intermediates + cert)
-	SSLFullChainCertificate string `json:"sslFullChainCertificate"`
-	// SSLExpireTime has the expire date of this certificate
-	SSLExpireTime time.Time `json:"sslExpireTime"`
 
 	SSLCert *SSLCert `json:"-"`
 
-	// SSLPemChecksum returns the checksum of the certificate file on disk.
-	// There is no restriction in the hash generator. This checksim can be
-	// used to  determine if the secret changed without the use of file
-	// system notifications
-	SSLPemChecksum string `json:"sslPemChecksum"`
 	// Locations list of URIs configured in the server.
 	Locations []*Location `json:"locations,omitempty"`
 	// Alias return the alias of the server name
@@ -132,4 +122,27 @@ type Location struct {
 	DefaultBackend *apiv1.Service `json:"defaultBackend,omitempty"`
 
 	KongPlugins map[string]string
+}
+
+// SSLCert describes a SSL certificate to be used in a server
+type SSLCert struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// ID contains the object metadata UID from the Kubenretes Secret
+	ID string `json:"id,omitempty"`
+
+	Certificate *x509.Certificate `json:"certificate,omitempty"`
+
+	// CN contains all the common names defined in the SSL certificate
+	CN []string `json:"cn"`
+	// ExpiresTime contains the expiration of this SSL certificate in timestamp format
+	ExpireTime time.Time `json:"expires"`
+
+	Raw RawSSLCert
+}
+
+// RawSSLCert represnts cert and key in bytes
+type RawSSLCert struct {
+	Cert []byte
+	Key  []byte
 }

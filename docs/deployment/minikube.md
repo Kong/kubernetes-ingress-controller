@@ -1,4 +1,4 @@
-# Kong Ingress on Openshift
+# Kong Ingress on Minikube
 
 ## Setup Minikube
 

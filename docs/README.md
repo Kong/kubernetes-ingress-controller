@@ -10,7 +10,7 @@
 
 Kong Ingress Controller can be deployed on all types of Kubernetes clusters
 using a wide variety of deployment options based on your use-case.
-Check out the [Deployment Guide][deploymeent]
+Check out the [Deployment Guide][deployment]
 
 ## Custom Resource Definitions
 
@@ -46,7 +46,7 @@ along alongside Kong.
 - Checkout our [Roadmap][roadmap] for features coming out in future.
 
 [annotations]: annotations.md
-[deployement]: deployment/
+[deployment]: deployment/
 [crd]: custom-resources.md
 [design]: design.md
 [faqs]: faq.md

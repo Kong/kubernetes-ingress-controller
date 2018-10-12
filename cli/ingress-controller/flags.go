@@ -67,23 +67,12 @@ Kubernetes cluster and local discovery is attempted.`)
 
 		electionID = flags.String("election-id", "ingress-controller-leader", `Election id to use for status update.`)
 
-		forceIsolation = flags.Bool("force-namespace-isolation", false,
-			`Force namespace isolation. This flag is required to avoid the reference of 
-secrets or configmaps located in a different namespace than the specified in 
-the flag --watch-namespace.`)
-
 		updateStatusOnShutdown = flags.Bool("update-status-on-shutdown", true,
 			`Indicates if the ingress controller should update the Ingress status 
 IP/hostname when the controller is being stopped. Default is true`)
 
 		showVersion = flags.Bool("version", false,
 			`Shows release information about the Kong Ingress controller`)
-
-		enableSSLChainCompletion = flags.Bool("enable-ssl-chain-completion", true,
-			`Defines if the ingress controller should check the secrets for missing 
-intermediate CA certificates.
-If the certificate contain issues chain issues is not possible to enable OCSP.
-Default is true.`)
 
 		syncRateLimit = flags.Float32("sync-rate-limit", 0.3,
 			`Define the sync frequency upper limit`)
@@ -127,28 +116,22 @@ The controller will set the endpoint records on the ingress using this address.`
 		class.IngressClass = *ingressClass
 	}
 
-	if !*enableSSLChainCompletion {
-		glog.Warningf("Check of SSL certificate chain is disabled (--enable-ssl-chain-completion=false)")
-	}
-
 	config := &controller.Configuration{
 		Kong: controller.Kong{
 			URL: *kongURL,
 		},
-		APIServerHost:            *apiserverHost,
-		KubeConfigFile:           *kubeConfigFile,
-		UpdateStatus:             *updateStatus,
-		ElectionID:               *electionID,
-		EnableProfiling:          *profiling,
-		EnableSSLChainCompletion: *enableSSLChainCompletion,
-		ResyncPeriod:             *resyncPeriod,
-		DefaultService:           *defaultSvc,
-		Namespace:                *watchNamespace,
-		PublishService:           *publishSvc,
-		PublishStatusAddress:     *publishStatusAddress,
-		ForceNamespaceIsolation:  *forceIsolation,
-		UpdateStatusOnShutdown:   *updateStatusOnShutdown,
-		SyncRateLimit:            *syncRateLimit,
+		APIServerHost:          *apiserverHost,
+		KubeConfigFile:         *kubeConfigFile,
+		UpdateStatus:           *updateStatus,
+		ElectionID:             *electionID,
+		EnableProfiling:        *profiling,
+		ResyncPeriod:           *resyncPeriod,
+		DefaultService:         *defaultSvc,
+		Namespace:              *watchNamespace,
+		PublishService:         *publishSvc,
+		PublishStatusAddress:   *publishStatusAddress,
+		UpdateStatusOnShutdown: *updateStatusOnShutdown,
+		SyncRateLimit:          *syncRateLimit,
 	}
 
 	return false, config, nil

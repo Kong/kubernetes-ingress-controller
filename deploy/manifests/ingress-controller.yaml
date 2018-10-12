@@ -42,15 +42,6 @@ spec:
         app: ingress-kong
     spec:
       serviceAccountName: kong-serviceaccount
-      initContainers:
-      - name: kong-migration
-        image: kong:0.14.1-centos
-        env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-        command: [ "/bin/sh", "-c", "kong migrations up" ]
       containers:
       - name: admin-api
         image: kong:0.14.1-centos

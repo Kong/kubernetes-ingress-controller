@@ -21,10 +21,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"reflect"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/imdario/mergo"
@@ -37,7 +35,6 @@ import (
 	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
 	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -497,6 +494,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							}
 							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
 						}
+						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
 				}
 			}
@@ -705,10 +703,6 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 	// Routes
 	for _, server := range ingressCfg.Servers {
-		if server.Hostname == "_" {
-			// there is no catch all server in kong
-			continue
-		}
 
 		protos := []string{"http"}
 		if server.SSLCert != nil {
@@ -748,8 +742,10 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			r := &kongadminv1.Route{
 				Paths:     []string{location.Path},
 				Protocols: []string{"http", "https"}, // default
-				Hosts:     []string{server.Hostname},
 				Service:   kongadminv1.InlineService{ID: svc.ID},
+			}
+			if server.Hostname != "_" {
+				r.Hosts = []string{server.Hostname}
 			}
 
 			if kongIngress != nil && kongIngress.Route != nil {
@@ -908,6 +904,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 							}
 							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
 						}
+						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
 					glog.Infof("plugin %v configuration in kong is up to date.", pluginInk8s.PluginName)
 
@@ -999,12 +996,24 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 						upstream.HashOn = kongIngress.Upstream.HashOn
 					}
 
+					if kongIngress.Upstream.HashOnCookie != "" {
+						upstream.HashOnCookie = kongIngress.Upstream.HashOnCookie
+					}
+
+					if kongIngress.Upstream.HashOnCookiePath != "" {
+						upstream.HashOnCookiePath = kongIngress.Upstream.HashOnCookiePath
+					}
+
 					if kongIngress.Upstream.HashOnHeader != "" {
 						upstream.HashOnHeader = kongIngress.Upstream.HashOnHeader
 					}
 
 					if kongIngress.Upstream.HashFallback != "" {
 						upstream.HashFallback = kongIngress.Upstream.HashFallback
+					}
+
+					if kongIngress.Upstream.HashFallbackHeader != "" {
+						upstream.HashFallbackHeader = kongIngress.Upstream.HashFallbackHeader
 					}
 
 					if kongIngress.Upstream.Slots != 0 {
@@ -1084,22 +1093,8 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 	switch res.StatusCode {
 	case http.StatusOK:
 		// check if an update is required
-		name := fmt.Sprintf("temporal-cert-%v", time.Now().UnixNano())
-		pem, err := ssl.AddOrUpdateCertAndKey(name,
-			[]byte(strings.TrimSpace(cert.Cert)),
-			[]byte(strings.TrimSpace(cert.Key)),
-			[]byte{},
-			n.fileSystem)
-		if err != nil {
-			return err
-		}
 
-		defer func() {
-			os.Remove(pem.PemFileName)
-			os.Remove(pem.FullChainPemFileName)
-		}()
-
-		if server.SSLCert.PemSHA != pem.PemSHA {
+		if cert.Cert != sc || cert.Key != sk {
 			glog.Infof("updating Kong SSL Certificate for host %v located in Secret %v/%v",
 				server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
@@ -1112,6 +1107,7 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 				return errors.Wrap(res.Error(), "patching a Kong consumer")
 			}
 		}
+
 	case http.StatusNotFound:
 		cert = &kongadminv1.Certificate{
 			Required: kongadminv1.Required{
@@ -1180,9 +1176,15 @@ func buildName(backend string, location *ingress.Location) string {
 // getKongService returns a Route from a list using the path and hosts as filters
 func getKongRoute(hostname, path string, routes []kongadminv1.Route) *kongadminv1.Route {
 	for _, r := range routes {
-		if sets.NewString(r.Paths...).Has(path) &&
-			sets.NewString(r.Hosts...).Has(hostname) {
-			return &r
+		if hostname != "_" {
+			if sets.NewString(r.Paths...).Has(path) &&
+				sets.NewString(r.Hosts...).Has(hostname) {
+				return &r
+			}
+		} else {
+			if sets.NewString(r.Paths...).Has(path) {
+				return &r
+			}
 		}
 	}
 

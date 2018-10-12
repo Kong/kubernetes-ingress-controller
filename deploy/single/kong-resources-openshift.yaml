@@ -294,7 +294,7 @@ kind: Service
 metadata:
   name: kong-proxy
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
   - name: kong-proxy
     port: 80

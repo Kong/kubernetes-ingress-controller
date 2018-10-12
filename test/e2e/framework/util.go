@@ -32,8 +32,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 )
 
 const (
@@ -207,30 +205,6 @@ func secretInNamespace(c kubernetes.Interface, namespace, name string) wait.Cond
 			return true, nil
 		}
 		return false, nil
-	}
-}
-
-// WaitForFileInFS waits a default amount of time for the specified file is present in the filesystem
-func WaitForFileInFS(file string, fs file.Filesystem) error {
-	return wait.PollImmediate(1*time.Second, time.Minute*2, fileInFS(file, fs))
-}
-
-func fileInFS(file string, fs file.Filesystem) wait.ConditionFunc {
-	return func() (bool, error) {
-		stat, err := fs.Stat(file)
-		if err != nil {
-			return false, err
-		}
-
-		if stat == nil {
-			return false, fmt.Errorf("file %v does not exists", file)
-		}
-
-		if stat.Size() > 0 {
-			return true, nil
-		}
-
-		return false, fmt.Errorf("the file %v exists but it is empty", file)
 	}
 }
 

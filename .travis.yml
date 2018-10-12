@@ -51,6 +51,11 @@ jobs:
 #    - test/e2e/wait-for-kong.sh
 #    script:
 #    - make e2e-test
+  - stage: Unit Test
+    before_script:
+    - make deps
+    script:
+    - make test
   # split builds to avoid job timeouts
   - stage: publish amd64
     if: type = api AND branch = master AND repo = kong/ingress-controller

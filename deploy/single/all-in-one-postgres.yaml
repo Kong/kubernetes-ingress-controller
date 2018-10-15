@@ -103,6 +103,10 @@ spec:
       containers:
       - name: postgres
         image: postgres:9.5
+        volumeMounts:
+          - name: datadir
+            mountPath: /var/lib/postgresql/data
+            subPath: pgdata
         env:
         - name: POSTGRES_USER
           value: kong
@@ -117,10 +121,6 @@ spec:
       # No pre-stop hook is required, a SIGTERM plus some time is all that's
       # needed for graceful shutdown of a node.
       terminationGracePeriodSeconds: 60
-      volumes:
-      - name: datadir
-        persistentVolumeClaim:
-          claimName: datadir
   volumeClaimTemplates:
   - metadata:
       name: datadir

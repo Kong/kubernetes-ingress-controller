@@ -61,8 +61,6 @@ type Configuration struct {
 
 	Namespace string
 
-	ForceNamespaceIsolation bool
-
 	DefaultHealthzURL     string
 	DefaultSSLCertificate string
 
@@ -75,11 +73,6 @@ type Configuration struct {
 	UpdateStatusOnShutdown bool
 
 	EnableProfiling bool
-
-	EnableSSLChainCompletion bool
-
-	FakeCertificatePath string
-	FakeCertificateSHA  string
 
 	SyncRateLimit float32
 }

@@ -322,15 +322,6 @@ spec:
         app: ingress-kong
     spec:
       serviceAccountName: kong-serviceaccount
-      initContainers:
-      - name: kong-migration
-        image: kong:0.14.1-centos
-        env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-        command: [ "/bin/sh", "-c", "kong migrations up" ]
       containers:
       - name: admin-api
         image: kong:0.14.1-centos
@@ -419,7 +410,7 @@ metadata:
   name: kong-proxy
   namespace: kong
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
   - name: kong-proxy
     port: 80
@@ -470,3 +461,34 @@ spec:
           protocol: TCP
 
 ---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    metadata:
+      name: kong-migrations
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        env:
+          - name: KONG_PG_HOST
+            value: postgres
+          - name: KONG_PG_PORT
+            value: "5432"
+        command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+      - name: kong-migrations
+        image: kong:0.14.1-centos
+        env:
+          - name: KONG_PG_PASSWORD
+            value: kong
+          - name: KONG_PG_HOST
+            value: postgres
+          - name: KONG_PG_PORT
+            value: "5432"
+        command: [ "/bin/sh", "-c", "kong migrations up" ]
+      restartPolicy: OnFailure

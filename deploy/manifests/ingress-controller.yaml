@@ -46,18 +46,18 @@ spec:
       - name: admin-api
         image: kong:0.14.1-centos
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_ADMIN_ACCESS_LOG
-            value: /dev/stdout
-          - name: KONG_ADMIN_ERROR_LOG
-            value: /dev/stderr
-          - name: KONG_ADMIN_LISTEN
-            value: 0.0.0.0:8001
-          - name: KONG_PROXY_LISTEN
-            value: 'off'
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8001
+        - name: KONG_PROXY_LISTEN
+          value: 'off'
         ports:
         - name: kong-admin
           containerPort: 8001

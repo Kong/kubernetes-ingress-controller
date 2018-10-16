@@ -104,9 +104,9 @@ spec:
       - name: postgres
         image: postgres:9.5
         volumeMounts:
-          - name: datadir
-            mountPath: /var/lib/postgresql/data
-            subPath: pgdata
+        - name: datadir
+          mountPath: /var/lib/postgresql/data
+          subPath: pgdata
         env:
         - name: POSTGRES_USER
           value: kong
@@ -117,7 +117,7 @@ spec:
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
         ports:
-          - containerPort: 5432
+        - containerPort: 5432
       # No pre-stop hook is required, a SIGTERM plus some time is all that's
       # needed for graceful shutdown of a node.
       terminationGracePeriodSeconds: 60
@@ -126,7 +126,7 @@ spec:
       name: datadir
     spec:
       accessModes:
-        - "ReadWriteOnce"
+      - "ReadWriteOnce"
       resources:
         requests:
           storage: 1Gi
@@ -146,62 +146,62 @@ kind: ClusterRole
 metadata:
   name: kong-ingress-clusterrole
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-      - nodes
-      - pods
-      - secrets
-    verbs:
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-    verbs:
-      - get
-  - apiGroups:
-      - ""
-    resources:
-      - services
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "extensions"
-    resources:
-      - ingresses
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-        - events
-    verbs:
-        - create
-        - patch
-  - apiGroups:
-      - "extensions"
-    resources:
-      - ingresses/status
-    verbs:
-      - update
-  - apiGroups:
-      - "configuration.konghq.com"
-    resources:
-      - kongplugins
-      - kongcredentials
-      - kongconsumers
-      - kongingresses
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - "configuration.konghq.com"
+  resources:
+  - kongplugins
+  - kongcredentials
+  - kongconsumers
+  - kongingresses
+  verbs:
+  - get
+  - list
+  - watch
 
 ---
 
@@ -211,40 +211,40 @@ metadata:
   name: kong-ingress-role
   namespace: kong
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-      - pods
-      - secrets
-      - namespaces
-    verbs:
-      - get
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    resourceNames:
-      # Defaults to "<election-id>-<ingress-class>"
-      # Here: "<ingress-controller-leader>-<nginx>"
-      # This has to be adapted if you change either parameter
-      # when launching the nginx-ingress-controller.
-      - "ingress-controller-leader-nginx"
-    verbs:
-      - get
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - create
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-    verbs:
-      - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  # Defaults to "<election-id>-<ingress-class>"
+  # Here: "<ingress-controller-leader>-<nginx>"
+  # This has to be adapted if you change either parameter
+  # when launching the nginx-ingress-controller.
+  - "ingress-controller-leader-nginx"
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
 
 ---
 
@@ -258,9 +258,9 @@ roleRef:
   kind: Role
   name: kong-ingress-role
 subjects:
-  - kind: ServiceAccount
-    name: kong-serviceaccount
-    namespace: kong
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
 
 ---
 
@@ -273,9 +273,9 @@ roleRef:
   kind: ClusterRole
   name: kong-ingress-clusterrole
 subjects:
-  - kind: ServiceAccount
-    name: kong-serviceaccount
-    namespace: kong
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
 
 ---
 
@@ -326,18 +326,18 @@ spec:
       - name: admin-api
         image: kong:0.14.1-centos
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_ADMIN_ACCESS_LOG
-            value: /dev/stdout
-          - name: KONG_ADMIN_ERROR_LOG
-            value: /dev/stderr
-          - name: KONG_ADMIN_LISTEN
-            value: 0.0.0.0:8001
-          - name: KONG_PROXY_LISTEN
-            value: 'off'
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8001
+        - name: KONG_PROXY_LISTEN
+          value: 'off'
         ports:
         - name: kong-admin
           containerPort: 8001
@@ -442,16 +442,16 @@ spec:
       - name: kong-proxy
         image: kong:0.14.1-centos
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_PROXY_ACCESS_LOG
-            value: "/dev/stdout"
-          - name: KONG_PROXY_ERROR_LOG
-            value: "/dev/stderr"
-          - name: KONG_ADMIN_LISTEN
-            value: 'off'
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
         ports:
         - name: proxy
           containerPort: 8000
@@ -475,20 +475,20 @@ spec:
       - name: wait-for-postgres
         image: busybox
         env:
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_PG_PORT
-            value: "5432"
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
         command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: kong-migrations
         image: kong:0.14.1-centos
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_PG_PORT
-            value: "5432"
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
         command: [ "/bin/sh", "-c", "kong migrations up" ]
       restartPolicy: OnFailure

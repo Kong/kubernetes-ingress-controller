@@ -60,18 +60,15 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 	// are not present in Kubernetes when the sync process is executed.
 	// For instance an Ingress, Service or Secret is removed.
 
+	err := n.syncCertificates(ingressCfg.Servers)
+	if err != nil {
+		return err
+	}
+
 	for _, server := range ingressCfg.Servers {
 		if server.Hostname == "_" {
 			// there is no catch all server in kong
 			continue
-		}
-
-		// check the certificate is present in kong
-		if server.SSLCert != nil {
-			err := n.syncCertificate(server)
-			if err != nil {
-				return err
-			}
 		}
 
 		err := n.syncUpstreams(server.Locations, ingressCfg.Backends)
@@ -80,7 +77,7 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 		}
 	}
 
-	err := n.syncConsumers()
+	err = n.syncConsumers()
 	if err != nil {
 		return err
 	}
@@ -1069,17 +1066,57 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 	return nil
 }
 
+func (n *NGINXController) syncCertificates(servers []*ingress.Server) error {
+
+	certsToKeep := make(map[string]bool)
+	for _, server := range servers {
+		if server.Hostname == "_" {
+			// there is no catch all server in kong
+			continue
+		}
+
+		// check the certificate is present in kong
+		if server.SSLCert != nil {
+			certID, err := n.syncCertificate(server)
+			if err != nil {
+				return err
+			}
+			if certID != "" {
+				certsToKeep[certID] = true
+			}
+		}
+	}
+	client := n.cfg.Kong.Client
+	certsInKong, err := client.Certificates().List(nil)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range certsInKong.Items {
+		glog.Infof("cert: %v", c.ID)
+		if _, ok := certsToKeep[c.ID]; !ok {
+			// delete the cert
+			err := client.Certificates().Delete(c.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // syncCertificate synchronizes the state of referenced secrets by Ingress
 // rules with Kong certificates.
 // This process only create or update certificates in Kong
-func (n *NGINXController) syncCertificate(server *ingress.Server) error {
+func (n *NGINXController) syncCertificate(server *ingress.Server) (string, error) {
 	if server.SSLCert == nil {
-		return nil
+		return "", nil
 	}
 
 	if server.SSLCert.ID == "" {
 		glog.Warningf("certificate %v/%v is invalid", server.SSLCert.Namespace, server.SSLCert.Name)
-		return nil
+		return "", nil
 	}
 
 	client := n.cfg.Client
@@ -1104,7 +1141,7 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 			}
 			cert, res = client.Certificates().Patch(server.SSLCert.ID, cert)
 			if res.StatusCode != http.StatusOK {
-				return errors.Wrap(res.Error(), "patching a Kong consumer")
+				return "", errors.Wrap(res.Error(), "patching a Kong certificate")
 			}
 		}
 
@@ -1113,22 +1150,21 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 			Required: kongadminv1.Required{
 				ID: server.SSLCert.ID,
 			},
-			Cert:  sc,
-			Key:   sk,
-			Hosts: []string{server.Hostname},
+			Cert: sc,
+			Key:  sk,
 		}
 
 		glog.Infof("creating Kong SSL Certificate for host %v located in Secret %v/%v",
 			server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
 		cert, res = client.Certificates().Create(cert)
-		if res.StatusCode != http.StatusCreated {
+		if res.StatusCode == http.StatusCreated {
 			glog.Errorf("Unexpected error creating Kong Certificate: %v", res)
-			return res.Error()
+			return "", res.Error()
 		}
 	default:
 		glog.Errorf("Unexpected response searching a Kong Certificate: %v", res)
-		return res.Error()
+		return "", res.Error()
 	}
 
 	//sync SNI
@@ -1143,7 +1179,7 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 			sni.Certificate.ID = cert.ID
 			sni, res = client.SNIs().Patch(sni.ID, sni)
 			if res.StatusCode != http.StatusOK {
-				return errors.Wrap(res.Error(), "patching a Kong consumer")
+				return "", errors.Wrap(res.Error(), "patching a Kong certificate")
 			}
 		}
 	case http.StatusNotFound:
@@ -1159,10 +1195,10 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 		}
 	default:
 		glog.Errorf("Unexpected error looking up Kong SNI: %v", res)
-		return res.Error()
+		return "", res.Error()
 	}
 
-	return nil
+	return cert.ID, nil
 }
 
 // buildName returns a string valid as a hostnames taking a backend and

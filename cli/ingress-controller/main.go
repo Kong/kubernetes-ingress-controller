@@ -117,11 +117,16 @@ func main() {
 	kongClient, err := kong.NewRESTClient(&rest.Config{
 		Host:    conf.Kong.URL,
 		Timeout: 0,
+		WrapTransport: func(rt http.RoundTripper) http.RoundTripper {
+			return &HeaderRoundTripper{
+				headers: conf.Kong.Headers,
+				rt:      rt,
+			}
+		},
 	})
 	if err != nil {
 		glog.Fatalf("Error creating Kong Rest client: %v", err)
 	}
-
 	v, err := kongClient.GetVersion()
 	if err != nil {
 		glog.Fatalf("%v", err)

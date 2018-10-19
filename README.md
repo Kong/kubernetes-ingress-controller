@@ -80,9 +80,13 @@ Please search through the posts on
 [Kong Nation](https://discuss.konghq.com/c/kubernetes) as it's
 likely that another user has run into the same problem.
 If you don't find an answer, please feel free to post a question.
-If you have a feature request, please post in
+For a feature request, please post in
 [Feature Suggestions](https://discuss.konghq.com/c/feature-suggestions)
 category.
+
+You can also talk to us in the
+[#kong](https://kubernetes.slack.com/messages/kong) channel on the
+Kubernetes Slack server.
 
 If you've spotted a bug, please open an issue
 on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).

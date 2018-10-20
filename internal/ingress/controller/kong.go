@@ -1158,7 +1158,7 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) (string, error
 			server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
 		cert, res = client.Certificates().Create(cert)
-		if res.StatusCode == http.StatusCreated {
+		if res.StatusCode != http.StatusCreated {
 			glog.Errorf("Unexpected error creating Kong Certificate: %v", res)
 			return "", res.Error()
 		}

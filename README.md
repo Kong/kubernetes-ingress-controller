@@ -1,6 +1,8 @@
 # Kubernetes Ingress Controller for Kong
 
 [![Build Status](https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master)](https://travis-ci.org/Kong/kubernetes-ingress-controller)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Kong/kubernetes-ingress-controller)](https://goreportcard.com/report/github.com/Kong/kubernetes-ingress-controller)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
 Use [Kong][kong] for your Kubernetes [Ingress][ingress]
 and further configure [plugins][kong-hub], health checking,
@@ -89,7 +91,7 @@ You can also talk to us in the
 Kubernetes Slack server.
 
 If you've spotted a bug, please open an issue
-on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
+on our [GitHub](https://github.com/kong/kubernetes-ingress-controller/issues).
 
 ## Documentation
 

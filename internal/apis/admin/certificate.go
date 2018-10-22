@@ -47,7 +47,7 @@ func (a *certificateAPI) List(params url.Values) (*adminv1.CertificateList, erro
 	}
 
 	list := &adminv1.CertificateList{}
-	request := a.client.RestClient().Get().Resource("consumers")
+	request := a.client.RestClient().Get().Resource("certificates")
 	for k, vals := range params {
 		for _, v := range vals {
 			request.Param(k, v)

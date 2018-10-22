@@ -42,8 +42,9 @@ const (
 )
 
 type Kong struct {
-	URL    string
-	Client *kong.RestClient
+	URL     string
+	Headers []string
+	Client  *kong.RestClient
 }
 
 // Configuration contains all the settings required by an Ingress controller

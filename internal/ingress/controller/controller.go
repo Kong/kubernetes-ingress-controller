@@ -31,7 +31,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
+	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 )
 
@@ -44,7 +44,7 @@ const (
 type Kong struct {
 	URL     string
 	Headers []string
-	Client  *kong.RestClient
+	Client  *kong.Client
 }
 
 // Configuration contains all the settings required by an Ingress controller

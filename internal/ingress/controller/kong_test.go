@@ -19,13 +19,13 @@ package controller
 import (
 	"testing"
 
-	kongadminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
+	"github.com/hbagdi/go-kong/kong"
 )
 
 func TestPluginDeepEqual(t *testing.T) {
 	var equal bool
 
-	equal = pluginDeepEqual(map[string]interface{}{}, &kongadminv1.Plugin{Config: map[string]interface{}{}})
+	equal = pluginDeepEqual(map[string]interface{}{}, &kong.Plugin{Config: map[string]interface{}{}})
 	if !equal {
 		t.Errorf("Comparing empty maps failed")
 	}
@@ -34,7 +34,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		"key1": "vaule1",
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key1": "vaule1",
 		"key2": "value2",
 		"key3": "value3",
@@ -47,7 +47,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		"key1": "vaule1",
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key2": "value2",
 		"key3": "value3",
 		"key1": "vaule1",
@@ -62,7 +62,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key2": "value2",
 		"key3": "value3",
 		"key1": map[string]string{
@@ -77,7 +77,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		"key1": map[string]string{},
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key2": "value2",
 		"key3": "value3",
 		"key1": map[string]string{},
@@ -92,7 +92,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key2": "value2",
 		"key3": "value3",
 		"key1": [3]string{
@@ -109,7 +109,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key2": "value2",
 		"key3": "value3",
 		"key1": [3]string{
@@ -124,7 +124,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		"key1": []string{},
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key2": "value2",
 		"key3": "value3",
 		"key1": []string{},
@@ -139,7 +139,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key2": "value2",
 		"key1": map[string]string{
 			"nestedkey1": "nestedvalue1",
@@ -155,7 +155,7 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 		"key2": "value2",
 		"key3": "value3",
-	}, &kongadminv1.Plugin{Config: map[string]interface{}{
+	}, &kong.Plugin{Config: map[string]interface{}{
 		"key3": "value3",
 		"key1": map[string]string{
 			"nestedkey1": "nestedvalue1",

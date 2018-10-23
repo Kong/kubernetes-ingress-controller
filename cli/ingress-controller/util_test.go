@@ -1,8 +1,6 @@
-package admin
+package main
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestFixVersion(t *testing.T) {
 	validVersions := map[string]string{
@@ -15,7 +13,7 @@ func TestFixVersion(t *testing.T) {
 		"0.33-1-enterprise-edition": "0.33.1-enterprise",
 	}
 	for inputVersion, expectedVersion := range validVersions {
-		v, err := fixVersion(inputVersion)
+		v, err := getSemVerVer(inputVersion)
 		if err != nil {
 			t.Errorf("error converting %s: %v", inputVersion, err)
 		} else if v.String() != expectedVersion {
@@ -28,7 +26,7 @@ func TestFixVersion(t *testing.T) {
 		"0-1-1",
 	}
 	for _, inputVersion := range invalidVersions {
-		_, err := fixVersion(inputVersion)
+		_, err := getSemVerVer(inputVersion)
 		if err == nil {
 			t.Errorf("expecting error converting %s, getting no errors", inputVersion)
 		}

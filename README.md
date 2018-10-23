@@ -103,7 +103,7 @@ Following are some helpful link:
 - [**Deployment**][deployment-doc]:
   Deployment guides for Minikube, GKE
   and other types of clusters.
-- [**Custom Resources Definitions (CRDs**][crds]:
+- [**Custom Resources Definitions (CRDs)**][crds]:
   Use custom resources
   to configure Kong in addition to the Ingress resource.
 - [**Annotations**][annotations]:
@@ -153,7 +153,7 @@ Please check the [roadmap][roadmap] document.
 [kong-hub]: https://docs.konghq.com/hub/
 [deployment-doc]: deploy/README.md
 [annotations]: docs/annotations.md
-[crds]: docs/custom-types.md
+[crds]: docs/custom-resources.md
 [roadmap]: docs/roadmap.md
 [design]: docs/design.md
 [faqs]: docs/faq.md

@@ -666,6 +666,9 @@ func (n *NGINXController) syncCredentials() error {
 		if res.StatusCode == http.StatusNotFound {
 			// use the configuration
 			data := credential.Config
+			if data == nil {
+				data = make(map[string]interface{})
+			}
 			// create a credential with the same id of k8s
 			data["id"] = credentialID
 			data["consumer_id"] = consumerID

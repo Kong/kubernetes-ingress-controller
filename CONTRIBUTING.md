@@ -1,43 +1,167 @@
 # Contributing Guidelines
 
-Read the following guide if you're interested in contributing to Ingress.
+Thank you for showing interest in contributing to
+Kong Ingress Controller.
 
-## Contributor License Agreements
+Following guide will help you navigate
+the repository and get your PRs
+merged in faster.
 
-We'd love to accept your patches! Before we can take them, we have to jump a couple of legal hurdles.
+## Finding work
 
-Please fill out either the individual or corporate Contributor License Agreement (CLA).
+If you're new to the project and want to help, but don't know where to start,
+look for "Help wanted" or "Good first issue" labels in our
+[issue tracker](https://github.com/Kong/kubernetes-ingress-controller/issues).
+Alternatively, read our documentation and fix or
+improve any issues that you see. We really value documentation contributions
+since that makes life easier for a lot of people.
 
-  * If you are an individual writing original source code and you're sure you own the intellectual property, then you'll need to sign an [individual CLA](http://code.google.com/legal/individual-cla-v1.0.html).
-  * If you work for a company that wants to allow you to contribute your work, then you'll need to sign a [corporate CLA](http://code.google.com/legal/corporate-cla-v1.0.html).
+All of the following tasks are noble and worthy contributions that you can
+make without coding:
 
-Follow either of the two links above to access the appropriate CLA and instructions for how to sign and return it. Once we receive it, we'll be able to accept your pull requests.
+- Reporting a bug
+- Helping other members of the community on the
+  [support channels](https://github.com/Kong/kubernetes-ingress-controller#seeking-help)
+- Fixing a typo in the code
+- Fixing a typo in the documentation
+- Providing your feedback on the proposed features and designs
+- Reviewing Pull Requests
 
-***NOTE***: Only original source code from you and other people that have signed the CLA can be accepted into the main repository.
+If you wish to contribute code (features or bug fixes), see the [Submitting a
+patch](#submitting-a-patch) section.
 
-## Finding Things That Need Help
+## Development environement
 
-If you're new to the project and want to help, but don't know where to start, we have a semi-curated list of issues that should not need deep knowledge of the system. [Have a look and see if anything sounds interesting](https://github.com/kubernetes/ingress-nginx/issues?utf8=%E2%9C%93&q=is%3Aopen%20is%3Aissue%20label%3A%22help+wanted%22). Alternatively, read some of the docs on other controllers and try to write your own, file and fix any/all issues that come up, including gaps in documentation!
+## Environment
 
-## Contributing a Patch
+- Golang version >= 1.10 installed
+- Access to a k8s cluster, you can use Minikube or GKE
+- Install dep for dependency management
+- make
+- Docker (for building)
 
-1. If you haven't already done so, sign a Contributor License Agreement (see details above).
-1. Read the [Ingress development guide](docs/development.md).
-1. Fork the desired repo, develop and test your code changes.
-1. Submit a pull request.
+## Dependencies
 
-All changes must be code reviewed. Coding conventions and standards are explained in the official [developer docs](https://github.com/kubernetes/community/tree/master/contributors/devel). Expect reviewers to request that you avoid common [go style mistakes](https://github.com/golang/go/wiki/CodeReviewComments) in your PRs.
+The build uses dependencies in the `vendor` directory, which
+must be installed before building a binary/image. Occasionally, you
+might need to update the dependencies.
 
-### Merge Approval
+Check the version of `dep` you are using and make sure it is up to date.
+If you have an older version of `dep`, you can update it as follows:
 
-Ingress collaborators may add "LGTM" (Looks Good To Me) or an equivalent comment to indicate that a PR is acceptable. Any change requires at least one LGTM.  No pull requests can be merged until at least one Ingress collaborator signs off with an LGTM.
+```console
+$ go get -u github.com/golang/dep
+```
 
-## Support Channels
+This will automatically save the dependencies to the `vendor/` directory.
 
-Whether you are a user or contributor, official support channels include:
+```console
+$ cd $GOPATH/src/github.com/kong/ingress-controller
+$ dep ensure -v -vendor-only
+```
 
-- GitHub issues: https://github.com/kubernetes/ingress-nginx/issues/new
-- Slack: kubernetes-users room in the [Kubernetes Slack](http://slack.kubernetes.io/)
-- Email: [kubernetes-users](https://groups.google.com/forum/#!forum/kubernetes-users) mailing list
+## Running in dev mode
 
-Before opening a new issue or submitting a new pull request, it's helpful to search the project - it's likely that another user has already reported the issue you're facing, or it's a known issue that we're already aware of.
+You can run the ingress controller without building a Docker
+Image and installing it onto your docker container.
+
+Following is a helpful shell script that you could
+use to run the Ingress Controller without building
+the Ingress Controller:
+
+```shell
+#!/bin/bash
+pkill -f kubectl
+# setup proxies
+kubectl port-forward svc/kong-proxy -n kong 8443:443 2>&1 > /dev/null &
+kubectl port-forward svc/kong-proxy -n kong 8000:80 2>&1 > /dev/null &
+kubectl port-forward svc/kong-ingress-controller -n kong 8001:8001 2>&1 > /dev/null &
+kubectl proxy --port=8002 2>&1 > /dev/null &
+
+export POD_NAME=`kubectl get po -n kong -o json | jq ".items[] | .metadata.name" -r | grep ingress`
+export POD_NAMESPACE=kong
+
+go run -tags gcp ./cli/ingress-controller/ \
+--default-backend-service kong/kong-proxy \
+--kubeconfig ~/.kube/config \
+--publish-service=kong/kong-proxy \
+--apiserver-host=http://localhost:8002 \
+--kong-url http://localhost:8001
+```
+
+## Building
+
+Build is performed via Makefile. Depending on your
+requirements you can build a raw server binary, a local container image,
+or push an image to a remote repository.
+
+### Build a raw server binary
+
+```console
+$ make build
+```
+
+### Build a local container image
+
+```console
+$ TAG=DEV make docker-build
+```
+
+Note: this will use the Docker daemon
+running on your system.
+If you're developing using minikube, you
+should exectue the following to use the
+Docker daemon running inside the Minikube VM:
+
+```console
+eval $(minikube docker-env)
+```
+
+This will allow you to publish images to
+Minikube VM, allowing you to reference them
+in your Deployment specs.
+
+### Push the container image to a remote repository
+
+```console
+$ TAG=DEV REGISTRY=$USER/kong-ingress-controller make docker-push
+```
+
+## Deploying
+
+There are several ways to deploy Kong Ingress Controller onto a cluster.
+Please check the [deployment guide](/deploy/README.md)
+
+## Testing
+
+To run unit-tests, just run
+
+```console
+$ cd $GOPATH/src/github.com/kong/kubernetes-ingress-controller
+$ make test
+```
+
+## Releasing
+
+Makefile will produce a release binary, as shown above. To publish this
+to a wider Kubernetes user base, push the image to a container registry.
+Our images are hosted on
+[Bintray](https://bintray.com/kong/kubernetes-ingress-controller).
+
+An example release might look like:
+
+```shell
+$ export TAG=42
+$ make release
+```
+
+Please follow these guidelines to cut a release:
+
+- Update the [release](https://help.github.com/articles/creating-releases/)
+  page with a link to changelog.
+- Cut a release branch, if appropriate.
+  All major feature work is done in HEAD. Specific bug fixes are
+  cherry-picked into a release branch.
+- If you're not confident about the stability of the code,
+  [tag](https://help.github.com/articles/working-with-tags/) it as alpha or beta.
+  Typically, a release branch should have stable code.

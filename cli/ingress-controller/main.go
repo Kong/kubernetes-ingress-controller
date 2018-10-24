@@ -41,13 +41,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
+	"github.com/hbagdi/go-kong/kong"
 	consumerintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
 	pluginintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
-	"github.com/kong/kubernetes-ingress-controller/internal/file"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
-	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
 	"github.com/kong/kubernetes-ingress-controller/version"
 )
 
@@ -61,11 +59,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	if err != nil {
-		glog.Fatal(err)
-	}
-
-	fs, err := file.NewLocalFS()
 	if err != nil {
 		glog.Fatal(err)
 	}
@@ -118,31 +111,25 @@ func main() {
 		glog.Fatalf("resync period (%vs) is too low", conf.ResyncPeriod.Seconds())
 	}
 
-	// create the default SSL certificate (dummy)
-	defCert, defKey := ssl.GetFakeSSLCert()
-	c, err := ssl.AddOrUpdateCertAndKey(fakeCertificate, defCert, defKey, []byte{}, fs)
-	if err != nil {
-		glog.Fatalf("Error generating self signed certificate: %v", err)
-	}
-
-	conf.FakeCertificatePath = c.PemFileName
-	conf.FakeCertificateSHA = c.PemSHA
-
 	conf.KubeClient = kubeClient
 	conf.KubeConf = kubeCfg
 
-	kongClient, err := kong.NewRESTClient(&rest.Config{
-		Host:    conf.Kong.URL,
-		Timeout: 0,
-	})
+	c := http.DefaultClient
+	c.Transport = &HeaderRoundTripper{
+		headers: conf.Kong.Headers,
+		rt:      http.DefaultTransport,
+	}
+
+	kongClient, err := kong.NewClient(kong.String(conf.Kong.URL), c)
 	if err != nil {
 		glog.Fatalf("Error creating Kong Rest client: %v", err)
 	}
 
-	v, err := kongClient.GetVersion()
+	root, err := kongClient.Root(nil)
 	if err != nil {
 		glog.Fatalf("%v", err)
 	}
+	v, err := getSemVerVer(root["version"].(string))
 
 	if !(v.GTE(semver.MustParse("0.13.0")) || v.GTE(semver.MustParse("0.32.0"))) {
 		glog.Fatalf("The version %s is not compatible with the Kong Ingress Controller. It requires Kong CE 0.13.0 or higher, or Kong EE 0.32 or higher.", v)
@@ -151,7 +138,7 @@ func main() {
 	glog.Infof("kong version: %s", v)
 	conf.Kong.Client = kongClient
 
-	ngx := controller.NewNGINXController(conf, fs)
+	ngx := controller.NewNGINXController(conf)
 
 	go handleSigterm(ngx, func(code int) {
 		os.Exit(code)

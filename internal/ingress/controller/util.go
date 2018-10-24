@@ -17,16 +17,81 @@ limitations under the License.
 package controller
 
 import (
-	api "k8s.io/api/core/v1"
+	"strings"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"github.com/hbagdi/go-kong/kong"
 )
 
-// newUpstream creates an upstream without servers.
-func newUpstream(name string) *ingress.Backend {
-	return &ingress.Backend{
-		Name:      name,
-		Endpoints: []ingress.Endpoint{},
-		Service:   &api.Service{},
+func isEmpty(s *string) bool {
+	return s == nil || strings.TrimSpace(*s) == ""
+}
+
+func toStringPtrArray(array []string) []*string {
+	var result []*string
+	for _, element := range array {
+		e := element
+		result = append(result, &e)
 	}
+	return result
+}
+
+func toStringArray(array []*string) []string {
+	var result []string
+	for _, element := range array {
+		e := *element
+		result = append(result, e)
+	}
+	return result
+}
+
+// TODO refactor this away
+func compareRoute(r1, r2 *kong.Route) bool {
+	if r1 == r2 {
+		return true
+	}
+	if r1 == nil || r2 == nil {
+		return false
+	}
+
+	if len(r1.Hosts) != len(r2.Hosts) {
+		return false
+	}
+
+	for _, r1b := range r1.Hosts {
+		found := false
+		for _, r2b := range r2.Hosts {
+			if *r1b == *r2b {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	if len(r1.Paths) != len(r2.Paths) {
+		return false
+	}
+
+	for _, r1b := range r1.Paths {
+		found := false
+		for _, r2b := range r2.Paths {
+			if *r1b == *r2b {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	if r1.Service != nil && r2.Service != nil {
+		if *r1.Service.ID != *r2.Service.ID {
+			return false
+		}
+
+	}
+
+	return true
 }

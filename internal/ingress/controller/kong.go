@@ -20,24 +20,20 @@ import (
 	"bytes"
 	"fmt"
 	"net"
-	"net/http"
-	"os"
 	"reflect"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/imdario/mergo"
 
 	"github.com/fatih/structs"
 	"github.com/golang/glog"
-	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
-	kongadminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
+	"github.com/hbagdi/go-kong/kong"
+	"github.com/hbagdi/go-kong/kong/custom"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/net/ssl"
 	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -63,18 +59,15 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 	// are not present in Kubernetes when the sync process is executed.
 	// For instance an Ingress, Service or Secret is removed.
 
+	err := n.syncCertificates(ingressCfg.Servers)
+	if err != nil {
+		return err
+	}
+
 	for _, server := range ingressCfg.Servers {
 		if server.Hostname == "_" {
 			// there is no catch all server in kong
 			continue
-		}
-
-		// check the certificate is present in kong
-		if server.SSLCert != nil {
-			err := n.syncCertificate(server)
-			if err != nil {
-				return err
-			}
 		}
 
 		err := n.syncUpstreams(server.Locations, ingressCfg.Backends)
@@ -83,7 +76,7 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 		}
 	}
 
-	err := n.syncConsumers()
+	err = n.syncConsumers()
 	if err != nil {
 		return err
 	}
@@ -151,16 +144,16 @@ func (n *NGINXController) syncGlobalPlugins() error {
 	}
 
 	client := n.cfg.Kong.Client
-	plugins, err := client.Plugins().List(nil)
+	plugins, err := client.Plugins.ListAll(nil)
 	if err != nil {
 		return err
 	}
 
 	// plugins in Kong
-	currentGlobalPlugins := make(map[string]kongadminv1.Plugin)
-	for _, plugin := range plugins.Items {
-		if plugin.Route == "" && plugin.Service == "" && plugin.Consumer == "" {
-			currentGlobalPlugins[plugin.Name] = plugin
+	currentGlobalPlugins := make(map[string]kong.Plugin)
+	for _, plugin := range plugins {
+		if isEmpty(plugin.RouteID) && isEmpty(plugin.ServiceID) && isEmpty(plugin.ConsumerID) {
+			currentGlobalPlugins[*plugin.Name] = *plugin
 		}
 	}
 
@@ -169,25 +162,26 @@ func (n *NGINXController) syncGlobalPlugins() error {
 		// plugin exists?
 		if pluginInKong, ok := currentGlobalPlugins[pluginName]; !ok {
 			// no, create it
-			p := &kongadminv1.Plugin{
-				Name:   pluginName,
-				Config: kongadminv1.Configuration(kongPlugin.Config),
+			p := &kong.Plugin{
+				Name:   kong.String(pluginName),
+				Config: kong.Configuration(kongPlugin.Config),
 			}
-			_, res := client.Plugins().CreateGlobal(p)
-			if res.StatusCode != http.StatusCreated {
-				return errors.Wrap(res.Error(), fmt.Sprintf("creating a global Kong plugin %v", p))
+			_, err := client.Plugins.Create(nil, p)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("creating a global Kong plugin %v", p))
 			}
 		} else {
 			// plugin exists, is the configuration up to date
 			if !pluginDeepEqual(kongPlugin.Config, &pluginInKong) {
 				// no, update it
-				p := &kongadminv1.Plugin{
-					Name:   pluginName,
-					Config: kongadminv1.Configuration(kongPlugin.Config),
+				p := &kong.Plugin{
+					ID:     kong.String(*pluginInKong.ID),
+					Name:   kong.String(pluginName),
+					Config: kong.Configuration(kongPlugin.Config),
 				}
-				_, res := client.Plugins().Patch(pluginInKong.ID, p)
-				if res.StatusCode != http.StatusOK {
-					return errors.Wrap(res.Error(), fmt.Sprintf("updating a global Kong plugin %v", p))
+				_, err := client.Plugins.Update(nil, p)
+				if err != nil {
+					return errors.Wrap(err, fmt.Sprintf("updating a global Kong plugin %v", p))
 				}
 			}
 		}
@@ -197,7 +191,7 @@ func (n *NGINXController) syncGlobalPlugins() error {
 
 	// delete the ones not configured in k8s
 	for _, plugin := range currentGlobalPlugins {
-		err := client.Plugins().Delete(plugin.ID)
+		err := client.Plugins.Delete(nil, plugin.ID)
 		if err != nil {
 			return err
 		}
@@ -209,23 +203,26 @@ func (n *NGINXController) syncGlobalPlugins() error {
 // kong comparing the endpoints in Kubernetes and the targets in a
 // particular kong upstream. To avoid downtimes we create the new targets
 // first and then remove the killed ones.
-func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kong.RestClient) error {
+func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kong.Client) error {
 	glog.V(3).Infof("syncing Kong targets")
-	b, res := client.Upstreams().Get(upstream)
-	if res.StatusCode == http.StatusNotFound {
+	b, err := client.Upstreams.Get(nil, &upstream)
+	if kong.IsNotFoundErr(err) {
 		glog.Errorf("there is no upstream with name %v in Kong", upstream)
 		return nil
+	} else if err != nil {
+		glog.Errorf("err fetching upstream %v from Kong: %v", upstream, err)
+		return err
 	}
 
-	kongTargets, err := client.Targets().List(nil, upstream)
+	kongTargets, err := client.Targets.ListAll(nil, &upstream)
 	if err != nil {
 		return err
 	}
 
 	oldTargets := sets.NewString()
-	for _, kongTarget := range kongTargets.Items {
-		if !oldTargets.Has(kongTarget.Target) {
-			oldTargets.Insert(kongTarget.Target)
+	for _, kongTarget := range kongTargets {
+		if !oldTargets.Has(*kongTarget.Target) {
+			oldTargets.Insert(*kongTarget.Target)
 		}
 	}
 
@@ -241,15 +238,15 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 	remove := oldTargets.Difference(newTargets).List()
 
 	for _, endpoint := range add {
-		target := &kongadminv1.Target{
-			Target:   endpoint,
-			Upstream: b.ID,
+		target := &kong.Target{
+			Target:     kong.String(endpoint),
+			UpstreamID: b.ID,
 		}
 		glog.Infof("creating Kong Target %v for upstream %v", endpoint, b.ID)
-		_, res := client.Targets().Create(target, upstream)
-		if res.StatusCode != http.StatusCreated {
-			glog.Errorf("Unexpected error creating Kong Upstream: %v", res)
-			return res.Error()
+		_, err := client.Targets.Create(nil, &upstream, target)
+		if err != nil {
+			glog.Errorf("Unexpected error creating Kong Upstream: %v", err)
+			return err
 		}
 	}
 
@@ -257,12 +254,12 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 	time.Sleep(100 * time.Millisecond)
 
 	for _, endpoint := range remove {
-		for _, kongTarget := range kongTargets.Items {
-			if kongTarget.Target != endpoint {
+		for _, kongTarget := range kongTargets {
+			if *kongTarget.Target != endpoint {
 				continue
 			}
-			glog.Infof("deleting Kong Target %v from upstream %v", kongTarget.ID, kongTarget.Upstream)
-			err := client.Targets().Delete(kongTarget.ID, b.ID)
+			glog.Infof("deleting Kong Target %v from upstream %v", kongTarget.ID, kongTarget.UpstreamID)
+			err := client.Targets.Delete(nil, b.ID, kongTarget.ID)
 			if err != nil {
 				glog.Errorf("Unexpected error deleting Kong Upstream: %v", err)
 				return err
@@ -356,15 +353,15 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				proto := "http"
 				port := 80
 
-				s, res := client.Services().Get(name)
-				if res.StatusCode == http.StatusNotFound {
-					s = &kongadminv1.Service{
-						Name:     name,
-						Path:     "/",
-						Protocol: proto,
-						Host:     name,
-						Port:     port,
-						Retries:  5,
+				s, err := client.Services.Get(nil, &name)
+				if kong.IsNotFoundErr(err) {
+					s = &kong.Service{
+						Name:     kong.String(name),
+						Path:     kong.String("/"),
+						Protocol: kong.String(proto),
+						Host:     kong.String(name),
+						Port:     kong.Int(port),
+						Retries:  kong.Int(5),
 					}
 				}
 
@@ -372,55 +369,55 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 					// the flag that if we need to patch KongService later
 					outOfSync := false
 					if kongIngress != nil && kongIngress.Proxy != nil {
-						if kongIngress.Proxy.Path != "" && s.Path != kongIngress.Proxy.Path {
-							s.Path = kongIngress.Proxy.Path
+						if kongIngress.Proxy.Path != "" && (s.Path == nil || *s.Path != kongIngress.Proxy.Path) {
+							s.Path = kong.String(kongIngress.Proxy.Path)
 							outOfSync = true
 						}
 
 						if kongIngress.Proxy.Protocol != "" &&
 							(kongIngress.Proxy.Protocol == "http" || kongIngress.Proxy.Protocol == "https") &&
-							s.Protocol != kongIngress.Proxy.Protocol {
-							s.Protocol = kongIngress.Proxy.Protocol
+							(s.Path == nil || *s.Protocol != kongIngress.Proxy.Protocol) {
+							s.Protocol = kong.String(kongIngress.Proxy.Protocol)
 							outOfSync = true
 						}
 
 						if kongIngress.Proxy.ConnectTimeout > 0 &&
-							s.ConnectTimeout != kongIngress.Proxy.ConnectTimeout {
-							s.ConnectTimeout = kongIngress.Proxy.ConnectTimeout
+							(s.ConnectTimeout == nil || *s.ConnectTimeout != kongIngress.Proxy.ConnectTimeout) {
+							s.ConnectTimeout = kong.Int(kongIngress.Proxy.ConnectTimeout)
 							outOfSync = true
 						}
 
 						if kongIngress.Proxy.ReadTimeout > 0 &&
-							s.ReadTimeout != kongIngress.Proxy.ReadTimeout {
-							s.ReadTimeout = kongIngress.Proxy.ReadTimeout
+							(s.ReadTimeout == nil || *s.ReadTimeout != kongIngress.Proxy.ReadTimeout) {
+							s.ReadTimeout = kong.Int(kongIngress.Proxy.ReadTimeout)
 							outOfSync = true
 						}
 
 						if kongIngress.Proxy.WriteTimeout > 0 &&
-							s.WriteTimeout != kongIngress.Proxy.WriteTimeout {
-							s.WriteTimeout = kongIngress.Proxy.WriteTimeout
+							(s.WriteTimeout == nil || *s.WriteTimeout != kongIngress.Proxy.WriteTimeout) {
+							s.WriteTimeout = kong.Int(kongIngress.Proxy.WriteTimeout)
 							outOfSync = true
 						}
 
-						if kongIngress.Proxy.Retries > 0 && s.Retries != kongIngress.Proxy.Retries {
-							s.Retries = kongIngress.Proxy.Retries
+						if kongIngress.Proxy.Retries > 0 &&
+							(s.Retries == nil || *s.Retries != kongIngress.Proxy.Retries) {
+							s.Retries = kong.Int(kongIngress.Proxy.Retries)
 							outOfSync = true
 						}
 					}
-
-					if res.StatusCode == http.StatusNotFound {
+					if kong.IsNotFoundErr(err) {
 						glog.Infof("Creating Kong Service name %v", name)
-						_, res := client.Services().Create(s)
-						if res.StatusCode != http.StatusCreated {
-							glog.Errorf("Unexpected error creating Kong Service: %v", res)
-							return false, res.Error()
+						_, err := client.Services.Create(nil, s)
+						if err != nil {
+							glog.Errorf("Unexpected error creating Kong Service: %v", err)
+							return false, err
 						}
 					} else if outOfSync {
 						glog.Infof("Patching Kong Service name %v", name)
-						_, res := client.Services().Patch(s.ID, s)
-						if res.StatusCode != http.StatusOK {
-							glog.Errorf("Unexpected error patching Kong Service: %v", res)
-							return false, res.Error()
+						_, err := client.Services.Update(nil, s)
+						if err != nil {
+							glog.Errorf("Unexpected error patching Kong Service: %v", err)
+							return false, err
 						}
 					}
 				}
@@ -433,8 +430,8 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 				break
 			}
 
-			svc, res := client.Services().Get(name)
-			if res.StatusCode == http.StatusNotFound || svc.ID == "" {
+			svc, err := client.Services.Get(nil, &name)
+			if err != nil {
 				glog.Warningf("service %v does not exists in kong", name)
 				continue
 			}
@@ -444,22 +441,22 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			pluginsInk8s, err := n.getPluginsFromAnnotations(location.Ingress.Namespace, anns)
 
 			// Get plugins configured in Kong currently
-			plugins, err := client.Plugins().GetAllByService(svc.ID)
+			plugins, err := client.Plugins.ListAllForService(nil, svc.ID)
 			if err != nil {
 				glog.Errorf("Unexpected error obtaining Kong plugins for service %v: %v", svc.ID, err)
 				continue
 			}
-			pluginsInKong := make(map[string]kongadminv1.Plugin)
+			pluginsInKong := make(map[string]kong.Plugin)
 			for _, plugin := range plugins {
-				pluginsInKong[plugin.Name] = plugin
+				pluginsInKong[*plugin.Name] = *plugin
 			}
-			var pluginsToDelete []kongadminv1.Plugin
-			var pluginsToCreate []kongadminv1.Plugin
-			var pluginsToUpdate []kongadminv1.Plugin
+			var pluginsToDelete []kong.Plugin
+			var pluginsToCreate []kong.Plugin
+			var pluginsToUpdate []kong.Plugin
 
 			// Plugins present in Kong but not in k8s should be deleted
 			for _, plugin := range pluginsInKong {
-				if _, ok := pluginsInk8s[plugin.Name]; !ok {
+				if _, ok := pluginsInk8s[*plugin.Name]; !ok {
 					pluginsToDelete = append(pluginsToDelete, plugin)
 				}
 			}
@@ -467,26 +464,30 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			// Plugins present in k8s but not in Kong should be created
 			for pluginName, pluginInk8s := range pluginsInk8s {
 				if pluginInKong, ok := pluginsInKong[pluginName]; !ok {
-					p := kongadminv1.Plugin{
-						Name:    pluginName,
-						Service: svc.ID,
-						Config:  kongadminv1.Configuration(pluginInk8s.Config),
+					p := kong.Plugin{
+						Name:      kong.String(pluginName),
+						ServiceID: kong.String(*svc.ID),
+						Config:    kong.Configuration(pluginInk8s.Config),
 					}
 					pluginsToCreate = append(pluginsToCreate, p)
 				} else {
+					enabled := false
+					if pluginInKong.Enabled != nil {
+						enabled = *pluginInKong.Enabled
+					}
 					// Plugins present in Kong and k8s need should have same configuration
-					if !pluginDeepEqual(pluginInk8s.Config, &pluginInKong) ||
-						(!pluginInk8s.Disabled != pluginInKong.Enabled) ||
-						(pluginInk8s.ConsumerRef != "" && pluginInKong.Consumer == "") {
+					if !pluginDeepEqual(pluginInk8s.Config, &pluginInKong) || // plugin conf
+						(pluginInk8s.ConsumerRef != "" && isEmpty(pluginInKong.ConsumerID)) || // consumerID
+						// plugin disabled?
+						(!pluginInk8s.Disabled != enabled) {
 						glog.Infof("plugin %v configuration in kong is outdated. Updating...", pluginInk8s.Name)
-						p := kongadminv1.Plugin{
-							Name:    pluginInKong.Name,
-							Config:  kongadminv1.Configuration(pluginInk8s.Config),
-							Enabled: pluginInk8s.Disabled,
-							Service: svc.ID,
-							Required: kongadminv1.Required{
-								ID: pluginInKong.ID,
-							},
+						p := kong.Plugin{
+							Name:   pluginInKong.Name,
+							Config: kong.Configuration(pluginInk8s.Config),
+
+							Enabled:   kong.Bool(!pluginInk8s.Disabled),
+							ServiceID: kong.String(*svc.ID),
+							ID:        kong.String(*pluginInKong.ID),
 						}
 						if pluginInk8s.ConsumerRef != "" {
 							consumer, err := n.store.GetKongConsumer(pluginInk8s.Namespace, pluginInk8s.ConsumerRef)
@@ -495,7 +496,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 									pluginInk8s.ConsumerRef, err)
 								continue
 							}
-							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
+							p.ConsumerID = kong.String(fmt.Sprintf("%v", consumer.GetUID()))
 						}
 						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
@@ -503,38 +504,38 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			}
 
 			for _, plugin := range pluginsToDelete {
-				err := client.Plugins().Delete(plugin.ID)
+				err := client.Plugins.Delete(nil, plugin.ID)
 				if err != nil {
 					return false, errors.Wrap(err, "deleting Kong plugin")
 				}
 			}
 
 			for _, plugin := range pluginsToCreate {
-				_, res := client.Plugins().CreateInService(svc.ID, &plugin)
-				if res.StatusCode != http.StatusCreated {
-					return false, errors.Wrap(res.Error(), fmt.Sprintf("creating a Kong plugin %v in service %v", plugin, svc.ID))
+				_, err := client.Plugins.Create(nil, &plugin)
+				if err != nil {
+					return false, errors.Wrap(err, fmt.Sprintf("creating a Kong plugin %v in service %v", plugin, svc.ID))
 				}
 			}
 
 			for _, plugin := range pluginsToUpdate {
-				_, res := client.Plugins().Patch(plugin.Required.ID, &plugin)
-				if res.StatusCode != http.StatusOK {
-					return false, errors.Wrap(res.Error(), fmt.Sprintf("updating a Kong plugin %v in service %v", plugin, svc.ID))
+				_, err := client.Plugins.Update(nil, &plugin)
+				if err != nil {
+					return false, errors.Wrap(err, fmt.Sprintf("updating a Kong plugin %v in service %v", plugin, svc.ID))
 				}
 			}
 		}
 	}
 
-	kongServices, err := client.Services().List(nil)
+	kongServices, err := client.Services.ListAll(nil)
 	if err != nil {
 		return false, err
 	}
 
 	serviceNames := sets.NewString()
 
-	for _, svc := range kongServices.Items {
-		if !serviceNames.Has(svc.Name) {
-			serviceNames.Insert(svc.Name)
+	for _, svc := range kongServices {
+		if !serviceNames.Has(*svc.Name) {
+			serviceNames.Insert(*svc.Name)
 		}
 	}
 
@@ -542,20 +543,23 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 
 	// remove all those services that are present in Kong but not in the current Kubernetes state
 	for _, svcName := range servicesToRemove.List() {
-		svc, res := client.Services().Get(svcName)
-		if res.StatusCode == http.StatusNotFound || svc == nil {
+		svc, err := client.Services.Get(nil, &svcName)
+		if kong.IsNotFoundErr(err) {
 			glog.Warningf("service %v does not exists in kong", svcName)
+			continue
+		} else if err != nil {
+			glog.Errorf("Unexpected error looking up service in Kong: %v", svc.Name)
 			continue
 		}
 
 		glog.Infof("deleting Kong Service %v", svcName)
 		// before deleting the service we need to remove the upstream and th targets that reference the service
-		err := deleteServiceUpstream(svc.Name, client)
+		err = deleteServiceUpstream(*svc.Name, client)
 		if err != nil {
 			glog.Errorf("Unexpected error deleting Kong upstreams and targets that depend on service %v: %v", svc.Name, err)
 			continue
 		}
-		err = client.Services().Delete(svc.ID)
+		err = client.Services.Delete(nil, svc.ID)
 		if err != nil {
 			// this means the service is being referenced by a route
 			// during the next sync it will be removed
@@ -574,17 +578,17 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 // This loop only creates new consumers in Kong.
 func (n *NGINXController) syncConsumers() error {
 
-	consumersInKong := make(map[string]*kongadminv1.Consumer)
+	consumersInKong := make(map[string]*kong.Consumer)
 	client := n.cfg.Kong.Client
 
 	// List all consumers in Kong
-	kongConsumers, err := client.Consumers().List(nil)
+	kongConsumers, err := client.Consumers.ListAll(nil)
 	if err != nil {
 		return err
 	}
 
-	for i := range kongConsumers.Items {
-		consumersInKong[kongConsumers.Items[i].ID] = &kongConsumers.Items[i]
+	for i := range kongConsumers {
+		consumersInKong[*kongConsumers[i].ID] = kongConsumers[i]
 	}
 
 	// List existing Consumers in Kubernetes
@@ -596,26 +600,34 @@ func (n *NGINXController) syncConsumers() error {
 
 		if !ok {
 			glog.Infof("Creating Kong consumer %v", consumerID)
-			c := &kongadminv1.Consumer{
-				Username: consumer.Username,
-				CustomID: consumer.CustomID,
-				Required: kongadminv1.Required{
-					ID: consumerID,
-				},
+			c := &kong.Consumer{
+				ID: kong.String(consumerID),
 			}
-
-			c, res := n.cfg.Kong.Client.Consumers().Create(c)
-			if res.StatusCode != http.StatusCreated {
-				return errors.Wrap(res.Error(), "creating a Kong consumer")
+			if consumer.Username != "" {
+				c.Username = kong.String(consumer.Username)
+			}
+			if consumer.CustomID != "" {
+				c.CustomID = kong.String(consumer.CustomID)
+			}
+			c, err := n.cfg.Kong.Client.Consumers.Create(nil, c)
+			if err != nil {
+				return errors.Wrap(err, "creating a Kong consumer")
 			}
 		} else {
 			// check the consumers are equals
-			if consumer.Username != kc.Username || consumer.CustomID != kc.CustomID {
-				kc.Username = consumer.Username
-				kc.CustomID = consumer.CustomID
-				_, res := n.cfg.Kong.Client.Consumers().Patch(consumerID, kc)
-				if res.StatusCode != http.StatusOK {
-					return errors.Wrap(res.Error(), "patching a Kong consumer")
+			outOfSync := false
+			if consumer.Username != "" && (kc.Username == nil || *kc.Username != consumer.Username) {
+				outOfSync = true
+				kc.Username = kong.String(consumer.Username)
+			}
+			if consumer.CustomID != "" && (kc.CustomID == nil || *kc.CustomID == consumer.CustomID) {
+				outOfSync = true
+				kc.CustomID = kong.String(consumer.CustomID)
+			}
+			if outOfSync {
+				_, err := n.cfg.Kong.Client.Consumers.Update(nil, kc)
+				if err != nil {
+					return errors.Wrap(err, "patching a Kong consumer")
 				}
 			}
 		}
@@ -624,7 +636,7 @@ func (n *NGINXController) syncConsumers() error {
 	// remaining entries in the map should be deleted
 
 	for _, consumer := range consumersInKong {
-		err := client.Consumers().Delete(consumer.ID)
+		err := client.Consumers.Delete(nil, consumer.ID)
 		if err != nil {
 			return err
 		}
@@ -650,6 +662,8 @@ var validCredentialTypes = sets.NewString(
 // syncCredentials synchronizes the state between KongCredential (Kubernetes CRD) and Kong credentials.
 func (n *NGINXController) syncCredentials() error {
 	// List existing credentials in Kubernetes
+	client := n.cfg.Kong.Client
+
 	for _, credential := range n.store.ListKongCredentials() {
 		if !validCredentialTypes.Has(credential.Type) {
 			glog.Errorf("the credential does contains a valid type: %v", credential.Type)
@@ -665,18 +679,26 @@ func (n *NGINXController) syncCredentials() error {
 		consumerID := fmt.Sprintf("%v", consumer.GetUID())
 
 		// TODO: allow changes in credentials?
-		_, res := n.cfg.Kong.Client.Credentials().GetByType(consumerID, credentialID, credential.Type)
-		if res.StatusCode == http.StatusNotFound {
+		credInKong := custom.NewEntityObject(custom.Type(credential.Type))
+		credInKong.AddRelation("consumer_id", consumerID)
+		credInKong.SetObject(map[string]interface{}{"id": credentialID})
+		_, err = client.CustomEntities.Get(nil, credInKong)
+		if kong.IsNotFoundErr(err) {
 			// use the configuration
 			data := credential.Config
+			if data == nil {
+				data = make(map[string]interface{})
+			}
 			// create a credential with the same id of k8s
 			data["id"] = credentialID
-			data["consumer_id"] = consumerID
-			res := n.cfg.Kong.Client.Credentials().CreateByType(data, consumerID, credential.Type)
-			if res.StatusCode != http.StatusCreated {
-				glog.Errorf("Unexpected error updating Kong Route: %v", res)
-				return res.Error()
+			credInKong.SetObject(map[string]interface{}(data))
+			_, err := client.CustomEntities.Create(nil, credInKong)
+			if err != nil {
+				glog.Errorf("Unexpected error creating credential: %v", err)
+				return err
 			}
+		} else {
+			return err
 		}
 	}
 
@@ -687,7 +709,7 @@ func (n *NGINXController) syncCredentials() error {
 func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, error) {
 	client := n.cfg.Kong.Client
 
-	kongRoutes, err := client.Routes().List(nil)
+	kongRoutes, err := client.Routes.ListAll(nil)
 	if err != nil {
 		return false, err
 	}
@@ -698,18 +720,14 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 
 	// create a copy of the existing routes to be able to run a comparison
 	routesToRemove := sets.NewString()
-	for _, old := range kongRoutes.Items {
-		if !routesToRemove.Has(old.ID) {
-			routesToRemove.Insert(old.ID)
+	for _, old := range kongRoutes {
+		if !routesToRemove.Has(*old.ID) {
+			routesToRemove.Insert(*old.ID)
 		}
 	}
 
 	// Routes
 	for _, server := range ingressCfg.Servers {
-		if server.Hostname == "_" {
-			// there is no catch all server in kong
-			continue
-		}
 
 		protos := []string{"http"}
 		if server.SSLCert != nil {
@@ -740,113 +758,133 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			}
 
 			name := buildName(backend, location)
-			svc, res := client.Services().Get(name)
-			if res.StatusCode == http.StatusNotFound || svc.ID == "" {
+			svc, err := client.Services.Get(nil, kong.String(name))
+			if kong.IsNotFoundErr(err) || svc == nil || isEmpty(svc.ID) {
 				glog.Warningf("service %v does not exists in kong", name)
 				continue
 			}
 
-			r := &kongadminv1.Route{
-				Paths:     []string{location.Path},
-				Protocols: []string{"http", "https"}, // default
-				Hosts:     []string{server.Hostname},
-				Service:   kongadminv1.InlineService{ID: svc.ID},
+			r := &kong.Route{
+				Paths:     []*string{&location.Path},
+				Protocols: []*string{kong.String("http"), kong.String("https")}, // default
+				Service:   &kong.Service{ID: svc.ID},
+			}
+			if server.Hostname != "_" {
+				r.Hosts = []*string{kong.String(server.Hostname)}
 			}
 
 			if kongIngress != nil && kongIngress.Route != nil {
 				if len(kongIngress.Route.Methods) > 0 {
-					r.Methods = kongIngress.Route.Methods
+					r.Methods = toStringPtrArray(kongIngress.Route.Methods)
 				}
 
-				if kongIngress.Route.PreserveHost != r.PreserveHost {
-					r.PreserveHost = kongIngress.Route.PreserveHost
+				if r.PreserveHost == nil {
+					r.PreserveHost = kong.Bool(false)
+				}
+				if kongIngress.Route.PreserveHost != *r.PreserveHost {
+					r.PreserveHost = kong.Bool(kongIngress.Route.PreserveHost)
 				}
 
-				if kongIngress.Route.RegexPriority != r.RegexPriority {
-					r.RegexPriority = kongIngress.Route.RegexPriority
+				if kongIngress.Route.RegexPriority != 0 &&
+					r.RegexPriority != nil || kongIngress.Route.RegexPriority != *r.RegexPriority {
+					r.RegexPriority = kong.Int(kongIngress.Route.RegexPriority)
 				}
 
-				if kongIngress.Route.StripPath != r.StripPath {
-					r.StripPath = kongIngress.Route.StripPath
+				if r.StripPath == nil {
+					r.StripPath = kong.Bool(false)
+				}
+				if kongIngress.Route.StripPath != *r.StripPath {
+					r.StripPath = kong.Bool(kongIngress.Route.StripPath)
 				}
 				if len(kongIngress.Route.Protocols) != 0 {
-					r.Protocols = kongIngress.Route.Protocols
+					r.Protocols = toStringPtrArray(kongIngress.Route.Protocols)
 				}
 			}
 
-			if !isRouteInKong(r, kongRoutes.Items) {
-				glog.Infof("creating Kong Route for host %v, path %v and service %v", server.Hostname, location.Path, svc.ID)
-				_, res := client.Routes().Create(r)
-				if res.StatusCode != http.StatusCreated {
-					glog.Errorf("Unexpected error creating Kong Route: %v", res)
-					return false, res.Error()
+			if !isRouteInKong(r, kongRoutes) {
+				glog.Infof("creating Kong Route for host %v, path %v and service %v", server.Hostname, location.Path, *svc.ID)
+				_, err := client.Routes.Create(nil, r)
+				if err != nil {
+					glog.Errorf("Unexpected error creating Kong Route: %v", err)
+					return false, err
 				}
 			} else {
 				// the route exists but the properties could have changed
-				route := getKongRoute(server.Hostname, location.Path, kongRoutes.Items)
+				route := getKongRoute(server.Hostname, location.Path, kongRoutes)
 
-				if routesToRemove.Has(route.ID) {
-					routesToRemove.Delete(route.ID)
+				if routesToRemove.Has(*route.ID) {
+					routesToRemove.Delete(*route.ID)
 				}
 				outOfSync := false
 				sort.Strings(protos)
-				sort.Strings(route.Protocols)
+				p := toStringArray(route.Protocols)
+				sort.Strings(p)
 
-				if !reflect.DeepEqual(protos, route.Protocols) {
+				if !reflect.DeepEqual(protos, p) {
 					outOfSync = true
-					route.Protocols = protos
+					route.Protocols = toStringPtrArray(protos)
 				}
 
 				if kongIngress != nil && kongIngress.Route != nil {
 					if kongIngress.Route.Methods != nil {
 						sort.Strings(kongIngress.Route.Methods)
-						sort.Strings(route.Methods)
-						if !reflect.DeepEqual(route.Methods, kongIngress.Route.Methods) {
+						m := toStringArray(route.Methods)
+						sort.Strings(m)
+						if !reflect.DeepEqual(m, kongIngress.Route.Methods) {
 							outOfSync = true
-							route.Methods = kongIngress.Route.Methods
+							route.Methods = toStringPtrArray(kongIngress.Route.Methods)
 						}
 					}
 
-					if kongIngress.Route.PreserveHost != route.PreserveHost {
+					if route.PreserveHost == nil {
+						route.PreserveHost = kong.Bool(false)
+					}
+					if kongIngress.Route.PreserveHost != *route.PreserveHost {
 						outOfSync = true
-						route.PreserveHost = kongIngress.Route.PreserveHost
+						route.PreserveHost = kong.Bool(kongIngress.Route.PreserveHost)
 					}
 
-					if kongIngress.Route.RegexPriority != route.RegexPriority {
+					if route.RegexPriority == nil {
+						route.RegexPriority = kong.Int(0)
+					}
+					if kongIngress.Route.RegexPriority != *route.RegexPriority {
 						outOfSync = true
-						route.RegexPriority = kongIngress.Route.RegexPriority
+						route.RegexPriority = kong.Int(kongIngress.Route.RegexPriority)
 					}
 
-					if kongIngress.Route.StripPath != route.StripPath {
+					if route.StripPath == nil {
+						route.StripPath = kong.Bool(false)
+					}
+					if kongIngress.Route.StripPath != *route.StripPath {
 						outOfSync = true
-						route.StripPath = kongIngress.Route.StripPath
+						route.StripPath = kong.Bool(kongIngress.Route.StripPath)
 					}
 					if len(kongIngress.Route.Protocols) > 0 {
 						sort.Strings(kongIngress.Route.Protocols)
 						if !reflect.DeepEqual(route.Protocols, kongIngress.Route.Protocols) {
 							outOfSync = true
 							glog.Infof("protocols changed form %v to %v", route.Protocols, kongIngress.Route.Protocols)
-							route.Protocols = kongIngress.Route.Protocols
+							route.Protocols = toStringPtrArray(kongIngress.Route.Protocols)
 						}
 					}
 				}
 
 				if outOfSync {
 					glog.Infof("updating Kong Route for host %v, path %v and service %v", server.Hostname, location.Path, svc.ID)
-					_, res := client.Routes().Patch(route.ID, route)
-					if res.StatusCode != http.StatusOK {
-						glog.Errorf("Unexpected error updating Kong Route: %v", res)
-						return false, res.Error()
+					_, err := client.Routes.Update(nil, route)
+					if err != nil {
+						glog.Errorf("Unexpected error updating Kong Route: %v", err)
+						return false, err
 					}
 				}
 			}
 
-			kongRoutes, err = client.Routes().List(nil)
+			kongRoutes, err = client.Routes.ListAll(nil)
 			if err != nil {
 				return false, err
 			}
 
-			route := getKongRoute(server.Hostname, location.Path, kongRoutes.Items)
+			route := getKongRoute(server.Hostname, location.Path, kongRoutes)
 
 			if route == nil {
 				continue
@@ -856,48 +894,50 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			pluginsInk8s, err := n.getPluginsFromAnnotations(location.Ingress.Namespace, anns)
 
 			// Get plugins configured in Kong currently
-			plugins, err := client.Plugins().GetAllByRoute(route.ID)
+			plugins, err := client.Plugins.ListAllForRoute(nil, route.ID)
 			if err != nil {
 				glog.Errorf("Unexpected error obtaining Kong plugins for route %v: %v", route.ID, err)
 				continue
 			}
-			pluginsInKong := make(map[string]kongadminv1.Plugin)
+			pluginsInKong := make(map[string]kong.Plugin)
 			for _, plugin := range plugins {
-				pluginsInKong[plugin.Name] = plugin
+				pluginsInKong[*plugin.Name] = *plugin
 			}
-			var pluginsToDelete []kongadminv1.Plugin
-			var pluginsToCreate []kongadminv1.Plugin
-			var pluginsToUpdate []kongadminv1.Plugin
+			var pluginsToDelete []kong.Plugin
+			var pluginsToCreate []kong.Plugin
+			var pluginsToUpdate []kong.Plugin
 
 			// Plugins present in Kong but not in k8s should be deleted
 			for _, plugin := range pluginsInKong {
-				if _, ok := pluginsInk8s[plugin.Name]; !ok {
+				if _, ok := pluginsInk8s[*plugin.Name]; !ok {
 					pluginsToDelete = append(pluginsToDelete, plugin)
 				}
 			}
 			// Plugins present in k8s but not in Kong should be created
 			for pluginName, pluginInk8s := range pluginsInk8s {
 				if pluginInKong, ok := pluginsInKong[pluginName]; !ok {
-					p := kongadminv1.Plugin{
-						Name:   pluginName,
-						Route:  route.ID,
-						Config: kongadminv1.Configuration(pluginInk8s.Config),
+					p := kong.Plugin{
+						Name:    kong.String(pluginName),
+						RouteID: kong.String(*route.ID),
+						Config:  kong.Configuration(pluginInk8s.Config),
 					}
 					pluginsToCreate = append(pluginsToCreate, p)
 				} else {
+					if pluginInKong.Enabled == nil {
+						pluginInKong.Enabled = kong.Bool(false)
+					}
 					// Plugins present in Kong and k8s need should have same configuration
 					if !pluginDeepEqual(pluginInk8s.Config, &pluginInKong) ||
-						(!pluginInk8s.Disabled != pluginInKong.Enabled) ||
-						(pluginInk8s.ConsumerRef != "" && pluginInKong.Consumer == "") {
+						(!pluginInk8s.Disabled != *pluginInKong.Enabled) ||
+						(pluginInk8s.ConsumerRef != "" &&
+							(pluginInKong.ConsumerID == nil || *pluginInKong.ConsumerID != pluginInk8s.ConsumerRef)) {
 						glog.Infof("plugin %v configuration in kong is outdated. Updating...", pluginInk8s.Name)
-						p := kongadminv1.Plugin{
+						p := kong.Plugin{
 							Name:    pluginInKong.Name,
-							Config:  kongadminv1.Configuration(pluginInk8s.Config),
-							Enabled: pluginInk8s.Disabled,
-							Route:   route.ID,
-							Required: kongadminv1.Required{
-								ID: pluginInKong.ID,
-							},
+							Config:  kong.Configuration(pluginInk8s.Config),
+							Enabled: kong.Bool(!pluginInk8s.Disabled),
+							RouteID: route.ID,
+							ID:      pluginInKong.ID,
 						}
 
 						if pluginInk8s.ConsumerRef != "" {
@@ -907,7 +947,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 									pluginInk8s.ConsumerRef, err)
 								continue
 							}
-							p.Consumer = fmt.Sprintf("%v", consumer.GetUID())
+							p.ConsumerID = kong.String(fmt.Sprintf("%v", consumer.GetUID()))
 						}
 						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
@@ -916,23 +956,23 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				}
 			}
 			for _, plugin := range pluginsToDelete {
-				err := client.Plugins().Delete(plugin.ID)
+				err := client.Plugins.Delete(nil, plugin.ID)
 				if err != nil {
 					return false, errors.Wrap(err, "deleting Kong plugin")
 				}
 			}
 
 			for _, plugin := range pluginsToCreate {
-				_, res := client.Plugins().CreateInRoute(route.ID, &plugin)
-				if res.StatusCode != http.StatusCreated {
-					return false, errors.Wrap(res.Error(), fmt.Sprintf("creating a Kong plugin %v in service %v", plugin, svc.ID))
+				_, err := client.Plugins.Create(nil, &plugin)
+				if err != nil {
+					return false, errors.Wrap(err, fmt.Sprintf("creating a Kong plugin %v in service %v", plugin, svc.ID))
 				}
 			}
 
 			for _, plugin := range pluginsToUpdate {
-				_, res := client.Plugins().Patch(plugin.Required.ID, &plugin)
-				if res.StatusCode != http.StatusOK {
-					return false, errors.Wrap(res.Error(), fmt.Sprintf("updating a Kong plugin %v in service %v", plugin, svc.ID))
+				_, err := client.Plugins.Update(nil, &plugin)
+				if err != nil {
+					return false, errors.Wrap(err, fmt.Sprintf("updating a Kong plugin %v in service %v", plugin, svc.ID))
 				}
 			}
 		}
@@ -941,7 +981,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 	// remove all those routes that are present in Kong but not in the current Kubernetes state
 	for _, route := range routesToRemove.List() {
 		glog.Infof("deleting Kong Route %v", route)
-		err := client.Routes().Delete(route)
+		err := client.Routes.Delete(nil, &route)
 		if err != nil {
 			glog.Errorf("Unexpected error deleting Kong Route: %v", err)
 		}
@@ -992,35 +1032,47 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 
 			upstreamName := buildName(backend, location)
 
-			_, res := client.Upstreams().Get(upstreamName)
-			if res.StatusCode == http.StatusNotFound {
-				upstream := kongadminv1.NewUpstream(upstreamName)
+			_, err := client.Upstreams.Get(nil, &upstreamName)
+			if kong.IsNotFoundErr(err) {
+				upstream := &kong.Upstream{Name: &upstreamName}
 
 				if kongIngress != nil && kongIngress.Upstream != nil {
 					if kongIngress.Upstream.HashOn != "" {
-						upstream.HashOn = kongIngress.Upstream.HashOn
+						upstream.HashOn = kong.String(kongIngress.Upstream.HashOn)
+					}
+
+					if kongIngress.Upstream.HashOnCookie != "" {
+						upstream.HashOnCookie = kong.String(kongIngress.Upstream.HashOnCookie)
+					}
+
+					if kongIngress.Upstream.HashOnCookiePath != "" {
+						upstream.HashOnCookiePath = kong.String(kongIngress.Upstream.HashOnCookiePath)
 					}
 
 					if kongIngress.Upstream.HashOnHeader != "" {
-						upstream.HashOnHeader = kongIngress.Upstream.HashOnHeader
+						upstream.HashOnHeader = kong.String(kongIngress.Upstream.HashOnHeader)
 					}
 
 					if kongIngress.Upstream.HashFallback != "" {
-						upstream.HashFallback = kongIngress.Upstream.HashFallback
+						upstream.HashFallback = kong.String(kongIngress.Upstream.HashFallback)
+					}
+
+					if kongIngress.Upstream.HashFallbackHeader != "" {
+						upstream.HashFallbackHeader = kong.String(kongIngress.Upstream.HashFallbackHeader)
 					}
 
 					if kongIngress.Upstream.Slots != 0 {
-						upstream.Slots = kongIngress.Upstream.Slots
+						upstream.Slots = kong.Int(kongIngress.Upstream.Slots)
 					}
 
 					if kongIngress.Upstream.Healthchecks != nil {
 						if kongIngress.Upstream.Healthchecks.Active != nil {
 							m := structs.Map(kongIngress.Upstream.Healthchecks.Active)
 							if upstream.Healthchecks == nil {
-								upstream.Healthchecks = &kongadminv1.Healthchecks{}
+								upstream.Healthchecks = &kong.Healthcheck{}
 							}
 							if upstream.Healthchecks.Active == nil {
-								upstream.Healthchecks.Active = &kongadminv1.ActiveHealthCheck{}
+								upstream.Healthchecks.Active = &kong.ActiveHealthcheck{}
 							}
 
 							mergo.MapWithOverwrite(upstream.Healthchecks.Active, m)
@@ -1030,10 +1082,10 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 							m := structs.Map(kongIngress.Upstream.Healthchecks.Passive)
 
 							if upstream.Healthchecks == nil {
-								upstream.Healthchecks = &kongadminv1.Healthchecks{}
+								upstream.Healthchecks = &kong.Healthcheck{}
 							}
 							if upstream.Healthchecks.Passive == nil {
-								upstream.Healthchecks.Passive = &kongadminv1.Passive{}
+								upstream.Healthchecks.Passive = &kong.PassiveHealthcheck{}
 							}
 
 							mergo.MapWithOverwrite(upstream.Healthchecks.Passive, m)
@@ -1043,14 +1095,14 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 
 				glog.Infof("creating Kong Upstream with name %v", upstreamName)
 
-				_, res := client.Upstreams().Create(upstream)
-				if res.StatusCode != http.StatusCreated {
-					glog.Errorf("Unexpected error creating Kong Upstream: %v", res)
-					return res.Error()
+				_, err := client.Upstreams.Create(nil, upstream)
+				if err != nil {
+					glog.Errorf("Unexpected error creating Kong Upstream: %v", err)
+					return err
 				}
 			}
 
-			err := syncTargets(upstreamName, upstream, client)
+			err = syncTargets(upstreamName, upstream, client)
 			if err != nil {
 				return errors.Wrap(err, "syncing targets")
 			}
@@ -1062,17 +1114,57 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 	return nil
 }
 
+func (n *NGINXController) syncCertificates(servers []*ingress.Server) error {
+
+	certsToKeep := make(map[string]bool)
+	for _, server := range servers {
+		if server.Hostname == "_" {
+			// there is no catch all server in kong
+			continue
+		}
+
+		// check the certificate is present in kong
+		if server.SSLCert != nil {
+			certID, err := n.syncCertificate(server)
+			if err != nil {
+				return err
+			}
+			if certID != "" {
+				certsToKeep[certID] = true
+			}
+		}
+	}
+	client := n.cfg.Kong.Client
+	certsInKong, err := client.Certificates.ListAll(nil)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range certsInKong {
+		glog.Infof("cert: %v", c.ID)
+		if _, ok := certsToKeep[*c.ID]; !ok {
+			// delete the cert
+			err := client.Certificates.Delete(nil, c.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // syncCertificate synchronizes the state of referenced secrets by Ingress
 // rules with Kong certificates.
 // This process only create or update certificates in Kong
-func (n *NGINXController) syncCertificate(server *ingress.Server) error {
+func (n *NGINXController) syncCertificate(server *ingress.Server) (string, error) {
 	if server.SSLCert == nil {
-		return nil
+		return "", nil
 	}
 
 	if server.SSLCert.ID == "" {
 		glog.Warningf("certificate %v/%v is invalid", server.SSLCert.Namespace, server.SSLCert.Name)
-		return nil
+		return "", nil
 	}
 
 	client := n.cfg.Client
@@ -1081,94 +1173,76 @@ func (n *NGINXController) syncCertificate(server *ingress.Server) error {
 	sk := bytes.NewBuffer(server.SSLCert.Raw.Key).String()
 
 	//sync cert
-	cert, res := client.Certificates().Get(server.SSLCert.ID)
-
-	switch res.StatusCode {
-	case http.StatusOK:
+	cert, err := client.Certificates.Get(nil, &server.SSLCert.ID)
+	if err == nil {
 		// check if an update is required
-		name := fmt.Sprintf("temporal-cert-%v", time.Now().UnixNano())
-		pem, err := ssl.AddOrUpdateCertAndKey(name,
-			[]byte(strings.TrimSpace(cert.Cert)),
-			[]byte(strings.TrimSpace(cert.Key)),
-			[]byte{},
-			n.fileSystem)
-		if err != nil {
-			return err
-		}
 
-		defer func() {
-			os.Remove(pem.PemFileName)
-			os.Remove(pem.FullChainPemFileName)
-		}()
-
-		if server.SSLCert.PemSHA != pem.PemSHA {
+		if *cert.Cert != sc || *cert.Key != sk {
 			glog.Infof("updating Kong SSL Certificate for host %v located in Secret %v/%v",
 				server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
-			cert = &kongadminv1.Certificate{
-				Cert: sc,
-				Key:  sk,
+			cert = &kong.Certificate{
+				Cert: kong.String(sc),
+				Key:  kong.String(sk),
+				ID:   kong.String(server.SSLCert.ID),
 			}
-			cert, res = client.Certificates().Patch(server.SSLCert.ID, cert)
-			if res.StatusCode != http.StatusOK {
-				return errors.Wrap(res.Error(), "patching a Kong consumer")
+			cert, err = client.Certificates.Update(nil, cert)
+			if err != nil {
+				return "", errors.Wrap(err, "patching a Kong certificate")
 			}
 		}
-	case http.StatusNotFound:
-		cert = &kongadminv1.Certificate{
-			Required: kongadminv1.Required{
-				ID: server.SSLCert.ID,
-			},
-			Cert:  sc,
-			Key:   sk,
-			Hosts: []string{server.Hostname},
+	} else if kong.IsNotFoundErr(err) {
+
+		cert = &kong.Certificate{
+			ID:   kong.String(server.SSLCert.ID),
+			Cert: kong.String(sc),
+			Key:  kong.String(sk),
 		}
 
 		glog.Infof("creating Kong SSL Certificate for host %v located in Secret %v/%v",
 			server.Hostname, server.SSLCert.Namespace, server.SSLCert.Name)
 
-		cert, res = client.Certificates().Create(cert)
-		if res.StatusCode != http.StatusCreated {
-			glog.Errorf("Unexpected error creating Kong Certificate: %v", res)
-			return res.Error()
+		cert, err = client.Certificates.Create(nil, cert)
+		if err != nil {
+			glog.Errorf("Unexpected error creating Kong Certificate: %v", err)
+			return "", err
 		}
-	default:
-		glog.Errorf("Unexpected response searching a Kong Certificate: %v", res)
-		return res.Error()
+	} else {
+		glog.Errorf("Unexpected response searching a Kong Certificate: %v", err)
+		return "", err
 	}
 
 	//sync SNI
-	sni, res := client.SNIs().Get(server.Hostname)
+	sni, err := client.SNIs.Get(nil, &server.Hostname)
 
-	switch res.StatusCode {
-	case http.StatusOK:
+	if err == nil {
 		// check if it is using the right certificate
-		if sni.Certificate.ID != cert.ID {
+		if *sni.Certificate.ID != *cert.ID {
 			glog.Infof("updating certificate for host %v to certificate id %v", server.Hostname, cert.ID)
 
-			sni.Certificate.ID = cert.ID
-			sni, res = client.SNIs().Patch(sni.ID, sni)
-			if res.StatusCode != http.StatusOK {
-				return errors.Wrap(res.Error(), "patching a Kong consumer")
+			sni.Certificate.ID = kong.String(*cert.ID)
+			sni, err = client.SNIs.Update(nil, sni)
+			if err != nil {
+				return "", errors.Wrap(err, "patching a Kong SNI")
 			}
 		}
-	case http.StatusNotFound:
-		sni = &kongadminv1.SNI{
-			Name:        server.Hostname,
-			Certificate: kongadminv1.InlineCertificate{ID: cert.ID},
+	} else if kong.IsNotFoundErr(err) {
+		sni = &kong.SNI{
+			Name:        kong.String(server.Hostname),
+			Certificate: &kong.Certificate{ID: kong.String(*cert.ID)},
 		}
 		glog.Infof("creating Kong SNI for host %v and certificate id %v", server.Hostname, cert.ID)
 
-		_, res = client.SNIs().Create(sni)
-		if res.StatusCode != http.StatusCreated {
-			glog.Errorf("Unexpected error creating Kong SNI (%v): %v", server.Hostname, res)
+		_, err = client.SNIs.Create(nil, sni)
+		if err != nil {
+			glog.Errorf("Unexpected error creating Kong SNI (%v): %v", server.Hostname, err)
 		}
-	default:
-		glog.Errorf("Unexpected error looking up Kong SNI: %v", res)
-		return res.Error()
+	} else {
+		glog.Errorf("Unexpected error looking up Kong SNI: %v", err)
+		return "", err
 	}
 
-	return nil
+	return *cert.ID, nil
 }
 
 // buildName returns a string valid as a hostnames taking a backend and
@@ -1180,11 +1254,17 @@ func buildName(backend string, location *ingress.Location) string {
 }
 
 // getKongService returns a Route from a list using the path and hosts as filters
-func getKongRoute(hostname, path string, routes []kongadminv1.Route) *kongadminv1.Route {
+func getKongRoute(hostname, path string, routes []*kong.Route) *kong.Route {
 	for _, r := range routes {
-		if sets.NewString(r.Paths...).Has(path) &&
-			sets.NewString(r.Hosts...).Has(hostname) {
-			return &r
+		if hostname != "_" {
+			if sets.NewString(toStringArray(r.Paths)...).Has(path) &&
+				sets.NewString(toStringArray(r.Hosts)...).Has(hostname) {
+				return r
+			}
+		} else {
+			if sets.NewString(toStringArray(r.Paths)...).Has(path) {
+				return r
+			}
 		}
 	}
 
@@ -1192,50 +1272,49 @@ func getKongRoute(hostname, path string, routes []kongadminv1.Route) *kongadminv
 }
 
 // isRouteInKong checks if a route exists or not in Kong
-func isRouteInKong(route *kongadminv1.Route, routes []kongadminv1.Route) bool {
+func isRouteInKong(route *kong.Route, routes []*kong.Route) bool {
 	for _, eRoute := range routes {
-		if route.Equal(&eRoute) {
+		if compareRoute(route, eRoute) {
 			return true
 		}
 	}
-
 	return false
 }
 
 // deleteServiceUpstream deletes multiple Kong upstreams for a particular
 // Kong service. This process requires the removal of all the targets that
 // reference the upstream to be removed
-func deleteServiceUpstream(host string, client *kong.RestClient) error {
-	kongUpstreams, err := client.Upstreams().List(nil)
+func deleteServiceUpstream(host string, client *kong.Client) error {
+	kongUpstreams, err := client.Upstreams.ListAll(nil)
 	if err != nil {
 		return err
 	}
 
 	upstreamsToRemove := sets.NewString()
-	for _, upstream := range kongUpstreams.Items {
-		if upstream.Name == host {
-			if !upstreamsToRemove.Has(upstream.ID) {
-				upstreamsToRemove.Insert(upstream.ID)
+	for _, upstream := range kongUpstreams {
+		if *upstream.Name == host {
+			if !upstreamsToRemove.Has(*upstream.ID) {
+				upstreamsToRemove.Insert(*upstream.ID)
 			}
 		}
 	}
 
 	for _, upstream := range upstreamsToRemove.List() {
-		kongTargets, err := client.Targets().List(nil, upstream)
+		kongTargets, err := client.Targets.ListAll(nil, &upstream)
 		if err != nil {
 			return err
 		}
 
-		for _, target := range kongTargets.Items {
-			if target.Upstream == upstream {
-				err := client.Targets().Delete(target.ID, upstream)
+		for _, target := range kongTargets {
+			if *target.UpstreamID == upstream {
+				err := client.Targets.Delete(nil, target.UpstreamID, target.ID)
 				if err != nil {
 					return errors.Wrap(err, "removing a Kong target")
 				}
 			}
 		}
 
-		err = client.Upstreams().Delete(upstream)
+		err = client.Upstreams.Delete(nil, &upstream)
 		if err != nil {
 			return errors.Wrap(err, "removing a Kong upstream")
 		}
@@ -1247,7 +1326,7 @@ func deleteServiceUpstream(host string, client *kong.RestClient) error {
 // pluginDeepEqual compares the configuration of a Plugin (CRD) against
 // the persisted state in the Kong database
 // This is required because a plugin has defaults that could not exists in the CRD.
-func pluginDeepEqual(config map[string]interface{}, kong *kongadminv1.Plugin) bool {
+func pluginDeepEqual(config map[string]interface{}, kong *kong.Plugin) bool {
 	for k, v := range config {
 		kv, ok := kong.Config[k]
 		if !ok {

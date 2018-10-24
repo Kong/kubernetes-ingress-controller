@@ -7,16 +7,13 @@ In particular:
 
 - `--v=3` shows details about the service, Ingress rule and endpoint changes
 
-## Troubleshooting
-
-
-### Authentication to the Kubernetes API Server
+## Authentication to the Kubernetes API Server
 
 A number of components are involved in the authentication process and the first step is to narrow
 down the source of the problem, namely whether it is a problem with service authentication or with the kubeconfig file.
 Both authentications must work:
 
-```
+```text
 +-------------+   service          +------------+
 |             |   authentication   |            |
 +  apiserver  +<-------------------+  ingress   |
@@ -25,21 +22,39 @@ Both authentications must work:
 
 ```
 
-__Service authentication__
+## Service authentication
 
-The Ingress controller needs information from apiserver. Therefore, authentication is required, which can be achieved in two different ways:
+The Ingress controller needs information from API server to configure Kong.
+Therefore, authentication is required, which can be achieved in two different ways:
 
-1. _Service Account:_ This is recommended, because nothing has to be configured. The Ingress controller will use information provided by the system to communicate with the API server. See 'Service Account' section for details.
+1. **Service Account**: This is recommended,
+   because nothing has to be configured.  
+   The Ingress controller will use information provided by the system
+   to communicate with the API server.  
+   See 'Service Account' section for details.
+1. **Kubeconfig file**: In some Kubernetes environments
+   service accounts are not available.  
+   In this case a manual configuration is required.
+   The Ingress controller binary can be started with the `--kubeconfig` flag.
+   The value of the flag is a path to a file specifying how
+   to connect to the API server. Using the `--kubeconfig`
+   does not requires the flag `--apiserver-host`.  
+   The format of the file is identical to `~/.kube/config`
+   which is used by `kubectl` to connect to the API server.  
+   See 'kubeconfig' section for details.
 
-2. _Kubeconfig file:_ In some Kubernetes environments service accounts are not available. In this case a manual configuration is required. The Ingress controller binary can be started with the `--kubeconfig` flag. The value of the flag is a path to a file specifying how to connect to the API server. Using the `--kubeconfig` does not requires the flag `--apiserver-host`.
-The format of the file is identical to `~/.kube/config` which is used by kubectl to connect to the API server. See 'kubeconfig' section for details.
+## Discovering API-server
 
-3. _Using the flag `--apiserver-host`:_ Using this flag `--apiserver-host=http://localhost:8080` it is possible to specify an unsecured API server or reach a remote kubernetes cluster using [kubectl proxy](https://kubernetes.io/docs/user-guide/kubectl/kubectl_proxy/).
+Using this flag `--apiserver-host=http://localhost:8080`,
+it is possible to specify an unsecured API server or
+reach a remote Kubernetes cluster using
+[kubectl proxy](https://kubernetes.io/docs/user-guide/kubectl/kubectl_proxy/).
 Please do not use this approach in production.
 
 In the diagram below you can see the full authentication flow with all options, starting with the browser
 on the lower left hand side.
-```
+
+```text
 
 Kubernetes                                                  Workstation
 +---------------------------------------------------+     +------------------+
@@ -60,7 +75,8 @@ Kubernetes                                                  Workstation
 +---------------------------------------------------+     +------------------+
 ```
 
-### Service Account
+## Service Account
+
 If using a service account to connect to the API server, Dashboard expects the file
 `/var/run/secrets/kubernetes.io/serviceaccount/token` to be present. It provides a secret
 token that is required to authenticate with the API server.
@@ -135,22 +151,30 @@ $ kubectl exec test-701078429-s5kca -- curl --cacert /var/run/secrets/kubernetes
 
 If it is not working, there are two possible reasons:
 
-1. The contents of the tokens are invalid. Find the secret name with `kubectl get secrets | grep service-account` and
-delete it with `kubectl delete secret <name>`. It will automatically be recreated.
+1. The contents of the tokens are invalid.
+   Find the secret name with `kubectl get secrets | grep service-account` and
+  delete it with `kubectl delete secret <name>`.  
+  It will automatically be recreated.
+1. You have a non-standard Kubernetes installation
+   and the file containing the token may not be present.  
 
-2. You have a non-standard Kubernetes installation and the file containing the token may not be present.
-The API server will mount a volume containing this file, but only if the API server is configured to use
-the ServiceAccount admission controller.
-If you experience this error, verify that your API server is using the ServiceAccount admission controller.
-If you are configuring the API server by hand, you can set this with the `--admission-control` parameter.
-Please note that you should use other admission controllers as well. Before configuring this option, you should
-read about admission controllers.
+The API server will mount a volume containing this file,
+but only if the API server is configured to use
+the ServiceAccount admission controller.  
+If you experience this error,
+verify that your API server is using the ServiceAccount admission controller.  
+If you are configuring the API server by hand,
+you can set this with the `--admission-control` parameter.  
+Please note that you should use other admission controllers as well.
+Before configuring this option, please read about admission controllers.
 
 More information:
 
-* [User Guide: Service Accounts](http://kubernetes.io/docs/user-guide/service-accounts/)
-* [Cluster Administrator Guide: Managing Service Accounts](http://kubernetes.io/docs/admin/service-accounts-admin/)
+- [User Guide: Service Accounts](http://kubernetes.io/docs/user-guide/service-accounts/)
+- [Cluster Administrator Guide: Managing Service Accounts](http://kubernetes.io/docs/admin/service-accounts-admin/)
 
-### Kubeconfig
-If you want to use a kubeconfig file for authentication, follow the deploy procedure and 
+## Kubeconfig
+
+If you want to use a kubeconfig file for authentication,
+follow the deploy procedure and
 add the flag `--kubeconfig=/etc/kubernetes/kubeconfig.yaml` to the deployment

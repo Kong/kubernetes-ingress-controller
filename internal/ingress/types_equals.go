@@ -159,15 +159,6 @@ func (s1 *Server) Equal(s2 *Server) bool {
 	if s1.Alias != s2.Alias {
 		return false
 	}
-	if s1.SSLCertificate != s2.SSLCertificate {
-		return false
-	}
-	if s1.SSLPemChecksum != s2.SSLPemChecksum {
-		return false
-	}
-	if s1.SSLFullChainCertificate != s2.SSLFullChainCertificate {
-		return false
-	}
 
 	if len(s1.Locations) != len(s2.Locations) {
 		return false
@@ -232,12 +223,6 @@ func (s1 *SSLCert) Equal(s2 *SSLCert) bool {
 		return true
 	}
 	if s1 == nil || s2 == nil {
-		return false
-	}
-	if s1.PemFileName != s2.PemFileName {
-		return false
-	}
-	if s1.PemSHA != s2.PemSHA {
 		return false
 	}
 	if !s1.ExpireTime.Equal(s2.ExpireTime) {

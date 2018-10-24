@@ -103,6 +103,10 @@ spec:
       containers:
       - name: postgres
         image: postgres:9.5
+        volumeMounts:
+          - name: datadir
+            mountPath: /var/lib/postgresql/data
+            subPath: pgdata
         env:
         - name: POSTGRES_USER
           value: kong
@@ -117,10 +121,6 @@ spec:
       # No pre-stop hook is required, a SIGTERM plus some time is all that's
       # needed for graceful shutdown of a node.
       terminationGracePeriodSeconds: 60
-      volumes:
-      - name: datadir
-        persistentVolumeClaim:
-          claimName: datadir
   volumeClaimTemplates:
   - metadata:
       name: datadir
@@ -323,14 +323,24 @@ spec:
     spec:
       serviceAccountName: kong-serviceaccount
       initContainers:
-      - name: kong-migration
+      # hack to verify that the DB is up to date or not
+      # TODO remove this for Kong >= 0.15.0
+      - name: wait-for-db
         image: kong:0.14.1-centos
+        command: [ "/bin/sh", "-c", "until kong start; do echo 'waiting for db'; sleep 1; done; kong stop" ]
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-        command: [ "/bin/sh", "-c", "kong migrations up" ]
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
       containers:
       - name: admin-api
         image: kong:0.14.1-centos
@@ -419,7 +429,7 @@ metadata:
   name: kong-proxy
   namespace: kong
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
   - name: kong-proxy
     port: 80
@@ -447,6 +457,25 @@ spec:
         name: kong
         app: kong
     spec:
+      initContainers:
+      # hack to verify that the DB is up to date or not
+      # TODO remove this for Kong >= 0.15.0
+      - name: wait-for-db
+        image: kong:0.14.1-centos
+        command: [ "/bin/sh", "-c", "until kong start; do echo 'waiting for db'; sleep 1; done; kong stop" ]
+        env:
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
       containers:
       - name: kong-proxy
         image: kong:0.14.1-centos
@@ -470,3 +499,34 @@ spec:
           protocol: TCP
 
 ---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    metadata:
+      name: kong-migrations
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        env:
+          - name: KONG_PG_HOST
+            value: postgres
+          - name: KONG_PG_PORT
+            value: "5432"
+        command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+      - name: kong-migrations
+        image: kong:0.14.1-centos
+        env:
+          - name: KONG_PG_PASSWORD
+            value: kong
+          - name: KONG_PG_HOST
+            value: postgres
+          - name: KONG_PG_PORT
+            value: "5432"
+        command: [ "/bin/sh", "-c", "kong migrations up" ]
+      restartPolicy: OnFailure

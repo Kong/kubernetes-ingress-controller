@@ -27,6 +27,9 @@ type KongPlugin struct {
 
 	// Config contains the plugin configuration.
 	Config Configuration `json:"config,omitempty"`
+
+	// PluginName is the name of the plugin to which to apply the config
+	PluginName string `json:"plugin,omitempty"`
 }
 
 // KongPluginList is a top-level list type. The client methods for lists are automatically created.

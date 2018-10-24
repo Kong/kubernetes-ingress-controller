@@ -42,8 +42,9 @@ const (
 )
 
 type Kong struct {
-	URL    string
-	Client *kong.RestClient
+	URL     string
+	Headers []string
+	Client  *kong.RestClient
 }
 
 // Configuration contains all the settings required by an Ingress controller
@@ -598,7 +599,7 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 
 	for alias, host := range aliases {
 		if _, ok := servers[alias]; ok {
-			glog.Warningf("There is a conflict with server hostname '%v' and alias '%v' (in server %v). Removing alias to avoid conflicts.", alias, host)
+			glog.Warningf("There is a conflict with server hostname '%v' and alias '%v'. Removing alias to avoid conflicts.", host, alias)
 			servers[host].Alias = ""
 		}
 	}

@@ -24,10 +24,13 @@ import (
 // pluginAnnotationSuffix sufix of kong annotations to configure plugins
 const pluginAnnotationSuffix = "plugin.konghq.com"
 
+const pluginListAnnotation = "plugins.konghq.com"
+
 const configurationAnnotation = "configuration.konghq.com"
 
 // ExtractKongPluginAnnotations extracts information about kong plugins
-// configured using annotations.
+// configured using plugin.konghq.com annotation.
+// DEPRECATED, please use ExtractKongPluginsFromAnnotations instead.
 func ExtractKongPluginAnnotations(anns map[string]string) map[string][]string {
 	ka := make(map[string][]string, 0)
 	for k, v := range anns {
@@ -45,6 +48,24 @@ func ExtractKongPluginAnnotations(anns map[string]string) map[string][]string {
 	}
 
 	return ka
+}
+
+// ExtractKongPluginsFromAnnotations extracts information about Kong
+// Plugins configured using plugins.konghq.com annotation.
+// This returns a list of KongPlugin resource names that should be applied.
+func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
+	var kongPluginCRs []string
+	v, ok := anns[pluginListAnnotation]
+	if !ok {
+		return kongPluginCRs
+	}
+	for _, kongPlugin := range strings.Split(v, ",") {
+		s := strings.TrimSpace(kongPlugin)
+		if s != "" {
+			kongPluginCRs = append(kongPluginCRs, s)
+		}
+	}
+	return kongPluginCRs
 }
 
 // ExtractConfigurationName extracts the name of the KongIngress object that holds

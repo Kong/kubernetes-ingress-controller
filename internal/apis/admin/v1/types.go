@@ -19,8 +19,8 @@ type Required struct {
 
 	Tags []string `json:"tags,omitempty"`
 
-	CreatedAt int `json:"created_at,omitempty"`
-	UpdatedAt int `json:"updated_at,omitempty"`
+	CreatedAt int64 `json:"created_at,omitempty"`
+	UpdatedAt int64 `json:"updated_at,omitempty"`
 }
 
 // RequiredList ...
@@ -121,11 +121,14 @@ type Upstream struct {
 
 	Name string `json:"name"`
 
-	HashOn       string        `json:"hash_on,omitempty"`
-	HashOnHeader string        `json:"hash_on_header,omitempty"`
-	HashFallback string        `json:"hash_fallback,omitempty"`
-	Healthchecks *Healthchecks `json:"healthchecks,omitempty"`
-	Slots        int           `json:"slots,omitempty"`
+	HashOn             string        `json:"hash_on,omitempty"`
+	HashFallback       string        `json:"hash_fallback,omitempty"`
+	HashFallbackHeader string        `json:"hash_fallback_header,omitempty"`
+	HashOnHeader       string        `json:"hash_on_header,omitempty"`
+	HashOnCookie       string        `json:"hash_on_cookie,omitempty"`
+	HashOnCookiePath   string        `json:"hash_on_cookie_path,omitempty"`
+	Healthchecks       *Healthchecks `json:"healthchecks,omitempty"`
+	Slots              int           `json:"slots,omitempty"`
 }
 
 type Healthchecks struct {

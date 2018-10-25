@@ -62,7 +62,7 @@ This command will create  followings files:
     Note: Ingress Controller is deployed as `NodePort` exposing ports
     internally into node's private network,
     you might edit the Service `kong-ingress-controller`
-    to use `ClusterIP` Type as following:
+    to use `ClusterIP` Type as follows:
 
     ```yaml
 
@@ -267,7 +267,7 @@ IP address to the `kong-proxy` Service.
 
   ```
 
-Now, access to dummy.kong.example should display some informations.
+Now, access to dummy.kong.example should display some information.
 
 ## Bonus: Expose the Kong admin API
 
@@ -312,7 +312,7 @@ registration services such as [Google Domains](https://domains.google/).
 [Let’s Encrypt on GKE](https://github.com/ahmetb/gke-letsencrypt)
 is a tutorial for installing `cert-manager` to get HTTPS certificates
 from Let’s Encrypt.
-There is an important things you need to configure,
+There is an important thing you need to configure,
 if you want to accomplish correctly. You should apply
 [KongIngress](https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/custom-types.md#kongingress)
 and set `preserve_host` configuration `true` at the
@@ -321,7 +321,7 @@ so that you could keep hostname in request headers.
 
 [cert-manager](https://github.com/jetstack/cert-manager) checks equality
 of hostname and domain name when it creates HTTPS certificates.
-However, Kong remove hostname as default.
+However, Kong removes hostname as default.
 I recommend you to create a `KongIngress` spec file to avoid
 the following error:
 

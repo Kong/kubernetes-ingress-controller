@@ -201,7 +201,7 @@ You can now retrieve the associated IP for the Service `kong-proxy`
 
 NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)
 kong-ingress-controller   ClusterIP      10.42.42.1   <none>         8001/TCP
-kong-proxy                LoadBalancer   10.42.42.2   35.204.42.1   80:30095/TCP,443:31166/TCP
+kong-proxy                LoadBalancer   10.42.42.2   203.0.113.1   80:30095/TCP,443:31166/TCP
 postgres                  ClusterIP      10.42.42.3   <none>         5432/TCP
 
 ```
@@ -210,7 +210,7 @@ Now,
 
 ```bash
 
-curl 35.204.42.1
+curl 203.0.113.1
 
 ```
 
@@ -263,7 +263,7 @@ IP address to the `kong-proxy` Service.
 
   ```text
 
-  35.204.42.1 dummy.kong.example
+  203.0.113.1 dummy.kong.example
 
   ```
 

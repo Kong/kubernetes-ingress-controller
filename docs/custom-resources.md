@@ -60,7 +60,7 @@ plugin: <name-of-plugin> # like key-auth, rate-limiting etc
 
 **Please note:** validation of the configuration fields is left to the user.
 Setting invalid fields will result in errors in the Ingress Controller.
-This behavior is set to improve in future.
+This behavior is set to improve in the future.
 
 The plugins can be associated with Ingress
 or Service object in Kubernetes using `plugins.konghq.com` annotation.
@@ -101,7 +101,7 @@ Once a `KongIngress` resource is created, it can be associated with
   On the other hand, this approach requires a `KongIngress`
   resource per Ingress, which becomes hard to maintain with multiple Ingresses.
 
-- Create an `KongIngress` resource and then using the annotation
+- Create a `KongIngress` resource and then using the annotation
   `configuration.konghq.com: <KongIngress-resource-name>`,
   associate it with one or more Ingress resources.  
   This approach allows you to reuse the same `KongIngress`.
@@ -200,7 +200,7 @@ This custom resource can be used to configure a consumer specific
 entities in Kong.
 The resource reference the KongConsumer resource via the `consumerRef` key.
 
-The validation of config object is left up to the user.
+The validation of the config object is left up to the user.
 
 ```yaml
 apiVersion: configuration.konghq.com/v1

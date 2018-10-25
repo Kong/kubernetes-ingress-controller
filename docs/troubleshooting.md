@@ -5,7 +5,7 @@
 Using the flag `--v=XX` it is possible to increase the level of logging.
 In particular:
 
-- `--v=3` shows details about the service, Ingress rule and endpoint changes
+- `--v=3` shows details about the service, Ingress rule, and endpoint changes
 
 ## Authentication to the Kubernetes API Server
 
@@ -27,18 +27,18 @@ Both authentications must work:
 The Ingress controller needs information from API server to configure Kong.
 Therefore, authentication is required, which can be achieved in two different ways:
 
-1. **Service Account**: This is recommended,
+1. **Service Account**: This is recommended
    because nothing has to be configured.  
    The Ingress controller will use information provided by the system
    to communicate with the API server.  
    See 'Service Account' section for details.
 1. **Kubeconfig file**: In some Kubernetes environments
    service accounts are not available.  
-   In this case a manual configuration is required.
+   In this case, a manual configuration is required.
    The Ingress controller binary can be started with the `--kubeconfig` flag.
    The value of the flag is a path to a file specifying how
    to connect to the API server. Using the `--kubeconfig`
-   does not requires the flag `--apiserver-host`.  
+   does not require the flag `--apiserver-host`.  
    The format of the file is identical to `~/.kube/config`
    which is used by `kubectl` to connect to the API server.  
    See 'kubeconfig' section for details.

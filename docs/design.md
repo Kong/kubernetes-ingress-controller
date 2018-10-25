@@ -28,7 +28,7 @@ both at the same time.
 
 In the above deployment figure, a Kong Control-Plane pod is
 deployed alongside the Ingress Controller pod.
-As mentioned above, this is only one way deploying Kong with Ingress Controller
+As mentioned above, this is only one way of deploying Kong with Ingress Controller
 and it won't matter how we do it.
 
 Kong's state is stored in Postgres (can be Cassandra) which should be deployed
@@ -43,7 +43,7 @@ details on how to deploy Kong with Ingress Controller.
 Multiple instances of Kong Ingress Controller pod can be deployed.
 The Ingress Controller uses a leader election protocol and elects a leader.
 At any point, only one leader Controller pod will be configuring Kong and
-other follower pods will be read to take over as soon as the leader fails.
+other follower pods will be ready to take over as soon as the leader fails.
 
 ## Scaling Kong
 
@@ -64,7 +64,7 @@ into Kong's data model:
 
 ![translating k8s to kong](images/k8s-to-kong.png "Translating k8s resources to Kong")
 
-The figure shows translation of Ingress resource, services and
+The figure shows the translation of Ingress resource, services and
 pods in Kubernetes to corresponding resources in Kong.
 
 ## Custom Resources

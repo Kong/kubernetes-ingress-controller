@@ -12,7 +12,7 @@
    minishift start --memory 4096
    ```
 
-   It will take few minutes to get all resources provisioned.
+   It will take a few minutes to get all resources provisioned.
 
    ```bash
    kubectl get nodes

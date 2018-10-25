@@ -67,14 +67,14 @@ for two unrelated Kong Ingress Controllers.
 `plugins.konghq.com` annotation.
 This annotation is available for Kong Ingress Controller versions >= 0.2.0.
 
-Following is an example on how to use the annotation:
+Following is an example of how to use the annotation:
 
 ```yaml
 plugins.konghq.com: high-rate-limit, docs-site-cors
 ```
 
 Here, `high-rate-limit` and `docs-site-cors`
-are the name of the KongPlugin resources which
+are the names of the KongPlugin resources which
 should be to be applied to the Ingress rules defined in the
 Ingress resource on which the annotation is applied.
 
@@ -87,7 +87,7 @@ executed for every request that is proxied, no matter which Route it came from.
 
 This annotation can associate a KongIngress custom resource with
 an Ingress resource. Only a single KongIngress resource can be specified and
-it will override properties of Service, Route and Upstream objects that
+it will override the properties of Service, Route and Upstream objects that
 are specified in the referenced `KongIngress` object.
 
 ## DEPRECATED `<name>.plugin.konghq.com`

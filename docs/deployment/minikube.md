@@ -14,7 +14,7 @@
     minikube start
     ```
 
-    It will take few minutes to get all resources provisioned.
+    It will take a few minutes to get all resources provisioned.
 
     ```bash
     kubectl get nodes
@@ -136,7 +136,7 @@
 
 Setup an Ingress rule with TLS section (HTTPS)
 
-7. Create a secret with a SSL certificate
+7. Create a secret with an SSL certificate
 
     ```bash
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=secure-foo-bar/O=konghq.org"

@@ -10,7 +10,6 @@ Kubernetes cluster. Here are some guides to get you started:
 
    *Notes:*
      - This setup does not provide HA for PostgreSQL
-
 1. [Using openshift/minishift][1]:
 
     Openshift is a Kubernetes distribution by Redhat and
@@ -30,6 +29,14 @@ Kubernetes cluster. Here are some guides to get you started:
    Controller on GKE alongwith TLS certs from
    Let's Encrypt.
 
+1. [Azure Kubernetes Service(AKS))][3]:
+
+   [AKS](https://azure.microsoft.com/en-us/services/kubernetes-service/)
+   is another managed Kubernetes cluster service.
+   This guide is a walk through to setup Kong Ingress
+   Controller on AKS.
+
 [0]: minikube.md
 [1]: openshift.md
 [2]: gke.md
+[3]: aks.md

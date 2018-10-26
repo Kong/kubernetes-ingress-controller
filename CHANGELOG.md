@@ -1,9 +1,62 @@
 # Table of Contents
 
+ - [0.1.2](#012-20181026)
  - [0.1.1](#011-20180926)
  - [0.1.0](#010-20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.1.2] - 2018/10/26
+
+#### Deprecated
+
+ - :warning: Configuring plugins in Kong using `<plugin-name>.plugin.konghq.com`
+   annotation is now deprecated and will be removed in a future release.
+   Please use `plugins.konghq.com` annotation instead.
+
+#### Added
+
+ - **Header Injection in requests to Kong's Admin API** HTTP Headers
+   can be set via CLI which will be injected in every request sent to
+   Kong's Admin API, enabling the use of Ingress Controller when Kong's
+   Control Plane is protected by Authentication/Authorization.
+   [#172](https://github.com/Kong/kubernetes-ingress-controller/pull/172)
+ - **Path only based routing** Path only Ingress rules (without a host)
+   are now parsed and served correctly.
+   [#142](https://github.com/Kong/kubernetes-ingress-controller/pull/142)
+ - **Global Plugins** Plugins can be configured to run globally in Kong
+   using a "global" label on `KongPlugin` resource.
+   [#112](https://github.com/Kong/kubernetes-ingress-controller/pull/112)
+ - A new property `plugin` has been introduced in `KongPlugin` resource
+   which ties the configuration to be used and the type of the plugin.
+   [#122](https://github.com/Kong/kubernetes-ingress-controller/pull/122)
+ - Multiple plugins can be configured for an Ingress or a Service in k8s
+   using `plugins.konghq.com` annotation.
+   [#124](https://github.com/Kong/kubernetes-ingress-controller/pull/124)
+ - `KongPlugin` resources do not need to be duplicated any more.
+   The same `KongPlugin` resource can be used across
+   multiple Ingress/Service resources.
+   [#121](https://github.com/Kong/kubernetes-ingress-controller/pull/121)
+
+#### Fixed
+
+ - Avoid issuing unnecessary PATCH requests on Services in Kong during the
+   reconcillation loop, which lead to unnecessary Router rebuilds inside Kong.
+   [#107](https://github.com/Kong/kubernetes-ingress-controller/pull/107)
+ - Fixed the diffing logic for plugin configuration between KongPlugin
+   resource in k8s and plugin config in Kong to avoid false positives.
+   [#106](https://github.com/Kong/kubernetes-ingress-controller/pull/106)
+ - Correctly format IPv6 address for Targets in Kong.
+   Thanks @NixM0nk3y for the patch!
+   [#118](https://github.com/Kong/kubernetes-ingress-controller/pull/118)
+ - Fixed KongIngress overrides to enable overriding hashing attributes in
+   Upstream object in Kong.
+   Thanks @jdevalk2 for the patch!
+   [#139](https://github.com/Kong/kubernetes-ingress-controller/pull/139)
+ - Remove and sync certificates correctly when TLS secret reference changes
+   for a hostname in Ingress spec.
+   [#169](https://github.com/Kong/kubernetes-ingress-controller/pull/169)
+
 
 ## [0.1.1] - 2018/09/26
 
@@ -53,6 +106,7 @@
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v0.0.5...0.1.0
 [v0.0.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v0.0.4...v0.0.5

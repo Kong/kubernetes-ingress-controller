@@ -1,11 +1,49 @@
 # Table of Contents
 
+ - [0.2.1](#021-20181026)
  - [0.1.2](#012-20181026)
  - [0.1.1](#011-20180926)
  - [0.2.0](#020-20180921)
  - [0.1.0](#010-20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.2.1] - 2018/10/26
+
+#### Added
+
+ - **Header Injection in requests to Kong's Admin API** HTTP Headers
+   can be set via CLI which will be injected in every request sent to
+   Kong's Admin API, enabling the use of Ingress Controller when Kong's
+   Control Plane is protected by Authentication/Authorization.
+   [#172](https://github.com/Kong/kubernetes-ingress-controller/pull/172)
+ - **Path only based routing** Path only Ingress rules (without a host)
+   are now parsed and served correctly.
+   [#142](https://github.com/Kong/kubernetes-ingress-controller/pull/142)
+ - Under the hood, an external library is now used to talk to Kong's Admin
+   API. Several other packages and dead code has been dropped. These changes
+   don't have any user facing changes but are steps in direction to simplify
+   code and make it more testable.
+   [#150](https://github.com/Kong/kubernetes-ingress-controller/pull/150)
+   [#154](https://github.com/Kong/kubernetes-ingress-controller/pull/154)
+   [#179](https://github.com/Kong/kubernetes-ingress-controller/pull/179)
+
+#### Fixed
+
+ - Fixed KongIngress overrides to enable overriding hashing attributes in
+   Upstream object in Kong.
+   Thanks @jdevalk2 for the patch!
+   [#139](https://github.com/Kong/kubernetes-ingress-controller/pull/139)
+ - Remove and sync certificates correctly when TLS secret reference changes
+   for a hostname in Ingress spec.
+   [#169](https://github.com/Kong/kubernetes-ingress-controller/pull/169)
+ - Migrations for Kong are run using 'Job' in Kubernetes to avoid any
+   issues that might arise due to multiple Kong nodes running migrations.
+   [#161](https://github.com/Kong/kubernetes-ingress-controller/pull/161)
+ - Kong and Ingress controller now wait for Postgres to start and migrations
+   to finish before attempting to start.
+   [#168](https://github.com/Kong/kubernetes-ingress-controller/pull/168)
+
 
 ## [0.1.2] - 2018/10/26
 
@@ -155,6 +193,7 @@
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.0...0.2.1
 [0.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.1.1
 [0.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.2.0

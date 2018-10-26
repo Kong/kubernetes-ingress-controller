@@ -1,10 +1,10 @@
 # Table of Contents
 
- - [0.2.1](#021-20181026)
- - [0.1.2](#012-20181026)
- - [0.1.1](#011-20180926)
- - [0.2.0](#020-20180921)
- - [0.1.0](#010-20180817)
+ - [0.2.1](#021---20181026)
+ - [0.1.2](#012---20181026)
+ - [0.1.1](#011---20180926)
+ - [0.2.0](#020---20180921)
+ - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
@@ -114,8 +114,8 @@
 #### Deprecated
 
  - :warning: Configuring plugins in Kong using `<plugin-name>.plugin.konghq.com`
- annotation is now deprecated and will be removed in a future release.
- Please use `plugins.konghq.com` annotation instead.
+   annotation is now deprecated and will be removed in a future release.
+   Please use `plugins.konghq.com` annotation instead.
 
 #### Added
 

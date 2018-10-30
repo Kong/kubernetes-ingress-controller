@@ -12,62 +12,62 @@ kind: ClusterRole
 metadata:
   name: kong-ingress-clusterrole
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-      - nodes
-      - pods
-      - secrets
-    verbs:
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-    verbs:
-      - get
-  - apiGroups:
-      - ""
-    resources:
-      - services
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "extensions"
-    resources:
-      - ingresses
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-        - events
-    verbs:
-        - create
-        - patch
-  - apiGroups:
-      - "extensions"
-    resources:
-      - ingresses/status
-    verbs:
-      - update
-  - apiGroups:
-      - "configuration.konghq.com"
-    resources:
-      - kongplugins
-      - kongcredentials
-      - kongconsumers
-      - kongingresses
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - "configuration.konghq.com"
+  resources:
+  - kongplugins
+  - kongcredentials
+  - kongconsumers
+  - kongingresses
+  verbs:
+  - get
+  - list
+  - watch
 
 ---
 
@@ -77,40 +77,40 @@ metadata:
   name: kong-ingress-role
   namespace: kong
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-      - pods
-      - secrets
-      - namespaces
-    verbs:
-      - get
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    resourceNames:
-      # Defaults to "<election-id>-<ingress-class>"
-      # Here: "<ingress-controller-leader>-<nginx>"
-      # This has to be adapted if you change either parameter
-      # when launching the nginx-ingress-controller.
-      - "ingress-controller-leader-nginx"
-    verbs:
-      - get
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - create
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-    verbs:
-      - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  # Defaults to "<election-id>-<ingress-class>"
+  # Here: "<ingress-controller-leader>-<nginx>"
+  # This has to be adapted if you change either parameter
+  # when launching the nginx-ingress-controller.
+  - "ingress-controller-leader-nginx"
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
 
 ---
 
@@ -124,9 +124,9 @@ roleRef:
   kind: Role
   name: kong-ingress-role
 subjects:
-  - kind: ServiceAccount
-    name: kong-serviceaccount
-    namespace: kong
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
 
 ---
 
@@ -139,8 +139,8 @@ roleRef:
   kind: ClusterRole
   name: kong-ingress-clusterrole
 subjects:
-  - kind: ServiceAccount
-    name: kong-serviceaccount
-    namespace: kong
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
 
 ---

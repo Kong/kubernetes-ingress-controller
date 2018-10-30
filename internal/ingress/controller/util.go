@@ -17,9 +17,12 @@ limitations under the License.
 package controller
 
 import (
+	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/hbagdi/go-kong/kong"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 )
 
 func isEmpty(s *string) bool {
@@ -94,4 +97,59 @@ func compareRoute(r1, r2 *kong.Route) bool {
 	}
 
 	return true
+}
+
+func mergeRouteAndKongIngress(r *kong.Route, kongIngress *configurationv1.KongIngress) bool {
+	if r == nil {
+		return false
+	}
+	if kongIngress == nil || kongIngress.Route == nil {
+		return false
+	}
+	updated := false
+	if len(kongIngress.Route.Methods) > 0 {
+		sort.Strings(kongIngress.Route.Methods)
+		m := toStringArray(r.Methods)
+		sort.Strings(m)
+		if !reflect.DeepEqual(m, kongIngress.Route.Methods) {
+			updated = true
+			r.Methods = toStringPtrArray(kongIngress.Route.Methods)
+		}
+	}
+
+	if r.PreserveHost == nil {
+		r.PreserveHost = kong.Bool(false)
+	}
+	if kongIngress.Route.PreserveHost != *r.PreserveHost {
+		r.PreserveHost = kong.Bool(kongIngress.Route.PreserveHost)
+		updated = true
+	}
+
+	if r.RegexPriority == nil {
+		r.RegexPriority = kong.Int(0)
+	}
+	if kongIngress.Route.RegexPriority != 0 &&
+		kongIngress.Route.RegexPriority != *r.RegexPriority {
+		r.RegexPriority = kong.Int(kongIngress.Route.RegexPriority)
+		updated = true
+	}
+
+	if r.StripPath == nil {
+		r.StripPath = kong.Bool(false)
+	}
+	if kongIngress.Route.StripPath != *r.StripPath {
+		r.StripPath = kong.Bool(kongIngress.Route.StripPath)
+		updated = true
+	}
+
+	if len(kongIngress.Route.Protocols) > 0 {
+		protocols := toStringArray(r.Protocols)
+		sort.Strings(protocols)
+		sort.Strings(kongIngress.Route.Protocols)
+		if !reflect.DeepEqual(protocols, kongIngress.Route.Protocols) {
+			updated = true
+			r.Protocols = toStringPtrArray(kongIngress.Route.Protocols)
+		}
+	}
+	return updated
 }

@@ -23,12 +23,12 @@ spec:
     JSONPath: .metadata.creationTimestamp
   - name: Disabled
     type: boolean
-    description: Is the plugin disabled?
+    description: Indicates if the plugin is disabled
     JSONPath: .disabled
     priority: 1
   - name: Config
     type: string
-    description: configuration of the plugin
+    description: Configuration of the plugin
     JSONPath: .config
     priority: 1
   validation:

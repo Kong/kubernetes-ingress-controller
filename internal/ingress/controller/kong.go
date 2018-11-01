@@ -774,31 +774,8 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			}
 
 			if kongIngress != nil && kongIngress.Route != nil {
-				if len(kongIngress.Route.Methods) > 0 {
-					r.Methods = toStringPtrArray(kongIngress.Route.Methods)
-				}
-
-				if r.PreserveHost == nil {
-					r.PreserveHost = kong.Bool(false)
-				}
-				if kongIngress.Route.PreserveHost != *r.PreserveHost {
-					r.PreserveHost = kong.Bool(kongIngress.Route.PreserveHost)
-				}
-
-				if kongIngress.Route.RegexPriority != 0 &&
-					r.RegexPriority != nil || kongIngress.Route.RegexPriority != *r.RegexPriority {
-					r.RegexPriority = kong.Int(kongIngress.Route.RegexPriority)
-				}
-
-				if r.StripPath == nil {
-					r.StripPath = kong.Bool(false)
-				}
-				if kongIngress.Route.StripPath != *r.StripPath {
-					r.StripPath = kong.Bool(kongIngress.Route.StripPath)
-				}
-				if len(kongIngress.Route.Protocols) != 0 {
-					r.Protocols = toStringPtrArray(kongIngress.Route.Protocols)
-				}
+				// ignore updated on create
+				mergeRouteAndKongIngress(r, kongIngress)
 			}
 
 			if !isRouteInKong(r, kongRoutes) {
@@ -815,62 +792,23 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				if routesToRemove.Has(*route.ID) {
 					routesToRemove.Delete(*route.ID)
 				}
-				outOfSync := false
+				routesOutOfSync, ingressOutOfSync := false, false
 				sort.Strings(protos)
 				p := toStringArray(route.Protocols)
 				sort.Strings(p)
 
 				if !reflect.DeepEqual(protos, p) {
-					outOfSync = true
+					routesOutOfSync = true
 					route.Protocols = toStringPtrArray(protos)
 				}
 
 				if kongIngress != nil && kongIngress.Route != nil {
-					if kongIngress.Route.Methods != nil {
-						sort.Strings(kongIngress.Route.Methods)
-						m := toStringArray(route.Methods)
-						sort.Strings(m)
-						if !reflect.DeepEqual(m, kongIngress.Route.Methods) {
-							outOfSync = true
-							route.Methods = toStringPtrArray(kongIngress.Route.Methods)
-						}
-					}
-
-					if route.PreserveHost == nil {
-						route.PreserveHost = kong.Bool(false)
-					}
-					if kongIngress.Route.PreserveHost != *route.PreserveHost {
-						outOfSync = true
-						route.PreserveHost = kong.Bool(kongIngress.Route.PreserveHost)
-					}
-
-					if route.RegexPriority == nil {
-						route.RegexPriority = kong.Int(0)
-					}
-					if kongIngress.Route.RegexPriority != *route.RegexPriority {
-						outOfSync = true
-						route.RegexPriority = kong.Int(kongIngress.Route.RegexPriority)
-					}
-
-					if route.StripPath == nil {
-						route.StripPath = kong.Bool(false)
-					}
-					if kongIngress.Route.StripPath != *route.StripPath {
-						outOfSync = true
-						route.StripPath = kong.Bool(kongIngress.Route.StripPath)
-					}
-					if len(kongIngress.Route.Protocols) > 0 {
-						sort.Strings(kongIngress.Route.Protocols)
-						if !reflect.DeepEqual(route.Protocols, kongIngress.Route.Protocols) {
-							outOfSync = true
-							glog.Infof("protocols changed form %v to %v", route.Protocols, kongIngress.Route.Protocols)
-							route.Protocols = toStringPtrArray(kongIngress.Route.Protocols)
-						}
-					}
+					ingressOutOfSync = mergeRouteAndKongIngress(route, kongIngress)
 				}
 
-				if outOfSync {
-					glog.Infof("updating Kong Route for host %v, path %v and service %v", server.Hostname, location.Path, svc.ID)
+				if routesOutOfSync || ingressOutOfSync {
+					glog.Infof("updating Kong Route for host %v, path %v and service %v",
+						server.Hostname, location.Path, svc.ID)
 					_, err := client.Routes.Update(nil, route)
 					if err != nil {
 						glog.Errorf("Unexpected error updating Kong Route: %v", err)

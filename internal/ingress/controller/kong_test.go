@@ -74,6 +74,19 @@ func TestPluginDeepEqual(t *testing.T) {
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": 1,
+		"key2": 2,
+		"key3": 8,
+	}, &kong.Plugin{Config: map[string]interface{}{
+		"key1": 1.0,
+		"key2": 2.0,
+		"key3": 8,
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with numeric values in different type failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
 		"key1": map[string]string{},
 		"key2": "value2",
 		"key3": "value3",
@@ -117,7 +130,24 @@ func TestPluginDeepEqual(t *testing.T) {
 		},
 	}})
 	if equal {
-		t.Errorf("Comparing maps with nested array with different order failed")
+		t.Errorf("Comparing maps with nested string array with different order failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": [3]int{
+			1, 2, 3,
+		},
+		"key2": "value2",
+		"key3": "value3",
+	}, &kong.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key3": "value3",
+		"key1": [3]float64{
+			1.0, 2.0, 3.0,
+		},
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with nested numeric value array failed")
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{

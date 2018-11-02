@@ -18,18 +18,18 @@ package controller
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
 	"sort"
 	"time"
 
-	"github.com/imdario/mergo"
-
 	"github.com/fatih/structs"
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/hbagdi/go-kong/kong/custom"
+	"github.com/imdario/mergo"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
@@ -1265,18 +1265,27 @@ func deleteServiceUpstream(host string, client *kong.Client) error {
 // the persisted state in the Kong database
 // This is required because a plugin has defaults that could not exists in the CRD.
 func pluginDeepEqual(config map[string]interface{}, kong *kong.Plugin) bool {
-	for k, v := range config {
+	configToCompare := make(map[string]interface{})
+	for k, _ := range config {
 		kv, ok := kong.Config[k]
 		if !ok {
 			return false
 		}
-
-		if !reflect.DeepEqual(v, kv) {
-			return false
-		}
+		// add kv pairs which config and kong.Config both have
+		// to emit any default keys
+		configToCompare[k] = kv
 	}
 
-	return true
+	configJSON, errConfig := json.Marshal(config)
+	configToCompareJSON, errConfigToCompare := json.Marshal(configToCompare)
+
+	if errConfig != nil || errConfigToCompare != nil {
+		glog.Errorf("Unexpected error when encoding config to json: %v, %v",
+			errConfig, errConfigToCompare)
+		return false
+	}
+
+	return string(configJSON) == string(configToCompareJSON)
 }
 
 // getKongIngress checks if the Ingress contains an annotation for configuration

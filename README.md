@@ -70,8 +70,8 @@ spin up.
 You now have set up Kong as your Ingress controller and
 all Ingress resources in your Kubernetes Cluster will be satisfied.
 
-Please refer our [deployment documentation][deployment-doc]
-for a detailed  introduction to Kong Ingress Controller
+Please refer to our [deployment documentation][deployment-doc]
+for a detailed introduction to Kong Ingress Controller
 and Ingress spec.
 
 ## Seeking help

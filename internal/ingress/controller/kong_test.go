@@ -151,6 +151,23 @@ func TestPluginDeepEqual(t *testing.T) {
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": []interface{}{
+			1, map[string]string{"1": "2"}, "3",
+		},
+		"key2": "value2",
+		"key3": "value3",
+	}, &kong.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key3": "value3",
+		"key1": []interface{}{
+			1.0, "3", map[string]string{"1": "2"},
+		},
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with interface value array failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
 		"key1": []string{},
 		"key2": "value2",
 		"key3": "value3",
@@ -194,6 +211,25 @@ func TestPluginDeepEqual(t *testing.T) {
 	}})
 	if equal {
 		t.Errorf("Comparing maps with unmatched keys failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key1": map[string]string{
+			"nestedkey1": "nestedvalue1",
+			"nestedkey2": "nestedvalue2",
+		},
+		"key2": "value2",
+		"key3": "value3",
+	}, &kong.Plugin{Config: map[string]interface{}{
+		"key3": "value3",
+		"key1": map[string]string{
+			"nestedkey1": "nestedvalue1",
+			"nestedkey2": "nestedvalue3",
+		},
+		"key2": "value2",
+	}})
+	if equal {
+		t.Errorf("Comparing maps with unmatched keys in nested structure failed")
 	}
 
 	equal = pluginDeepEqual(map[string]interface{}{

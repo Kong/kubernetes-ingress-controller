@@ -1276,18 +1276,18 @@ func interfaceDeepEqual(i1 interface{}, i2 interface{}) bool {
 	v1 := reflect.ValueOf(i1)
 	v2 := reflect.ValueOf(i2)
 
-	t1 := v1.Type().String()
-	t2 := v2.Type().String()
-
-	if t1[:3] == "map" && t1[:3] == t2[:3] {
-		return mapDeepEqual(v1, v2)
-	} else if t1[:1] == "[" && t1[:1] == t2[:1] {
-		return listUnorderedDeepEqual(v1, v2)
+	k1 := v1.Type().Kind()
+	k2 := v2.Type().Kind()
+	if k1 == k2 {
+		if k1 == reflect.Map {
+			return mapDeepEqual(v1, v2)
+		} else if k1 == reflect.Slice || k1 == reflect.Array {
+			return listUnorderedDeepEqual(v1, v2)
+		}
 	}
 	j1, e1 := json.Marshal(v1.Interface())
 	j2, e2 := json.Marshal(v2.Interface())
 	return e1 == nil && e2 == nil && string(j1) == string(j2)
-
 }
 
 func mapDeepEqual(m1 reflect.Value, m2 reflect.Value) bool {

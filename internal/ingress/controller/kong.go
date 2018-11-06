@@ -1265,27 +1265,70 @@ func deleteServiceUpstream(host string, client *kong.Client) error {
 // the persisted state in the Kong database
 // This is required because a plugin has defaults that could not exists in the CRD.
 func pluginDeepEqual(config map[string]interface{}, kong *kong.Plugin) bool {
-	configToCompare := make(map[string]interface{})
-	for k, _ := range config {
-		kv, ok := kong.Config[k]
-		if !ok {
+	return pluginDeepEqualWrapper(config, kong.Config)
+}
+
+func pluginDeepEqualWrapper(config1 map[string]interface{}, config2 map[string]interface{}) bool {
+	return interfaceDeepEqual(config1, config2)
+}
+
+func interfaceDeepEqual(i1 interface{}, i2 interface{}) bool {
+	v1 := reflect.ValueOf(i1)
+	v2 := reflect.ValueOf(i2)
+
+	t1 := v1.Type().String()
+	t2 := v2.Type().String()
+
+	if t1[:3] == "map" && t1[:3] == t2[:3] {
+		return mapDeepEqual(v1, v2)
+	} else if t1[:1] == "[" && t1[:1] == t2[:1] {
+		return listUnorderedDeepEqual(v1, v2)
+	}
+	j1, e1 := json.Marshal(v1.Interface())
+	j2, e2 := json.Marshal(v2.Interface())
+	return e1 == nil && e2 == nil && string(j1) == string(j2)
+
+}
+
+func mapDeepEqual(m1 reflect.Value, m2 reflect.Value) bool {
+	keys1 := m1.MapKeys()
+	for _, k := range keys1 {
+		v2 := m2.MapIndex(k)
+		if !v2.IsValid() { // k not found in m2
 			return false
 		}
-		// add kv pairs which config and kong.Config both have
-		// to emit any default keys
-		configToCompare[k] = kv
+		v1 := m1.MapIndex(k)
+
+		if v1.IsValid() && !interfaceDeepEqual(v1.Interface(), v2.Interface()) {
+			return false
+		}
 	}
+	return true
+}
 
-	configJSON, errConfig := json.Marshal(config)
-	configToCompareJSON, errConfigToCompare := json.Marshal(configToCompare)
-
-	if errConfig != nil || errConfigToCompare != nil {
-		glog.Errorf("Unexpected error when encoding config to json: %v, %v",
-			errConfig, errConfigToCompare)
+func listUnorderedDeepEqual(l1 reflect.Value, l2 reflect.Value) bool {
+	length := l1.Len()
+	if length != l2.Len() {
 		return false
 	}
-
-	return string(configJSON) == string(configToCompareJSON)
+	for i := 0; i < length; i++ {
+		v1 := l1.Index(i)
+		if !v1.IsValid() {
+			return false // this shouldn't happen
+		}
+		found := false
+		for j := 0; j < length; j++ {
+			v2 := l2.Index(j)
+			if v2.IsValid() && interfaceDeepEqual(v1.Interface(), v2.Interface()) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 // getKongIngress checks if the Ingress contains an annotation for configuration

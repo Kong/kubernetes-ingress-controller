@@ -129,7 +129,7 @@ func TestPluginDeepEqual(t *testing.T) {
 			"arr2", "arr3", "arr1",
 		},
 	}})
-	if equal {
+	if !equal {
 		t.Errorf("Comparing maps with nested string array with different order failed")
 	}
 
@@ -194,5 +194,38 @@ func TestPluginDeepEqual(t *testing.T) {
 	}})
 	if equal {
 		t.Errorf("Comparing maps with unmatched keys failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key2": "value2",
+		"key1": map[string]string{
+			"nestedkey1": "nestedvalue1",
+		},
+	}, &kong.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key1": map[string]string{
+			"nestedkey1": "nestedvalue1",
+		},
+		"default3": "value3",
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with default configs failed")
+	}
+
+	equal = pluginDeepEqual(map[string]interface{}{
+		"key2": "value2",
+		"key1": map[string]string{
+			"nestedkey1": "nestedvalue1",
+		},
+	}, &kong.Plugin{Config: map[string]interface{}{
+		"key2": "value2",
+		"key1": map[string]string{
+			"nestedkey1":     "nestedvalue1",
+			"defaultnested2": "nestedvalue2",
+		},
+		"default3": "value3",
+	}})
+	if !equal {
+		t.Errorf("Comparing maps with nested default configs failed")
 	}
 }

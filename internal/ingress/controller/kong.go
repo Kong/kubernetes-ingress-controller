@@ -65,10 +65,6 @@ func (n *NGINXController) OnUpdate(ingressCfg *ingress.Configuration) error {
 	}
 
 	for _, server := range ingressCfg.Servers {
-		if server.Hostname == "_" {
-			// there is no catch all server in kong
-			continue
-		}
 
 		err := n.syncUpstreams(server.Locations, ingressCfg.Backends)
 		if err != nil {
@@ -315,10 +311,6 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 
 	// Check if the endpoints exists as a service in kong
 	for _, server := range ingressCfg.Servers {
-		if server.Hostname == "_" {
-			// there is no catch all server in kong
-			continue
-		}
 
 		for _, location := range server.Locations {
 			backend := location.Backend
@@ -942,10 +934,6 @@ func (n *NGINXController) syncUpstreams(locations []*ingress.Location, backends 
 
 	for _, location := range locations {
 		backend := location.Backend
-		if backend == "default-backend" {
-			// there is no default backend in Kong
-			continue
-		}
 
 		ingress := location.Ingress
 		if ingress == nil {

@@ -81,7 +81,7 @@ Ingress resource on which the annotation is applied.
 This annotation can be applied to a Service Object in Kubernetes as well, which
 will result in the plugin being executed at Service in Kong,
 meaning the plugin will be
-executed for every request that is proxied, n matter which Route it came from.
+executed for every request that is proxied, no matter which Route it came from.
 
 See [KongPlugin](#kongplugin) for examples of how to apply a plugin to service
 or ingress.

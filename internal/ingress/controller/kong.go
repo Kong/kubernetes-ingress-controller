@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -27,10 +28,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/imdario/mergo"
-
 	"github.com/fatih/structs"
 	"github.com/golang/glog"
+	"github.com/imdario/mergo"
 	kong "github.com/kong/kubernetes-ingress-controller/internal/apis/admin"
 	kongadminv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/admin/v1"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
@@ -1291,17 +1291,69 @@ func deleteServiceUpstream(host string, client *kong.RestClient) error {
 // the persisted state in the Kong database
 // This is required because a plugin has defaults that could not exists in the CRD.
 func pluginDeepEqual(config map[string]interface{}, kong *kongadminv1.Plugin) bool {
-	for k, v := range config {
-		kv, ok := kong.Config[k]
-		if !ok {
+	return pluginDeepEqualWrapper(config, kong.Config)
+}
+
+func pluginDeepEqualWrapper(config1 map[string]interface{}, config2 map[string]interface{}) bool {
+	return interfaceDeepEqual(config1, config2)
+}
+
+func interfaceDeepEqual(i1 interface{}, i2 interface{}) bool {
+	v1 := reflect.ValueOf(i1)
+	v2 := reflect.ValueOf(i2)
+
+	k1 := v1.Type().Kind()
+	k2 := v2.Type().Kind()
+	if k1 == k2 {
+		if k1 == reflect.Map {
+			return mapDeepEqual(v1, v2)
+		} else if k1 == reflect.Slice || k1 == reflect.Array {
+			return listUnorderedDeepEqual(v1, v2)
+		}
+	}
+	j1, e1 := json.Marshal(v1.Interface())
+	j2, e2 := json.Marshal(v2.Interface())
+	return e1 == nil && e2 == nil && string(j1) == string(j2)
+}
+
+func mapDeepEqual(m1 reflect.Value, m2 reflect.Value) bool {
+	keys1 := m1.MapKeys()
+	for _, k := range keys1 {
+		v2 := m2.MapIndex(k)
+		if !v2.IsValid() { // k not found in m2
 			return false
 		}
+		v1 := m1.MapIndex(k)
 
-		if !reflect.DeepEqual(v, kv) {
+		if v1.IsValid() && !interfaceDeepEqual(v1.Interface(), v2.Interface()) {
 			return false
 		}
 	}
+	return true
+}
 
+func listUnorderedDeepEqual(l1 reflect.Value, l2 reflect.Value) bool {
+	length := l1.Len()
+	if length != l2.Len() {
+		return false
+	}
+	for i := 0; i < length; i++ {
+		v1 := l1.Index(i)
+		if !v1.IsValid() {
+			return false // this shouldn't happen
+		}
+		found := false
+		for j := 0; j < length; j++ {
+			v2 := l2.Index(j)
+			if v2.IsValid() && interfaceDeepEqual(v1.Interface(), v2.Interface()) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
 	return true
 }
 

@@ -1,11 +1,30 @@
 # Table of Contents
 
+ - [0.2.2](#022-20181109)
  - [0.2.1](#021-20181026)
  - [0.1.1](#011-20180926)
  - [0.2.0](#020-20180921)
  - [0.1.0](#010-20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.2.2] - 2018/11/09
+
+#### Fixed
+
+ - Fix plugin config comparison logic to avoid unnecessary PATCH requests
+   to Kong
+   [#196](https://github.com/Kong/kubernetes-ingress-controller/pull/196)
+ - Fix `strip_path` in Routes in Kong. It is now set to false by default
+   as in all other versions of Ingress controller except 0.2.1.
+   [#194](https://github.com/Kong/kubernetes-ingress-controller/pull/194)
+ - Fix path-only based Ingress rule parsing and configuration where only a
+   path based rule for a Kubernetes Service
+   would not setup Routes and Service in Kong.
+   [#190](https://github.com/Kong/kubernetes-ingress-controller/pull/190)
+ - Fix a nil pointer reference when overiding Ingress resource with KongIngress
+   [#188](https://github.com/Kong/kubernetes-ingress-controller/pull/188)
+
 
 ## [0.2.1] - 2018/10/26
 
@@ -140,6 +159,7 @@
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.0...0.2.1
 [0.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.1.1
 [0.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.2.0

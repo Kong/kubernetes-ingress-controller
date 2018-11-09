@@ -1,10 +1,24 @@
 # Table of Contents
 
+ - [0.1.3](#013-20181109)
  - [0.1.2](#012-20181026)
  - [0.1.1](#011-20180926)
  - [0.1.0](#010-20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.1.3] - 2018/11/09
+
+#### Fixed
+
+ - Fix path-only based Ingress rule parsing and configuration where only a
+   path based rule for a Kubernetes Service
+   would not setup Routes and Service in Kong.
+   [#190](https://github.com/Kong/kubernetes-ingress-controller/pull/190)
+ - Fix plugin config comparison logic to avoid unnecessary PATCH requests
+   to Kong
+   [#196](https://github.com/Kong/kubernetes-ingress-controller/pull/196)
+
 
 ## [0.1.2] - 2018/10/26
 
@@ -106,6 +120,7 @@
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v0.0.5...0.1.0

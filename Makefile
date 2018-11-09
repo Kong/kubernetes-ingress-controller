@@ -49,7 +49,7 @@ IMGNAME = kong-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
 
-LDFLAGS = -ldflags "-s -w -X ${PKG}/version.RELEASE=${TAG} -X ${PKG}/version.COMMIT=${COMMIT} -X ${PKG}/version.REPO=${REPO_INFO}"
+LDFLAGS = -ldflags "-s -w -X ${PKG}/version.RELEASE=${TAG} -X ${PKG}/version.COMMIT=${COMMIT} -X ${PKG}/version.REPO=${REPO_INFO}" -gcflags=-trimpath=${PWD} -asmflags=-trimpath=${PWD}
 
 # Set default base image dynamically for each arch
 BASEIMAGE?=gcr.io/google-containers/debian-base-$(ARCH):0.3
@@ -142,16 +142,16 @@ deps:
 
 .PHONY: build
 build: clean
-	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -a -installsuffix cgo \
+	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -installsuffix cgo \
 		${LDFLAGS} \
 		-o ${TEMP_DIR}/rootfs/kong-ingress-controller ${PKG}/cli/ingress-controller
 
 .PHONY: build-cli
 build-cli: clean
 	@mkdir -p bin
-	CGO_ENABLED=0 GOOS=darwin go build -a -installsuffix cgo ${LDFLAGS}  -o bin/kong-cli-darwin  ${PKG}/cli/install
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo ${LDFLAGS}	 -o bin/kong-cli-linux   ${PKG}/cli/install
-	CGO_ENABLED=0 GOOS=windows go build -a -installsuffix cgo ${LDFLAGS} -o bin/kong-cli-windows ${PKG}/cli/install
+	CGO_ENABLED=0 GOOS=darwin go build -installsuffix cgo ${LDFLAGS} -o bin/kong-cli-darwin ${PKG}/cli/ingress-controller
+	#CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo ${LDFLAGS} -o bin/kong-cli-linux ${PKG}/cli/ingress-controller
+	#CGO_ENABLED=0 GOOS=windows go build -installsuffix cgo ${LDFLAGS} -o bin/kong-cli-windows ${PKG}/cli/ingress-controller
 
 
 .PHONY: verify-all

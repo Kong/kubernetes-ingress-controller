@@ -100,7 +100,7 @@ IP address to the `kong-proxy` Service so please be patient.
       kubernetes.io/ingress.class: "nginx"
   spec:
     rules:
-      - host:
+      - host: dummy.kong.example
         http:
           paths:
             - path: "/"

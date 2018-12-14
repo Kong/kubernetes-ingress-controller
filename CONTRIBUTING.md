@@ -130,7 +130,7 @@ $ TAG=DEV REGISTRY=$USER/kong-ingress-controller make docker-push
 ## Deploying
 
 There are several ways to deploy Kong Ingress Controller onto a cluster.
-Please check the [deployment guide](/deploy/README.md)
+Please check the [deployment guide](/docs/deployment/README.md)
 
 ## Testing
 

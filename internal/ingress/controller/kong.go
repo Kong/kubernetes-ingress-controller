@@ -391,7 +391,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							outOfSync = true
 						}
 
-						if kongIngress.Proxy.Retries > 0 &&
+						if kongIngress.Proxy.Retries >= 0 &&
 							(s.Retries == nil || *s.Retries != kongIngress.Proxy.Retries) {
 							s.Retries = kong.Int(kongIngress.Proxy.Retries)
 							outOfSync = true

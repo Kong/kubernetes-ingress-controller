@@ -29,13 +29,13 @@ const (
 )
 
 var (
-	// DefaultClass defines the default class used in the nginx ingres controller
-	DefaultClass = "nginx"
+	// DefaultClass defines the default class used in the Kong ingres controller
+	DefaultClass = "kong"
 
 	// IngressClass sets the runtime ingress class to use
 	// An empty string means accept all ingresses without
-	// annotation and the ones configured with class nginx
-	IngressClass = "nginx"
+	// annotation and the ones configured with class kong
+	IngressClass = "kong"
 )
 
 // IsValid returns true if the given Ingress either doesn't specify

@@ -39,12 +39,12 @@ func TestIsValidClass(t *testing.T) {
 		defClass   string
 		isValid    bool
 	}{
-		{"", "", "nginx", true},
-		{"", "nginx", "nginx", true},
-		{"nginx", "nginx", "nginx", true},
-		{"custom", "custom", "nginx", true},
-		{"", "killer", "nginx", false},
-		{"custom", "nginx", "nginx", false},
+		{"", "", "kong", true},
+		{"", "kong", "kong", true},
+		{"kong", "kong", "kong", true},
+		{"custom", "custom", "kong", true},
+		{"", "killer", "kong", false},
+		{"custom", "kong", "kong", false},
 	}
 
 	ing := &extensions.Ingress{

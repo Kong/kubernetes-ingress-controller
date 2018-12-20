@@ -29,12 +29,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/kong/kubernetes-ingress-controller/test/e2e/framework"
-
-	// tests to run
-	_ "github.com/kong/kubernetes-ingress-controller/test/e2e/annotations"
-	_ "github.com/kong/kubernetes-ingress-controller/test/e2e/defaultbackend"
-	_ "github.com/kong/kubernetes-ingress-controller/test/e2e/settings"
-	_ "github.com/kong/kubernetes-ingress-controller/test/e2e/ssl"
 )
 
 // RunE2ETests checks configuration parameters (specified through flags) and then runs

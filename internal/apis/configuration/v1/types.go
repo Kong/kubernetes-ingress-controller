@@ -55,7 +55,7 @@ type Proxy struct {
 	Protocol       string `json:"protocol"`
 	Path           string `json:"path"`
 	ConnectTimeout int    `json:"connect_timeout"`
-	Retries        int    `json:"retries"`
+	Retries        *int   `json:"retries"`
 	ReadTimeout    int    `json:"read_timeout"`
 	WriteTimeout   int    `json:"write_timeout"`
 }

@@ -60,23 +60,68 @@ plugin: <name-of-plugin> # like key-auth, rate-limiting etc
 
 **Please note:** validation of the configuration fields is left to the user.
 Setting invalid fields will result in errors in the Ingress Controller.
-This behavior is set to improve in future.
+This behavior is set to improve in the future.
 
 The plugins can be associated with Ingress
 or Service object in Kubernetes using `plugins.konghq.com` annotation.
 
 *Example:*
 
+Given the following plugin:
+
 ```yaml
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
   name: http-svc-consumer-ratelimiting
-  namespace: default
+  namespace: default #this should match the namespace of the route or service you're adding it too. 
 config:
   key: value
 plugin: my-plugin
 ```
+
+It can be applied to a service by annotating like:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+  labels:
+     app: myapp-service
+  annotations:
+     plugins.konghq.com: http-svc-consumer-ratelimiting
+
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: myapp-service
+  selector:
+    app: myapp-service
+```
+
+It can be applied to a specific ingress (route or routes) like:
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+   name: myapp-ingress
+   annotations:
+      plugins.konghq.com: http-svc-consumer-ratelimiting
+spec:
+   rules:
+     - host: my.host.com
+       http:
+         paths:
+           - path: /myendpoint
+             backend:
+               serviceName: myapp-service
+               servicePort: 80
+```
+
 
 ## KongIngress
 
@@ -101,7 +146,7 @@ Once a `KongIngress` resource is created, it can be associated with
   On the other hand, this approach requires a `KongIngress`
   resource per Ingress, which becomes hard to maintain with multiple Ingresses.
 
-- Create an `KongIngress` resource and then using the annotation
+- Create a `KongIngress` resource and then using the annotation
   `configuration.konghq.com: <KongIngress-resource-name>`,
   associate it with one or more Ingress resources.  
   This approach allows you to reuse the same `KongIngress`.
@@ -200,7 +245,7 @@ This custom resource can be used to configure a consumer specific
 entities in Kong.
 The resource reference the KongConsumer resource via the `consumerRef` key.
 
-The validation of config object is left up to the user.
+The validation of the config object is left up to the user.
 
 ```yaml
 apiVersion: configuration.konghq.com/v1

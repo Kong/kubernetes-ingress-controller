@@ -19,6 +19,36 @@ spec:
     plural: kongplugins
     shortNames:
     - kp
+  additionalPrinterColumns:
+  - name: Plugin-Type
+    type: string
+    description: Name of the plugin
+    JSONPath: .plugin
+  - name: Age
+    type: date
+    description: Age
+    JSONPath: .metadata.creationTimestamp
+  - name: Disabled
+    type: boolean
+    description: Indicates if the plugin is disabled
+    JSONPath: .disabled
+    priority: 1
+  - name: Config
+    type: string
+    description: Configuration of the plugin
+    JSONPath: .config
+    priority: 1
+  validation:
+    openAPIV3Schema:
+      required:
+      - plugin
+      properties:
+        plugin:
+          type: string
+        disabled:
+          type: boolean
+        config:
+          type: object
 
 ---
 
@@ -35,6 +65,22 @@ spec:
     plural: kongconsumers
     shortNames:
     - kc
+  additionalPrinterColumns:
+  - name: Username
+    type: string
+    description: Username of a Kong Consumer
+    JSONPath: .username
+  - name: Age
+    type: date
+    description: Age
+    JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      properties:
+        username:
+          type: string
+        custom_id:
+          type: string
 
 ---
 
@@ -49,6 +95,29 @@ spec:
   names:
     kind: KongCredential
     plural: kongcredentials
+  additionalPrinterColumns:
+  - name: Credential-type
+    type: string
+    description: Type of credential
+    JSONPath: .type
+  - name: Age
+    type: date
+    description: Age
+    JSONPath: .metadata.creationTimestamp
+  - name: Consumer-Ref
+    type: string
+    description: Owner of the credential
+    JSONPath: .consumerRef
+  validation:
+    openAPIV3Schema:
+      required:
+      - consumerRef
+      - type
+      properties:
+        consumerRef:
+          type: string
+        type:
+          type: string
 
 ---
 
@@ -65,6 +134,123 @@ spec:
     plural: kongingresses
     shortNames:
     - ki
+  validation:
+    openAPIV3Schema:
+      properties:
+        upstream:
+          type: object
+        route:
+          properties:
+            methods:
+              type: array
+              items:
+                type: string
+            regex_priority:
+              type: integer
+            strip_path:
+              type: boolean
+            preserve_host:
+              type: boolean
+            protocols:
+              type: array
+              items:
+                type: string
+                enum:
+                - http
+                - https
+        proxy:
+          type: object
+          properties:
+            protocol:
+              type: string
+              enum:
+              - http
+              - https
+            path:
+              type: string
+              pattern: ^/.*$
+            retries:
+              type: integer
+              minimum: 0
+            connect_timeout:
+              type: integer
+              minimum: 0
+            read_timeout:
+              type: integer
+              minimum: 0
+            write_timeout:
+              type: integer
+              minimum: 0
+        upstream:
+          type: object
+          properties:
+            hash_on:
+              type: string
+            hash_on_cookie:
+              type: string
+            hash_on_cookie_path:
+              type: string
+            hash_on_header:
+              type: string
+            hash_fallback_header:
+              type: string
+            hash_fallback:
+              type: string
+            slots:
+              type: integer
+              minimum: 10
+            healthchecks:
+              type: object
+              properties:
+                active:
+                  type: object
+                  properties:
+                    concurrency:
+                      type: integer
+                      minimum: 1
+                    timeout:
+                      type: integer
+                      minimum: 0
+                    http_path:
+                      type: string
+                      pattern: ^/.*$
+                    healthy: &healthy
+                      type: object
+                      properties:
+                        http_statuses:
+                          type: array
+                          items:
+                            type: integer
+                        interval:
+                          type: integer
+                          minimum: 0
+                        successes:
+                          type: integer
+                          minimum: 0
+                    unhealthy: &unhealthy
+                      type: object
+                      properties:
+                        http_failures:
+                          type: integer
+                          minimum: 0
+                        http_statuses:
+                          type: array
+                          items:
+                            type: integer
+                        interval:
+                          type: integer
+                          minimum: 0
+                        tcp_failures:
+                          type: integer
+                          minimum: 0
+                        timeout:
+                          type: integer
+                          minimum: 0
+                passive:
+                  type: object
+                  properties:
+                    healthy: *healthy
+                    unhealthy: *unhealthy
 
 ---
 
@@ -103,6 +289,10 @@ spec:
       containers:
       - name: postgres
         image: postgres:9.5
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/lib/postgresql/data
+          subPath: pgdata
         env:
         - name: POSTGRES_USER
           value: kong
@@ -113,20 +303,16 @@ spec:
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
         ports:
-          - containerPort: 5432
+        - containerPort: 5432
       # No pre-stop hook is required, a SIGTERM plus some time is all that's
       # needed for graceful shutdown of a node.
       terminationGracePeriodSeconds: 60
-      volumes:
-      - name: datadir
-        persistentVolumeClaim:
-          claimName: datadir
   volumeClaimTemplates:
   - metadata:
       name: datadir
     spec:
       accessModes:
-        - "ReadWriteOnce"
+      - "ReadWriteOnce"
       resources:
         requests:
           storage: 1Gi
@@ -146,62 +332,62 @@ kind: ClusterRole
 metadata:
   name: kong-ingress-clusterrole
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-      - nodes
-      - pods
-      - secrets
-    verbs:
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-    verbs:
-      - get
-  - apiGroups:
-      - ""
-    resources:
-      - services
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "extensions"
-    resources:
-      - ingresses
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-        - events
-    verbs:
-        - create
-        - patch
-  - apiGroups:
-      - "extensions"
-    resources:
-      - ingresses/status
-    verbs:
-      - update
-  - apiGroups:
-      - "configuration.konghq.com"
-    resources:
-      - kongplugins
-      - kongcredentials
-      - kongconsumers
-      - kongingresses
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - "configuration.konghq.com"
+  resources:
+  - kongplugins
+  - kongcredentials
+  - kongconsumers
+  - kongingresses
+  verbs:
+  - get
+  - list
+  - watch
 
 ---
 
@@ -211,40 +397,40 @@ metadata:
   name: kong-ingress-role
   namespace: kong
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-      - pods
-      - secrets
-      - namespaces
-    verbs:
-      - get
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    resourceNames:
-      # Defaults to "<election-id>-<ingress-class>"
-      # Here: "<ingress-controller-leader>-<nginx>"
-      # This has to be adapted if you change either parameter
-      # when launching the nginx-ingress-controller.
-      - "ingress-controller-leader-nginx"
-    verbs:
-      - get
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - create
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-    verbs:
-      - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  # Defaults to "<election-id>-<ingress-class>"
+  # Here: "<ingress-controller-leader>-<nginx>"
+  # This has to be adapted if you change either parameter
+  # when launching the nginx-ingress-controller.
+  - "ingress-controller-leader-nginx"
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
 
 ---
 
@@ -258,9 +444,9 @@ roleRef:
   kind: Role
   name: kong-ingress-role
 subjects:
-  - kind: ServiceAccount
-    name: kong-serviceaccount
-    namespace: kong
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
 
 ---
 
@@ -273,9 +459,9 @@ roleRef:
   kind: ClusterRole
   name: kong-ingress-clusterrole
 subjects:
-  - kind: ServiceAccount
-    name: kong-serviceaccount
-    namespace: kong
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
 
 ---
 
@@ -323,30 +509,40 @@ spec:
     spec:
       serviceAccountName: kong-serviceaccount
       initContainers:
-      - name: kong-migration
+      # hack to verify that the DB is up to date or not
+      # TODO remove this for Kong >= 0.15.0
+      - name: wait-for-db
         image: kong:0.14.1-centos
+        command: [ "/bin/sh", "-c", "until kong start; do echo 'waiting for db'; sleep 1; done; kong stop" ]
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-        command: [ "/bin/sh", "-c", "kong migrations up" ]
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
       containers:
       - name: admin-api
         image: kong:0.14.1-centos
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_ADMIN_ACCESS_LOG
-            value: /dev/stdout
-          - name: KONG_ADMIN_ERROR_LOG
-            value: /dev/stderr
-          - name: KONG_ADMIN_LISTEN
-            value: 0.0.0.0:8001
-          - name: KONG_PROXY_LISTEN
-            value: 'off'
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8001
+        - name: KONG_PROXY_LISTEN
+          value: 'off'
         ports:
         - name: kong-admin
           containerPort: 8001
@@ -389,7 +585,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.2.0
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.2.2
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -447,20 +643,39 @@ spec:
         name: kong
         app: kong
     spec:
+      initContainers:
+      # hack to verify that the DB is up to date or not
+      # TODO remove this for Kong >= 0.15.0
+      - name: wait-for-db
+        image: kong:0.14.1-centos
+        command: [ "/bin/sh", "-c", "until kong start; do echo 'waiting for db'; sleep 1; done; kong stop" ]
+        env:
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
       containers:
       - name: kong-proxy
         image: kong:0.14.1-centos
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_PROXY_ACCESS_LOG
-            value: "/dev/stdout"
-          - name: KONG_PROXY_ERROR_LOG
-            value: "/dev/stderr"
-          - name: KONG_ADMIN_LISTEN
-            value: 'off'
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
         ports:
         - name: proxy
           containerPort: 8000
@@ -470,3 +685,34 @@ spec:
           protocol: TCP
 
 ---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    metadata:
+      name: kong-migrations
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        env:
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
+        command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+      - name: kong-migrations
+        image: kong:0.14.1-centos
+        env:
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
+        command: [ "/bin/sh", "-c", "kong migrations up" ]
+      restartPolicy: OnFailure

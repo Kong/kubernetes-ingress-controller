@@ -17,9 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -30,6 +32,20 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 )
+
+type headers []string
+
+func (h *headers) String() string {
+	return "my string representation"
+}
+
+func (h *headers) Set(value string) error {
+	if len(strings.Split(value, ":")) < 2 {
+		return errors.New("header should be of form key:value")
+	}
+	*h = append(*h, value)
+	return nil
+}
 
 func parseFlags() (bool, *controller.Configuration, error) {
 	var (
@@ -83,7 +99,12 @@ The controller will set the endpoint records on the ingress using this address.`
 
 		kongURL = flags.String("kong-url", "http://localhost:8001",
 			"The address of the Kong Admin URL to connect to in the format of protocol://address:port")
+
+		kongHeaders headers
 	)
+
+	flag.Var(&kongHeaders, "admin-header",
+		"add a header (key:value) to every Admin API call, flag can be used multiple times")
 
 	flag.Set("logtostderr", "true")
 
@@ -118,7 +139,8 @@ The controller will set the endpoint records on the ingress using this address.`
 
 	config := &controller.Configuration{
 		Kong: controller.Kong{
-			URL: *kongURL,
+			URL:     *kongURL,
+			Headers: kongHeaders,
 		},
 		APIServerHost:          *apiserverHost,
 		KubeConfigFile:         *kubeConfigFile,

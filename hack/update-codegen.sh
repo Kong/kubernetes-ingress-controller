@@ -37,12 +37,6 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
   --output-base "$GOPATH/src" \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
 
-${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
-  ${PACKAGE_NAME}/internal/client/plugin ${PACKAGE_NAME}/internal/apis \
-  admin:v1 \
-  --output-base "$GOPATH/src" \
-  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
-
 ${CODEGEN_PKG}/generate-groups.sh "all" \
   ${PACKAGE_NAME}/internal/client/plugin ${PACKAGE_NAME}/internal/apis \
   plugin:v1 \

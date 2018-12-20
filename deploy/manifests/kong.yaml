@@ -14,20 +14,39 @@ spec:
         name: kong
         app: kong
     spec:
+      initContainers:
+      # hack to verify that the DB is up to date or not
+      # TODO remove this for Kong >= 0.15.0
+      - name: wait-for-db
+        image: kong:0.14.1-centos
+        command: [ "/bin/sh", "-c", "until kong start; do echo 'waiting for db'; sleep 1; done; kong stop" ]
+        env:
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
       containers:
       - name: kong-proxy
         image: kong:0.14.1-centos
         env:
-          - name: KONG_PG_PASSWORD
-            value: kong
-          - name: KONG_PG_HOST
-            value: postgres
-          - name: KONG_PROXY_ACCESS_LOG
-            value: "/dev/stdout"
-          - name: KONG_PROXY_ERROR_LOG
-            value: "/dev/stderr"
-          - name: KONG_ADMIN_LISTEN
-            value: 'off'
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
         ports:
         - name: proxy
           containerPort: 8000

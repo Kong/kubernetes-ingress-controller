@@ -70,8 +70,8 @@ spin up.
 You now have set up Kong as your Ingress controller and
 all Ingress resources in your Kubernetes Cluster will be satisfied.
 
-Please refer our [deployment documentation][deployment-doc]
-for a detailed  introduction to Kong Ingress Controller
+Please refer to our [deployment documentation][deployment-doc]
+for a detailed introduction to Kong Ingress Controller
 and Ingress spec.
 
 ## Seeking help
@@ -80,9 +80,13 @@ Please search through the posts on
 [Kong Nation](https://discuss.konghq.com/c/kubernetes) as it's
 likely that another user has run into the same problem.
 If you don't find an answer, please feel free to post a question.
-If you have a feature request, please post in
+For a feature request, please post in
 [Feature Suggestions](https://discuss.konghq.com/c/feature-suggestions)
 category.
+
+You can also talk to us in the
+[#kong](https://kubernetes.slack.com/messages/kong) channel on the
+Kubernetes Slack server.
 
 If you've spotted a bug, please open an issue
 on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
@@ -99,7 +103,7 @@ Following are some helpful link:
 - [**Deployment**][deployment-doc]:
   Deployment guides for Minikube, GKE
   and other types of clusters.
-- [**Custom Resources Definitions (CRDs**][crds]:
+- [**Custom Resources Definitions (CRDs)**][crds]:
   Use custom resources
   to configure Kong in addition to the Ingress resource.
 - [**Annotations**][annotations]:
@@ -149,7 +153,7 @@ Please check the [roadmap][roadmap] document.
 [kong-hub]: https://docs.konghq.com/hub/
 [deployment-doc]: deploy/README.md
 [annotations]: docs/annotations.md
-[crds]: docs/custom-types.md
+[crds]: docs/custom-resources.md
 [roadmap]: docs/roadmap.md
 [design]: docs/design.md
 [faqs]: docs/faq.md

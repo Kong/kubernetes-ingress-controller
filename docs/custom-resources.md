@@ -67,16 +67,61 @@ or Service object in Kubernetes using `plugins.konghq.com` annotation.
 
 *Example:*
 
+Given the following plugin:
+
 ```yaml
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
   name: http-svc-consumer-ratelimiting
-  namespace: default
+  namespace: default #this should match the namespace of the route or service you're adding it too. 
 config:
   key: value
 plugin: my-plugin
 ```
+
+It can be applied to a service by annotating like:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+  labels:
+     app: myapp-service
+  annotations:
+     plugins.konghq.com: http-svc-consumer-ratelimiting
+
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: myapp-service
+  selector:
+    app: myapp-service
+```
+
+It can be applied to a specific ingress (route or routes) like:
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+   name: myapp-ingress
+   annotations:
+      plugins.konghq.com: http-svc-consumer-ratelimiting
+spec:
+   rules:
+     - host: my.host.com
+       http:
+         paths:
+           - path: /myendpoint
+             backend:
+               serviceName: myapp-service
+               servicePort: 80
+```
+
 
 ## KongIngress
 

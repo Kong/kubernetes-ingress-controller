@@ -83,6 +83,9 @@ will result in the plugin being executed at Service in Kong,
 meaning the plugin will be
 executed for every request that is proxied, no matter which Route it came from.
 
+See [KongPlugin](#kongplugin) for examples of how to apply a plugin to service
+or ingress.
+
 ## `configuration.konghq.com`
 
 This annotation can associate a KongIngress custom resource with
@@ -118,3 +121,6 @@ Sometimes, there is a need to apply plugins on the Service entity in Kong,
 meaning execute the plugin for any request being proxied to a service,
 no matter which Route was taken.
 The same annotations can be applied to Kubernetes service itself as well.
+
+
+[kongplugin]: custom-resources.md#KongPlugin

@@ -157,6 +157,7 @@ build-cli: clean
 .PHONY: verify-all
 verify-all:
 	@./hack/verify-all.sh
+	@./hack/verify-codegen.sh
 
 .PHONY: test
 test:

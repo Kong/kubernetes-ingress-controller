@@ -257,6 +257,11 @@ func (in *Route) DeepCopyInto(out *Route) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Protocols != nil {
+		in, out := &in.Protocols, &out.Protocols
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

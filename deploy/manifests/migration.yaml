@@ -19,7 +19,7 @@ spec:
         command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: kong-migrations
-        image: kong:0.14.1-centos
+        image: kong:1.0.0-centos
         env:
         - name: KONG_PG_PASSWORD
           value: kong
@@ -27,5 +27,5 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        command: [ "/bin/sh", "-c", "kong migrations up" ]
+        command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
       restartPolicy: OnFailure

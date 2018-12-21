@@ -509,12 +509,14 @@ spec:
     spec:
       serviceAccountName: kong-serviceaccount
       initContainers:
-      # hack to verify that the DB is up to date or not
-      # TODO remove this for Kong >= 0.15.0
-      - name: wait-for-db
-        image: kong:0.14.1-centos
-        command: [ "/bin/sh", "-c", "until kong start; do echo 'waiting for db'; sleep 1; done; kong stop" ]
+      - name: wait-for-migrations
+        image: kong:1.0.0-centos
+        command: [ "/bin/sh", "-c", "kong migrations list" ]
         env:
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
+        - name: KONG_PROXY_LISTEN
+          value: 'off'
         - name: KONG_PROXY_ACCESS_LOG
           value: "/dev/stdout"
         - name: KONG_ADMIN_ACCESS_LOG
@@ -529,7 +531,7 @@ spec:
           value: kong
       containers:
       - name: admin-api
-        image: kong:0.14.1-centos
+        image: kong:1.0.0-centos
         env:
         - name: KONG_PG_PASSWORD
           value: kong
@@ -646,10 +648,14 @@ spec:
       initContainers:
       # hack to verify that the DB is up to date or not
       # TODO remove this for Kong >= 0.15.0
-      - name: wait-for-db
-        image: kong:0.14.1-centos
-        command: [ "/bin/sh", "-c", "until kong start; do echo 'waiting for db'; sleep 1; done; kong stop" ]
+      - name: wait-for-migrations
+        image: kong:1.0.0-centos
+        command: [ "/bin/sh", "-c", "kong migrations list" ]
         env:
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
+        - name: KONG_PROXY_LISTEN
+          value: 'off'
         - name: KONG_PROXY_ACCESS_LOG
           value: "/dev/stdout"
         - name: KONG_ADMIN_ACCESS_LOG
@@ -664,7 +670,7 @@ spec:
           value: kong
       containers:
       - name: kong-proxy
-        image: kong:0.14.1-centos
+        image: kong:1.0.0-centos
         env:
         - name: KONG_PG_PASSWORD
           value: kong
@@ -706,7 +712,7 @@ spec:
         command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: kong-migrations
-        image: kong:0.14.1-centos
+        image: kong:1.0.0-centos
         env:
         - name: KONG_PG_PASSWORD
           value: kong
@@ -714,5 +720,5 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        command: [ "/bin/sh", "-c", "kong migrations up" ]
+        command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
       restartPolicy: OnFailure

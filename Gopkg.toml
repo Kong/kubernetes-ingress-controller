@@ -81,5 +81,5 @@ name = "gopkg.in/fsnotify.v1"
 source = "https://github.com/fsnotify/fsnotify.git"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/hbagdi/go-kong"
+  version = "0.3.0"

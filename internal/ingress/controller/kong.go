@@ -148,7 +148,7 @@ func (n *NGINXController) syncGlobalPlugins() error {
 	// plugins in Kong
 	currentGlobalPlugins := make(map[string]kong.Plugin)
 	for _, plugin := range plugins {
-		if isEmpty(plugin.RouteID) && isEmpty(plugin.ServiceID) && isEmpty(plugin.ConsumerID) {
+		if plugin.Route == nil && plugin.Service == nil && plugin.Consumer == nil {
 			currentGlobalPlugins[*plugin.Name] = *plugin
 		}
 	}
@@ -235,10 +235,10 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 
 	for _, endpoint := range add {
 		target := &kong.Target{
-			Target:     kong.String(endpoint),
-			UpstreamID: b.ID,
+			Target:   kong.String(endpoint),
+			Upstream: b,
 		}
-		glog.Infof("creating Kong Target %v for upstream %v", endpoint, b.ID)
+		glog.Infof("creating Kong Target %v for upstream %v", endpoint, *b.ID)
 		_, err := client.Targets.Create(nil, &upstream, target)
 		if err != nil {
 			glog.Errorf("Unexpected error creating Kong Upstream: %v", err)
@@ -254,7 +254,7 @@ func syncTargets(upstream string, ingressEndpopint *ingress.Backend, client *kon
 			if *kongTarget.Target != endpoint {
 				continue
 			}
-			glog.Infof("deleting Kong Target %v from upstream %v", kongTarget.ID, kongTarget.UpstreamID)
+			glog.Infof("deleting Kong Target %v from upstream %v", kongTarget.ID, *kongTarget.Upstream.ID)
 			err := client.Targets.Delete(nil, b.ID, kongTarget.ID)
 			if err != nil {
 				glog.Errorf("Unexpected error deleting Kong Upstream: %v", err)
@@ -457,9 +457,9 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 			for pluginName, pluginInk8s := range pluginsInk8s {
 				if pluginInKong, ok := pluginsInKong[pluginName]; !ok {
 					p := kong.Plugin{
-						Name:      kong.String(pluginName),
-						ServiceID: kong.String(*svc.ID),
-						Config:    kong.Configuration(pluginInk8s.Config),
+						Name:    kong.String(pluginName),
+						Service: svc,
+						Config:  kong.Configuration(pluginInk8s.Config),
 					}
 					pluginsToCreate = append(pluginsToCreate, p)
 				} else {
@@ -469,7 +469,7 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 					}
 					// Plugins present in Kong and k8s need should have same configuration
 					if !pluginDeepEqual(pluginInk8s.Config, &pluginInKong) || // plugin conf
-						(pluginInk8s.ConsumerRef != "" && isEmpty(pluginInKong.ConsumerID)) || // consumerID
+						(pluginInk8s.ConsumerRef != "" && ((pluginInKong.Consumer == nil || isEmpty(pluginInKong.Consumer.ID)) || *pluginInKong.Consumer.ID != pluginInk8s.ConsumerRef)) || // consumerID
 						// plugin disabled?
 						(!pluginInk8s.Disabled != enabled) {
 						glog.Infof("plugin %v configuration in kong is outdated. Updating...", pluginInk8s.Name)
@@ -477,9 +477,9 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							Name:   pluginInKong.Name,
 							Config: kong.Configuration(pluginInk8s.Config),
 
-							Enabled:   kong.Bool(!pluginInk8s.Disabled),
-							ServiceID: kong.String(*svc.ID),
-							ID:        kong.String(*pluginInKong.ID),
+							Enabled: kong.Bool(!pluginInk8s.Disabled),
+							Service: svc,
+							ID:      kong.String(*pluginInKong.ID),
 						}
 						if pluginInk8s.ConsumerRef != "" {
 							consumer, err := n.store.GetKongConsumer(pluginInk8s.Namespace, pluginInk8s.ConsumerRef)
@@ -488,7 +488,9 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 									pluginInk8s.ConsumerRef, err)
 								continue
 							}
-							p.ConsumerID = kong.String(fmt.Sprintf("%v", consumer.GetUID()))
+							p.Consumer = &kong.Consumer{
+								ID: kong.String(fmt.Sprintf("%v", consumer.GetUID())),
+							}
 						}
 						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
@@ -848,9 +850,9 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 			for pluginName, pluginInk8s := range pluginsInk8s {
 				if pluginInKong, ok := pluginsInKong[pluginName]; !ok {
 					p := kong.Plugin{
-						Name:    kong.String(pluginName),
-						RouteID: kong.String(*route.ID),
-						Config:  kong.Configuration(pluginInk8s.Config),
+						Name:   kong.String(pluginName),
+						Route:  route,
+						Config: kong.Configuration(pluginInk8s.Config),
 					}
 					pluginsToCreate = append(pluginsToCreate, p)
 				} else {
@@ -861,13 +863,13 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 					if !pluginDeepEqual(pluginInk8s.Config, &pluginInKong) ||
 						(!pluginInk8s.Disabled != *pluginInKong.Enabled) ||
 						(pluginInk8s.ConsumerRef != "" &&
-							(pluginInKong.ConsumerID == nil || *pluginInKong.ConsumerID != pluginInk8s.ConsumerRef)) {
+							((pluginInKong.Consumer == nil || isEmpty(pluginInKong.Consumer.ID)) || *pluginInKong.Consumer.ID != pluginInk8s.ConsumerRef)) {
 						glog.Infof("plugin %v configuration in kong is outdated. Updating...", pluginInk8s.Name)
 						p := kong.Plugin{
 							Name:    pluginInKong.Name,
 							Config:  kong.Configuration(pluginInk8s.Config),
 							Enabled: kong.Bool(!pluginInk8s.Disabled),
-							RouteID: route.ID,
+							Route:   route,
 							ID:      pluginInKong.ID,
 						}
 
@@ -878,7 +880,9 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 									pluginInk8s.ConsumerRef, err)
 								continue
 							}
-							p.ConsumerID = kong.String(fmt.Sprintf("%v", consumer.GetUID()))
+							p.Consumer = &kong.Consumer{
+								ID: kong.String(fmt.Sprintf("%v", consumer.GetUID())),
+							}
 						}
 						pluginsToUpdate = append(pluginsToUpdate, p)
 					}
@@ -1233,8 +1237,8 @@ func deleteServiceUpstream(host string, client *kong.Client) error {
 		}
 
 		for _, target := range kongTargets {
-			if *target.UpstreamID == upstream {
-				err := client.Targets.Delete(nil, target.UpstreamID, target.ID)
+			if *target.Upstream.ID == upstream {
+				err := client.Targets.Delete(nil, target.Upstream.ID, target.ID)
 				if err != nil {
 					return errors.Wrap(err, "removing a Kong target")
 				}

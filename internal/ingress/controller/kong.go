@@ -125,6 +125,7 @@ func (n *NGINXController) syncGlobalPlugins() error {
 		if name == "" {
 			continue
 		}
+
 		if _, ok := targetPluginMap[name]; ok {
 			glog.Error("Multiple KongPlugin definitions found with 'global' annotation for :", name,
 				", the plugin will not be applied")

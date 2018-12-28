@@ -41,6 +41,7 @@ const (
 	rootLocation    = "/"
 )
 
+// Kong Represents a Kong client and connexion information
 type Kong struct {
 	URL string
 	// Headers are injected into every request to Kong's Admin API

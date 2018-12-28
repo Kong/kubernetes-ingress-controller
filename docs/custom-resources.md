@@ -15,6 +15,30 @@ Following CRDs enables users to declaratively configure all aspects of Kong:
 - [**KongCredential**](#kongcredential): These resources map to
   credentials (key-auth, basic-auth, etc) that belong to consumers.
 
+**IMPORTANT NOTE**: Kong Custom Resources are using the `kubernetes.io/ingress.class` annotation which defaults to `kong`. In
+case you have more than one Kong Ingress deployed on your cluster, make sure you label all your ressources with the appropriate
+annotation. For example:
+
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: <object name>
+  namespace: <object namespace>
+  annotations:
+    kubernetes.io/ingress.class: <my-custom-kong-ingress>
+  labels:
+    global: "true" # optional, please note the quotes around true
+                  # configures the plugin Globally in Kong
+consumerRef: <name of an existing consumer> # optional
+                                            # applies the plugin
+                                            # in on specific route and consumer
+disabled: <boolean>  # optionally disable the plugin in Kong
+config:
+    key: value
+plugin: <name-of-plugin> # like key-auth, rate-limiting etc
+```
+
 ## KongPlugin
 
 This resource allows the configuration of
@@ -74,7 +98,7 @@ apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
   name: http-svc-consumer-ratelimiting
-  namespace: default #this should match the namespace of the route or service you're adding it too. 
+  namespace: default #this should match the namespace of the route or service you're adding it too.
 config:
   key: value
 plugin: my-plugin
@@ -121,7 +145,6 @@ spec:
                serviceName: myapp-service
                servicePort: 80
 ```
-
 
 ## KongIngress
 

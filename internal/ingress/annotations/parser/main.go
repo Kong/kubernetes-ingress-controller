@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"strconv"
 
+	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
+	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
+	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/errors"
@@ -80,6 +83,39 @@ func checkAnnotation(name string, ing *extensions.Ingress) error {
 	return nil
 }
 
+func checkAnnotationPlugin(name string, plugin *pluginv1.KongPlugin) error {
+	if plugin == nil || len(plugin.GetAnnotations()) == 0 {
+		return errors.ErrMissingAnnotations
+	}
+	if name == "" {
+		return errors.ErrInvalidAnnotationName
+	}
+
+	return nil
+}
+
+func checkAnnotationCredential(name string, credential *credentialv1.KongCredential) error {
+	if credential == nil || len(credential.GetAnnotations()) == 0 {
+		return errors.ErrMissingAnnotations
+	}
+	if name == "" {
+		return errors.ErrInvalidAnnotationName
+	}
+
+	return nil
+}
+
+func checkAnnotationConsumer(name string, consumer *consumerv1.KongConsumer) error {
+	if consumer == nil || len(consumer.GetAnnotations()) == 0 {
+		return errors.ErrMissingAnnotations
+	}
+	if name == "" {
+		return errors.ErrInvalidAnnotationName
+	}
+
+	return nil
+}
+
 // GetBoolAnnotation extracts a boolean from an Ingress annotation
 func GetBoolAnnotation(name string, ing *extensions.Ingress) (bool, error) {
 	v := GetAnnotationWithPrefix(name)
@@ -98,6 +134,36 @@ func GetStringAnnotation(name string, ing *extensions.Ingress) (string, error) {
 		return "", err
 	}
 	return ingAnnotations(ing.GetAnnotations()).parseString(v)
+}
+
+// GetStringAnnotationPlugin extracts a string from an Ingress annotation
+func GetStringAnnotationPlugin(name string, plugin *pluginv1.KongPlugin) (string, error) {
+	v := GetAnnotationWithPrefix(name)
+	err := checkAnnotationPlugin(v, plugin)
+	if err != nil {
+		return "", err
+	}
+	return ingAnnotations(plugin.GetAnnotations()).parseString(v)
+}
+
+// GetStringAnnotationCredential extracts a string from an Ingress annotation
+func GetStringAnnotationCredential(name string, credential *credentialv1.KongCredential) (string, error) {
+	v := GetAnnotationWithPrefix(name)
+	err := checkAnnotationCredential(v, credential)
+	if err != nil {
+		return "", err
+	}
+	return ingAnnotations(credential.GetAnnotations()).parseString(v)
+}
+
+// GetStringAnnotationConsumer extracts a string from an Ingress annotation
+func GetStringAnnotationConsumer(name string, consumer *consumerv1.KongConsumer) (string, error) {
+	v := GetAnnotationWithPrefix(name)
+	err := checkAnnotationConsumer(v, consumer)
+	if err != nil {
+		return "", err
+	}
+	return ingAnnotations(consumer.GetAnnotations()).parseString(v)
 }
 
 // GetIntAnnotation extracts an int from an Ingress annotation

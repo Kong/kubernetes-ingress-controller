@@ -19,6 +19,9 @@ package parser
 import (
 	"testing"
 
+	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
+	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
+	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	api "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +37,32 @@ func buildIngress() *extensions.Ingress {
 	}
 }
 
+func buildPlugin() *pluginv1.KongPlugin {
+	return &pluginv1.KongPlugin{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:      "foo",
+			Namespace: api.NamespaceDefault,
+		},
+	}
+}
+
+func buildCredential() *credentialv1.KongCredential {
+	return &credentialv1.KongCredential{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:      "foo",
+			Namespace: api.NamespaceDefault,
+		},
+	}
+}
+
+func buildConsumer() *consumerv1.KongConsumer {
+	return &consumerv1.KongConsumer{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:      "foo",
+			Namespace: api.NamespaceDefault,
+		},
+	}
+}
 func TestGetBoolAnnotation(t *testing.T) {
 	ing := buildIngress()
 
@@ -100,6 +129,126 @@ func TestGetStringAnnotation(t *testing.T) {
 		data[GetAnnotationWithPrefix(test.field)] = test.value
 
 		s, err := GetStringAnnotation(test.field, ing)
+		if test.expErr {
+			if err == nil {
+				t.Errorf("%v: expected error but retuned nil", test.name)
+			}
+			continue
+		}
+		if s != test.exp {
+			t.Errorf("%v: expected \"%v\" but \"%v\" was returned", test.name, test.exp, s)
+		}
+
+		delete(data, test.field)
+	}
+}
+
+func TestGetStringAnnotationPlugin(t *testing.T) {
+	res := buildPlugin()
+
+	_, err := GetStringAnnotationPlugin("", nil)
+	if err == nil {
+		t.Errorf("expected error but retuned nil")
+	}
+
+	tests := []struct {
+		name   string
+		field  string
+		value  string
+		exp    string
+		expErr bool
+	}{
+		{"valid - A", "string", "A", "A", false},
+		{"valid - B", "string", "B", "B", false},
+	}
+
+	data := map[string]string{}
+	res.SetAnnotations(data)
+
+	for _, test := range tests {
+		data[GetAnnotationWithPrefix(test.field)] = test.value
+
+		s, err := GetStringAnnotationPlugin(test.field, res)
+		if test.expErr {
+			if err == nil {
+				t.Errorf("%v: expected error but retuned nil", test.name)
+			}
+			continue
+		}
+		if s != test.exp {
+			t.Errorf("%v: expected \"%v\" but \"%v\" was returned", test.name, test.exp, s)
+		}
+
+		delete(data, test.field)
+	}
+}
+
+func TestGetStringAnnotationCredential(t *testing.T) {
+	res := buildCredential()
+
+	_, err := GetStringAnnotationCredential("", nil)
+	if err == nil {
+		t.Errorf("expected error but retuned nil")
+	}
+
+	tests := []struct {
+		name   string
+		field  string
+		value  string
+		exp    string
+		expErr bool
+	}{
+		{"valid - A", "string", "A", "A", false},
+		{"valid - B", "string", "B", "B", false},
+	}
+
+	data := map[string]string{}
+	res.SetAnnotations(data)
+
+	for _, test := range tests {
+		data[GetAnnotationWithPrefix(test.field)] = test.value
+
+		s, err := GetStringAnnotationCredential(test.field, res)
+		if test.expErr {
+			if err == nil {
+				t.Errorf("%v: expected error but retuned nil", test.name)
+			}
+			continue
+		}
+		if s != test.exp {
+			t.Errorf("%v: expected \"%v\" but \"%v\" was returned", test.name, test.exp, s)
+		}
+
+		delete(data, test.field)
+	}
+}
+
+func TestGetStringAnnotationConsumer(t *testing.T) {
+	res := buildConsumer()
+
+	_, err := GetStringAnnotationConsumer("", nil)
+	if err == nil {
+		t.Errorf("expected error but retuned nil")
+	}
+
+	tests := []struct {
+		name   string
+		field  string
+		value  string
+		exp    string
+		expErr bool
+	}{
+		{"valid - A", "string", "A", "A", false},
+		{"valid - B", "string", "B", "B", false},
+	}
+
+	data := map[string]string{}
+	res.SetAnnotations(data)
+
+	for _, test := range tests {
+		data[GetAnnotationWithPrefix(test.field)] = test.value
+
+		s, err := GetStringAnnotationConsumer(test.field, res)
 		if test.expErr {
 			if err == nil {
 				t.Errorf("%v: expected error but retuned nil", test.name)

@@ -65,7 +65,7 @@ func TestIsValidClass(t *testing.T) {
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValid(ing)
+		b := IsValid(&ing.ObjectMeta)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}
@@ -110,7 +110,7 @@ func TestIsValidPlugin(t *testing.T) {
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValidPlugin(plugin)
+		b := IsValid(&plugin.ObjectMeta)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}
@@ -155,7 +155,7 @@ func TestIsValidConsumer(t *testing.T) {
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValidConsumer(consumer)
+		b := IsValid(&consumer.ObjectMeta)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}
@@ -200,7 +200,7 @@ func TestIsValidCredential(t *testing.T) {
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValidCredential(credential)
+		b := IsValid(&credential.ObjectMeta)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}

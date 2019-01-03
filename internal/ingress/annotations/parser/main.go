@@ -20,10 +20,8 @@ import (
 	"fmt"
 	"strconv"
 
-	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
-	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
-	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/errors"
 )
@@ -72,41 +70,8 @@ func (a ingAnnotations) parseInt(name string) (int, error) {
 	return 0, errors.ErrMissingAnnotations
 }
 
-func checkAnnotation(name string, ing *extensions.Ingress) error {
-	if ing == nil || len(ing.GetAnnotations()) == 0 {
-		return errors.ErrMissingAnnotations
-	}
-	if name == "" {
-		return errors.ErrInvalidAnnotationName
-	}
-
-	return nil
-}
-
-func checkAnnotationPlugin(name string, plugin *pluginv1.KongPlugin) error {
-	if plugin == nil || len(plugin.GetAnnotations()) == 0 {
-		return errors.ErrMissingAnnotations
-	}
-	if name == "" {
-		return errors.ErrInvalidAnnotationName
-	}
-
-	return nil
-}
-
-func checkAnnotationCredential(name string, credential *credentialv1.KongCredential) error {
-	if credential == nil || len(credential.GetAnnotations()) == 0 {
-		return errors.ErrMissingAnnotations
-	}
-	if name == "" {
-		return errors.ErrInvalidAnnotationName
-	}
-
-	return nil
-}
-
-func checkAnnotationConsumer(name string, consumer *consumerv1.KongConsumer) error {
-	if consumer == nil || len(consumer.GetAnnotations()) == 0 {
+func checkAnnotation(name string, objectMeta *metav1.ObjectMeta) error {
+	if objectMeta == nil || len(objectMeta.GetAnnotations()) == 0 {
 		return errors.ErrMissingAnnotations
 	}
 	if name == "" {
@@ -119,57 +84,41 @@ func checkAnnotationConsumer(name string, consumer *consumerv1.KongConsumer) err
 // GetBoolAnnotation extracts a boolean from an Ingress annotation
 func GetBoolAnnotation(name string, ing *extensions.Ingress) (bool, error) {
 	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotation(v, ing)
+	if ing == nil {
+		return false, errors.ErrMissingAnnotations
+	}
+
+	err := checkAnnotation(v, &ing.ObjectMeta)
+
 	if err != nil {
 		return false, err
 	}
+
 	return ingAnnotations(ing.GetAnnotations()).parseBool(v)
 }
 
 // GetStringAnnotation extracts a string from an Ingress annotation
-func GetStringAnnotation(name string, ing *extensions.Ingress) (string, error) {
+func GetStringAnnotation(name string, objectMeta *metav1.ObjectMeta) (string, error) {
 	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotation(v, ing)
-	if err != nil {
-		return "", err
+	if objectMeta == nil {
+		return "", errors.ErrMissingAnnotations
 	}
-	return ingAnnotations(ing.GetAnnotations()).parseString(v)
-}
 
-// GetStringAnnotationPlugin extracts a string from an Ingress annotation
-func GetStringAnnotationPlugin(name string, plugin *pluginv1.KongPlugin) (string, error) {
-	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotationPlugin(v, plugin)
+	err := checkAnnotation(v, objectMeta)
 	if err != nil {
 		return "", err
 	}
-	return ingAnnotations(plugin.GetAnnotations()).parseString(v)
-}
-
-// GetStringAnnotationCredential extracts a string from an Ingress annotation
-func GetStringAnnotationCredential(name string, credential *credentialv1.KongCredential) (string, error) {
-	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotationCredential(v, credential)
-	if err != nil {
-		return "", err
-	}
-	return ingAnnotations(credential.GetAnnotations()).parseString(v)
-}
-
-// GetStringAnnotationConsumer extracts a string from an Ingress annotation
-func GetStringAnnotationConsumer(name string, consumer *consumerv1.KongConsumer) (string, error) {
-	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotationConsumer(v, consumer)
-	if err != nil {
-		return "", err
-	}
-	return ingAnnotations(consumer.GetAnnotations()).parseString(v)
+	return ingAnnotations(objectMeta.GetAnnotations()).parseString(v)
 }
 
 // GetIntAnnotation extracts an int from an Ingress annotation
 func GetIntAnnotation(name string, ing *extensions.Ingress) (int, error) {
 	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotation(v, ing)
+	if ing == nil {
+		return 0, errors.ErrMissingAnnotations
+	}
+
+	err := checkAnnotation(v, &ing.ObjectMeta)
 	if err != nil {
 		return 0, err
 	}

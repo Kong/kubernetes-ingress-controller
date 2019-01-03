@@ -216,8 +216,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	ingEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ing := obj.(*extensions.Ingress)
-			if !class.IsValid(ing) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, ing)
+			if !class.IsValid(&ing.ObjectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, &ing.ObjectMeta)
 				glog.Infof("ignoring add for ingress %v based on annotation %v with value %v", ing.Name, class.IngressKey, a)
 				return
 			}
@@ -244,7 +244,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 					return
 				}
 			}
-			if !class.IsValid(ing) {
+			if !class.IsValid(&ing.ObjectMeta) {
 				glog.Infof("ignoring delete for ingress %v based on annotation %v", ing.Name, class.IngressKey)
 				return
 			}
@@ -258,8 +258,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldIng := old.(*extensions.Ingress)
 			curIng := cur.(*extensions.Ingress)
-			validOld := class.IsValid(oldIng)
-			validCur := class.IsValid(curIng)
+			validOld := class.IsValid(&oldIng.ObjectMeta)
+			validCur := class.IsValid(&curIng.ObjectMeta)
 			if !validOld && validCur {
 				glog.Infof("creating ingress %v based on annotation %v", curIng.Name, class.IngressKey)
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
@@ -361,8 +361,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	pluginEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			plugin := obj.(*pluginv1.KongPlugin)
-			if !class.IsValidPlugin(plugin) {
-				a, _ := parser.GetStringAnnotationPlugin(class.IngressKey, plugin)
+			if !class.IsValid(&plugin.ObjectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, &plugin.ObjectMeta)
 				glog.Infof("ignoring add for plugin %v based on annotation %v with value %v", plugin.Name, class.IngressKey, a)
 				return
 			}
@@ -387,7 +387,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 					return
 				}
 			}
-			if !class.IsValidPlugin(plugin) {
+			if !class.IsValid(&plugin.ObjectMeta) {
 				glog.Infof("ignoring delete for plugin %v based on annotation %v", plugin.Name, class.IngressKey)
 				return
 			}
@@ -400,8 +400,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldPlugin := old.(*pluginv1.KongPlugin)
 			curPlugin := cur.(*pluginv1.KongPlugin)
-			validOld := class.IsValidPlugin(oldPlugin)
-			validCur := class.IsValidPlugin(curPlugin)
+			validOld := class.IsValid(&oldPlugin.ObjectMeta)
+			validCur := class.IsValid(&curPlugin.ObjectMeta)
 
 			if !validOld && validCur {
 				glog.Infof("creating plugin %v based on annotation %v", curPlugin.Name, class.IngressKey)
@@ -419,8 +419,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	credentialEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			credential := obj.(*credentialv1.KongCredential)
-			if !class.IsValidCredential(credential) {
-				a, _ := parser.GetStringAnnotationCredential(class.IngressKey, credential)
+			if !class.IsValid(&credential.ObjectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, &credential.ObjectMeta)
 				glog.Infof("ignoring add for credential %v based on annotation %v with value %v", credential.Name, class.IngressKey, a)
 				return
 			}
@@ -445,7 +445,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 					return
 				}
 			}
-			if !class.IsValidCredential(credential) {
+			if !class.IsValid(&credential.ObjectMeta) {
 				glog.Infof("ignoring delete for credential %v based on annotation %v", credential.Name, class.IngressKey)
 				return
 			}
@@ -458,8 +458,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldCredential := old.(*credentialv1.KongCredential)
 			curCredential := cur.(*credentialv1.KongCredential)
-			validOld := class.IsValidCredential(oldCredential)
-			validCur := class.IsValidCredential(curCredential)
+			validOld := class.IsValid(&oldCredential.ObjectMeta)
+			validCur := class.IsValid(&curCredential.ObjectMeta)
 			if !validOld && validCur {
 				glog.Infof("creating credential %v based on annotation %v", curCredential.Name, class.IngressKey)
 			} else if validOld && !validCur {
@@ -476,8 +476,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	consumerEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			consumer := obj.(*consumerv1.KongConsumer)
-			if !class.IsValidConsumer(consumer) {
-				a, _ := parser.GetStringAnnotationConsumer(class.IngressKey, consumer)
+			if !class.IsValid(&consumer.ObjectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, &consumer.ObjectMeta)
 				glog.Infof("ignoring add for consumer %v based on annotation %v with value %v", consumer.Name, class.IngressKey, a)
 				return
 			}
@@ -502,7 +502,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 					return
 				}
 			}
-			if !class.IsValidConsumer(consumer) {
+			if !class.IsValid(&consumer.ObjectMeta) {
 				glog.Infof("ignoring delete for consumer %v based on annotation %v", consumer.Name, class.IngressKey)
 				return
 			}
@@ -515,8 +515,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldConsumer := old.(*consumerv1.KongConsumer)
 			curConsumer := cur.(*consumerv1.KongConsumer)
-			validOld := class.IsValidConsumer(oldConsumer)
-			validCur := class.IsValidConsumer(curConsumer)
+			validOld := class.IsValid(&oldConsumer.ObjectMeta)
+			validCur := class.IsValid(&curConsumer.ObjectMeta)
 			if !validOld && validCur {
 				glog.Infof("creating consumer %v based on annotation %v", curConsumer.Name, class.IngressKey)
 			} else if validOld && !validCur {
@@ -603,7 +603,7 @@ func (s k8sStore) ListIngresses() []*extensions.Ingress {
 	var ingresses []*extensions.Ingress
 	for _, item := range s.listers.Ingress.List() {
 		ing := item.(*extensions.Ingress)
-		if !class.IsValid(ing) {
+		if !class.IsValid(&ing.ObjectMeta) {
 			continue
 		}
 
@@ -664,7 +664,7 @@ func (s k8sStore) ListKongConsumers() []*consumerv1.KongConsumer {
 	var consumers []*consumerv1.KongConsumer
 	for _, item := range s.listers.Kong.Consumer.List() {
 		c, ok := item.(*consumerv1.KongConsumer)
-		if ok && class.IsValidConsumer(c) {
+		if ok && class.IsValid(&c.ObjectMeta) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -676,7 +676,7 @@ func (s k8sStore) ListKongCredentials() []*credentialv1.KongCredential {
 	var credentials []*credentialv1.KongCredential
 	for _, item := range s.listers.Kong.Credential.List() {
 		c, ok := item.(*credentialv1.KongCredential)
-		if ok && class.IsValidCredential(c) {
+		if ok && class.IsValid(&c.ObjectMeta) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -696,7 +696,7 @@ func (s k8sStore) ListGlobalKongPlugins() ([]*pluginv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*pluginv1.KongPlugin)
-			if ok && class.IsValidPlugin(p) {
+			if ok && class.IsValid(&p.ObjectMeta) {
 				plugins = append(plugins, p)
 			}
 		})

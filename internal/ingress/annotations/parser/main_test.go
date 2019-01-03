@@ -128,7 +128,7 @@ func TestGetStringAnnotation(t *testing.T) {
 	for _, test := range tests {
 		data[GetAnnotationWithPrefix(test.field)] = test.value
 
-		s, err := GetStringAnnotation(test.field, ing)
+		s, err := GetStringAnnotation(test.field, &ing.ObjectMeta)
 		if test.expErr {
 			if err == nil {
 				t.Errorf("%v: expected error but retuned nil", test.name)
@@ -146,7 +146,7 @@ func TestGetStringAnnotation(t *testing.T) {
 func TestGetStringAnnotationPlugin(t *testing.T) {
 	res := buildPlugin()
 
-	_, err := GetStringAnnotationPlugin("", nil)
+	_, err := GetStringAnnotation("", nil)
 	if err == nil {
 		t.Errorf("expected error but retuned nil")
 	}
@@ -168,7 +168,7 @@ func TestGetStringAnnotationPlugin(t *testing.T) {
 	for _, test := range tests {
 		data[GetAnnotationWithPrefix(test.field)] = test.value
 
-		s, err := GetStringAnnotationPlugin(test.field, res)
+		s, err := GetStringAnnotation(test.field, &res.ObjectMeta)
 		if test.expErr {
 			if err == nil {
 				t.Errorf("%v: expected error but retuned nil", test.name)
@@ -186,7 +186,7 @@ func TestGetStringAnnotationPlugin(t *testing.T) {
 func TestGetStringAnnotationCredential(t *testing.T) {
 	res := buildCredential()
 
-	_, err := GetStringAnnotationCredential("", nil)
+	_, err := GetStringAnnotation("", nil)
 	if err == nil {
 		t.Errorf("expected error but retuned nil")
 	}
@@ -208,7 +208,7 @@ func TestGetStringAnnotationCredential(t *testing.T) {
 	for _, test := range tests {
 		data[GetAnnotationWithPrefix(test.field)] = test.value
 
-		s, err := GetStringAnnotationCredential(test.field, res)
+		s, err := GetStringAnnotation(test.field, &res.ObjectMeta)
 		if test.expErr {
 			if err == nil {
 				t.Errorf("%v: expected error but retuned nil", test.name)
@@ -226,7 +226,7 @@ func TestGetStringAnnotationCredential(t *testing.T) {
 func TestGetStringAnnotationConsumer(t *testing.T) {
 	res := buildConsumer()
 
-	_, err := GetStringAnnotationConsumer("", nil)
+	_, err := GetStringAnnotation("", nil)
 	if err == nil {
 		t.Errorf("expected error but retuned nil")
 	}
@@ -248,7 +248,7 @@ func TestGetStringAnnotationConsumer(t *testing.T) {
 	for _, test := range tests {
 		data[GetAnnotationWithPrefix(test.field)] = test.value
 
-		s, err := GetStringAnnotationConsumer(test.field, res)
+		s, err := GetStringAnnotation(test.field, &res.ObjectMeta)
 		if test.expErr {
 			if err == nil {
 				t.Errorf("%v: expected error but retuned nil", test.name)

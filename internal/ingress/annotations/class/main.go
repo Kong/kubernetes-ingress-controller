@@ -18,10 +18,7 @@ package class
 
 import (
 	"github.com/golang/glog"
-	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
-	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
-	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -41,82 +38,13 @@ var (
 	IngressClass = "nginx"
 )
 
-// IsValid returns true if the given Ingress either doesn't specify
-// the ingress.class annotation, or it's set to the configured in the
-// ingress controller.
-func IsValid(ing *extensions.Ingress) bool {
-	ingress, ok := ing.GetAnnotations()[IngressKey]
-	if !ok {
-		glog.V(3).Infof("annotation %v is not present in object %v/%v", IngressKey, ing.Namespace, ing.Name)
-	}
-
-	// we have 2 valid combinations
-	// 1 - ingress with default class | blank annotation on ingress
-	// 2 - ingress with specific class | same annotation on ingress
-	//
-	// and 2 invalid combinations
-	// 3 - ingress with default class | fixed annotation on ingress
-	// 4 - ingress with specific class | different annotation on ingress
-	if ingress == "" && IngressClass == DefaultClass {
-		return true
-	}
-
-	return ingress == IngressClass
-}
-
-// IsValid returns true if the given KongPlugin either doesn't specify
-// the ingress.class annotation, or it's set to the configured in the
-// ingress controller.
-func IsValidPlugin(plugin *pluginv1.KongPlugin) bool {
-	ingress, ok := plugin.GetAnnotations()[IngressKey]
-	if !ok {
-		glog.V(3).Infof("annotation %v is not present in plugin %v/%v", IngressKey, plugin.Namespace, plugin.Name)
-	}
-
-	// we have 2 valid combinations
-	// 1 - ingress with default class | blank annotation on ingress
-	// 2 - ingress with specific class | same annotation on ingress
-	//
-	// and 2 invalid combinations
-	// 3 - ingress with default class | fixed annotation on ingress
-	// 4 - ingress with specific class | different annotation on ingress
-	if ingress == "" && IngressClass == DefaultClass {
-		return true
-	}
-
-	return ingress == IngressClass
-}
-
 // IsValid returns true if the given KongConsumer either doesn't specify
 // the ingress.class annotation, or it's set to the configured in the
 // ingress controller.
-func IsValidConsumer(consumer *consumerv1.KongConsumer) bool {
-	ingress, ok := consumer.GetAnnotations()[IngressKey]
+func IsValid(objectMeta *metav1.ObjectMeta) bool {
+	ingress, ok := objectMeta.GetAnnotations()[IngressKey]
 	if !ok {
-		glog.V(3).Infof("annotation %v is not present in consumer %v/%v", IngressKey, consumer.Namespace, consumer.Name)
-	}
-
-	// we have 2 valid combinations
-	// 1 - ingress with default class | blank annotation on ingress
-	// 2 - ingress with specific class | same annotation on ingress
-	//
-	// and 2 invalid combinations
-	// 3 - ingress with default class | fixed annotation on ingress
-	// 4 - ingress with specific class | different annotation on ingress
-	if ingress == "" && IngressClass == DefaultClass {
-		return true
-	}
-
-	return ingress == IngressClass
-}
-
-// IsValid returns true if the given KongCredential either doesn't specify
-// the ingress.class annotation, or it's set to the configured in the
-// ingress controller.
-func IsValidCredential(credential *credentialv1.KongCredential) bool {
-	ingress, ok := credential.GetAnnotations()[IngressKey]
-	if !ok {
-		glog.V(3).Infof("annotation %v is not present in credential %v/%v", IngressKey, credential.Namespace, credential.Name)
+		glog.V(3).Infof("annotation %v is not present in custom resources %v/%v", IngressKey, objectMeta.Namespace, objectMeta.Name)
 	}
 
 	// we have 2 valid combinations

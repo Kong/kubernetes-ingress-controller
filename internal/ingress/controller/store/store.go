@@ -358,12 +358,9 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	store.informers.Secret.AddEventHandler(secrEventHandler)
 	store.informers.Service.AddEventHandler(serviceEventHandler)
 
-	pluginEventHandler := cache.ResourceEventHandlerFuncs{
+	annotatedCrdEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			plugin := obj.(*pluginv1.KongPlugin)
-			if !class.IsValid(&plugin.ObjectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, &plugin.ObjectMeta)
-				glog.Infof("ignoring add for plugin %v based on annotation %v with value %v", plugin.Name, class.IngressKey, a)
+			if ok := class.CanAddResource(obj); !ok {
 				return
 			}
 
@@ -373,22 +370,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			plugin, ok := obj.(*pluginv1.KongPlugin)
-			if !ok {
-				// If we reached here it means the ingress was deleted but its final state is unrecorded.
-				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					glog.Errorf("couldn't get object from tombstone %#v", obj)
-					return
-				}
-				plugin, ok = tombstone.Obj.(*pluginv1.KongPlugin)
-				if !ok {
-					glog.Errorf("Tombstone contained object that is not a KongPlugin: %#v", obj)
-					return
-				}
-			}
-			if !class.IsValid(&plugin.ObjectMeta) {
-				glog.Infof("ignoring delete for plugin %v based on annotation %v", plugin.Name, class.IngressKey)
+			if ok := class.CanDeleteResource(obj); !ok {
 				return
 			}
 
@@ -398,129 +380,13 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
-			oldPlugin := old.(*pluginv1.KongPlugin)
-			curPlugin := cur.(*pluginv1.KongPlugin)
-			validOld := class.IsValid(&oldPlugin.ObjectMeta)
-			validCur := class.IsValid(&curPlugin.ObjectMeta)
+			validOld, _, _ := class.CanUpdateResource(old)
+			validCur, curType, curName := class.CanUpdateResource(cur)
 
 			if !validOld && validCur {
-				glog.Infof("creating plugin %v based on annotation %v", curPlugin.Name, class.IngressKey)
+				glog.Infof("creating %v %v based on annotation %v", curType, curName, class.IngressKey)
 			} else if validOld && !validCur {
-				glog.Infof("removing plugin %v based on annotation %v", curPlugin.Name, class.IngressKey)
-			}
-
-			updateCh.In() <- Event{
-				Type: ConfigurationEvent,
-				Obj:  cur,
-			}
-		},
-	}
-
-	credentialEventHandler := cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			credential := obj.(*credentialv1.KongCredential)
-			if !class.IsValid(&credential.ObjectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, &credential.ObjectMeta)
-				glog.Infof("ignoring add for credential %v based on annotation %v with value %v", credential.Name, class.IngressKey, a)
-				return
-			}
-
-			updateCh.In() <- Event{
-				Type: ConfigurationEvent,
-				Obj:  obj,
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			credential, ok := obj.(*credentialv1.KongCredential)
-			if !ok {
-				// If we reached here it means the ingress was deleted but its final state is unrecorded.
-				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					glog.Errorf("couldn't get object from tombstone %#v", obj)
-					return
-				}
-				credential, ok = tombstone.Obj.(*credentialv1.KongCredential)
-				if !ok {
-					glog.Errorf("Tombstone contained object that is not a KongCredential: %#v", obj)
-					return
-				}
-			}
-			if !class.IsValid(&credential.ObjectMeta) {
-				glog.Infof("ignoring delete for credential %v based on annotation %v", credential.Name, class.IngressKey)
-				return
-			}
-
-			updateCh.In() <- Event{
-				Type: ConfigurationEvent,
-				Obj:  obj,
-			}
-		},
-		UpdateFunc: func(old, cur interface{}) {
-			oldCredential := old.(*credentialv1.KongCredential)
-			curCredential := cur.(*credentialv1.KongCredential)
-			validOld := class.IsValid(&oldCredential.ObjectMeta)
-			validCur := class.IsValid(&curCredential.ObjectMeta)
-			if !validOld && validCur {
-				glog.Infof("creating credential %v based on annotation %v", curCredential.Name, class.IngressKey)
-			} else if validOld && !validCur {
-				glog.Infof("removing credential %v based on annotation %v", curCredential.Name, class.IngressKey)
-			}
-
-			updateCh.In() <- Event{
-				Type: ConfigurationEvent,
-				Obj:  cur,
-			}
-		},
-	}
-
-	consumerEventHandler := cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			consumer := obj.(*consumerv1.KongConsumer)
-			if !class.IsValid(&consumer.ObjectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, &consumer.ObjectMeta)
-				glog.Infof("ignoring add for consumer %v based on annotation %v with value %v", consumer.Name, class.IngressKey, a)
-				return
-			}
-
-			updateCh.In() <- Event{
-				Type: ConfigurationEvent,
-				Obj:  obj,
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			consumer, ok := obj.(*consumerv1.KongConsumer)
-			if !ok {
-				// If we reached here it means the ingress was deleted but its final state is unrecorded.
-				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					glog.Errorf("couldn't get object from tombstone %#v", obj)
-					return
-				}
-				consumer, ok = tombstone.Obj.(*consumerv1.KongConsumer)
-				if !ok {
-					glog.Errorf("Tombstone contained object that is not a KongConsumer: %#v", obj)
-					return
-				}
-			}
-			if !class.IsValid(&consumer.ObjectMeta) {
-				glog.Infof("ignoring delete for consumer %v based on annotation %v", consumer.Name, class.IngressKey)
-				return
-			}
-
-			updateCh.In() <- Event{
-				Type: ConfigurationEvent,
-				Obj:  obj,
-			}
-		},
-		UpdateFunc: func(old, cur interface{}) {
-			oldConsumer := old.(*consumerv1.KongConsumer)
-			curConsumer := cur.(*consumerv1.KongConsumer)
-			validOld := class.IsValid(&oldConsumer.ObjectMeta)
-			validCur := class.IsValid(&curConsumer.ObjectMeta)
-			if !validOld && validCur {
-				glog.Infof("creating consumer %v based on annotation %v", curConsumer.Name, class.IngressKey)
-			} else if validOld && !validCur {
-				glog.Infof("removing consumer %v based on annotation %v", curConsumer.Name, class.IngressKey)
+				glog.Infof("removing %v %v based on annotation %v", curType, curName, class.IngressKey)
 			}
 
 			updateCh.In() <- Event{
@@ -556,21 +422,21 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 
 	store.informers.Kong.Plugin = pluginFactory.Configuration().V1().KongPlugins().Informer()
 	store.listers.Kong.Plugin = store.informers.Kong.Plugin.GetStore()
-	store.informers.Kong.Plugin.AddEventHandler(pluginEventHandler)
+	store.informers.Kong.Plugin.AddEventHandler(annotatedCrdEventHandler)
 
 	consumerClient, _ := consumerclientv1.NewForConfig(clientConf)
 	consumerFactory := consumerinformer.NewFilteredSharedInformerFactory(consumerClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Consumer = consumerFactory.Configuration().V1().KongConsumers().Informer()
 	store.listers.Kong.Consumer = store.informers.Kong.Consumer.GetStore()
-	store.informers.Kong.Consumer.AddEventHandler(consumerEventHandler)
+	store.informers.Kong.Consumer.AddEventHandler(annotatedCrdEventHandler)
 
 	credClient, _ := credentialclientv1.NewForConfig(clientConf)
 	credentialFactory := credentialinformer.NewFilteredSharedInformerFactory(credClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Credential = credentialFactory.Configuration().V1().KongCredentials().Informer()
 	store.listers.Kong.Credential = store.informers.Kong.Credential.GetStore()
-	store.informers.Kong.Credential.AddEventHandler(credentialEventHandler)
+	store.informers.Kong.Credential.AddEventHandler(annotatedCrdEventHandler)
 
 	confClient, _ := configurationclientv1.NewForConfig(clientConf)
 	configFactory := configurationinformer.NewFilteredSharedInformerFactory(confClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})

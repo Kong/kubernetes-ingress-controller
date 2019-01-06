@@ -15,30 +15,6 @@ Following CRDs enables users to declaratively configure all aspects of Kong:
 - [**KongCredential**](#kongcredential): These resources map to
   credentials (key-auth, basic-auth, etc) that belong to consumers.
 
-**IMPORTANT NOTE**: Kong Custom Resources are using the `kubernetes.io/ingress.class` annotation which defaults to `kong`. In
-case you have more than one Kong Ingress deployed on your cluster, make sure you label all your ressources with the appropriate
-annotation. For example:
-
-```yaml
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
-metadata:
-  name: <object name>
-  namespace: <object namespace>
-  annotations:
-    kubernetes.io/ingress.class: <my-custom-kong-ingress>
-  labels:
-    global: "true" # optional, please note the quotes around true
-                  # configures the plugin Globally in Kong
-consumerRef: <name of an existing consumer> # optional
-                                            # applies the plugin
-                                            # in on specific route and consumer
-disabled: <boolean>  # optionally disable the plugin in Kong
-config:
-    key: value
-plugin: <name-of-plugin> # like key-auth, rate-limiting etc
-```
-
 ## KongPlugin
 
 This resource allows the configuration of
@@ -289,3 +265,36 @@ config:
 [kong-upstream]: https://getkong.org/docs/0.14.x/admin-api/#upstream-objects
 [kong-service]: https://getkong.org/docs/0.14.x/admin-api/#service-object
 [kong-route]: https://getkong.org/docs/0.14.x/admin-api/#route-object
+
+## Using mutilple ingresses on the same cluster
+
+Kong Custom Resources are using the `kubernetes.io/ingress.class`
+annotation which defaults to `nginx`. In case you have more than one Ingress deployed
+on your cluster, make sure you label all your resources with the appropriate
+annotation. For example:
+
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: <object name>
+  namespace: <object namespace>
+  annotations:
+    kubernetes.io/ingress.class: <my-custom-kong-ingress>
+  labels:
+    global: "true" # optional, please note the quotes around true
+                  # configures the plugin Globally in Kong
+consumerRef: <name of an existing consumer> # optional
+                                            # applies the plugin
+                                            # in on specific route and consumer
+disabled: <boolean>  # optionally disable the plugin in Kong
+config:
+    key: value
+plugin: <name-of-plugin> # like key-auth, rate-limiting etc
+```
+
+Here are the list of custom resources that supports the annotation:
+
+- KongPlugin
+- KongCredential
+- KongConsumer

@@ -72,7 +72,7 @@ func TestIsValidClass(t *testing.T) {
 	}
 }
 
-func TestIsValidPlugin(t *testing.T) {
+func TestCandAddResource(t *testing.T) {
 	dc := DefaultClass
 	ic := IngressClass
 	// restore original values after the tests
@@ -95,7 +95,7 @@ func TestIsValidPlugin(t *testing.T) {
 		{"custom", "nginx", "nginx", false},
 	}
 
-	plugin := &pluginv1.KongPlugin{
+	crd := &pluginv1.KongPlugin{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      "foo",
 			Namespace: api.NamespaceDefault,
@@ -103,21 +103,21 @@ func TestIsValidPlugin(t *testing.T) {
 	}
 
 	data := map[string]string{}
-	plugin.SetAnnotations(data)
+	crd.SetAnnotations(data)
 	for _, test := range tests {
-		plugin.Annotations[IngressKey] = test.ingress
+		crd.Annotations[IngressKey] = test.ingress
 
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValid(&plugin.ObjectMeta)
+		b := CanAddResource(crd)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}
 	}
 }
 
-func TestIsValidConsumer(t *testing.T) {
+func TestCandDeleteResource(t *testing.T) {
 	dc := DefaultClass
 	ic := IngressClass
 	// restore original values after the tests
@@ -140,7 +140,7 @@ func TestIsValidConsumer(t *testing.T) {
 		{"custom", "nginx", "nginx", false},
 	}
 
-	consumer := &consumerv1.KongConsumer{
+	crd := &credentialv1.KongCredential{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      "foo",
 			Namespace: api.NamespaceDefault,
@@ -148,21 +148,21 @@ func TestIsValidConsumer(t *testing.T) {
 	}
 
 	data := map[string]string{}
-	consumer.SetAnnotations(data)
+	crd.SetAnnotations(data)
 	for _, test := range tests {
-		consumer.Annotations[IngressKey] = test.ingress
+		crd.Annotations[IngressKey] = test.ingress
 
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValid(&consumer.ObjectMeta)
+		b := CanDeleteResource(crd)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}
 	}
 }
 
-func TestIsValidCredential(t *testing.T) {
+func TestCandUpdateResource(t *testing.T) {
 	dc := DefaultClass
 	ic := IngressClass
 	// restore original values after the tests
@@ -185,7 +185,7 @@ func TestIsValidCredential(t *testing.T) {
 		{"custom", "nginx", "nginx", false},
 	}
 
-	credential := &credentialv1.KongCredential{
+	crd := &consumerv1.KongConsumer{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      "foo",
 			Namespace: api.NamespaceDefault,
@@ -193,14 +193,14 @@ func TestIsValidCredential(t *testing.T) {
 	}
 
 	data := map[string]string{}
-	credential.SetAnnotations(data)
+	crd.SetAnnotations(data)
 	for _, test := range tests {
-		credential.Annotations[IngressKey] = test.ingress
+		crd.Annotations[IngressKey] = test.ingress
 
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValid(&credential.ObjectMeta)
+		b, _, _ := CanUpdateResource(crd)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}

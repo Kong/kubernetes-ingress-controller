@@ -18,10 +18,6 @@ package class
 
 import (
 	"github.com/golang/glog"
-	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
-	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
-	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/parser"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,95 +59,4 @@ func IsValid(objectMeta *metav1.ObjectMeta) bool {
 	}
 
 	return ingress == IngressClass
-}
-
-// CanAddResource checks if a custom resources can be added to the ingress
-func CanAddResource(obj interface{}) bool {
-	var objectMeta *metav1.ObjectMeta
-	resourceType := ""
-	resourceName := ""
-
-	if p, ok := obj.(*pluginv1.KongPlugin); ok {
-		resourceType = "plugin"
-		resourceName = p.Name
-		objectMeta = &p.ObjectMeta
-	} else if c, ok := obj.(*consumerv1.KongConsumer); ok {
-		resourceType = "consumer"
-		resourceName = c.Name
-		objectMeta = &c.ObjectMeta
-	} else if c, ok := obj.(*credentialv1.KongCredential); ok {
-		resourceType = "credential"
-		resourceName = c.Name
-		objectMeta = &c.ObjectMeta
-	} else {
-		return false
-	}
-
-	if !IsValid(objectMeta) {
-		a, _ := parser.GetStringAnnotation(IngressKey, objectMeta)
-		glog.Infof("ignoring add for %v %v based on annotation %v with value %v", resourceType, resourceName, IngressKey, a)
-		return false
-	}
-
-	return true
-}
-
-// CanDeleteResource checks if a custom resources can be deleted from the ingress
-func CanDeleteResource(obj interface{}) bool {
-	var objectMeta *metav1.ObjectMeta
-	resourceType := ""
-	resourceName := ""
-
-	if p, ok := obj.(*pluginv1.KongPlugin); ok {
-		resourceType = "plugin"
-		resourceName = p.Name
-		objectMeta = &p.ObjectMeta
-	} else if c, ok := obj.(*consumerv1.KongConsumer); ok {
-		resourceType = "consumer"
-		resourceName = c.Name
-		objectMeta = &c.ObjectMeta
-	} else if c, ok := obj.(*credentialv1.KongCredential); ok {
-		resourceType = "credential"
-		resourceName = c.Name
-		objectMeta = &c.ObjectMeta
-	} else {
-		return false
-	}
-
-	if !IsValid(objectMeta) {
-		a, _ := parser.GetStringAnnotation(IngressKey, objectMeta)
-		glog.Infof("ignoring delete for %v %v based on annotation %v with value %v", resourceType, resourceName, IngressKey, a)
-		return false
-	}
-
-	return true
-}
-
-// CanUpdateResource checks if a custom resources can be updated from the ingress
-func CanUpdateResource(obj interface{}) (bool, string, string) {
-	var objectMeta *metav1.ObjectMeta
-	resourceType := ""
-	resourceName := ""
-
-	if p, ok := obj.(*pluginv1.KongPlugin); ok {
-		resourceType = "plugin"
-		resourceName = p.Name
-		objectMeta = &p.ObjectMeta
-	} else if c, ok := obj.(*consumerv1.KongConsumer); ok {
-		resourceType = "consumer"
-		resourceName = c.Name
-		objectMeta = &c.ObjectMeta
-	} else if c, ok := obj.(*credentialv1.KongCredential); ok {
-		resourceType = "credential"
-		resourceName = c.Name
-		objectMeta = &c.ObjectMeta
-	} else {
-		return false, "", ""
-	}
-
-	if !IsValid(objectMeta) {
-		return false, resourceType, resourceName
-	}
-
-	return true, resourceType, resourceName
 }

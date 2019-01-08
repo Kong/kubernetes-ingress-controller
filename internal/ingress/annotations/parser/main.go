@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	extensions "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/errors"
 )
@@ -69,8 +70,8 @@ func (a ingAnnotations) parseInt(name string) (int, error) {
 	return 0, errors.ErrMissingAnnotations
 }
 
-func checkAnnotation(name string, ing *extensions.Ingress) error {
-	if ing == nil || len(ing.GetAnnotations()) == 0 {
+func checkAnnotation(name string, objectMeta *metav1.ObjectMeta) error {
+	if objectMeta == nil || len(objectMeta.GetAnnotations()) == 0 {
 		return errors.ErrMissingAnnotations
 	}
 	if name == "" {
@@ -83,27 +84,41 @@ func checkAnnotation(name string, ing *extensions.Ingress) error {
 // GetBoolAnnotation extracts a boolean from an Ingress annotation
 func GetBoolAnnotation(name string, ing *extensions.Ingress) (bool, error) {
 	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotation(v, ing)
+	if ing == nil {
+		return false, errors.ErrMissingAnnotations
+	}
+
+	err := checkAnnotation(v, &ing.ObjectMeta)
+
 	if err != nil {
 		return false, err
 	}
+
 	return ingAnnotations(ing.GetAnnotations()).parseBool(v)
 }
 
-// GetStringAnnotation extracts a string from an Ingress annotation
-func GetStringAnnotation(name string, ing *extensions.Ingress) (string, error) {
+// GetStringAnnotation extracts a string from an ObjectMeta.
+func GetStringAnnotation(name string, objectMeta *metav1.ObjectMeta) (string, error) {
 	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotation(v, ing)
+	if objectMeta == nil {
+		return "", errors.ErrMissingAnnotations
+	}
+
+	err := checkAnnotation(v, objectMeta)
 	if err != nil {
 		return "", err
 	}
-	return ingAnnotations(ing.GetAnnotations()).parseString(v)
+	return ingAnnotations(objectMeta.GetAnnotations()).parseString(v)
 }
 
 // GetIntAnnotation extracts an int from an Ingress annotation
 func GetIntAnnotation(name string, ing *extensions.Ingress) (int, error) {
 	v := GetAnnotationWithPrefix(name)
-	err := checkAnnotation(v, ing)
+	if ing == nil {
+		return 0, errors.ErrMissingAnnotations
+	}
+
+	err := checkAnnotation(v, &ing.ObjectMeta)
 	if err != nil {
 		return 0, err
 	}

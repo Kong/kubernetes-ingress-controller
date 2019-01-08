@@ -17,8 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/pprof"
@@ -114,10 +117,35 @@ func main() {
 	conf.KubeClient = kubeClient
 	conf.KubeConf = kubeCfg
 
+	defaultTransport := http.DefaultTransport.(*http.Transport)
+
+	var tlsConfig tls.Config
+
+	if conf.Kong.TLSSkipVerify {
+		tlsConfig.InsecureSkipVerify = true
+	}
+
+	if conf.Kong.TLSServerName != "" {
+		tlsConfig.ServerName = conf.Kong.TLSServerName
+	}
+
+	if conf.Kong.CACert != "" {
+		certPool := x509.NewCertPool()
+		cert, err := ioutil.ReadFile(conf.Kong.CACert)
+		if err != nil {
+			glog.Fatalf("failed to read CACert: %s", conf.Kong.CACert)
+		}
+		ok := certPool.AppendCertsFromPEM([]byte(cert))
+		if !ok {
+			glog.Fatalf("failed to load CACert: %s", conf.Kong.CACert)
+		}
+		tlsConfig.RootCAs = certPool
+	}
+	defaultTransport.TLSClientConfig = &tlsConfig
 	c := http.DefaultClient
 	c.Transport = &HeaderRoundTripper{
 		headers: conf.Kong.Headers,
-		rt:      http.DefaultTransport,
+		rt:      defaultTransport,
 	}
 
 	kongClient, err := kong.NewClient(kong.String(conf.Kong.URL), c)

@@ -216,8 +216,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	ingEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ing := obj.(*extensions.Ingress)
-			if !class.IsValid(ing) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, ing)
+			if !class.IsValid(&ing.ObjectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, &ing.ObjectMeta)
 				glog.Infof("ignoring add for ingress %v based on annotation %v with value %v", ing.Name, class.IngressKey, a)
 				return
 			}
@@ -244,7 +244,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 					return
 				}
 			}
-			if !class.IsValid(ing) {
+			if !class.IsValid(&ing.ObjectMeta) {
 				glog.Infof("ignoring delete for ingress %v based on annotation %v", ing.Name, class.IngressKey)
 				return
 			}
@@ -258,8 +258,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldIng := old.(*extensions.Ingress)
 			curIng := cur.(*extensions.Ingress)
-			validOld := class.IsValid(oldIng)
-			validCur := class.IsValid(curIng)
+			validOld := class.IsValid(&oldIng.ObjectMeta)
+			validCur := class.IsValid(&curIng.ObjectMeta)
 			if !validOld && validCur {
 				glog.Infof("creating ingress %v based on annotation %v", curIng.Name, class.IngressKey)
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
@@ -358,6 +358,207 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	store.informers.Secret.AddEventHandler(secrEventHandler)
 	store.informers.Service.AddEventHandler(serviceEventHandler)
 
+	pluginEventHandler := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			res, ok := obj.(*pluginv1.KongPlugin)
+			if !ok {
+				return
+			}
+			objectMeta := &res.ObjectMeta
+			if !class.IsValid(objectMeta) {
+				a, err := parser.GetStringAnnotation(class.IngressKey, objectMeta)
+				if err != nil {
+					glog.Infof("%v", err)
+				}
+				glog.Infof("ignoring add event for plugin %v based"+
+					" on annotation %v with value %v", res.Name,
+					class.IngressKey, a)
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  obj,
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			res, ok := obj.(*pluginv1.KongPlugin)
+			if !ok {
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					glog.Errorf("couldn't get object from tombstone %#v", obj)
+					return
+				}
+				res, ok = tombstone.Obj.(*pluginv1.KongPlugin)
+				if !ok {
+					glog.Errorf("Tombstone contained an"+
+						" object that is not a plugin: %#v", obj)
+					return
+				}
+			}
+			objectMeta := &res.ObjectMeta
+			if !class.IsValid(objectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
+				glog.Infof("ignoring delete event for plugin %v based"+
+					" on annotation %v with value %v",
+					res.Name, class.IngressKey, a)
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  obj,
+			}
+		},
+		UpdateFunc: func(old, cur interface{}) {
+			oldRes := old.(*pluginv1.KongPlugin)
+			curRes := cur.(*pluginv1.KongPlugin)
+			validOld := class.IsValid(&oldRes.ObjectMeta)
+			validCur := class.IsValid(&curRes.ObjectMeta)
+
+			if !validCur && !validOld {
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  cur,
+			}
+		},
+	}
+
+	consumerEventHandler := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			res, ok := obj.(*consumerv1.KongConsumer)
+			if !ok {
+				return
+			}
+			objectMeta := &res.ObjectMeta
+			if !class.IsValid(objectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
+				glog.Infof("ignoring add event for consumer %v based"+
+					" on annotation %v with value %v",
+					res.Name, class.IngressKey, a)
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  obj,
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			res, ok := obj.(*consumerv1.KongConsumer)
+			if !ok {
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					glog.Errorf("couldn't get object from tombstone %#v", obj)
+					return
+				}
+				res, ok = tombstone.Obj.(*consumerv1.KongConsumer)
+				if !ok {
+					glog.Errorf("Tombstone contained"+
+						" object that is not a consumer: %#v", obj)
+					return
+				}
+			}
+			objectMeta := &res.ObjectMeta
+			if !class.IsValid(objectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
+				glog.Infof("ignoring delete event for consumer"+
+					" %v based on annotation %v with value %v",
+					res.Name, class.IngressKey, a)
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  obj,
+			}
+		},
+		UpdateFunc: func(old, cur interface{}) {
+			oldRes := old.(*consumerv1.KongConsumer)
+			curRes := cur.(*consumerv1.KongConsumer)
+			validOld := class.IsValid(&oldRes.ObjectMeta)
+			validCur := class.IsValid(&curRes.ObjectMeta)
+
+			if !validCur && !validOld {
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  cur,
+			}
+		},
+	}
+
+	credentialEventHandler := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			res, ok := obj.(*credentialv1.KongCredential)
+			if !ok {
+				return
+			}
+			objectMeta := &res.ObjectMeta
+			if !class.IsValid(objectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
+				glog.Infof("ignoring add event for credential %v"+
+					" based on annotation %v with value %v",
+					res.Name, class.IngressKey, a)
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  obj,
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			res, ok := obj.(*credentialv1.KongCredential)
+			if !ok {
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					glog.Errorf("couldn't get object from tombstone %#v", obj)
+					return
+				}
+				res, ok = tombstone.Obj.(*credentialv1.KongCredential)
+				if !ok {
+					glog.Errorf("Tombstone contained"+
+						" object that is not a credential: %#v", obj)
+					return
+				}
+			}
+			objectMeta := &res.ObjectMeta
+			if !class.IsValid(objectMeta) {
+				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
+				glog.Infof("ignoring delete event for credential %v"+
+					" based on annotation %v with value %v",
+					res.Name, class.IngressKey, a)
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  obj,
+			}
+		},
+		UpdateFunc: func(old, cur interface{}) {
+			oldRes := old.(*credentialv1.KongCredential)
+			curRes := cur.(*credentialv1.KongCredential)
+			validOld := class.IsValid(&oldRes.ObjectMeta)
+			validCur := class.IsValid(&curRes.ObjectMeta)
+
+			if !validCur && !validOld {
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: ConfigurationEvent,
+				Obj:  cur,
+			}
+		},
+	}
+
 	crdEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			updateCh.In() <- Event{
@@ -384,21 +585,21 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 
 	store.informers.Kong.Plugin = pluginFactory.Configuration().V1().KongPlugins().Informer()
 	store.listers.Kong.Plugin = store.informers.Kong.Plugin.GetStore()
-	store.informers.Kong.Plugin.AddEventHandler(crdEventHandler)
+	store.informers.Kong.Plugin.AddEventHandler(pluginEventHandler)
 
 	consumerClient, _ := consumerclientv1.NewForConfig(clientConf)
 	consumerFactory := consumerinformer.NewFilteredSharedInformerFactory(consumerClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Consumer = consumerFactory.Configuration().V1().KongConsumers().Informer()
 	store.listers.Kong.Consumer = store.informers.Kong.Consumer.GetStore()
-	store.informers.Kong.Consumer.AddEventHandler(crdEventHandler)
+	store.informers.Kong.Consumer.AddEventHandler(consumerEventHandler)
 
 	credClient, _ := credentialclientv1.NewForConfig(clientConf)
 	credentialFactory := credentialinformer.NewFilteredSharedInformerFactory(credClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Credential = credentialFactory.Configuration().V1().KongCredentials().Informer()
 	store.listers.Kong.Credential = store.informers.Kong.Credential.GetStore()
-	store.informers.Kong.Credential.AddEventHandler(crdEventHandler)
+	store.informers.Kong.Credential.AddEventHandler(credentialEventHandler)
 
 	confClient, _ := configurationclientv1.NewForConfig(clientConf)
 	configFactory := configurationinformer.NewFilteredSharedInformerFactory(confClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
@@ -431,7 +632,7 @@ func (s k8sStore) ListIngresses() []*extensions.Ingress {
 	var ingresses []*extensions.Ingress
 	for _, item := range s.listers.Ingress.List() {
 		ing := item.(*extensions.Ingress)
-		if !class.IsValid(ing) {
+		if !class.IsValid(&ing.ObjectMeta) {
 			continue
 		}
 
@@ -491,7 +692,8 @@ func (s k8sStore) GetKongConsumer(namespace, name string) (*consumerv1.KongConsu
 func (s k8sStore) ListKongConsumers() []*consumerv1.KongConsumer {
 	var consumers []*consumerv1.KongConsumer
 	for _, item := range s.listers.Kong.Consumer.List() {
-		if c, ok := item.(*consumerv1.KongConsumer); ok {
+		c, ok := item.(*consumerv1.KongConsumer)
+		if ok && class.IsValid(&c.ObjectMeta) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -502,7 +704,8 @@ func (s k8sStore) ListKongConsumers() []*consumerv1.KongConsumer {
 func (s k8sStore) ListKongCredentials() []*credentialv1.KongCredential {
 	var credentials []*credentialv1.KongCredential
 	for _, item := range s.listers.Kong.Credential.List() {
-		if c, ok := item.(*credentialv1.KongCredential); ok {
+		c, ok := item.(*credentialv1.KongCredential)
+		if ok && class.IsValid(&c.ObjectMeta) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -521,7 +724,8 @@ func (s k8sStore) ListGlobalKongPlugins() ([]*pluginv1.KongPlugin, error) {
 	err = cache.ListAll(s.listers.Kong.Plugin,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			if p, ok := ob.(*pluginv1.KongPlugin); ok {
+			p, ok := ob.(*pluginv1.KongPlugin)
+			if ok && class.IsValid(&p.ObjectMeta) {
 				plugins = append(plugins, p)
 			}
 		})

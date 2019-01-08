@@ -62,7 +62,7 @@ func TestIsValidClass(t *testing.T) {
 		IngressClass = test.controller
 		DefaultClass = test.defClass
 
-		b := IsValid(ing)
+		b := IsValid(&ing.ObjectMeta)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}

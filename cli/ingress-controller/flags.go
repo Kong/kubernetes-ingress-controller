@@ -100,6 +100,13 @@ The controller will set the endpoint records on the ingress using this address.`
 		kongURL = flags.String("kong-url", "http://localhost:8001",
 			"The address of the Kong Admin URL to connect to in the format of protocol://address:port")
 
+		kongTLSSkipVerify = flag.Bool("admin-tls-skip-verify", false,
+			"Disable verification of TLS certificate of Kong's Admin endpoint.")
+		kongTLSServerName = flag.String("admin-tls-server-name", "",
+			"SNI name to use to verify the certificate presented by Kong in TLS.")
+		kongCACert = flag.String("admin-ca-cert-file", "",
+			"Path to PEM-encoded CA certificate file to verify the Kong's Admin SSL certificate.")
+
 		kongHeaders headers
 	)
 
@@ -141,6 +148,10 @@ The controller will set the endpoint records on the ingress using this address.`
 		Kong: controller.Kong{
 			URL:     *kongURL,
 			Headers: kongHeaders,
+
+			TLSServerName: *kongTLSServerName,
+			TLSSkipVerify: *kongTLSSkipVerify,
+			CACert:        *kongCACert,
 		},
 		APIServerHost:          *apiserverHost,
 		KubeConfigFile:         *kubeConfigFile,

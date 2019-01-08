@@ -41,10 +41,17 @@ const (
 	rootLocation    = "/"
 )
 
+// Kong Represents a Kong client and connection information
 type Kong struct {
-	URL     string
+	URL string
+	// Headers are injected into every request to Kong's Admin API
+	// to help with authorization/authentication.
 	Headers []string
 	Client  *kong.Client
+
+	TLSSkipVerify bool
+	TLSServerName string
+	CACert        string
 }
 
 // Configuration contains all the settings required by an Ingress controller

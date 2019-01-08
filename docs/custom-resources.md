@@ -74,7 +74,7 @@ apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
   name: http-svc-consumer-ratelimiting
-  namespace: default #this should match the namespace of the route or service you're adding it too. 
+  namespace: default #this should match the namespace of the route or service you're adding it too.
 config:
   key: value
 plugin: my-plugin
@@ -121,7 +121,6 @@ spec:
                serviceName: myapp-service
                servicePort: 80
 ```
-
 
 ## KongIngress
 
@@ -266,3 +265,4 @@ config:
 [kong-upstream]: https://getkong.org/docs/0.14.x/admin-api/#upstream-objects
 [kong-service]: https://getkong.org/docs/0.14.x/admin-api/#service-object
 [kong-route]: https://getkong.org/docs/0.14.x/admin-api/#route-object
+

@@ -99,7 +99,7 @@ func TestGetStringAnnotation(t *testing.T) {
 	for _, test := range tests {
 		data[GetAnnotationWithPrefix(test.field)] = test.value
 
-		s, err := GetStringAnnotation(test.field, ing)
+		s, err := GetStringAnnotation(test.field, &ing.ObjectMeta)
 		if test.expErr {
 			if err == nil {
 				t.Errorf("%v: expected error but retuned nil", test.name)

@@ -18,7 +18,7 @@ package class
 
 import (
 	"github.com/golang/glog"
-	extensions "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -38,13 +38,13 @@ var (
 	IngressClass = "nginx"
 )
 
-// IsValid returns true if the given Ingress either doesn't specify
+// IsValid returns true if the given ObjectMeta either doesn't specify
 // the ingress.class annotation, or it's set to the configured in the
 // ingress controller.
-func IsValid(ing *extensions.Ingress) bool {
-	ingress, ok := ing.GetAnnotations()[IngressKey]
+func IsValid(objectMeta *metav1.ObjectMeta) bool {
+	ingress, ok := objectMeta.GetAnnotations()[IngressKey]
 	if !ok {
-		glog.V(3).Infof("annotation %v is not present in ingress %v/%v", IngressKey, ing.Namespace, ing.Name)
+		glog.V(3).Infof("annotation %v is not present in custom resources %v/%v", IngressKey, objectMeta.Namespace, objectMeta.Name)
 	}
 
 	// we have 2 valid combinations

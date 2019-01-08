@@ -55,11 +55,19 @@ spec:
              - '--ingress-class=kong-internal'
 ```
 
-This also helps users who wish to run
-_multiple unrelated_ Kong ingress controllers
+### Multiple unrelated Kong Ingress Controllers
+
+In some deployments, one might wish to use multiple Kong clusters in the same
+k8s cluster
 (e.g. one which serves public traffic, one which serves "internal" traffic).
-Please note that the `--election-id` also needs to be different
-for two unrelated Kong Ingress Controllers.
+For such deployments, please ensure that in addition to different
+`ingress-class`, the `--election-id` also needs to be different.
+
+In such deployments, `ingress.class` annotation can be used on the
+following custom resources as well:
+- KongPlugin: To configure (global) plugins only in one of the Kong clusters.
+- KongConsumer: To create different consumers in different Kong clusters.
+- KongCredential: To create associated credentials for consumers.
 
 ## `plugins.konghq.com`
 

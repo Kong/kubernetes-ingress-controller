@@ -44,7 +44,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       initContainers:
       - name: wait-for-migrations
-        image: kong:1.0.0-centos
+        image: kong:1.0.0
         command: [ "/bin/sh", "-c", "kong migrations list" ]
         env:
         - name: KONG_ADMIN_LISTEN
@@ -65,7 +65,7 @@ spec:
           value: kong
       containers:
       - name: admin-api
-        image: kong:1.0.0-centos
+        image: kong:1.0.0
         env:
         - name: KONG_PG_PASSWORD
           value: kong
@@ -76,7 +76,7 @@ spec:
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
         - name: KONG_ADMIN_LISTEN
-          value: 0.0.0.0:8001
+          value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
         - name: KONG_PROXY_LISTEN
           value: 'off'
         ports:
@@ -105,7 +105,8 @@ spec:
         args:
         - /kong-ingress-controller
         # the kong URL points to the kong admin api server
-        - --kong-url=http://localhost:8001
+        - --kong-url=https://localhost:8444
+        - --admin-tls-skip-verify
         # the default service is the kong proxy service
         - --default-backend-service=kong/kong-proxy
         # Service from were we extract the IP address/es to use in Ingress status

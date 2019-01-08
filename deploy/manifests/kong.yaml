@@ -18,7 +18,7 @@ spec:
       # hack to verify that the DB is up to date or not
       # TODO remove this for Kong >= 0.15.0
       - name: wait-for-migrations
-        image: kong:1.0.0-centos
+        image: kong:1.0.0
         command: [ "/bin/sh", "-c", "kong migrations list" ]
         env:
         - name: KONG_ADMIN_LISTEN
@@ -39,7 +39,7 @@ spec:
           value: kong
       containers:
       - name: kong-proxy
-        image: kong:1.0.0-centos
+        image: kong:1.0.0
         env:
         - name: KONG_PG_PASSWORD
           value: kong

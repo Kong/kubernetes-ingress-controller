@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.3.0](#030---20190108)
  - [0.2.2](#022---20181109)
  - [0.1.3](#013---20181109)
  - [0.2.1](#021---20181026)
@@ -9,6 +10,43 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.3.0] - 2019/01/08
+
+#### Breaking Changes
+
+ - :warning: Default Ingress class is now `kong`.
+   If you were relying on the previous default of `nginx`, you will
+   need to explicitly set the class using `--ingress-class` CLI flag.
+
+#### Added
+
+- **Support for Kong 1.0.x** Kong 1.0 introduces a number of breaking changes
+  in the Admin API. Ingress controller is updated to make correct calls
+  and parse responses correctly.
+  [#213](https://github.com/Kong/kubernetes-ingress-controller/pull/213)
+- **ingress.class annotation-based filtering on CRD** Multiple Kong clusters
+  can be deployed and configured individually on the same Kubernetes Cluster.
+  This feature allows configuring
+  global Plugins, Consumers & credentials
+  using a different `ingress.class` annotation for each Kong cluster.
+  [#220](https://github.com/Kong/kubernetes-ingress-controller/pull/220)
+- **TLS support for Ingress Controller <-> Kong communication**
+  The ingress controller can now talk to Kong's Control-Plane using TLS with
+  custom certificates. Following new CLI flags are introduces:
+  - `--admin-tls-skip-verify`: to skip validation of a certificate; it
+  shouldn't be used in production environments.
+  - `--admin-tls-server-name`: use this if the FQDN of Kong's Control Plane
+  doesn't match the CN in the certificate.
+  - `--admin-ca-cert-file`: use this to specify a custom CA cert which is
+  not part of the bundled CA certs.
+  [#212](https://github.com/Kong/kubernetes-ingress-controller/pull/212)
+
+#### Fixed
+
+- Retries for services in Kong can be set to zero.
+   [#211](https://github.com/Kong/kubernetes-ingress-controller/pull/211)
+
 
 ## [0.2.2] - 2018/11/09
 
@@ -226,6 +264,7 @@
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.2...0.3.0
 [0.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.1...0.2.2
 [0.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.2...0.1.3
 [0.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.0...0.2.1

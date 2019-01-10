@@ -1,0 +1,12 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "kong.releasename" . }}-ingress
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1beta1
+    kind: Deployment
+    name: {{ template "kong.releasename" . }}
+  minReplicas: {{ .Values.autoscaler.min_replicas }}
+  maxReplicas: {{ .Values.autoscaler.max_replicas }}
+  targetCPUUtilizationPercentage: {{ .Values.autoscaler.target_cpu }}

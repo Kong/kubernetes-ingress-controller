@@ -1,0 +1,17 @@
+image:
+  repository: "kong"
+  tag: "1.0.0"
+  pullPolicy: Always
+
+autoscaler:
+  min_replicas: 3
+  max_replicas: 100
+  target_cpu: 80
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 1
+  limits:
+    memory: 512Mi
+    cpu: 2

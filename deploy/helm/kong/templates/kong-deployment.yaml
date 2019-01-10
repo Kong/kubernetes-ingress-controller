@@ -1,0 +1,85 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "kong.releasename" . }}
+spec:
+  replicas: {{ .Values.autoscaler.min_replicas }}
+  template:
+    metadata:
+      labels:
+        name: {{ template "kong.releasename" . }}
+        app: {{ template "kong.releasename" . }}
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "10254"
+        prometheus.io/scrape: "true"
+    spec:
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: kong-prometheus
+        name: kong-prometheus
+      initContainers:
+      - name: wait-for-migrations
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        command: [ "/bin/sh", "-c", "kong migrations list" ]
+        env:
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
+        - name: KONG_PROXY_LISTEN
+          value: 'off'
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PG_HOST
+          value: {{ template "kong.releasename" . }}-postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
+      containers:
+      - name: kong-proxy
+        resources:
+          requests:
+             memory: {{ .Values.resources.requests.memory }}
+             cpu: {{ .Values.resources.requests.cpu }}
+          limits:
+             memory: {{ .Values.resources.limits.memory }}
+             cpu: {{ .Values.resources.limits.cpu }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: Always
+        env:
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: {{ template "kong.releasename" . }}-postgres
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
+        - name: KONG_NGINX_HTTP_INCLUDE
+          value: /opt/config/kong-prometheus.conf
+        - name: KONG_NGINX_PROXY_LISTEN
+          # quirky syntax follows. Even though docs say that kong should be able to take multiple values
+          # separated by , that is not the case so we resort to tricking it
+          value: "0.0.0.0:80; listen 0.0.0.0:443 ssl"
+        ports:
+        - name: proxy
+          containerPort: 80
+          protocol: TCP
+        - name: proxy-ssl
+          containerPort: 443
+          protocol: TCP
+        - name: proxy-prom
+          containerPort: 10254
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /opt/config
+          name: kong-prometheus
+---

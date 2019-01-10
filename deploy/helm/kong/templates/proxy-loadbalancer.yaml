@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "kong.releasename" . }}-proxy
+spec:
+  externalTrafficPolicy: Local
+  type: LoadBalancer
+  ports:
+  - name: kong-proxy
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  - name: kong-proxy-ssl
+    port: 443
+    targetPort: 443
+    protocol: TCP
+  selector:
+    app: {{ template "kong.releasename" . }}

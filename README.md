@@ -64,6 +64,12 @@ a hosted k8s service like
 To setup Kong Ingress Controller in your k8s cluster, execute:
 
 ```shell
+helm install stable/kong --set ingressController.enabled=true
+```
+
+If you don't have helm installed on your k8s cluster, execute:
+
+```
 kubectl apply -f https://bit.ly/kong-ingress
 ```
 

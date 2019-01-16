@@ -20,7 +20,7 @@ On the other hand, an annotation such as
 metadata:
   name: foo
   annotations:
-    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/ingress.class: "kong"
 ```
 
 will target Kong Ingress controller, forcing the GCE controller to ignore it.
@@ -29,8 +29,15 @@ __Note__: Deploying multiple ingress controller and not specifying the
 annotation will cause both controllers fighting to satisfy the Ingress
 and will lead to unknown behaviour.
 
-If you're running multiple ingress controllers, or running on a cloud provider that handles ingress, you need to specify the annotation `kubernetes.io/ingress.class: "nginx"` in all ingresses you would like this controller to claim. This mechanism also provides users the ability to run _multiple_ Kong ingress controllers (e.g. one which serves public traffic, one which serves "internal" traffic).
-When using this functionality the option `--ingress-class` should set a value unique for the cluster. Here is a partial example:
+If you're running multiple ingress controllers, or running on a
+cloud provider that handles ingress,
+you need to specify the annotation `kubernetes.io/ingress.class: "kong"`
+in all ingresses you would like this controller to claim.
+This mechanism also provides users the ability to run _multiple_
+Kong ingress controllers (e.g. one which serves public traffic,
+and another serving "internal" traffic).
+When using this functionality the option `--ingress-class`
+should set a value unique for the cluster. Here is a partial example:
 
 ```yaml
 spec:
@@ -44,5 +51,7 @@ spec:
              - '--ingress-class=kong-internal'
 ```
 
-Not specifying the annotation will lead to multiple ingress controllers claiming the same ingress.
-Setting a value which does not match the class of any existing ingress controllers will cause all ingress controllers ignoring the ingress.
+Not specifying the annotation will lead to multiple ingress controllers
+claiming the same ingress.
+Setting a value which does not match the class of any existing ingress
+controllers will cause all ingress controllers ignoring the ingress.

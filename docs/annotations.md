@@ -31,7 +31,7 @@ On the other hand, an annotation such as
 metadata:
   name: foo
   annotations:
-    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/ingress.class: "kong"
 ```
 
 will target Kong Ingress controller, forcing the GCE controller to ignore it.

@@ -78,7 +78,7 @@ spin up.
 You now have set up Kong as your Ingress controller and
 all Ingress resources in your Kubernetes Cluster will be satisfied.
 
-Please refer to our [deployment documentation][deployment-doc]
+Please refer to our [deployment documentation][deployment]
 for a detailed introduction to Kong Ingress Controller
 and Ingress spec.
 
@@ -106,9 +106,9 @@ repository. Pull Requests are welcome for additions and corrections.
 
 Following are some helpful link:
 
-- [**Getting Started**][deployment-doc]:
+- [**Getting Started**][deployment]:
   Get Kubernetes Ingress setup up and running.
-- [**Deployment**][deployment-doc]:
+- [**Deployment**][deployment]:
   Deployment guides for Minikube, GKE
   and other types of clusters.
 - [**Custom Resources Definitions (CRDs)**][crds]:
@@ -159,7 +159,7 @@ Please check the [roadmap][roadmap] document.
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/
 [kong-hub]: https://docs.konghq.com/hub/
-[deployment-doc]: deploy/README.md
+[deployment]: docs/deployment/
 [annotations]: docs/annotations.md
 [crds]: docs/custom-resources.md
 [roadmap]: docs/roadmap.md

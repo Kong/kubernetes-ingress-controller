@@ -106,7 +106,7 @@ repository. Pull Requests are welcome for additions and corrections.
 
 Following are some helpful link:
 
-- [**Getting Started**][deployment]:
+- [**Getting Started**][docs]:
   Get Kubernetes Ingress setup up and running.
 - [**Deployment**][deployment]:
   Deployment guides for Minikube, GKE
@@ -159,6 +159,7 @@ Please check the [roadmap][roadmap] document.
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/
 [kong-hub]: https://docs.konghq.com/hub/
+[docs]: docs/
 [deployment]: docs/deployment/
 [annotations]: docs/annotations.md
 [crds]: docs/custom-resources.md

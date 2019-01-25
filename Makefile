@@ -26,7 +26,7 @@ SED_I?=sed -i
 GOHOSTOS ?= $(shell go env GOHOSTOS)
 
 ifeq ($(GOHOSTOS),darwin)
-  SED_I=sed -i ''
+  SED_I=/usr/bin/sed -i ''
 endif
 
 REPO_INFO=$(shell git config --get remote.origin.url)

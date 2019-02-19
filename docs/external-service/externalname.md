@@ -39,6 +39,7 @@ metadata:
 config:
   remove:
     headers: host
+plugin: request-transformer
 " | kubectl create -f -
 ```
 
@@ -51,8 +52,7 @@ kind: Ingress
 metadata:
   name: proxy-from-k8s-to-mockbin
   annotations:
-    request-transformer.plugin.konghq.com: |
-      transform-request-to-mockbin
+    plugins.konghq.com: transform-request-to-mockbin
 spec:
   rules:
   - host: foo.bar

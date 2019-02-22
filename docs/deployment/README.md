@@ -35,8 +35,15 @@ Kubernetes cluster. Here are some guides to get you started:
    is another managed Kubernetes cluster service.
    This guide is a walk through to setup Kong Ingress
    Controller on AKS.
+   
+1. [Using docker-for-mac edge][4]:
 
+   If you have docker-for-mac Edge release running an integrated Kubernetes cluster
+
+   *Notes:*
+     - This setup does not provide HA for PostgreSQL
 [0]: minikube.md
 [1]: openshift.md
 [2]: gke.md
 [3]: aks.md
+[4]: docker-for-mac-edge.md

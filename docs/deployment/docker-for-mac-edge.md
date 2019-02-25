@@ -235,6 +235,7 @@ http --verify=no https://localhost Host:secure.foo.bar
     kind: KongPlugin
     metadata:
       name: rl-by-ip
+      namespace: kong
     config:
       hour: 100
       limit_by: ip
@@ -246,7 +247,7 @@ http --verify=no https://localhost Host:secure.foo.bar
 12. Check the plugins was created correctly running:
 
     ```bash
-    kubectl get kongplugins
+    kubectl get kongplugins -n kong
     NAME                        AGE
     rl-by-ip                    16s
     ```
@@ -255,20 +256,33 @@ http --verify=no https://localhost Host:secure.foo.bar
 
     ```bash
     kubectl patch ingress foo-bar \
-      -p '{"metadata":{"annotations":{"plugins.konghq.com":"rl-by-ip\n"}}}'
+      -p '{"metadata":{"annotations":{"plugins.konghq.com":"rl-by-ip\n"}}}' -n kong
     ```
 
-14. Check the plugin was created in Kong running:
+14. Check the plugin was created in Kong:
+
+    Get the port for the `kong-ingress-controller`
+    
+    ```bash
+    kubectl get svc kong-ingress-controller -n kong
+    ```
 
     ```bash
-    http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/plugins
+    http http://localhost:<port>/plugins
     ```
 
 15. Verify the plugin was configured making a request and
     checking the `X-RateLimit-Limit-*` headers are present in the response
 
     ```bash
-    http ${PROXY_IP}:${HTTP_PORT} Host:foo.bar
+    http --headers http://localhost Host:foo.bar
+    .
+    .
+    .
+    X-RateLimit-Limit-hour: 100
+    X-RateLimit-Limit-second: 10
+    X-RateLimit-Remaining-hour: 91
+    X-RateLimit-Remaining-second: 9
     ```
 
 ## Configure a Kong plugin using annotations on Kubernetes Services
@@ -283,13 +297,13 @@ http --verify=no https://localhost Host:secure.foo.bar
 
     ```bash
     kubectl patch svc http-svc \
-      -p '{"metadata":{"annotations":{"plugins.konghq.com": "rl-by-ip\n"}}}'
+      -p '{"metadata":{"annotations":{"plugins.konghq.com": "rl-by-ip\n"}}}' -n kong
     ```
 
     This change should add a new plugin on the corresponding Kong Service:
 
     ```bash
-    http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/plugins
+    http http://localhost:<port>/plugins
     ```
 
 ## Cleanup

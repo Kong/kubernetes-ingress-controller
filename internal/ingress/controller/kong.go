@@ -763,6 +763,7 @@ func (n *NGINXController) syncRoutes(ingressCfg *ingress.Configuration) (bool, e
 				Protocols: []*string{kong.String("http"), kong.String("https")}, // default
 				Service:   &kong.Service{ID: svc.ID},
 				StripPath: kong.Bool(false),
+				PreserveHost: kong.Bool(true),
 			}
 			if server.Hostname != "_" {
 				r.Hosts = []*string{kong.String(server.Hostname)}

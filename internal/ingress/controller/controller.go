@@ -105,7 +105,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
 		return nil
 	}
 
-	if !n.syncStatus.IsLeader() {
+	if !n.elector.IsLeader() {
 		glog.V(2).Infof("skipping synchronization of configuration because I am not the leader.")
 		return nil
 	}

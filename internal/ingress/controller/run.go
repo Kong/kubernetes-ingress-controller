@@ -28,6 +28,7 @@ import (
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/kubernetes/pkg/util/filesystem"
@@ -35,6 +36,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
@@ -79,6 +81,13 @@ func NewNGINXController(config *Configuration) *NGINXController {
 
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
 
+	electionConfig := election.Config{
+		Client:              config.KubeClient,
+		ElectionID:          config.ElectionID,
+		IngressClass:        class.IngressClass,
+		DefaultIngressClass: class.DefaultClass,
+	}
+
 	if config.UpdateStatus {
 		n.syncStatus = status.NewStatusSyncer(status.Config{
 			Client:                 config.KubeClient,
@@ -94,9 +103,24 @@ func NewNGINXController(config *Configuration) *NGINXController {
 				n.syncQueue.Enqueue(&extensions.Ingress{})
 			},
 		})
+		electionConfig.Callbacks = n.syncStatus.Callbacks()
 	} else {
 		glog.Warning("Update of ingress status is disabled (flag --update-status=false was specified)")
+
+		electionConfig.Callbacks = leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(stop <-chan struct{}) {
+				glog.V(2).Infof("I am the new status update leader")
+			},
+			OnStoppedLeading: func() {
+				glog.V(2).Infof("I am not status update leader anymore")
+			},
+			OnNewLeader: func(identity string) {
+				glog.Infof("new leader elected: %v", identity)
+			},
+		}
 	}
+
+	n.elector = election.NewElector(electionConfig)
 
 	return n
 }
@@ -110,6 +134,8 @@ type NGINXController struct {
 	syncQueue *task.Queue
 
 	syncStatus status.Sync
+
+	elector election.Elector
 
 	syncRateLimiter flowcontrol.RateLimiter
 
@@ -139,6 +165,8 @@ func (n *NGINXController) Start() {
 	glog.Infof("starting Ingress controller")
 
 	n.store.Run(n.stopCh)
+
+	go n.elector.Run()
 
 	if n.syncStatus != nil {
 		go n.syncStatus.Run()
@@ -187,7 +215,7 @@ func (n *NGINXController) Stop() error {
 	close(n.stopCh)
 	go n.syncQueue.Shutdown()
 	if n.syncStatus != nil {
-		n.syncStatus.Shutdown()
+		n.syncStatus.Shutdown(n.elector.IsLeader())
 	}
 
 	return nil

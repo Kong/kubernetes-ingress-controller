@@ -1,10 +1,3 @@
-dist: trusty
-
-sudo: required
-
-services:
-  - docker
-
 language: go
 
 notifications:
@@ -17,47 +10,13 @@ go:
 
 go_import_path: github.com/kong/kubernetes-ingress-controller
 
-# New secure variables can be added using travis encrypt -r kong/ingress-controller --add K=V
-env:
-  global:
-  - CHANGE_MINIKUBE_NONE_USER=true
-  - KUBERNETES_VERSION=v1.9.4
-  - DOCKER=docker
+before_script:
+- go get golang.org/x/lint/golint
+- diff -u <(echo -n) <(gofmt -d -s .)
+- go tool vet .
+- golint -set_exit_status .
+- make deps
+- make verify-all
 
-jobs:
-  include:
-  - stage: Static Check
-    script:
-    - go get golang.org/x/lint/golint
-    - diff -u <(echo -n) <(gofmt -d -s .)
-    - go tool vet .
-    - golint -set_exit_status .
-    - make deps
-    - make verify-all
-  - stage: Coverage
-    before_script:
-    # start minikube 
-    - test/e2e/up.sh
-    script:
-    - if ! go get github.com/jteeuwen/go-bindata/...; then github.com/jteeuwen/go-bindata/...;fi
-    - kubectl create -f deploy/manifests/custom-types.yaml
-    - make deps
-    - make cover
-#  - stage: e2e
-#    before_script:
-#    - if ! go get github.com/jteeuwen/go-bindata/...; then github.com/jteeuwen/go-bindata/...;fi
-#    - make e2e-image
-#    - test/e2e/up.sh
-#    - test/e2e/wait-for-kong.sh
-#    script:
-#    - make e2e-test
-  - stage: Unit Test
-    before_script:
-    - make deps
-    script:
-    - make test
-  # split builds to avoid job timeouts
-  - stage: publish amd64
-    if: type = api AND branch = master AND repo = kong/ingress-controller
-    script:
-    - .travis/publish.sh amd64
+script:
+- make test

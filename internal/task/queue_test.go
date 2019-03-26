@@ -74,7 +74,7 @@ func TestEnqueueSuccess(t *testing.T) {
 	q.Enqueue(mo)
 	// wait for 'mockSynFn'
 	time.Sleep(time.Millisecond * 10)
-	if atomic.LoadUint32(&sr) != 1 {
+	if !checkSR(1) {
 		t.Errorf("sr should be 1, but is %d", sr)
 	}
 
@@ -103,7 +103,7 @@ func TestEnqueueFailed(t *testing.T) {
 	// wait for 'mockSynFn'
 	time.Sleep(time.Millisecond * 10)
 	// queue is shutdown, so mockSynFn should not be executed, so the result should be 0
-	if atomic.LoadUint32(&sr) != 0 {
+	if !checkSR(0) {
 		t.Errorf("queue has been shutdown, so sr should be 0, but is %d", sr)
 	}
 }
@@ -125,7 +125,7 @@ func TestEnqueueKeyError(t *testing.T) {
 	// wait for 'mockSynFn'
 	time.Sleep(time.Millisecond * 10)
 	// key error, so the result should be 0
-	if atomic.LoadUint32(&sr) != 0 {
+	if !checkSR(0) {
 		t.Errorf("error occurs while get key, so sr should be 0, but is %d", sr)
 	}
 	// shutdown queue before exit
@@ -150,10 +150,25 @@ func TestSkipEnqueue(t *testing.T) {
 	q.Enqueue(mo)
 	// wait for 'mockSynFn'
 	time.Sleep(time.Millisecond * 10)
-	if atomic.LoadUint32(&sr) != 1 {
+	if !checkSR(1) {
 		t.Errorf("sr should be 1, but is %d", sr)
 	}
 
 	// shutdown queue before exit
 	q.Shutdown()
+}
+
+// checkSR waits for the value to match expected.
+// It loops and checks every 10 ms till 5 seconds.
+// This should usually succeed in the first attempt if plenty of CPU
+// is available on the testing machine, but in case there is a contention
+// (like on Travis CI), then can take some time.
+func checkSR(expected uint32) bool {
+	for i := 0; i < 10; i++ {
+		time.Sleep(time.Millisecond * 10)
+		if atomic.LoadUint32(&sr) == expected {
+			return true
+		}
+	}
+	return false
 }

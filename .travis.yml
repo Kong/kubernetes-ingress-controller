@@ -6,17 +6,17 @@ notifications:
     on_success: never
 
 go:
-  - "1.11"
+  - "1.12"
 
 go_import_path: github.com/kong/kubernetes-ingress-controller
 
 before_script:
 - go get golang.org/x/lint/golint
 - diff -u <(echo -n) <(gofmt -d -s .)
-- go tool vet .
 - golint -set_exit_status .
 - make deps
 - make verify-all
+- make vet
 
 script:
 - make test

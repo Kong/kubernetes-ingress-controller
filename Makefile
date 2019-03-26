@@ -190,7 +190,7 @@ cover:
 
 .PHONY: vet
 vet:
-	@go vet $(shell go list ${PKG}/... | grep -v vendor)
+	@go vet $(shell go list ${PKG}/... | grep -v vendor | grep -v "internal/client")
 
 .PHONY: release
 release: all-container all-push

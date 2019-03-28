@@ -510,7 +510,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       initContainers:
       - name: wait-for-migrations
-        image: kong:1.0
+        image: kong:1.1
         command: [ "/bin/sh", "-c", "kong migrations list" ]
         env:
         - name: KONG_ADMIN_LISTEN
@@ -531,7 +531,7 @@ spec:
           value: kong
       containers:
       - name: admin-api
-        image: kong:1.0
+        image: kong:1.1
         env:
         - name: KONG_PG_PASSWORD
           value: kong
@@ -650,7 +650,7 @@ spec:
       # hack to verify that the DB is up to date or not
       # TODO remove this for Kong >= 0.15.0
       - name: wait-for-migrations
-        image: kong:1.0
+        image: kong:1.1
         command: [ "/bin/sh", "-c", "kong migrations list" ]
         env:
         - name: KONG_ADMIN_LISTEN
@@ -671,7 +671,7 @@ spec:
           value: kong
       containers:
       - name: kong-proxy
-        image: kong:1.0
+        image: kong:1.1
         env:
         - name: KONG_PG_PASSWORD
           value: kong
@@ -713,7 +713,7 @@ spec:
         command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: kong-migrations
-        image: kong:1.0-centos
+        image: kong:1.1-centos
         env:
         - name: KONG_PG_PASSWORD
           value: kong

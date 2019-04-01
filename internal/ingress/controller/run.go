@@ -32,7 +32,6 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/kubernetes/pkg/util/filesystem"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
@@ -61,9 +60,8 @@ func NewNGINXController(config *Configuration) *NGINXController {
 		updateCh: channels.NewRingChannel(1024),
 
 		stopLock: &sync.Mutex{},
-
-		// create an empty configuration.
-		runningConfig: &ingress.Configuration{},
+		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client,
+			config.Kong.URL),
 	}
 
 	n.store = store.New(
@@ -76,6 +74,8 @@ func NewNGINXController(config *Configuration) *NGINXController {
 		config.KubeClient,
 		config.KubeConf,
 		n.updateCh)
+
+	n.parser = Parser{store: n.store}
 
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
 
@@ -125,13 +125,17 @@ type NGINXController struct {
 	ngxErrCh chan error
 
 	// runningConfig contains the running configuration in the Backend
-	runningConfig *ingress.Configuration
+	runningConfig *KongState
 
 	isShuttingDown bool
 
 	store store.Storer
 
 	fileSystem filesystem.Filesystem
+
+	parser Parser
+
+	PluginSchemaStore PluginSchemaStore
 }
 
 // Start start a new NGINX master process running in foreground.

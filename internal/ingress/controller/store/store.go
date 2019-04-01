@@ -672,7 +672,7 @@ func (s k8sStore) GetKongIngress(namespace, name string) (*configurationv1.KongI
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("ingress configuration %v was not found", key)
+		return nil, nil
 	}
 	return p.(*configurationv1.KongIngress), nil
 }

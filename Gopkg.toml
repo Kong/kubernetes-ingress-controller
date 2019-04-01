@@ -38,10 +38,6 @@ required = [
   branch = "master"
 
 [[constraint]]
-  name = "github.com/imdario/mergo"
-  version = "0.2.4"
-
-[[constraint]]
   name = "github.com/pkg/errors"
   version = "0.8.0"
 
@@ -83,3 +79,11 @@ source = "https://github.com/fsnotify/fsnotify.git"
 [[constraint]]
   name = "github.com/hbagdi/go-kong"
   version = "0.3.0"
+
+[[constraint]]
+  name = "github.com/hbagdi/deck"
+  version = "0.1.0"
+
+[[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "0.3.7"

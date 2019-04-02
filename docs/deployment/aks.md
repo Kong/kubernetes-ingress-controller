@@ -97,7 +97,7 @@ IP address to the `kong-proxy` Service so please be patient.
     name: dummy
     namespace:  dummy
     annotations:
-      kubernetes.io/ingress.class: "nginx"
+      kubernetes.io/ingress.class: "kong"
   spec:
     rules:
       - host:
@@ -134,7 +134,7 @@ metadata:
   name: kong-admin
   namespace:  kong
   annotations:
-    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/ingress.class: "kong"
 spec:
   rules:
     - host: dummy.kong.example

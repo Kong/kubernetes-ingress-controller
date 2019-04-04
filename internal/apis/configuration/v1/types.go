@@ -58,6 +58,7 @@ type Proxy struct {
 	Retries        *int   `json:"retries"`
 	ReadTimeout    int    `json:"read_timeout"`
 	WriteTimeout   int    `json:"write_timeout"`
+	Port           int    `json:"port"`
 }
 
 type Healthchecks struct {

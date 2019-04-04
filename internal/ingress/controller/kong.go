@@ -396,6 +396,12 @@ func (n *NGINXController) syncServices(ingressCfg *ingress.Configuration) (bool,
 							s.Retries = kong.Int(*kongIngress.Proxy.Retries)
 							outOfSync = true
 						}
+
+						if kongIngress.Proxy.Port != nil &&
+							(s.Port == nil || s.Port != kongIngress.Proxy.Port) {
+							s.Port = kong.Int(*kongIngress.Proxy.Port)
+							outOfSync = true
+						}
 					}
 					if kong.IsNotFoundErr(err) {
 						glog.Infof("Creating Kong Service name %v", name)

@@ -31,6 +31,7 @@ import (
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/hbagdi/go-kong/kong/custom"
 	"github.com/imdario/mergo"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -79,7 +80,7 @@ var upstreamDefaults = kong.Upstream{
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
-func (n *NGINXController) OnUpdate(state *KongState) error {
+func (n *NGINXController) OnUpdate(state *parser.KongState) error {
 	client := n.cfg.Kong.Client
 
 	err := n.syncConsumers()
@@ -111,7 +112,7 @@ func (n *NGINXController) OnUpdate(state *KongState) error {
 	return nil
 }
 
-func (n *NGINXController) toDeckKongState(k8sState *KongState) (*state.KongState, error) {
+func (n *NGINXController) toDeckKongState(k8sState *parser.KongState) (*state.KongState, error) {
 	targetState, err := state.NewKongState()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating new KongState")
@@ -250,7 +251,7 @@ func (n *NGINXController) fillPlugin(plugin *state.Plugin) error {
 	return nil
 }
 
-func toKongNativeState(state *KongState) error {
+func toKongNativeState(state *parser.KongState) error {
 	return nil
 }
 

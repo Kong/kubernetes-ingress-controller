@@ -1,7 +1,9 @@
-package controller
+package parser
 
 import (
 	"bytes"
+	"fmt"
+	"reflect"
 	"sort"
 
 	"strconv"
@@ -51,12 +53,21 @@ type Target struct {
 	kong.Target
 }
 
+// Consumer holds a Kong consumer and it's plugins and credentials.
+type Consumer struct {
+	kong.Consumer
+	Plugins []kong.Plugin
+	// Credentials type(key-auth, basic-auth) to credential mapping
+	Credentials map[string][]map[string]interface{}
+}
+
 // KongState holds the configuration that should be applied to Kong.
 type KongState struct {
 	Services      []Service
 	Upstreams     []Upstream
 	Certificates  []Certificate
 	GlobalPlugins []Plugin
+	Consumers     []Consumer
 }
 
 // Certificate represents the certificate object in Kong.
@@ -78,6 +89,11 @@ type Parser struct {
 type parsedIngressRules struct {
 	SecretNameToSNIs      map[string][]string
 	ServiceNameToServices map[string]Service
+}
+
+// New returns a new parser backed with store.
+func New(store store.Storer) Parser {
+	return Parser{store: store}
 }
 
 // Build creates a Kong configuration from Ingress and Custom resources
@@ -117,6 +133,7 @@ func (p *Parser) Build() (*KongState, error) {
 
 	// generate Certificates and SNIs
 	state.Certificates, err = p.getCerts(parsedInfo.SecretNameToSNIs)
+	fmt.Println(len(state.Certificates))
 	if err != nil {
 		return nil, err
 	}
@@ -149,14 +166,17 @@ func (p *Parser) parseIngressRules(
 			allDefaultBackends = append(allDefaultBackends, ingress)
 
 		}
+		fmt.Println("ingress: ", ingress.Name)
 
-		for _, tls := range ingressSpec.TLS {
+		for i, tls := range ingressSpec.TLS {
+			fmt.Println(i, ingress.Name)
 			if len(tls.Hosts) == 0 {
 				continue
 			}
 			if tls.SecretName == "" {
 				continue
 			}
+			fmt.Println("tls in hosts is ", tls.Hosts)
 			hosts := tls.Hosts
 			secretName := ingress.Namespace + "/" + tls.SecretName
 			if secretNameToSNIs[secretName] != nil {
@@ -403,6 +423,9 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 		}
 		cert := bytes.NewBuffer(certKeyPair.Raw.Cert).String()
 		key := bytes.NewBuffer(certKeyPair.Raw.Key).String()
+		fmt.Println(secretKey)
+		fmt.Println(cert)
+		fmt.Println(SNIs)
 		kongCert := Certificate{
 			Certificate: kong.Certificate{
 				Cert: kong.String(cert),
@@ -608,4 +631,88 @@ func (p *Parser) getPluginsFromAnnotations(namespace string, anns map[string]str
 		})
 	}
 	return plugins, nil
+}
+
+// getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
+func getEndpoints(
+	s *corev1.Service,
+	port *corev1.ServicePort,
+	proto corev1.Protocol,
+	getServiceEndpoints func(*corev1.Service) (*corev1.Endpoints, error),
+) []ingress.Endpoint {
+
+	upsServers := []ingress.Endpoint{}
+
+	if s == nil || port == nil {
+		return upsServers
+	}
+
+	// avoid duplicated upstream servers when the service
+	// contains multiple port definitions sharing the same
+	// targetport.
+	adus := make(map[string]bool)
+
+	// ExternalName services
+	if s.Spec.Type == corev1.ServiceTypeExternalName {
+		glog.V(3).Infof("Ingress using a service %v of type=ExternalName", s.Name)
+
+		targetPort := port.TargetPort.IntValue()
+		// check for invalid port value
+		if targetPort <= 0 {
+			glog.Errorf("ExternalName service with an invalid port: %v", targetPort)
+			return upsServers
+		}
+
+		return append(upsServers, ingress.Endpoint{
+			Address: s.Spec.ExternalName,
+			Port:    fmt.Sprintf("%v", targetPort),
+		})
+	}
+
+	glog.V(3).Infof("getting endpoints for service %v/%v and port %v", s.Namespace, s.Name, port.String())
+	ep, err := getServiceEndpoints(s)
+	if err != nil {
+		glog.Warningf("unexpected error obtaining service endpoints: %v", err)
+		return upsServers
+	}
+
+	for _, ss := range ep.Subsets {
+		for _, epPort := range ss.Ports {
+
+			if !reflect.DeepEqual(epPort.Protocol, proto) {
+				continue
+			}
+
+			var targetPort int32
+
+			if port.Name == "" {
+				// port.Name is optional if there is only one port
+				targetPort = epPort.Port
+			} else if port.Name == epPort.Name {
+				targetPort = epPort.Port
+			}
+
+			// check for invalid port value
+			if targetPort <= 0 {
+				continue
+			}
+
+			for _, epAddress := range ss.Addresses {
+				ep := fmt.Sprintf("%v:%v", epAddress.IP, targetPort)
+				if _, exists := adus[ep]; exists {
+					continue
+				}
+				ups := ingress.Endpoint{
+					Address: epAddress.IP,
+					Port:    fmt.Sprintf("%v", targetPort),
+					Target:  epAddress.TargetRef,
+				}
+				upsServers = append(upsServers, ups)
+				adus[ep] = true
+			}
+		}
+	}
+
+	glog.V(3).Infof("endpoints found: %v", upsServers)
+	return upsServers
 }

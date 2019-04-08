@@ -33,6 +33,7 @@ import (
 	"k8s.io/kubernetes/pkg/util/filesystem"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
@@ -75,8 +76,7 @@ func NewNGINXController(config *Configuration) *NGINXController {
 		config.KubeConf,
 		n.updateCh)
 
-	n.parser = Parser{store: n.store}
-
+	n.parser = parser.New(n.store)
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
 
 	if config.UpdateStatus {
@@ -125,7 +125,7 @@ type NGINXController struct {
 	ngxErrCh chan error
 
 	// runningConfig contains the running configuration in the Backend
-	runningConfig *KongState
+	runningConfig *parser.KongState
 
 	isShuttingDown bool
 
@@ -133,7 +133,7 @@ type NGINXController struct {
 
 	fileSystem filesystem.Filesystem
 
-	parser Parser
+	parser parser.Parser
 
 	PluginSchemaStore PluginSchemaStore
 }

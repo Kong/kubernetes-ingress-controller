@@ -17,7 +17,10 @@ limitations under the License.
 package controller
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 
@@ -31,6 +34,7 @@ import (
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/hbagdi/go-kong/kong/custom"
 	"github.com/imdario/mergo"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/kong/dbless"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -81,6 +85,52 @@ var upstreamDefaults = kong.Upstream{
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
 func (n *NGINXController) OnUpdate(state *parser.KongState) error {
+	if n.cfg.InMemory {
+		return n.onUpdateInMemoryMode(state)
+	}
+	return n.onUpdateDBMode(state)
+}
+
+func (n *NGINXController) onUpdateInMemoryMode(state *parser.KongState) error {
+	client := n.cfg.Kong.Client
+
+	// XXX
+	err := n.fillConsumersAndCredentials(state)
+	if err != nil {
+		return err
+	}
+
+	config := dbless.KongNativeState(state)
+	jsonConfig, err := json.Marshal(&config)
+	if err != nil {
+		return errors.Wrap(err,
+			"marshaling Kong declarative configuration to JSON")
+	}
+	type reqBody struct {
+		Config string `json:"config"`
+	}
+	json, err := json.Marshal(&reqBody{Config: string(jsonConfig)})
+	if err != nil {
+		//TODO annotate
+		return errors.Wrap(err,
+			"marshaling /config request body")
+	}
+	req, err := http.NewRequest("POST", n.cfg.Kong.URL+"/config",
+		bytes.NewReader(json))
+	if err != nil {
+		return errors.Wrap(err, "creating new HTTP request for /config")
+	}
+	req.Header.Add("content-type", "application/json")
+	_, err = client.Do(nil, req, nil)
+	if err != nil {
+		return errors.Wrap(err, "posting new config to /config")
+	}
+
+	return err
+}
+
+func (n *NGINXController) onUpdateDBMode(state *parser.KongState) error {
+
 	client := n.cfg.Kong.Client
 
 	err := n.syncConsumers()
@@ -115,7 +165,7 @@ func (n *NGINXController) OnUpdate(state *parser.KongState) error {
 func (n *NGINXController) toDeckKongState(k8sState *parser.KongState) (*state.KongState, error) {
 	targetState, err := state.NewKongState()
 	if err != nil {
-		return nil, errors.Wrap(err, "creating new KongState")
+		return nil, errors.Wrap(err, "creating new parser.KongState")
 	}
 
 	for _, s := range k8sState.Services {
@@ -251,7 +301,45 @@ func (n *NGINXController) fillPlugin(plugin *state.Plugin) error {
 	return nil
 }
 
-func toKongNativeState(state *parser.KongState) error {
+func (n *NGINXController) fillConsumersAndCredentials(state *parser.KongState) error {
+	consumers := make(map[string]parser.Consumer)
+	for _, consumer := range n.store.ListKongConsumers() {
+		if consumer.Username == "" && consumer.CustomID == "" {
+			continue
+		}
+
+		c := parser.Consumer{}
+
+		if consumer.Username != "" {
+			c.Username = kong.String(consumer.Username)
+		}
+
+		if consumer.CustomID != "" {
+			c.CustomID = kong.String(consumer.CustomID)
+		}
+
+		consumers[consumer.Name] = c
+	}
+
+	for _, credential := range n.store.ListKongCredentials() {
+		consumer, ok := consumers[credential.ConsumerRef]
+		if !ok {
+			continue
+		}
+		if consumer.Credentials == nil {
+			consumer.Credentials = make(map[string][]map[string]interface{})
+		}
+		if credential.Type == "" {
+			continue
+		}
+		consumer.Credentials[credential.Type] = append(consumer.Credentials[credential.Type], credential.Config)
+
+		consumers[credential.ConsumerRef] = consumer
+	}
+
+	for _, c := range consumers {
+		state.Consumers = append(state.Consumers, c)
+	}
 	return nil
 }
 

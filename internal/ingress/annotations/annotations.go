@@ -17,38 +17,12 @@ limitations under the License.
 package annotations
 
 import (
-	"fmt"
 	"strings"
 )
-
-// pluginAnnotationSuffix sufix of kong annotations to configure plugins
-const pluginAnnotationSuffix = "plugin.konghq.com"
 
 const pluginListAnnotation = "plugins.konghq.com"
 
 const configurationAnnotation = "configuration.konghq.com"
-
-// ExtractKongPluginAnnotations extracts information about kong plugins
-// configured using plugin.konghq.com annotation.
-// DEPRECATED, please use ExtractKongPluginsFromAnnotations instead.
-func ExtractKongPluginAnnotations(anns map[string]string) map[string][]string {
-	ka := make(map[string][]string, 0)
-	for k, v := range anns {
-		if strings.HasSuffix(k, pluginAnnotationSuffix) {
-			name := strings.TrimSuffix(k, fmt.Sprintf(".%v", pluginAnnotationSuffix))
-			var values []string
-			for _, line := range strings.Split(v, "\n") {
-				s := strings.TrimSpace(strings.TrimPrefix(line, "-"))
-				if s != "" {
-					values = append(values, s)
-				}
-			}
-			ka[name] = values
-		}
-	}
-
-	return ka
-}
 
 // ExtractKongPluginsFromAnnotations extracts information about Kong
 // Plugins configured using plugins.konghq.com annotation.

@@ -20,22 +20,6 @@ import (
 	"testing"
 )
 
-func TestExtractKongPluginAnnotations(t *testing.T) {
-	data := map[string]string{
-		"rate-limiting.plugin.konghq.com":      "v1",
-		"key-authentication.plugin.konghq.com": "v2",
-	}
-
-	ka := ExtractKongPluginAnnotations(data)
-	if len(ka) != 2 {
-		t.Errorf("expected two keys but %v returned", len(ka))
-	}
-
-	if _, ok := ka["rate-limiting"]; !ok {
-		t.Errorf("expected a rate limiting plugin but none returned")
-	}
-}
-
 func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 	data := map[string]string{
 		"plugins.konghq.com": "kp-rl, kp-cors",

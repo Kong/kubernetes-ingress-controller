@@ -589,18 +589,7 @@ func (p *Parser) getKongIngressFromIngress(ing *extensions.Ingress) (
 
 // getPluginsFromAnnotations extracts plugins to be applied on an ingress/service from annotations
 func (p *Parser) getPluginsFromAnnotations(namespace string, anns map[string]string) ([]kong.Plugin, error) {
-	pluginAnnotations := annotations.ExtractKongPluginAnnotations(anns)
 	pluginsInk8s := make(map[string]*pluginv1.KongPlugin)
-	for plugin, crdNames := range pluginAnnotations {
-		for _, crdName := range crdNames {
-			// search configured plugin CRD in k8s
-			k8sPlugin, err := p.store.GetKongPlugin(namespace, crdName)
-			if err != nil {
-				return nil, errors.Wrapf(err, "fetching KongPlugin %v", crdName)
-			}
-			pluginsInk8s[plugin] = k8sPlugin
-		}
-	}
 	pluginList := annotations.ExtractKongPluginsFromAnnotations(anns)
 	// override plugins configured by new annotation
 	for _, plugin := range pluginList {

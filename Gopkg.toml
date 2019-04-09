@@ -78,7 +78,7 @@ source = "https://github.com/fsnotify/fsnotify.git"
 
 [[constraint]]
   name = "github.com/hbagdi/go-kong"
-  version = "0.3.0"
+  version = "v0.4.0"
 
 [[constraint]]
   name = "github.com/hbagdi/deck"

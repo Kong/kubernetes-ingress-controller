@@ -164,8 +164,12 @@ func main() {
 	}
 
 	glog.Infof("kong version: %s", v)
+	kongConfiguration := root["configuration"].(map[string]interface{})
+	glog.Infof("Kong datastore: %s", kongConfiguration["database"].(string))
 	conf.Kong.Client = kongClient
-
+	if kongConfiguration["database"].(string) == "off" {
+		conf.Kong.InMemory = true
+	}
 	ngx := controller.NewNGINXController(conf)
 
 	go handleSigterm(ngx, func(code int) {

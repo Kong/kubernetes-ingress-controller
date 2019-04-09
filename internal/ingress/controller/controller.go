@@ -47,6 +47,8 @@ type Kong struct {
 	TLSSkipVerify bool
 	TLSServerName string
 	CACert        string
+
+	InMemory bool
 }
 
 // Configuration contains all the settings required by an Ingress controller
@@ -100,7 +102,9 @@ func (n *NGINXController) syncIngress(interface{}) error {
 		return nil
 	}
 
-	if !n.syncStatus.IsLeader() {
+	// If in-memory mode, each Kong instance runs with it's own controller
+	if !n.cfg.Kong.InMemory &&
+		!n.syncStatus.IsLeader() {
 		glog.V(2).Infof("skipping synchronization of configuration because I am not the leader.")
 		return nil
 	}

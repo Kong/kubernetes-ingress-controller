@@ -133,7 +133,6 @@ func (p *Parser) Build() (*KongState, error) {
 
 	// generate Certificates and SNIs
 	state.Certificates, err = p.getCerts(parsedInfo.SecretNameToSNIs)
-	fmt.Println(len(state.Certificates))
 	if err != nil {
 		return nil, err
 	}
@@ -166,17 +165,14 @@ func (p *Parser) parseIngressRules(
 			allDefaultBackends = append(allDefaultBackends, ingress)
 
 		}
-		fmt.Println("ingress: ", ingress.Name)
 
-		for i, tls := range ingressSpec.TLS {
-			fmt.Println(i, ingress.Name)
+		for _, tls := range ingressSpec.TLS {
 			if len(tls.Hosts) == 0 {
 				continue
 			}
 			if tls.SecretName == "" {
 				continue
 			}
-			fmt.Println("tls in hosts is ", tls.Hosts)
 			hosts := tls.Hosts
 			secretName := ingress.Namespace + "/" + tls.SecretName
 			if secretNameToSNIs[secretName] != nil {
@@ -423,9 +419,6 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 		}
 		cert := bytes.NewBuffer(certKeyPair.Raw.Cert).String()
 		key := bytes.NewBuffer(certKeyPair.Raw.Key).String()
-		fmt.Println(secretKey)
-		fmt.Println(cert)
-		fmt.Println(SNIs)
 		kongCert := Certificate{
 			Certificate: kong.Certificate{
 				Cert: kong.String(cert),

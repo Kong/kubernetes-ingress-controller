@@ -294,10 +294,16 @@ func (n *NGINXController) fillPlugin(plugin *state.Plugin) error {
 		return errors.Wrapf(err, "error filling in default for plugin %s", *plugin.Name)
 	}
 	plugin.Config = newConfig
-	// FIXME
-	// TODO it should be possible to override these from KongPlugin
-	plugin.RunOn = kong.String("first")
-	plugin.Enabled = kong.Bool(true)
+	if plugin.RunOn == nil {
+		plugin.RunOn = kong.String("first")
+	}
+	if plugin.Enabled == nil {
+		plugin.Enabled = kong.Bool(true)
+	}
+	if len(plugin.Protocols) == 0 {
+		// TODO read this from the schema endpoint
+		plugin.Protocols = kong.StringSlice("http", "https")
+	}
 	return nil
 }
 

@@ -30,6 +30,14 @@ type KongPlugin struct {
 
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`
+
+	// RunOn configures the plugin to run on the first or the second or both
+	// nodes in case of a service mesh deployment.
+	RunOn string `json:"run_on,omitempty"`
+
+	// Protocols configures plugin to run on requests received on specific
+	// protocols.
+	Protocols []string `json:"protocols,omitempty"`
 }
 
 // KongPluginList is a top-level list type. The client methods for lists are automatically created.

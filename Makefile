@@ -22,6 +22,7 @@ TAG?=0.3.0
 REGISTRY?=kong-docker-kubernetes-ingress-controller.bintray.io
 GOOS?=linux
 DOCKER?=docker
+DOCKER_BUILD_EXTRA?=
 SED_I?=sed -i
 GOHOSTOS ?= $(shell go env GOHOSTOS)
 
@@ -114,7 +115,7 @@ else
 	$(SED_I) "s/CROSS_BUILD_//g" $(DOCKERFILE)
 endif
 
-	$(DOCKER) build -t $(MULTI_ARCH_IMG):$(TAG) $(TEMP_DIR)/rootfs
+	$(DOCKER) build -t $(MULTI_ARCH_IMG):$(TAG) $(DOCKER_BUILD_EXTRA) $(TEMP_DIR)/rootfs
 
 ifeq ($(ARCH), amd64)
 	# This is for to maintain the backward compatibility

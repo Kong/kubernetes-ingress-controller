@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 
 	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -80,7 +81,8 @@ type Configuration struct {
 	ElectionID             string
 	UpdateStatusOnShutdown bool
 
-	EnableProfiling bool
+	EnableProfiling       bool
+	KongOutsideKubernetes bool
 
 	SyncRateLimit float32
 }
@@ -137,6 +139,15 @@ func (n *NGINXController) syncIngress(interface{}) error {
 	return nil
 }
 
+// getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
+func (n *NGINXController) getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Protocol) []ingress.Endpoint {
+	if n.cfg.KongOutsideKubernetes {
+		return getEndpointsForExternalKong(s, port, n.store.ListNodeAddresses)
+	} else {
+		return getEndpoints(s, port, proto, n.store.GetServiceEndpoints)
+	}
+}
+
 // getDefaultUpstream returns an upstream associated with the
 // default backend service. In case of error retrieving information
 // configure the upstream to return http code 503.
@@ -150,7 +161,7 @@ func (n *NGINXController) getDefaultUpstream() *ingress.Backend {
 		return upstream
 	}
 
-	endps := getEndpoints(svc, &svc.Spec.Ports[0], apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
+	endps := n.getEndpoints(svc, &svc.Spec.Ports[0], apiv1.ProtocolTCP)
 	if len(endps) == 0 {
 		glog.Warningf("service %v does not have any active endpoints", svcKey)
 	}
@@ -251,7 +262,7 @@ func (n *NGINXController) getBackendServers(ingresses []*extensions.Ingress) ([]
 						// check if the location contains endpoints and a custom default backend
 						if location.DefaultBackend != nil {
 							sp := location.DefaultBackend.Spec.Ports[0]
-							endps := getEndpoints(location.DefaultBackend, &sp, apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
+							endps := n.getEndpoints(location.DefaultBackend, &sp, apiv1.ProtocolTCP)
 							if len(endps) > 0 {
 								glog.V(3).Infof("using custom default backend in server %v location %v (service %v/%v)",
 									server.Hostname, location.Path, location.DefaultBackend.Namespace, location.DefaultBackend.Name)
@@ -382,7 +393,7 @@ func (n *NGINXController) serviceEndpoints(svcKey, backendPort string) ([]ingres
 			servicePort.TargetPort.String() == backendPort ||
 			servicePort.Name == backendPort {
 
-			endps := getEndpoints(svc, &servicePort, apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
+			endps := n.getEndpoints(svc, &servicePort, apiv1.ProtocolTCP)
 			if len(endps) == 0 {
 				glog.Warningf("service %v does not have any active endpoints", svcKey)
 			}
@@ -405,7 +416,7 @@ func (n *NGINXController) serviceEndpoints(svcKey, backendPort string) ([]ingres
 			Port:       int32(externalPort),
 			TargetPort: intstr.FromString(backendPort),
 		}
-		endps := getEndpoints(svc, &servicePort, apiv1.ProtocolTCP, n.store.GetServiceEndpoints)
+		endps := n.getEndpoints(svc, &servicePort, apiv1.ProtocolTCP)
 		if len(endps) == 0 {
 			glog.Warningf("service %v does not have any active endpoints", svcKey)
 			return upstreams, nil

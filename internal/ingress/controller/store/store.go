@@ -67,6 +67,9 @@ type Storer interface {
 
 	GetServiceEndpoints(svc *corev1.Service) (*corev1.Endpoints, error)
 
+	// ListNodeAddresses returns the list of kubernetes node addresses
+	ListNodeAddresses() []string
+
 	// GetSecret returns an Ingress using the namespace and name as key
 	GetIngress(key string) (*extensions.Ingress, error)
 
@@ -119,6 +122,7 @@ type Lister struct {
 	Service  ServiceLister
 	Endpoint EndpointLister
 	Secret   SecretLister
+	Node     NodeLister
 
 	Kong struct {
 		Plugin        cache.Store
@@ -135,6 +139,7 @@ type Informer struct {
 	Service       cache.SharedIndexInformer
 	Secret        cache.SharedIndexInformer
 	Configuration cache.SharedIndexInformer
+	Node          cache.SharedIndexInformer
 
 	Kong struct {
 		Plugin        cache.SharedIndexInformer
@@ -149,6 +154,7 @@ func (c *Informer) Run(stopCh chan struct{}) {
 	go c.Endpoint.Run(stopCh)
 	go c.Service.Run(stopCh)
 	go c.Secret.Run(stopCh)
+	go c.Node.Run(stopCh)
 
 	go c.Kong.Plugin.Run(stopCh)
 	go c.Kong.Consumer.Run(stopCh)
@@ -160,6 +166,7 @@ func (c *Informer) Run(stopCh chan struct{}) {
 		c.Endpoint.HasSynced,
 		c.Service.HasSynced,
 		c.Secret.HasSynced,
+		c.Node.HasSynced,
 		c.Kong.Plugin.HasSynced,
 		c.Kong.Consumer.HasSynced,
 		c.Kong.Credential.HasSynced,
@@ -298,6 +305,27 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		},
 	}
 
+	nodeEventHandler := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			updateCh.In() <- Event{
+				Type: CreateEvent,
+				Obj:  obj,
+			}
+		},
+		UpdateFunc: func(old, cur interface{}) {
+			updateCh.In() <- Event{
+				Type: UpdateEvent,
+				Obj:  cur,
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			updateCh.In() <- Event{
+				Type: DeleteEvent,
+				Obj:  obj,
+			}
+		},
+	}
+
 	epEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			updateCh.In() <- Event{
@@ -353,10 +381,14 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	store.informers.Service = infFactory.Core().V1().Services().Informer()
 	store.listers.Service.Store = store.informers.Service.GetStore()
 
+	store.informers.Node = infFactory.Core().V1().Nodes().Informer()
+	store.listers.Node.Store = store.informers.Service.GetStore()
+
 	store.informers.Ingress.AddEventHandler(ingEventHandler)
 	store.informers.Endpoint.AddEventHandler(epEventHandler)
 	store.informers.Secret.AddEventHandler(secrEventHandler)
 	store.informers.Service.AddEventHandler(serviceEventHandler)
+	store.informers.Node.AddEventHandler(nodeEventHandler)
 
 	pluginEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -619,6 +651,21 @@ func (s k8sStore) GetSecret(key string) (*corev1.Secret, error) {
 // GetService returns a Service using the namespace and name as key
 func (s k8sStore) GetService(key string) (*corev1.Service, error) {
 	return s.listers.Service.ByKey(key)
+}
+
+// ListNodeAddresses returns a list of kubernetes node addresses
+func (s k8sStore) ListNodeAddresses() []string {
+	var result []string
+	nodes, _ := s.listers.Node.GetNodes()
+	for _, node := range nodes {
+		addresses := node.Status.Addresses
+		for _, addr := range addresses {
+			if addr.Type == "InternalIP" {
+				result = append(result, addr.Address)
+			}
+		}
+	}
+	return result
 }
 
 // GetSecret returns an Ingress using the namespace and name as key

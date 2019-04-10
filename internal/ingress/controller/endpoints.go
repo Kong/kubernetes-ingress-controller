@@ -27,6 +27,20 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 )
 
+func getEndpointsForExternalKong(s *corev1.Service, port *corev1.ServicePort, getNodeAddresses func() []string) []ingress.Endpoint {
+	var result []ingress.Endpoint
+	if port.NodePort != 0 {
+		addresses := getNodeAddresses()
+		for _, address := range addresses {
+			result = append(result, ingress.Endpoint{
+				Address: address,
+				Port:    fmt.Sprintf("%v", port.NodePort),
+			})
+		}
+	}
+	return result
+}
+
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
 func getEndpoints(
 	s *corev1.Service,

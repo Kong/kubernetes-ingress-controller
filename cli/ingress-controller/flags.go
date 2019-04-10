@@ -78,6 +78,8 @@ Kubernetes cluster and local discovery is attempted.`)
 
 		profiling = flags.Bool("profiling", true, `Enable profiling via web interface host:port/debug/pprof/`)
 
+		kongOutsideKubernetes = flags.Bool("kong-outside-kubernetes", false, `Kong lives outside the kubernetes cluster`)
+
 		updateStatus = flags.Bool("update-status", true, `Indicates if the
 		ingress controller should update the Ingress status IP/hostname. Default is true`)
 
@@ -158,6 +160,7 @@ The controller will set the endpoint records on the ingress using this address.`
 		UpdateStatus:           *updateStatus,
 		ElectionID:             *electionID,
 		EnableProfiling:        *profiling,
+		KongOutsideKubernetes:  *kongOutsideKubernetes,
 		ResyncPeriod:           *resyncPeriod,
 		DefaultService:         *defaultSvc,
 		Namespace:              *watchNamespace,

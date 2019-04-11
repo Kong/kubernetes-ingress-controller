@@ -213,15 +213,15 @@
   version = "v0.1.0"
 
 [[projects]]
-  digest = "1:4838ecbaaa3b89e38c450bcc85605d62a7300fb08488923491cbbf7dc7e04548"
+  digest = "1:a55f4499ad51cf5618e9aafbaaea3118a87836f5e74fd8eb7d2bc6b83d03a109"
   name = "github.com/hbagdi/go-kong"
   packages = [
     "kong",
     "kong/custom",
   ]
   pruneopts = ""
-  revision = "42f59b3df91cf10b7b189276157adc71db023959"
-  version = "v0.4.0"
+  revision = "d3b4f918abdb6a7d0da4c6a9b4d6e9625bf0a28e"
+  version = "v0.4.1"
 
 [[projects]]
   branch = "master"

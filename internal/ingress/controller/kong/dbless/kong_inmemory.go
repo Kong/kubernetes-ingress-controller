@@ -15,22 +15,26 @@ var credNameToDAOName = map[string]string{
 	"acl":        "acls",
 }
 
+// Service is a Kong Service, it's plugins and routes associated with it.
 type Service struct {
 	kong.Service
 	Plugins []kong.Plugin `json:"plugins"`
 	Routes  []Route       `json:"routes"`
 }
 
+// Route is a Kong Route and the plugins associated with it.
 type Route struct {
 	kong.Route
 	Plugins []kong.Plugin `json:"plugins"`
 }
 
+// Upstream is a Kong Upstream and it's targets.
 type Upstream struct {
 	kong.Upstream
 	Targets []kong.Target `json:"targets"`
 }
 
+// Certificate is a Kong Certificate and it's associated SNIs.
 type Certificate struct {
 	// Duplicated to avoid the problem of Certificate struct having an
 	// SNI as well outer layer.
@@ -42,12 +46,15 @@ type Certificate struct {
 	SNIs      []kong.SNI `json:"snis"`
 }
 
+// Consumer is a Kong consumer, and plugins and credentials associated with it.
 type Consumer struct {
 	kong.Consumer
 	Plugins     []kong.Plugin `json:"plugins"`
 	Credentials map[string][]map[string]interface{}
 }
 
+// MarshalJSON is a custom JSON marshaller to marshal credentials correctly
+// into Kong's declarative native configuration format.
 func (c Consumer) MarshalJSON() ([]byte, error) {
 	res := map[string]interface{}{}
 
@@ -71,26 +78,31 @@ func (c Consumer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&res)
 }
 
+// KongDeclarativeConfig holds Kong's configuration and can be marshalled
+// into Kong's native declarative configuration.
 type KongDeclarativeConfig struct {
 	FormatVersion string        `json:"_format_version"`
 	Services      []Service     `json:"services"`
-	Routes        []Route       `json:"routes"`
 	Upstreams     []Upstream    `json:"upstreams"`
 	Certificates  []Certificate `json:"certificates"`
 	Plugins       []kong.Plugin `json:"plugins"`
 	Consumers     []Consumer    `json:"consumers"`
 }
 
+// KongNativeState takes in a parser state and spits out Kong's native
+// declarative configuration format.
 func KongNativeState(k8sState *parser.KongState) *KongDeclarativeConfig {
 	var result KongDeclarativeConfig
 	result.FormatVersion = "1.1"
+	if k8sState == nil {
+		return &result
+	}
 	for _, s := range k8sState.Services {
 		service := Service{Service: s.Service}
 
 		for _, p := range s.Plugins {
 			service.Plugins = append(service.Plugins, *p.DeepCopy())
 		}
-		result.Services = append(result.Services, service)
 
 		for _, r := range s.Routes {
 			route := Route{Route: r.Route}
@@ -98,8 +110,9 @@ func KongNativeState(k8sState *parser.KongState) *KongDeclarativeConfig {
 			for _, p := range r.Plugins {
 				route.Plugins = append(route.Plugins, *p.DeepCopy())
 			}
-			result.Routes = append(result.Routes, route)
+			service.Routes = append(service.Routes, route)
 		}
+		result.Services = append(result.Services, service)
 	}
 
 	for _, plugin := range k8sState.GlobalPlugins {

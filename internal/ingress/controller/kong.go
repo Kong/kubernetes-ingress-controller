@@ -52,8 +52,10 @@ var upstreamDefaults = kong.Upstream{
 				Interval:     kong.Int(0),
 				Successes:    kong.Int(0),
 			},
-			HTTPPath: kong.String("/"),
-			Timeout:  kong.Int(1),
+			HTTPPath:               kong.String("/"),
+			Timeout:                kong.Int(1),
+			HTTPSVerifyCertificate: kong.Bool(true),
+			Type:                   kong.String("http"),
 			Unhealthy: &kong.Unhealthy{
 				HTTPFailures: kong.Int(0),
 				TCPFailures:  kong.Int(0),

@@ -24,6 +24,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/hbagdi/deck/counter"
 	"github.com/hbagdi/deck/diff"
@@ -277,6 +278,8 @@ func (n *NGINXController) toDeckKongState(k8sState *parser.KongState) (*state.Ko
 	return targetState, nil
 }
 
+var kong110version = semver.MustParse("1.1.0")
+
 func (n *NGINXController) fillPlugin(plugin *state.Plugin) error {
 	if plugin == nil {
 		return errors.New("plugin is nil")
@@ -302,9 +305,11 @@ func (n *NGINXController) fillPlugin(plugin *state.Plugin) error {
 	if plugin.Enabled == nil {
 		plugin.Enabled = kong.Bool(true)
 	}
-	if len(plugin.Protocols) == 0 {
-		// TODO read this from the schema endpoint
-		plugin.Protocols = kong.StringSlice("http", "https")
+	if n.cfg.Kong.Version.GTE(kong110version) {
+		if len(plugin.Protocols) == 0 {
+			// TODO read this from the schema endpoint
+			plugin.Protocols = kong.StringSlice("http", "https")
+		}
 	}
 	return nil
 }

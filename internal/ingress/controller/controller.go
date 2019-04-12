@@ -20,6 +20,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
@@ -49,6 +50,7 @@ type Kong struct {
 	CACert        string
 
 	InMemory bool
+	Version  semver.Version
 }
 
 // Configuration contains all the settings required by an Ingress controller

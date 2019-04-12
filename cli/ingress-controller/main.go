@@ -165,6 +165,7 @@ func main() {
 
 	glog.Infof("kong version: %s", v)
 	kongConfiguration := root["configuration"].(map[string]interface{})
+	conf.Kong.Version = v
 	glog.Infof("Kong datastore: %s", kongConfiguration["database"].(string))
 	conf.Kong.Client = kongClient
 	if kongConfiguration["database"].(string) == "off" {

@@ -318,7 +318,7 @@ func TestStatusActions(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// execute shutdown
-	fk.Shutdown()
+	fk.Shutdown(true)
 	// ingress should be empty
 	newIPs2 := []apiv1.LoadBalancerIngress{}
 	fooIngress2, err2 := fk.Client.ExtensionsV1beta1().Ingresses(apiv1.NamespaceDefault).Get("foo_ingress_1", metav1.GetOptions{})

@@ -104,7 +104,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
 
 	// If in-memory mode, each Kong instance runs with it's own controller
 	if !n.cfg.Kong.InMemory &&
-		!n.syncStatus.IsLeader() {
+		!n.elector.IsLeader() {
 		glog.V(2).Infof("skipping synchronization of configuration because I am not the leader.")
 		return nil
 	}

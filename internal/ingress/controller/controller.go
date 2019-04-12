@@ -141,7 +141,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
 func (n *NGINXController) getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Protocol) []ingress.Endpoint {
-	if n.cfg.KongOutsideKubernetes {
+	if n.cfg.KongOutsideKubernetes && port.NodePort != 0 {
 		return getEndpointsForExternalKong(s, port, n.store.ListNodeAddresses)
 	} else {
 		return getEndpoints(s, port, proto, n.store.GetServiceEndpoints)

@@ -382,7 +382,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	store.listers.Service.Store = store.informers.Service.GetStore()
 
 	store.informers.Node = infFactory.Core().V1().Nodes().Informer()
-	store.listers.Node.Store = store.informers.Service.GetStore()
+	store.listers.Node.Store = store.informers.Node.GetStore()
 
 	store.informers.Ingress.AddEventHandler(ingEventHandler)
 	store.informers.Endpoint.AddEventHandler(epEventHandler)

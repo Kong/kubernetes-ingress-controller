@@ -331,11 +331,11 @@ func (n *NGINXController) fillConsumersAndCredentials(state *parser.KongState) e
 			c.CustomID = kong.String(consumer.CustomID)
 		}
 
-		consumers[consumer.Name] = c
+		consumers[consumer.Namespace+"/"+consumer.Name] = c
 	}
 
 	for _, credential := range n.store.ListKongCredentials() {
-		consumer, ok := consumers[credential.ConsumerRef]
+		consumer, ok := consumers[credential.Namespace+"/"+credential.ConsumerRef]
 		if !ok {
 			continue
 		}
@@ -347,7 +347,7 @@ func (n *NGINXController) fillConsumersAndCredentials(state *parser.KongState) e
 		}
 		consumer.Credentials[credential.Type] = append(consumer.Credentials[credential.Type], credential.Config)
 
-		consumers[credential.ConsumerRef] = consumer
+		consumers[credential.Namespace+"/"+credential.ConsumerRef] = consumer
 	}
 
 	for _, c := range consumers {

@@ -83,6 +83,11 @@ Please refer to our [deployment documentation][deployment]
 for a detailed introduction to Kong Ingress Controller
 and Ingress spec.
 
+:warning: Kong Ingress Controller takes care of managing all entities in Kong's
+datastore as per the Ingress and custom resource definitions in k8s.
+Any entity created using Kong's Admin API will be
+deleted by the Ingress Controller.
+
 ## Seeking help
 
 Please search through the posts on

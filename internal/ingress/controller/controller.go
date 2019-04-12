@@ -64,8 +64,6 @@ type Configuration struct {
 
 	ResyncPeriod time.Duration
 
-	DefaultService string
-
 	Namespace string
 
 	DefaultHealthzURL     string

@@ -25,7 +25,6 @@ import (
 	"github.com/golang/glog"
 
 	apiv1 "k8s.io/api/core/v1"
-	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -140,7 +139,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
-func (n *NGINXController) getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Protocol) []ingress.Endpoint {
+func (n *NGINXController) getEndpoints(s *apiv1.Service, port *apiv1.ServicePort, proto apiv1.Protocol) []ingress.Endpoint {
 	if n.cfg.KongOutsideKubernetes && port.NodePort != 0 {
 		return getEndpointsForExternalKong(s, port, n.store.ListNodeAddresses)
 	} else {

@@ -20,16 +20,33 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/errors"
 )
 
 var (
 	// AnnotationsPrefix defines the common prefix used in the nginx ingress controller
-	AnnotationsPrefix = "nginx.ingress.kubernetes.io"
+	AnnotationsPrefix        = "nginx.ingress.kubernetes.io"
+	errMissingAnnotations    = errors.New("ingress rule without annotations")
+	errInvalidAnnotationName = errors.New("invalid annotation name")
 )
+
+// InvalidContent error
+type InvalidContent struct {
+	Name string
+}
+
+func (e InvalidContent) Error() string {
+	return e.Name
+}
+
+// NewInvalidAnnotationContent returns a new InvalidContent error
+func invalidContentErro(name string, val interface{}) error {
+	return InvalidContent{
+		Name: fmt.Sprintf("the annotation %v does not contain a valid value (%v)", name, val),
+	}
+}
 
 // IngressAnnotation has a method to parse annotations located in Ingress
 type IngressAnnotation interface {
@@ -43,11 +60,11 @@ func (a ingAnnotations) parseBool(name string) (bool, error) {
 	if ok {
 		b, err := strconv.ParseBool(val)
 		if err != nil {
-			return false, errors.NewInvalidAnnotationContent(name, val)
+			return false, invalidContentErro(name, val)
 		}
 		return b, nil
 	}
-	return false, errors.ErrMissingAnnotations
+	return false, errMissingAnnotations
 }
 
 func (a ingAnnotations) parseString(name string) (string, error) {
@@ -55,7 +72,7 @@ func (a ingAnnotations) parseString(name string) (string, error) {
 	if ok {
 		return val, nil
 	}
-	return "", errors.ErrMissingAnnotations
+	return "", errMissingAnnotations
 }
 
 func (a ingAnnotations) parseInt(name string) (int, error) {
@@ -63,19 +80,19 @@ func (a ingAnnotations) parseInt(name string) (int, error) {
 	if ok {
 		i, err := strconv.Atoi(val)
 		if err != nil {
-			return 0, errors.NewInvalidAnnotationContent(name, val)
+			return 0, invalidContentErro(name, val)
 		}
 		return i, nil
 	}
-	return 0, errors.ErrMissingAnnotations
+	return 0, errMissingAnnotations
 }
 
 func checkAnnotation(name string, objectMeta *metav1.ObjectMeta) error {
 	if objectMeta == nil || len(objectMeta.GetAnnotations()) == 0 {
-		return errors.ErrMissingAnnotations
+		return errMissingAnnotations
 	}
 	if name == "" {
-		return errors.ErrInvalidAnnotationName
+		return errInvalidAnnotationName
 	}
 
 	return nil
@@ -85,7 +102,7 @@ func checkAnnotation(name string, objectMeta *metav1.ObjectMeta) error {
 func GetBoolAnnotation(name string, ing *extensions.Ingress) (bool, error) {
 	v := GetAnnotationWithPrefix(name)
 	if ing == nil {
-		return false, errors.ErrMissingAnnotations
+		return false, errMissingAnnotations
 	}
 
 	err := checkAnnotation(v, &ing.ObjectMeta)
@@ -101,7 +118,7 @@ func GetBoolAnnotation(name string, ing *extensions.Ingress) (bool, error) {
 func GetStringAnnotation(name string, objectMeta *metav1.ObjectMeta) (string, error) {
 	v := GetAnnotationWithPrefix(name)
 	if objectMeta == nil {
-		return "", errors.ErrMissingAnnotations
+		return "", errMissingAnnotations
 	}
 
 	err := checkAnnotation(v, objectMeta)
@@ -115,7 +132,7 @@ func GetStringAnnotation(name string, objectMeta *metav1.ObjectMeta) (string, er
 func GetIntAnnotation(name string, ing *extensions.Ingress) (int, error) {
 	v := GetAnnotationWithPrefix(name)
 	if ing == nil {
-		return 0, errors.ErrMissingAnnotations
+		return 0, errMissingAnnotations
 	}
 
 	err := checkAnnotation(v, &ing.ObjectMeta)

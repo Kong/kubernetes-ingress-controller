@@ -19,7 +19,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -57,11 +56,6 @@ protocol://address:port, e.g., "http://localhost:8080.
 If not specified, the assumption is that the binary runs inside a 
 Kubernetes cluster and local discovery is attempted.`)
 		kubeConfigFile = flags.String("kubeconfig", "", "Path to kubeconfig file with authorization and master location information.")
-
-		defaultSvc = flags.String("default-backend-service", "",
-			`Service used to serve a 404 page for the default backend. Takes the form
-		namespace/name. The controller uses the first node port of this Service for
-		the default backend.`)
 
 		ingressClass = flags.String("ingress-class", "",
 			`Name of the ingress class to route through this controller.`)
@@ -130,10 +124,6 @@ The controller will set the endpoint records on the ingress using this address.`
 		return true, nil, nil
 	}
 
-	if *defaultSvc == "" {
-		return false, nil, fmt.Errorf("Please specify --default-backend-service")
-	}
-
 	if *ingressClass != "" {
 		glog.Infof("Watching for ingress class: %s", *ingressClass)
 
@@ -159,7 +149,6 @@ The controller will set the endpoint records on the ingress using this address.`
 		ElectionID:             *electionID,
 		EnableProfiling:        *profiling,
 		ResyncPeriod:           *resyncPeriod,
-		DefaultService:         *defaultSvc,
 		Namespace:              *watchNamespace,
 		PublishService:         *publishSvc,
 		PublishStatusAddress:   *publishStatusAddress,

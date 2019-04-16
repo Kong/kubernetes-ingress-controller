@@ -25,7 +25,6 @@ import (
 )
 
 // Endpoint describes a kubernetes endpoint in a backend
-// +k8s:deepcopy-gen=true
 type Endpoint struct {
 	// Address IP address of the endpoint
 	Address string `json:"address"`

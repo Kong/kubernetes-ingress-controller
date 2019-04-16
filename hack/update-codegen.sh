@@ -17,7 +17,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -x
 
 GOPATH=$(go env GOPATH)
 PACKAGE_NAME=github.com/kong/kubernetes-ingress-controller
@@ -26,16 +25,6 @@ REPO_ROOT="$GOPATH/src/$PACKAGE_NAME"
 
 SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
-
-# generate the code with:
-# --output-base    because this script should also be able to run inside the vendor dir of
-#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
-#                  instead of the $GOPATH directly. For normal projects this can be dropped.
-${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
-  ${PACKAGE_NAME}/internal ${PACKAGE_NAME}/internal \
-  .:ingress \
-  --output-base "$GOPATH/src" \
-  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
 
 ${CODEGEN_PKG}/generate-groups.sh "all" \
   ${PACKAGE_NAME}/internal/client/configuration ${PACKAGE_NAME}/internal/apis \

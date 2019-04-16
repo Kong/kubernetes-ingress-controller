@@ -53,8 +53,14 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=configuration.konghq.com, Version=v1
+	case v1.SchemeGroupVersion.WithResource("kongconsumers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongConsumers().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("kongcredentials"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongCredentials().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("kongingresses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongIngresses().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("kongplugins"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongPlugins().Informer()}, nil
 
 	}
 

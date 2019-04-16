@@ -684,7 +684,7 @@ func (s k8sStore) GetKongConsumer(namespace, name string) (*consumerv1.KongConsu
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("plugin %v was not found", key)
+		return nil, fmt.Errorf("consumer %v was not found", key)
 	}
 	return p.(*consumerv1.KongConsumer), nil
 }

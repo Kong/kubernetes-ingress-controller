@@ -39,13 +39,10 @@ import (
 	discovery "k8s.io/apimachinery/pkg/version"
 	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/hbagdi/go-kong/kong"
-	consumerintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
-	pluginintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
 	"github.com/kong/kubernetes-ingress-controller/version"
@@ -69,10 +66,6 @@ func main() {
 	if err != nil {
 		handleFatalInitError(err)
 	}
-
-	// Add types to the default Kubernetes Scheme
-	pluginintscheme.AddToScheme(scheme.Scheme)
-	consumerintscheme.AddToScheme(scheme.Scheme)
 
 	if conf.PublishService == "" {
 		glog.Fatal("flag --publish-address is mandatory")

@@ -11,7 +11,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
@@ -589,7 +588,7 @@ func (p *Parser) getKongIngressFromIngress(ing *extensions.Ingress) (
 
 // getPluginsFromAnnotations extracts plugins to be applied on an ingress/service from annotations
 func (p *Parser) getPluginsFromAnnotations(namespace string, anns map[string]string) ([]kong.Plugin, error) {
-	pluginsInk8s := make(map[string]*pluginv1.KongPlugin)
+	pluginsInk8s := make(map[string]*configurationv1.KongPlugin)
 	pluginList := annotations.ExtractKongPluginsFromAnnotations(anns)
 	// override plugins configured by new annotation
 	for _, plugin := range pluginList {

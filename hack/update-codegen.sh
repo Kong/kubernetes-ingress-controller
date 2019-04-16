@@ -38,21 +38,6 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
 
 ${CODEGEN_PKG}/generate-groups.sh "all" \
-  ${PACKAGE_NAME}/internal/client/plugin ${PACKAGE_NAME}/internal/apis \
-  plugin:v1 \
-  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
-
-${CODEGEN_PKG}/generate-groups.sh "all" \
-  ${PACKAGE_NAME}/internal/client/consumer ${PACKAGE_NAME}/internal/apis \
-  consumer:v1 \
-  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
-
-${CODEGEN_PKG}/generate-groups.sh "all" \
-  ${PACKAGE_NAME}/internal/client/credential ${PACKAGE_NAME}/internal/apis \
-  credential:v1 \
-  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt
-
-${CODEGEN_PKG}/generate-groups.sh "all" \
   ${PACKAGE_NAME}/internal/client/configuration ${PACKAGE_NAME}/internal/apis \
   configuration:v1 \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt

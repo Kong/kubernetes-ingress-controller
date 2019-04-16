@@ -149,28 +149,32 @@ func main() {
 	if kongConfiguration["database"].(string) == "off" {
 		conf.Kong.InMemory = true
 	}
-	ngx := controller.NewNGINXController(conf)
 
-	go handleSigterm(ngx, func(code int) {
+	kong, err := controller.NewKongController(conf)
+	if err != nil {
+		glog.Fatal(err)
+	}
+
+	go handleSigterm(kong, func(code int) {
 		os.Exit(code)
 	})
 
 	mux := http.NewServeMux()
-	go registerHandlers(conf.EnableProfiling, 10254, ngx, mux)
+	go registerHandlers(conf.EnableProfiling, 10254, kong, mux)
 
-	ngx.Start()
+	kong.Start()
 }
 
 type exiter func(code int)
 
-func handleSigterm(ngx *controller.NGINXController, exit exiter) {
+func handleSigterm(kong *controller.KongController, exit exiter) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
 	<-signalChan
 	glog.Infof("Received SIGTERM, shutting down")
 
 	exitCode := 0
-	if err := ngx.Stop(); err != nil {
+	if err := kong.Stop(); err != nil {
 		glog.Infof("Error during shutdown %v", err)
 		exitCode = 1
 	}
@@ -272,7 +276,7 @@ func handleFatalInitError(err error) {
 		"https://github.com/kubernetes/ingress-nginx/blob/master/docs/troubleshooting.md", err)
 }
 
-func registerHandlers(enableProfiling bool, port int, ic *controller.NGINXController, mux *http.ServeMux) {
+func registerHandlers(enableProfiling bool, port int, ic *controller.KongController, mux *http.ServeMux) {
 	// expose health check endpoint (/healthz)
 	healthz.InstallHandler(mux,
 		healthz.PingHealthz,

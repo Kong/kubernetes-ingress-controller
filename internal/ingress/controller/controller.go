@@ -83,7 +83,7 @@ type Configuration struct {
 }
 
 // GetPublishService returns the configured service used to set ingress status
-func (n NGINXController) GetPublishService() *apiv1.Service {
+func (n KongController) GetPublishService() *apiv1.Service {
 	s, err := n.store.GetService(n.cfg.PublishService)
 	if err != nil {
 		return nil
@@ -95,7 +95,7 @@ func (n NGINXController) GetPublishService() *apiv1.Service {
 // sync collects all the pieces required to assemble the configuration file and
 // then sends the content to the backend (OnUpdate) receiving the populated
 // template as response reloading the backend if is required.
-func (n *NGINXController) syncIngress(interface{}) error {
+func (n *KongController) syncIngress(interface{}) error {
 	n.syncRateLimiter.Accept()
 
 	if n.syncQueue.IsShuttingDown() {

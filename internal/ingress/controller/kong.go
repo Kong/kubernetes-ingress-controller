@@ -87,14 +87,14 @@ var upstreamDefaults = kong.Upstream{
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
-func (n *NGINXController) OnUpdate(state *parser.KongState) error {
+func (n *KongController) OnUpdate(state *parser.KongState) error {
 	if n.cfg.InMemory {
 		return n.onUpdateInMemoryMode(state)
 	}
 	return n.onUpdateDBMode(state)
 }
 
-func (n *NGINXController) onUpdateInMemoryMode(state *parser.KongState) error {
+func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
 	client := n.cfg.Kong.Client
 
 	// XXX
@@ -132,7 +132,7 @@ func (n *NGINXController) onUpdateInMemoryMode(state *parser.KongState) error {
 	return err
 }
 
-func (n *NGINXController) onUpdateDBMode(state *parser.KongState) error {
+func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 
 	client := n.cfg.Kong.Client
 
@@ -165,7 +165,7 @@ func (n *NGINXController) onUpdateDBMode(state *parser.KongState) error {
 	return nil
 }
 
-func (n *NGINXController) toDeckKongState(k8sState *parser.KongState) (*state.KongState, error) {
+func (n *KongController) toDeckKongState(k8sState *parser.KongState) (*state.KongState, error) {
 	targetState, err := state.NewKongState()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating new parser.KongState")
@@ -280,7 +280,7 @@ func (n *NGINXController) toDeckKongState(k8sState *parser.KongState) (*state.Ko
 
 var kong110version = semver.MustParse("1.1.0")
 
-func (n *NGINXController) fillPlugin(plugin *state.Plugin) error {
+func (n *KongController) fillPlugin(plugin *state.Plugin) error {
 	if plugin == nil {
 		return errors.New("plugin is nil")
 	}
@@ -314,7 +314,7 @@ func (n *NGINXController) fillPlugin(plugin *state.Plugin) error {
 	return nil
 }
 
-func (n *NGINXController) fillConsumersAndCredentials(state *parser.KongState) error {
+func (n *KongController) fillConsumersAndCredentials(state *parser.KongState) error {
 	consumers := make(map[string]parser.Consumer)
 	for _, consumer := range n.store.ListKongConsumers() {
 		if consumer.Username == "" && consumer.CustomID == "" {
@@ -358,7 +358,7 @@ func (n *NGINXController) fillConsumersAndCredentials(state *parser.KongState) e
 
 // syncConsumers synchronizes the state between KongConsumer (Kubernetes CRD) type and Kong consumers.
 // This loop only creates new consumers in Kong.
-func (n *NGINXController) syncConsumers() error {
+func (n *KongController) syncConsumers() error {
 
 	consumersInKong := make(map[string]*kong.Consumer)
 	client := n.cfg.Kong.Client
@@ -442,7 +442,7 @@ var validCredentialTypes = sets.NewString(
 )
 
 // syncCredentials synchronizes the state between KongCredential (Kubernetes CRD) and Kong credentials.
-func (n *NGINXController) syncCredentials() error {
+func (n *KongController) syncCredentials() error {
 	// List existing credentials in Kubernetes
 	client := n.cfg.Kong.Client
 

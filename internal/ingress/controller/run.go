@@ -40,17 +40,17 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
-// NewNGINXController creates a new NGINX Ingress controller.
+// NewKongController creates a new NGINX Ingress controller.
 // If the environment variable NGINX_BINARY exists it will be used
 // as source for nginx commands
-func NewNGINXController(config *Configuration) *NGINXController {
+func NewKongController(config *Configuration) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: config.KubeClient.CoreV1().Events(config.Namespace),
 	})
 
-	n := &NGINXController{
+	n := &KongController{
 		cfg:             config,
 		syncRateLimiter: flowcontrol.NewTokenBucketRateLimiter(config.SyncRateLimit, 1),
 
@@ -113,11 +113,11 @@ func NewNGINXController(config *Configuration) *NGINXController {
 
 	n.elector = election.NewElector(electionConfig)
 
-	return n
+	return n, nil
 }
 
-// NGINXController ...
-type NGINXController struct {
+// KongController ...
+type KongController struct {
 	cfg *Configuration
 
 	recorder record.EventRecorder
@@ -138,9 +138,6 @@ type NGINXController struct {
 	stopCh   chan struct{}
 	updateCh *channels.RingChannel
 
-	// ngxErrCh channel used to detect errors with the nginx processes
-	ngxErrCh chan error
-
 	// runningConfig contains the running configuration in the Backend
 	runningConfig *parser.KongState
 
@@ -156,7 +153,7 @@ type NGINXController struct {
 }
 
 // Start start a new NGINX master process running in foreground.
-func (n *NGINXController) Start() {
+func (n *KongController) Start() {
 	glog.Infof("starting Ingress controller")
 
 	n.store.Run(n.stopCh)
@@ -173,11 +170,6 @@ func (n *NGINXController) Start() {
 
 	for {
 		select {
-		case err := <-n.ngxErrCh:
-			if n.isShuttingDown {
-				break
-			}
-			glog.Infof("Unexpected error: %v", err)
 		case event := <-n.updateCh.Out():
 			if n.isShuttingDown {
 				break
@@ -195,7 +187,7 @@ func (n *NGINXController) Start() {
 }
 
 // Stop gracefully stops the NGINX master process.
-func (n *NGINXController) Stop() error {
+func (n *KongController) Stop() error {
 	n.isShuttingDown = true
 
 	n.stopLock.Lock()

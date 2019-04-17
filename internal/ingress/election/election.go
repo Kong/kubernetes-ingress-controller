@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection"
@@ -44,7 +44,7 @@ func (e elector) IsLeader() bool {
 
 // NewElector returns an instance of Elector based on config.
 func NewElector(config Config) Elector {
-	pod, err := k8s.GetPodDetails(config.Client)
+	pod, err := utils.GetPodDetails(config.Client)
 	if err != nil {
 		glog.Fatalf("unexpected error obtaining pod information: %v", err)
 	}

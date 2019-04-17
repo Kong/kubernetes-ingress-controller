@@ -36,7 +36,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/kubernetes/pkg/kubelet/util/sliceutils"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
@@ -87,7 +87,7 @@ type Config struct {
 type statusSync struct {
 	Config
 	// pod contains runtime information about this pod
-	pod *k8s.PodInfo
+	pod *utils.PodInfo
 
 	electionID string
 	// workqueue used to keep in sync the status IP/s
@@ -170,7 +170,7 @@ func (s statusSync) keyfunc(input interface{}) (interface{}, error) {
 
 // NewStatusSyncer returns a new Sync instance
 func NewStatusSyncer(config Config) Sync {
-	pod, err := k8s.GetPodDetails(config.Client)
+	pod, err := utils.GetPodDetails(config.Client)
 	if err != nil {
 		glog.Fatalf("unexpected error obtaining pod information: %v", err)
 	}
@@ -216,7 +216,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 		return addrs, nil
 	}
 
-	ns, name, _ := k8s.ParseNameNS(s.PublishService)
+	ns, name, _ := utils.ParseNameNS(s.PublishService)
 	svc, err := s.Client.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 				continue
 			}
 
-			name := k8s.GetNodeIPOrName(s.Client, pod.Spec.NodeName)
+			name := utils.GetNodeIPOrName(s.Client, pod.Spec.NodeName)
 			if !sliceutils.StringInSlice(name, addrs) {
 				addrs = append(addrs, name)
 			}

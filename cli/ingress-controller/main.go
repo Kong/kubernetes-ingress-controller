@@ -44,7 +44,7 @@ import (
 
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/version"
 )
 
@@ -71,7 +71,7 @@ func main() {
 		glog.Fatal("flag --publish-address is mandatory")
 	}
 
-	ns, name, err := k8s.ParseNameNS(conf.PublishService)
+	ns, name, err := utils.ParseNameNS(conf.PublishService)
 	if err != nil {
 		glog.Fatal(err)
 	}

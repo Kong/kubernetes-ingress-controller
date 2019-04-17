@@ -6,7 +6,7 @@ import (
 
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -476,7 +476,7 @@ func TestGetEndpoints(t *testing.T) {
 		port   *corev1.ServicePort
 		proto  corev1.Protocol
 		fn     func(*corev1.Service) (*corev1.Endpoints, error)
-		result []ingress.Endpoint
+		result []utils.Endpoint
 	}{
 		{
 			"no service should return 0 endpoints",
@@ -486,7 +486,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(*corev1.Service) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"no service port should return 0 endpoints",
@@ -496,7 +496,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(*corev1.Service) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"a service without endpoints should return 0 endpoints",
@@ -506,7 +506,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(*corev1.Service) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"a service type ServiceTypeExternalName service with an invalid port should return 0 endpoints",
@@ -520,7 +520,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(*corev1.Service) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"a service type ServiceTypeExternalName with a valid port should return one endpoint",
@@ -544,12 +544,10 @@ func TestGetEndpoints(t *testing.T) {
 			func(*corev1.Service) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]ingress.Endpoint{
+			[]utils.Endpoint{
 				{
-					Address:     "10.0.0.1.xip.io",
-					Port:        "80",
-					MaxFails:    0,
-					FailTimeout: 0,
+					Address: "10.0.0.1.xip.io",
+					Port:    "80",
 				},
 			},
 		},
@@ -575,7 +573,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(*corev1.Service) (*corev1.Endpoints, error) {
 				return nil, fmt.Errorf("unexpected error")
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"should return no endpoints when the protocol does not match",
@@ -616,7 +614,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"should return no endpoints when there is no ready Addresses",
@@ -657,7 +655,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"should return no endpoints when the name of the port name do not match any port in the endpoint Subsets",
@@ -700,7 +698,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]ingress.Endpoint{},
+			[]utils.Endpoint{},
 		},
 		{
 			"should return one endpoint when the name of the port name match a port in the endpoint Subsets",
@@ -743,12 +741,10 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]ingress.Endpoint{
+			[]utils.Endpoint{
 				{
-					Address:     "1.1.1.1",
-					Port:        "80",
-					MaxFails:    0,
-					FailTimeout: 0,
+					Address: "1.1.1.1",
+					Port:    "80",
 				},
 			},
 		},
@@ -798,12 +794,10 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]ingress.Endpoint{
+			[]utils.Endpoint{
 				{
-					Address:     "1.1.1.1",
-					Port:        "80",
-					MaxFails:    0,
-					FailTimeout: 0,
+					Address: "1.1.1.1",
+					Port:    "80",
 				},
 			},
 		},

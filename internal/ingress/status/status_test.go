@@ -27,7 +27,7 @@ import (
 	testclient "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
@@ -260,7 +260,7 @@ func buildIngressLister() ingressLister {
 
 func buildStatusSync() statusSync {
 	return statusSync{
-		pod: &k8s.PodInfo{
+		pod: &utils.PodInfo{
 			Name:      "foo_base_pod",
 			Namespace: apiv1.NamespaceDefault,
 			Labels: map[string]string{

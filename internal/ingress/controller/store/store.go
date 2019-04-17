@@ -42,9 +42,9 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/parser"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
 // Storer is the interface that wraps the required methods to gather information
@@ -65,7 +65,7 @@ type Storer interface {
 	ListIngresses() []*extensions.Ingress
 
 	// Get an SSL cert from k8s secret
-	GetCertFromSecret(string) (*ingress.SSLCert, error)
+	GetCertFromSecret(string) (*utils.RawSSLCert, error)
 
 	// Run initiates the synchronization of the controllers
 	Run(stopCh chan struct{})

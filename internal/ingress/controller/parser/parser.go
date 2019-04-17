@@ -11,9 +11,9 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -416,8 +416,8 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 			return nil, errors.Wrapf(err, "error fetching certificate '%v'",
 				secretKey)
 		}
-		cert := bytes.NewBuffer(certKeyPair.Raw.Cert).String()
-		key := bytes.NewBuffer(certKeyPair.Raw.Key).String()
+		cert := bytes.NewBuffer(certKeyPair.Cert).String()
+		key := bytes.NewBuffer(certKeyPair.Key).String()
 		kongCert := Certificate{
 			Certificate: kong.Certificate{
 				Cert: kong.String(cert),
@@ -506,7 +506,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 func (p *Parser) getServiceEndpoints(svcKey,
 	backendPort string) ([]Target, error) {
 	var targets []Target
-	var endpoints []ingress.Endpoint
+	var endpoints []utils.Endpoint
 	var servicePort corev1.ServicePort
 	svc, err := p.store.GetService(svcKey)
 	if err != nil {
@@ -630,9 +630,9 @@ func getEndpoints(
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 	getServiceEndpoints func(*corev1.Service) (*corev1.Endpoints, error),
-) []ingress.Endpoint {
+) []utils.Endpoint {
 
-	upsServers := []ingress.Endpoint{}
+	upsServers := []utils.Endpoint{}
 
 	if s == nil || port == nil {
 		return upsServers
@@ -654,7 +654,7 @@ func getEndpoints(
 			return upsServers
 		}
 
-		return append(upsServers, ingress.Endpoint{
+		return append(upsServers, utils.Endpoint{
 			Address: s.Spec.ExternalName,
 			Port:    fmt.Sprintf("%v", targetPort),
 		})
@@ -693,10 +693,9 @@ func getEndpoints(
 				if _, exists := adus[ep]; exists {
 					continue
 				}
-				ups := ingress.Endpoint{
+				ups := utils.Endpoint{
 					Address: epAddress.IP,
 					Port:    fmt.Sprintf("%v", targetPort),
-					Target:  epAddress.TargetRef,
 				}
 				upsServers = append(upsServers, ups)
 				adus[ep] = true

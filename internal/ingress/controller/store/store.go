@@ -43,7 +43,6 @@ import (
 	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
@@ -183,7 +182,7 @@ type k8sStore struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
+func New(namespace string,
 	resyncPeriod time.Duration,
 	client clientset.Interface,
 	clientConf *rest.Config,
@@ -196,7 +195,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: client.CoreV1().Events(namespace),
 	})
@@ -208,8 +206,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		AddFunc: func(obj interface{}) {
 			ing := obj.(*extensions.Ingress)
 			if !class.IsValid(&ing.ObjectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, &ing.ObjectMeta)
-				glog.Infof("ignoring add for ingress %v based on annotation %v with value %v", ing.Name, class.IngressKey, a)
 				return
 			}
 
@@ -236,7 +232,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 				}
 			}
 			if !class.IsValid(&ing.ObjectMeta) {
-				glog.Infof("ignoring delete for ingress %v based on annotation %v", ing.Name, class.IngressKey)
 				return
 			}
 			recorder.Eventf(ing, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", ing.Namespace, ing.Name))
@@ -252,10 +247,8 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			validOld := class.IsValid(&oldIng.ObjectMeta)
 			validCur := class.IsValid(&curIng.ObjectMeta)
 			if !validOld && validCur {
-				glog.Infof("creating ingress %v based on annotation %v", curIng.Name, class.IngressKey)
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			} else if validOld && !validCur {
-				glog.Infof("removing ingress %v based on annotation %v", curIng.Name, class.IngressKey)
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			} else if validCur && !reflect.DeepEqual(old, cur) {
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "UPDATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
@@ -357,13 +350,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 			objectMeta := &res.ObjectMeta
 			if !class.IsValid(objectMeta) {
-				a, err := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				if err != nil {
-					glog.Infof("%v", err)
-				}
-				glog.Infof("ignoring add event for plugin %v based"+
-					" on annotation %v with value %v", res.Name,
-					class.IngressKey, a)
 				return
 			}
 
@@ -389,10 +375,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 			objectMeta := &res.ObjectMeta
 			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring delete event for plugin %v based"+
-					" on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
 				return
 			}
 
@@ -426,10 +408,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 			objectMeta := &res.ObjectMeta
 			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring add event for consumer %v based"+
-					" on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
 				return
 			}
 
@@ -455,10 +433,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 			objectMeta := &res.ObjectMeta
 			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring delete event for consumer"+
-					" %v based on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
 				return
 			}
 
@@ -492,10 +466,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 			objectMeta := &res.ObjectMeta
 			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring add event for credential %v"+
-					" based on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
 				return
 			}
 
@@ -521,10 +491,6 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 			objectMeta := &res.ObjectMeta
 			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring delete event for credential %v"+
-					" based on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
 				return
 			}
 

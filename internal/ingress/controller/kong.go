@@ -375,13 +375,13 @@ func (n *KongController) syncConsumers() error {
 
 	// List existing Consumers in Kubernetes
 	for _, consumer := range n.store.ListKongConsumers() {
-		glog.Infof("checking if Kong consumer %v exists", consumer.Name)
+		glog.V(2).Infof("checking if Kong consumer %v exists", consumer.Name)
 		consumerID := fmt.Sprintf("%v", consumer.GetUID())
 
 		kc, ok := consumersInKong[consumerID]
 
 		if !ok {
-			glog.Infof("Creating Kong consumer %v", consumerID)
+			glog.V(2).Infof("Creating Kong consumer %v", consumerID)
 			c := &kong.Consumer{
 				ID: kong.String(consumerID),
 			}

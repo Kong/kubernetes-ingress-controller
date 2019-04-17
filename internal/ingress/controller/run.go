@@ -24,13 +24,10 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/eapache/channels"
-	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
-	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
-	"k8s.io/kubernetes/pkg/util/filesystem"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
@@ -45,7 +42,6 @@ import (
 // as source for nginx commands
 func NewKongController(config *Configuration) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: config.KubeClient.CoreV1().Events(config.Namespace),
 	})
@@ -53,10 +49,6 @@ func NewKongController(config *Configuration) (*KongController, error) {
 	n := &KongController{
 		cfg:             config,
 		syncRateLimiter: flowcontrol.NewTokenBucketRateLimiter(config.SyncRateLimit, 1),
-
-		recorder: eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{
-			Component: "kong-ingress-controller",
-		}),
 
 		stopCh:   make(chan struct{}),
 		updateCh: channels.NewRingChannel(1024),
@@ -68,10 +60,6 @@ func NewKongController(config *Configuration) (*KongController, error) {
 
 	n.store = store.New(
 		config.Namespace,
-		"",
-		"",
-		"",
-		"",
 		config.ResyncPeriod,
 		config.KubeClient,
 		config.KubeConf,
@@ -120,8 +108,6 @@ func NewKongController(config *Configuration) (*KongController, error) {
 type KongController struct {
 	cfg *Configuration
 
-	recorder record.EventRecorder
-
 	syncQueue *task.Queue
 
 	syncStatus status.Sync
@@ -144,8 +130,6 @@ type KongController struct {
 	isShuttingDown bool
 
 	store store.Storer
-
-	fileSystem filesystem.Filesystem
 
 	parser parser.Parser
 

@@ -26,6 +26,12 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&KongIngress{},
 		&KongIngressList{},
+		&KongPlugin{},
+		&KongPluginList{},
+		&KongConsumer{},
+		&KongConsumerList{},
+		&KongCredential{},
+		&KongCredentialList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -42,7 +42,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
@@ -179,6 +179,8 @@ type k8sStore struct {
 
 	// updateCh
 	updateCh *channels.RingChannel
+
+	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
 }
 
 // New creates a new object store to be used in the ingress controller
@@ -186,12 +188,14 @@ func New(namespace string,
 	resyncPeriod time.Duration,
 	client clientset.Interface,
 	clientConf *rest.Config,
-	updateCh *channels.RingChannel) Storer {
+	updateCh *channels.RingChannel,
+	ingressClass string) Storer {
 
 	store := &k8sStore{
-		informers: &Informer{},
-		listers:   &Lister{},
-		updateCh:  updateCh,
+		informers:          &Informer{},
+		listers:            &Lister{},
+		updateCh:           updateCh,
+		isValidIngresClass: annotations.IngressClassValidatorFunc(ingressClass),
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -205,7 +209,7 @@ func New(namespace string,
 	ingEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ing := obj.(*extensions.Ingress)
-			if !class.IsValid(&ing.ObjectMeta) {
+			if !store.isValidIngresClass(&ing.ObjectMeta) {
 				return
 			}
 
@@ -231,7 +235,7 @@ func New(namespace string,
 					return
 				}
 			}
-			if !class.IsValid(&ing.ObjectMeta) {
+			if !store.isValidIngresClass(&ing.ObjectMeta) {
 				return
 			}
 			recorder.Eventf(ing, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", ing.Namespace, ing.Name))
@@ -244,8 +248,8 @@ func New(namespace string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldIng := old.(*extensions.Ingress)
 			curIng := cur.(*extensions.Ingress)
-			validOld := class.IsValid(&oldIng.ObjectMeta)
-			validCur := class.IsValid(&curIng.ObjectMeta)
+			validOld := store.isValidIngresClass(&oldIng.ObjectMeta)
+			validCur := store.isValidIngresClass(&curIng.ObjectMeta)
 			if !validOld && validCur {
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			} else if validOld && !validCur {
@@ -349,7 +353,7 @@ func New(namespace string,
 				return
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -374,7 +378,7 @@ func New(namespace string,
 				}
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -386,8 +390,8 @@ func New(namespace string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldRes := old.(*configurationv1.KongPlugin)
 			curRes := cur.(*configurationv1.KongPlugin)
-			validOld := class.IsValid(&oldRes.ObjectMeta)
-			validCur := class.IsValid(&curRes.ObjectMeta)
+			validOld := store.isValidIngresClass(&oldRes.ObjectMeta)
+			validCur := store.isValidIngresClass(&curRes.ObjectMeta)
 
 			if !validCur && !validOld {
 				return
@@ -407,7 +411,7 @@ func New(namespace string,
 				return
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -432,7 +436,7 @@ func New(namespace string,
 				}
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -444,8 +448,8 @@ func New(namespace string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldRes := old.(*configurationv1.KongConsumer)
 			curRes := cur.(*configurationv1.KongConsumer)
-			validOld := class.IsValid(&oldRes.ObjectMeta)
-			validCur := class.IsValid(&curRes.ObjectMeta)
+			validOld := store.isValidIngresClass(&oldRes.ObjectMeta)
+			validCur := store.isValidIngresClass(&curRes.ObjectMeta)
 
 			if !validCur && !validOld {
 				return
@@ -465,7 +469,7 @@ func New(namespace string,
 				return
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -490,7 +494,7 @@ func New(namespace string,
 				}
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -502,8 +506,8 @@ func New(namespace string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldRes := old.(*configurationv1.KongCredential)
 			curRes := cur.(*configurationv1.KongCredential)
-			validOld := class.IsValid(&oldRes.ObjectMeta)
-			validCur := class.IsValid(&curRes.ObjectMeta)
+			validOld := store.isValidIngresClass(&oldRes.ObjectMeta)
+			validCur := store.isValidIngresClass(&curRes.ObjectMeta)
 
 			if !validCur && !validOld {
 				return
@@ -580,7 +584,7 @@ func (s k8sStore) ListIngresses() []*extensions.Ingress {
 	var ingresses []*extensions.Ingress
 	for _, item := range s.listers.Ingress.List() {
 		ing := item.(*extensions.Ingress)
-		if !class.IsValid(&ing.ObjectMeta) {
+		if !s.isValidIngresClass(&ing.ObjectMeta) {
 			continue
 		}
 
@@ -641,7 +645,7 @@ func (s k8sStore) ListKongConsumers() []*configurationv1.KongConsumer {
 	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.listers.Kong.Consumer.List() {
 		c, ok := item.(*configurationv1.KongConsumer)
-		if ok && class.IsValid(&c.ObjectMeta) {
+		if ok && s.isValidIngresClass(&c.ObjectMeta) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -653,7 +657,7 @@ func (s k8sStore) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.listers.Kong.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		if ok && class.IsValid(&c.ObjectMeta) {
+		if ok && s.isValidIngresClass(&c.ObjectMeta) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -673,7 +677,7 @@ func (s k8sStore) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
-			if ok && class.IsValid(&p.ObjectMeta) {
+			if ok && s.isValidIngresClass(&p.ObjectMeta) {
 				plugins = append(plugins, p)
 			}
 		})

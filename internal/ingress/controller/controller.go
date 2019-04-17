@@ -66,6 +66,7 @@ type Configuration struct {
 
 	Namespace string
 
+	IngressClass          string
 	DefaultHealthzURL     string
 	DefaultSSLCertificate string
 

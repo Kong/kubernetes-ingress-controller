@@ -18,6 +18,10 @@ package annotations
 
 import (
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/apis/extensions"
 )
 
 func TestExtractKongPluginsFromAnnotations(t *testing.T) {
@@ -42,5 +46,38 @@ func TestExtractConfigurationName(t *testing.T) {
 	cn := ExtractConfigurationName(data)
 	if cn != "demo" {
 		t.Errorf("expected demo as configuration name but got %v", cn)
+	}
+}
+
+func TestIngrssClassValidatorFunc(t *testing.T) {
+	tests := []struct {
+		ingress    string
+		controller string
+		isValid    bool
+	}{
+		{"", "", true},
+		{"", "kong", true},
+		{"kong", "kong", true},
+		{"custom", "custom", true},
+		{"", "killer", false},
+		{"custom", "kong", false},
+	}
+
+	ing := &extensions.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: v1.NamespaceDefault,
+		},
+	}
+
+	data := map[string]string{}
+	ing.SetAnnotations(data)
+	for _, test := range tests {
+		ing.Annotations[ingressClassKey] = test.ingress
+		f := IngressClassValidatorFunc(test.controller)
+		b := f(&ing.ObjectMeta)
+		if b != test.isValid {
+			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
+		}
 	}
 }

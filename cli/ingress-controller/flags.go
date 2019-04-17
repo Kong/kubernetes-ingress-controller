@@ -28,7 +28,7 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 )
 
@@ -57,7 +57,7 @@ If not specified, the assumption is that the binary runs inside a
 Kubernetes cluster and local discovery is attempted.`)
 		kubeConfigFile = flags.String("kubeconfig", "", "Path to kubeconfig file with authorization and master location information.")
 
-		ingressClass = flags.String("ingress-class", "",
+		ingressClass = flags.String("ingress-class", annotations.DefaultIngressClass,
 			`Name of the ingress class to route through this controller.`)
 
 		publishSvc = flags.String("publish-service", "",
@@ -124,16 +124,6 @@ The controller will set the endpoint records on the ingress using this address.`
 		return true, nil, nil
 	}
 
-	if *ingressClass != "" {
-		glog.Infof("Watching for ingress class: %s", *ingressClass)
-
-		if *ingressClass != class.DefaultClass {
-			glog.Warningf("only Ingress with class \"%v\" will be processed by this ingress controller", *ingressClass)
-		}
-
-		class.IngressClass = *ingressClass
-	}
-
 	config := &controller.Configuration{
 		Kong: controller.Kong{
 			URL:     *kongURL,
@@ -149,6 +139,7 @@ The controller will set the endpoint records on the ingress using this address.`
 		ElectionID:             *electionID,
 		EnableProfiling:        *profiling,
 		ResyncPeriod:           *resyncPeriod,
+		IngressClass:           *ingressClass,
 		Namespace:              *watchNamespace,
 		PublishService:         *publishSvc,
 		PublishStatusAddress:   *publishStatusAddress,

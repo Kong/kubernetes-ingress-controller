@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
@@ -200,7 +199,7 @@ func buildExtensionsIngresses() []extensions.Ingress {
 				Name:      "foo_ingress_different_class",
 				Namespace: metav1.NamespaceDefault,
 				Annotations: map[string]string{
-					class.IngressKey: "no-nginx",
+					"kubernetes.io/ingress.class": "no-nginx",
 				},
 			},
 			Status: extensions.IngressStatus{
@@ -284,8 +283,6 @@ func TestStatusActions(t *testing.T) {
 		Client:                 buildSimpleClientSet(),
 		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
 		IngressLister:          buildIngressLister(),
-		DefaultIngressClass:    "nginx",
-		IngressClass:           "",
 		UpdateStatusOnShutdown: true,
 	}
 	// create object

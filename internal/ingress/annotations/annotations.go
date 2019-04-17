@@ -18,18 +18,50 @@ package annotations
 
 import (
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const pluginListAnnotation = "plugins.konghq.com"
+const (
+	ingressClassKey = "kubernetes.io/ingress.class"
 
-const configurationAnnotation = "configuration.konghq.com"
+	pluginsAnnotationKey = "plugins.konghq.com"
+
+	configurationAnnotationKey = "configuration.konghq.com"
+
+	// DefaultIngressClass defines the default class used
+	// by Kong's ingres controller.
+	DefaultIngressClass = "kong"
+)
+
+// IngressClassValidatorFunc returns a function which can valid if an object
+// belongs to an the ingressClass or not.
+func IngressClassValidatorFunc(
+	ingressClass string) func(objectMeta *metav1.ObjectMeta) bool {
+
+	return func(objectMeta *metav1.ObjectMeta) bool {
+		ingress := objectMeta.GetAnnotations()[ingressClassKey]
+
+		// we have 2 valid combinations
+		// 1 - ingress with default class | blank annotation on ingress
+		// 2 - ingress with specific class | same annotation on ingress
+		//
+		// and 2 invalid combinations
+		// 3 - ingress with default class | fixed annotation on ingress
+		// 4 - ingress with specific class | different annotation on ingress
+		if ingress == "" && ingressClass == DefaultIngressClass {
+			return true
+		}
+		return ingress == ingressClass
+	}
+}
 
 // ExtractKongPluginsFromAnnotations extracts information about Kong
 // Plugins configured using plugins.konghq.com annotation.
 // This returns a list of KongPlugin resource names that should be applied.
 func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 	var kongPluginCRs []string
-	v, ok := anns[pluginListAnnotation]
+	v, ok := anns[pluginsAnnotationKey]
 	if !ok {
 		return kongPluginCRs
 	}
@@ -45,5 +77,5 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 // ExtractConfigurationName extracts the name of the KongIngress object that holds
 // information about the configuration to use in Routes, Services and Upstreams
 func ExtractConfigurationName(anns map[string]string) string {
-	return anns[configurationAnnotation]
+	return anns[configurationAnnotationKey]
 }

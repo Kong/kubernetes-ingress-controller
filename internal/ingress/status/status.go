@@ -72,9 +72,6 @@ type Config struct {
 	UpdateStatusOnShutdown bool
 
 	IngressLister ingressLister
-
-	DefaultIngressClass string
-	IngressClass        string
 }
 
 // statusSync keeps the status IP in each Ingress rule updated executing a periodic check

@@ -29,7 +29,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
@@ -63,16 +62,13 @@ func NewKongController(config *Configuration) (*KongController, error) {
 		config.ResyncPeriod,
 		config.KubeClient,
 		config.KubeConf,
-		n.updateCh)
+		n.updateCh,
+		config.IngressClass)
 
 	n.parser = parser.New(n.store)
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
 
-	ingressClass := class.DefaultClass
-	if class.IngressClass != "" {
-		ingressClass = class.IngressClass
-	}
-	electionID := config.ElectionID + "-" + ingressClass
+	electionID := config.ElectionID + "-" + config.IngressClass
 
 	electionConfig := election.Config{
 		Client:     config.KubeClient,
@@ -86,8 +82,6 @@ func NewKongController(config *Configuration) (*KongController, error) {
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,
 			ElectionID:             electionID,
-			IngressClass:           class.IngressClass,
-			DefaultIngressClass:    class.DefaultClass,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
 			OnStartedLeading: func() {
 				// force a sync

@@ -50,10 +50,6 @@ required = [
   version = "3.1.1"
 
 [[constraint]]
-  name = "k8s.io/kubernetes"
-  version = "v1.10.0"
-
-[[constraint]]
   name = "k8s.io/api"
   revision = "kubernetes-1.10.0"
 
@@ -64,11 +60,6 @@ required = [
 [[constraint]]
   name = "k8s.io/client-go"
   revision = "v7.0.0"
-
-
-[[constraint]]
-  name = "k8s.io/apiextensions-apiserver"
-  revision = "kubernetes-1.10.0"
 
 
 # For dependency below: Refer to issue https://github.com/golang/dep/issues/1799

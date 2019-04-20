@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
-	"k8s.io/kubernetes/pkg/kubelet/util/sliceutils"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
@@ -247,13 +246,23 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 			}
 
 			name := utils.GetNodeIPOrName(s.Client, pod.Spec.NodeName)
-			if !sliceutils.StringInSlice(name, addrs) {
+			if !inSlice(name, addrs) {
 				addrs = append(addrs, name)
 			}
 		}
 
 		return addrs, nil
 	}
+}
+
+func inSlice(e string, arr []string) bool {
+	for _, v := range arr {
+		if v == e {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *statusSync) isRunningMultiplePods() bool {

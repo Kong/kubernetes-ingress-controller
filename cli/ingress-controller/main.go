@@ -37,7 +37,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	discovery "k8s.io/apimachinery/pkg/version"
-	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -277,10 +276,10 @@ func handleFatalInitError(err error) {
 }
 
 func registerHandlers(enableProfiling bool, port int, ic *controller.KongController, mux *http.ServeMux) {
-	// expose health check endpoint (/healthz)
-	healthz.InstallHandler(mux,
-		healthz.PingHealthz,
-	)
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	mux.Handle("/metrics", promhttp.Handler())
 

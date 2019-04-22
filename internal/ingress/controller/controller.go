@@ -24,7 +24,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
-	apiv1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -81,16 +80,6 @@ type Configuration struct {
 	EnableProfiling bool
 
 	SyncRateLimit float32
-}
-
-// GetPublishService returns the configured service used to set ingress status
-func (n KongController) GetPublishService() *apiv1.Service {
-	s, err := n.store.GetService(n.cfg.PublishService)
-	if err != nil {
-		return nil
-	}
-
-	return s
 }
 
 // sync collects all the pieces required to assemble the configuration file and

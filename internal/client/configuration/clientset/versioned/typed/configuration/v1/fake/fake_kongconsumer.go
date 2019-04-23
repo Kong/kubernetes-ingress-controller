@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	configuration_v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,20 +39,20 @@ var kongconsumersResource = schema.GroupVersionResource{Group: "configuration.ko
 var kongconsumersKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongConsumer"}
 
 // Get takes name of the kongConsumer, and returns the corresponding kongConsumer object, and an error if there is any.
-func (c *FakeKongConsumers) Get(name string, options v1.GetOptions) (result *configuration_v1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Get(name string, options v1.GetOptions) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongconsumersResource, c.ns, name), &configuration_v1.KongConsumer{})
+		Invokes(testing.NewGetAction(kongconsumersResource, c.ns, name), &configurationv1.KongConsumer{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongConsumer), err
+	return obj.(*configurationv1.KongConsumer), err
 }
 
 // List takes label and field selectors, and returns the list of KongConsumers that match those selectors.
-func (c *FakeKongConsumers) List(opts v1.ListOptions) (result *configuration_v1.KongConsumerList, err error) {
+func (c *FakeKongConsumers) List(opts v1.ListOptions) (result *configurationv1.KongConsumerList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongconsumersResource, kongconsumersKind, c.ns, opts), &configuration_v1.KongConsumerList{})
+		Invokes(testing.NewListAction(kongconsumersResource, kongconsumersKind, c.ns, opts), &configurationv1.KongConsumerList{})
 
 	if obj == nil {
 		return nil, err
@@ -62,8 +62,8 @@ func (c *FakeKongConsumers) List(opts v1.ListOptions) (result *configuration_v1.
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &configuration_v1.KongConsumerList{}
-	for _, item := range obj.(*configuration_v1.KongConsumerList).Items {
+	list := &configurationv1.KongConsumerList{ListMeta: obj.(*configurationv1.KongConsumerList).ListMeta}
+	for _, item := range obj.(*configurationv1.KongConsumerList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -79,31 +79,31 @@ func (c *FakeKongConsumers) Watch(opts v1.ListOptions) (watch.Interface, error) 
 }
 
 // Create takes the representation of a kongConsumer and creates it.  Returns the server's representation of the kongConsumer, and an error, if there is any.
-func (c *FakeKongConsumers) Create(kongConsumer *configuration_v1.KongConsumer) (result *configuration_v1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Create(kongConsumer *configurationv1.KongConsumer) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongconsumersResource, c.ns, kongConsumer), &configuration_v1.KongConsumer{})
+		Invokes(testing.NewCreateAction(kongconsumersResource, c.ns, kongConsumer), &configurationv1.KongConsumer{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongConsumer), err
+	return obj.(*configurationv1.KongConsumer), err
 }
 
 // Update takes the representation of a kongConsumer and updates it. Returns the server's representation of the kongConsumer, and an error, if there is any.
-func (c *FakeKongConsumers) Update(kongConsumer *configuration_v1.KongConsumer) (result *configuration_v1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Update(kongConsumer *configurationv1.KongConsumer) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongconsumersResource, c.ns, kongConsumer), &configuration_v1.KongConsumer{})
+		Invokes(testing.NewUpdateAction(kongconsumersResource, c.ns, kongConsumer), &configurationv1.KongConsumer{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongConsumer), err
+	return obj.(*configurationv1.KongConsumer), err
 }
 
 // Delete takes name of the kongConsumer and deletes it. Returns an error if one occurs.
 func (c *FakeKongConsumers) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(kongconsumersResource, c.ns, name), &configuration_v1.KongConsumer{})
+		Invokes(testing.NewDeleteAction(kongconsumersResource, c.ns, name), &configurationv1.KongConsumer{})
 
 	return err
 }
@@ -112,17 +112,17 @@ func (c *FakeKongConsumers) Delete(name string, options *v1.DeleteOptions) error
 func (c *FakeKongConsumers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(kongconsumersResource, c.ns, listOptions)
 
-	_, err := c.Fake.Invokes(action, &configuration_v1.KongConsumerList{})
+	_, err := c.Fake.Invokes(action, &configurationv1.KongConsumerList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched kongConsumer.
-func (c *FakeKongConsumers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configuration_v1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongconsumersResource, c.ns, name, data, subresources...), &configuration_v1.KongConsumer{})
+		Invokes(testing.NewPatchSubresourceAction(kongconsumersResource, c.ns, name, pt, data, subresources...), &configurationv1.KongConsumer{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongConsumer), err
+	return obj.(*configurationv1.KongConsumer), err
 }

@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	configuration_v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,20 +39,20 @@ var kongingressesResource = schema.GroupVersionResource{Group: "configuration.ko
 var kongingressesKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongIngress"}
 
 // Get takes name of the kongIngress, and returns the corresponding kongIngress object, and an error if there is any.
-func (c *FakeKongIngresses) Get(name string, options v1.GetOptions) (result *configuration_v1.KongIngress, err error) {
+func (c *FakeKongIngresses) Get(name string, options v1.GetOptions) (result *configurationv1.KongIngress, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongingressesResource, c.ns, name), &configuration_v1.KongIngress{})
+		Invokes(testing.NewGetAction(kongingressesResource, c.ns, name), &configurationv1.KongIngress{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongIngress), err
+	return obj.(*configurationv1.KongIngress), err
 }
 
 // List takes label and field selectors, and returns the list of KongIngresses that match those selectors.
-func (c *FakeKongIngresses) List(opts v1.ListOptions) (result *configuration_v1.KongIngressList, err error) {
+func (c *FakeKongIngresses) List(opts v1.ListOptions) (result *configurationv1.KongIngressList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongingressesResource, kongingressesKind, c.ns, opts), &configuration_v1.KongIngressList{})
+		Invokes(testing.NewListAction(kongingressesResource, kongingressesKind, c.ns, opts), &configurationv1.KongIngressList{})
 
 	if obj == nil {
 		return nil, err
@@ -62,8 +62,8 @@ func (c *FakeKongIngresses) List(opts v1.ListOptions) (result *configuration_v1.
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &configuration_v1.KongIngressList{}
-	for _, item := range obj.(*configuration_v1.KongIngressList).Items {
+	list := &configurationv1.KongIngressList{ListMeta: obj.(*configurationv1.KongIngressList).ListMeta}
+	for _, item := range obj.(*configurationv1.KongIngressList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -79,31 +79,31 @@ func (c *FakeKongIngresses) Watch(opts v1.ListOptions) (watch.Interface, error) 
 }
 
 // Create takes the representation of a kongIngress and creates it.  Returns the server's representation of the kongIngress, and an error, if there is any.
-func (c *FakeKongIngresses) Create(kongIngress *configuration_v1.KongIngress) (result *configuration_v1.KongIngress, err error) {
+func (c *FakeKongIngresses) Create(kongIngress *configurationv1.KongIngress) (result *configurationv1.KongIngress, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongingressesResource, c.ns, kongIngress), &configuration_v1.KongIngress{})
+		Invokes(testing.NewCreateAction(kongingressesResource, c.ns, kongIngress), &configurationv1.KongIngress{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongIngress), err
+	return obj.(*configurationv1.KongIngress), err
 }
 
 // Update takes the representation of a kongIngress and updates it. Returns the server's representation of the kongIngress, and an error, if there is any.
-func (c *FakeKongIngresses) Update(kongIngress *configuration_v1.KongIngress) (result *configuration_v1.KongIngress, err error) {
+func (c *FakeKongIngresses) Update(kongIngress *configurationv1.KongIngress) (result *configurationv1.KongIngress, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongingressesResource, c.ns, kongIngress), &configuration_v1.KongIngress{})
+		Invokes(testing.NewUpdateAction(kongingressesResource, c.ns, kongIngress), &configurationv1.KongIngress{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongIngress), err
+	return obj.(*configurationv1.KongIngress), err
 }
 
 // Delete takes name of the kongIngress and deletes it. Returns an error if one occurs.
 func (c *FakeKongIngresses) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(kongingressesResource, c.ns, name), &configuration_v1.KongIngress{})
+		Invokes(testing.NewDeleteAction(kongingressesResource, c.ns, name), &configurationv1.KongIngress{})
 
 	return err
 }
@@ -112,17 +112,17 @@ func (c *FakeKongIngresses) Delete(name string, options *v1.DeleteOptions) error
 func (c *FakeKongIngresses) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(kongingressesResource, c.ns, listOptions)
 
-	_, err := c.Fake.Invokes(action, &configuration_v1.KongIngressList{})
+	_, err := c.Fake.Invokes(action, &configurationv1.KongIngressList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched kongIngress.
-func (c *FakeKongIngresses) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configuration_v1.KongIngress, err error) {
+func (c *FakeKongIngresses) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configurationv1.KongIngress, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongingressesResource, c.ns, name, data, subresources...), &configuration_v1.KongIngress{})
+		Invokes(testing.NewPatchSubresourceAction(kongingressesResource, c.ns, name, pt, data, subresources...), &configurationv1.KongIngress{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configuration_v1.KongIngress), err
+	return obj.(*configurationv1.KongIngress), err
 }

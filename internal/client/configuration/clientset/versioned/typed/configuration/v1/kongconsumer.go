@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	scheme "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -37,11 +39,11 @@ type KongConsumersGetter interface {
 type KongConsumerInterface interface {
 	Create(*v1.KongConsumer) (*v1.KongConsumer, error)
 	Update(*v1.KongConsumer) (*v1.KongConsumer, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.KongConsumer, error)
-	List(opts meta_v1.ListOptions) (*v1.KongConsumerList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.KongConsumer, error)
+	List(opts metav1.ListOptions) (*v1.KongConsumerList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.KongConsumer, err error)
 	KongConsumerExpansion
 }
@@ -61,7 +63,7 @@ func newKongConsumers(c *ConfigurationV1Client, namespace string) *kongConsumers
 }
 
 // Get takes name of the kongConsumer, and returns the corresponding kongConsumer object, and an error if there is any.
-func (c *kongConsumers) Get(name string, options meta_v1.GetOptions) (result *v1.KongConsumer, err error) {
+func (c *kongConsumers) Get(name string, options metav1.GetOptions) (result *v1.KongConsumer, err error) {
 	result = &v1.KongConsumer{}
 	err = c.client.Get().
 		Namespace(c.ns).
@@ -74,24 +76,34 @@ func (c *kongConsumers) Get(name string, options meta_v1.GetOptions) (result *v1
 }
 
 // List takes label and field selectors, and returns the list of KongConsumers that match those selectors.
-func (c *kongConsumers) List(opts meta_v1.ListOptions) (result *v1.KongConsumerList, err error) {
+func (c *kongConsumers) List(opts metav1.ListOptions) (result *v1.KongConsumerList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &v1.KongConsumerList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("kongconsumers").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Do().
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested kongConsumers.
-func (c *kongConsumers) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *kongConsumers) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
 		Resource("kongconsumers").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Watch()
 }
 
@@ -121,7 +133,7 @@ func (c *kongConsumers) Update(kongConsumer *v1.KongConsumer) (result *v1.KongCo
 }
 
 // Delete takes name of the kongConsumer and deletes it. Returns an error if one occurs.
-func (c *kongConsumers) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *kongConsumers) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongconsumers").
@@ -132,11 +144,16 @@ func (c *kongConsumers) Delete(name string, options *meta_v1.DeleteOptions) erro
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *kongConsumers) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *kongConsumers) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+	var timeout time.Duration
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongconsumers").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
+		Timeout(timeout).
 		Body(options).
 		Do().
 		Error()

@@ -142,30 +142,18 @@ func (in *KongIngress) DeepCopyInto(out *KongIngress) {
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	if in.Upstream != nil {
 		in, out := &in.Upstream, &out.Upstream
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(kong.Upstream)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(kong.Upstream)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Proxy != nil {
 		in, out := &in.Proxy, &out.Proxy
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(kong.Service)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(kong.Service)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Route != nil {
 		in, out := &in.Route, &out.Route
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(kong.Route)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(kong.Route)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

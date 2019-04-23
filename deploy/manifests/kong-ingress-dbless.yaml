@@ -41,13 +41,13 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: ingress-kong
+    app: kong
   name: ingress-kong
   namespace: kong
 spec:
   selector:
     matchLabels:
-      app: ingress-kong
+      app: kong
   strategy:
     rollingUpdate:
       maxSurge: 3
@@ -59,7 +59,7 @@ spec:
         prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
       labels:
-        app: ingress-kong
+        app: kong
     spec:
       serviceAccountName: kong-serviceaccount
       containers:

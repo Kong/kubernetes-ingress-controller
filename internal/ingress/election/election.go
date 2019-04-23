@@ -1,6 +1,7 @@
 package election
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -35,7 +36,8 @@ type elector struct {
 }
 
 func (e elector) Run() {
-	e.elector.Run()
+	// TODO pass the correct context in here
+	e.elector.Run(context.Background())
 }
 
 func (e elector) IsLeader() bool {

@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	scheme "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -37,11 +39,11 @@ type KongPluginsGetter interface {
 type KongPluginInterface interface {
 	Create(*v1.KongPlugin) (*v1.KongPlugin, error)
 	Update(*v1.KongPlugin) (*v1.KongPlugin, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.KongPlugin, error)
-	List(opts meta_v1.ListOptions) (*v1.KongPluginList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.KongPlugin, error)
+	List(opts metav1.ListOptions) (*v1.KongPluginList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.KongPlugin, err error)
 	KongPluginExpansion
 }
@@ -61,7 +63,7 @@ func newKongPlugins(c *ConfigurationV1Client, namespace string) *kongPlugins {
 }
 
 // Get takes name of the kongPlugin, and returns the corresponding kongPlugin object, and an error if there is any.
-func (c *kongPlugins) Get(name string, options meta_v1.GetOptions) (result *v1.KongPlugin, err error) {
+func (c *kongPlugins) Get(name string, options metav1.GetOptions) (result *v1.KongPlugin, err error) {
 	result = &v1.KongPlugin{}
 	err = c.client.Get().
 		Namespace(c.ns).
@@ -74,24 +76,34 @@ func (c *kongPlugins) Get(name string, options meta_v1.GetOptions) (result *v1.K
 }
 
 // List takes label and field selectors, and returns the list of KongPlugins that match those selectors.
-func (c *kongPlugins) List(opts meta_v1.ListOptions) (result *v1.KongPluginList, err error) {
+func (c *kongPlugins) List(opts metav1.ListOptions) (result *v1.KongPluginList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &v1.KongPluginList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("kongplugins").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Do().
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested kongPlugins.
-func (c *kongPlugins) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *kongPlugins) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
 		Resource("kongplugins").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Watch()
 }
 
@@ -121,7 +133,7 @@ func (c *kongPlugins) Update(kongPlugin *v1.KongPlugin) (result *v1.KongPlugin, 
 }
 
 // Delete takes name of the kongPlugin and deletes it. Returns an error if one occurs.
-func (c *kongPlugins) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *kongPlugins) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongplugins").
@@ -132,11 +144,16 @@ func (c *kongPlugins) Delete(name string, options *meta_v1.DeleteOptions) error 
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *kongPlugins) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *kongPlugins) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+	var timeout time.Duration
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongplugins").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
+		Timeout(timeout).
 		Body(options).
 		Do().
 		Error()

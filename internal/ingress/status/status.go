@@ -17,6 +17,7 @@ limitations under the License.
 package status
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sort"
@@ -179,17 +180,17 @@ func NewStatusSyncer(config Config) Sync {
 	st.syncQueue = task.NewCustomTaskQueue(st.sync, st.keyfunc)
 
 	st.callbacks = leaderelection.LeaderCallbacks{
-		OnStartedLeading: func(stop <-chan struct{}) {
+		OnStartedLeading: func(ctx context.Context) {
 			glog.V(2).Infof("I am the new status update leader")
 			if st.Config.OnStartedLeading != nil {
 				st.Config.OnStartedLeading()
 			}
-			go st.syncQueue.Run(time.Second, stop)
+			go st.syncQueue.Run(time.Second, ctx.Done())
 			wait.PollUntil(updateInterval, func() (bool, error) {
 				// send a dummy object to the queue to force a sync
 				st.syncQueue.Enqueue("sync status")
 				return false, nil
-			}, stop)
+			}, ctx.Done())
 		},
 		OnStoppedLeading: func() {
 			glog.V(2).Infof("I am not status update leader anymore")

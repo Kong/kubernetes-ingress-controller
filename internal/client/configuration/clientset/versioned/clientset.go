@@ -19,7 +19,6 @@ limitations under the License.
 package versioned
 
 import (
-	glog "github.com/golang/glog"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
@@ -29,8 +28,6 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	ConfigurationV1() configurationv1.ConfigurationV1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Configuration() configurationv1.ConfigurationV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -42,12 +39,6 @@ type Clientset struct {
 
 // ConfigurationV1 retrieves the ConfigurationV1Client
 func (c *Clientset) ConfigurationV1() configurationv1.ConfigurationV1Interface {
-	return c.configurationV1
-}
-
-// Deprecated: Configuration retrieves the default version of ConfigurationClient.
-// Please explicitly pick a version.
-func (c *Clientset) Configuration() configurationv1.ConfigurationV1Interface {
 	return c.configurationV1
 }
 
@@ -74,7 +65,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
-		glog.Errorf("failed to create the DiscoveryClient: %v", err)
 		return nil, err
 	}
 	return &cs, nil

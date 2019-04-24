@@ -19,7 +19,6 @@ set -o nounset
 set -o pipefail
 
 KUBE_ROOT=$(dirname "${BASH_SOURCE}")/..
-source "${KUBE_ROOT}/hack/kube-env.sh"
 
 SILENT=true
 
@@ -63,9 +62,9 @@ do
   if $SILENT ; then
     echo -e "Verifying $t"
     if bash "$t" &> /dev/null; then
-      echo -e "${color_green}SUCCESS${color_norm}"
+      echo -e "SUCCESS"
     else
-      echo -e "${color_red}FAILED${color_norm}"
+      echo -e "FAILED"
       ret=1
     fi
   else

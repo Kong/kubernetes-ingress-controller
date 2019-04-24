@@ -21,11 +21,11 @@ package v1
 import (
 	time "time"
 
-	configuration_v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	versioned "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	internalinterfaces "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions/internalinterfaces"
 	v1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/listers/configuration/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
@@ -57,20 +57,20 @@ func NewKongPluginInformer(client versioned.Interface, namespace string, resyncP
 func NewFilteredKongPluginInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
-			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ConfigurationV1().KongPlugins(namespace).List(options)
 			},
-			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ConfigurationV1().KongPlugins(namespace).Watch(options)
 			},
 		},
-		&configuration_v1.KongPlugin{},
+		&configurationv1.KongPlugin{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *kongPluginInformer) defaultInformer(client versioned.Interface, resyncP
 }
 
 func (f *kongPluginInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&configuration_v1.KongPlugin{}, f.defaultInformer)
+	return f.factory.InformerFor(&configurationv1.KongPlugin{}, f.defaultInformer)
 }
 
 func (f *kongPluginInformer) Lister() v1.KongPluginLister {

@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	scheme "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -37,11 +39,11 @@ type KongIngressesGetter interface {
 type KongIngressInterface interface {
 	Create(*v1.KongIngress) (*v1.KongIngress, error)
 	Update(*v1.KongIngress) (*v1.KongIngress, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.KongIngress, error)
-	List(opts meta_v1.ListOptions) (*v1.KongIngressList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.KongIngress, error)
+	List(opts metav1.ListOptions) (*v1.KongIngressList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.KongIngress, err error)
 	KongIngressExpansion
 }
@@ -61,7 +63,7 @@ func newKongIngresses(c *ConfigurationV1Client, namespace string) *kongIngresses
 }
 
 // Get takes name of the kongIngress, and returns the corresponding kongIngress object, and an error if there is any.
-func (c *kongIngresses) Get(name string, options meta_v1.GetOptions) (result *v1.KongIngress, err error) {
+func (c *kongIngresses) Get(name string, options metav1.GetOptions) (result *v1.KongIngress, err error) {
 	result = &v1.KongIngress{}
 	err = c.client.Get().
 		Namespace(c.ns).
@@ -74,24 +76,34 @@ func (c *kongIngresses) Get(name string, options meta_v1.GetOptions) (result *v1
 }
 
 // List takes label and field selectors, and returns the list of KongIngresses that match those selectors.
-func (c *kongIngresses) List(opts meta_v1.ListOptions) (result *v1.KongIngressList, err error) {
+func (c *kongIngresses) List(opts metav1.ListOptions) (result *v1.KongIngressList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &v1.KongIngressList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("kongingresses").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Do().
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested kongIngresses.
-func (c *kongIngresses) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *kongIngresses) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
 		Resource("kongingresses").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Watch()
 }
 
@@ -121,7 +133,7 @@ func (c *kongIngresses) Update(kongIngress *v1.KongIngress) (result *v1.KongIngr
 }
 
 // Delete takes name of the kongIngress and deletes it. Returns an error if one occurs.
-func (c *kongIngresses) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *kongIngresses) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongingresses").
@@ -132,11 +144,16 @@ func (c *kongIngresses) Delete(name string, options *meta_v1.DeleteOptions) erro
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *kongIngresses) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *kongIngresses) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+	var timeout time.Duration
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongingresses").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
+		Timeout(timeout).
 		Body(options).
 		Do().
 		Error()

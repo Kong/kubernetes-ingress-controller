@@ -5,6 +5,9 @@ notifications:
     on_failure: never
     on_success: never
 
+env:
+- GO111MODULE=on
+
 go:
   - "1.12"
 
@@ -14,7 +17,6 @@ before_script:
 - go get golang.org/x/lint/golint
 - diff -u <(echo -n) <(gofmt -d -s .)
 - golint -set_exit_status .
-- make deps
 - make verify-all
 - make vet
 

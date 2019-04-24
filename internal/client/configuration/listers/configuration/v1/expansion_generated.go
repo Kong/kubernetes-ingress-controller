@@ -18,6 +18,22 @@ limitations under the License.
 
 package v1
 
+// KongConsumerListerExpansion allows custom methods to be added to
+// KongConsumerLister.
+type KongConsumerListerExpansion interface{}
+
+// KongConsumerNamespaceListerExpansion allows custom methods to be added to
+// KongConsumerNamespaceLister.
+type KongConsumerNamespaceListerExpansion interface{}
+
+// KongCredentialListerExpansion allows custom methods to be added to
+// KongCredentialLister.
+type KongCredentialListerExpansion interface{}
+
+// KongCredentialNamespaceListerExpansion allows custom methods to be added to
+// KongCredentialNamespaceLister.
+type KongCredentialNamespaceListerExpansion interface{}
+
 // KongIngressListerExpansion allows custom methods to be added to
 // KongIngressLister.
 type KongIngressListerExpansion interface{}
@@ -25,3 +41,11 @@ type KongIngressListerExpansion interface{}
 // KongIngressNamespaceListerExpansion allows custom methods to be added to
 // KongIngressNamespaceLister.
 type KongIngressNamespaceListerExpansion interface{}
+
+// KongPluginListerExpansion allows custom methods to be added to
+// KongPluginLister.
+type KongPluginListerExpansion interface{}
+
+// KongPluginNamespaceListerExpansion allows custom methods to be added to
+// KongPluginNamespaceLister.
+type KongPluginNamespaceListerExpansion interface{}

@@ -27,7 +27,6 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -38,17 +37,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	discovery "k8s.io/apimachinery/pkg/version"
-	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/hbagdi/go-kong/kong"
-	consumerintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
-	pluginintscheme "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned/scheme"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/version"
 )
 
@@ -71,29 +66,11 @@ func main() {
 		handleFatalInitError(err)
 	}
 
-	// Add types to the default Kubernetes Scheme
-	pluginintscheme.AddToScheme(scheme.Scheme)
-	consumerintscheme.AddToScheme(scheme.Scheme)
-
-	ns, name, err := k8s.ParseNameNS(conf.DefaultService)
-	if err != nil {
-		glog.Fatal(err)
-	}
-
-	_, err = kubeClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
-	if err != nil {
-		if strings.Contains(err.Error(), "cannot get services in the namespace") {
-			glog.Fatalf("✖ It seems the cluster it is running with Authorization enabled (like RBAC) and there is no permissions for the ingress controller. Please check the configuration")
-		}
-		glog.Fatalf("no service with name %v found: %v", conf.DefaultService, err)
-	}
-	glog.Infof("validated %v as the default backend", conf.DefaultService)
-
 	if conf.PublishService == "" {
 		glog.Fatal("flag --publish-address is mandatory")
 	}
 
-	ns, name, err = k8s.ParseNameNS(conf.PublishService)
+	ns, name, err := utils.ParseNameNS(conf.PublishService)
 	if err != nil {
 		glog.Fatal(err)
 	}
@@ -164,30 +141,39 @@ func main() {
 	}
 
 	glog.Infof("kong version: %s", v)
+	kongConfiguration := root["configuration"].(map[string]interface{})
+	conf.Kong.Version = v
+	glog.Infof("Kong datastore: %s", kongConfiguration["database"].(string))
 	conf.Kong.Client = kongClient
+	if kongConfiguration["database"].(string) == "off" {
+		conf.Kong.InMemory = true
+	}
 
-	ngx := controller.NewNGINXController(conf)
+	kong, err := controller.NewKongController(conf)
+	if err != nil {
+		glog.Fatal(err)
+	}
 
-	go handleSigterm(ngx, func(code int) {
+	go handleSigterm(kong, func(code int) {
 		os.Exit(code)
 	})
 
 	mux := http.NewServeMux()
-	go registerHandlers(conf.EnableProfiling, 10254, ngx, mux)
+	go registerHandlers(conf.EnableProfiling, 10254, kong, mux)
 
-	ngx.Start()
+	kong.Start()
 }
 
 type exiter func(code int)
 
-func handleSigterm(ngx *controller.NGINXController, exit exiter) {
+func handleSigterm(kong *controller.KongController, exit exiter) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
 	<-signalChan
 	glog.Infof("Received SIGTERM, shutting down")
 
 	exitCode := 0
-	if err := ngx.Stop(); err != nil {
+	if err := kong.Stop(); err != nil {
 		glog.Infof("Error during shutdown %v", err)
 		exitCode = 1
 	}
@@ -289,11 +275,11 @@ func handleFatalInitError(err error) {
 		"https://github.com/kubernetes/ingress-nginx/blob/master/docs/troubleshooting.md", err)
 }
 
-func registerHandlers(enableProfiling bool, port int, ic *controller.NGINXController, mux *http.ServeMux) {
-	// expose health check endpoint (/healthz)
-	healthz.InstallHandler(mux,
-		healthz.PingHealthz,
-	)
+func registerHandlers(enableProfiling bool, port int, ic *controller.KongController, mux *http.ServeMux) {
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	mux.Handle("/metrics", promhttp.Handler())
 

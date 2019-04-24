@@ -36,7 +36,7 @@ func TestDefaults(t *testing.T) {
 
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
-	os.Args = []string{"cmd", "--default-backend-service", "namespace/test"}
+	os.Args = []string{"cmd", "--publish-service", "namespace/test"}
 
 	showVersion, conf, err := parseFlags()
 	if err != nil {

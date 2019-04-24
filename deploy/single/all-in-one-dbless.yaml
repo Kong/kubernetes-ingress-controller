@@ -1,0 +1,590 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kongplugins.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  version: v1
+  scope: Namespaced
+  names:
+    kind: KongPlugin
+    plural: kongplugins
+    shortNames:
+    - kp
+  additionalPrinterColumns:
+  - name: Plugin-Type
+    type: string
+    description: Name of the plugin
+    JSONPath: .plugin
+  - name: Age
+    type: date
+    description: Age
+    JSONPath: .metadata.creationTimestamp
+  - name: Disabled
+    type: boolean
+    description: Indicates if the plugin is disabled
+    JSONPath: .disabled
+    priority: 1
+  - name: Config
+    type: string
+    description: Configuration of the plugin
+    JSONPath: .config
+    priority: 1
+  validation:
+    openAPIV3Schema:
+      required:
+      - plugin
+      properties:
+        plugin:
+          type: string
+        disabled:
+          type: boolean
+        config:
+          type: object
+        run_on:
+          type: string
+          enum:
+          - first
+          - second
+          - all
+        protocols:
+          type: array
+          items:
+            type: string
+            enum:
+            - http
+            - https
+            - tcp
+            - tls
+
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kongconsumers.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  version: v1
+  scope: Namespaced
+  names:
+    kind: KongConsumer
+    plural: kongconsumers
+    shortNames:
+    - kc
+  additionalPrinterColumns:
+  - name: Username
+    type: string
+    description: Username of a Kong Consumer
+    JSONPath: .username
+  - name: Age
+    type: date
+    description: Age
+    JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      properties:
+        username:
+          type: string
+        custom_id:
+          type: string
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kongcredentials.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  version: v1
+  scope: Namespaced
+  names:
+    kind: KongCredential
+    plural: kongcredentials
+  additionalPrinterColumns:
+  - name: Credential-type
+    type: string
+    description: Type of credential
+    JSONPath: .type
+  - name: Age
+    type: date
+    description: Age
+    JSONPath: .metadata.creationTimestamp
+  - name: Consumer-Ref
+    type: string
+    description: Owner of the credential
+    JSONPath: .consumerRef
+  validation:
+    openAPIV3Schema:
+      required:
+      - consumerRef
+      - type
+      properties:
+        consumerRef:
+          type: string
+        type:
+          type: string
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kongingresses.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  version: v1
+  scope: Namespaced
+  names:
+    kind: KongIngress
+    plural: kongingresses
+    shortNames:
+    - ki
+  validation:
+    openAPIV3Schema:
+      properties:
+        upstream:
+          type: object
+        route:
+          properties:
+            methods:
+              type: array
+              items:
+                type: string
+            regex_priority:
+              type: integer
+            strip_path:
+              type: boolean
+            preserve_host:
+              type: boolean
+            protocols:
+              type: array
+              items:
+                type: string
+                enum:
+                - http
+                - https
+        proxy:
+          type: object
+          properties:
+            protocol:
+              type: string
+              enum:
+              - http
+              - https
+            path:
+              type: string
+              pattern: ^/.*$
+            retries:
+              type: integer
+              minimum: 0
+            connect_timeout:
+              type: integer
+              minimum: 0
+            read_timeout:
+              type: integer
+              minimum: 0
+            write_timeout:
+              type: integer
+              minimum: 0
+        upstream:
+          type: object
+          properties:
+            hash_on:
+              type: string
+            hash_on_cookie:
+              type: string
+            hash_on_cookie_path:
+              type: string
+            hash_on_header:
+              type: string
+            hash_fallback_header:
+              type: string
+            hash_fallback:
+              type: string
+            slots:
+              type: integer
+              minimum: 10
+            healthchecks:
+              type: object
+              properties:
+                active:
+                  type: object
+                  properties:
+                    concurrency:
+                      type: integer
+                      minimum: 1
+                    timeout:
+                      type: integer
+                      minimum: 0
+                    http_path:
+                      type: string
+                      pattern: ^/.*$
+                    healthy: &healthy
+                      type: object
+                      properties:
+                        http_statuses:
+                          type: array
+                          items:
+                            type: integer
+                        interval:
+                          type: integer
+                          minimum: 0
+                        successes:
+                          type: integer
+                          minimum: 0
+                    unhealthy: &unhealthy
+                      type: object
+                      properties:
+                        http_failures:
+                          type: integer
+                          minimum: 0
+                        http_statuses:
+                          type: array
+                          items:
+                            type: integer
+                        interval:
+                          type: integer
+                          minimum: 0
+                        tcp_failures:
+                          type: integer
+                          minimum: 0
+                        timeout:
+                          type: integer
+                          minimum: 0
+                passive:
+                  type: object
+                  properties:
+                    healthy: *healthy
+                    unhealthy: *unhealthy
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kong-serviceaccount
+  namespace: kong
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: kong-ingress-clusterrole
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - "configuration.konghq.com"
+  resources:
+  - kongplugins
+  - kongcredentials
+  - kongconsumers
+  - kongingresses
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: kong-ingress-role
+  namespace: kong
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  # Defaults to "<election-id>-<ingress-class>"
+  # Here: "<ingress-controller-leader>-<kong>"
+  # This has to be adapted if you change either parameter
+  # when launching the kong-ingress-controller.
+  - "ingress-controller-leader-kong"
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: kong-ingress-role-nisa-binding
+  namespace: kong
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kong-ingress-role
+subjects:
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kong-ingress-clusterrole-nisa-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kong-ingress-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-server-blocks
+  namespace: kong
+data:
+  servers.conf: |
+    # Prometheus metrics server
+    server {
+        server_name kong_prometheus_exporter;
+        listen 0.0.0.0:9542; # can be any other port as well
+
+        access_log off;
+        location /metrics {
+            default_type text/plain;
+            content_by_lua_block {
+                 local prometheus = require "kong.plugins.prometheus.exporter"
+                 prometheus:collect()
+            }
+        }
+
+        location /nginx_status {
+            internal;
+            access_log off;
+            stub_status;
+        }
+    }
+    # Health check server
+    # TODO how to health check kong in dbless?
+    server {
+        server_name kong_health_check;
+        listen 0.0.0.0:9001; # can be any other port as well
+
+        access_log off;
+        location /health {
+          return 200;
+        }
+    }
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: kong
+  name: ingress-kong
+  namespace: kong
+spec:
+  selector:
+    matchLabels:
+      app: kong
+  strategy:
+    rollingUpdate:
+      maxSurge: 3
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "9542"
+        prometheus.io/scrape: "true"
+      labels:
+        app: kong
+    spec:
+      serviceAccountName: kong-serviceaccount
+      containers:
+      - name: proxy
+        image: kong:1.1
+        env:
+        - name: KONG_DATABASE
+          value: "off"
+        - name: KONG_NGINX_HTTP_INCLUDE
+          value: "/kong/servers.conf"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 127.0.0.1:8444 ssl
+        ports:
+        - name: proxy
+          containerPort: 8000
+          protocol: TCP
+        - name: proxy-ssl
+          containerPort: 8443
+          protocol: TCP
+        - name: metrics
+          containerPort: 9542
+          protocol: TCP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 9001
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 9001
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - name: kong-server-blocks
+          mountPath: /kong
+      - name: ingress-controller
+        args:
+        - /kong-ingress-controller
+        # the kong URL points to the kong admin api server
+        - --kong-url=https://localhost:8444
+        - --admin-tls-skip-verify
+        # Service from were we extract the IP address/es to use in Ingress status
+        - --publish-service=kong/kong-proxy
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.4.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+      volumes:
+      - name: kong-server-blocks
+        configMap:
+          name: kong-server-blocks
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+  namespace: kong
+spec:
+  type: LoadBalancer
+  ports:
+  - name: kong-proxy
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: kong-proxy-ssl
+    port: 443
+    targetPort: 8443
+    protocol: TCP
+  selector:
+    app: kong

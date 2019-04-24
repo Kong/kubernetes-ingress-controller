@@ -49,6 +49,22 @@ spec:
           type: boolean
         config:
           type: object
+        run_on:
+          type: string
+          enum:
+          - first
+          - second
+          - all
+        protocols:
+          type: array
+          items:
+            type: string
+            enum:
+            - http
+            - https
+            - tcp
+            - tls
+
 
 ---
 
@@ -573,8 +589,6 @@ spec:
         # the kong URL points to the kong admin api server
         - --kong-url=https://localhost:8444
         - --admin-tls-skip-verify
-        # the default service is the kong proxy service
-        - --default-backend-service=kong/kong-proxy
         # Service from were we extract the IP address/es to use in Ingress status
         - --publish-service=kong/kong-proxy
         env:
@@ -588,7 +602,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.3.0
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.4.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

@@ -38,10 +38,6 @@ required = [
   branch = "master"
 
 [[constraint]]
-  name = "github.com/imdario/mergo"
-  version = "0.2.4"
-
-[[constraint]]
   name = "github.com/pkg/errors"
   version = "0.8.0"
 
@@ -52,10 +48,6 @@ required = [
 [[constraint]]
   name = "gopkg.in/go-playground/pool.v3"
   version = "3.1.1"
-
-[[constraint]]
-  name = "k8s.io/kubernetes"
-  version = "v1.10.0"
 
 [[constraint]]
   name = "k8s.io/api"
@@ -70,11 +62,6 @@ required = [
   revision = "v7.0.0"
 
 
-[[constraint]]
-  name = "k8s.io/apiextensions-apiserver"
-  revision = "kubernetes-1.10.0"
-
-
 # For dependency below: Refer to issue https://github.com/golang/dep/issues/1799
 [[override]]
 name = "gopkg.in/fsnotify.v1"
@@ -82,4 +69,12 @@ source = "https://github.com/fsnotify/fsnotify.git"
 
 [[constraint]]
   name = "github.com/hbagdi/go-kong"
-  version = "0.3.0"
+  version = "v0.4.1"
+
+[[constraint]]
+  name = "github.com/hbagdi/deck"
+  version = "0.1.0"
+
+[[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "0.3.7"

@@ -6,30 +6,39 @@ Kong Ingress Controller is a dynamic and
 highly available Ingress Controller which configures Kong
 using Ingress resources created in your Kubernetes cluster.  
 In addition, it can configure plugins, load balancing, health checking
-on your services running in Kubernetes.
+on your services running inside Kubernetes.
 
 ## Deployment
 
-Ingress Controller is a Golang application that talks to Kubernetes API server
+Kong's Ingress Controller is a Golang application
+that talks to Kubernetes API server
 and [translates](#translation) Kubernetes resources into Kong.
 
-Kong Ingress controller can be deployed in any Kubernetes cluster
-which is running Kong.
-Ingress Controller does not pose any limitations on how Kong is deployed
-in your Kubernetes environment.
-All it needs, is access to Kubernetes API server and
-Admin API of Kong which it uses to configure Kong.
+Kong's Ingress Controller can run in two modes depending on how
+Kong is being deployed.
 
-The Admin API of Kong can be running on
-Data-Plane Kong nodes or Kong nodes running Control-Plane and Data-plane,
-both at the same time.
+### Kong backed without a database
 
-![kong components](images/deployment.png "Kong Components")
+In DB-less deployments, Kong's Ingress controller runs as a sidecar to Kong
+container and configures Kong dynamically as per changes it receives from
+the k8s API server.
+
+![kong components](images/dbless-deployment.png "Kong Components")
+
+Scaling up Kong and making it highly available can be done by horizontally
+scalling out Kong pods.
+
+### Kong backed with a database
+
+In a deployment where Kong is backed by a DB, Kong's Ingress Controller
+is deployed separately from Kong's data plane nodes.
+
+Kong's Ingress Controller is deployed together with Kong's Control plane pods.
+
+![kong components](images/db-deployment.png "Kong Components")
 
 In the above deployment figure, a Kong Control-Plane pod is
 deployed alongside the Ingress Controller pod.
-As mentioned above, this is only one way of deploying Kong with Ingress Controller
-and it won't matter how we do it.
 
 Kong's state is stored in Postgres (can be Cassandra) which should be deployed
 as a StatefulSet and all Kong nodes in your Kubernetes cluster should be
@@ -38,14 +47,14 @@ able to connect to the database.
 Please check out [Deployment Guides](deployment/) for more
 details on how to deploy Kong with Ingress Controller.
 
-## High Availability
+### High Availability
 
 Multiple instances of Kong Ingress Controller pod can be deployed.
 The Ingress Controller uses a leader election protocol and elects a leader.
 At any point, only one leader Controller pod will be configuring Kong and
 other follower pods will be ready to take over as soon as the leader fails.
 
-## Scaling Kong
+### Scaling Kong
 
 If Kong is deployed in Control-plane and Data-plane mode, then
 Kong proxy can be scaled independently.

@@ -24,8 +24,14 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// KongConsumers returns a KongConsumerInformer.
+	KongConsumers() KongConsumerInformer
+	// KongCredentials returns a KongCredentialInformer.
+	KongCredentials() KongCredentialInformer
 	// KongIngresses returns a KongIngressInformer.
 	KongIngresses() KongIngressInformer
+	// KongPlugins returns a KongPluginInformer.
+	KongPlugins() KongPluginInformer
 }
 
 type version struct {
@@ -39,7 +45,22 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// KongConsumers returns a KongConsumerInformer.
+func (v *version) KongConsumers() KongConsumerInformer {
+	return &kongConsumerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// KongCredentials returns a KongCredentialInformer.
+func (v *version) KongCredentials() KongCredentialInformer {
+	return &kongCredentialInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // KongIngresses returns a KongIngressInformer.
 func (v *version) KongIngresses() KongIngressInformer {
 	return &kongIngressInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// KongPlugins returns a KongPluginInformer.
+func (v *version) KongPlugins() KongPluginInformer {
+	return &kongPluginInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

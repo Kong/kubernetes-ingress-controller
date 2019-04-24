@@ -26,8 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
@@ -200,7 +199,7 @@ func buildExtensionsIngresses() []extensions.Ingress {
 				Name:      "foo_ingress_different_class",
 				Namespace: metav1.NamespaceDefault,
 				Annotations: map[string]string{
-					class.IngressKey: "no-nginx",
+					"kubernetes.io/ingress.class": "no-nginx",
 				},
 			},
 			Status: extensions.IngressStatus{
@@ -260,7 +259,7 @@ func buildIngressLister() ingressLister {
 
 func buildStatusSync() statusSync {
 	return statusSync{
-		pod: &k8s.PodInfo{
+		pod: &utils.PodInfo{
 			Name:      "foo_base_pod",
 			Namespace: apiv1.NamespaceDefault,
 			Labels: map[string]string{
@@ -284,8 +283,6 @@ func TestStatusActions(t *testing.T) {
 		Client:                 buildSimpleClientSet(),
 		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
 		IngressLister:          buildIngressLister(),
-		DefaultIngressClass:    "nginx",
-		IngressClass:           "",
 		UpdateStatusOnShutdown: true,
 	}
 	// create object
@@ -318,7 +315,7 @@ func TestStatusActions(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// execute shutdown
-	fk.Shutdown()
+	fk.Shutdown(true)
 	// ingress should be empty
 	newIPs2 := []apiv1.LoadBalancerIngress{}
 	fooIngress2, err2 := fk.Client.ExtensionsV1beta1().Ingresses(apiv1.NamespaceDefault).Get("foo_ingress_1", metav1.GetOptions{})

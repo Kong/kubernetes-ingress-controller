@@ -24,60 +24,56 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/eapache/channels"
-	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
-	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
-	"k8s.io/kubernetes/pkg/util/filesystem"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
-// NewNGINXController creates a new NGINX Ingress controller.
+// NewKongController creates a new NGINX Ingress controller.
 // If the environment variable NGINX_BINARY exists it will be used
 // as source for nginx commands
-func NewNGINXController(config *Configuration) *NGINXController {
+func NewKongController(config *Configuration) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: config.KubeClient.CoreV1().Events(config.Namespace),
 	})
 
-	n := &NGINXController{
+	n := &KongController{
 		cfg:             config,
 		syncRateLimiter: flowcontrol.NewTokenBucketRateLimiter(config.SyncRateLimit, 1),
-
-		recorder: eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{
-			Component: "kong-ingress-controller",
-		}),
 
 		stopCh:   make(chan struct{}),
 		updateCh: channels.NewRingChannel(1024),
 
 		stopLock: &sync.Mutex{},
-
-		// create an empty configuration.
-		runningConfig: &ingress.Configuration{},
+		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client,
+			config.Kong.URL),
 	}
 
 	n.store = store.New(
 		config.Namespace,
-		"",
-		"",
-		"",
-		"",
 		config.ResyncPeriod,
 		config.KubeClient,
 		config.KubeConf,
-		n.updateCh)
+		n.updateCh,
+		config.IngressClass)
 
+	n.parser = parser.New(n.store)
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
+
+	electionID := config.ElectionID + "-" + config.IngressClass
+
+	electionConfig := election.Config{
+		Client:     config.KubeClient,
+		ElectionID: electionID,
+	}
 
 	if config.UpdateStatus {
 		n.syncStatus = status.NewStatusSyncer(status.Config{
@@ -85,31 +81,32 @@ func NewNGINXController(config *Configuration) *NGINXController {
 			PublishService:         config.PublishService,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,
-			ElectionID:             config.ElectionID,
-			IngressClass:           class.IngressClass,
-			DefaultIngressClass:    class.DefaultClass,
+			ElectionID:             electionID,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
 			OnStartedLeading: func() {
 				// force a sync
 				n.syncQueue.Enqueue(&extensions.Ingress{})
 			},
 		})
+		electionConfig.Callbacks = n.syncStatus.Callbacks()
 	} else {
 		glog.Warning("Update of ingress status is disabled (flag --update-status=false was specified)")
 	}
 
-	return n
+	n.elector = election.NewElector(electionConfig)
+
+	return n, nil
 }
 
-// NGINXController ...
-type NGINXController struct {
+// KongController ...
+type KongController struct {
 	cfg *Configuration
-
-	recorder record.EventRecorder
 
 	syncQueue *task.Queue
 
 	syncStatus status.Sync
+
+	elector election.Elector
 
 	syncRateLimiter flowcontrol.RateLimiter
 
@@ -121,24 +118,25 @@ type NGINXController struct {
 	stopCh   chan struct{}
 	updateCh *channels.RingChannel
 
-	// ngxErrCh channel used to detect errors with the nginx processes
-	ngxErrCh chan error
-
 	// runningConfig contains the running configuration in the Backend
-	runningConfig *ingress.Configuration
+	runningConfig *parser.KongState
 
 	isShuttingDown bool
 
 	store store.Storer
 
-	fileSystem filesystem.Filesystem
+	parser parser.Parser
+
+	PluginSchemaStore PluginSchemaStore
 }
 
 // Start start a new NGINX master process running in foreground.
-func (n *NGINXController) Start() {
+func (n *KongController) Start() {
 	glog.Infof("starting Ingress controller")
 
 	n.store.Run(n.stopCh)
+
+	go n.elector.Run()
 
 	if n.syncStatus != nil {
 		go n.syncStatus.Run()
@@ -150,11 +148,6 @@ func (n *NGINXController) Start() {
 
 	for {
 		select {
-		case err := <-n.ngxErrCh:
-			if n.isShuttingDown {
-				break
-			}
-			glog.Infof("Unexpected error: %v", err)
 		case event := <-n.updateCh.Out():
 			if n.isShuttingDown {
 				break
@@ -172,7 +165,7 @@ func (n *NGINXController) Start() {
 }
 
 // Stop gracefully stops the NGINX master process.
-func (n *NGINXController) Stop() error {
+func (n *KongController) Stop() error {
 	n.isShuttingDown = true
 
 	n.stopLock.Lock()
@@ -187,7 +180,7 @@ func (n *NGINXController) Stop() error {
 	close(n.stopCh)
 	go n.syncQueue.Shutdown()
 	if n.syncStatus != nil {
-		n.syncStatus.Shutdown()
+		n.syncStatus.Shutdown(n.elector.IsLeader())
 	}
 
 	return nil

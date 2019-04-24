@@ -19,7 +19,6 @@ package status
 import (
 	"fmt"
 	"net"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -34,13 +33,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/kubernetes/pkg/kubelet/util/sliceutils"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/k8s"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/internal/task"
 )
 
@@ -51,9 +46,9 @@ const (
 // Sync ...
 type Sync interface {
 	Run()
-	Shutdown()
+	Shutdown(l bool)
 
-	IsLeader() bool
+	Callbacks() leaderelection.LeaderCallbacks
 }
 
 type ingressLister interface {
@@ -76,9 +71,6 @@ type Config struct {
 	UpdateStatusOnShutdown bool
 
 	IngressLister ingressLister
-
-	DefaultIngressClass string
-	IngressClass        string
 }
 
 // statusSync keeps the status IP in each Ingress rule updated executing a periodic check
@@ -91,31 +83,29 @@ type Config struct {
 type statusSync struct {
 	Config
 	// pod contains runtime information about this pod
-	pod *k8s.PodInfo
+	pod *utils.PodInfo
 
 	electionID string
-	elector    *leaderelection.LeaderElector
 	// workqueue used to keep in sync the status IP/s
 	// in the Ingress rules
 	syncQueue *task.Queue
+	callbacks leaderelection.LeaderCallbacks
 }
 
 // Run starts the loop to keep the status in sync
 func (s statusSync) Run() {
-	s.elector.Run()
 }
 
-// IsLeader returns if it is the current leader
-func (s statusSync) IsLeader() bool {
-	return s.elector.IsLeader()
+func (s statusSync) Callbacks() leaderelection.LeaderCallbacks {
+	return s.callbacks
 }
 
 // Shutdown stop the sync. In case the instance is the leader it will remove the current IP
 // if there is no other instances running.
-func (s statusSync) Shutdown() {
+func (s statusSync) Shutdown(isLeader bool) {
 	go s.syncQueue.Shutdown()
 	// remove IP from Ingress
-	if !s.elector.IsLeader() {
+	if !isLeader {
 		return
 	}
 
@@ -176,7 +166,7 @@ func (s statusSync) keyfunc(input interface{}) (interface{}, error) {
 
 // NewStatusSyncer returns a new Sync instance
 func NewStatusSyncer(config Config) Sync {
-	pod, err := k8s.GetPodDetails(config.Client)
+	pod, err := utils.GetPodDetails(config.Client)
 	if err != nil {
 		glog.Fatalf("unexpected error obtaining pod information: %v", err)
 	}
@@ -188,16 +178,7 @@ func NewStatusSyncer(config Config) Sync {
 	}
 	st.syncQueue = task.NewCustomTaskQueue(st.sync, st.keyfunc)
 
-	// we need to use the defined ingress class to allow multiple leaders
-	// in order to update information about ingress status
-	electionID := fmt.Sprintf("%v-%v", config.ElectionID, config.DefaultIngressClass)
-	if config.IngressClass != "" {
-		electionID = fmt.Sprintf("%v-%v", config.ElectionID, config.IngressClass)
-	}
-
-	st.electionID = electionID
-
-	callbacks := leaderelection.LeaderCallbacks{
+	st.callbacks = leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(stop <-chan struct{}) {
 			glog.V(2).Infof("I am the new status update leader")
 			if st.Config.OnStartedLeading != nil {
@@ -218,37 +199,6 @@ func NewStatusSyncer(config Config) Sync {
 		},
 	}
 
-	broadcaster := record.NewBroadcaster()
-	hostname, _ := os.Hostname()
-
-	recorder := broadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{
-		Component: "ingress-leader-elector",
-		Host:      hostname,
-	})
-
-	lock := resourcelock.ConfigMapLock{
-		ConfigMapMeta: metav1.ObjectMeta{Namespace: pod.Namespace, Name: electionID},
-		Client:        config.Client.CoreV1(),
-		LockConfig: resourcelock.ResourceLockConfig{
-			Identity:      pod.Name,
-			EventRecorder: recorder,
-		},
-	}
-
-	ttl := 30 * time.Second
-	le, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
-		Lock:          &lock,
-		LeaseDuration: ttl,
-		RenewDeadline: ttl / 2,
-		RetryPeriod:   ttl / 4,
-		Callbacks:     callbacks,
-	})
-
-	if err != nil {
-		glog.Fatalf("unexpected error starting leader election: %v", err)
-	}
-
-	st.elector = le
 	return st
 }
 
@@ -262,7 +212,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 		return addrs, nil
 	}
 
-	ns, name, _ := k8s.ParseNameNS(s.PublishService)
+	ns, name, _ := utils.ParseNameNS(s.PublishService)
 	svc, err := s.Client.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -295,14 +245,24 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 				continue
 			}
 
-			name := k8s.GetNodeIPOrName(s.Client, pod.Spec.NodeName)
-			if !sliceutils.StringInSlice(name, addrs) {
+			name := utils.GetNodeIPOrName(s.Client, pod.Spec.NodeName)
+			if !inSlice(name, addrs) {
 				addrs = append(addrs, name)
 			}
 		}
 
 		return addrs, nil
 	}
+}
+
+func inSlice(e string, arr []string) bool {
+	for _, v := range arr {
+		if v == e {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *statusSync) isRunningMultiplePods() bool {

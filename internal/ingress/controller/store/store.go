@@ -40,20 +40,10 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	consumerv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/consumer/v1"
-	credentialv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/credential/v1"
-	pluginv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/plugin/v1"
 	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
-	consumerclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/clientset/versioned"
-	consumerinformer "github.com/kong/kubernetes-ingress-controller/internal/client/consumer/informers/externalversions"
-	credentialclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/credential/clientset/versioned"
-	credentialinformer "github.com/kong/kubernetes-ingress-controller/internal/client/credential/informers/externalversions"
-	pluginclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/clientset/versioned"
-	plugininformer "github.com/kong/kubernetes-ingress-controller/internal/client/plugin/informers/externalversions"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/class"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations/parser"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
 // Storer is the interface that wraps the required methods to gather information
@@ -74,22 +64,22 @@ type Storer interface {
 	ListIngresses() []*extensions.Ingress
 
 	// Get an SSL cert from k8s secret
-	GetCertFromSecret(string) (*ingress.SSLCert, error)
+	GetCertFromSecret(string) (*utils.RawSSLCert, error)
 
 	// Run initiates the synchronization of the controllers
 	Run(stopCh chan struct{})
 
-	GetKongPlugin(namespace, name string) (*pluginv1.KongPlugin, error)
+	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
 
-	GetKongConsumer(namespace, name string) (*consumerv1.KongConsumer, error)
+	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
 
 	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
 
-	ListKongConsumers() []*consumerv1.KongConsumer
+	ListKongConsumers() []*configurationv1.KongConsumer
 
-	ListKongCredentials() []*credentialv1.KongCredential
+	ListKongCredentials() []*configurationv1.KongCredential
 
-	ListGlobalKongPlugins() ([]*pluginv1.KongPlugin, error)
+	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 }
 
 // EventType type of event associated with an informer
@@ -189,23 +179,26 @@ type k8sStore struct {
 
 	// updateCh
 	updateCh *channels.RingChannel
+
+	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
+func New(namespace string,
 	resyncPeriod time.Duration,
 	client clientset.Interface,
 	clientConf *rest.Config,
-	updateCh *channels.RingChannel) Storer {
+	updateCh *channels.RingChannel,
+	ingressClass string) Storer {
 
 	store := &k8sStore{
-		informers: &Informer{},
-		listers:   &Lister{},
-		updateCh:  updateCh,
+		informers:          &Informer{},
+		listers:            &Lister{},
+		updateCh:           updateCh,
+		isValidIngresClass: annotations.IngressClassValidatorFunc(ingressClass),
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: client.CoreV1().Events(namespace),
 	})
@@ -216,9 +209,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 	ingEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ing := obj.(*extensions.Ingress)
-			if !class.IsValid(&ing.ObjectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, &ing.ObjectMeta)
-				glog.Infof("ignoring add for ingress %v based on annotation %v with value %v", ing.Name, class.IngressKey, a)
+			if !store.isValidIngresClass(&ing.ObjectMeta) {
 				return
 			}
 
@@ -244,8 +235,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 					return
 				}
 			}
-			if !class.IsValid(&ing.ObjectMeta) {
-				glog.Infof("ignoring delete for ingress %v based on annotation %v", ing.Name, class.IngressKey)
+			if !store.isValidIngresClass(&ing.ObjectMeta) {
 				return
 			}
 			recorder.Eventf(ing, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", ing.Namespace, ing.Name))
@@ -258,13 +248,11 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		UpdateFunc: func(old, cur interface{}) {
 			oldIng := old.(*extensions.Ingress)
 			curIng := cur.(*extensions.Ingress)
-			validOld := class.IsValid(&oldIng.ObjectMeta)
-			validCur := class.IsValid(&curIng.ObjectMeta)
+			validOld := store.isValidIngresClass(&oldIng.ObjectMeta)
+			validCur := store.isValidIngresClass(&curIng.ObjectMeta)
 			if !validOld && validCur {
-				glog.Infof("creating ingress %v based on annotation %v", curIng.Name, class.IngressKey)
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			} else if validOld && !validCur {
-				glog.Infof("removing ingress %v based on annotation %v", curIng.Name, class.IngressKey)
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
 			} else if validCur && !reflect.DeepEqual(old, cur) {
 				recorder.Eventf(curIng, corev1.EventTypeNormal, "UPDATE", fmt.Sprintf("Ingress %s/%s", curIng.Namespace, curIng.Name))
@@ -360,19 +348,12 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 
 	pluginEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			res, ok := obj.(*pluginv1.KongPlugin)
+			res, ok := obj.(*configurationv1.KongPlugin)
 			if !ok {
 				return
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
-				a, err := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				if err != nil {
-					glog.Infof("%v", err)
-				}
-				glog.Infof("ignoring add event for plugin %v based"+
-					" on annotation %v with value %v", res.Name,
-					class.IngressKey, a)
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -382,14 +363,14 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			res, ok := obj.(*pluginv1.KongPlugin)
+			res, ok := obj.(*configurationv1.KongPlugin)
 			if !ok {
 				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 				if !ok {
 					glog.Errorf("couldn't get object from tombstone %#v", obj)
 					return
 				}
-				res, ok = tombstone.Obj.(*pluginv1.KongPlugin)
+				res, ok = tombstone.Obj.(*configurationv1.KongPlugin)
 				if !ok {
 					glog.Errorf("Tombstone contained an"+
 						" object that is not a plugin: %#v", obj)
@@ -397,11 +378,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 				}
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring delete event for plugin %v based"+
-					" on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -411,10 +388,10 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
-			oldRes := old.(*pluginv1.KongPlugin)
-			curRes := cur.(*pluginv1.KongPlugin)
-			validOld := class.IsValid(&oldRes.ObjectMeta)
-			validCur := class.IsValid(&curRes.ObjectMeta)
+			oldRes := old.(*configurationv1.KongPlugin)
+			curRes := cur.(*configurationv1.KongPlugin)
+			validOld := store.isValidIngresClass(&oldRes.ObjectMeta)
+			validCur := store.isValidIngresClass(&curRes.ObjectMeta)
 
 			if !validCur && !validOld {
 				return
@@ -429,16 +406,12 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 
 	consumerEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			res, ok := obj.(*consumerv1.KongConsumer)
+			res, ok := obj.(*configurationv1.KongConsumer)
 			if !ok {
 				return
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring add event for consumer %v based"+
-					" on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -448,14 +421,14 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			res, ok := obj.(*consumerv1.KongConsumer)
+			res, ok := obj.(*configurationv1.KongConsumer)
 			if !ok {
 				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 				if !ok {
 					glog.Errorf("couldn't get object from tombstone %#v", obj)
 					return
 				}
-				res, ok = tombstone.Obj.(*consumerv1.KongConsumer)
+				res, ok = tombstone.Obj.(*configurationv1.KongConsumer)
 				if !ok {
 					glog.Errorf("Tombstone contained"+
 						" object that is not a consumer: %#v", obj)
@@ -463,11 +436,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 				}
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring delete event for consumer"+
-					" %v based on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -477,10 +446,10 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
-			oldRes := old.(*consumerv1.KongConsumer)
-			curRes := cur.(*consumerv1.KongConsumer)
-			validOld := class.IsValid(&oldRes.ObjectMeta)
-			validCur := class.IsValid(&curRes.ObjectMeta)
+			oldRes := old.(*configurationv1.KongConsumer)
+			curRes := cur.(*configurationv1.KongConsumer)
+			validOld := store.isValidIngresClass(&oldRes.ObjectMeta)
+			validCur := store.isValidIngresClass(&curRes.ObjectMeta)
 
 			if !validCur && !validOld {
 				return
@@ -495,16 +464,12 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 
 	credentialEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			res, ok := obj.(*credentialv1.KongCredential)
+			res, ok := obj.(*configurationv1.KongCredential)
 			if !ok {
 				return
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring add event for credential %v"+
-					" based on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -514,14 +479,14 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			res, ok := obj.(*credentialv1.KongCredential)
+			res, ok := obj.(*configurationv1.KongCredential)
 			if !ok {
 				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 				if !ok {
 					glog.Errorf("couldn't get object from tombstone %#v", obj)
 					return
 				}
-				res, ok = tombstone.Obj.(*credentialv1.KongCredential)
+				res, ok = tombstone.Obj.(*configurationv1.KongCredential)
 				if !ok {
 					glog.Errorf("Tombstone contained"+
 						" object that is not a credential: %#v", obj)
@@ -529,11 +494,7 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 				}
 			}
 			objectMeta := &res.ObjectMeta
-			if !class.IsValid(objectMeta) {
-				a, _ := parser.GetStringAnnotation(class.IngressKey, objectMeta)
-				glog.Infof("ignoring delete event for credential %v"+
-					" based on annotation %v with value %v",
-					res.Name, class.IngressKey, a)
+			if !store.isValidIngresClass(objectMeta) {
 				return
 			}
 
@@ -543,10 +504,10 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
-			oldRes := old.(*credentialv1.KongCredential)
-			curRes := cur.(*credentialv1.KongCredential)
-			validOld := class.IsValid(&oldRes.ObjectMeta)
-			validCur := class.IsValid(&curRes.ObjectMeta)
+			oldRes := old.(*configurationv1.KongCredential)
+			curRes := cur.(*configurationv1.KongCredential)
+			validOld := store.isValidIngresClass(&oldRes.ObjectMeta)
+			validCur := store.isValidIngresClass(&curRes.ObjectMeta)
 
 			if !validCur && !validOld {
 				return
@@ -580,33 +541,24 @@ func New(namespace string, configmap, tcp, udp, defaultSSLCertificate string,
 		},
 	}
 
-	pluginClient, _ := pluginclientv1.NewForConfig(clientConf)
-	pluginFactory := plugininformer.NewFilteredSharedInformerFactory(pluginClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
-
-	store.informers.Kong.Plugin = pluginFactory.Configuration().V1().KongPlugins().Informer()
-	store.listers.Kong.Plugin = store.informers.Kong.Plugin.GetStore()
-	store.informers.Kong.Plugin.AddEventHandler(pluginEventHandler)
-
-	consumerClient, _ := consumerclientv1.NewForConfig(clientConf)
-	consumerFactory := consumerinformer.NewFilteredSharedInformerFactory(consumerClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
-
-	store.informers.Kong.Consumer = consumerFactory.Configuration().V1().KongConsumers().Informer()
-	store.listers.Kong.Consumer = store.informers.Kong.Consumer.GetStore()
-	store.informers.Kong.Consumer.AddEventHandler(consumerEventHandler)
-
-	credClient, _ := credentialclientv1.NewForConfig(clientConf)
-	credentialFactory := credentialinformer.NewFilteredSharedInformerFactory(credClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
-
-	store.informers.Kong.Credential = credentialFactory.Configuration().V1().KongCredentials().Informer()
-	store.listers.Kong.Credential = store.informers.Kong.Credential.GetStore()
-	store.informers.Kong.Credential.AddEventHandler(credentialEventHandler)
-
 	confClient, _ := configurationclientv1.NewForConfig(clientConf)
 	configFactory := configurationinformer.NewFilteredSharedInformerFactory(confClient, resyncPeriod, namespace, func(*metav1.ListOptions) {})
 
 	store.informers.Kong.Configuration = configFactory.Configuration().V1().KongIngresses().Informer()
 	store.listers.Kong.Configuration = store.informers.Kong.Configuration.GetStore()
 	store.informers.Kong.Configuration.AddEventHandler(crdEventHandler)
+
+	store.informers.Kong.Plugin = configFactory.Configuration().V1().KongPlugins().Informer()
+	store.listers.Kong.Plugin = store.informers.Kong.Plugin.GetStore()
+	store.informers.Kong.Plugin.AddEventHandler(pluginEventHandler)
+
+	store.informers.Kong.Consumer = configFactory.Configuration().V1().KongConsumers().Informer()
+	store.listers.Kong.Consumer = store.informers.Kong.Consumer.GetStore()
+	store.informers.Kong.Consumer.AddEventHandler(consumerEventHandler)
+
+	store.informers.Kong.Credential = configFactory.Configuration().V1().KongCredentials().Informer()
+	store.listers.Kong.Credential = store.informers.Kong.Credential.GetStore()
+	store.informers.Kong.Credential.AddEventHandler(credentialEventHandler)
 
 	return store
 }
@@ -632,7 +584,7 @@ func (s k8sStore) ListIngresses() []*extensions.Ingress {
 	var ingresses []*extensions.Ingress
 	for _, item := range s.listers.Ingress.List() {
 		ing := item.(*extensions.Ingress)
-		if !class.IsValid(&ing.ObjectMeta) {
+		if !s.isValidIngresClass(&ing.ObjectMeta) {
 			continue
 		}
 
@@ -653,7 +605,7 @@ func (s k8sStore) Run(stopCh chan struct{}) {
 	s.informers.Run(stopCh)
 }
 
-func (s k8sStore) GetKongPlugin(namespace, name string) (*pluginv1.KongPlugin, error) {
+func (s k8sStore) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	p, exists, err := s.listers.Kong.Plugin.GetByKey(key)
 	if err != nil {
@@ -662,7 +614,7 @@ func (s k8sStore) GetKongPlugin(namespace, name string) (*pluginv1.KongPlugin, e
 	if !exists {
 		return nil, fmt.Errorf("plugin %v was not found", key)
 	}
-	return p.(*pluginv1.KongPlugin), nil
+	return p.(*configurationv1.KongPlugin), nil
 }
 
 func (s k8sStore) GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error) {
@@ -672,28 +624,28 @@ func (s k8sStore) GetKongIngress(namespace, name string) (*configurationv1.KongI
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("ingress configuration %v was not found", key)
+		return nil, nil
 	}
 	return p.(*configurationv1.KongIngress), nil
 }
 
-func (s k8sStore) GetKongConsumer(namespace, name string) (*consumerv1.KongConsumer, error) {
+func (s k8sStore) GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	p, exists, err := s.listers.Kong.Consumer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("plugin %v was not found", key)
+		return nil, fmt.Errorf("consumer %v was not found", key)
 	}
-	return p.(*consumerv1.KongConsumer), nil
+	return p.(*configurationv1.KongConsumer), nil
 }
 
-func (s k8sStore) ListKongConsumers() []*consumerv1.KongConsumer {
-	var consumers []*consumerv1.KongConsumer
+func (s k8sStore) ListKongConsumers() []*configurationv1.KongConsumer {
+	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.listers.Kong.Consumer.List() {
-		c, ok := item.(*consumerv1.KongConsumer)
-		if ok && class.IsValid(&c.ObjectMeta) {
+		c, ok := item.(*configurationv1.KongConsumer)
+		if ok && s.isValidIngresClass(&c.ObjectMeta) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -701,11 +653,11 @@ func (s k8sStore) ListKongConsumers() []*consumerv1.KongConsumer {
 	return consumers
 }
 
-func (s k8sStore) ListKongCredentials() []*credentialv1.KongCredential {
-	var credentials []*credentialv1.KongCredential
+func (s k8sStore) ListKongCredentials() []*configurationv1.KongCredential {
+	var credentials []*configurationv1.KongCredential
 	for _, item := range s.listers.Kong.Credential.List() {
-		c, ok := item.(*credentialv1.KongCredential)
-		if ok && class.IsValid(&c.ObjectMeta) {
+		c, ok := item.(*configurationv1.KongCredential)
+		if ok && s.isValidIngresClass(&c.ObjectMeta) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -713,10 +665,10 @@ func (s k8sStore) ListKongCredentials() []*credentialv1.KongCredential {
 	return credentials
 }
 
-func (s k8sStore) ListGlobalKongPlugins() ([]*pluginv1.KongPlugin, error) {
+func (s k8sStore) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 
-	var plugins []*pluginv1.KongPlugin
-	// var globalPlugins []*pluginv1.KongPlugin
+	var plugins []*configurationv1.KongPlugin
+	// var globalPlugins []*configurationv1.KongPlugin
 	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
 	if err != nil {
 		return nil, err
@@ -724,8 +676,8 @@ func (s k8sStore) ListGlobalKongPlugins() ([]*pluginv1.KongPlugin, error) {
 	err = cache.ListAll(s.listers.Kong.Plugin,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*pluginv1.KongPlugin)
-			if ok && class.IsValid(&p.ObjectMeta) {
+			p, ok := ob.(*configurationv1.KongPlugin)
+			if ok && s.isValidIngresClass(&p.ObjectMeta) {
 				plugins = append(plugins, p)
 			}
 		})

@@ -7,7 +7,6 @@ It supports the following annotations:
 - [`kubernetes.io/ingress.class`](#kubernetesioingressclass)
 - [`plugins.konghq.com`](#pluginskonghqcom)
 - [`configuration.konghq.com`](#configurationkonghqcom)
-- DEPRECATED [`<name>.plugin.konghq.com`](#deprecated-namepluginkonghqcom)
 
 ## `kubernetes.io/ingress.class`
 
@@ -65,6 +64,7 @@ For such deployments, please ensure that in addition to different
 
 In such deployments, `ingress.class` annotation can be used on the
 following custom resources as well:
+
 - KongPlugin: To configure (global) plugins only in one of the Kong clusters.
 - KongConsumer: To create different consumers in different Kong clusters.
 - KongCredential: To create associated credentials for consumers.
@@ -73,7 +73,6 @@ following custom resources as well:
 
 `KongPlugin` custom resource can be configured using the
 `plugins.konghq.com` annotation.
-This annotation is available for Kong Ingress Controller versions >= 0.2.0.
 
 Following is an example of how to use the annotation:
 
@@ -87,7 +86,7 @@ should be to be applied to the Ingress rules defined in the
 Ingress resource on which the annotation is applied.
 
 This annotation can be applied to a Service Object in Kubernetes as well, which
-will result in the plugin being executed at Service in Kong,
+will result in the plugin being executed at Service-level in Kong,
 meaning the plugin will be
 executed for every request that is proxied, no matter which Route it came from.
 
@@ -97,38 +96,11 @@ or ingress.
 ## `configuration.konghq.com`
 
 This annotation can associate a KongIngress custom resource with
-an Ingress resource. Only a single KongIngress resource can be specified and
+an Ingress or a Service resource.
+Only a single KongIngress resource can be specified and
 it will override the properties of Service, Route and Upstream objects that
 are specified in the referenced `KongIngress` object.
+Please read [KongIngress](#kongingress) for more details.
 
-## DEPRECATED `<name>.plugin.konghq.com`
-
-Before version 0.2.0, a different annotation was used to configure plugins,
-which is now deprecated.
-
-The annotation can be used as follows:
-
-```yaml
-rate-limiting.plugin.konghq.com: |
-  add-ratelimiting-to-route
-```
-
-The content of the annotation, in this case,
-`add-ratelimiting-to-route` indicates the name of the
-`KongPlugin` containing the configuration to be used.
-
-**Rules:**
-
-- the prefix must be a valid plugin name.
-- the suffix must be `.plugin.konghq.com`
-- the end of the line must be `|` if we want to add multiple plugins.
-- each line should contain a valid `KongPlugin` in the Kubernetes cluster.
-
-Setting annotations in Ingress rules set ups plugins on Routes entity in Kong.
-Sometimes, there is a need to apply plugins on the Service entity in Kong,
-meaning execute the plugin for any request being proxied to a service,
-no matter which Route was taken.
-The same annotations can be applied to Kubernetes service itself as well.
-
-
-[kongplugin]: custom-resources.md#KongPlugin
+[kongplugin]: ../custom-resources.md#KongPlugin
+[kongingress]: ../custom-resources.md#KongIngress

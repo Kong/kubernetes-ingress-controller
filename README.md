@@ -41,15 +41,15 @@ Kubernetes version `1.8` through `1.10`.
 The following matrix lists supported versions of
 Kong for every release of the Kong Ingress Controller:
 
-| Kong Ingress Controller  | <= 0.0.4           | 0.0.5              | 0.1.x              | 0.2.x              | 0.3.x              |
-|--------------------------|:------------------:|:------------------:|:------------------:|:------------------:|:------------------:|
-| Kong 0.13.x              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                |
-| Kong 0.14.x              | :x:                | :x:                | :x:                | :white_check_mark: | :x:                |
-| Kong 1.0.x               | :x:                | :x:                | :x:                | :x:                | :white_check_mark: |
-| Kong 1.1.x               | :x:                | :x:                | :x:                | :x:                | :white_check_mark: |
-| Kong Enterprise 0.32-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                |
-| Kong Enterprise 0.33-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                |
-| Kong Enterprise 0.34-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                |
+| Kong Ingress Controller  | <= 0.0.4           | 0.0.5              | 0.1.x              | 0.2.x              | 0.3.x              | 0.4.x              |
+|--------------------------|:------------------:|:------------------:|:------------------:|:------------------:|:------------------:|:------------------:|
+| Kong 0.13.x              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| Kong 0.14.x              | :x:                | :x:                | :x:                | :white_check_mark: | :x:                | :x:                |
+| Kong 1.0.x               | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: |
+| Kong 1.1.x               | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: |
+| Kong Enterprise 0.32-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| Kong Enterprise 0.33-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| Kong Enterprise 0.34-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
 
 ## Get started
 
@@ -72,6 +72,12 @@ If you don't have helm installed on your k8s cluster, execute:
 
 ```
 kubectl apply -f https://bit.ly/kong-ingress
+```
+
+You can also spin up Kong Ingress Controller without a database dependency:
+
+```
+kubectl apply -f https://bit.ly/kong-ingress-dbless
 ```
 
 It takes a few minutes for all components to

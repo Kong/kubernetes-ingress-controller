@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.4.0](#040---20190424)
  - [0.3.0](#030---20190108)
  - [0.2.2](#022---20181109)
  - [0.1.3](#013---20181109)
@@ -10,6 +11,81 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.4.0] - 2019/04/24
+
+#### Summary
+
+This release introduces support to run Kong as an Ingress Controller
+without a database!
+This release comes with major under the hood rewrites to fix numerous
+bugs and design issues in the codebase. Most of the syncing logic has
+now been ported over to [decK](http://github.com/hbagdi/deck).
+
+This release comes with a number of breaking changes.
+Please read the changelog and test in your environment.
+
+#### Breaking Changes
+
+- :warning: Annotation `<plugin-name>.plugin.konghq.com`
+  (deprecatd in 0.2.0) is no longer supported.
+- :warning: `--default-backend-service` CLI flag is now removed. The default
+  service will now be picked up from the default backend in the Ingress rules.
+- :warning: Service and Upstream entity overrides via KongIngress CRD are now
+  supported only with `configuration.konghq.com` annotation on Kubernetes
+  services.
+  Route level overrides work same as before,
+  using the `configuration.konghq.com` annotation on Ingress resources.
+- :warning: `strip_path` property of Routes in Kong is set to `true` by default.
+- :warning: `preserve_host` property of Routes in Kong is set to
+  `true` by default.
+- Plugins created for a combination of Route and Consumer using `consumerRef`
+  property in KongPlugin CRD are not supported anymore. This functionality
+  will be added back in future
+  via [#250](https://github.com/Kong/kubernetes-ingress-controller/issues/250).
+- Service and upstream Host name have changed from
+  `namespace.service-name.port` to `service-name.namespace.svc`.
+
+#### Added
+
+- Ingress Controller now supports a DB-less deployment mode using Kong 1.1.
+  [#244](https://github.com/Kong/kubernetes-ingress-controller/issues/244)
+- New `run_on` and `protocols` properties are added to KongPlugin CRD.
+  These can be used to further tune behaviors of plugins
+  in Service Mesh deployments.
+- New fields are added to KongIngress CRD to support HTTPS Active healthchecks.
+- Ingress Controller is now built using Go 1.12.
+- Default service, which handles all traffic that is not matched against
+  any of the Ingress rules, is now configured using the default backend
+  defined via the Ingress resources.
+
+#### Fixed
+
+- Logs to stdout and stderr will be much more quieter and helpful and won't
+  be as verbose as before.
+- Routes with same path but different methods can now be created.
+  [#202](https://github.com/Kong/kubernetes-ingress-controller/issues/202)
+- Removing a value in KongPlugin config will now correctly sync it to Kong.
+  [#117](https://github.com/Kong/kubernetes-ingress-controller/issues/117)
+- Setting `--update-state=false` no longer causes a panic and performs leader
+  election correctly.
+  [#232](https://github.com/Kong/kubernetes-ingress-controller/issues/232)
+  Thanks to [@lijiaocn](https://github.com/lijiaocn) for the fix!!
+- KongIngress will now correctly override properites of Upstream object
+  in Kong.
+  [#252](https://github.com/Kong/kubernetes-ingress-controller/issues/252)
+- Removing a value from KongPlugin config will now correctly unset it in
+  Kong's datastore.
+  [#117](https://github.com/Kong/kubernetes-ingress-controller/issues/117)
+
+#### Under the hood
+
+- Translation of Ingress rules and CRDs to Kong entities is completey
+  re-written.
+  [#241](https://github.com/Kong/kubernetes-ingress-controller/issues/241)
+- For database deployments, an external tool, decK is used to sync resources
+  to Kong, fixing numerous bugs and making Ingress Controller code saner
+  and easier to maintain.
 
 ## [0.3.0] - 2019/01/08
 
@@ -264,6 +340,7 @@
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.2...0.3.0
 [0.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.1...0.2.2
 [0.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.2...0.1.3

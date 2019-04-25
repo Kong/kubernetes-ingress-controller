@@ -5,6 +5,11 @@ notifications:
     on_failure: never
     on_success: never
 
+cache:
+  apt: true
+  directories:
+  - $GOPATH/pkg/mod
+
 env:
 - GO111MODULE=on
 

@@ -10,9 +10,12 @@ var (
 	// TODO: move SchemeBuilder with zz_generated.deepcopy.go to k8s.io/api.
 	// localSchemeBuilder and AddToScheme will stay in k8s.io/kubernetes.
 
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-	localSchemeBuilder = &SchemeBuilder
-	AddToScheme        = localSchemeBuilder.AddToScheme
+	// SchemeBuilder is a schemeBuilder with all CRDs
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	// AddToScheme points to SchemeBuilder's AddToScheme
+	AddToScheme = SchemeBuilder.AddToScheme
+	// SchemeGroupVersion is API Group and Version of
+	// Kong Ingress Controller's API.
 	SchemeGroupVersion = schema.GroupVersion{Group: "configuration.konghq.com", Version: "v1"}
 )
 

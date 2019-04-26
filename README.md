@@ -68,6 +68,12 @@ To setup Kong Ingress Controller in your k8s cluster, execute:
 helm install stable/kong --set ingressController.enabled=true
 ```
 
+If you like to use a static IP:
+
+```shell
+helm install stable/kong --set ingressController.enabled=true --set proxy.loadBalancerIP=[Your IP goes there] --set proxy.type=LoadBalancer --name kong --namespace kong
+```
+
 If you don't have helm installed on your k8s cluster, execute:
 
 ```

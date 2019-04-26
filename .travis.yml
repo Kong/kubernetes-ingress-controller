@@ -20,10 +20,7 @@ go_import_path: github.com/kong/kubernetes-ingress-controller
 
 before_script:
 - go get golang.org/x/lint/golint
-- diff -u <(echo -n) <(gofmt -d -s .)
-- golint -set_exit_status .
-- make verify-all
-- make vet
 
 script:
-- make test
+- make verify-codegen
+- make test-all

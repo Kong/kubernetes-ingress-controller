@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package version
+package main
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+)
 
 var (
 	// RELEASE returns the release version
@@ -27,13 +30,14 @@ var (
 	COMMIT = "UNKNOWN"
 )
 
-// String returns information about the release.
-func String() string {
+// version returns information about the release.
+func version() string {
 	return fmt.Sprintf(`-------------------------------------------------------------------------------
 Kong Ingress controller
   Release:    %v
   Build:      %v
   Repository: %v
+  Go:         %v
 -------------------------------------------------------------------------------
-`, RELEASE, COMMIT, REPO)
+`, RELEASE, COMMIT, REPO, runtime.Version())
 }

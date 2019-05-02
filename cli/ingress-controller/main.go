@@ -44,13 +44,12 @@ import (
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
-	"github.com/kong/kubernetes-ingress-controller/version"
 )
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	fmt.Println(version.String())
+	fmt.Println(version())
 
 	showVersion, conf, err := parseFlags()
 	if showVersion {
@@ -285,7 +284,7 @@ func registerHandlers(enableProfiling bool, port int, ic *controller.KongControl
 
 	mux.HandleFunc("/build", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		b, _ := json.Marshal(version.String())
+		b, _ := json.Marshal(version())
 		w.Write(b)
 	})
 

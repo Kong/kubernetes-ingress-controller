@@ -30,7 +30,7 @@ e2e-tests
 
 coverage.txt
 # for this repo only
-ingress-controller
+kong-ingress-controller
 
 # ignore vendor tree
 vendor

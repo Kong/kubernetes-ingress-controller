@@ -58,5 +58,8 @@ spec:
         - name: proxy-ssl
           containerPort: 8443
           protocol: TCP
-
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/sh", "-c", "kong quit" ]
 ---

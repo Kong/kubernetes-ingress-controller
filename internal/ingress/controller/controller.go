@@ -30,12 +30,6 @@ import (
 	"github.com/hbagdi/go-kong/kong"
 )
 
-const (
-	defUpstreamName = "upstream-default-backend"
-	defServerName   = "_"
-	rootLocation    = "/"
-)
-
 // Kong Represents a Kong client and connection information
 type Kong struct {
 	URL string
@@ -65,9 +59,7 @@ type Configuration struct {
 
 	Namespace string
 
-	IngressClass          string
-	DefaultHealthzURL     string
-	DefaultSSLCertificate string
+	IngressClass string
 
 	// optional
 	PublishService       string

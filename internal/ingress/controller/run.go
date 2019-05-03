@@ -33,7 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
-	"github.com/kong/kubernetes-ingress-controller/internal/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 )
 
 // NewKongController creates a new NGINX Ingress controller.

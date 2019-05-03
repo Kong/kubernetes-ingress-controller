@@ -26,7 +26,7 @@ lint:
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go -o kong-ingress-controller build ./cli/ingress-controller
+	CGO_ENABLED=0 go build -o kong-ingress-controller ./cli/ingress-controller
 
 .PHONY: fmt
 fmt:

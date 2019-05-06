@@ -334,15 +334,12 @@ spec:
           storage: 1Gi
 
 ---
-
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kong-serviceaccount
   namespace: kong
-
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
@@ -404,24 +401,6 @@ rules:
   - get
   - list
   - watch
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: Role
-metadata:
-  name: kong-ingress-role
-  namespace: kong
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - pods
-  - secrets
-  - namespaces
-  verbs:
-  - get
 - apiGroups:
   - ""
   resources:
@@ -433,39 +412,10 @@ rules:
   # when launching the kong-ingress-controller.
   - "ingress-controller-leader-kong"
   verbs:
+  - create
   - get
   - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-- apiGroups:
-  - ""
-  resources:
-  - endpoints
-  verbs:
-  - get
-
 ---
-
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: RoleBinding
-metadata:
-  name: kong-ingress-role-nisa-binding
-  namespace: kong
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: kong-ingress-role
-subjects:
-- kind: ServiceAccount
-  name: kong-serviceaccount
-  namespace: kong
-
----
-
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
@@ -478,7 +428,6 @@ subjects:
 - kind: ServiceAccount
   name: kong-serviceaccount
   namespace: kong
-
 ---
 
 apiVersion: v1

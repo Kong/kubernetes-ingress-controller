@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 
 	"strconv"
 
@@ -184,6 +185,9 @@ func (p *Parser) parseIngressRules(
 			host := rule.Host
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
+
+				isTLSNegotiation := strings.HasPrefix(path, "/.well-known/acme-challenge/")
+
 				r := Route{
 					Ingress: ingress,
 					Route: kong.Route{
@@ -197,7 +201,7 @@ func (p *Parser) parseIngressRules(
 						// order?
 						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
 						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(true),
+						StripPath:     kong.Bool(!isTLSNegotiation),
 						PreserveHost:  kong.Bool(true),
 						Protocols:     kong.StringSlice("http", "https"),
 						RegexPriority: kong.Int(0),
@@ -347,6 +351,13 @@ func overrideRoute(route *Route,
 	}
 	r := kongIngress.Route
 
+	isTLSNegotiation := false
+	for _, path := range r.Paths {
+		if strings.HasPrefix(*path, "/.well-known/acme-challenge/") {
+			isTLSNegotiation = true
+		}
+	}
+
 	if len(r.Methods) != 0 {
 		route.Methods = cloneStringPointerSlice(r.Methods...)
 	}
@@ -357,10 +368,10 @@ func overrideRoute(route *Route,
 	if r.RegexPriority != nil {
 		route.RegexPriority = kong.Int(*r.RegexPriority)
 	}
-	if r.StripPath != nil {
+	if r.StripPath != nil && !isTLSNegotiation {
 		route.StripPath = kong.Bool(*r.StripPath)
 	}
-	if r.PreserveHost != nil {
+	if r.PreserveHost != nil && !isTLSNegotiation {
 		route.PreserveHost = kong.Bool(*r.PreserveHost)
 	}
 }

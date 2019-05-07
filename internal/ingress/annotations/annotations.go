@@ -34,25 +34,40 @@ const (
 	DefaultIngressClass = "kong"
 )
 
+func validIngress(ingressAnnotationValue, ingressClass string) bool {
+	// we have 2 valid combinations
+	// 1 - ingress with default class | blank annotation on ingress
+	// 2 - ingress with specific class | same annotation on ingress
+	//
+	// and 2 invalid combinations
+	// 3 - ingress with default class | fixed annotation on ingress
+	// 4 - ingress with specific class | different annotation on ingress
+	if ingressAnnotationValue == "" && ingressClass == DefaultIngressClass {
+		return true
+	}
+	return ingressAnnotationValue == ingressClass
+}
+
 // IngressClassValidatorFunc returns a function which can valid if an object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
-	ingressClass string) func(objectMeta *metav1.ObjectMeta) bool {
+	ingressClass string) func(obj metav1.Object) bool {
 
-	return func(objectMeta *metav1.ObjectMeta) bool {
-		ingress := objectMeta.GetAnnotations()[ingressClassKey]
+	return func(obj metav1.Object) bool {
+		ingress := obj.GetAnnotations()[ingressClassKey]
+		return validIngress(ingress, ingressClass)
+	}
+}
 
-		// we have 2 valid combinations
-		// 1 - ingress with default class | blank annotation on ingress
-		// 2 - ingress with specific class | same annotation on ingress
-		//
-		// and 2 invalid combinations
-		// 3 - ingress with default class | fixed annotation on ingress
-		// 4 - ingress with specific class | different annotation on ingress
-		if ingress == "" && ingressClass == DefaultIngressClass {
-			return true
-		}
-		return ingress == ingressClass
+// IngressClassValidatorFuncFromObjectMeta returns a function which
+// can valid if an ObjectMeta
+// belongs to an the ingressClass or not.
+func IngressClassValidatorFuncFromObjectMeta(
+	ingressClass string) func(obj *metav1.ObjectMeta) bool {
+
+	return func(obj *metav1.ObjectMeta) bool {
+		ingress := obj.GetAnnotations()[ingressClassKey]
+		return validIngress(ingress, ingressClass)
 	}
 }
 

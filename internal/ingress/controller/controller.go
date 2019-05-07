@@ -27,9 +27,9 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -129,7 +129,9 @@ func (n *KongController) syncIngress(interface{}) error {
 // NewKongController creates a new NGINX Ingress controller.
 // If the environment variable NGINX_BINARY exists it will be used
 // as source for nginx commands
-func NewKongController(config *Configuration) (*KongController, error) {
+func NewKongController(config *Configuration,
+	updateCh *channels.RingChannel,
+	store store.Storer) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: config.KubeClient.CoreV1().Events(config.Namespace),
@@ -140,21 +142,14 @@ func NewKongController(config *Configuration) (*KongController, error) {
 		syncRateLimiter: flowcontrol.NewTokenBucketRateLimiter(config.SyncRateLimit, 1),
 
 		stopCh:   make(chan struct{}),
-		updateCh: channels.NewRingChannel(1024),
+		updateCh: updateCh,
 
 		stopLock: &sync.Mutex{},
 		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client,
 			config.Kong.URL),
 	}
 
-	n.store = store.New(
-		config.Namespace,
-		config.ResyncPeriod,
-		config.KubeClient,
-		config.KubeConf,
-		n.updateCh,
-		config.IngressClass)
-
+	n.store = store
 	n.parser = parser.New(n.store)
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
 
@@ -224,8 +219,6 @@ type KongController struct {
 func (n *KongController) Start() {
 	glog.Infof("starting Ingress controller")
 
-	n.store.Run(n.stopCh)
-
 	go n.elector.Run()
 
 	if n.syncStatus != nil {
@@ -242,7 +235,7 @@ func (n *KongController) Start() {
 			if n.isShuttingDown {
 				break
 			}
-			if evt, ok := event.(store.Event); ok {
+			if evt, ok := event.(Event); ok {
 				glog.V(3).Infof("Event %v received - object %v", evt.Type, evt.Obj)
 				n.syncQueue.Enqueue(evt.Obj)
 			} else {

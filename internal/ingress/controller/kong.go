@@ -268,7 +268,7 @@ func (n *KongController) toDeckKongState(k8sState *parser.KongState) (*state.Kon
 
 	for _, c := range k8sState.Certificates {
 		cert := state.Certificate{Certificate: c.Certificate}
-		c.ID = kong.String("placeholder-" +
+		cert.ID = kong.String("placeholder-" +
 			strconv.FormatUint(count.Inc(), 10))
 		err := targetState.Certificates.Add(cert)
 		if err != nil {

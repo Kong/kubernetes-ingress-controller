@@ -31,19 +31,25 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/eapache/channels"
 	"github.com/golang/glog"
+	"github.com/hbagdi/go-kong/kong"
+	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	discovery "k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/hbagdi/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
 func main() {
@@ -148,12 +154,88 @@ func main() {
 		conf.Kong.InMemory = true
 	}
 
-	kong, err := controller.NewKongController(conf)
+	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
+		kubeClient,
+		conf.ResyncPeriod,
+		informers.WithNamespace(conf.Namespace),
+	)
+	confClient, _ := configurationclientv1.NewForConfig(conf.KubeConf)
+	kongInformerFactory := configurationinformer.NewSharedInformerFactoryWithOptions(
+		confClient,
+		conf.ResyncPeriod,
+		configurationinformer.WithNamespace(conf.Namespace),
+	)
+
+	var synced []cache.InformerSynced
+	updateChannel := channels.NewRingChannel(1024)
+	reh := controller.ResourceEventHandler{
+		UpdateCh:           updateChannel,
+		IsValidIngresClass: annotations.IngressClassValidatorFunc(conf.IngressClass),
+	}
+	var informers []cache.SharedIndexInformer
+	var cacheStores store.CacheStores
+
+	ingInformer := coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
+	ingInformer.AddEventHandler(reh)
+	cacheStores.Ingress = ingInformer.GetStore()
+	informers = append(informers, ingInformer)
+
+	endpointsInformer := coreInformerFactory.Core().V1().Endpoints().Informer()
+	endpointsInformer.AddEventHandler(controller.EndpointsEventHandler{
+		UpdateCh: updateChannel,
+	})
+	cacheStores.Endpoint = endpointsInformer.GetStore()
+	informers = append(informers, endpointsInformer)
+
+	secretsInformer := coreInformerFactory.Core().V1().Secrets().Informer()
+	secretsInformer.AddEventHandler(reh)
+	cacheStores.Secret = secretsInformer.GetStore()
+	informers = append(informers, secretsInformer)
+
+	servicesInformer := coreInformerFactory.Core().V1().Services().Informer()
+	servicesInformer.AddEventHandler(reh)
+	cacheStores.Service = servicesInformer.GetStore()
+	informers = append(informers, servicesInformer)
+
+	kongIngressInformer := kongInformerFactory.Configuration().V1().KongIngresses().Informer()
+	kongIngressInformer.AddEventHandler(reh)
+	cacheStores.Configuration = kongIngressInformer.GetStore()
+	informers = append(informers, kongIngressInformer)
+
+	kongPluginInformer := kongInformerFactory.Configuration().V1().KongPlugins().Informer()
+	kongPluginInformer.AddEventHandler(reh)
+	cacheStores.Plugin = kongPluginInformer.GetStore()
+	informers = append(informers, kongPluginInformer)
+
+	kongConsumerInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()
+	kongConsumerInformer.AddEventHandler(reh)
+	cacheStores.Consumer = kongConsumerInformer.GetStore()
+	informers = append(informers, kongConsumerInformer)
+
+	kongCredentialInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()
+	kongCredentialInformer.AddEventHandler(reh)
+	cacheStores.Credential = kongCredentialInformer.GetStore()
+	informers = append(informers, kongCredentialInformer)
+
+	stopCh := make(chan struct{})
+	for _, informer := range informers {
+		go informer.Run(stopCh)
+		synced = append(synced, informer.HasSynced)
+	}
+	if !cache.WaitForCacheSync(stopCh, synced...) {
+		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
+	}
+
+	store := store.New(
+		cacheStores,
+		annotations.IngressClassValidatorFuncFromObjectMeta(conf.IngressClass),
+	)
+	kong, err := controller.NewKongController(conf, updateChannel, store)
 	if err != nil {
 		glog.Fatal(err)
 	}
 
-	go handleSigterm(kong, func(code int) {
+	go handleSigterm(kong, stopCh, func(code int) {
 		os.Exit(code)
 	})
 
@@ -165,13 +247,15 @@ func main() {
 
 type exiter func(code int)
 
-func handleSigterm(kong *controller.KongController, exit exiter) {
+func handleSigterm(kong *controller.KongController, stopCh chan struct{},
+	exit exiter) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
 	<-signalChan
 	glog.Infof("Received SIGTERM, shutting down")
 
 	exitCode := 0
+	close(stopCh)
 	if err := kong.Stop(); err != nil {
 		glog.Infof("Error during shutdown %v", err)
 		exitCode = 1

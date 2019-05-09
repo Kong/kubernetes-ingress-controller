@@ -17,12 +17,9 @@ limitations under the License.
 package store
 
 import (
-	"bytes"
 	"fmt"
-	"strings"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,16 +31,16 @@ import (
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
-	GetSecret(key string) (*apiv1.Secret, error)
-	GetCertFromSecret(string) (*utils.RawSSLCert, error)
-	GetService(key string) (*apiv1.Service, error)
-	GetServiceEndpoints(svc *apiv1.Service) (*apiv1.Endpoints, error)
-	ListIngresses() []*extensions.Ingress
+	GetSecret(namespace, name string) (*apiv1.Secret, error)
+	GetService(namespace, name string) (*apiv1.Service, error)
+	GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error)
 	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
-	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
-	ListKongConsumers() []*configurationv1.KongConsumer
 	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
+	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
+
+	ListIngresses() []*extensions.Ingress
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
+	ListKongConsumers() []*configurationv1.KongConsumer
 	ListKongCredentials() []*configurationv1.KongCredential
 }
 
@@ -81,7 +78,8 @@ func New(cs CacheStores,
 }
 
 // GetSecret returns a Secret using the namespace and name as key
-func (s Store) GetSecret(key string) (*apiv1.Secret, error) {
+func (s Store) GetSecret(namespace, name string) (*apiv1.Secret, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
 	secret, exists, err := s.stores.Secret.GetByKey(key)
 	if err != nil {
 		return nil, err
@@ -93,7 +91,8 @@ func (s Store) GetSecret(key string) (*apiv1.Secret, error) {
 }
 
 // GetService returns a Service using the namespace and name as key
-func (s Store) GetService(key string) (*apiv1.Service, error) {
+func (s Store) GetService(namespace, name string) (*apiv1.Service, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
 	service, exists, err := s.stores.Service.GetByKey(key)
 	if err != nil {
 		return nil, err
@@ -120,10 +119,10 @@ func (s Store) ListIngresses() []*extensions.Ingress {
 	return ingresses
 }
 
-// GetServiceEndpoints returns the internal endpoints for svc inside the
-// current k8s cluster.
-func (s Store) GetServiceEndpoints(svc *apiv1.Service) (*apiv1.Endpoints, error) {
-	key := fmt.Sprintf("%v/%v", svc.Namespace, svc.Name)
+// GetEndpointsForService returns the internal endpoints for service
+// 'namespace/name' inside k8s.
+func (s Store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
 	eps, exists, err := s.stores.Endpoint.GetByKey(key)
 	if err != nil {
 		return nil, err
@@ -155,7 +154,7 @@ func (s Store) GetKongIngress(namespace, name string) (*configurationv1.KongIngr
 		return nil, err
 	}
 	if !exists {
-		return nil, nil
+		return nil, fmt.Errorf("KongIngress %v was not found", key)
 	}
 	return p.(*configurationv1.KongIngress), nil
 }
@@ -224,26 +223,4 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		return nil, err
 	}
 	return plugins, nil
-}
-
-// GetCertFromSecret gets an SSL cert from k8s secret.
-func (s Store) GetCertFromSecret(secretName string) (*utils.RawSSLCert, error) {
-	secret, err := s.GetSecret(secretName)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving secret %v: %v", secretName, err)
-	}
-	cert, okcert := secret.Data[apiv1.TLSCertKey]
-	key, okkey := secret.Data[apiv1.TLSPrivateKeyKey]
-
-	if !okcert || !okkey {
-		return nil, fmt.Errorf("no keypair could be found in %v", secretName)
-	}
-
-	cert = []byte(strings.TrimSpace(bytes.NewBuffer(cert).String()))
-	key = []byte(strings.TrimSpace(bytes.NewBuffer(key).String()))
-
-	return &utils.RawSSLCert{
-		Cert: cert,
-		Key:  key,
-	}, nil
 }

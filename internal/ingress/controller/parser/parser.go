@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 
 	"strconv"
 
@@ -395,7 +396,8 @@ func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error)
 			Service: service,
 		}
 		svcKey := service.Namespace + "/" + service.Backend.ServiceName
-		targets, err := p.getServiceEndpoints(svcKey,
+		targets, err := p.getServiceEndpoints(service.Namespace,
+			service.Backend.ServiceName,
 			service.Backend.ServicePort.String())
 		if err != nil {
 			return nil, errors.Wrapf(err,
@@ -407,17 +409,36 @@ func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error)
 	return upstreams, nil
 }
 
+func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
+	certData, okcert := secret.Data[corev1.TLSCertKey]
+	keyData, okkey := secret.Data[corev1.TLSPrivateKeyKey]
+
+	if !okcert || !okkey {
+		return "", "", fmt.Errorf("no keypair could be found in"+
+			" secret '%v/%v'", secret.Namespace, secret.Name)
+	}
+
+	cert := strings.TrimSpace(bytes.NewBuffer(certData).String())
+	key := strings.TrimSpace(bytes.NewBuffer(keyData).String())
+
+	return cert, key, nil
+}
+
 func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 	error) {
 	var res []Certificate
 	for secretKey, SNIs := range secretsToSNIs {
-		certKeyPair, err := p.store.GetCertFromSecret(secretKey)
+		namespaceName := strings.Split(secretKey, "/")
+		secret, err := p.store.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {
-			return nil, errors.Wrapf(err, "error fetching certificate '%v'",
-				secretKey)
+			glog.Errorf("error fetching certificate '%v': %v", secretKey, err)
+			continue
 		}
-		cert := bytes.NewBuffer(certKeyPair.Cert).String()
-		key := bytes.NewBuffer(certKeyPair.Key).String()
+		cert, key, err := getCertFromSecret(secret)
+		if err != nil {
+			glog.Errorf("error finding a certificate in '%v': %v",
+				secretKey, err)
+		}
 		kongCert := Certificate{
 			Certificate: kong.Certificate{
 				Cert: kong.String(cert),
@@ -433,8 +454,10 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 func (p *Parser) fillPlugins(state KongState) error {
 	for i := range state.Services {
 		// service
-		svcKey := state.Services[i].Namespace + "/" + state.Services[i].Backend.ServiceName
-		svc, err := p.store.GetService(svcKey)
+		svcKey := state.Services[i].Namespace + "/" +
+			state.Services[i].Backend.ServiceName
+		svc, err := p.store.GetService(state.Services[i].Namespace,
+			state.Services[i].Backend.ServiceName)
 		if err != nil {
 			return errors.Wrapf(err, "fetching service '%s'", svcKey)
 		}
@@ -503,12 +526,13 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 	return plugins, nil
 }
 
-func (p *Parser) getServiceEndpoints(svcKey,
+func (p *Parser) getServiceEndpoints(namespace, svcName string,
 	backendPort string) ([]Target, error) {
 	var targets []Target
 	var endpoints []utils.Endpoint
 	var servicePort corev1.ServicePort
-	svc, err := p.store.GetService(svcKey)
+	svc, err := p.store.GetService(namespace, svcName)
+	svcKey := namespace + "/" + svcName
 	if err != nil {
 		return nil, errors.Wrapf(err,
 			"error getting service '%v' from the cache", svcKey)
@@ -544,7 +568,7 @@ func (p *Parser) getServiceEndpoints(svcKey,
 	}
 
 	endpoints = getEndpoints(svc, &servicePort,
-		corev1.ProtocolTCP, p.store.GetServiceEndpoints)
+		corev1.ProtocolTCP, p.store.GetEndpointsForService)
 	if len(endpoints) == 0 {
 		glog.Warningf("service %v does not have any active endpoints",
 			svcKey)
@@ -562,14 +586,17 @@ func (p *Parser) getServiceEndpoints(svcKey,
 
 func (p *Parser) getKongIngressForService(namespace, serviceName string) (
 	*configurationv1.KongIngress, error) {
-	svcKey := namespace + "/" + serviceName
-	svc, err := p.store.GetService(svcKey)
+	svc, err := p.store.GetService(namespace, serviceName)
 	if err != nil {
-		return nil, errors.Wrapf(err, "fetching service %s from cache", svcKey)
+		return nil, errors.Wrapf(err, "fetching service '%s' from cache",
+			namespace+"/"+serviceName)
 	}
 	confName := annotations.ExtractConfigurationName(svc.Annotations)
 	if confName != "" {
-		return p.store.GetKongIngress(svc.Namespace, confName)
+		ki, err := p.store.GetKongIngress(svc.Namespace, confName)
+		if err == nil {
+			return ki, nil
+		}
 	}
 	return nil, nil
 }
@@ -580,10 +607,17 @@ func (p *Parser) getKongIngressFromIngress(ing *extensions.Ingress) (
 	*configurationv1.KongIngress, error) {
 	confName := annotations.ExtractConfigurationName(ing.Annotations)
 	if confName != "" {
-		return p.store.GetKongIngress(ing.Namespace, confName)
+		ki, err := p.store.GetKongIngress(ing.Namespace, confName)
+		if err == nil {
+			return ki, nil
+		}
 	}
 
-	return p.store.GetKongIngress(ing.Namespace, ing.Name)
+	ki, err := p.store.GetKongIngress(ing.Namespace, ing.Name)
+	if err == nil {
+		return ki, err
+	}
+	return nil, nil
 }
 
 // getPluginsFromAnnotations extracts plugins to be applied on an ingress/service from annotations
@@ -629,7 +663,7 @@ func getEndpoints(
 	s *corev1.Service,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
-	getServiceEndpoints func(*corev1.Service) (*corev1.Endpoints, error),
+	getEndpoints func(string, string) (*corev1.Endpoints, error),
 ) []utils.Endpoint {
 
 	upsServers := []utils.Endpoint{}
@@ -661,7 +695,7 @@ func getEndpoints(
 	}
 
 	glog.V(3).Infof("getting endpoints for service %v/%v and port %v", s.Namespace, s.Name, port.String())
-	ep, err := getServiceEndpoints(s)
+	ep, err := getEndpoints(s.Namespace, s.Name)
 	if err != nil {
 		glog.Warningf("unexpected error obtaining service endpoints: %v", err)
 		return upsServers

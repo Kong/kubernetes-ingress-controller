@@ -475,7 +475,7 @@ func TestGetEndpoints(t *testing.T) {
 		svc    *corev1.Service
 		port   *corev1.ServicePort
 		proto  corev1.Protocol
-		fn     func(*corev1.Service) (*corev1.Endpoints, error)
+		fn     func(string, string) (*corev1.Endpoints, error)
 		result []utils.Endpoint
 	}{
 		{
@@ -483,7 +483,7 @@ func TestGetEndpoints(t *testing.T) {
 			nil,
 			nil,
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
 			[]utils.Endpoint{},
@@ -493,7 +493,7 @@ func TestGetEndpoints(t *testing.T) {
 			&corev1.Service{},
 			nil,
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
 			[]utils.Endpoint{},
@@ -503,7 +503,7 @@ func TestGetEndpoints(t *testing.T) {
 			&corev1.Service{},
 			&corev1.ServicePort{Name: "default"},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			[]utils.Endpoint{},
@@ -517,7 +517,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			&corev1.ServicePort{Name: "default"},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			[]utils.Endpoint{},
@@ -541,7 +541,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			[]utils.Endpoint{
@@ -570,7 +570,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				return nil, fmt.Errorf("unexpected error")
 			},
 			[]utils.Endpoint{},
@@ -594,7 +594,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -635,7 +635,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -676,7 +676,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -719,7 +719,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -767,7 +767,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromString("port-1"),
 			},
 			corev1.ProtocolTCP,
-			func(*corev1.Service) (*corev1.Endpoints, error) {
+			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{

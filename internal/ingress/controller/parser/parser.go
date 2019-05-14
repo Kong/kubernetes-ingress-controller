@@ -438,6 +438,7 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 		if err != nil {
 			glog.Errorf("error finding a certificate in '%v': %v",
 				secretKey, err)
+			continue
 		}
 		kongCert := Certificate{
 			Certificate: kong.Certificate{

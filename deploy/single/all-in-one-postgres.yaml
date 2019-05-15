@@ -412,9 +412,14 @@ rules:
   # when launching the kong-ingress-controller.
   - "ingress-controller-leader-kong"
   verbs:
-  - create
   - get
   - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding

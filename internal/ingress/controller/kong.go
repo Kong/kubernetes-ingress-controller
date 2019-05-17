@@ -146,7 +146,7 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 		return err
 	}
 
-	currentState, err := dump.GetState(client)
+	currentState, err := dump.GetState(client, dump.Config{})
 	if err != nil {
 		return err
 	}

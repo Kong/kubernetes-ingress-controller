@@ -12,7 +12,7 @@ require (
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/hashicorp/go-memdb v1.0.0 // indirect
-	github.com/hbagdi/deck v0.1.0
+	github.com/hbagdi/deck v0.3.0
 	github.com/hbagdi/go-kong v0.4.1
 	github.com/imdario/mergo v0.3.7
 	github.com/json-iterator/go v1.1.6 // indirect

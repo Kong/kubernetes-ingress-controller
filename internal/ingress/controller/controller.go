@@ -52,8 +52,9 @@ type Kong struct {
 	TLSServerName string
 	CACert        string
 
-	InMemory bool
-	Version  semver.Version
+	InMemory      bool
+	HasTagSupport bool
+	Version       semver.Version
 }
 
 // Configuration contains all the settings required by an Ingress controller

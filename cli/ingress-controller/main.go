@@ -153,6 +153,12 @@ func main() {
 	if kongConfiguration["database"].(string) == "off" {
 		conf.Kong.InMemory = true
 	}
+	req, _ := http.NewRequest("GET",
+		conf.Kong.URL+"/tags", nil)
+	res, err := kongClient.Do(nil, req, nil)
+	if err == nil && res.StatusCode == 200 {
+		conf.Kong.HasTagSupport = true
+	}
 
 	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient,

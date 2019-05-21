@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strconv"
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/hbagdi/deck/counter"
 	"github.com/hbagdi/deck/diff"
 	"github.com/hbagdi/deck/dump"
+	"github.com/hbagdi/deck/file"
 	"github.com/hbagdi/deck/solver"
 	"github.com/hbagdi/deck/state"
 	"github.com/hbagdi/deck/utils"
@@ -42,6 +42,8 @@ import (
 )
 
 var count counter.Counter
+
+const ingressControllerTag = "managed-by-ingress-controller"
 
 var upstreamDefaults = kong.Upstream{
 	Slots: kong.Int(10000),
@@ -146,7 +148,10 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 		return err
 	}
 
-	currentState, err := dump.GetState(client, dump.Config{})
+	currentState, err := dump.GetState(client,
+		dump.Config{
+			SelectorTags: n.getIngressControllerTags(),
+		})
 	if err != nil {
 		return err
 	}
@@ -165,122 +170,89 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 	return nil
 }
 
-func (n *KongController) toDeckKongState(k8sState *parser.KongState) (*state.KongState, error) {
-	targetState, err := state.NewKongState()
-	if err != nil {
-		return nil, errors.Wrap(err, "creating new parser.KongState")
+// getIngressControllerTags returns a tag to use if the current
+// Kong entity supports tagging.
+func (n *KongController) getIngressControllerTags() []string {
+	var res []string
+	if n.cfg.Kong.HasTagSupport {
+		res = append(res, ingressControllerTag)
 	}
+	return res
+}
+
+func (n *KongController) toDeckKongState(
+	k8sState *parser.KongState) (*state.KongState, error) {
+	var content file.Content
+	var err error
 
 	for _, s := range k8sState.Services {
-		service := state.Service{Service: s.Service}
-		service.ID = kong.String("placeholder-" +
-			strconv.FormatUint(count.Inc(), 10))
-		err := targetState.Services.Add(service)
-		if err != nil {
-			return nil, errors.Wrap(err, "inserting service into state")
-		}
+		service := file.Service{Service: s.Service}
 		for _, p := range s.Plugins {
-			plugin := state.Plugin{
+			plugin := file.Plugin{
 				Plugin: *p.DeepCopy(),
 			}
 			err = n.fillPlugin(&plugin)
 			if err != nil {
-				glog.Errorf("error filling in defaults for plugin: %s", *plugin.Name)
+				glog.Errorf("error filling in defaults for plugin: %s",
+					*plugin.Name)
 			}
-			plugin.ID = kong.String("placeholder-" +
-				strconv.FormatUint(count.Inc(), 10))
-			plugin.Service = s.DeepCopy()
-			err = targetState.Plugins.Add(plugin)
-			if err != nil {
-				return nil, errors.Wrap(err, "inserting plugin into state")
-			}
+			service.Plugins = append(service.Plugins, &plugin)
 		}
 
 		for _, r := range s.Routes {
-			route := state.Route{Route: r.Route}
-			route.ID = kong.String("placeholder-" +
-				strconv.FormatUint(count.Inc(), 10))
-			route.Service = service.DeepCopy()
-			err := targetState.Routes.Add(route)
-			if err != nil {
-				return nil, errors.Wrap(err, "inserting route into state")
-			}
+			route := file.Route{Route: r.Route}
 			for _, p := range r.Plugins {
-				plugin := state.Plugin{
+				plugin := file.Plugin{
 					Plugin: *p.DeepCopy(),
 				}
 				err = n.fillPlugin(&plugin)
 				if err != nil {
-					glog.Errorf("error filling in defaults for plugin: %s", *plugin.Name)
+					glog.Errorf("error filling in defaults for plugin: %s",
+						*plugin.Name)
 				}
-				plugin.ID = kong.String("placeholder-" +
-					strconv.FormatUint(count.Inc(), 10))
-				plugin.Route = r.DeepCopy()
-				err := targetState.Plugins.Add(plugin)
-				if err != nil {
-					return nil, errors.Wrap(err, "inserting plugin into state")
-				}
+				route.Plugins = append(route.Plugins, &plugin)
 			}
+			service.Routes = append(service.Routes, &route)
 		}
+		content.Services = append(content.Services, service)
 	}
 
 	for _, plugin := range k8sState.GlobalPlugins {
-		plugin := state.Plugin{
+		plugin := file.Plugin{
 			Plugin: plugin.Plugin,
 		}
 		err = n.fillPlugin(&plugin)
 		if err != nil {
-			glog.Errorf("error filling in defaults for plugin: %s", *plugin.Name)
+			glog.Errorf("error filling in defaults for plugin: %s",
+				*plugin.Name)
 		}
-
-		plugin.ID = kong.String("placeholder-" +
-			strconv.FormatUint(count.Inc(), 10))
-		err := targetState.Plugins.Add(plugin)
-		if err != nil {
-			return nil, errors.Wrap(err, "inserting plugin into state")
-		}
+		content.Plugins = append(content.Plugins, plugin)
 	}
 
 	for _, u := range k8sState.Upstreams {
-		upstream := state.Upstream{Upstream: u.Upstream}
-		upstream.ID = kong.String("placeholder-" +
-			strconv.FormatUint(count.Inc(), 10))
-		err = setDefaultsInUpstream(&upstream.Upstream)
-		if err != nil {
-			return nil, err
-		}
-		err := targetState.Upstreams.Add(upstream)
-		if err != nil {
-			return nil, errors.Wrap(err, "inserting upstream into state")
-		}
+		upstream := file.Upstream{Upstream: u.Upstream}
 		for _, t := range u.Targets {
-			target := state.Target{Target: t.Target}
-			target.ID = kong.String("placeholder-" +
-				strconv.FormatUint(count.Inc(), 10))
-			target.Upstream = upstream.DeepCopy()
-			target.Weight = kong.Int(100)
-			err := targetState.Targets.Add(target)
-			if err != nil {
-				return nil, errors.Wrap(err, "inserting target into state")
-			}
+			target := file.Target{Target: t.Target}
+			upstream.Targets = append(upstream.Targets, &target)
 		}
+		content.Upstreams = append(content.Upstreams, upstream)
 	}
 
 	for _, c := range k8sState.Certificates {
-		cert := state.Certificate{Certificate: c.Certificate}
-		cert.ID = kong.String("placeholder-" +
-			strconv.FormatUint(count.Inc(), 10))
-		err := targetState.Certificates.Add(cert)
-		if err != nil {
-			return nil, errors.Wrap(err, "inserting certificate into state")
-		}
+		cert := file.Certificate{Certificate: c.Certificate}
+		content.Certificates = append(content.Certificates, cert)
+	}
+	content.Info.SelectorTags = n.getIngressControllerTags()
+	targetState, _, err := file.GetStateFromContent(&content)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating a valid state for Kong")
 	}
 	return targetState, nil
 }
 
 var kong110version = semver.MustParse("1.1.0")
 
-func (n *KongController) fillPlugin(plugin *state.Plugin) error {
+func (n *KongController) fillPlugin(plugin *file.Plugin) error {
 	if plugin == nil {
 		return errors.New("plugin is nil")
 	}
@@ -289,14 +261,16 @@ func (n *KongController) fillPlugin(plugin *state.Plugin) error {
 	}
 	schema, err := n.PluginSchemaStore.Schema(*plugin.Name)
 	if err != nil {
-		return errors.Wrapf(err, "error retrieveing schema for plugin %s", *plugin.Name)
+		return errors.Wrapf(err, "error retrieveing schema for plugin %s",
+			*plugin.Name)
 	}
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)
 	}
 	newConfig, err := fill(schema, plugin.Config)
 	if err != nil {
-		return errors.Wrapf(err, "error filling in default for plugin %s", *plugin.Name)
+		return errors.Wrapf(err, "error filling in default for plugin %s",
+			*plugin.Name)
 	}
 	plugin.Config = newConfig
 	if plugin.RunOn == nil {
@@ -314,7 +288,8 @@ func (n *KongController) fillPlugin(plugin *state.Plugin) error {
 	return nil
 }
 
-func (n *KongController) fillConsumersAndCredentials(state *parser.KongState) error {
+func (n *KongController) fillConsumersAndCredentials(
+	state *parser.KongState) error {
 	consumers := make(map[string]parser.Consumer)
 	for _, consumer := range n.store.ListKongConsumers() {
 		if consumer.Username == "" && consumer.CustomID == "" {
@@ -335,7 +310,8 @@ func (n *KongController) fillConsumersAndCredentials(state *parser.KongState) er
 	}
 
 	for _, credential := range n.store.ListKongCredentials() {
-		consumer, ok := consumers[credential.Namespace+"/"+credential.ConsumerRef]
+		consumer, ok := consumers[credential.Namespace+"/"+
+			credential.ConsumerRef]
 		if !ok {
 			continue
 		}
@@ -345,7 +321,8 @@ func (n *KongController) fillConsumersAndCredentials(state *parser.KongState) er
 		if credential.Type == "" {
 			continue
 		}
-		consumer.Credentials[credential.Type] = append(consumer.Credentials[credential.Type], credential.Config)
+		consumer.Credentials[credential.Type] = append(
+			consumer.Credentials[credential.Type], credential.Config)
 
 		consumers[credential.Namespace+"/"+credential.ConsumerRef] = consumer
 	}
@@ -356,7 +333,8 @@ func (n *KongController) fillConsumersAndCredentials(state *parser.KongState) er
 	return nil
 }
 
-// syncConsumers synchronizes the state between KongConsumer (Kubernetes CRD) type and Kong consumers.
+// syncConsumers synchronizes the state between KongConsumer
+// (Kubernetes CRD) type and Kong consumers.
 // This loop only creates new consumers in Kong.
 func (n *KongController) syncConsumers() error {
 
@@ -398,11 +376,13 @@ func (n *KongController) syncConsumers() error {
 		} else {
 			// check the consumers are equals
 			outOfSync := false
-			if consumer.Username != "" && (kc.Username == nil || *kc.Username != consumer.Username) {
+			if consumer.Username != "" && (kc.Username == nil ||
+				*kc.Username != consumer.Username) {
 				outOfSync = true
 				kc.Username = kong.String(consumer.Username)
 			}
-			if consumer.CustomID != "" && (kc.CustomID == nil || *kc.CustomID == consumer.CustomID) {
+			if consumer.CustomID != "" && (kc.CustomID == nil ||
+				*kc.CustomID == consumer.CustomID) {
 				outOfSync = true
 				kc.CustomID = kong.String(consumer.CustomID)
 			}
@@ -441,19 +421,22 @@ var validCredentialTypes = sets.NewString(
 	"oauth2-introspection",
 )
 
-// syncCredentials synchronizes the state between KongCredential (Kubernetes CRD) and Kong credentials.
+// syncCredentials synchronizes the state between KongCredential
+// (Kubernetes CRD) and Kong credentials.
 func (n *KongController) syncCredentials() error {
 	// List existing credentials in Kubernetes
 	client := n.cfg.Kong.Client
 
 	for _, credential := range n.store.ListKongCredentials() {
 		if !validCredentialTypes.Has(credential.Type) {
-			glog.Errorf("the credential does contains a valid type: %v", credential.Type)
+			glog.Errorf("the credential does contains a valid type: %v",
+				credential.Type)
 			continue
 		}
 		credentialID := fmt.Sprintf("%v", credential.GetUID())
 
-		consumer, err := n.store.GetKongConsumer(credential.Namespace, credential.ConsumerRef)
+		consumer, err := n.store.GetKongConsumer(credential.Namespace,
+			credential.ConsumerRef)
 		if err != nil {
 			glog.Errorf("Unexpected error searching KongConsumer: %v", err)
 			continue
@@ -490,13 +473,15 @@ func (n *KongController) syncCredentials() error {
 type intTransformer struct {
 }
 
-func (t intTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+func (t intTransformer) Transformer(typ reflect.Type) func(dst,
+	src reflect.Value) error {
 	var a *int
 	var ar []int
 	if typ == reflect.TypeOf(ar) {
 		return func(dst, src reflect.Value) error {
 			if dst.CanSet() {
-				if reflect.DeepEqual(reflect.Zero(dst.Type()).Interface(), dst.Interface()) {
+				if reflect.DeepEqual(reflect.Zero(dst.Type()).Interface(),
+					dst.Interface()) {
 					return nil
 				}
 			}
@@ -506,7 +491,8 @@ func (t intTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Valu
 	if typ == reflect.TypeOf(a) {
 		return func(dst, src reflect.Value) error {
 			if dst.CanSet() {
-				if reflect.DeepEqual(reflect.Zero(dst.Type()).Interface(), dst.Interface()) {
+				if reflect.DeepEqual(reflect.Zero(dst.Type()).Interface(),
+					dst.Interface()) {
 					return nil
 				}
 			}
@@ -517,7 +503,8 @@ func (t intTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Valu
 }
 
 func setDefaultsInUpstream(upstream *kong.Upstream) error {
-	err := mergo.Merge(upstream, upstreamDefaults, mergo.WithTransformers(intTransformer{}))
+	err := mergo.Merge(upstream, upstreamDefaults,
+		mergo.WithTransformers(intTransformer{}))
 	if err != nil {
 		return errors.Wrap(err, "error overriding upstream")
 	}

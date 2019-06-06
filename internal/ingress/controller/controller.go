@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
@@ -36,6 +37,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
 )
@@ -159,6 +161,14 @@ func NewKongController(config *Configuration,
 	electionConfig := election.Config{
 		Client:     config.KubeClient,
 		ElectionID: electionID,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) {
+			},
+			OnStoppedLeading: func() {
+			},
+			OnNewLeader: func(identity string) {
+			},
+		},
 	}
 
 	if config.UpdateStatus {

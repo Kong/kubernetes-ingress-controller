@@ -188,6 +188,9 @@ func (p *Parser) parseIngressRules(
 
 				isACMEChallenge := strings.HasPrefix(path, "/.well-known/acme-challenge/")
 
+				if path == "" {
+					path = "/"
+				}
 				r := Route{
 					Ingress: ingress,
 					Route: kong.Route{

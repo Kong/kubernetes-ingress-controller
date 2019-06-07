@@ -128,6 +128,32 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 4
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: extensions.IngressSpec{
+				Rules: []extensions.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: extensions.IngressRuleValue{
+							HTTP: &extensions.HTTPIngressRuleValue{
+								Paths: []extensions.HTTPIngressPath{
+									{
+										Backend: extensions.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{})
@@ -187,6 +213,15 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal("/.well-known/acme-challenge/yolo", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Hosts[0])
 		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
+
+		assert.Nil(err)
+	})
+	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
+		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{
+			ingressList[4],
+		})
+		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
+		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 
 		assert.Nil(err)
 	})

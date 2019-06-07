@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -91,6 +92,21 @@ type parsedIngressRules struct {
 	ServiceNameToServices map[string]Service
 }
 
+// set of valid authentication plugins for consumers
+var validCredentialTypes = sets.NewString(
+	// Kong CE and EE
+	"oauth2",
+	"jwt",
+	"basic-auth",
+	"acl",
+	"key-auth",
+	"hmac-auth",
+	"ldap-authentication",
+	// Kong EE only
+	"openid-connect",
+	"oauth2-introspection",
+)
+
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
 	return Parser{store: store}
@@ -111,6 +127,51 @@ func (p *Parser) Build() (*KongState, error) {
 	// add the routes and services to the state
 	for _, service := range parsedInfo.ServiceNameToServices {
 		state.Services = append(state.Services, service)
+	}
+
+	consumerIndex := make(map[string]Consumer)
+	for _, consumer := range p.store.ListKongConsumers() {
+		var c Consumer
+		if consumer.Username == "" && consumer.CustomID == "" {
+			continue
+		}
+		if consumer.Username != "" {
+			c.Username = kong.String(consumer.Username)
+		}
+		if consumer.CustomID != "" {
+			c.CustomID = kong.String(consumer.CustomID)
+		}
+		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
+	}
+
+	for _, credential := range p.store.ListKongCredentials() {
+		consumer, ok := consumerIndex[credential.Namespace+"/"+
+			credential.ConsumerRef]
+		if !ok {
+			continue
+		}
+		if consumer.Credentials == nil {
+			consumer.Credentials = make(map[string][]map[string]interface{})
+		}
+		if credential.Type == "" {
+			continue
+		}
+		if !validCredentialTypes.Has(credential.Type) {
+			glog.Errorf("the credential does contains a valid type: %v",
+				credential.Type)
+			continue
+		}
+		if credential.Config == nil {
+			credential.Config = make(configurationv1.Configuration)
+		}
+		credential.Config["id"] = string(credential.UID)
+		consumer.Credentials[credential.Type] = append(
+			consumer.Credentials[credential.Type], credential.Config)
+		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = consumer
+	}
+
+	for _, c := range consumerIndex {
+		state.Consumers = append(state.Consumers, c)
 	}
 
 	// generate Upstreams and Targets from service defs

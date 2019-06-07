@@ -532,6 +532,43 @@ var (
 			"querystring": []
 		}
 	}`
+	RequestTransformerNonEmptyConfig = `{
+		"remove": {
+			"headers": [ "cookie" ],
+			"body": [ "foo" ]
+		},
+		"add": {
+			"body": [ "bar" ]
+		}
+	}`
+	RequestTransformerNonEmptyFilledConfig = `{
+		"add": {
+			"body": [ "bar" ],
+			"headers": [],
+			"querystring": []
+		},
+		"append": {
+			"body": [],
+			"headers": [],
+			"querystring": []
+		},
+		"http_method": null,
+		"remove": {
+			"body": [ "foo" ],
+			"headers": [ "cookie" ],
+			"querystring": []
+		},
+		"rename": {
+			"body": [],
+			"headers": [],
+			"querystring": []
+		},
+		"replace": {
+			"body": [],
+			"headers": [],
+			"querystring": []
+		}
+	}`
 )
 
 func TestFillNil(t *testing.T) {
@@ -594,7 +631,6 @@ func TestKeyAuthSetKeys(t *testing.T) {
 
 func TestFillReqeustTransformer(t *testing.T) {
 	assert := assert.New(t)
-	// t.Skip()
 	var schema map[string]interface{}
 	err := json.Unmarshal([]byte(RequestTransformerSchema), &schema)
 	assert.Nil(err)
@@ -605,6 +641,21 @@ func TestFillReqeustTransformer(t *testing.T) {
 	assert.Nil(err)
 
 	res, err := fill(schema, config)
-	// assert.NotEqual(def, res)
 	assert.Equal(def, res)
+}
+
+func TestFillReqeustTransformerNestedConfig(t *testing.T) {
+	assert := assert.New(t)
+	var schema map[string]interface{}
+	err := json.Unmarshal([]byte(RequestTransformerSchema), &schema)
+	assert.Nil(err)
+
+	config := make(kong.Configuration)
+	err = json.Unmarshal([]byte(RequestTransformerNonEmptyConfig), &config)
+	assert.Nil(err)
+	want := make(kong.Configuration)
+	err = json.Unmarshal([]byte(RequestTransformerNonEmptyFilledConfig), &want)
+	res, err := fill(schema, config)
+	assert.Equal(want, res)
+	assert.Nil(err)
 }

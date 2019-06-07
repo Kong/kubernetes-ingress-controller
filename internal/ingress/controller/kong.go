@@ -38,7 +38,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/kong/dbless"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var count counter.Counter
@@ -99,12 +98,6 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
 	client := n.cfg.Kong.Client
 
-	// XXX
-	err := n.fillConsumersAndCredentials(state)
-	if err != nil {
-		return err
-	}
-
 	config := dbless.KongNativeState(state)
 	jsonConfig, err := json.Marshal(&config)
 	if err != nil {
@@ -138,16 +131,6 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 
 	client := n.cfg.Kong.Client
 
-	err := n.syncConsumers()
-	if err != nil {
-		return err
-	}
-
-	err = n.syncCredentials()
-	if err != nil {
-		return err
-	}
-
 	currentState, err := dump.GetState(client,
 		dump.Config{
 			SelectorTags: n.getIngressControllerTags(),
@@ -167,7 +150,10 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 	if errs != nil {
 		return utils.ErrArray{Errors: errs}
 	}
-	return nil
+
+	// credentials are not synced using decK
+	err = n.syncCredentials(state)
+	return err
 }
 
 // getIngressControllerTags returns a tag to use if the current
@@ -242,6 +228,15 @@ func (n *KongController) toDeckKongState(
 		cert := file.Certificate{Certificate: c.Certificate}
 		content.Certificates = append(content.Certificates, cert)
 	}
+
+	for _, c := range k8sState.Consumers {
+		c := file.Consumer{Consumer: c.Consumer}
+		for _, p := range c.Plugins {
+			c.Plugins = append(c.Plugins, p)
+		}
+		content.Consumers = append(content.Consumers, c)
+	}
+
 	content.Info.SelectorTags = n.getIngressControllerTags()
 	targetState, _, err := file.GetStateFromContent(&content)
 	if err != nil {
@@ -288,182 +283,73 @@ func (n *KongController) fillPlugin(plugin *file.Plugin) error {
 	return nil
 }
 
-func (n *KongController) fillConsumersAndCredentials(
-	state *parser.KongState) error {
-	consumers := make(map[string]parser.Consumer)
-	for _, consumer := range n.store.ListKongConsumers() {
-		if consumer.Username == "" && consumer.CustomID == "" {
-			continue
-		}
-
-		c := parser.Consumer{}
-
-		if consumer.Username != "" {
-			c.Username = kong.String(consumer.Username)
-		}
-
-		if consumer.CustomID != "" {
-			c.CustomID = kong.String(consumer.CustomID)
-		}
-
-		consumers[consumer.Namespace+"/"+consumer.Name] = c
-	}
-
-	for _, credential := range n.store.ListKongCredentials() {
-		consumer, ok := consumers[credential.Namespace+"/"+
-			credential.ConsumerRef]
-		if !ok {
-			continue
-		}
-		if consumer.Credentials == nil {
-			consumer.Credentials = make(map[string][]map[string]interface{})
-		}
-		if credential.Type == "" {
-			continue
-		}
-		consumer.Credentials[credential.Type] = append(
-			consumer.Credentials[credential.Type], credential.Config)
-
-		consumers[credential.Namespace+"/"+credential.ConsumerRef] = consumer
-	}
-
-	for _, c := range consumers {
-		state.Consumers = append(state.Consumers, c)
-	}
-	return nil
-}
-
-// syncConsumers synchronizes the state between KongConsumer
-// (Kubernetes CRD) type and Kong consumers.
-// This loop only creates new consumers in Kong.
-func (n *KongController) syncConsumers() error {
-
-	consumersInKong := make(map[string]*kong.Consumer)
+// syncCredentials synchronizes the state between KongCredential
+// (Kubernetes CRD) and Kong credentials.
+func (n *KongController) syncCredentials(state *parser.KongState) error {
 	client := n.cfg.Kong.Client
 
-	// List all consumers in Kong
+	// List all consumers in Kong to obtain an ID
+	usernameToConsumer := make(map[string]*kong.Consumer)
+	customIDToConsumer := make(map[string]*kong.Consumer)
 	kongConsumers, err := client.Consumers.ListAll(nil)
 	if err != nil {
 		return err
 	}
 
+	// create simple indexes
 	for i := range kongConsumers {
-		consumersInKong[*kongConsumers[i].ID] = kongConsumers[i]
+		username := kongConsumers[i].Username
+		customID := kongConsumers[i].CustomID
+
+		if !utils.Empty(username) {
+			usernameToConsumer[*username] = kongConsumers[i]
+		}
+		if !utils.Empty(customID) {
+			customIDToConsumer[*customID] = kongConsumers[i]
+		}
 	}
 
-	// List existing Consumers in Kubernetes
-	for _, consumer := range n.store.ListKongConsumers() {
-		glog.V(2).Infof("checking if Kong consumer %v exists", consumer.Name)
-		consumerID := fmt.Sprintf("%v", consumer.GetUID())
-
-		kc, ok := consumersInKong[consumerID]
-
-		if !ok {
-			glog.V(2).Infof("Creating Kong consumer %v", consumerID)
-			c := &kong.Consumer{
-				ID: kong.String(consumerID),
-			}
-			if consumer.Username != "" {
-				c.Username = kong.String(consumer.Username)
-			}
-			if consumer.CustomID != "" {
-				c.CustomID = kong.String(consumer.CustomID)
-			}
-			c, err := n.cfg.Kong.Client.Consumers.Create(nil, c)
-			if err != nil {
-				return errors.Wrap(err, "creating a Kong consumer")
-			}
-		} else {
-			// check the consumers are equals
-			outOfSync := false
-			if consumer.Username != "" && (kc.Username == nil ||
-				*kc.Username != consumer.Username) {
-				outOfSync = true
-				kc.Username = kong.String(consumer.Username)
-			}
-			if consumer.CustomID != "" && (kc.CustomID == nil ||
-				*kc.CustomID == consumer.CustomID) {
-				outOfSync = true
-				kc.CustomID = kong.String(consumer.CustomID)
-			}
-			if outOfSync {
-				_, err := n.cfg.Kong.Client.Consumers.Update(nil, kc)
-				if err != nil {
-					return errors.Wrap(err, "patching a Kong consumer")
+	for _, consumer := range state.Consumers {
+		for credType, creds := range consumer.Credentials {
+			for _, credData := range creds {
+				// lookup consumerID
+				var consumerID string
+				if !utils.Empty(consumer.Username) {
+					if c, ok := usernameToConsumer[*consumer.Username]; ok {
+						consumerID = *c.ID
+					}
 				}
+				if !utils.Empty(consumer.CustomID) {
+					if c, ok := customIDToConsumer[*consumer.CustomID]; ok {
+						consumerID = *c.ID
+					}
+				}
+				if consumerID == "" {
+					continue
+				}
+
+				// lookup credential in Kong
+				credInKong := custom.NewEntityObject(custom.Type(credType))
+				credentialID := fmt.Sprintf("%v", credData["id"])
+				credInKong.AddRelation("consumer_id", consumerID)
+				credInKong.SetObject(map[string]interface{}{"id": credentialID})
+
+				_, err = client.CustomEntities.Get(nil, credInKong)
+				if !kong.IsNotFoundErr(err) || err == nil {
+					return err
+				}
+
+				// if not found, then create it
+				credInKong.SetObject(map[string]interface{}(credData))
+				_, err := client.CustomEntities.Create(nil, credInKong)
+				if err != nil {
+					glog.Errorf("Unexpected error creating credential: %v", err)
+					return err
+				}
+				// TODO: allow changes in credentials?
+				// TODO sync this object using PUT (whenever the ResourceVersion is out of date)
+				// An alternate solution would be to handle UPDATE events separately
 			}
-		}
-		delete(consumersInKong, consumerID)
-	}
-	// remaining entries in the map should be deleted
-
-	for _, consumer := range consumersInKong {
-		err := client.Consumers.Delete(nil, consumer.ID)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// set of valid authentication plugins for consumers
-var validCredentialTypes = sets.NewString(
-	// Kong CE and EE
-	"oauth2",
-	"jwt",
-	"basic-auth",
-	"acl",
-	"key-auth",
-	"hmac-auth",
-	"ldap-authentication",
-	// Kong EE only
-	"openid-connect",
-	"oauth2-introspection",
-)
-
-// syncCredentials synchronizes the state between KongCredential
-// (Kubernetes CRD) and Kong credentials.
-func (n *KongController) syncCredentials() error {
-	// List existing credentials in Kubernetes
-	client := n.cfg.Kong.Client
-
-	for _, credential := range n.store.ListKongCredentials() {
-		if !validCredentialTypes.Has(credential.Type) {
-			glog.Errorf("the credential does contains a valid type: %v",
-				credential.Type)
-			continue
-		}
-		credentialID := fmt.Sprintf("%v", credential.GetUID())
-
-		consumer, err := n.store.GetKongConsumer(credential.Namespace,
-			credential.ConsumerRef)
-		if err != nil {
-			glog.Errorf("Unexpected error searching KongConsumer: %v", err)
-			continue
-		}
-		consumerID := fmt.Sprintf("%v", consumer.GetUID())
-
-		// TODO: allow changes in credentials?
-		credInKong := custom.NewEntityObject(custom.Type(credential.Type))
-		credInKong.AddRelation("consumer_id", consumerID)
-		credInKong.SetObject(map[string]interface{}{"id": credentialID})
-		_, err = client.CustomEntities.Get(nil, credInKong)
-		if kong.IsNotFoundErr(err) {
-			// use the configuration
-			data := credential.Config
-			if data == nil {
-				data = make(map[string]interface{})
-			}
-			// create a credential with the same id of k8s
-			data["id"] = credentialID
-			credInKong.SetObject(map[string]interface{}(data))
-			_, err := client.CustomEntities.Create(nil, credInKong)
-			if err != nil {
-				glog.Errorf("Unexpected error creating credential: %v", err)
-				return err
-			}
-		} else {
-			return err
 		}
 	}
 

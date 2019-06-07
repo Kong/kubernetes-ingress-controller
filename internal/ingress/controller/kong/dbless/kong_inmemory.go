@@ -139,11 +139,11 @@ func KongNativeState(k8sState *parser.KongState) *KongDeclarativeConfig {
 	}
 
 	for _, c := range k8sState.Consumers {
-		c := Consumer{Consumer: c.Consumer,
+		consumer := Consumer{Consumer: c.Consumer,
 			Plugins:     c.Plugins,
 			Credentials: c.Credentials,
 		}
-		result.Consumers = append(result.Consumers, c)
+		result.Consumers = append(result.Consumers, consumer)
 	}
 	return &result
 }

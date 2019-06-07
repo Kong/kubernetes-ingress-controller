@@ -230,11 +230,11 @@ func (n *KongController) toDeckKongState(
 	}
 
 	for _, c := range k8sState.Consumers {
-		c := file.Consumer{Consumer: c.Consumer}
+		consumer := file.Consumer{Consumer: c.Consumer}
 		for _, p := range c.Plugins {
-			c.Plugins = append(c.Plugins, p)
+			consumer.Plugins = append(consumer.Plugins, &file.Plugin{Plugin: p})
 		}
-		content.Consumers = append(content.Consumers, c)
+		content.Consumers = append(content.Consumers, consumer)
 	}
 
 	content.Info.SelectorTags = n.getIngressControllerTags()

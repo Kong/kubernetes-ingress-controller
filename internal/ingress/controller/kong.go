@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -104,6 +105,11 @@ func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
 		return errors.Wrap(err,
 			"marshaling Kong declarative configuration to JSON")
 	}
+
+	if reflect.DeepEqual(n.runningConfigHash, sha256.Sum256(jsonConfig)) {
+		glog.V(2).Info("no configuration change, skipping call sync config")
+		return nil
+	}
 	type reqBody struct {
 		Config string `json:"config"`
 	}
@@ -123,6 +129,7 @@ func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
 	if err != nil {
 		return errors.Wrap(err, "posting new config to /config")
 	}
+	n.runningConfigHash = sha256.Sum256(jsonConfig)
 
 	return err
 }

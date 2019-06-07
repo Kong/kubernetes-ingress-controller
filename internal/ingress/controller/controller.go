@@ -215,7 +215,8 @@ type KongController struct {
 	updateCh *channels.RingChannel
 
 	// runningConfig contains the running configuration in the Backend
-	runningConfig *parser.KongState
+	runningConfig     *parser.KongState
+	runningConfigHash [32]byte
 
 	isShuttingDown bool
 

@@ -101,6 +101,33 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 3
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: extensions.IngressSpec{
+				Rules: []extensions.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: extensions.IngressRuleValue{
+							HTTP: &extensions.HTTPIngressRuleValue{
+								Paths: []extensions.HTTPIngressPath{
+									{
+										Path: "/.well-known/acme-challenge/yolo",
+										Backend: extensions.IngressBackend{
+											ServiceName: "cert-manager-solver-pod",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{})
@@ -146,6 +173,20 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
+
+		assert.Nil(err)
+	})
+	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
+		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{
+			ingressList[3],
+		})
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		assert.Equal("cert-manager-solver-pod.foo-namespace.svc", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
+		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Port)
+
+		assert.Equal("/.well-known/acme-challenge/yolo", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Paths[0])
+		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Hosts[0])
+		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
 
 		assert.Nil(err)
 	})

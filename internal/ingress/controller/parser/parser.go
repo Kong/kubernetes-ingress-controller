@@ -60,6 +60,8 @@ type Consumer struct {
 	Plugins []kong.Plugin
 	// Credentials type(key-auth, basic-auth) to credential mapping
 	Credentials map[string][]map[string]interface{}
+
+	k8sKongConsumer configurationv1.KongConsumer
 }
 
 // KongState holds the configuration that should be applied to Kong.
@@ -141,6 +143,7 @@ func (p *Parser) Build() (*KongState, error) {
 		if consumer.CustomID != "" {
 			c.CustomID = kong.String(consumer.CustomID)
 		}
+		c.k8sKongConsumer = *consumer
 		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
 	}
 
@@ -191,7 +194,9 @@ func (p *Parser) Build() (*KongState, error) {
 
 	// process annotation plugins
 	err = p.fillPlugins(state)
-
+	if err != nil {
+		return nil, err
+	}
 	// generate Certificates and SNIs
 	state.Certificates, err = p.getCerts(parsedInfo.SecretNameToSNIs)
 	if err != nil {
@@ -544,6 +549,14 @@ func (p *Parser) fillPlugins(state KongState) error {
 			}
 			state.Services[i].Routes[j].Plugins = plugins
 		}
+	}
+	// consumer
+	for i, c := range state.Consumers {
+		plugins, err := p.getPluginsFromAnnotations(c.k8sKongConsumer.Namespace, c.k8sKongConsumer.GetAnnotations())
+		if err != nil {
+			return errors.Wrapf(err, "fetching KongPlugins for consumer '%v/%v'", c.k8sKongConsumer.Namespace, c.k8sKongConsumer.Name)
+		}
+		state.Consumers[i].Plugins = plugins
 	}
 	return nil
 }

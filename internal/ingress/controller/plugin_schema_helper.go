@@ -84,7 +84,11 @@ func fillRecord(schema gjson.Result, config kong.Configuration) (kong.Configurat
 		}
 		ftype := value.Get(fname + ".type")
 		if ftype.String() == "record" {
-			newSubConfig, err := fillRecord(value.Get(fname), make(kong.Configuration))
+			subConfig := config[fname]
+			if subConfig == nil {
+				subConfig = make(map[string]interface{})
+			}
+			newSubConfig, err := fillRecord(value.Get(fname), subConfig.(map[string]interface{}))
 			if err != nil {
 				panic(err)
 			}

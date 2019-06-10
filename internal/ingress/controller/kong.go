@@ -190,6 +190,8 @@ func (n *KongController) toDeckKongState(
 
 		for _, r := range s.Routes {
 			route := file.Route{Route: r.Route}
+			n.fillRoute(&route.Route)
+
 			for _, p := range r.Plugins {
 				plugin := file.Plugin{
 					Plugin: *p.DeepCopy(),
@@ -249,6 +251,16 @@ func (n *KongController) toDeckKongState(
 }
 
 var kong110version = semver.MustParse("1.1.0")
+
+var kong120version = semver.MustParse("1.2.0")
+
+func (n *KongController) fillRoute(route *kong.Route) {
+	if n.cfg.Kong.Version.GTE(kong120version) {
+		if route.HTTPSRedirectStatusCode == nil {
+			route.HTTPSRedirectStatusCode = kong.Int(426)
+		}
+	}
+}
 
 func (n *KongController) fillPlugin(plugin *file.Plugin) error {
 	if plugin == nil {

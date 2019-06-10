@@ -125,6 +125,9 @@ func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
 		return errors.Wrap(err, "creating new HTTP request for /config")
 	}
 	req.Header.Add("content-type", "application/json")
+	queryString := req.URL.Query()
+	queryString.Add("check_hash", "1")
+	req.URL.RawQuery = queryString.Encode()
 	_, err = client.Do(nil, req, nil)
 	if err != nil {
 		return errors.Wrap(err, "posting new config to /config")

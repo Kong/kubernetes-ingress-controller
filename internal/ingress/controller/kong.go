@@ -313,9 +313,21 @@ func (n *KongController) syncCredentials(state *parser.KongState) error {
 	// List all consumers in Kong to obtain an ID
 	usernameToConsumer := make(map[string]*kong.Consumer)
 	customIDToConsumer := make(map[string]*kong.Consumer)
-	kongConsumers, err := client.Consumers.ListAll(nil)
-	if err != nil {
-		return err
+	opt := new(kong.ListOpt)
+	if n.cfg.Kong.HasTagSupport {
+		opt.Tags = kong.StringSlice(n.getIngressControllerTags()...)
+	}
+	var kongConsumers []*kong.Consumer
+	for {
+		page, nextOpt, err := client.Consumers.List(nil, opt)
+		if err != nil {
+			return err
+		}
+		kongConsumers = append(kongConsumers, page...)
+		if nextOpt == nil {
+			break
+		}
+		opt = nextOpt
 	}
 
 	// create simple indexes
@@ -356,14 +368,14 @@ func (n *KongController) syncCredentials(state *parser.KongState) error {
 				credInKong.AddRelation("consumer_id", consumerID)
 				credInKong.SetObject(map[string]interface{}{"id": credentialID})
 
-				_, err = client.CustomEntities.Get(nil, credInKong)
+				_, err := client.CustomEntities.Get(nil, credInKong)
 				if !kong.IsNotFoundErr(err) || err == nil {
 					return err
 				}
 
 				// if not found, then create it
 				credInKong.SetObject(map[string]interface{}(credData))
-				_, err := client.CustomEntities.Create(nil, credInKong)
+				_, err = client.CustomEntities.Create(nil, credInKong)
 				if err != nil {
 					glog.Errorf("Unexpected error creating credential: %v", err)
 					return err

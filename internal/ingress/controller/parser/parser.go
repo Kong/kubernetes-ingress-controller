@@ -193,10 +193,8 @@ func (p *Parser) Build() (*KongState, error) {
 	// TODO add processors for annotations on Ingress object
 
 	// process annotation plugins
-	err = p.fillPlugins(state)
-	if err != nil {
-		return nil, err
-	}
+	p.fillPlugins(state)
+
 	// generate Certificates and SNIs
 	state.Certificates, err = p.getCerts(parsedInfo.SecretNameToSNIs)
 	if err != nil {
@@ -356,21 +354,24 @@ func (p *Parser) fillOverrides(state KongState) error {
 		// Services
 		kongIngress, err := p.getKongIngressForService(
 			state.Services[i].Namespace, state.Services[i].Backend.ServiceName)
-		if err != nil {
-			return errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
-				state.Services[i].Backend.ServiceName, state.Services[i].Namespace)
+		if err == nil {
+			overrideService(&state.Services[i], kongIngress)
+		} else {
+			glog.Error(errors.Wrapf(err, "fetching KongIngress for service %v/%v",
+				state.Services[i].Namespace,
+				state.Services[i].Backend.ServiceName))
 		}
-		overrideService(&state.Services[i], kongIngress)
 
 		// Routes
 		for j := 0; j < len(state.Services[i].Routes); j++ {
 			kongIngress, err := p.getKongIngressFromIngress(
 				&state.Services[i].Routes[j].Ingress)
-			if err != nil {
-				return errors.Wrapf(err, "fetching KongIngress for Ingress '%v' in namespace '%v'",
-					state.Services[i].Routes[j].Ingress.Name, state.Services[i].Routes[j].Ingress.Namespace)
+			if err == nil {
+				overrideRoute(&state.Services[i].Routes[j], kongIngress)
+			} else {
+				glog.Error(errors.Wrapf(err, "fetching KongIngress for Ingress '%v' in namespace '%v'",
+					state.Services[i].Routes[j].Ingress.Name, state.Services[i].Routes[j].Ingress.Namespace))
 			}
-			overrideRoute(&state.Services[i].Routes[j], kongIngress)
 		}
 	}
 
@@ -378,11 +379,12 @@ func (p *Parser) fillOverrides(state KongState) error {
 	for i := 0; i < len(state.Upstreams); i++ {
 		kongIngress, err := p.getKongIngressForService(
 			state.Upstreams[i].Service.Namespace, state.Upstreams[i].Service.Backend.ServiceName)
-		if err != nil {
-			return errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
-				state.Upstreams[i].Service.Backend.ServiceName, state.Upstreams[i].Service.Namespace)
+		if err == nil {
+			overrideUpstream(&state.Upstreams[i], kongIngress)
+		} else {
+			glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
+				state.Upstreams[i].Service.Backend.ServiceName, state.Upstreams[i].Service.Namespace))
 		}
-		overrideUpstream(&state.Upstreams[i], kongIngress)
 	}
 	return nil
 }
@@ -472,8 +474,8 @@ func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error)
 			service.Backend.ServiceName,
 			service.Backend.ServicePort.String())
 		if err != nil {
-			return nil, errors.Wrapf(err,
-				"error getting endpoints for '%v' service", svcKey)
+			glog.Errorf("error getting endpoints for '%v' service: %v",
+				svcKey, err)
 		}
 		upstream.Targets = targets
 		upstreams = append(upstreams, upstream)
@@ -524,7 +526,8 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 	return res, nil
 }
 
-func (p *Parser) fillPlugins(state KongState) error {
+// TODO simplify and break this giant fn
+func (p *Parser) fillPlugins(state KongState) {
 	for i := range state.Services {
 		// service
 		svcKey := state.Services[i].Namespace + "/" +
@@ -532,20 +535,20 @@ func (p *Parser) fillPlugins(state KongState) error {
 		svc, err := p.store.GetService(state.Services[i].Namespace,
 			state.Services[i].Backend.ServiceName)
 		if err != nil {
-			return errors.Wrapf(err, "fetching service '%s'", svcKey)
+			glog.Error(errors.Wrapf(err, "fetching service '%s'", svcKey))
+		} else {
+			plugins, err := p.getPluginsFromAnnotations(state.Services[i].Namespace,
+				svc.GetAnnotations())
+			if err != nil {
+				glog.Error(errors.Wrapf(err, "fetching KongPlugins for service '%s'", svcKey))
+			}
+			state.Services[i].Plugins = plugins
 		}
-		plugins, err := p.getPluginsFromAnnotations(state.Services[i].Namespace,
-			svc.GetAnnotations())
-		if err != nil {
-			return errors.Wrapf(err, "fetching KongPlugins for service '%s'", svcKey)
-		}
-		state.Services[i].Plugins = plugins
-
 		// route
 		for j := range state.Services[i].Routes {
 			plugins, err := p.getPluginsFromAnnotations(state.Services[i].Routes[j].Ingress.Namespace, state.Services[i].Routes[j].Ingress.GetAnnotations())
 			if err != nil {
-				return errors.Wrapf(err, "fetching KongPlugins for a route in Ingress '%s'", svcKey)
+				glog.Error(errors.Wrapf(err, "fetching KongPlugins for a route in Ingress '%s'", svcKey))
 			}
 			state.Services[i].Routes[j].Plugins = plugins
 		}
@@ -554,11 +557,11 @@ func (p *Parser) fillPlugins(state KongState) error {
 	for i, c := range state.Consumers {
 		plugins, err := p.getPluginsFromAnnotations(c.k8sKongConsumer.Namespace, c.k8sKongConsumer.GetAnnotations())
 		if err != nil {
-			return errors.Wrapf(err, "fetching KongPlugins for consumer '%v/%v'", c.k8sKongConsumer.Namespace, c.k8sKongConsumer.Name)
+			glog.Error(errors.Wrapf(err, "fetching KongPlugins for consumer '%v/%v'", c.k8sKongConsumer.Namespace, c.k8sKongConsumer.Name))
 		}
 		state.Consumers[i].Plugins = plugins
 	}
-	return nil
+	return
 }
 
 func (p *Parser) globalPlugins() ([]Plugin, error) {
@@ -673,13 +676,10 @@ func (p *Parser) getKongIngressForService(namespace, serviceName string) (
 			namespace+"/"+serviceName)
 	}
 	confName := annotations.ExtractConfigurationName(svc.Annotations)
-	if confName != "" {
-		ki, err := p.store.GetKongIngress(svc.Namespace, confName)
-		if err == nil {
-			return ki, nil
-		}
+	if confName == "" {
+		return nil, nil
 	}
-	return nil, nil
+	return p.store.GetKongIngress(svc.Namespace, confName)
 }
 
 // getKongIngress checks if the Ingress contains an annotation for configuration
@@ -709,7 +709,8 @@ func (p *Parser) getPluginsFromAnnotations(namespace string, anns map[string]str
 	for _, plugin := range pluginList {
 		k8sPlugin, err := p.store.GetKongPlugin(namespace, plugin)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fetching KongPlugin %v", plugin)
+			glog.Errorf("fetching KongPlugin %v/%v: %v", namespace, plugin, err)
+			continue
 		}
 		// ignore plugins with no name
 		if k8sPlugin.PluginName == "" {

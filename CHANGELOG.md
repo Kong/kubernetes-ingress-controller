@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.5.0-rc0](#050-rc0---20190614)
  - [0.4.0](#040---20190424)
  - [0.3.0](#030---20190108)
  - [0.2.2](#022---20181109)
@@ -11,6 +12,52 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.5.0-rc0] - 2019/06/14
+
+#### Summary
+
+This release introduces automated TLS certificates, consumer-level plugins,
+enabling deployments using controller and Kong's Admin API at the same time
+and numerous bug-fixes and enhancements.
+
+#### Added
+
+- Kong 1.2 is now supported, meaning wildcard hosts in TLS section of Ingress
+  resources are allowed.
+- **Automated TLS certificates using Let's Encrypt**: Use Kong's Ingress
+  Controller and
+  [cert-manager](https://docs.cert-manager.io/en/latest/tasks/issuing-certificates/ingress-shim.html)
+  to automatically provision TLS certs and serve them.
+- **Tagging support**: All entities managed by Kong Ingress Controller in Kong's
+  database are now tagged and the controller manages only a subset of Kong's
+  configuration. Any entity created via Kong's Admin API will not be
+  automatically deleted by the Ingress Controller.
+- **Consumer-level plugins** can now be configured by applying
+  `plugins.konghq.com` annotation on KongConsumer custom resources.
+  [#250](https://github.com/Kong/kubernetes-ingress-controller/issues/#250)
+- Avoid reloading configuration in Kong in db-less mode when there is no
+  change in configuration.
+  [#308](https://github.com/Kong/kubernetes-ingress-controller/pull/308)
+- Service scoped plugins for Kong 1.1 are now configured correctly.
+  [#289](https://github.com/Kong/kubernetes-ingress-controller/issues/#289)
+
+#### Fixed
+
+- Multiple certificates are now correctly populated in Kong.
+  [#285](https://github.com/Kong/kubernetes-ingress-controller/issues/#285)
+- Missing entities like certificate secrets, services or plugins in Kubernetes
+  object store will not stop controller from syncing configuration to Kong.
+- A Ingress rule with an empty path is correctly parsed and populated in Kong.
+  [#98](https://github.com/Kong/kubernetes-ingress-controller/issues/#98)
+- Plugins with a nested schema are now correctly configured.
+  [#294](https://github.com/Kong/kubernetes-ingress-controller/issues/#294)
+
+#### Under the hood
+
+- Dependency management for the project is done using Go modules.
+- Kubernetes client-go library has been updated to v1.14.1.
+- Makefile and Dockerfiles have been simplified.
 
 ## [0.4.0] - 2019/04/24
 
@@ -340,6 +387,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.5.0-rc0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.4.0...0.5.0-rc0
 [0.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.2...0.3.0
 [0.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.1...0.2.2

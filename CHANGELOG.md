@@ -21,6 +21,11 @@ This release introduces automated TLS certificates, consumer-level plugins,
 enabling deployments using controller and Kong's Admin API at the same time
 and numerous bug-fixes and enhancements.
 
+#### Breaking changes
+
+- UUID of consumers in Kong are no longer associated with UID of KongConsumer
+  custom resource.
+
 #### Added
 
 - Kong 1.2 is now supported, meaning wildcard hosts in TLS section of Ingress

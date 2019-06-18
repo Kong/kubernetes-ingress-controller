@@ -100,6 +100,8 @@ The controller will set the endpoint records on the ingress using this address.`
 			"SNI name to use to verify the certificate presented by Kong in TLS.")
 		kongCACert = flag.String("admin-ca-cert-file", "",
 			"Path to PEM-encoded CA certificate file to verify the Kong's Admin SSL certificate.")
+		workspace = flag.String("kong-workspace", "",
+			"Workspace in Kong Enterprise to be configured")
 
 		kongHeaders headers
 	)
@@ -126,8 +128,9 @@ The controller will set the endpoint records on the ingress using this address.`
 
 	config := &controller.Configuration{
 		Kong: controller.Kong{
-			URL:     *kongURL,
-			Headers: kongHeaders,
+			URL:       *kongURL,
+			Headers:   kongHeaders,
+			Workspace: *workspace,
 
 			TLSServerName: *kongTLSServerName,
 			TLSSkipVerify: *kongTLSSkipVerify,

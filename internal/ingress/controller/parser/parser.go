@@ -438,6 +438,9 @@ func overrideRoute(route *Route,
 	if r.PreserveHost != nil {
 		route.PreserveHost = kong.Bool(*r.PreserveHost)
 	}
+	if r.HTTPSRedirectStatusCode != nil {
+		route.HTTPSRedirectStatusCode = kong.Int(*r.HTTPSRedirectStatusCode)
+	}
 }
 
 func cloneStringPointerSlice(array ...*string) []*string {

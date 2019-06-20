@@ -167,6 +167,8 @@ spec:
                 enum:
                 - http
                 - https
+            https_redirect_status_code:
+              type: integer
         proxy:
           type: object
           properties:

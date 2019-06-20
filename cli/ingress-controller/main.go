@@ -149,7 +149,7 @@ func main() {
 	kongConfiguration := root["configuration"].(map[string]interface{})
 	conf.Kong.Version = v
 	glog.Infof("Kong datastore: %s", kongConfiguration["database"].(string))
-	conf.Kong.Client = kongClient
+
 	if kongConfiguration["database"].(string) == "off" {
 		conf.Kong.InMemory = true
 	}
@@ -159,6 +159,15 @@ func main() {
 	if err == nil && res.StatusCode == 200 {
 		conf.Kong.HasTagSupport = true
 	}
+
+	// setup workspace in Kong Enterprise
+	if conf.Kong.Workspace != "" {
+		kongClient, err = kong.NewClient(kong.String(conf.Kong.URL+"/"+conf.Kong.Workspace), c)
+		if err != nil {
+			glog.Fatalf("Error creating Kong Rest client: %v", err)
+		}
+	}
+	conf.Kong.Client = kongClient
 
 	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient,

@@ -57,6 +57,9 @@ type Kong struct {
 	InMemory      bool
 	HasTagSupport bool
 	Version       semver.Version
+
+	// Workspace is the Kong Enterprise workspace being synced.
+	Workspace string
 }
 
 // Configuration contains all the settings required by an Ingress controller

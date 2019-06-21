@@ -48,10 +48,6 @@ along alongside Kong.
   Please contribute back if you feel your experience can help
   the larger community.
 
-## Roadmap
-
-- Checkout our [Roadmap][roadmap] for features coming out in future.
-
 [annotations]: annotations.md
 [deployment]: deployment/
 [crd]: custom-resources.md

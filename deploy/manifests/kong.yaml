@@ -1,7 +1,4 @@
-
-
 ---
-
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -62,4 +59,3 @@ spec:
           preStop:
             exec:
               command: [ "/bin/sh", "-c", "kong quit" ]
----

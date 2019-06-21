@@ -1,11 +1,9 @@
-
+---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: kong
-
----
-
+  ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -65,9 +63,7 @@ spec:
             - tcp
             - tls
 
-
 ---
-
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -99,7 +95,6 @@ spec:
           type: string
 
 ---
-
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -136,7 +131,6 @@ spec:
           type: string
 
 ---
-
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -269,78 +263,13 @@ spec:
                   properties:
                     healthy: *healthy
                     unhealthy: *unhealthy
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: kong
-spec:
-  ports:
-  - name: pgql
-    port: 5432
-    targetPort: 5432
-    protocol: TCP
-  selector:
-    app: postgres
-
----
-
-apiVersion: apps/v1  #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
-kind: StatefulSet
-metadata:
-  name: postgres
-  namespace: kong
-spec:
-  serviceName: "postgres"
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:9.5
-        volumeMounts:
-        - name: datadir
-          mountPath: /var/lib/postgresql/data
-          subPath: pgdata
-        env:
-        - name: POSTGRES_USER
-          value: kong
-        - name: POSTGRES_PASSWORD
-          value: kong
-        - name: POSTGRES_DB
-          value: kong
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        ports:
-        - containerPort: 5432
-      # No pre-stop hook is required, a SIGTERM plus some time is all that's
-      # needed for graceful shutdown of a node.
-      terminationGracePeriodSeconds: 60
-  volumeClaimTemplates:
-  - metadata:
-      name: datadir
-    spec:
-      accessModes:
-      - "ReadWriteOnce"
-      resources:
-        requests:
-          storage: 1Gi
-
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kong-serviceaccount
   namespace: kong
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
@@ -422,6 +351,7 @@ rules:
   - configmaps
   verbs:
   - create
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -436,7 +366,131 @@ subjects:
   name: kong-serviceaccount
   namespace: kong
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+  namespace: kong
+  annotations:
+    # Cloud-provider specific annotations
+    # GKE
+    # GKE creates a L4 LB for any service of type LoadBalancer
+    # TODO figure out how to enable Proxy Protocol on an L4 LB for GKE
+    # AWS
+    # Use NLB over ELB
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    # Use L4 LB so that Kong can do TLS termination
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    # Enable Proxy Protocol when Kong is listening for proxy-protocol
+    #service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
+spec:
+  externalTrafficPolicy: Local
+  type: LoadBalancer
+  ports:
+  - name: kong-proxy
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: kong-proxy-ssl
+    port: 443
+    targetPort: 8443
+    protocol: TCP
+  selector:
+    app: kong---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: kong
+spec:
+  ports:
+  - name: pgql
+    port: 5432
+    targetPort: 5432
+    protocol: TCP
+  selector:
+    app: postgres
 
+---
+apiVersion: apps/v1  #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: kong
+spec:
+  serviceName: "postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:9.5
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/lib/postgresql/data
+          subPath: pgdata
+        env:
+        - name: POSTGRES_USER
+          value: kong
+        - name: POSTGRES_PASSWORD
+          value: kong
+        - name: POSTGRES_DB
+          value: kong
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        ports:
+        - containerPort: 5432
+      # No pre-stop hook is required, a SIGTERM plus some time is all that's
+      # needed for graceful shutdown of a node.
+      terminationGracePeriodSeconds: 60
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+      - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    metadata:
+      name: kong-migrations
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        env:
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
+        command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+      - name: kong-migrations
+        image: kong:1.1-centos
+        env:
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
+        command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
+      restartPolicy: OnFailure
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -453,7 +507,6 @@ spec:
     app: ingress-kong
 
 ---
-
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -579,31 +632,7 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
-
 ---
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: kong-proxy
-  namespace: kong
-spec:
-  type: LoadBalancer
-  ports:
-  - name: kong-proxy
-    port: 80
-    targetPort: 8000
-    protocol: TCP
-  - name: kong-proxy-ssl
-    port: 443
-    targetPort: 8443
-    protocol: TCP
-  selector:
-    app: kong
-
-
----
-
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -664,35 +693,3 @@ spec:
           preStop:
             exec:
               command: [ "/bin/sh", "-c", "kong quit" ]
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kong-migrations
-  namespace: kong
-spec:
-  template:
-    metadata:
-      name: kong-migrations
-    spec:
-      initContainers:
-      - name: wait-for-postgres
-        image: busybox
-        env:
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
-      containers:
-      - name: kong-migrations
-        image: kong:1.1-centos
-        env:
-        - name: KONG_PG_PASSWORD
-          value: kong
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
-      restartPolicy: OnFailure

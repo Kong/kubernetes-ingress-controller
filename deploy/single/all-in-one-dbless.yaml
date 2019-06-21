@@ -1,11 +1,9 @@
-
+---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: kong
-
----
-
+  ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -65,9 +63,7 @@ spec:
             - tcp
             - tls
 
-
 ---
-
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -99,7 +95,6 @@ spec:
           type: string
 
 ---
-
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -136,7 +131,6 @@ spec:
           type: string
 
 ---
-
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -269,13 +263,13 @@ spec:
                   properties:
                     healthy: *healthy
                     unhealthy: *unhealthy
-
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kong-serviceaccount
   namespace: kong
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
@@ -357,6 +351,7 @@ rules:
   - configmaps
   verbs:
   - create
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -371,6 +366,37 @@ subjects:
   name: kong-serviceaccount
   namespace: kong
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+  namespace: kong
+  annotations:
+    # Cloud-provider specific annotations
+    # GKE
+    # GKE creates a L4 LB for any service of type LoadBalancer
+    # TODO figure out how to enable Proxy Protocol on an L4 LB for GKE
+    # AWS
+    # Use NLB over ELB
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    # Use L4 LB so that Kong can do TLS termination
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    # Enable Proxy Protocol when Kong is listening for proxy-protocol
+    #service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
+spec:
+  externalTrafficPolicy: Local
+  type: LoadBalancer
+  ports:
+  - name: kong-proxy
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: kong-proxy-ssl
+    port: 443
+    targetPort: 8443
+    protocol: TCP
+  selector:
+    app: kong---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -409,6 +435,7 @@ data:
           return 200;
         }
     }
+
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -528,23 +555,3 @@ spec:
       - name: kong-server-blocks
         configMap:
           name: kong-server-blocks
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: kong-proxy
-  namespace: kong
-spec:
-  type: LoadBalancer
-  ports:
-  - name: kong-proxy
-    port: 80
-    targetPort: 8000
-    protocol: TCP
-  - name: kong-proxy-ssl
-    port: 443
-    targetPort: 8443
-    protocol: TCP
-  selector:
-    app: kong

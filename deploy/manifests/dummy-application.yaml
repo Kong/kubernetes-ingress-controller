@@ -1,4 +1,4 @@
-
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -37,7 +37,6 @@ spec:
               fieldPath: status.podIP
 
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -53,5 +52,3 @@ spec:
     name: http
   selector:
     app: http-svc
-
----

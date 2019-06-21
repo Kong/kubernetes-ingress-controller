@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -36,6 +37,7 @@ data:
           return 200;
         }
     }
+
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -155,4 +157,3 @@ spec:
       - name: kong-server-blocks
         configMap:
           name: kong-server-blocks
----

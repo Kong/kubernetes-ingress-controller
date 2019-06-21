@@ -43,7 +43,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       initContainers:
       - name: wait-for-migrations
-        image: kong:1.1
+        image: kong:1.2
         command: [ "/bin/sh", "-c", "kong migrations list" ]
         env:
         - name: KONG_ADMIN_LISTEN
@@ -64,7 +64,7 @@ spec:
           value: kong
       containers:
       - name: admin-api
-        image: kong:1.1
+        image: kong:1.2
         env:
         - name: KONG_PG_PASSWORD
           value: kong

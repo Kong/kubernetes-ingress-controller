@@ -12,6 +12,13 @@ Kong Ingress Controller can be deployed on all types of Kubernetes clusters
 using a wide variety of deployment options based on your use-case.
 Check out the [Deployment Guide][deployment]
 
+## Tutorials
+
+Follow one of the tutorials on how to use Kong Ingress Controller:
+
+- [Getting started](tutorials/getting-started.md) with Kong Ingress Controller
+- [Using cert-manager with Kong](tutorials/cert-manager.md)
+
 ## Custom Resource Definitions
 
 The controller can configure plugins and other Kong specific features

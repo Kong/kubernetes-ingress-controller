@@ -12,12 +12,10 @@
 
 ## Deploy Kong Ingress Controller
 
-Deploy Kong as Ingress controller:
+Deploy Kong Ingress Controller using `kubectl`:
 
-```shell
-
-$ kubectl apply -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/single/all-in-one-postgres.yaml
-
+```bash
+$ curl -sL https://bit.ly/kong-ingress | kubectl create -f -
 namespace/kong created
 customresourcedefinition.apiextensions.k8s.io/kongplugins.configuration.konghq.com created
 customresourcedefinition.apiextensions.k8s.io/kongconsumers.configuration.konghq.com created
@@ -27,126 +25,49 @@ service/postgres created
 statefulset.apps/postgres created
 serviceaccount/kong-serviceaccount created
 clusterrole.rbac.authorization.k8s.io/kong-ingress-clusterrole created
-role.rbac.authorization.k8s.io/kong-ingress-role created
-rolebinding.rbac.authorization.k8s.io/kong-ingress-role-nisa-binding created
 clusterrolebinding.rbac.authorization.k8s.io/kong-ingress-clusterrole-nisa-binding created
 service/kong-ingress-controller created
 deployment.extensions/kong-ingress-controller created
 service/kong-proxy created
 deployment.extensions/kong created
-
+job.batch/kong-migrations created
 ```
 
 It will take a few minutes for all containers to start and report
 healthy status.
 
-You can now retrieve the associated IP for the Service `kong-proxy`
+Alternatively, you can use our helm chart as well.
+Please ensure that you've Tiller working and then execute:
 
 ```bash
+$ helm install stable/kong --set ingressController.enabled=true
+```
 
+*Note:* this process could take up to five minutes the first time.
+
+## Setup environment variables
+
+Next, we will setup an environment variable with the IP address at which
+Kong is accesssible. This will be used to actually send reqeusts into the
+Kubernetes cluster.
+
+Execute the following command to get the IP address at which Kong is accessible:
+
+```bash
 $ kubectl get services -n kong
-
-NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)
-kong-ingress-controller   ClusterIP      10.42.42.1   <none>         8001/TCP
-kong-proxy                LoadBalancer   10.42.42.2   203.0.113.42   80:30095/TCP,443:31166/TCP
-postgres                  ClusterIP      10.42.42.3   <none>         5432/TCP
-
+NAME         TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
+kong-proxy   LoadBalancer   10.63.250.199   203.0.113.42   80:31929/TCP,443:31408/TCP   57d
 ```
 
-Now,
+Let's setup an environment variable to hold the IP address:
 
 ```bash
-
-curl 203.0.113.42
-
+$ export PROXY_URL=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong kong-proxy)
 ```
 
-Should display:
+> Note: It may take a while for Google to actually associate the
+IP address to the `kong-proxy` Service.
 
-```bash
-
-{"message":"no route and no API found with those values"}
-
-```
-
-> Note: It may take a while to actually associate the
-IP address to the `kong-proxy` Service so please be patient.
-
-## Test your deployment
-
-- Deploy a dummy application :
-
-  ```shell
-
-  $ kubectl create namespace dummy
-  namespace/dummy created
-  $ kubectl apply -n dummy -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/dummy-application.yaml
-  deployment.extensions/http-svc created
-  service/http-svc created
-
-  ```
-
-- Add an Ingress:
-
-  ```yaml
-
-  echo -n "
-  apiVersion: extensions/v1beta1
-  kind: Ingress
-  metadata:
-    name: dummy
-    namespace:  dummy
-    annotations:
-      kubernetes.io/ingress.class: "kong"
-  spec:
-    rules:
-      - host:
-        http:
-          paths:
-            - path: "/"
-              backend:
-                serviceName: http-svc
-                servicePort: http" | kubectl apply -f -
-
-  ```
-
-- Edit your /etc/hosts and add:
-
-  ```text
-
-  203.0.113.42 dummy.kong.example
-
-  ```
-
-Now, access to dummy.kong.example should display some informations.
-
-## Bonus: Expose the Kong admin API
-
-If you want to expose the Kong admin API,
-you must configure Kong correctly via `KONG_ADMIN_LISTEN` and add an Ingress:
-
-```yaml
-
-echo -n "
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: kong-admin
-  namespace:  kong
-  annotations:
-    kubernetes.io/ingress.class: "kong"
-spec:
-  rules:
-    - host: dummy.kong.example
-      http:
-        paths:
-          - path: "/"
-            backend:
-              serviceName: kong-ingress-controller
-              servicePort: 8001" | kubectl apply -f -
-
-```
-
-Do keep in mind that anyone can configure Kong at this point.
-You can use one of the Kong's authentication plugin to protect
-the Admin API on the Internet.
+Once you've Kong Ingress Controlled installed, please follow our
+[getting started](../tutorials/getting-started.md) tutorial to learn
+about how to use the Ingress Controller.

@@ -1,42 +1,33 @@
 # Deploying Kong Ingress Controller
 
-Kong ingress controller can be installed on a local or managed
-Kubernetes cluster. Here are some guides to get you started:
+Kong ingress controller can be installed on a local, managed
+or any Kubernetes cluster which supports a service of type `LoadBalancer`.
+
+Here are some guides to get you started:
 
 1. [Using minikube][0]:
 
-   If you have a local Minikube instance running,
-   this guide will help you deploy the Ingress Controller.
-
-   *Notes:*
-     - This setup does not provide HA for PostgreSQL
-1. [Using openshift/minishift][1]:
-
-    Openshift is a Kubernetes distribution by Redhat and
-    has few minor differences in how a user logs in using
-    `oc` CLI.
-
-   *Notes:*
-     - This setup does not provide HA for PostgreSQL
-     - Because of CPU/RAM requirements,
-       this does not work in OpenShift Online (free account)
+   This guide helps you get Kong Ingress Controller on a local
+   Kubernetes cluster.
 
 1. [Goolge Kubernetes Engine(GKE)][2]:
 
    [GKE](https://cloud.google.com/kubernetes-engine/)
-   is a managed Kubernetes cluster service.
-   This guide is a walk through to setup Kong Ingress
-   Controller on GKE alongwith TLS certs from
-   Let's Encrypt.
+   is a managed Kubernetes cluster offering by Google.
+   This guide is a walk through to setup Kong Ingress Controller on GKE.
+   If you've access to GKE, please use this guide.
 
 1. [Azure Kubernetes Service(AKS))][3]:
 
    [AKS](https://azure.microsoft.com/en-us/services/kubernetes-service/)
-   is another managed Kubernetes cluster service.
+   is a managed Kubernetes cluster offering by Microsoft Azure.
    This guide is a walk through to setup Kong Ingress
    Controller on AKS.
 
+Once you've Kong Ingress Controlled installed, please follow our
+[getting started](../tutorials/getting-started.md) tutorial to learn
+about how to use the Ingress Controller.
+
 [0]: minikube.md
-[1]: openshift.md
 [2]: gke.md
 [3]: aks.md

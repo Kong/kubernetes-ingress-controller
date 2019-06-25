@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [0.5.0-rc0](#050-rc0---20190614)
+ - [0.5.0](#050---20190625)
  - [0.4.0](#040---20190424)
  - [0.3.0](#030---20190108)
  - [0.2.2](#022---20181109)
@@ -13,7 +13,7 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [0.5.0-rc0] - 2019/06/14
+## [0.5.0] - 2019/06/25
 
 #### Summary
 
@@ -41,6 +41,8 @@ and numerous bug-fixes and enhancements.
 - **Consumer-level plugins** can now be configured by applying
   `plugins.konghq.com` annotation on KongConsumer custom resources.
   [#250](https://github.com/Kong/kubernetes-ingress-controller/issues/#250)
+- **Kong Enterprise workspaces**: Ingress Controller can manage a specific
+  workspace inside Kong Enterprise (previously, only default workspace).
 - Avoid reloading configuration in Kong in db-less mode when there is no
   change in configuration.
   [#308](https://github.com/Kong/kubernetes-ingress-controller/pull/308)
@@ -392,7 +394,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
-[0.5.0-rc0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.4.0...0.5.0-rc0
+[0.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.2...0.3.0
 [0.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.1...0.2.2

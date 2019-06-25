@@ -41,11 +41,6 @@ config:
 plugin: <name-of-plugin> # like key-auth, rate-limiting etc
 ```
 
-- `consumerRef`, an optional field,
-  implies the plugin will be used for a particular consumer only.
-  The value of the field must reference an existing consumer
-  in the same namespace.
-  If specified, the plugin will execute for the specific consumer only.
 - `config` contains a list of `key` and `value`
   required to configure the plugin.
   All configuration values specific to the type of plugin go in here.

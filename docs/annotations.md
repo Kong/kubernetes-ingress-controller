@@ -90,6 +90,9 @@ will result in the plugin being executed at Service-level in Kong,
 meaning the plugin will be
 executed for every request that is proxied, no matter which Route it came from.
 
+This annotation can be applied to a KongConsumer resource, which results in
+plugin being applied whenver a consumer is accessing any API.
+
 See [KongPlugin](#kongplugin) for examples of how to apply a plugin to service
 or ingress.
 

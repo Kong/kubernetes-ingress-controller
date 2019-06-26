@@ -397,7 +397,9 @@ spec:
     targetPort: 8443
     protocol: TCP
   selector:
-    app: kong---
+    app: kong
+
+---
 apiVersion: v1
 kind: Service
 metadata:

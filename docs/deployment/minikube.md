@@ -60,7 +60,7 @@ Kubernetes cluster.
 
 ```bash
 $ export PROXY_IP=$(minikube service -n kong kong-proxy --url | head -1)
-$ echo $PROXY_URL
+$ echo $PROXY_IP
 http://192.168.99.100:32728
 ```
 

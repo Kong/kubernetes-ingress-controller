@@ -62,7 +62,7 @@ kong-proxy   LoadBalancer   10.63.250.199   203.0.113.42   80:31929/TCP,443:3140
 Let's setup an environment variable to hold the IP address:
 
 ```bash
-$ export PROXY_URL=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong kong-proxy)
+$ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong kong-proxy)
 ```
 
 > Note: It may take a while for Google to actually associate the

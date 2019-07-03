@@ -10,7 +10,7 @@ Here are some guides to get you started:
    This guide helps you get Kong Ingress Controller on a local
    Kubernetes cluster.
 
-1. [Goolge Kubernetes Engine(GKE)][2]:
+1. [Google Kubernetes Engine(GKE)][2]:
 
    [GKE](https://cloud.google.com/kubernetes-engine/)
    is a managed Kubernetes cluster offering by Google.

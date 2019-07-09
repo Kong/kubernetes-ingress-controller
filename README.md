@@ -17,7 +17,6 @@ Custom Resource Definitions(CRDs).
 - [**Seeking help**](#seeking-help)
 - [**Design**](#design)
 - [**License**](#license)
-- [**Roadmap**](#roadmap)
 
 ## Features
 
@@ -179,6 +178,5 @@ Please check the [roadmap][roadmap] document.
 [deployment]: docs/deployment/
 [annotations]: docs/annotations.md
 [crds]: docs/custom-resources.md
-[roadmap]: docs/roadmap.md
 [design]: docs/design.md
 [faqs]: docs/faq.md

@@ -1,35 +1,66 @@
 # Kong Ingress Controller Documentation
 
-## Design
+## Table of contents
 
-- Check out our [Design][design] documentation to understand how
-  Ingress Controller is
-  designed to configure Kong in Kubernetes environment.
+- [Concepts](#concepts)
+  - [Architecture](#architecture)
+  - [Custom Resources](#custom-resources)
+  - [Deployment methods](#deployment-methods)
+  - [High-availability and scalling](#high-availability-and-scalling)
+- [Guides and tutorials](#guides-and-tutorials)
+- [Configuration reference](#configuration-reference)
+- [FAQs](#faqs)
+- [Troubleshooting](#troubleshooting)
 
-## Deployment
+## Concepts
 
-Kong Ingress Controller can be deployed on all types of Kubernetes clusters
-using a wide variety of deployment options based on your use-case.
-Check out the [Deployment Guide][deployment]
+### Architecture
 
-## Tutorials
+The [design][design] document explains how Kong Ingress Controller works
+inside a Kubernetes cluster and configures Kong to proxy traffic as per
+rules defined in the Ingress resources.
 
-Follow one of the tutorials on how to use Kong Ingress Controller:
+### Custom Resources
 
-- [Getting started](tutorials/getting-started.md) with Kong Ingress Controller
-- [Using cert-manager with Kong](tutorials/cert-manager.md)
+The Ingress resource in Kubernetes is a fairly narrow and ambiguous API, and
+doesn't offer resources to describe the specifics of proxying.
+To overcome this limitation, the `KongIngress` Custom resource is used as an
+"extension" to the existing Ingress API.
 
-## Custom Resource Definitions
+A few custom resources are bundled with Kong Ingress Controller to configure
+settings that are specific to Kong and provide fine-grained control over
+the proxying behavior.
 
-The controller can configure plugins and other Kong specific features
-using Custom Resources. Please refer to our [custom resources][crd] and
-[annotations][annotations] documentation for details.
+Please refer to [custom resources][crd] concept document for more details.
 
-## Annotations
+### Deployment Methods
 
-Kong Ingress Controller supports some common annotations and
-has specific annotations for Kong specific features like
-plugins. Please check out the [annotations][annotations] guide.
+Kong Ingress Controller can be deployed in a variety of deployment patterns.
+Please refer to the [deployment](concepts/deployment.md) documentation,
+which explains all the components
+involved and different ways of deploying them based on the use-case.
+
+### High-availability and Scaling
+
+The Kong Ingress Controller is designed to scale with your traffic
+and infrastructure.
+Please refer to [this document](concepts/ha-and-scaling.md) to understand
+failures scenarios, recovery methods, as well scaling considerations.
+
+## Guides and Tutorials
+
+Please browse through [guides][guides] to get started or understand how to configure
+a specific setting with Kong Ingress Controller.
+
+## Configuration Reference
+
+The configurations in the Kong Ingress Controller can be tweaked using
+Custom Resources and annotations.
+Please refer to the following documents detailing this process:
+
+- [Custom Resource Definitions](references/custom-resources.md)
+- [Annotations](references/annotations.md)
+- [CLI arguments](references/cli-arguments.md)
 
 ## FAQs
 
@@ -49,9 +80,11 @@ along alongside Kong.
   the larger community.
 
 [annotations]: annotations.md
+[crd]: concepts/custom-resources.md
 [deployment]: deployment/
-[crd]: custom-resources.md
-[design]: design.md
+[design]: concepts/design.md
 [faqs]: faq.md
-[roadmap]: roadmap.md
 [troubleshooting]: troubleshooting.md
+[guides]: guides/
+
+[Back to top](#kong-ingress-controller-documentation)

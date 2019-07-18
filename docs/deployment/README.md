@@ -25,7 +25,7 @@ Here are some guides to get you started:
    Controller on AKS.
 
 Once you've Kong Ingress Controlled installed, please follow our
-[getting started](../tutorials/getting-started.md) tutorial to learn
+[getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.
 
 [0]: minikube.md

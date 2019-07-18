@@ -15,7 +15,6 @@ Custom Resource Definitions(CRDs).
 - [**Get started**](#get-started)
 - [**Documentation**](#documentation)
 - [**Seeking help**](#seeking-help)
-- [**Design**](#design)
 - [**License**](#license)
 
 ## Features
@@ -117,11 +116,12 @@ on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 ## Documentation
 
 All documentation around Kong Ingress Controller is present in this
-repository. Pull Requests are welcome for additions and corrections.
+repository inside the [docs][docs] directory.
+Pull Requests are welcome for additions and corrections.
 
 Following are some helpful link:
 
-- [**Getting Started**][docs]:
+- [**Getting Started**](docs/guides/getting-started.md):
   Get Kubernetes Ingress setup up and running.
 - [**Deployment**][deployment]:
   Deployment guides for Minikube, GKE
@@ -132,22 +132,6 @@ Following are some helpful link:
 - [**Annotations**][annotations]:
   Associate plugins with your requests using annotations
 - [**FAQs**][faqs]: Frequently Asked Questions.
-
-## Design
-
-Kong Ingress Controller is built to satisfy the [Ingress][ingress]
-spec in Kubernetes.
-Kong Ingress Controller is a [Go](https://golang.org/) app
-that listens to events from the API-server of your Kubernetes cluster
-and then sets up Kong to handle your configuration accordingly,
-meaning you never have to configure Kong yourself manually.
-
-The controller can configure any Kong cluster via a
-Kong node running either in a control-plane mode
-or running both, control and data planes.
-
-For detailed design, please refer to our
-[design][design] documentation.
 
 ## License
 
@@ -167,16 +151,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Roadmap
-
-Please check the [roadmap][roadmap] document.
-
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/
 [kong-hub]: https://docs.konghq.com/hub/
 [docs]: docs/
 [deployment]: docs/deployment/
-[annotations]: docs/annotations.md
-[crds]: docs/custom-resources.md
-[design]: docs/design.md
+[annotations]: docs/references/annotations.md
+[crds]: docs/references/custom-resources.md
 [faqs]: docs/faq.md

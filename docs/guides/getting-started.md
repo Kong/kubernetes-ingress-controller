@@ -1,9 +1,9 @@
 # Getting started with Kong Ingress Controller
 
-This guide assumes that you have already installed Kong Ingress Controller
-in your Kubernetes cluster. If you have not done so already, please
-follow the [deployment](../deployment) documentation on how to deploy the
-Ingress Controller.
+## Installation
+
+Please follow the [deployment](../deployment) documentation to install
+Kong Ingress Controller onto your Kubernetes cluster.
 
 ## Testing connectivity to Kong
 

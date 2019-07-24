@@ -4,7 +4,7 @@ Use the following flags to tweak the behavior of Kong Ingress Controller:
 
 |  Flag | Type | Default | Description |
 |-------|------|---------|-------------|
-| Configuration |
+| **Configuration** |
 | `--ingress-class` | `string` | `kong` | Ingress class name to use to filter Ingress and custom resources when multiple Ingress Controllers are running in the same Kubernetes cluster. |
 | `--election-id` | `string` | `ingress-controller-leader` | The name of ConfigMap (in the same namespace) to use to facilitate leader-election between multiple instances of the controller. |
 | `--watch-namespace` | `string` | none | Namespace to watch for Ingress and custom resources. The default value of an empty string results in the controller watching for resources in all namespaces and configuring Kong accordingly. |
@@ -21,12 +21,12 @@ Use the following flags to tweak the behavior of Kong Ingress Controller:
 | `--update-status-on-shutdown` | `boolean` | `true`  | If true, the controller will update the status of the Ingress resource when it being stoppped. |
 | `--version` | `boolean` | `false` | Shows release information about the Kong Ingress controller and exit |
 | `--help` | `boolean` | `false` | Shows this documentation on the CLI and exit. |
-| Authentication|
+| **Authentication**|
 | `--admin-header` | `string` in the form of `key:value` | none | Add a header (key:value) to every HTTP request to Kong's Admin API; it can be used multiple times to inject multiple headers |
 | `--admin-ca-cert-file` | `string` | none | Path to PEM-encoded CA certificate file to verify the certificate served on Kong's Admin API |
 | `--admin-tls-server-name` | `string` | none | SNI name to use for verification of the certificate presented by Kong |
 | `--admin-tls-skip-verify` | `boolean` | `false` | Disable verification of TLS certificate of Kong's Admin endpoint |
-| Logging |
+|**Logging**|
 | `--alsologtostderr` | `boolean` | `false` | Logs are written to standard error as well as to files. |
 | `--log_backtrace_at` | `file:N` | none | When set to a file and line number holding a logging statement, such as -log_backtrace_at=gopherflakes.go:234 a stack trace will be written to the Info log whenever execution hits that statement. (Unlike with -vmodule, the ".go" must be present.) |
 | `--log_dir` | `string` | none | Log files will be written to this directory instead of the default temporary directory. |

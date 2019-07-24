@@ -398,6 +398,9 @@ func overrideService(service *Service,
 	if s.Protocol != nil {
 		service.Protocol = kong.String(*s.Protocol)
 	}
+	if s.Port != nil {
+		service.Port = kong.Int(*s.Port)
+	}
 	if s.Path != nil {
 		service.Path = kong.String(*s.Path)
 	}

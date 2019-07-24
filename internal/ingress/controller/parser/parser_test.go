@@ -390,6 +390,32 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("http"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("https"),
+					Port:     kong.Int(443),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(443),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+		},
 	}
 
 	for _, testcase := range testTable {

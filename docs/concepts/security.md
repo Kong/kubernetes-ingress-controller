@@ -14,22 +14,27 @@ It has read and list permissions on most resources but requires update
 and create permission for a few resources to provide seamless integration.
 The permissions can be locked down further if needed depending on the specific
 use-case.
-This RBAC policy is associated with a ServiceAccount in Kubernetes, which
-takes of the Controller authenticating and authorizing against Kuberentes
-API-server.
+This RBAC policy is associated with a ServiceAccount and the ServiceAccount
+is associated with Kong Ingress Controller.
+The Controller uses the ServiceAccount credential to authenticate and
+authorize itself against the Kubernetes API-server.
 
 ## Kong Admin API Protection
 
 Kong's Admin API is used to control configuration of Kong and proxying behavior.
-If an attacker gets access to Kong's Admin API, Kong will be compromised
-and all bets are off at that point. Hence, it is important that the deployment
-ensures that the likelihood of this happening is minimized.
+If an attacker happens to gain access to Kong's Admin API, they
+will be able to perform all actions as an authorized user like
+modifying or deleting Kong's configuration.
+Hence, it is important that the deployment
+ensures that the likelihood of this happening is as small as possible.
 
 In the example deployements, the Controller and Kong's Admin API communicate
-over the loopback (`lo`) interface of the pod. There is no authorization or
-authentication being done over the loopback listner.
-Although not ideal, this setup is simple to get started and can be further
-hardened.
+over the loopback (`lo`) interface of the pod.
+Kong is no performing any kind of authorization or
+authentication on the Admin API, hence the API is accessible only
+on the loopback interface to limit the attack surface.
+Although not ideal, this setup requires fewer steps
+to get started and can be further hardened as required.
 
 Please note that it is very important that Kong's Admin API is not accessible
 inside the cluster as any malicious service can change Kong's configuration.

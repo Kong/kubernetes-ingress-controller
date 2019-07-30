@@ -8,7 +8,7 @@
   - [Deployment methods](#deployment-methods)
   - [High-availability and scalling](#high-availability-and-scalling)
   - [Security](#security)
-- [Guides and tutorials](#guides-and-tutorials)
+- [Guides and Tutorials](#guides-and-tutorials)
 - [Configuration reference](#configuration-reference)
 - [FAQs](#faqs)
 - [Troubleshooting](#troubleshooting)
@@ -53,7 +53,7 @@ failures scenarios, recovery methods, as well scaling considerations.
 Please refere to [this document](concepts/security.md) to understand the
 default security settings and how to further secure the Ingress Controller.
 
-## Guides and tutorials
+## Guides and Tutorials
 
 Please browse through [guides][guides] to get started or understand how to configure
 a specific setting with Kong Ingress Controller.

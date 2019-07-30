@@ -65,5 +65,5 @@ http://192.168.99.100:32728
 ```
 
 Once you've Kong Ingress Controlled installed, please follow our
-[getting started](../tutorials/getting-started.md) tutorial to learn
+[getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.

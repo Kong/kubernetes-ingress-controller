@@ -11,7 +11,9 @@ cache:
   - $GOPATH/pkg/mod
 
 env:
-- GO111MODULE=on
+  global:
+  - GO111MODULE=on
+  - GOPROXY=https://proxy.golang.org
 
 go:
   - "1.12"

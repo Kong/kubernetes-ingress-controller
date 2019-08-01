@@ -6,7 +6,7 @@
   - [Architecture](#architecture)
   - [Custom Resources](#custom-resources)
   - [Deployment methods](#deployment-methods)
-  - [High-availability and scalling](#high-availability-and-scalling)
+  - [High-availability and scaling](#high-availability-and-scaling)
   - [Security](#security)
 - [Guides and Tutorials](#guides-and-tutorials)
 - [Configuration reference](#configuration-reference)
@@ -46,11 +46,11 @@ involved and different ways of deploying them based on the use-case.
 The Kong Ingress Controller is designed to scale with your traffic
 and infrastructure.
 Please refer to [this document](concepts/ha-and-scaling.md) to understand
-failures scenarios, recovery methods, as well scaling considerations.
+failures scenarios, recovery methods, as well as scaling considerations.
 
 ### Security
 
-Please refere to [this document](concepts/security.md) to understand the
+Please refer to [this document](concepts/security.md) to understand the
 default security settings and how to further secure the Ingress Controller.
 
 ## Guides and Tutorials

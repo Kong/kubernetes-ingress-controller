@@ -5,23 +5,27 @@ using several [Custom Resource Definitions(CRDs)][k8s-crd].
 
 Following CRDs enables users to declaratively configure all aspects of Kong:
 
-- [**KongPlugin**](#kongplugin): These resources correspond to [Plugin][kong-plugin]
-  entities in Kong.
-- [**KongIngress**](#kongingress): These resources can control routing, load-balancing,
-  health checking properties in Kong.  
-  It works with the Ingress resources in Kubernetes.
+- [**KongPlugin**](#kongplugin): This resource corresponds to
+  the [Plugin][kong-plugin] entity in Kong.
+- [**KongIngress**](#kongingress): This resource provides fine-grained control
+  over all aspects of proxy behaviour like routing, load-balancing,
+  and health checking. It serves as an "extension" to the Ingress resources
+  in Kubernetes.
 - [**KongConsumer**](#kongconsumer):
-  These resources map to [Consumer][kong-consumer] entities in Kong.
-- [**KongCredential**](#kongcredential): These resources map to
-  credentials (key-auth, basic-auth, etc) that belong to consumers.
+  This resource maps to the [Consumer][kong-consumer] entity in Kong.
+- [**KongCredential**](#kongcredential): This resource maps to
+  a credential (key-auth, basic-auth, jwt, hmac-auth) that is associated with
+  a specific KongConsumer.
 
 ## KongPlugin
 
-This resource allows the configuration of
-Kong plugins in the same way we add plugins using the
-[admin API][kong-add-plugin]
+This resource provides an API to configure plugins inside Kong using
+Kubernetes-styled APIs.
 
-Following is an example no how to define a `KongPlugin` resource:
+Please see the [concept](../concepts/custom-resources.md#KongPlugin)
+document for how the resource should be used.
+
+The following snippet shows the properties available:
 
 ```yaml
 apiVersion: configuration.konghq.com/v1
@@ -30,13 +34,11 @@ metadata:
   name: <object name>
   namespace: <object namespace>
   labels:
-    global: "true" # optional, please note the quotes around true
-                  # configures the plugin Globally in Kong
-consumerRef: <name of an existing consumer> # optional
-                                            # applies the plugin
-                                            # in on specific route and consumer
+    global: "true"   # optional, if set, then the plugin will be executed
+                     # for every request that Kong proxies
+                     # please note the quotes around true
 disabled: <boolean>  # optionally disable the plugin in Kong
-config:
+config:              # configuration for the plugin
     key: value
 plugin: <name-of-plugin> # like key-auth, rate-limiting etc
 ```
@@ -46,7 +48,6 @@ plugin: <name-of-plugin> # like key-auth, rate-limiting etc
   All configuration values specific to the type of plugin go in here.
   Please read the documentation of the plugin being configured to set values
   in here.
-- `disabled` if set to true, disables the plugin in Kong (but not delete it).
 - `plugin` field determines the name of the plugin in Kong.
   This field was introduced in Kong Ingress Controller 0.2.0.
 - Setting a label `global` to `"true"` will result in the plugin being
@@ -68,11 +69,10 @@ Given the following plugin:
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
-  name: http-svc-consumer-ratelimiting
-  namespace: default #this should match the namespace of the route or service you're adding it too.
+  name: request-id
 config:
-  key: value
-plugin: my-plugin
+  header_name: my-request-id
+plugin: correlation-id
 ```
 
 It can be applied to a service by annotating like:
@@ -85,8 +85,7 @@ metadata:
   labels:
      app: myapp-service
   annotations:
-     plugins.konghq.com: http-svc-consumer-ratelimiting
-
+     plugins.konghq.com: request-id
 spec:
   ports:
   - port: 80
@@ -97,25 +96,32 @@ spec:
     app: myapp-service
 ```
 
-It can be applied to a specific ingress (route or routes) like:
+It can be applied to a specific ingress (route or routes):
 
 ```yaml
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-   name: myapp-ingress
-   annotations:
-      plugins.konghq.com: http-svc-consumer-ratelimiting
+  name: demo-example-com
+  annotations:
+    plugins.konghq.com: request-id
 spec:
-   rules:
-     - host: my.host.com
-       http:
-         paths:
-           - path: /myendpoint
-             backend:
-               serviceName: myapp-service
-               servicePort: 80
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - path: /bar
+        backend:
+          serviceName: echo
+          servicePort: 80
 ```
+
+A plugin can also be applied to a specific KongConsumer by adding
+`plugins.konghq.com` annotation to the KongConsumer resource.
+
+Please follow the
+[Using the KongPlugin resource](../guides/using-kongplugin-resource.md)
+guide for details on how to use this resource.
 
 ## KongIngress
 
@@ -123,32 +129,39 @@ Ingress resource spec in Kubernetes can define routing policies
 based on HTTP Host header and paths.  
 While this is sufficient in most cases,
 sometimes, users may want more control over routing at the Ingress level.
-`KongIngress` works in conjunction with existing Ingress resource
-and extends it. It is not meant as a replacement to the
+`KongIngress` serves as an "extension" to Ingress resource.
+It is not meant as a replacement to the
 `Ingress` resource in Kubernetes.
+
+Please read the [concept](../concepts/custom-resources.md#kongingress)
+document for why this resource exists and how it relates to the existing
+Ingress resource.
+
 Using `KongIngress`, all properties of [Upstream][kong-upstream],
 [Service][kong-service] and
 [Route][kong-route] entities in Kong related to an Ingress resource
 can be modified.
 
-Once a `KongIngress` resource is created, it can be associated with
-`Ingress` resource in two ways:
+Once a `KongIngress` resource is created, it needs to be associated with
+an Ingress or Service resource using the following annotation:
 
-- Create a `KongIngress` object in the same namespace as that of the
-  Ingress rule using the same name.
-  This avoids a need of additional annotation in Ingress resource.
-  On the other hand, this approach requires a `KongIngress`
-  resource per Ingress, which becomes hard to maintain with multiple Ingresses.
+```yaml
+configuration.konghq.com: kong-ingress-resource-name
+```
 
-- Create a `KongIngress` resource and then using the annotation
-  `configuration.konghq.com: <KongIngress-resource-name>`,
-  associate it with one or more Ingress resources.  
-  This approach allows you to reuse the same `KongIngress`.
+Specifically,
 
-*Note:* Is not required to define the complete object,
-one can define only one of the `upstream`, `proxy` or `route` sections
+- To override any properties related to health-checking, load-balancing,
+  or details specific to a service, add the annotation to the Kubernetes
+  Service that is being exposed via the Ingress API.
+- To override routing configuration (like protocol or method based routing),
+  add the annotation to the Ingress resource.
 
-Following is a complete spec for KongIngress:
+Please follow the
+[Using the KongIngress resource](../guides/using-kongingress-resource.md)
+guide for details on how to use this resource.
+
+For reference, the following is a complete spec for KongIngress:
 
 ```yaml
 apiVersion: configuration.konghq.com/v1
@@ -210,7 +223,9 @@ route:
 
 ## KongConsumer
 
-This custom resource configures consumers in Kong:
+This custom resource configures a consumer in Kong:
+
+The following snippet shows the field available in the resource:
 
 ```yaml
 apiVersion: configuration.konghq.com/v1
@@ -230,8 +245,10 @@ kind: KongConsumer
 metadata:
   name: consumer-team-x
 username: team-X
-custom_id: my_team_x # optional and not recommended, please use `username`
 ```
+
+When this resource is created, a corresponding consumer entity will be
+created in Kong.
 
 ## KongCredential
 
@@ -252,11 +269,12 @@ config:
   key: 62eb165c070a41d5c1b58d9d3d725ca1
 ```
 
+[Using the Kong Consumer and Credential resource](../guides/using-consumer-credential-resource.md)
+guide for details on how to use this resource.
+
 [k8s-crd]: https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/
 [kong-consumer]: https://getkong.org/docs/latest/admin-api/#consumer-object
 [kong-plugin]: https://getkong.org/docs/latest/admin-api/#plugin-object
-[kubectl-doc]: https://kubernetes.io/docs/reference/kubectl/overview/
-[kong-add-plugin]: https://getkong.org/docs/latest/admin-api/#add-plugin
 [kong-upstream]: https://getkong.org/docs/latest/admin-api/#upstream-objects
 [kong-service]: https://getkong.org/docs/latest/admin-api/#service-object
 [kong-route]: https://getkong.org/docs/latest/admin-api/#route-object

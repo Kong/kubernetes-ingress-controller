@@ -1,4 +1,4 @@
-# High-availability and Scalling
+# High-availability and Scaling
 
 ## High availability
 
@@ -54,7 +54,7 @@ namespace that the controller is deployed in.
 
 ## Scaling
 
-Kong is designed to be horizontally scallable, meaning as traffic increases,
+Kong is designed to be horizontally scalable, meaning as traffic increases,
 multiple instances of Kong can be deployed to handle the increase in load.
 
 The configuration is either pumped into Kong directly via the Ingress

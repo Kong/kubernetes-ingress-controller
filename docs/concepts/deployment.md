@@ -34,7 +34,7 @@ they are used, so that they can be tweaked as necessary for a specific use-case.
 
 Kong Ingress Controller can be deployed in any [namespace][k8s-namespace].  
 If Kong Ingress Controller is being used to proxy traffic for all namespaces
-in a Kubernetes cluster, which is generaly the case,
+in a Kubernetes cluster, which is generally the case,
 it is recommended that it is installed in a dedicated
 `kong` namespace but it is not required to do so.
 
@@ -54,7 +54,7 @@ A few custom resources are bundled with Kong Ingress Controller to configure
 settings that are specific to Kong and provide fine-grained control over
 the proxying behavior.
 
-Please refer to [custom resources][custom-resources.md]
+Please refer to [custom resources](custom-resources.md)
 concept document for details.
 
 ### RBAC permissions
@@ -124,7 +124,7 @@ See the [database](#database) section below for details.
 
 Once Kong Ingress Controller is deployed, one service is needed to
 expose Kong outside the Kubernetes cluster so that it can receive all traffic
-that is destinted for the cluster and route it appropriately.
+that is destined for the cluster and route it appropriately.
 `kong-proxy` is a Kubernetes service which points to the Kong pods which are
 capable of proxying request traffic. This service will be usually of type
 `LoadBalancer`, however it is not required to be such.
@@ -208,8 +208,8 @@ and a controller container which configures Kong.
 `kong-proxy` service would point to the ports of the Kong container in the
 above deployment.
 
-Since each pod contains a controller and a Kong container, scalling out
-simply requires horizontally scalling this deployment to handle more traffic
+Since each pod contains a controller and a Kong container, scaling out
+simply requires horizontally scaling this deployment to handle more traffic
 or to add redundancy in the infrastructure.
 
 #### With a Database
@@ -232,7 +232,7 @@ separating the control and data flow:
   that only one of the pods is configuring Kong's database at a time.
 - **Data-plane**: This deployment consists of pods running a
   single Kong container which can proxy traffic based on the configuration
-  it loads from the database. This deployment should be scalled to respond
+  it loads from the database. This deployment should be scaled to respond
   to change in traffic profiles and add redundancy to safeguard from node
   failures.
 - **Database**: The database is used to store Kong's configuration and propagate

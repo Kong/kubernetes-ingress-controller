@@ -152,7 +152,7 @@ $ kubectl exec test-701078429-s5kca -- curl --cacert /var/run/secrets/kubernetes
 If it is not working, there are two possible reasons:
 
 1. The contents of the tokens are invalid.
-   Find the secret name with `kubectl get secrets | grep service-account` and
+   Find the secret name with `kubectl get secrets --field-selector=type=kubernetes.io/service-account-token` and
   delete it with `kubectl delete secret <name>`.  
   It will automatically be recreated.
 1. You have a non-standard Kubernetes installation

@@ -7,7 +7,7 @@ Kong Ingress Controller onto your Kubernetes cluster.
 
 ## Testing connectivity to Kong
 
-This guide assumes that `PROXY_IP` environment varialbe is
+This guide assumes that `PROXY_IP` environment variable is
 set to contain the IP address or URL pointing to Kong.
 If you've not done so, please follow one of the
 [deployment guides](../deployment) to configure this environment variable.

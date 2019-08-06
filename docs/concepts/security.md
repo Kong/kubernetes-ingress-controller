@@ -30,7 +30,7 @@ ensures that the likelihood of this happening is as small as possible.
 
 In the example deployements, the Controller and Kong's Admin API communicate
 over the loopback (`lo`) interface of the pod.
-Kong is no performing any kind of authorization or
+Kong is not performing any kind of authorization or
 authentication on the Admin API, hence the API is accessible only
 on the loopback interface to limit the attack surface.
 Although not ideal, this setup requires fewer steps

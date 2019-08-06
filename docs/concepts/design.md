@@ -46,13 +46,13 @@ configuration:
 - A [Service](https://kubernetes.io/docs/concepts/services-networking/service/)
   inside Kubernetes is a way to abstract an application that is
   running on a set of pods.
-  This maps to two object in Kong: Service and Upstream.
+  This maps to two objects in Kong: Service and Upstream.
   The service object in Kong holds the information on the protocol
   to use to talk to the upstream service and various other protocol
   specific settings. The Upstream object defines load balancing
   and healthchecking behavior.
 - Pods associated to a Service in Kubernetes map as a Target belonging
-  to the Upstream (the upsteram correspondign to the Kubenrete
+  to the Upstream (the upstream corresponding to the Kubernetes
   Service) in Kong. Kong load balances across the Pods of your service.
   This means that all requests flowing through Kong are not directed via
   kube-proxy but directly to the pod.

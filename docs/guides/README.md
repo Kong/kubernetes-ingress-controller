@@ -18,3 +18,7 @@ Kong Ingress controller:
   This guide walks through how to use cert-manager along with Kong Ingress
   Controller to automate TLS certificate provisioning and using them
   to encrypt your API traffic.
+- [Configuring a fallback service](configuring-fallback-service.md)
+  This guides walks through how to setup a fallback service using Ingress
+  resource. The fallback service will receive all requests that don't
+  match against any of the defined Ingress rules.

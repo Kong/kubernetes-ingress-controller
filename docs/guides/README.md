@@ -22,3 +22,7 @@ Kong Ingress controller:
   This guides walks through how to setup a fallback service using Ingress
   resource. The fallback service will receive all requests that don't
   match against any of the defined Ingress rules.
+- [Configuring HTTPS redirects for your services](configuring-https-redirect.md)
+  This guide walks through how to configure Kong Ingress Controller to
+  redirect HTTP request to HTTPS so that all communication
+  from the external world to your APIs and microservices is encrypted.

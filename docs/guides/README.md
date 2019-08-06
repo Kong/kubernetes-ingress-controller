@@ -26,3 +26,6 @@ Kong Ingress controller:
   This guide walks through how to configure Kong Ingress Controller to
   redirect HTTP request to HTTPS so that all communication
   from the external world to your APIs and microservices is encrypted.
+- [Using Redis for rate-limiting](redis-rate-limiting.md)
+  This guide walks through how to use Redis for storing rate-limit information
+  in a multi-node Kong deployment.

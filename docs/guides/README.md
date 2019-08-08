@@ -10,7 +10,7 @@ Kong Ingress controller:
 - [Using KongIngress resource](using-kongingress-resource.md)
   This guide explains how the KongIngress resource can be used to change Kong
   specific settings like load-balancing, health-checking and proxy behaviour.
-- [Using KongConsumer and KongCredential resources](using-consumer-credential-resource)
+- [Using KongConsumer and KongCredential resources](using-consumer-credential-resource.md)
   This guides walks through how Kubernetes native declarative configuration
   can be used to dynamically provision credentials for authentication purposes
   in the Ingress layer.

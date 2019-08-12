@@ -33,9 +33,6 @@ Custom Resource Definitions(CRDs).
 
 ## Version support matrix
 
-The Ingress controller is tested on
-Kubernetes version `1.8` through `1.10`.
-
 The following matrix lists supported versions of
 Kong for every release of the Kong Ingress Controller:
 

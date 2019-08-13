@@ -3,9 +3,9 @@
 Kong Ingress Controller can give you visibility not only into how Kong is
 performing but also gives visibilty into
 how the services in your Kubernetes cluster are responding to the
-traffic that is coming in.
+inbound traffic.
 
-This how-to guide walks through the steps on how to configure Kong and
+This how-to guide walks through the steps of how to configure Kong and
 Prometheus to collect metrics from Kong Ingress Controller.
 
 > Note: This guide was originally posted on Kong Inc's blog:
@@ -23,20 +23,20 @@ You’ll need a few things before we can start:
   Helm CLI should be available on your workstation.
   You can follow Helm’s quickstart guide to set up helm.
 
-Once you’ve Kubernetes and Helm setup, please proceed ahead.
+Once you have Kubernetes and Helm set up, please proceed.
 
-Caution: Setting here are tweaked to keep this guide simple.
+Caution: Settings here are tweaked to keep this guide simple.
 These settings are not meant for production usage.
 
 ## Install Prometheus and Grafana
 
-If you already have these installed on your Kubernetes cluster,
+If you already have Prometheus and Grafana installed on your Kubernetes cluster,
 you can skip these steps.
 
 ### Prometheus
 
 First, we will install Prometheus with a
-scrape interval of 10 seconds to have fine grained data points for all metrics.
+scrape interval of 10 seconds to have fine-grained data points for all metrics.
 We’ll install both Prometheus and Grafana in a dedicated ‘monitoring’ namespace.
 
 To install Prometheus, execute the following:
@@ -47,7 +47,7 @@ helm install --name prometheus stable/prometheus --namespace monitoring --values
 
 ### Grafana
 
-Grafana is installed with the following values for it's Helm chart
+Grafana is installed with the following values for its Helm chart
 (see comments for explanation):
 
 ```yaml
@@ -101,7 +101,7 @@ helm install stable/kong --name kong --namespace kong --values https://bit.ly/2Y
 
 ### Enable Prometheus plugin in Kong
 
-We will enable the Promtheus plugin in Kong at the global level, meaning,
+We will enable the Promtheus plugin in Kong at the global level, meaning
 each request that flows into the Kubernetes cluster gets tracked in Prometheus:
 
 ```bash
@@ -119,10 +119,10 @@ plugin: prometheus
 
 Now, we will gain access to the components we just deployed.
 In a production environment, you would have a Kubernetes Service with
-external IP or load balancer, which would allow you to access
-Prometheus, Grafana and Kong.
+an external IP or load balancer, which would allow you to access
+Prometheus, Grafana, and Kong.
 For demo purposes, we will set up port-forwarding using kubectl to get access.
-Please do not do this in production.
+It is not advisable to do this in production.
 
 Open a new terminal and execute the following commands:
 
@@ -151,7 +151,7 @@ kubectl --namespace kong port-forward $POD_NAME 8000 &
 
 To access Grafana, you need to get the password for the admin user.
 
-Execute the following to read the password and take a note of it:
+Execute the following to read the password and take note of it:
 
 ```bash
 kubectl get secret --namespace monitoring grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
@@ -170,7 +170,7 @@ routing for them.
 
 ### Install Services
 
-We will setup three services: billing, invoice, comments.
+We will set up three services: billing, invoice, and comments.
 Execute the following to spin these services up:
 
 ```bash
@@ -221,7 +221,7 @@ spec:
 ## Let’s Create Some Traffic
 
 We’re done configuring our services and proxies.
-Time to see if our set up works or catches fire.
+Time to see if our setup works.
 Execute the following in a new terminal:
 
 ```bash
@@ -243,7 +243,7 @@ we should see metrics coming through in the Grafana dashboard.
 
 You should be able to see metrics related to the traffic flowing
 through our services.
-Try tweaking the above script to send different trafficpatterns
+Try tweaking the above script to send different traffic patterns
 and see how the metrics change.
 The upstream services are httpbin instances, meaning you can use
 a variety of endpoints to shape your traffic.
@@ -256,7 +256,7 @@ a variety of endpoints to shape your traffic.
 
 Kong collects latency data of how long your services take to respond to
 requests. One can use this data to alert the on-call engineer if the latency
-goes beyond a certain threshold. For example, let’s say you’ve an SLA
+goes beyond a certain threshold. For example, let’s say you have an SLA
 that your APIs will respond with latency of less than 20 millisecond
 for 95% of the requests.
 You could configure Prometheus to alert based on the following query:
@@ -270,8 +270,8 @@ latency (or duration) for all of your services and alerts you if it is more
 than 20 milliseconds.
 The “type” label in this query is “request”, which tracks the latency
 added by Kong and the service.
-You can switch this to “upstream”, to track latency added by the service only.
-Prometheus is really flexible and well documented, so we won’t go into
+You can switch this to “upstream” to track latency added by the service only.
+Prometheus is highly flexible and well documented, so we won’t go into
 details of setting up alerts here, but you’ll be able to find them
 in the Prometheus documentation.
 
@@ -279,7 +279,7 @@ in the Prometheus documentation.
 
 ![Proxy latencies](../images/proxy-latencies.png)
 
-Kong also collects metrics about it’s performance.
+Kong also collects metrics about its performance.
 The following query is similar to the previous one but gives
 us insight into latency added by Kong:
 
@@ -293,7 +293,7 @@ histogram_quantile(0.90, sum(rate(kong_latency_bucket{type="kong"}[1m])) by (le,
 
 Another important metric to track is the rate of errors and requests
 your services are serving.
-The timeseries kong_http_status collects HTTP status code metrics
+The time series `kong_http_status` collects HTTP status code metrics
 for each service.
 
 This metric can help you track the rate of errors for each of your service:
@@ -314,15 +314,15 @@ of client codes requesting an endpoint that was removed in a recent deploy.
 
 ![Request rates](../images/request-rate.png)
 
-One can derive the total request rate for each of your service or
-across your Kubernetes cluster using the kong_http_status timeseries.
+One can derive the total request rate for each of your services or
+across your Kubernetes cluster using the `kong_http_status` time series.
 
 ![Bandwidth](../images/bandwidth.png)
 
 Another metric that Kong keeps track of is the amount of
-network bandwidth (kong_bandwidth) being consumed.
+network bandwidth (`kong_bandwidth`) being consumed.
 This gives you an estimate of how request/response sizes
-co-relate with other behaviours in your infrastructure.
+correlate with other behaviors in your infrastructure.
 
 You now have metrics for the services running inside your Kubernetes cluster
 and have much more visibility into your applications, without making

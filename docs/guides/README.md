@@ -29,3 +29,7 @@ Kong Ingress controller:
 - [Using Redis for rate-limiting](redis-rate-limiting.md)
   This guide walks through how to use Redis for storing rate-limit information
   in a multi-node Kong deployment.
+- [Integrate Kong Ingress Controller with Prometheus/Grafana](prometheus-grafana.md)
+  This guide walks through the steps of how to deploy Kong Ingress Controller
+  and Prometheus to obtain metrics for the traffic flowing into your
+  Kubernetes cluster.

@@ -14,7 +14,7 @@ require (
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/hashicorp/go-memdb v1.0.3 // indirect
-	github.com/hashicorp/go-uuid v1.0.1 // indirect
+	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hbagdi/deck v0.4.0
 	github.com/hbagdi/go-kong v0.5.0
 	github.com/imdario/mergo v0.3.7

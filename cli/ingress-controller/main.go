@@ -33,6 +33,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/eapache/channels"
 	"github.com/golang/glog"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hbagdi/go-kong/kong"
 	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
@@ -148,9 +149,10 @@ func main() {
 	glog.Infof("kong version: %s", v)
 	kongConfiguration := root["configuration"].(map[string]interface{})
 	conf.Kong.Version = v
-	glog.Infof("Kong datastore: %s", kongConfiguration["database"].(string))
+	kongDB := kongConfiguration["database"].(string)
+	glog.Infof("Kong datastore: %s", kongDB)
 
-	if kongConfiguration["database"].(string) == "off" {
+	if kongDB == "off" {
 		conf.Kong.InMemory = true
 	}
 	req, _ := http.NewRequest("GET",
@@ -257,6 +259,30 @@ func main() {
 	mux := http.NewServeMux()
 	go registerHandlers(conf.EnableProfiling, 10254, kong, mux)
 
+	if "off" != os.Getenv("KONG_ANONYMOUS_REPORTS") {
+		hostname, err := os.Hostname()
+		if err != nil {
+			glog.Error(err)
+		}
+		uuid, err := uuid.GenerateUUID()
+		if err != nil {
+			glog.Error(err)
+		}
+		k8sVersion, err := kubeClient.Discovery().ServerVersion()
+		if err != nil {
+			glog.Error(err)
+		}
+		info := utils.Info{
+			KongVersion:       root["version"].(string),
+			KICVersion:        RELEASE,
+			KubernetesVersion: fmt.Sprintf("%s", k8sVersion),
+			Hostname:          hostname,
+			ID:                uuid,
+			KongDB:            kongDB,
+		}
+		reporter := utils.NewReporter(info)
+		go reporter.Run(stopCh)
+	}
 	kong.Start()
 }
 

@@ -94,3 +94,9 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 func ExtractConfigurationName(anns map[string]string) string {
 	return anns[configurationAnnotationKey]
 }
+
+// HasServiceUpstreamAnnotation returns true if the annotation
+// ingress.kubernetes.io/service-upstream is set to "true" in anns.
+func HasServiceUpstreamAnnotation(anns map[string]string) bool {
+	return anns["ingress.kubernetes.io/service-upstream"] == "true"
+}

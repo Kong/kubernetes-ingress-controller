@@ -55,6 +55,7 @@ type Kong struct {
 	CACert        string
 
 	InMemory      bool
+	Database      string
 	HasTagSupport bool
 	Version       semver.Version
 

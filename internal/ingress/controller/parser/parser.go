@@ -778,6 +778,13 @@ func getEndpoints(
 			Port:    fmt.Sprintf("%v", targetPort),
 		})
 	}
+	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {
+		return append(upsServers, utils.Endpoint{
+			Address: s.Name + "." + s.Namespace + ".svc",
+			Port:    fmt.Sprintf("%v", port.Port),
+		})
+
+	}
 
 	glog.V(3).Infof("getting endpoints for service %v/%v and port %v", s.Namespace, s.Name, port.String())
 	ep, err := getEndpoints(s.Namespace, s.Name)

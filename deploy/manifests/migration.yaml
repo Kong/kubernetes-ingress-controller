@@ -17,6 +17,8 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
+        - name: KONG_PG_SSL
+          value: "true"
         command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: kong-migrations
@@ -28,5 +30,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
+        - name: KONG_PG_SSL
+          value: "true"
         command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
       restartPolicy: OnFailure

@@ -11,6 +11,10 @@ spec:
     port: 8001
     targetPort: 8001
     protocol: TCP
+  - name: kong-admin-ssl
+    port: 8444
+    targetPort: 8444
+    protocol: TCP
   selector:
     app: ingress-kong
 

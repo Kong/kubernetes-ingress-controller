@@ -646,6 +646,41 @@ func TestGetEndpoints(t *testing.T) {
 			},
 		},
 		{
+			"a service with ingress.kubernetes.io/service-upstream annotation should return one endpoint",
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			&corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(2080),
+			},
+			corev1.ProtocolTCP,
+			func(string, string) (*corev1.Endpoints, error) {
+				return &corev1.Endpoints{}, nil
+			},
+			[]utils.Endpoint{
+				{
+					Address: "foo.bar.svc",
+					Port:    "2080",
+				},
+			},
+		},
+		{
 			"should return no endpoints when there is an error searching for endpoints",
 			&corev1.Service{
 				Spec: corev1.ServiceSpec{

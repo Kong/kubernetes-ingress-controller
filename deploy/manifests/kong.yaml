@@ -34,6 +34,8 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
+        - name: KONG_PG_SSL
+          value: "true"
       containers:
       - name: kong-proxy
         image: kong:1.2
@@ -42,6 +44,8 @@ spec:
           value: kong
         - name: KONG_PG_HOST
           value: postgres
+        - name: KONG_PG_SSL
+          value: "true"
         - name: KONG_PROXY_ACCESS_LOG
           value: "/dev/stdout"
         - name: KONG_PROXY_ERROR_LOG

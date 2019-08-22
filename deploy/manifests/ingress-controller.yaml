@@ -62,6 +62,8 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
+        - name: KONG_PG_SSL
+          value: "true"
       containers:
       - name: admin-api
         image: kong:1.2
@@ -70,6 +72,8 @@ spec:
           value: kong
         - name: KONG_PG_HOST
           value: postgres
+        - name: KONG_PG_SSL
+          value: "true"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
@@ -108,6 +112,9 @@ spec:
         - --admin-tls-skip-verify
         # Service from were we extract the IP address/es to use in Ingress status
         - --publish-service=kong/kong-proxy
+        # If there two ingress controllers in K8S cluster, kong should look at only its own namespace.
+        # Below flag will restrict it from updating clster ip for other services.
+        #- --update-status=false
         env:
         - name: POD_NAME
           valueFrom:

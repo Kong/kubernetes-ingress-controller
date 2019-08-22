@@ -33,7 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/pkg/errors"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	clientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -89,6 +89,8 @@ type Configuration struct {
 	EnableProfiling bool
 
 	SyncRateLimit float32
+
+	UseNetworkingV1beta1 bool
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -183,9 +185,10 @@ func NewKongController(config *Configuration,
 			IngressLister:          n.store,
 			ElectionID:             electionID,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
+			UseNetworkingV1beta1:   config.UseNetworkingV1beta1,
 			OnStartedLeading: func() {
 				// force a sync
-				n.syncQueue.Enqueue(&extensions.Ingress{})
+				n.syncQueue.Enqueue(&networking.Ingress{})
 			},
 		})
 		electionConfig.Callbacks = n.syncStatus.Callbacks()
@@ -243,7 +246,7 @@ func (n *KongController) Start() {
 
 	go n.syncQueue.Run(time.Second, n.stopCh)
 	// force initial sync
-	n.syncQueue.Enqueue(&extensions.Ingress{})
+	n.syncQueue.Enqueue(&networking.Ingress{})
 
 	for {
 		select {

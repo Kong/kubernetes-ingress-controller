@@ -9,7 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -17,23 +17,23 @@ import (
 func TestParseIngressRules(t *testing.T) {
 	assert := assert.New(t)
 	p := Parser{}
-	ingressList := []*extensions.Ingress{
+	ingressList := []*networking.Ingress{
 		// 0
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
 			},
-			Spec: extensions.IngressSpec{
-				Rules: []extensions.IngressRule{
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: extensions.IngressRuleValue{
-							HTTP: &extensions.HTTPIngressRuleValue{
-								Paths: []extensions.HTTPIngressPath{
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
 									{
 										Path: "/",
-										Backend: extensions.IngressBackend{
+										Backend: networking.IngressBackend{
 											ServiceName: "foo-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -51,8 +51,8 @@ func TestParseIngressRules(t *testing.T) {
 				Name:      "ing-with-tls",
 				Namespace: "bar-namespace",
 			},
-			Spec: extensions.IngressSpec{
-				TLS: []extensions.IngressTLS{
+			Spec: networking.IngressSpec{
+				TLS: []networking.IngressTLS{
 					{
 						Hosts: []string{
 							"1.example.com",
@@ -68,15 +68,15 @@ func TestParseIngressRules(t *testing.T) {
 						SecretName: "sooper-secret2",
 					},
 				},
-				Rules: []extensions.IngressRule{
+				Rules: []networking.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: extensions.IngressRuleValue{
-							HTTP: &extensions.HTTPIngressRuleValue{
-								Paths: []extensions.HTTPIngressPath{
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
 									{
 										Path: "/",
-										Backend: extensions.IngressBackend{
+										Backend: networking.IngressBackend{
 											ServiceName: "foo-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -94,8 +94,8 @@ func TestParseIngressRules(t *testing.T) {
 				Name:      "ing-with-default-backend",
 				Namespace: "bar-namespace",
 			},
-			Spec: extensions.IngressSpec{
-				Backend: &extensions.IngressBackend{
+			Spec: networking.IngressSpec{
+				Backend: &networking.IngressBackend{
 					ServiceName: "default-svc",
 					ServicePort: intstr.FromInt(80),
 				},
@@ -107,16 +107,16 @@ func TestParseIngressRules(t *testing.T) {
 				Name:      "foo",
 				Namespace: "foo-namespace",
 			},
-			Spec: extensions.IngressSpec{
-				Rules: []extensions.IngressRule{
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: extensions.IngressRuleValue{
-							HTTP: &extensions.HTTPIngressRuleValue{
-								Paths: []extensions.HTTPIngressPath{
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
 									{
 										Path: "/.well-known/acme-challenge/yolo",
-										Backend: extensions.IngressBackend{
+										Backend: networking.IngressBackend{
 											ServiceName: "cert-manager-solver-pod",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -134,15 +134,15 @@ func TestParseIngressRules(t *testing.T) {
 				Name:      "foo",
 				Namespace: "foo-namespace",
 			},
-			Spec: extensions.IngressSpec{
-				Rules: []extensions.IngressRule{
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: extensions.IngressRuleValue{
-							HTTP: &extensions.HTTPIngressRuleValue{
-								Paths: []extensions.HTTPIngressPath{
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
 									{
-										Backend: extensions.IngressBackend{
+										Backend: networking.IngressBackend{
 											ServiceName: "foo-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -156,7 +156,7 @@ func TestParseIngressRules(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{})
+		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{})
 		assert.Equal(&parsedIngressRules{
 			ServiceNameToServices: make(map[string]Service),
 			SecretNameToSNIs:      make(map[string][]string),
@@ -164,7 +164,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Nil(err)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{
+		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
 			ingressList[0],
 		})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -176,7 +176,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Nil(err)
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{
+		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
 			ingressList[0],
 			ingressList[2],
 		})
@@ -193,7 +193,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Nil(err)
 	})
 	t.Run("ingress rule with TLS", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{
+		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
 			ingressList[1],
 		})
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
@@ -203,7 +203,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Nil(err)
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{
+		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
 			ingressList[3],
 		})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -217,7 +217,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Nil(err)
 	})
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*extensions.Ingress{
+		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
 			ingressList[4],
 		})
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])

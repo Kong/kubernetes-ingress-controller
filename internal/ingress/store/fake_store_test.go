@@ -6,7 +6,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -53,7 +53,7 @@ func Test_keyFunc(t *testing.T) {
 		{
 			want: "default/foo",
 			args: args{
-				obj: extensions.Ingress{
+				obj: networking.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
 						Namespace: "default",
@@ -86,22 +86,22 @@ func TestFakeStoreEmpty(t *testing.T) {
 func TestFakeStoreIngress(t *testing.T) {
 	assert := assert.New(t)
 
-	ingresses := []*extensions.Ingress{
+	ingresses := []*networking.Ingress{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
 			},
-			Spec: extensions.IngressSpec{
-				Rules: []extensions.IngressRule{
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: extensions.IngressRuleValue{
-							HTTP: &extensions.HTTPIngressRuleValue{
-								Paths: []extensions.HTTPIngressPath{
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
 									{
 										Path: "/",
-										Backend: extensions.IngressBackend{
+										Backend: networking.IngressBackend{
 											ServiceName: "foo-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -121,16 +121,16 @@ func TestFakeStoreIngress(t *testing.T) {
 					"kubernetes.io/ingress.class": "not-kong",
 				},
 			},
-			Spec: extensions.IngressSpec{
-				Rules: []extensions.IngressRule{
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: extensions.IngressRuleValue{
-							HTTP: &extensions.HTTPIngressRuleValue{
-								Paths: []extensions.HTTPIngressPath{
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
 									{
 										Path: "/bar",
-										Backend: extensions.IngressBackend{
+										Backend: networking.IngressBackend{
 											ServiceName: "bar-svc",
 											ServicePort: intstr.FromInt(80),
 										},

@@ -17,7 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -27,7 +27,7 @@ import (
 type Route struct {
 	kong.Route
 	// Ingress object associated with this route
-	Ingress extensions.Ingress
+	Ingress networking.Ingress
 	Plugins []kong.Plugin
 }
 
@@ -35,7 +35,7 @@ type Route struct {
 // service and other k8s metadata.
 type Service struct {
 	kong.Service
-	Backend   extensions.IngressBackend
+	Backend   networking.IngressBackend
 	Namespace string
 	Routes    []Route
 	Plugins   []kong.Plugin
@@ -213,11 +213,11 @@ func (p *Parser) Build() (*KongState, error) {
 }
 
 func (p *Parser) parseIngressRules(
-	ingressList []*extensions.Ingress) (*parsedIngressRules, error) {
+	ingressList []*networking.Ingress) (*parsedIngressRules, error) {
 
 	// generate the following:
 	// Services and Routes
-	var allDefaultBackends []extensions.Ingress
+	var allDefaultBackends []networking.Ingress
 	secretNameToSNIs := make(map[string][]string)
 	serviceNameToServices := make(map[string]Service)
 
@@ -687,7 +687,7 @@ func (p *Parser) getKongIngressForService(namespace, serviceName string) (
 
 // getKongIngress checks if the Ingress contains an annotation for configuration
 // or if exists a KongIngress object with the same name than the Ingress
-func (p *Parser) getKongIngressFromIngress(ing *extensions.Ingress) (
+func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
 	*configurationv1.KongIngress, error) {
 	confName := annotations.ExtractConfigurationName(ing.Annotations)
 	if confName != "" {

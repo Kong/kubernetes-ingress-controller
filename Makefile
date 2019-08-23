@@ -1,7 +1,7 @@
 REGISTRY?=kong-docker-kubernetes-ingress-controller.bintray.io
 TAG?=0.5.0
 REPO_INFO=$(shell git config --get remote.origin.url)
-IMGNAME = kong-ingress-controller
+IMGNAME?=kong-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 
 ifndef COMMIT

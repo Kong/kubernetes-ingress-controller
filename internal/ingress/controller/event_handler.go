@@ -93,6 +93,7 @@ func (reh ResourceEventHandler) OnUpdate(old, cur interface{}) {
 	reh.UpdateCh.In() <- Event{
 		Type: UpdateEvent,
 		Obj:  cur,
+		Old:  old,
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -57,9 +58,14 @@ type Target struct {
 // Consumer holds a Kong consumer and it's plugins and credentials.
 type Consumer struct {
 	kong.Consumer
-	Plugins []kong.Plugin
-	// Credentials type(key-auth, basic-auth) to credential mapping
-	Credentials map[string][]map[string]interface{}
+	Plugins    []kong.Plugin
+	KeyAuths   []*kong.KeyAuth
+	HMACAuths  []*kong.HMACAuth
+	JWTAuths   []*kong.JWTAuth
+	BasicAuths []*kong.BasicAuth
+	ACLGroups  []*kong.ACLGroup
+
+	Oauth2Creds []*kong.Oauth2Credential
 
 	k8sKongConsumer configurationv1.KongConsumer
 }
@@ -94,19 +100,13 @@ type parsedIngressRules struct {
 	ServiceNameToServices map[string]Service
 }
 
-// set of valid authentication plugins for consumers
-var validCredentialTypes = sets.NewString(
-	// Kong CE and EE
-	"oauth2",
-	"jwt",
-	"basic-auth",
+var supportedCreds = sets.NewString(
 	"acl",
-	"key-auth",
+	"basic-auth",
 	"hmac-auth",
-	"ldap-authentication",
-	// Kong EE only
-	"openid-connect",
-	"oauth2-introspection",
+	"jwt",
+	"key-auth",
+	"oauth2",
 )
 
 // New returns a new parser backed with store.
@@ -131,54 +131,7 @@ func (p *Parser) Build() (*KongState, error) {
 		state.Services = append(state.Services, service)
 	}
 
-	consumerIndex := make(map[string]Consumer)
-	for _, consumer := range p.store.ListKongConsumers() {
-		var c Consumer
-		if consumer.Username == "" && consumer.CustomID == "" {
-			continue
-		}
-		if consumer.Username != "" {
-			c.Username = kong.String(consumer.Username)
-		}
-		if consumer.CustomID != "" {
-			c.CustomID = kong.String(consumer.CustomID)
-		}
-		c.k8sKongConsumer = *consumer
-		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
-	}
-
-	for _, credential := range p.store.ListKongCredentials() {
-		consumer, ok := consumerIndex[credential.Namespace+"/"+
-			credential.ConsumerRef]
-		if !ok {
-			continue
-		}
-		if consumer.Credentials == nil {
-			consumer.Credentials = make(map[string][]map[string]interface{})
-		}
-		if credential.Type == "" {
-			continue
-		}
-		if !validCredentialTypes.Has(credential.Type) {
-			glog.Errorf("the credential does contains a valid type: %v",
-				credential.Type)
-			continue
-		}
-		if credential.Config == nil {
-			credential.Config = make(configurationv1.Configuration)
-		}
-		credential.Config["id"] = string(credential.UID)
-		consumer.Credentials[credential.Type] = append(
-			consumer.Credentials[credential.Type], credential.Config)
-		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = consumer
-	}
-
-	for _, c := range consumerIndex {
-		state.Consumers = append(state.Consumers, c)
-	}
-
 	// generate Upstreams and Targets from service defs
-	// TODO add support for DNS based service records
 	state.Upstreams, err = p.getUpstreams(parsedInfo.ServiceNameToServices)
 	if err != nil {
 		return nil, errors.Wrap(err, "building upstreams and targets")
@@ -188,6 +141,12 @@ func (p *Parser) Build() (*KongState, error) {
 	err = p.fillOverrides(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "overriding KongIngress values")
+	}
+
+	// generate consumers and credentials
+	err = p.fillConsumersAndCredentials(&state)
+	if err != nil {
+		return nil, errors.Wrap(err, "building consumers and credentials")
 	}
 
 	// TODO add processors for annotations on Ingress object
@@ -210,6 +169,131 @@ func (p *Parser) Build() (*KongState, error) {
 	// TODO add support for consumers and credentials
 
 	return &state, nil
+}
+
+func decodeCredential(credentialToDecode configurationv1.KongCredential,
+	credStructPointer interface{}) error {
+	decoder, err := mapstructure.NewDecoder(
+		&mapstructure.DecoderConfig{TagName: "json",
+			Result: credStructPointer,
+		})
+	if err != nil {
+		return errors.Wrap(err, "failed to create a decoder")
+	}
+	err = decoder.Decode(credentialToDecode.Config)
+	if err != nil {
+		return errors.Wrapf(err, "failed to decode credential '%v/%v': %v",
+			credentialToDecode.Namespace, credentialToDecode.Name, err)
+	}
+	return nil
+}
+
+func (p *Parser) fillConsumersAndCredentials(state *KongState) error {
+	consumerIndex := make(map[string]Consumer)
+
+	// build consumer index
+	for _, consumer := range p.store.ListKongConsumers() {
+		var c Consumer
+		if consumer.Username == "" && consumer.CustomID == "" {
+			continue
+		}
+		if consumer.Username != "" {
+			c.Username = kong.String(consumer.Username)
+		}
+		if consumer.CustomID != "" {
+			c.CustomID = kong.String(consumer.CustomID)
+		}
+		c.k8sKongConsumer = *consumer
+		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
+	}
+
+	// attach credentials
+	for _, credential := range p.store.ListKongCredentials() {
+		consumer, ok := consumerIndex[credential.Namespace+"/"+
+			credential.ConsumerRef]
+		if !ok {
+			continue
+		}
+		if credential.Type == "" {
+			continue
+		}
+		if !supportedCreds.Has(credential.Type) {
+			glog.Errorf("invalid credType '%v' in KongCredential '%v/%v'",
+				credential.Type, credential.Namespace, credential.Name)
+			continue
+		}
+		if credential.Config == nil {
+			glog.Errorf("empty config in '%v' in KongCredential '%v/%v'",
+				credential.Type, credential.Namespace, credential.Name)
+			continue
+		}
+		switch credential.Type {
+		case "key-auth":
+			var cred kong.KeyAuth
+			err := decodeCredential(*credential, &cred)
+			if err != nil {
+				glog.Error("failed to process credential", err)
+				continue
+			}
+			consumer.KeyAuths = append(consumer.KeyAuths, &cred)
+		case "basic-auth":
+			var cred kong.BasicAuth
+			err := decodeCredential(*credential, &cred)
+			if err != nil {
+				glog.Error("failed to process credential", err)
+				continue
+			}
+			consumer.BasicAuths = append(consumer.BasicAuths, &cred)
+		case "hmac-auth":
+			var cred kong.HMACAuth
+			err := decodeCredential(*credential, &cred)
+			if err != nil {
+				glog.Error("failed to process credential", err)
+				continue
+			}
+			consumer.HMACAuths = append(consumer.HMACAuths, &cred)
+		case "oauth2":
+			var cred kong.Oauth2Credential
+			err := decodeCredential(*credential, &cred)
+			if err != nil {
+				glog.Error("failed to process credential", err)
+				continue
+			}
+			consumer.Oauth2Creds = append(consumer.Oauth2Creds, &cred)
+		case "jwt":
+			var cred kong.JWTAuth
+			err := decodeCredential(*credential, &cred)
+			if err != nil {
+				glog.Error("failed to process credential", err)
+				continue
+			}
+			// This is treated specially because only this
+			// field might be omitted by user under the expectation
+			// that Kong will insert the default.
+			// If we don't set it, decK will detect a diff and PUT this
+			// credential everytime it performs a sync operation, which
+			// leads to unnecessary cache invalidations in Kong.
+			if cred.Algorithm == nil || *cred.Algorithm == "" {
+				cred.Algorithm = kong.String("HS256")
+			}
+			consumer.JWTAuths = append(consumer.JWTAuths, &cred)
+		case "acl":
+			var cred kong.ACLGroup
+			err := decodeCredential(*credential, &cred)
+			if err != nil {
+				glog.Error("failed to process credential", err)
+				continue
+			}
+			consumer.ACLGroups = append(consumer.ACLGroups, &cred)
+		}
+		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = consumer
+	}
+
+	// populate the consumer in the state
+	for _, c := range consumerIndex {
+		state.Consumers = append(state.Consumers, c)
+	}
+	return nil
 }
 
 func (p *Parser) parseIngressRules(

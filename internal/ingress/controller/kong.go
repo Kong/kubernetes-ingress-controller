@@ -146,7 +146,7 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 			SelectorTags: n.getIngressControllerTags(),
 		})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "loading configuration from kong")
 	}
 	targetState, err := n.toDeckKongState(state)
 	if err != nil {
@@ -250,7 +250,7 @@ func (n *KongController) toDeckKongState(
 	}
 
 	content.Info.SelectorTags = n.getIngressControllerTags()
-	targetState, _, err := file.GetStateFromContent(&content)
+	targetState, _, _, err := file.GetStateFromContent(&content)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating a valid state for Kong")
 	}

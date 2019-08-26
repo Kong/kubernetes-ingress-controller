@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	cloud.google.com/go v0.40.0 // indirect
-	github.com/blang/semver v3.5.1+incompatible
+	github.com/blang/semver v0.0.0-20190414102917-ba2c2ddd8906
 	github.com/eapache/channels v1.1.0
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
@@ -15,8 +15,8 @@ require (
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/hashicorp/go-memdb v1.0.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hbagdi/deck v0.4.0
-	github.com/hbagdi/go-kong v0.5.0
+	github.com/hbagdi/deck v0.5.1
+	github.com/hbagdi/go-kong v0.9.0
 	github.com/imdario/mergo v0.3.7
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
@@ -24,7 +24,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.4
 	github.com/spf13/pflag v1.0.3
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/tidwall/gjson v1.2.1
 	github.com/tidwall/match v1.0.1 // indirect
 	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect

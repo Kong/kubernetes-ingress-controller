@@ -1,8 +1,6 @@
 package dbless
 
 import (
-	"encoding/json"
-
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 )
@@ -49,33 +47,13 @@ type Certificate struct {
 // Consumer is a Kong consumer, and plugins and credentials associated with it.
 type Consumer struct {
 	kong.Consumer
-	Plugins     []kong.Plugin `json:"plugins"`
-	Credentials map[string][]map[string]interface{}
-}
-
-// MarshalJSON is a custom JSON marshaller to marshal credentials correctly
-// into Kong's declarative native configuration format.
-func (c Consumer) MarshalJSON() ([]byte, error) {
-	res := map[string]interface{}{}
-
-	consumerJSON, err := json.Marshal(&c.Consumer)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(consumerJSON, &res)
-	if err != nil {
-		return nil, err
-	}
-
-	res["plugins"] = c.Plugins
-	for credType, creds := range c.Credentials {
-		if DAOName, ok := credNameToDAOName[credType]; ok {
-			credType = DAOName
-		}
-		res[credType] = creds
-	}
-	return json.Marshal(&res)
+	Plugins     []kong.Plugin            `json:"plugins"`
+	KeyAuths    []*kong.KeyAuth          `json:"keyauth_credentials,omitempty"`
+	HMACAuths   []*kong.HMACAuth         `json:"hmacauth_credentials,omitempty"`
+	JWTAuths    []*kong.JWTAuth          `json:"jwt_secrets,omitempty"`
+	BasicAuths  []*kong.BasicAuth        `json:"basicauth_credentials,omitempty"`
+	ACLGroups   []*kong.ACLGroup         `json:"acls,omitempty"`
+	Oauth2Creds []*kong.Oauth2Credential `json:"oauth2_credentials,omitempty"`
 }
 
 // KongDeclarativeConfig holds Kong's configuration and can be marshalled
@@ -140,8 +118,12 @@ func KongNativeState(k8sState *parser.KongState) *KongDeclarativeConfig {
 
 	for _, c := range k8sState.Consumers {
 		consumer := Consumer{Consumer: c.Consumer,
-			Plugins:     c.Plugins,
-			Credentials: c.Credentials,
+			Plugins:    c.Plugins,
+			KeyAuths:   c.KeyAuths,
+			HMACAuths:  c.HMACAuths,
+			ACLGroups:  c.ACLGroups,
+			BasicAuths: c.BasicAuths,
+			JWTAuths:   c.JWTAuths,
 		}
 		result.Consumers = append(result.Consumers, consumer)
 	}

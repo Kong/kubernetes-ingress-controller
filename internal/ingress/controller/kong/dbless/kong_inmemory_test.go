@@ -464,11 +464,9 @@ func TestKongNativeState(t *testing.T) {
 							Consumer: kong.Consumer{
 								Username: kong.String("foo"),
 							},
-							Credentials: map[string][]map[string]interface{}{
-								"key-auth": {
-									{
-										"apikey": "secret-api-key",
-									},
+							KeyAuths: []*kong.KeyAuth{
+								{
+									Key: kong.String("secret-api-key"),
 								},
 							},
 						},
@@ -487,11 +485,9 @@ func TestKongNativeState(t *testing.T) {
 						Consumer: kong.Consumer{
 							Username: kong.String("foo"),
 						},
-						Credentials: map[string][]map[string]interface{}{
-							"key-auth": {
-								{
-									"apikey": "secret-api-key",
-								},
+						KeyAuths: []*kong.KeyAuth{
+							{
+								Key: kong.String("secret-api-key"),
 							},
 						},
 					},

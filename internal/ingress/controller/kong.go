@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"reflect"
 
@@ -34,7 +33,6 @@ import (
 	"github.com/hbagdi/deck/state"
 	"github.com/hbagdi/deck/utils"
 	"github.com/hbagdi/go-kong/kong"
-	"github.com/hbagdi/go-kong/kong/custom"
 	"github.com/imdario/mergo"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/kong/dbless"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
@@ -146,7 +144,7 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 			SelectorTags: n.getIngressControllerTags(),
 		})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "loading configuration from kong")
 	}
 	targetState, err := n.toDeckKongState(state)
 	if err != nil {
@@ -160,10 +158,7 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 	if errs != nil {
 		return utils.ErrArray{Errors: errs}
 	}
-
-	// credentials are not synced using decK
-	err = n.syncCredentials(state)
-	return err
+	return nil
 }
 
 // getIngressControllerTags returns a tag to use if the current
@@ -246,11 +241,17 @@ func (n *KongController) toDeckKongState(
 		for _, p := range c.Plugins {
 			consumer.Plugins = append(consumer.Plugins, &file.Plugin{Plugin: p})
 		}
+		consumer.KeyAuths = c.KeyAuths
+		consumer.HMACAuths = c.HMACAuths
+		consumer.BasicAuths = c.BasicAuths
+		consumer.JWTAuths = c.JWTAuths
+		consumer.ACLGroups = c.ACLGroups
+		consumer.Oauth2Creds = c.Oauth2Creds
 		content.Consumers = append(content.Consumers, consumer)
 	}
 
 	content.Info.SelectorTags = n.getIngressControllerTags()
-	targetState, _, err := file.GetStateFromContent(&content)
+	targetState, _, _, err := file.GetStateFromContent(&content)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating a valid state for Kong")
 	}
@@ -302,91 +303,6 @@ func (n *KongController) fillPlugin(plugin *file.Plugin) error {
 			plugin.Protocols = kong.StringSlice("http", "https")
 		}
 	}
-	return nil
-}
-
-// syncCredentials synchronizes the state between KongCredential
-// (Kubernetes CRD) and Kong credentials.
-func (n *KongController) syncCredentials(state *parser.KongState) error {
-	client := n.cfg.Kong.Client
-
-	// List all consumers in Kong to obtain an ID
-	usernameToConsumer := make(map[string]*kong.Consumer)
-	customIDToConsumer := make(map[string]*kong.Consumer)
-	opt := new(kong.ListOpt)
-	if n.cfg.Kong.HasTagSupport {
-		opt.Tags = kong.StringSlice(n.getIngressControllerTags()...)
-	}
-	var kongConsumers []*kong.Consumer
-	for {
-		page, nextOpt, err := client.Consumers.List(nil, opt)
-		if err != nil {
-			return err
-		}
-		kongConsumers = append(kongConsumers, page...)
-		if nextOpt == nil {
-			break
-		}
-		opt = nextOpt
-	}
-
-	// create simple indexes
-	for i := range kongConsumers {
-		username := kongConsumers[i].Username
-		customID := kongConsumers[i].CustomID
-
-		if !utils.Empty(username) {
-			usernameToConsumer[*username] = kongConsumers[i]
-		}
-		if !utils.Empty(customID) {
-			customIDToConsumer[*customID] = kongConsumers[i]
-		}
-	}
-
-	for _, consumer := range state.Consumers {
-		for credType, creds := range consumer.Credentials {
-			for _, credData := range creds {
-				// lookup consumerID
-				var consumerID string
-				if !utils.Empty(consumer.Username) {
-					if c, ok := usernameToConsumer[*consumer.Username]; ok {
-						consumerID = *c.ID
-					}
-				}
-				if !utils.Empty(consumer.CustomID) {
-					if c, ok := customIDToConsumer[*consumer.CustomID]; ok {
-						consumerID = *c.ID
-					}
-				}
-				if consumerID == "" {
-					continue
-				}
-
-				// lookup credential in Kong
-				credInKong := custom.NewEntityObject(custom.Type(credType))
-				credentialID := fmt.Sprintf("%v", credData["id"])
-				credInKong.AddRelation("consumer_id", consumerID)
-				credInKong.SetObject(map[string]interface{}{"id": credentialID})
-
-				_, err := client.CustomEntities.Get(nil, credInKong)
-				if !kong.IsNotFoundErr(err) || err == nil {
-					return err
-				}
-
-				// if not found, then create it
-				credInKong.SetObject(map[string]interface{}(credData))
-				_, err = client.CustomEntities.Create(nil, credInKong)
-				if err != nil {
-					glog.Errorf("Unexpected error creating credential: %v", err)
-					return err
-				}
-				// TODO: allow changes in credentials?
-				// TODO sync this object using PUT (whenever the ResourceVersion is out of date)
-				// An alternate solution would be to handle UPDATE events separately
-			}
-		}
-	}
-
 	return nil
 }
 

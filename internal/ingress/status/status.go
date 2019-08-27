@@ -29,7 +29,7 @@ import (
 
 	pool "gopkg.in/go-playground/pool.v3"
 	apiv1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -54,7 +54,7 @@ type Sync interface {
 
 type ingressLister interface {
 	// ListIngresses returns the list of Ingresses
-	ListIngresses() []*extensions.Ingress
+	ListIngresses() []*networking.Ingress
 }
 
 // Config ...
@@ -72,6 +72,8 @@ type Config struct {
 	UpdateStatusOnShutdown bool
 
 	IngressLister ingressLister
+
+	UseNetworkingV1beta1 bool
 }
 
 // statusSync keeps the status IP in each Ingress rule updated executing a periodic check
@@ -305,14 +307,14 @@ func (s *statusSync) updateStatus(newIngressPoint []apiv1.LoadBalancerIngress) {
 	batch := p.Batch()
 
 	for _, ing := range ings {
-		batch.Queue(runUpdate(ing, newIngressPoint, s.Client))
+		batch.Queue(s.runUpdate(ing, newIngressPoint, s.Client))
 	}
 
 	batch.QueueComplete()
 	batch.WaitAll()
 }
 
-func runUpdate(ing *extensions.Ingress, status []apiv1.LoadBalancerIngress,
+func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalancerIngress,
 	client clientset.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {
@@ -329,20 +331,35 @@ func runUpdate(ing *extensions.Ingress, status []apiv1.LoadBalancerIngress,
 			return true, nil
 		}
 
-		ingClient := client.ExtensionsV1beta1().Ingresses(ing.Namespace)
+		if s.UseNetworkingV1beta1 {
+			ingClient := client.NetworkingV1beta1().Ingresses(ing.Namespace)
 
-		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching Ingress %v/%v", ing.Namespace, ing.Name))
+			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching Ingress %v/%v", ing.Namespace, ing.Name))
+			}
+
+			glog.Infof("updating Ingress %v/%v status to %v", currIng.Namespace, currIng.Name, status)
+			currIng.Status.LoadBalancer.Ingress = status
+			_, err = ingClient.UpdateStatus(currIng)
+			if err != nil {
+				glog.Warningf("error updating ingress rule: %v", err)
+			}
+		} else {
+			ingClient := client.ExtensionsV1beta1().Ingresses(ing.Namespace)
+
+			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching Ingress %v/%v", ing.Namespace, ing.Name))
+			}
+
+			glog.Infof("updating Ingress %v/%v status to %v", currIng.Namespace, currIng.Name, status)
+			currIng.Status.LoadBalancer.Ingress = status
+			_, err = ingClient.UpdateStatus(currIng)
+			if err != nil {
+				glog.Warningf("error updating ingress rule: %v", err)
+			}
 		}
-
-		glog.Infof("updating Ingress %v/%v status to %v", currIng.Namespace, currIng.Name, status)
-		currIng.Status.LoadBalancer.Ingress = status
-		_, err = ingClient.UpdateStatus(currIng)
-		if err != nil {
-			glog.Warningf("error updating ingress rule: %v", err)
-		}
-
 		return true, nil
 	}
 }

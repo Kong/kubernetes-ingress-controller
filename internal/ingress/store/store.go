@@ -19,11 +19,14 @@ package store
 import (
 	"fmt"
 
+	"github.com/golang/glog"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
 )
@@ -38,7 +41,7 @@ type Storer interface {
 	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
 	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
 
-	ListIngresses() []*extensions.Ingress
+	ListIngresses() []*networking.Ingress
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
 	ListKongCredentials() []*configurationv1.KongCredential
@@ -104,15 +107,14 @@ func (s Store) GetService(namespace, name string) (*apiv1.Service, error) {
 }
 
 // ListIngresses returns the list of Ingresses
-func (s Store) ListIngresses() []*extensions.Ingress {
+func (s Store) ListIngresses() []*networking.Ingress {
 	// filter ingress rules
-	var ingresses []*extensions.Ingress
+	var ingresses []*networking.Ingress
 	for _, item := range s.stores.Ingress.List() {
-		ing := item.(*extensions.Ingress)
+		ing := networkingIngressV1Beta1(item)
 		if !s.isValidIngresClass(&ing.ObjectMeta) {
 			continue
 		}
-
 		ingresses = append(ingresses, ing)
 	}
 
@@ -223,4 +225,33 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		return nil, err
 	}
 	return plugins, nil
+}
+
+var ingressConversionScheme *runtime.Scheme
+
+func init() {
+	ingressConversionScheme = runtime.NewScheme()
+	extensions.AddToScheme(ingressConversionScheme)
+	networking.AddToScheme(ingressConversionScheme)
+}
+
+func networkingIngressV1Beta1(obj interface{}) *networking.Ingress {
+	networkingIngress, okNetworking := obj.(*networking.Ingress)
+	if okNetworking {
+		return networkingIngress
+	}
+	extensionsIngress, okExtension := obj.(*extensions.Ingress)
+	if !okExtension {
+		glog.Errorf("ingress resource can not be casted to extensions.Ingress" +
+			" or networking.Ingress")
+		return nil
+	}
+	networkingIngress = &networking.Ingress{}
+	err := ingressConversionScheme.Convert(extensionsIngress, networkingIngress, nil)
+	if err != nil {
+		glog.Error("failed to convert extensions.Ingress "+
+			"to networking.Ingress", err)
+		return nil
+	}
+	return networkingIngress
 }

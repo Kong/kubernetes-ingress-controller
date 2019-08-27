@@ -43,9 +43,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	discovery "k8s.io/apimachinery/pkg/version"
+	k8sVersion "k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -171,6 +173,13 @@ func main() {
 	}
 	conf.Kong.Client = kongClient
 
+	err = discovery.ServerSupportsVersion(kubeClient.Discovery(), schema.GroupVersion{
+		Group:   "networking.k8s.io",
+		Version: "v1beta1",
+	})
+	if err == nil {
+		conf.UseNetworkingV1beta1 = true
+	}
 	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient,
 		conf.ResyncPeriod,
@@ -192,7 +201,13 @@ func main() {
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
 
-	ingInformer := coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
+	var ingInformer cache.SharedIndexInformer
+	if conf.UseNetworkingV1beta1 {
+		ingInformer = coreInformerFactory.Networking().V1beta1().Ingresses().Informer()
+	} else {
+		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
+	}
+
 	ingInformer.AddEventHandler(reh)
 	cacheStores.Ingress = ingInformer.GetStore()
 	informers = append(informers, ingInformer)
@@ -333,7 +348,7 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*rest.Confi
 		return nil, nil, err
 	}
 
-	var v *discovery.Info
+	var v *k8sVersion.Info
 
 	// In some environments is possible the client cannot connect the API server in the first request
 	// https://github.com/kubernetes/ingress-nginx/issues/1968

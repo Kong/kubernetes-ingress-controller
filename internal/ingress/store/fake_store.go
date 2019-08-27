@@ -6,7 +6,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	apiv1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -19,7 +19,7 @@ func keyFunc(obj interface{}) (string, error) {
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	Ingresses       []*extensions.Ingress
+	Ingresses       []*networking.Ingress
 	Services        []*apiv1.Service
 	Endpoints       []*apiv1.Endpoints
 	Secrets         []*apiv1.Secret

@@ -155,9 +155,8 @@ func NewKongController(config *Configuration,
 		stopCh:   make(chan struct{}),
 		updateCh: updateCh,
 
-		stopLock: &sync.Mutex{},
-		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client,
-			config.Kong.URL),
+		stopLock:          &sync.Mutex{},
+		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client),
 	}
 
 	n.store = store

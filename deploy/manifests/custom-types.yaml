@@ -150,6 +150,12 @@ spec:
               type: array
               items:
                 type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
             regex_priority:
               type: integer
             strip_path:

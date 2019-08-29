@@ -46,6 +46,12 @@ func (h *headers) Set(value string) error {
 	return nil
 }
 
+var (
+	admissionWebhookListen   string
+	admissionWebhookCertPath string
+	admissionWebhookKeyPath  string
+)
+
 func parseFlags() (bool, *controller.Configuration, error) {
 	var (
 		flags = pflag.NewFlagSet("", pflag.ExitOnError)
@@ -108,6 +114,16 @@ The controller will set the endpoint records on the ingress using this address.`
 
 	flag.Var(&kongHeaders, "admin-header",
 		"add a header (key:value) to every Admin API call, flag can be used multiple times")
+
+	flag.StringVar(&admissionWebhookListen, "admission-webhook-listen", ":8080",
+		"The address to start admission controller on (ip:port)."+
+			" Setting it to `off` disables the admission controller.")
+	flag.StringVar(&admissionWebhookCertPath, "admission-webhook-cert-file",
+		"/admission-webhook/tls.crt",
+		"Path to the PEM-encoded certificate file for TLS handshake")
+	flag.StringVar(&admissionWebhookKeyPath, "admission-webhook-key-file",
+		"/admission-webhook/tls.key",
+		"Path to the PEM-encoded private key file for TLS handshake")
 
 	flag.Set("logtostderr", "true")
 

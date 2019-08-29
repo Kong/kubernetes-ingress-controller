@@ -510,7 +510,9 @@ func overrideRoute(route *Route,
 	if len(r.Methods) != 0 {
 		route.Methods = cloneStringPointerSlice(r.Methods...)
 	}
-
+	if len(r.Headers) != 0 {
+		route.Headers = r.Headers
+	}
 	if len(r.Protocols) != 0 {
 		route.Protocols = cloneStringPointerSlice(r.Protocols...)
 	}

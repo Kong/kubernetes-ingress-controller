@@ -734,6 +734,30 @@ func TestOverrideRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts:     kong.StringSlice("foo.com"),
+					Protocols: kong.StringSlice("http", "https"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
+					Headers: map[string][]string{
+						"foo-header": {"bar-value"},
+					},
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts:     kong.StringSlice("foo.com"),
+					Protocols: kong.StringSlice("http", "https"),
+					Headers: map[string][]string{
+						"foo-header": {"bar-value"},
+					},
+				},
+			},
+		},
 	}
 
 	for _, testcase := range testTable {

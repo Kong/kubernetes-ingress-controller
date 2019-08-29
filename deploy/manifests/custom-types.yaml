@@ -142,8 +142,6 @@ spec:
   validation:
     openAPIV3Schema:
       properties:
-        upstream:
-          type: object
         route:
           properties:
             methods:
@@ -197,6 +195,12 @@ spec:
         upstream:
           type: object
           properties:
+            algorithm:
+              type: string
+              enum:
+              - "round-robin"
+              - "consistent-hashing"
+              - "least-connections"
             hash_on:
               type: string
             hash_on_cookie:

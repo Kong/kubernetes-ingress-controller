@@ -11,7 +11,7 @@ export TAG=`git rev-parse --short HEAD`
 
 make container
 docker tag ${REPO}/${IMGNAME}:${TAG} ${REPO}/${IMGNAME}:latest
-docker login -u ${BINTRAY_USER} -p ${BINTRAY_KEY} ${REPO}
+echo "${BINTRAY_KEY}" | docker login -u "${BINTRAY_USER}" ${REPO} --password-stdin
 
 docker push ${REPO}/${IMGNAME}:${TAG}
 docker push ${REPO}/${IMGNAME}:latest

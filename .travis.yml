@@ -26,3 +26,6 @@ before_script:
 script:
 - make verify-codegen
 - make test-all
+
+after_success:
+- .ci/build-master.sh

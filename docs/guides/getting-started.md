@@ -220,7 +220,7 @@ Next, apply the `plugins.konghq.com` annotation on the Kubernetes Service
 that needs rate-limiting:
 
 ```bash
-kubectl patch svc http-svc \
+kubectl patch svc echo \
   -p '{"metadata":{"annotations":{"plugins.konghq.com": "rl-by-ip\n"}}}'
 ```
 

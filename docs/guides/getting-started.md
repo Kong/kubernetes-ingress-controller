@@ -136,7 +136,7 @@ ingress.extensions/demo-example-com created
 ```
 
 The above resource directs Kong to exectue the request-id plugin whenever
-a reqeust is proxied matching any rule defined in the resource.
+a request is proxied matching any rule defined in the resource.
 
 Send a request to Kong:
 
@@ -197,13 +197,13 @@ of the Ingress rules defined in `demo-example-com` resource.
 ## Using plugins on Services
 
 Kong Ingress allows plugins to be executed on a service level, meaning,
-Kong will execute a plugin whenever a reqeust is sent to a specific k8s service,
+Kong will execute a plugin whenever a request is sent to a specific k8s service,
 no matter which Ingress path it came from.
 
 Create a KongPlugin resource:
 
 ```bash
-$ echo "                                                                                                                                                                                                      <<<
+$ echo "
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:

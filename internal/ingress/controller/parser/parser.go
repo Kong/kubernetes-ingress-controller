@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"reflect"
 	"sort"
@@ -582,12 +583,21 @@ func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
 	cert := strings.TrimSpace(bytes.NewBuffer(certData).String())
 	key := strings.TrimSpace(bytes.NewBuffer(keyData).String())
 
+	_, err := tls.X509KeyPair([]byte(cert), []byte(key))
+	if err != nil {
+		return "", "", fmt.Errorf("parsing TLS key-pair in secret '%v/%v': %v",
+			secret.Namespace, secret.Name, err)
+	}
+
 	return cert, key, nil
 }
 
 func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 	error) {
-	var res []Certificate
+	snisAdded := make(map[string]bool)
+	// map of cert public key + private key to certificate
+	certs := make(map[string]Certificate)
+
 	for secretKey, SNIs := range secretsToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
 		secret, err := p.store.GetSecret(namespaceName[0], namespaceName[1])
@@ -601,14 +611,27 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 				secretKey, err)
 			continue
 		}
-		kongCert := Certificate{
-			Certificate: kong.Certificate{
-				Cert: kong.String(cert),
-				Key:  kong.String(key),
-				SNIs: kong.StringSlice(SNIs...),
-			},
+		kongCert, ok := certs[cert+key]
+		if !ok {
+			kongCert = Certificate{
+				Certificate: kong.Certificate{
+					Cert: kong.String(cert),
+					Key:  kong.String(key),
+				},
+			}
 		}
-		res = append(res, kongCert)
+
+		for _, sni := range SNIs {
+			if !snisAdded[sni] {
+				snisAdded[sni] = true
+				kongCert.SNIs = append(kongCert.SNIs, kong.String(sni))
+			}
+		}
+		certs[cert+key] = kongCert
+	}
+	var res []Certificate
+	for _, cert := range certs {
+		res = append(res, cert)
 	}
 	return res, nil
 }

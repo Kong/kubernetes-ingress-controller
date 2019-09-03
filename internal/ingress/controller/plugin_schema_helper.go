@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/json"
-	"net/http"
 
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/pkg/errors"
@@ -14,15 +13,13 @@ import (
 
 // PluginSchemaStore retrives a schema of a Plugin from Kong.
 type PluginSchemaStore struct {
-	baseURL string
 	client  *kong.Client
 	schemas map[string]map[string]interface{}
 }
 
 // NewPluginSchemaStore creates a PluginSchemaStore.
-func NewPluginSchemaStore(client *kong.Client, baseURL string) *PluginSchemaStore {
+func NewPluginSchemaStore(client *kong.Client) *PluginSchemaStore {
 	return &PluginSchemaStore{
-		baseURL: baseURL,
 		client:  client,
 		schemas: make(map[string]map[string]interface{}),
 	}
@@ -42,8 +39,8 @@ func (p *PluginSchemaStore) Schema(pluginName string) (map[string]interface{}, e
 	}
 
 	// not present in cache, lookup
-	req, err := http.NewRequest("GET",
-		p.baseURL+"/plugins/schema/"+pluginName, nil)
+	req, err := p.client.NewRequest("GET", "/plugins/schema/"+pluginName,
+		nil, nil)
 	if err != nil {
 		return nil, err
 	}

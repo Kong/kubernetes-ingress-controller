@@ -35,6 +35,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
@@ -297,6 +298,22 @@ func main() {
 		}
 		reporter := utils.NewReporter(info)
 		go reporter.Run(stopCh)
+	}
+	if admissionWebhookListen != "off" {
+		admissionServer := admission.Server{
+			Validator: admission.KongHTTPValidator{
+				Client: kongClient,
+			},
+		}
+		go func() {
+			glog.Error("error running the admission controller server:",
+				http.ListenAndServeTLS(
+					admissionWebhookListen,
+					admissionWebhookCertPath,
+					admissionWebhookKeyPath,
+					admissionServer,
+				))
+		}()
 	}
 	kong.Start()
 }

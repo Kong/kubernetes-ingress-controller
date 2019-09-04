@@ -148,14 +148,18 @@ spec:
   validation:
     openAPIV3Schema:
       properties:
-        upstream:
-          type: object
         route:
           properties:
             methods:
               type: array
               items:
                 type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
             regex_priority:
               type: integer
             strip_path:
@@ -197,6 +201,12 @@ spec:
         upstream:
           type: object
           properties:
+            algorithm:
+              type: string
+              enum:
+              - "round-robin"
+              - "consistent-hashing"
+              - "least-connections"
             hash_on:
               type: string
             hash_on_cookie:
@@ -302,6 +312,7 @@ rules:
   - list
   - watch
 - apiGroups:
+  - "networking.k8s.io"
   - "extensions"
   resources:
   - ingresses
@@ -317,6 +328,7 @@ rules:
   - create
   - patch
 - apiGroups:
+  - "networking.k8s.io"
   - "extensions"
   resources:
   - ingresses/status
@@ -436,6 +448,20 @@ data:
           return 200;
         }
     }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-validation-webhook
+  namespace: kong
+spec:
+  ports:
+  - name: webhook
+    port: 443
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: ingress-kong
 ---
 apiVersion: v1
 kind: Service
@@ -637,6 +663,10 @@ spec:
               fieldPath: metadata.namespace
         image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.5.0
         imagePullPolicy: IfNotPresent
+        ports:
+        - name: webhook
+          containerPort: 8080
+          protocol: TCP
         livenessProbe:
           failureThreshold: 3
           httpGet:

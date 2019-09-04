@@ -28,6 +28,15 @@ Once you've Kong Ingress Controlled installed, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.
 
+## Deploying Admission Controller
+
+Kong Ingress Controller also ships with a Validating
+Admission Controller that
+can be enabled to verify KongConsumer and KongPlugin resources as they
+are created.
+Please follow the [admission-webhook](admission-webhook.md) deployment
+guide to set it up.
+
 [0]: minikube.md
 [2]: gke.md
 [3]: aks.md

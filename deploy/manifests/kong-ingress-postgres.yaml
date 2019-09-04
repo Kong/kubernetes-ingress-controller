@@ -1,41 +1,20 @@
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: kong-ingress-controller
-  namespace: kong
-spec:
-  type: NodePort
-  ports:
-  - name: kong-admin
-    port: 8001
-    targetPort: 8001
-    protocol: TCP
-  selector:
-    app: ingress-kong
-
----
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
     app: ingress-kong
-  name: kong-ingress-controller
+  name: ingress-kong
   namespace: kong
 spec:
+  replicas: 2
   selector:
     matchLabels:
       app: ingress-kong
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-    type: RollingUpdate
   template:
     metadata:
       annotations:
-        # the returned metrics are related to the kong ingress controller not kong itself
-        prometheus.io/port: "10254"
+        prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
       labels:
         app: ingress-kong
@@ -44,48 +23,52 @@ spec:
       initContainers:
       - name: wait-for-migrations
         image: kong:1.2
-        command: [ "/bin/sh", "-c", "kong migrations list" ]
+        command:
+        - "/bin/sh"
+        - "-c"
+        - "while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi; sleep 2;  done;"
         env:
-        - name: KONG_ADMIN_LISTEN
-          value: 'off'
-        - name: KONG_PROXY_LISTEN
-          value: 'off'
-        - name: KONG_PROXY_ACCESS_LOG
-          value: "/dev/stdout"
-        - name: KONG_ADMIN_ACCESS_LOG
-          value: "/dev/stdout"
-        - name: KONG_PROXY_ERROR_LOG
-          value: "/dev/stderr"
-        - name: KONG_ADMIN_ERROR_LOG
-          value: "/dev/stderr"
         - name: KONG_PG_HOST
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
       containers:
-      - name: admin-api
+      - name: proxy
         image: kong:1.2
         env:
+        - name: KONG_DATABASE
+          value: "postgres"
         - name: KONG_PG_PASSWORD
           value: kong
         - name: KONG_PG_HOST
           value: postgres
+        - name: KONG_NGINX_HTTP_INCLUDE
+          value: "/kong/servers.conf"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
         - name: KONG_ADMIN_LISTEN
-          value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-        - name: KONG_PROXY_LISTEN
-          value: 'off'
+          value: 127.0.0.1:8444 ssl
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/sh", "-c", "kong quit" ]
         ports:
-        - name: kong-admin
-          containerPort: 8001
+        - name: proxy
+          containerPort: 8000
+          protocol: TCP
+        - name: proxy-ssl
+          containerPort: 8443
+          protocol: TCP
+        - name: metrics
+          containerPort: 9542
+          protocol: TCP
         livenessProbe:
           failureThreshold: 3
           httpGet:
-            path: /status
-            port: 8001
+            path: /health
+            port: 9001
             scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -94,19 +77,20 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /status
-            port: 8001
+            path: /health
+            port: 9001
             scheme: HTTP
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+        volumeMounts:
+        - name: kong-server-blocks
+          mountPath: /kong
       - name: ingress-controller
         args:
         - /kong-ingress-controller
-        # the kong URL points to the kong admin api server
         - --kong-url=https://localhost:8444
         - --admin-tls-skip-verify
-        # Service from were we extract the IP address/es to use in Ingress status
         - --publish-service=kong/kong-proxy
         env:
         - name: POD_NAME
@@ -127,7 +111,6 @@ spec:
             path: /healthz
             port: 10254
             scheme: HTTP
-          initialDelaySeconds: 30
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
@@ -140,3 +123,7 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+      volumes:
+      - name: kong-server-blocks
+        configMap:
+          name: kong-server-blocks

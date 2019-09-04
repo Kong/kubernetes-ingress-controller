@@ -388,16 +388,16 @@ spec:
   externalTrafficPolicy: Local
   type: LoadBalancer
   ports:
-  - name: kong-proxy
+  - name: proxy
     port: 80
     targetPort: 8000
     protocol: TCP
-  - name: kong-proxy-ssl
+  - name: proxy-ssl
     port: 443
     targetPort: 8443
     protocol: TCP
   selector:
-    app: kong
+    app: ingress-kong
 
 ---
 apiVersion: v1
@@ -411,8 +411,8 @@ data:
     server {
         server_name kong_prometheus_exporter;
         listen 0.0.0.0:9542; # can be any other port as well
-
         access_log off;
+
         location /metrics {
             default_type text/plain;
             content_by_lua_block {
@@ -423,12 +423,10 @@ data:
 
         location /nginx_status {
             internal;
-            access_log off;
             stub_status;
         }
     }
     # Health check server
-    # TODO how to health check kong in dbless?
     server {
         server_name kong_health_check;
         listen 0.0.0.0:9001; # can be any other port as well
@@ -438,31 +436,26 @@ data:
           return 200;
         }
     }
-
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: kong
+    app: ingress-kong
   name: ingress-kong
   namespace: kong
 spec:
+  replicas: 2
   selector:
     matchLabels:
-      app: kong
-  strategy:
-    rollingUpdate:
-      maxSurge: 3
-      maxUnavailable: 0
-    type: RollingUpdate
+      app: ingress-kong
   template:
     metadata:
       annotations:
         prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
       labels:
-        app: kong
+        app: ingress-kong
     spec:
       serviceAccountName: kong-serviceaccount
       containers:
@@ -518,10 +511,8 @@ spec:
       - name: ingress-controller
         args:
         - /kong-ingress-controller
-        # the kong URL points to the kong admin api server
         - --kong-url=https://localhost:8444
         - --admin-tls-skip-verify
-        # Service from were we extract the IP address/es to use in Ingress status
         - --publish-service=kong/kong-proxy
         env:
         - name: POD_NAME

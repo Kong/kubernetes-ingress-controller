@@ -20,14 +20,14 @@ spec:
   externalTrafficPolicy: Local
   type: LoadBalancer
   ports:
-  - name: kong-proxy
+  - name: proxy
     port: 80
     targetPort: 8000
     protocol: TCP
-  - name: kong-proxy-ssl
+  - name: proxy-ssl
     port: 443
     targetPort: 8443
     protocol: TCP
   selector:
-    app: kong
+    app: ingress-kong
 

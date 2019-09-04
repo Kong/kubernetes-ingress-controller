@@ -6,8 +6,8 @@ set -o pipefail
 
 SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 
-COMMON="namespace.yaml custom-types.yaml rbac.yaml service.yaml"
-DB="postgres.yaml migration.yaml ingress-controller.yaml kong.yaml"
+COMMON="namespace.yaml custom-types.yaml rbac.yaml service.yaml custom-server-block.yaml"
+DB="postgres.yaml migration.yaml kong-ingress-postgres.yaml"
 DBLESS="kong-ingress-dbless.yaml"
 
 MANIFEST=$(cd ${SCRIPT_ROOT}/deploy/manifests; cat ${COMMON} ${DB})

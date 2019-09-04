@@ -1,0 +1,6 @@
+resources:
+- ./../base
+- migration.yaml
+- postgres.yaml
+patchesStrategicMerge:
+- kong-ingress-postgres.yaml

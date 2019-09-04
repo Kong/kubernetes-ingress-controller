@@ -89,6 +89,10 @@ spec:
               fieldPath: metadata.namespace
         image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.5.0
         imagePullPolicy: IfNotPresent
+        ports:
+        - name: webhook
+          containerPort: 8080
+          protocol: TCP
         livenessProbe:
           failureThreshold: 3
           httpGet:

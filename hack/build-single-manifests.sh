@@ -6,7 +6,8 @@ set -o pipefail
 
 SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 
-COMMON="namespace.yaml custom-types.yaml rbac.yaml service.yaml custom-server-block.yaml"
+COMMON="namespace.yaml custom-types.yaml rbac.yaml service.yaml"
+COMMON+=" custom-server-block.yaml validation-service.yaml"
 DB="postgres.yaml migration.yaml kong-ingress-postgres.yaml"
 DBLESS="kong-ingress-dbless.yaml"
 

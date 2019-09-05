@@ -1,136 +1,72 @@
----
 apiVersion: v1
 kind: Namespace
 metadata:
   name: kong
-
----
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: kongplugins.configuration.konghq.com
-spec:
-  group: configuration.konghq.com
-  version: v1
-  scope: Namespaced
-  names:
-    kind: KongPlugin
-    plural: kongplugins
-    shortNames:
-    - kp
-  additionalPrinterColumns:
-  - name: Plugin-Type
-    type: string
-    description: Name of the plugin
-    JSONPath: .plugin
-  - name: Age
-    type: date
-    description: Age
-    JSONPath: .metadata.creationTimestamp
-  - name: Disabled
-    type: boolean
-    description: Indicates if the plugin is disabled
-    JSONPath: .disabled
-    priority: 1
-  - name: Config
-    type: string
-    description: Configuration of the plugin
-    JSONPath: .config
-    priority: 1
-  validation:
-    openAPIV3Schema:
-      required:
-      - plugin
-      properties:
-        plugin:
-          type: string
-        disabled:
-          type: boolean
-        config:
-          type: object
-        run_on:
-          type: string
-          enum:
-          - first
-          - second
-          - all
-        protocols:
-          type: array
-          items:
-            type: string
-            enum:
-            - http
-            - https
-            - tcp
-            - tls
-
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: kongconsumers.configuration.konghq.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .username
+    description: Username of a Kong Consumer
+    name: Username
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Age
+    name: Age
+    type: date
   group: configuration.konghq.com
-  version: v1
-  scope: Namespaced
   names:
     kind: KongConsumer
     plural: kongconsumers
     shortNames:
     - kc
-  additionalPrinterColumns:
-  - name: Username
-    type: string
-    description: Username of a Kong Consumer
-    JSONPath: .username
-  - name: Age
-    type: date
-    description: Age
-    JSONPath: .metadata.creationTimestamp
+  scope: Namespaced
   validation:
     openAPIV3Schema:
       properties:
-        username:
-          type: string
         custom_id:
           type: string
-
+        username:
+          type: string
+  version: v1
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: kongcredentials.configuration.konghq.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .type
+    description: Type of credential
+    name: Credential-type
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Age
+    name: Age
+    type: date
+  - JSONPath: .consumerRef
+    description: Owner of the credential
+    name: Consumer-Ref
+    type: string
   group: configuration.konghq.com
-  version: v1
-  scope: Namespaced
   names:
     kind: KongCredential
     plural: kongcredentials
-  additionalPrinterColumns:
-  - name: Credential-type
-    type: string
-    description: Type of credential
-    JSONPath: .type
-  - name: Age
-    type: date
-    description: Age
-    JSONPath: .metadata.creationTimestamp
-  - name: Consumer-Ref
-    type: string
-    description: Owner of the credential
-    JSONPath: .consumerRef
+  scope: Namespaced
   validation:
     openAPIV3Schema:
-      required:
-      - consumerRef
-      - type
       properties:
         consumerRef:
           type: string
         type:
           type: string
-
+      required:
+      - consumerRef
+      - type
+  version: v1
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -138,75 +74,77 @@ metadata:
   name: kongingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
-  version: v1
-  scope: Namespaced
   names:
     kind: KongIngress
     plural: kongingresses
     shortNames:
     - ki
+  scope: Namespaced
   validation:
     openAPIV3Schema:
       properties:
+        proxy:
+          properties:
+            connect_timeout:
+              minimum: 0
+              type: integer
+            path:
+              pattern: ^/.*$
+              type: string
+            protocol:
+              enum:
+              - http
+              - https
+              type: string
+            read_timeout:
+              minimum: 0
+              type: integer
+            retries:
+              minimum: 0
+              type: integer
+            write_timeout:
+              minimum: 0
+              type: integer
+          type: object
         route:
           properties:
-            methods:
-              type: array
-              items:
-                type: string
             headers:
-              type: object
               additionalProperties:
-                type: array
                 items:
                   type: string
+                type: array
+              type: object
+            https_redirect_status_code:
+              type: integer
+            methods:
+              items:
+                type: string
+              type: array
+            preserve_host:
+              type: boolean
+            protocols:
+              items:
+                enum:
+                - http
+                - https
+                type: string
+              type: array
             regex_priority:
               type: integer
             strip_path:
               type: boolean
-            preserve_host:
-              type: boolean
-            protocols:
-              type: array
-              items:
-                type: string
-                enum:
-                - http
-                - https
-            https_redirect_status_code:
-              type: integer
-        proxy:
-          type: object
-          properties:
-            protocol:
-              type: string
-              enum:
-              - http
-              - https
-            path:
-              type: string
-              pattern: ^/.*$
-            retries:
-              type: integer
-              minimum: 0
-            connect_timeout:
-              type: integer
-              minimum: 0
-            read_timeout:
-              type: integer
-              minimum: 0
-            write_timeout:
-              type: integer
-              minimum: 0
         upstream:
-          type: object
           properties:
             algorithm:
-              type: string
               enum:
-              - "round-robin"
-              - "consistent-hashing"
-              - "least-connections"
+              - round-robin
+              - consistent-hashing
+              - least-connections
+              type: string
+            hash_fallback:
+              type: string
+            hash_fallback_header:
+              type: string
             hash_on:
               type: string
             hash_on_cookie:
@@ -215,72 +153,158 @@ spec:
               type: string
             hash_on_header:
               type: string
-            hash_fallback_header:
-              type: string
-            hash_fallback:
-              type: string
-            slots:
-              type: integer
-              minimum: 10
             healthchecks:
-              type: object
               properties:
                 active:
-                  type: object
                   properties:
                     concurrency:
-                      type: integer
                       minimum: 1
-                    timeout:
                       type: integer
-                      minimum: 0
-                    http_path:
-                      type: string
-                      pattern: ^/.*$
-                    healthy: &healthy
-                      type: object
+                    healthy:
                       properties:
                         http_statuses:
-                          type: array
                           items:
                             type: integer
+                          type: array
                         interval:
-                          type: integer
                           minimum: 0
+                          type: integer
                         successes:
-                          type: integer
                           minimum: 0
-                    unhealthy: &unhealthy
+                          type: integer
                       type: object
+                    http_path:
+                      pattern: ^/.*$
+                      type: string
+                    timeout:
+                      minimum: 0
+                      type: integer
+                    unhealthy:
                       properties:
                         http_failures:
-                          type: integer
                           minimum: 0
+                          type: integer
                         http_statuses:
-                          type: array
                           items:
                             type: integer
+                          type: array
                         interval:
-                          type: integer
                           minimum: 0
+                          type: integer
                         tcp_failures:
-                          type: integer
                           minimum: 0
+                          type: integer
                         timeout:
-                          type: integer
                           minimum: 0
-                passive:
+                          type: integer
+                      type: object
                   type: object
+                passive:
                   properties:
-                    healthy: *healthy
-                    unhealthy: *unhealthy
+                    healthy:
+                      properties:
+                        http_statuses:
+                          items:
+                            type: integer
+                          type: array
+                        interval:
+                          minimum: 0
+                          type: integer
+                        successes:
+                          minimum: 0
+                          type: integer
+                      type: object
+                    unhealthy:
+                      properties:
+                        http_failures:
+                          minimum: 0
+                          type: integer
+                        http_statuses:
+                          items:
+                            type: integer
+                          type: array
+                        interval:
+                          minimum: 0
+                          type: integer
+                        tcp_failures:
+                          minimum: 0
+                          type: integer
+                        timeout:
+                          minimum: 0
+                          type: integer
+                      type: object
+                  type: object
+              type: object
+            slots:
+              minimum: 10
+              type: integer
+          type: object
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kongplugins.configuration.konghq.com
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .plugin
+    description: Name of the plugin
+    name: Plugin-Type
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Age
+    name: Age
+    type: date
+  - JSONPath: .disabled
+    description: Indicates if the plugin is disabled
+    name: Disabled
+    priority: 1
+    type: boolean
+  - JSONPath: .config
+    description: Configuration of the plugin
+    name: Config
+    priority: 1
+    type: string
+  group: configuration.konghq.com
+  names:
+    kind: KongPlugin
+    plural: kongplugins
+    shortNames:
+    - kp
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      properties:
+        config:
+          type: object
+        disabled:
+          type: boolean
+        plugin:
+          type: string
+        protocols:
+          items:
+            enum:
+            - http
+            - https
+            - tcp
+            - tls
+            type: string
+          type: array
+        run_on:
+          enum:
+          - first
+          - second
+          - all
+          type: string
+      required:
+      - plugin
+  version: v1
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kong-serviceaccount
   namespace: kong
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
@@ -312,8 +336,8 @@ rules:
   - list
   - watch
 - apiGroups:
-  - "networking.k8s.io"
-  - "extensions"
+  - networking.k8s.io
+  - extensions
   resources:
   - ingresses
   verbs:
@@ -328,14 +352,14 @@ rules:
   - create
   - patch
 - apiGroups:
-  - "networking.k8s.io"
-  - "extensions"
+  - networking.k8s.io
+  - extensions
   resources:
   - ingresses/status
   verbs:
   - update
 - apiGroups:
-  - "configuration.konghq.com"
+  - configuration.konghq.com
   resources:
   - kongplugins
   - kongcredentials
@@ -347,14 +371,10 @@ rules:
   - watch
 - apiGroups:
   - ""
+  resourceNames:
+  - ingress-controller-leader-kong
   resources:
   - configmaps
-  resourceNames:
-  # Defaults to "<election-id>-<ingress-class>"
-  # Here: "<ingress-controller-leader>-<kong>"
-  # This has to be adapted if you change either parameter
-  # when launching the kong-ingress-controller.
-  - "ingress-controller-leader-kong"
   verbs:
   - get
   - update
@@ -364,7 +384,6 @@ rules:
   - configmaps
   verbs:
   - create
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -380,43 +399,6 @@ subjects:
   namespace: kong
 ---
 apiVersion: v1
-kind: Service
-metadata:
-  name: kong-proxy
-  namespace: kong
-  annotations:
-    # Cloud-provider specific annotations
-    # GKE
-    # GKE creates a L4 LB for any service of type LoadBalancer
-    # TODO figure out how to enable Proxy Protocol on an L4 LB for GKE
-    # AWS
-    # Use NLB over ELB
-    service.beta.kubernetes.io/aws-load-balancer-type: nlb
-    # Use L4 LB so that Kong can do TLS termination
-    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-    # Enable Proxy Protocol when Kong is listening for proxy-protocol
-    #service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
-spec:
-  externalTrafficPolicy: Local
-  type: LoadBalancer
-  ports:
-  - name: proxy
-    port: 80
-    targetPort: 8000
-    protocol: TCP
-  - name: proxy-ssl
-    port: 443
-    targetPort: 8443
-    protocol: TCP
-  selector:
-    app: ingress-kong
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kong-server-blocks
-  namespace: kong
 data:
   servers.conf: |
     # Prometheus metrics server
@@ -448,6 +430,33 @@ data:
           return 200;
         }
     }
+kind: ConfigMap
+metadata:
+  name: kong-server-blocks
+  namespace: kong
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+  name: kong-proxy
+  namespace: kong
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - name: proxy
+    port: 80
+    protocol: TCP
+    targetPort: 8000
+  - name: proxy-ssl
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: ingress-kong
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: Service
@@ -472,90 +481,10 @@ spec:
   ports:
   - name: pgql
     port: 5432
-    targetPort: 5432
     protocol: TCP
+    targetPort: 5432
   selector:
     app: postgres
-
----
-apiVersion: apps/v1  #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
-kind: StatefulSet
-metadata:
-  name: postgres
-  namespace: kong
-spec:
-  serviceName: "postgres"
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:9.5
-        volumeMounts:
-        - name: datadir
-          mountPath: /var/lib/postgresql/data
-          subPath: pgdata
-        env:
-        - name: POSTGRES_USER
-          value: kong
-        - name: POSTGRES_PASSWORD
-          value: kong
-        - name: POSTGRES_DB
-          value: kong
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        ports:
-        - containerPort: 5432
-      # No pre-stop hook is required, a SIGTERM plus some time is all that's
-      # needed for graceful shutdown of a node.
-      terminationGracePeriodSeconds: 60
-  volumeClaimTemplates:
-  - metadata:
-      name: datadir
-    spec:
-      accessModes:
-      - "ReadWriteOnce"
-      resources:
-        requests:
-          storage: 1Gi
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kong-migrations
-  namespace: kong
-spec:
-  template:
-    metadata:
-      name: kong-migrations
-    spec:
-      initContainers:
-      - name: wait-for-postgres
-        image: busybox
-        env:
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
-      containers:
-      - name: kong-migrations
-        image: kong:1.2
-        env:
-        - name: KONG_PG_PASSWORD
-          value: kong
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
-      restartPolicy: OnFailure
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -577,51 +506,30 @@ spec:
       labels:
         app: ingress-kong
     spec:
-      serviceAccountName: kong-serviceaccount
-      initContainers:
-      - name: wait-for-migrations
-        image: kong:1.2
-        command:
-        - "/bin/sh"
-        - "-c"
-        - "while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi; sleep 2;  done;"
-        env:
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
       containers:
-      - name: proxy
-        image: kong:1.2
-        env:
+      - env:
         - name: KONG_DATABASE
-          value: "postgres"
-        - name: KONG_PG_PASSWORD
-          value: kong
+          value: postgres
         - name: KONG_PG_HOST
           value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
         - name: KONG_NGINX_HTTP_INCLUDE
-          value: "/kong/servers.conf"
+          value: /kong/servers.conf
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
         - name: KONG_ADMIN_LISTEN
           value: 127.0.0.1:8444 ssl
+        image: kong:1.2
         lifecycle:
           preStop:
             exec:
-              command: [ "/bin/sh", "-c", "kong quit" ]
-        ports:
-        - name: proxy
-          containerPort: 8000
-          protocol: TCP
-        - name: proxy-ssl
-          containerPort: 8443
-          protocol: TCP
-        - name: metrics
-          containerPort: 9542
-          protocol: TCP
+              command:
+              - /bin/sh
+              - -c
+              - kong quit
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -632,6 +540,17 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+        name: proxy
+        ports:
+        - containerPort: 8000
+          name: proxy
+          protocol: TCP
+        - containerPort: 8443
+          name: proxy-ssl
+          protocol: TCP
+        - containerPort: 9542
+          name: metrics
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
@@ -642,10 +561,9 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         volumeMounts:
-        - name: kong-server-blocks
-          mountPath: /kong
-      - name: ingress-controller
-        args:
+        - mountPath: /kong
+          name: kong-server-blocks
+      - args:
         - /kong-ingress-controller
         - --kong-url=https://localhost:8444
         - --admin-tls-skip-verify
@@ -663,10 +581,6 @@ spec:
               fieldPath: metadata.namespace
         image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.5.0
         imagePullPolicy: IfNotPresent
-        ports:
-        - name: webhook
-          containerPort: 8080
-          protocol: TCP
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -676,6 +590,11 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+        name: ingress-controller
+        ports:
+        - containerPort: 8080
+          name: webhook
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
@@ -685,7 +604,105 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
+          sleep 2;  done;
+        env:
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
+        image: kong:1.2
+        name: wait-for-migrations
+      serviceAccountName: kong-serviceaccount
       volumes:
-      - name: kong-server-blocks
-        configMap:
+      - configMap:
           name: kong-server-blocks
+        name: kong-server-blocks
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  serviceName: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_USER
+          value: kong
+        - name: POSTGRES_PASSWORD
+          value: kong
+        - name: POSTGRES_DB
+          value: kong
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        image: postgres:9.5
+        name: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: datadir
+          subPath: pgdata
+      terminationGracePeriodSeconds: 60
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    metadata:
+      name: kong-migrations
+    spec:
+      containers:
+      - command:
+        - /bin/sh
+        - -c
+        - kong migrations bootstrap
+        env:
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
+        image: kong:1.2
+        name: kong-migrations
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db';
+          sleep 1; done
+        env:
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
+        image: busybox
+        name: wait-for-postgres
+      restartPolicy: OnFailure

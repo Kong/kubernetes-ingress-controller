@@ -2,7 +2,7 @@
 
 export GO111MODULE=on
 
-VERSION="50b56122"
+VERSION="kubernetes-1.15.3"
 PACKAGE_NAME=github.com/kong/kubernetes-ingress-controller
 SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 

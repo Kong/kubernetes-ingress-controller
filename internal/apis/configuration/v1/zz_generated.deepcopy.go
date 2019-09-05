@@ -55,7 +55,7 @@ func (in *KongConsumer) DeepCopyObject() runtime.Object {
 func (in *KongConsumerList) DeepCopyInto(out *KongConsumerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]KongConsumer, len(*in))
@@ -106,7 +106,7 @@ func (in *KongCredential) DeepCopyObject() runtime.Object {
 func (in *KongCredentialList) DeepCopyInto(out *KongCredentialList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]KongCredential, len(*in))
@@ -180,7 +180,7 @@ func (in *KongIngress) DeepCopyObject() runtime.Object {
 func (in *KongIngressList) DeepCopyInto(out *KongIngressList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]KongIngress, len(*in))
@@ -231,7 +231,7 @@ func (in *KongPlugin) DeepCopyObject() runtime.Object {
 func (in *KongPluginList) DeepCopyInto(out *KongPluginList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]KongPlugin, len(*in))

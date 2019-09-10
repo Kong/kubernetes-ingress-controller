@@ -59,7 +59,9 @@ type Kong struct {
 	InMemory      bool
 	Database      string
 	HasTagSupport bool
-	Version       semver.Version
+
+	Enterprise bool
+	Version    semver.Version
 
 	// Workspace is the Kong Enterprise workspace being synced.
 	Workspace string

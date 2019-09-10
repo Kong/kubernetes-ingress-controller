@@ -261,9 +261,12 @@ func (n *KongController) toDeckKongState(
 var kong110version = semver.MustParse("1.1.0")
 
 var kong120version = semver.MustParse("1.2.0")
+var kongEnterprise036version = semver.MustParse("0.36.0")
 
 func (n *KongController) fillRoute(route *kong.Route) {
-	if n.cfg.Kong.Version.GTE(kong120version) {
+	if n.cfg.Kong.Version.GTE(kong120version) ||
+		(n.cfg.Kong.Enterprise &&
+			n.cfg.Kong.Version.GTE(kongEnterprise036version)) {
 		if route.HTTPSRedirectStatusCode == nil {
 			route.HTTPSRedirectStatusCode = kong.Int(426)
 		}

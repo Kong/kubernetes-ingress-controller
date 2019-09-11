@@ -269,7 +269,21 @@ config:
   key: 62eb165c070a41d5c1b58d9d3d725ca1
 ```
 
-[Using the Kong Consumer and Credential resource](../guides/using-consumer-credential-resource.md)
+The following credential types can be provisioned using the KongCredential
+resource:
+
+- `key-auth` for [Key authentication](https://docs.konghq.com/plugins/key-authentication/)
+- `basic-auth` for [Basic authenticaiton](https://docs.konghq.com/plugins/basic-authentication/)
+- `hmac-auth` for [HMAC authentication](http://docs.konghq.com/plugins/hmac-authentication/)
+- `jwt` for [JWT based authentication](http://docs.konghq.com/plugins/jwt/)
+- `oauth2` for [Oauth2 Client credentials](https://docs.konghq.com/hub/kong-inc/oauth2/)
+- `acls` for [ACL group associations](https://docs.konghq.com/hub/kong-inc/acl/)
+
+Please ensure that all fields related to the credential in Kong
+are present in the definition of KongCredential's `config` section.
+
+Please refer to the
+[using the Kong Consumer and Credential resource](../guides/using-consumer-credential-resource.md)
 guide for details on how to use this resource.
 
 [k8s-crd]: https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/

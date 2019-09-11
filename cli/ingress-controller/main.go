@@ -27,6 +27,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -152,6 +153,11 @@ func main() {
 	glog.Infof("kong version: %s", v)
 	kongConfiguration := root["configuration"].(map[string]interface{})
 	conf.Kong.Version = v
+
+	if strings.Contains(root["version"].(string), "enterprise") {
+		conf.Kong.Enterprise = true
+	}
+
 	kongDB := kongConfiguration["database"].(string)
 	glog.Infof("Kong datastore: %s", kongDB)
 

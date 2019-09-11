@@ -33,3 +33,7 @@ Kong Ingress controller:
   This guide walks through the steps of how to deploy Kong Ingress Controller
   and Prometheus to obtain metrics for the traffic flowing into your
   Kubernetes cluster.
+- [Configuring circuit-breaker and health-checking](configuring-health-checks.md)
+  This guide walks through the usage of Circuit-breaking and health-checking
+  features of Kong Ingress Controller.
+

@@ -40,3 +40,9 @@ guide to set it up.
 [0]: minikube.md
 [2]: gke.md
 [3]: aks.md
+
+
+## Deploying Kong Enterprise Ingress Controller
+
+Please follow [this guide](kong-enterprise.md) to deploy Kong Enterprise Ingress Controller
+if you have purchased or are trying out Kong Enterprise.

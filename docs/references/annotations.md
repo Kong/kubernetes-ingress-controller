@@ -6,9 +6,10 @@ It supports the following annotations:
 
 | Annotation name | Description | Guide |
 |-----------------|-------------|-------|
-| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy. | TODO |
+| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy. | Coming soon |
 | [`plugins.konghq.com`](#pluginskonghqcom) | Run plugins for specific service or Ingress. | [Using KongPlugin resource](../guides/using-kongplugin-resource.md) |
 | [`configuration.konghq.com`](#configurationkonghqcom) | Fine grained routing and load-balancing. | [Using KongIngress resource](../guides/using-kongingress-resource.md)|
+| [`ingress.kubernetes.io/service-upstream`](#ingresskubernetesioservice-upstream) | Offload load-balancing to kube-proxy or sidecar. | Coming soon |
 
 ## `kubernetes.io/ingress.class`
 
@@ -109,12 +110,12 @@ meaning the plugin will be
 executed for every request that is proxied, no matter which Route it came from.
 
 This annotation can be applied to a KongConsumer resource, which results in
-plugin being executed whenver the specific consumer is accessing any of
+plugin being executed whenever the specific consumer is accessing any of
 the defined APIs.
 
 Please follow the
 [Using the KongPlugin resource](../guides/using-kongplugin-resource.md)
-guide for details on how this annoatation can be used.
+guide for details on how this annotation can be used.
 
 ## `configuration.konghq.com`
 
@@ -127,3 +128,33 @@ and Upstream entities in Kong.
 Please follow the
 [Using the KongIngress resource](../guides/using-kongingress-resource.md)
 guide for details on how to use this annotation.
+
+## `ingress.kubernetes.io/service-upstream`
+
+By default, Kong Ingress Controller distributes traffic amongst all the Pods
+of a Kubernetes `Service` by forwarding the requests directly to
+Pod IP addresses. One can choose the load-balancing strategy to use
+by specifying a KongIngress resource.
+
+However, in some use-cases, the load-balancing should be left up
+to `kube-proxy`, or a sidecar component in the case of Service Mesh deployments.
+
+Setting this annotation to a Service resource in Kubernetes will configure
+Kong Ingress Controller to directly forward
+the traffic outbound for this Service
+to the IP address of the service (usually the ClusterIP).
+
+`kube-proxy` can then decide how it wants to handle the request and route the
+traffic accordingly. If a sidecar intercepts the traffic from the controller,
+it can also route traffic as it sees fit in this case.
+
+Following is an example snippet you can use to configure this annotation
+on a `Service` resource in Kubernetes, (please note the quotes around `true`):
+
+```yaml
+annotations:
+  ingress.kubernetes.io/service-upstream: "true"
+```
+
+You need Kong Ingress Controller >= 0.6 for this annotation.
+

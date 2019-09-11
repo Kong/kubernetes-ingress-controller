@@ -1,0 +1,45 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: kong-enterprise-docker
+      initContainers:
+      - name: wait-for-migrations
+        env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+      containers:
+      - name: proxy
+        env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: kong-enterprise-docker
+      containers:
+      - name: kong-migrations
+        env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license

@@ -23,6 +23,8 @@ spec:
       containers:
       - name: proxy
         image: kong:1.2
+        securityContext:
+          runAsUser: 1000
         env:
         - name: KONG_DATABASE
           value: "off"

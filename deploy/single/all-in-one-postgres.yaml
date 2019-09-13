@@ -494,7 +494,7 @@ metadata:
   name: ingress-kong
   namespace: kong
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ingress-kong

@@ -332,6 +332,9 @@ func (p *Parser) parseIngressRules(
 
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
+			if rule.HTTP == nil {
+				continue
+			}
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 

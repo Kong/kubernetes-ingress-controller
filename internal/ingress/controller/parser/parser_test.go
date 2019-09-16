@@ -403,6 +403,21 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 5
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "baz",
+				Namespace: "foo-namespace",
+			},
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
+					{
+						Host:             "example.com",
+						IngressRuleValue: networking.IngressRuleValue{},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{})
@@ -473,6 +488,14 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 
 		assert.Nil(err)
+	})
+	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
+		assert.NotPanics(func() {
+			_, err := p.parseIngressRules([]*networking.Ingress{
+				ingressList[5],
+			})
+			assert.Nil(err)
+		})
 	})
 }
 

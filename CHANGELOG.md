@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.6.0](#060---20190917)
  - [0.5.0](#050---20190625)
  - [0.4.0](#040---20190424)
  - [0.3.0](#030---20190108)
@@ -12,6 +13,71 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.6.0] - 2019/09/17
+
+### Summary
+
+This release brings introduces an Admission Controller for CRDs,
+Istio compatibility, support for `networking/ingress`,
+Kong 1.3 addtions and enhancements to documentation and deployments.
+
+### Added
+
+- **Service Mesh integration** Kong Ingress Controller can now be deployed
+  alongside Service Mesh solutions like Kuma and Istio. In such a deployment,
+  Kong handles all the external client facing routing and policies while the
+  mesh takes care of these aspects for internal service-to-service traffic.
+- **`ingress.kubernetes.io/service-upstream`**, a new annotation has
+  been introduced.
+  Adding this annotation to a kubernetes service resource
+  will result in Kong directly forwarding traffic to kube-proxy.
+  In other words, Kong will not send traffic directly to the pods.
+  [#365](https://github.com/Kong/kubernetes-ingress-controller/pull/365)
+- Ingress resources created in the new `networking.k8s.io` API group are
+  now be supported. The controller dynamically figures out the API group
+  to use based on the metadata it receives from k8s API-server.
+- **Kong Credential enhancements**
+  - Kong Credentials are now live-synced as they are created and updated in
+    DB-mode.
+    [#230](https://github.com/Kong/kubernetes-ingress-controller/issues/#230)
+  - A single Consumer can now contain multiple credentials of the same type
+    and multiple ACL group associations.
+    [#371](https://github.com/Kong/kubernetes-ingress-controller/pull/371)
+- **Admission controller** Kong Ingress Controller now ships with an in-built
+  admission controller for KongPlugin and KongConsumer entities. The validations
+  stop users from mis-configuring the Ingress controller.
+  [#372](https://github.com/Kong/kubernetes-ingress-controller/pull/372)
+- **Kong 1.3 support**:
+  - HTTP Header based routing is now supported using `KongIngress.Route.Headers`
+    property.
+  - The algorithm to use for load-balancing traffic sent upstream can be
+    set using `KongIngress.Upstream.Algorithm` field.
+- **Kustomize**: Users can now use `kustomize` to tweak the reference deployment
+  as per their needs. Both, DB and DB-less modes are supported. Please have
+  a look at `deploy/manifests` directory in the Github repository.
+- **Documentation**: The documentation for the project has been revamped.
+  Deployment guides, how-to guides, and reference docs have been added.
+- **Deployment**: The deployment of Kong Ingress Controller in DB and DB-less
+  modes has been simplified, and Kong Ingress Controller now always runs as a
+  side-car to Kong in proxy mode. There is no dedicated deployment for Kong
+  Ingress Controller that needs to be run.
+
+### Fixed
+
+- SNIs and Certificates are now de-duplicated across namespaces.
+  [#360](https://github.com/Kong/kubernetes-ingress-controller/issues/#360)
+  [#327](https://github.com/Kong/kubernetes-ingress-controller/issues/#327)
+- Empty TLS secret no longer stops the controller from syncing configuration
+  [#321](https://github.com/Kong/kubernetes-ingress-controller/issues/#321)
+- Fix a nil reference when empty Ingress rules are created
+  [#365](https://github.com/Kong/kubernetes-ingress-controller/pull/365)
+
+#### Under the hood
+
+- Kubernetes client-go library has been updated to v1.15.3.
+- Credentials sync has been moved into decK and decK has been bumped up
+  to v0.5.1.
 
 ## [0.5.0] - 2019/06/25
 
@@ -394,6 +460,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.2.2...0.3.0

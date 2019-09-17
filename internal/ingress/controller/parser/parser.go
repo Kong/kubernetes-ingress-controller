@@ -374,7 +374,7 @@ func (p *Parser) parseIngressRules(
 					service = Service{
 						Service: kong.Service{
 							Name:           kong.String(serviceName),
-							Host:           kong.String(rule.Backend.ServiceName + "." + ingress.Namespace + ".svc"),
+							Host:           kong.String(rule.Backend.ServiceName + "." + ingress.Namespace + "." + rule.Backend.ServicePort.String() + ".svc"),
 							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
@@ -409,7 +409,7 @@ func (p *Parser) parseIngressRules(
 			service = Service{
 				Service: kong.Service{
 					Name: kong.String(serviceName),
-					Host: kong.String(defaultBackend.ServiceName + "." + ingress.Namespace + ".svc"),
+					Host: kong.String(defaultBackend.ServiceName + "." + ingress.Namespace + "." + defaultBackend.ServicePort.String() + ".svc"),
 					Port: kong.Int(80),
 				},
 				Namespace: ingress.Namespace,
@@ -555,7 +555,7 @@ func overrideUpstream(upstream *Upstream,
 func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error) {
 	var upstreams []Upstream
 	for _, service := range serviceMap {
-		upstreamName := service.Backend.ServiceName + "." + service.Namespace + ".svc"
+		upstreamName := service.Backend.ServiceName + "." + service.Namespace + "." + service.Backend.ServicePort.String() + ".svc"
 		upstream := Upstream{
 			Upstream: kong.Upstream{
 				Name: kong.String(upstreamName),

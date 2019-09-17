@@ -418,6 +418,47 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 6
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
+									{
+										Backend: networking.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Host: "example.net",
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
+									{
+										Backend: networking.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(8000),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{})
@@ -432,7 +473,7 @@ func TestParseIngressRules(t *testing.T) {
 			ingressList[0],
 		})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
 
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
@@ -445,7 +486,7 @@ func TestParseIngressRules(t *testing.T) {
 			ingressList[2],
 		})
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
 
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
@@ -471,7 +512,7 @@ func TestParseIngressRules(t *testing.T) {
 			ingressList[3],
 		})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("cert-manager-solver-pod.foo-namespace.svc", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
+		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Port)
 
 		assert.Equal("/.well-known/acme-challenge/yolo", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Paths[0])
@@ -496,6 +537,14 @@ func TestParseIngressRules(t *testing.T) {
 			})
 			assert.Nil(err)
 		})
+	})
+	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
+		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
+			ingressList[6],
+		})
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
+		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
+		assert.Nil(err)
 	})
 }
 

@@ -503,6 +503,7 @@ spec:
       annotations:
         prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
+        traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
         app: ingress-kong
     spec:

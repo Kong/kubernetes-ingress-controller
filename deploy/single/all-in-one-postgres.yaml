@@ -618,7 +618,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong:1.2
+        image: kong:1.3
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
@@ -693,7 +693,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:1.2
+        image: kong:1.3
         name: kong-migrations
       initContainers:
       - command:

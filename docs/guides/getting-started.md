@@ -211,6 +211,7 @@ metadata:
 config:
   minute: 5
   limit_by: ip
+  policy: local
 plugin: rate-limiting
 " | kubectl apply -f -
 kongplugin.configuration.konghq.com/rl-by-ip created

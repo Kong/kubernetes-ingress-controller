@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.6.1](#061---20191009)
  - [0.6.0](#060---20190917)
  - [0.5.0](#050---20190625)
  - [0.4.0](#040---20190424)
@@ -13,6 +14,13 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.6.1] - 2019/10/09
+
+### Summary
+
+This is a minor patch release to update Kong Ingress Controller's
+Docker image to use a non-root by default.
 
 ## [0.6.0] - 2019/09/17
 
@@ -460,6 +468,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.6.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.3.0...0.4.0

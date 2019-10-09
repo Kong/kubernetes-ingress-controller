@@ -19,6 +19,8 @@ RUN addgroup -S kic && \
     adduser -S kic -G kic -u 1000
 
 # Import the compiled executable from the second stage.
+COPY --from=build /kong-ingress-controller/kong-ingress-controller /bin
+# Only for backwards compatibility
 COPY --from=build /kong-ingress-controller/kong-ingress-controller .
 
 # Perform any further action as an unprivileged user.

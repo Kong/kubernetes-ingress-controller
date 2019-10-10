@@ -4,7 +4,7 @@
 
 1. A fully functional EKS cluster.
    Please follow Amazon's Guide to
-   [setup an EKS cluster](https://aws.amazon.com/getting-started/projects/deploy-kubernetes-app-amazon-eks/).
+   [set up an EKS cluster](https://aws.amazon.com/getting-started/projects/deploy-kubernetes-app-amazon-eks/).
 2. Basic understanding of Kubernetes
 3. A working `kubectl`  linked to the EKS Kubernetes
    cluster we will work on. The above EKS setup guide will help

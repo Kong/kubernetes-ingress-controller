@@ -497,6 +497,8 @@ spec:
       - env:
         - name: KONG_DATABASE
           value: "off"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "1"
         - name: KONG_NGINX_HTTP_INCLUDE
           value: /kong/servers.conf
         - name: KONG_ADMIN_ACCESS_LOG

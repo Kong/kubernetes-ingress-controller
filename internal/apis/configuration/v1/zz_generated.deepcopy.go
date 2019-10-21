@@ -30,6 +30,11 @@ func (in *KongConsumer) DeepCopyInto(out *KongConsumer) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	if in.Credentials != nil {
+		in, out := &in.Credentials, &out.Credentials
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

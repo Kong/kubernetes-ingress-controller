@@ -125,6 +125,10 @@ type KongConsumer struct {
 	// CustomID existing unique ID for the consumer - useful for mapping
 	// Kong with users in your existing database
 	CustomID string `json:"custom_id,omitempty"`
+
+	// Credentials are references to secrets containing a credential to be
+	// provisioned in Kong.
+	Credentials []string `json:"credentials,omitempty"`
 }
 
 // KongConsumerList is a top-level list type. The client methods for

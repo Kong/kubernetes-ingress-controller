@@ -2,8 +2,8 @@
 
 ## Setup Minikube
 
-1. Install [`minikube`](https://github.com/kubernetes/minikube)  
-  
+1. Install [`minikube`](https://github.com/kubernetes/minikube)
+
     Minikube is a tool that makes it easy to run Kubernetes locally.
     Minikube runs a single-node Kubernetes cluster inside a VM on your laptop
     for users looking to try out Kubernetes or develop with it day-to-day.
@@ -64,6 +64,6 @@ $ echo $PROXY_IP
 http://192.168.99.100:32728
 ```
 
-Once you've Kong Ingress Controlled installed, please follow our
+Once you've installed Kong Ingress Controller, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.

@@ -30,7 +30,7 @@ Here are some guides to get you started:
    This guide is a walkthrough to set up Kong Ingress
    Controller on AKS.
 
-Once you've Kong Ingress Controlled installed, please follow our
+Once you've installed Kong Ingress Controller, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.
 

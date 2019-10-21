@@ -36,7 +36,7 @@ Kong Ingress controller:
 - [Configuring circuit-breaker and health-checking](configuring-health-checks.md)  
   This guide walks through the usage of Circuit-breaking and health-checking
   features of Kong Ingress Controller.
-- [Setting up custom plugin](setting-up-custom-plugin.md)  
+- [Setting up custom plugin](setting-up-custom-plugins.md)
   This guide walks through
   installation of a custom plugin into Kong using
   ConfigMaps and Volumes.

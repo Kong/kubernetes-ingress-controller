@@ -68,6 +68,6 @@ $ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip
 > Note: It may take a while for Google to actually associate the
 IP address to the `kong-proxy` Service.
 
-Once you've Kong Ingress Controlled installed, please follow our
+Once you've installed Kong Ingress Controller, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.

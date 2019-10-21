@@ -135,7 +135,7 @@ spec:
 ingress.extensions/demo-example-com created
 ```
 
-The above resource directs Kong to exectue the request-id plugin whenever
+The above resource directs Kong to execute the request-id plugin whenever
 a request is proxied matching any rule defined in the resource.
 
 Send a request to Kong:
@@ -190,13 +190,13 @@ Request Body:
         -no body in request-
 ```
 
-The `my-request-id` can be seen in the request received by echo-server
+The `my-request-id` can be seen in the request received by echo-server.
 It is injected by Kong as the request matches one
 of the Ingress rules defined in `demo-example-com` resource.
 
 ## Using plugins on Services
 
-Kong Ingress allows plugins to be executed on a service level, meaning,
+Kong Ingress allows plugins to be executed on a service level, meaning
 Kong will execute a plugin whenever a request is sent to a specific k8s service,
 no matter which Ingress path it came from.
 

@@ -2,7 +2,7 @@
 
 This guide will walk through steps to setup Kong Ingress Controller with
 cert-manager to automate certificate management using Let's Encrypt.
-Any ACME based CA can be used in-place of Let's Encrypt as well.
+Any ACME-based CA can be used in-place of Let's Encrypt as well.
 
 ## Before you begin
 
@@ -170,7 +170,7 @@ spec:
     http01: {}
     privateKeySecretRef:
       name: letsencrypt-prod
-    server: https://acme-v02.api.letsencrypt.org/directory" | k apply -f -
+    server: https://acme-v02.api.letsencrypt.org/directory" | kubectl apply -f -
 clusterissuer.certmanager.k8s.io/letsencrypt-prod created
 ```
 

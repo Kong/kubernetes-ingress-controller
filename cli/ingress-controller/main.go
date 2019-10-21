@@ -173,6 +173,11 @@ func main() {
 
 	// setup workspace in Kong Enterprise
 	if conf.Kong.Workspace != "" {
+		// ensure the workspace exists or try creating it
+		err := ensureWorkspace(kongClient, conf.Kong.Workspace)
+		if err != nil {
+			glog.Fatalf("Error ensuring workspace: %v", err)
+		}
 		kongClient, err = kong.NewClient(kong.String(conf.Kong.URL+"/"+conf.Kong.Workspace), c)
 		if err != nil {
 			glog.Fatalf("Error creating Kong Rest client: %v", err)

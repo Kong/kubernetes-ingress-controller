@@ -172,7 +172,68 @@ func (p *Parser) Build() (*KongState, error) {
 	return &state, nil
 }
 
-func decodeCredential(credentialToDecode configurationv1.KongCredential,
+func processCredential(credType string, consumer *Consumer,
+	credConfig interface{}) error {
+	switch credType {
+	case "key-auth":
+		var cred kong.KeyAuth
+		err := decodeCredential(credConfig, &cred)
+		if err != nil {
+			return errors.Wrap(err, "failed to decode key-auth credential")
+
+		}
+		consumer.KeyAuths = append(consumer.KeyAuths, &cred)
+	case "basic-auth":
+		var cred kong.BasicAuth
+		err := decodeCredential(credConfig, &cred)
+		if err != nil {
+			return errors.Wrap(err, "failed to decode basic-auth credential")
+		}
+		consumer.BasicAuths = append(consumer.BasicAuths, &cred)
+	case "hmac-auth":
+		var cred kong.HMACAuth
+		err := decodeCredential(credConfig, &cred)
+		if err != nil {
+			return errors.Wrap(err, "failed to decode hmac-auth credential")
+		}
+		consumer.HMACAuths = append(consumer.HMACAuths, &cred)
+	case "oauth2":
+		var cred kong.Oauth2Credential
+		err := decodeCredential(credConfig, &cred)
+		if err != nil {
+			return errors.Wrap(err, "failed to decode oauth2 credential")
+		}
+		consumer.Oauth2Creds = append(consumer.Oauth2Creds, &cred)
+	case "jwt":
+		var cred kong.JWTAuth
+		err := decodeCredential(credConfig, &cred)
+		if err != nil {
+			glog.Error("failed to process JWT credential", err)
+		}
+		// This is treated specially because only this
+		// field might be omitted by user under the expectation
+		// that Kong will insert the default.
+		// If we don't set it, decK will detect a diff and PUT this
+		// credential everytime it performs a sync operation, which
+		// leads to unnecessary cache invalidations in Kong.
+		if cred.Algorithm == nil || *cred.Algorithm == "" {
+			cred.Algorithm = kong.String("HS256")
+		}
+		consumer.JWTAuths = append(consumer.JWTAuths, &cred)
+	case "acl":
+		var cred kong.ACLGroup
+		err := decodeCredential(credConfig, &cred)
+		if err != nil {
+			glog.Error("failed to process ACL group", err)
+		}
+		consumer.ACLGroups = append(consumer.ACLGroups, &cred)
+	default:
+		return errors.Errorf("invalid credential type: '%v'", credType)
+	}
+	return nil
+}
+
+func decodeCredential(credConfig interface{},
 	credStructPointer interface{}) error {
 	decoder, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{TagName: "json",
@@ -181,10 +242,9 @@ func decodeCredential(credentialToDecode configurationv1.KongCredential,
 	if err != nil {
 		return errors.Wrap(err, "failed to create a decoder")
 	}
-	err = decoder.Decode(credentialToDecode.Config)
+	err = decoder.Decode(credConfig)
 	if err != nil {
-		return errors.Wrapf(err, "failed to decode credential '%v/%v': %v",
-			credentialToDecode.Namespace, credentialToDecode.Name, err)
+		return errors.Wrapf(err, "failed to decode credential")
 	}
 	return nil
 }
@@ -205,17 +265,66 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) error {
 			c.CustomID = kong.String(consumer.CustomID)
 		}
 		c.k8sKongConsumer = *consumer
+
+		for _, cred := range consumer.Credentials {
+			secret, err := p.store.GetSecret(consumer.Namespace, cred)
+			if err != nil {
+				glog.Errorf("error fetching credential secret '%v/%v': %v",
+					consumer.Namespace, cred, err)
+				continue
+			}
+			credConfig := map[string]interface{}{}
+			for k, v := range secret.Data {
+				// TODO populate these based on schema from Kong
+				// and remove this workaround
+				if k == "redirect_uris" {
+					credConfig[k] = strings.Split(string(v), ",")
+					continue
+				}
+				credConfig[k] = string(v)
+			}
+			credType, ok := credConfig["credType"].(string)
+			if !ok {
+				glog.Errorf("invalid credType in secret '%v/%v'",
+					consumer.Namespace, cred)
+			}
+			if !supportedCreds.Has(credType) {
+				glog.Errorf("invalid credType '%v' in secret '%v/%v'",
+					credType, consumer.Namespace, cred)
+				continue
+			}
+			if len(credConfig) <= 1 { // 1 key of credType itself
+				glog.Errorf("empty config in '%v' in secret '%v/%v'",
+					credType, consumer.Namespace, cred)
+				continue
+			}
+			err = processCredential(credType, &c, credConfig)
+			if err != nil {
+				glog.Errorf("failed to process credential in "+
+					"secret '%v/%v': %v", consumer.Namespace, cred, err)
+				continue
+			}
+		}
+
 		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
 	}
 
-	// attach credentials
-	for _, credential := range p.store.ListKongCredentials() {
+	// legacy attach credentials
+	credentials := p.store.ListKongCredentials()
+	if len(credentials) > 0 {
+		glog.Warningf("Deprecated KongCredential in use, " +
+			"please use secret-based credentials. " +
+			"KongCredential resource will be removed in future.")
+	}
+	for _, credential := range credentials {
 		consumer, ok := consumerIndex[credential.Namespace+"/"+
 			credential.ConsumerRef]
 		if !ok {
 			continue
 		}
 		if credential.Type == "" {
+			glog.Errorf("empty credential type in KongCredential '%v/%v'",
+				credential.Namespace, credential.Name)
 			continue
 		}
 		if !supportedCreds.Has(credential.Type) {
@@ -228,64 +337,12 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) error {
 				credential.Type, credential.Namespace, credential.Name)
 			continue
 		}
-		switch credential.Type {
-		case "key-auth":
-			var cred kong.KeyAuth
-			err := decodeCredential(*credential, &cred)
-			if err != nil {
-				glog.Error("failed to process credential", err)
-				continue
-			}
-			consumer.KeyAuths = append(consumer.KeyAuths, &cred)
-		case "basic-auth":
-			var cred kong.BasicAuth
-			err := decodeCredential(*credential, &cred)
-			if err != nil {
-				glog.Error("failed to process credential", err)
-				continue
-			}
-			consumer.BasicAuths = append(consumer.BasicAuths, &cred)
-		case "hmac-auth":
-			var cred kong.HMACAuth
-			err := decodeCredential(*credential, &cred)
-			if err != nil {
-				glog.Error("failed to process credential", err)
-				continue
-			}
-			consumer.HMACAuths = append(consumer.HMACAuths, &cred)
-		case "oauth2":
-			var cred kong.Oauth2Credential
-			err := decodeCredential(*credential, &cred)
-			if err != nil {
-				glog.Error("failed to process credential", err)
-				continue
-			}
-			consumer.Oauth2Creds = append(consumer.Oauth2Creds, &cred)
-		case "jwt":
-			var cred kong.JWTAuth
-			err := decodeCredential(*credential, &cred)
-			if err != nil {
-				glog.Error("failed to process credential", err)
-				continue
-			}
-			// This is treated specially because only this
-			// field might be omitted by user under the expectation
-			// that Kong will insert the default.
-			// If we don't set it, decK will detect a diff and PUT this
-			// credential everytime it performs a sync operation, which
-			// leads to unnecessary cache invalidations in Kong.
-			if cred.Algorithm == nil || *cred.Algorithm == "" {
-				cred.Algorithm = kong.String("HS256")
-			}
-			consumer.JWTAuths = append(consumer.JWTAuths, &cred)
-		case "acl":
-			var cred kong.ACLGroup
-			err := decodeCredential(*credential, &cred)
-			if err != nil {
-				glog.Error("failed to process credential", err)
-				continue
-			}
-			consumer.ACLGroups = append(consumer.ACLGroups, &cred)
+		err := processCredential(credential.Type, &consumer, credential.Config)
+		if err != nil {
+			glog.Errorf("failed to process credential in "+
+				"KongCredential '%v/%v': %v", credential.Namespace,
+				credential.Name, err)
+			continue
 		}
 		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = consumer
 	}

@@ -1,6 +1,6 @@
 # Configuring a fallback service
 
-This guides walks through how to setup a fallback service using Ingress
+This guide walks through how to setup a fallback service using Ingress
 resource. The fallback service will receive all requests that don't
 match against any of the defined Ingress rules.
 This can be useful for scenarios where you would like to return a 404 page
@@ -127,5 +127,5 @@ see how requests that don't match any rules, are forwarded to the
 fallback service.
 
 You can also use Kong's request-termination plugin on the `fallback`
-Ingress resource to termination all requests at Kong, without
+Ingress resource to terminate all requests at Kong, without
 forwarding them inside your infrastructure.

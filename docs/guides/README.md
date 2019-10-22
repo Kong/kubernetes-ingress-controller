@@ -10,16 +10,16 @@ Kong Ingress controller:
 - [Using KongIngress resource](using-kongingress-resource.md)  
   This guide explains how the KongIngress resource can be used to change Kong
   specific settings like load-balancing, health-checking and proxy behaviour.
-- [Using KongConsumer and KongCredential resources](using-consumer-credential-resource.md)  
-  This guides walks through how Kubernetes native declarative configuration
+- [Using KongConsumer and KongCredential resources](using-consumer-credential-resource.md)
+  This guide walks through how Kubernetes native declarative configuration
   can be used to dynamically provision credentials for authentication purposes
   in the Ingress layer.
 - [Using cert-manager with Kong](cert-manager.md)  
   This guide walks through how to use cert-manager along with Kong Ingress
   Controller to automate TLS certificate provisioning and using them
   to encrypt your API traffic.
-- [Configuring a fallback service](configuring-fallback-service.md)  
-  This guides walks through how to setup a fallback service using Ingress
+- [Configuring a fallback service](configuring-fallback-service.md)
+  This guide walks through how to setup a fallback service using Ingress
   resource. The fallback service will receive all requests that don't
   match against any of the defined Ingress rules.
 - [Configuring HTTPS redirects for your services](configuring-https-redirect.md)  

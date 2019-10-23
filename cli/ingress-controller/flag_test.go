@@ -168,6 +168,7 @@ func TestOverrideViaEnvVars(t *testing.T) {
 	}
 	for k, v := range envs {
 		os.Setenv(k, v)
+		defer os.Unsetenv(k)
 	}
 
 	conf, err := parseFlags()
@@ -204,5 +205,150 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		ShowVersion: false,
 	}
 	assert.Equal(expectedConf, conf)
+	assert.Nil(err, "unexpected error parsing default flags")
+}
+
+func TestDeprecatedFlags(t *testing.T) {
+	resetForTesting(func() { t.Fatal("bad parse") })
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	assert := assert.New(t)
+
+	os.Args = []string{
+		"cmd",
+		"--kong-url", "https://kong.example.com",
+		"--kong-workspace", "yolo",
+		"--admin-header", "foo:bar",
+		"--admin-tls-skip-verify",
+		"--admin-tls-server-name", "kong-admin.example.com",
+		"--admin-ca-cert-file", "/path/to/ca-cert",
+	}
+	conf, err := parseFlags()
+
+	expectedConf := cliConfig{
+		KongAdminURL:           "https://kong.example.com",
+		KongWorkspace:          "yolo",
+		KongAdminHeaders:       []string{"foo:bar"},
+		KongAdminTLSSkipVerify: true,
+		KongAdminTLSServerName: "kong-admin.example.com",
+		KongAdminCACertPath:    "/path/to/ca-cert",
+
+		AdmissionWebhookListen:   ":8080",
+		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
+		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
+
+		WatchNamespace: "",
+		IngressClass:   "kong",
+		ElectionID:     "ingress-controller-leader",
+
+		PublishService:         "",
+		PublishStatusAddress:   "",
+		UpdateStatus:           true,
+		UpdateStatusOnShutdown: true,
+
+		SyncPeriod:    600 * time.Second,
+		SyncRateLimit: 0.3,
+
+		APIServerHost:      "",
+		KubeConfigFilePath: "",
+
+		EnableProfiling: true,
+
+		ShowVersion: false,
+	}
+	assert.Equal(expectedConf, conf)
+	assert.Nil(err, "unexpected error parsing default flags")
+}
+
+func TestDeprecatedFlagPrecedences(t *testing.T) {
+	resetForTesting(func() { t.Fatal("bad parse") })
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	assert := assert.New(t)
+
+	os.Args = []string{
+		"cmd",
+		"--kong-url", "https://kong.example.com",
+		"--kong-admin-url", "http://kong.yolo42.com",
+		"--kong-workspace", "yolo",
+		"--admin-header", "foo:bar",
+		"--kong-admin-header", "fuu:baz",
+		"--kong-admin-tls-skip-verify",
+		"--admin-tls-server-name", "kong-admin.example.com",
+		"--kong-admin-tls-server-name", "kong-admin-new.example.com",
+		"--admin-ca-cert-file", "/path/to/ca-cert",
+		"--kong-admin-ca-cert-file", "/path/to/new/ca-cert",
+	}
+	conf, err := parseFlags()
+
+	expectedConf := cliConfig{
+		KongAdminURL:           "http://kong.yolo42.com",
+		KongWorkspace:          "yolo",
+		KongAdminHeaders:       []string{"fuu:baz"},
+		KongAdminTLSSkipVerify: true,
+		KongAdminTLSServerName: "kong-admin-new.example.com",
+		KongAdminCACertPath:    "/path/to/new/ca-cert",
+
+		AdmissionWebhookListen:   ":8080",
+		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
+		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
+
+		WatchNamespace: "",
+		IngressClass:   "kong",
+		ElectionID:     "ingress-controller-leader",
+
+		PublishService:         "",
+		PublishStatusAddress:   "",
+		UpdateStatus:           true,
+		UpdateStatusOnShutdown: true,
+
+		SyncPeriod:    600 * time.Second,
+		SyncRateLimit: 0.3,
+
+		APIServerHost:      "",
+		KubeConfigFilePath: "",
+
+		EnableProfiling: true,
+
+		ShowVersion: false,
+	}
+	assert.Equal(expectedConf, conf)
+	assert.Nil(err, "unexpected error parsing default flags")
+}
+
+func TestKongAdminHeaders(t *testing.T) {
+	resetForTesting(func() { t.Fatal("bad parse") })
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	assert := assert.New(t)
+
+	os.Args = []string{
+		"cmd",
+		"--kong-admin-header", "key0:value0",
+		"--kong-admin-header", "key1:value1",
+	}
+	conf, err := parseFlags()
+	assert.Equal([]string{"key0:value0", "key1:value1"}, conf.KongAdminHeaders)
+
+	assert.Nil(err, "unexpected error parsing default flags")
+}
+
+func TestKongAdminHeadersEnvVar(t *testing.T) {
+	resetForTesting(func() { t.Fatal("bad parse") })
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	assert := assert.New(t)
+
+	k := "CONTROLLER_KONG_ADMIN_HEADER"
+	v := "key0:value0 key1:value1"
+	os.Setenv(k, v)
+	defer os.Unsetenv(k)
+	conf, err := parseFlags()
+	assert.Equal([]string{"key0:value0", "key1:value1"}, conf.KongAdminHeaders)
+
 	assert.Nil(err, "unexpected error parsing default flags")
 }

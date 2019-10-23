@@ -57,85 +57,115 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
+	return controller.Configuration{
+		Kong: controller.Kong{
+			URL: cliConfig.KongAdminURL,
+		},
+
+		ResyncPeriod:  cliConfig.SyncPeriod,
+		SyncRateLimit: cliConfig.SyncRateLimit,
+
+		Namespace: cliConfig.WatchNamespace,
+
+		IngressClass: cliConfig.IngressClass,
+
+		PublishService:       cliConfig.PublishService,
+		PublishStatusAddress: cliConfig.PublishStatusAddress,
+
+		UpdateStatus:           cliConfig.UpdateStatus,
+		UpdateStatusOnShutdown: cliConfig.UpdateStatusOnShutdown,
+		ElectionID:             cliConfig.ElectionID,
+	}
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	fmt.Println(version())
 
-	showVersion, conf, err := parseFlags()
-	if showVersion {
-		os.Exit(0)
-	}
-
+	cliConfig, err := parseFlags()
 	if err != nil {
 		glog.Fatal(err)
 	}
 
-	kubeCfg, kubeClient, err := createApiserverClient(conf.APIServerHost, conf.KubeConfigFile)
+	if cliConfig.ShowVersion {
+		os.Exit(0)
+	}
+
+	if cliConfig.PublishService == "" && cliConfig.PublishStatusAddress == "" {
+		glog.Fatal("either --publish-service or --publish-status-address",
+			"must be specified")
+	}
+
+	if cliConfig.SyncPeriod.Seconds() < 10 {
+		glog.Fatalf("resync period (%vs) is too low", cliConfig.SyncPeriod.Seconds())
+	}
+
+	kubeCfg, kubeClient, err := createApiserverClient(cliConfig.APIServerHost,
+		cliConfig.KubeConfigFilePath)
 	if err != nil {
 		handleFatalInitError(err)
 	}
 
-	if conf.PublishService == "" {
-		glog.Fatal("flag --publish-address is mandatory")
-	}
-
-	ns, name, err := utils.ParseNameNS(conf.PublishService)
-	if err != nil {
-		glog.Fatal(err)
-	}
-
-	_, err = kubeClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
-	if err != nil {
-		glog.Fatalf("unexpected error getting information about service %v: %v", conf.PublishService, err)
-	}
-
-	if conf.Namespace != "" {
-		_, err = kubeClient.CoreV1().Namespaces().Get(conf.Namespace, metav1.GetOptions{})
+	if cliConfig.PublishService != "" {
+		svc := cliConfig.PublishService
+		ns, name, err := utils.ParseNameNS(svc)
 		if err != nil {
-			glog.Fatalf("no namespace with name %v found: %v", conf.Namespace, err)
+			glog.Fatal(err)
+		}
+		_, err = kubeClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			glog.Fatalf("unexpected error getting information about service %v: %v", svc, err)
 		}
 	}
 
-	if conf.ResyncPeriod.Seconds() < 10 {
-		glog.Fatalf("resync period (%vs) is too low", conf.ResyncPeriod.Seconds())
+	if cliConfig.WatchNamespace != "" {
+		_, err = kubeClient.CoreV1().Namespaces().Get(cliConfig.WatchNamespace,
+			metav1.GetOptions{})
+		if err != nil {
+			glog.Fatalf("no namespace with name %v found: %v",
+				cliConfig.WatchNamespace, err)
+		}
 	}
 
-	conf.KubeClient = kubeClient
-	conf.KubeConf = kubeCfg
+	controllerConfig := controllerConfigFromCLIConfig(cliConfig)
+
+	controllerConfig.KubeClient = kubeClient
 
 	defaultTransport := http.DefaultTransport.(*http.Transport)
 
 	var tlsConfig tls.Config
 
-	if conf.Kong.TLSSkipVerify {
+	if cliConfig.KongAdminTLSSkipVerify {
 		tlsConfig.InsecureSkipVerify = true
 	}
 
-	if conf.Kong.TLSServerName != "" {
-		tlsConfig.ServerName = conf.Kong.TLSServerName
+	if cliConfig.KongAdminTLSServerName != "" {
+		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
 	}
 
-	if conf.Kong.CACert != "" {
+	if cliConfig.KongAdminCACertPath != "" {
+		certPath := cliConfig.KongAdminCACertPath
 		certPool := x509.NewCertPool()
-		cert, err := ioutil.ReadFile(conf.Kong.CACert)
+		cert, err := ioutil.ReadFile(certPath)
 		if err != nil {
-			glog.Fatalf("failed to read CACert: %s", conf.Kong.CACert)
+			glog.Fatalf("failed to read CACert: %s", certPath)
 		}
 		ok := certPool.AppendCertsFromPEM([]byte(cert))
 		if !ok {
-			glog.Fatalf("failed to load CACert: %s", conf.Kong.CACert)
+			glog.Fatalf("failed to load CACert: %s", certPath)
 		}
 		tlsConfig.RootCAs = certPool
 	}
 	defaultTransport.TLSClientConfig = &tlsConfig
 	c := http.DefaultClient
 	c.Transport = &HeaderRoundTripper{
-		headers: conf.Kong.Headers,
+		headers: cliConfig.KongAdminHeaders,
 		rt:      defaultTransport,
 	}
 
-	kongClient, err := kong.NewClient(kong.String(conf.Kong.URL), c)
+	kongClient, err := kong.NewClient(kong.String(cliConfig.KongAdminURL), c)
 	if err != nil {
 		glog.Fatalf("Error creating Kong Rest client: %v", err)
 	}
@@ -152,69 +182,69 @@ func main() {
 
 	glog.Infof("kong version: %s", v)
 	kongConfiguration := root["configuration"].(map[string]interface{})
-	conf.Kong.Version = v
+	controllerConfig.Kong.Version = v
 
 	if strings.Contains(root["version"].(string), "enterprise") {
-		conf.Kong.Enterprise = true
+		controllerConfig.Kong.Enterprise = true
 	}
 
 	kongDB := kongConfiguration["database"].(string)
 	glog.Infof("Kong datastore: %s", kongDB)
 
 	if kongDB == "off" {
-		conf.Kong.InMemory = true
+		controllerConfig.Kong.InMemory = true
 	}
 	req, _ := http.NewRequest("GET",
-		conf.Kong.URL+"/tags", nil)
+		cliConfig.KongAdminURL+"/tags", nil)
 	res, err := kongClient.Do(nil, req, nil)
 	if err == nil && res.StatusCode == 200 {
-		conf.Kong.HasTagSupport = true
+		controllerConfig.Kong.HasTagSupport = true
 	}
 
 	// setup workspace in Kong Enterprise
-	if conf.Kong.Workspace != "" {
+	if cliConfig.KongWorkspace != "" {
 		// ensure the workspace exists or try creating it
-		err := ensureWorkspace(kongClient, conf.Kong.Workspace)
+		err := ensureWorkspace(kongClient, cliConfig.KongWorkspace)
 		if err != nil {
 			glog.Fatalf("Error ensuring workspace: %v", err)
 		}
-		kongClient, err = kong.NewClient(kong.String(conf.Kong.URL+"/"+conf.Kong.Workspace), c)
+		kongClient, err = kong.NewClient(kong.String(cliConfig.KongAdminURL+"/"+cliConfig.KongWorkspace), c)
 		if err != nil {
 			glog.Fatalf("Error creating Kong Rest client: %v", err)
 		}
 	}
-	conf.Kong.Client = kongClient
+	controllerConfig.Kong.Client = kongClient
 
 	err = discovery.ServerSupportsVersion(kubeClient.Discovery(), schema.GroupVersion{
 		Group:   "networking.k8s.io",
 		Version: "v1beta1",
 	})
 	if err == nil {
-		conf.UseNetworkingV1beta1 = true
+		controllerConfig.UseNetworkingV1beta1 = true
 	}
 	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient,
-		conf.ResyncPeriod,
-		informers.WithNamespace(conf.Namespace),
+		cliConfig.SyncPeriod,
+		informers.WithNamespace(cliConfig.WatchNamespace),
 	)
-	confClient, _ := configurationclientv1.NewForConfig(conf.KubeConf)
+	confClient, _ := configurationclientv1.NewForConfig(kubeCfg)
 	kongInformerFactory := configurationinformer.NewSharedInformerFactoryWithOptions(
 		confClient,
-		conf.ResyncPeriod,
-		configurationinformer.WithNamespace(conf.Namespace),
+		cliConfig.SyncPeriod,
+		configurationinformer.WithNamespace(cliConfig.WatchNamespace),
 	)
 
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
 		UpdateCh:           updateChannel,
-		IsValidIngresClass: annotations.IngressClassValidatorFunc(conf.IngressClass),
+		IsValidIngresClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass),
 	}
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
 
 	var ingInformer cache.SharedIndexInformer
-	if conf.UseNetworkingV1beta1 {
+	if controllerConfig.UseNetworkingV1beta1 {
 		ingInformer = coreInformerFactory.Networking().V1beta1().Ingresses().Informer()
 	} else {
 		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
@@ -272,9 +302,10 @@ func main() {
 
 	store := store.New(
 		cacheStores,
-		annotations.IngressClassValidatorFuncFromObjectMeta(conf.IngressClass),
+		annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass),
 	)
-	kong, err := controller.NewKongController(conf, updateChannel, store)
+	kong, err := controller.NewKongController(&controllerConfig, updateChannel,
+		store)
 	if err != nil {
 		glog.Fatal(err)
 	}
@@ -284,7 +315,7 @@ func main() {
 	})
 
 	mux := http.NewServeMux()
-	go registerHandlers(conf.EnableProfiling, 10254, kong, mux)
+	go registerHandlers(cliConfig.EnableProfiling, 10254, kong, mux)
 
 	if "off" != os.Getenv("KONG_ANONYMOUS_REPORTS") {
 		hostname, err := os.Hostname()
@@ -310,7 +341,7 @@ func main() {
 		reporter := utils.NewReporter(info)
 		go reporter.Run(stopCh)
 	}
-	if admissionWebhookListen != "off" {
+	if cliConfig.AdmissionWebhookListen != "off" {
 		admissionServer := admission.Server{
 			Validator: admission.KongHTTPValidator{
 				Client: kongClient,
@@ -319,9 +350,9 @@ func main() {
 		go func() {
 			glog.Error("error running the admission controller server:",
 				http.ListenAndServeTLS(
-					admissionWebhookListen,
-					admissionWebhookCertPath,
-					admissionWebhookKeyPath,
+					cliConfig.AdmissionWebhookListen,
+					cliConfig.AdmissionWebhookCertPath,
+					cliConfig.AdmissionWebhookKeyPath,
 					admissionServer,
 				))
 		}()

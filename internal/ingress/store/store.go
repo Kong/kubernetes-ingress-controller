@@ -18,6 +18,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
@@ -138,6 +139,9 @@ func (s Store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints,
 // GetKongPlugin returns the 'name' KongPlugin resource in namespace.
 func (s Store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
+	if strings.Contains(name, "/") {
+		key = name
+	}
 	p, exists, err := s.stores.Plugin.GetByKey(key)
 	if err != nil {
 		return nil, err

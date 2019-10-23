@@ -53,11 +53,10 @@ func TestHandleSigterm(t *testing.T) {
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
-	kubeConf, kubeClient, err := createApiserverClient("", kubeConfigFile)
+	_, kubeClient, err := createApiserverClient("", kubeConfigFile)
 	if err != nil {
 		t.Fatalf("unexpected error creating api server client: %v", err)
 	}
-
 	resetForTesting(func() { t.Fatal("bad parse") })
 
 	os.Setenv("POD_NAME", "test")
@@ -69,16 +68,14 @@ func TestHandleSigterm(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 	os.Args = []string{"cmd", "--default-backend-service", "ingress-nginx/default-backend-http"}
 
-	_, conf, err := parseFlags()
+	conf, err := parseFlags()
 	if err != nil {
 		t.Errorf("unexpected error creating Kong controller: %v", err)
 	}
-	conf.KubeClient = kubeClient
-	conf.KubeConf = kubeConf
 
-	conf.Kong = controller.Kong{}
-
-	kong, err := controller.NewKongController(conf,
+	kong, err := controller.NewKongController(&controller.Configuration{
+		KubeClient: kubeClient,
+	},
 		channels.NewRingChannel(1024),
 		store.New(
 			store.CacheStores{},

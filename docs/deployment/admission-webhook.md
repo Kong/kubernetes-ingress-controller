@@ -56,7 +56,7 @@ Here, we assume that the PEM-encoded certificate is stored in a file named
 
 ```bash
 $ kubectl create secret tls kong-validation-webhook -n kong \
-    --key key.pem --cert cert.pem
+    --key tls.crt --cert tls.key
 secret/kong-validation-webhook created
 ```
 

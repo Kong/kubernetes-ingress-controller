@@ -31,7 +31,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 )
 
-const defaultKongAdminURL = "http://localhost:8001"
+const (
+	defaultKongAdminURL  = "http://localhost:8001"
+	defaultKongFilterTag = "managed-by-ingress-controller"
+)
 
 type cliConfig struct {
 	// Admission controller server properties
@@ -42,6 +45,7 @@ type cliConfig struct {
 	// Kong connection details
 	KongAdminURL           string
 	KongWorkspace          string
+	KongAdminFilterTags    []string
 	KongAdminHeaders       []string
 	KongAdminTLSSkipVerify bool
 	KongAdminTLSServerName string
@@ -100,6 +104,10 @@ format of protocol://address:port`)
 
 	flags.String("kong-workspace", "",
 		"Workspace in Kong Enterprise to be configured")
+
+	flags.StringSlice("kong-admin-filter-tag", []string{defaultKongFilterTag},
+		`add a header (key:value) to every Admin API call,
+this flag can be used multiple times to specify multiple tags`)
 
 	// deprecated
 	flags.StringSlice("admin-header", nil,
@@ -227,6 +235,7 @@ func parseFlags() (cliConfig, error) {
 	config.KongAdminURL = kongAdminURL
 
 	config.KongWorkspace = viper.GetString("kong-workspace")
+	config.KongAdminFilterTags = viper.GetStringSlice("kong-admin-filter-tag")
 
 	config.KongAdminHeaders = viper.GetStringSlice("admin-header")
 	kongAdminHeaders := viper.GetStringSlice("kong-admin-header")

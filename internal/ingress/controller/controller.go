@@ -45,7 +45,8 @@ import (
 
 // Kong Represents a Kong client and connection information
 type Kong struct {
-	URL string
+	URL        string
+	FilterTags []string
 	// Headers are injected into every request to Kong's Admin API
 	// to help with authorization/authentication.
 	Client *kong.Client

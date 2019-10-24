@@ -60,7 +60,8 @@ import (
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
 	return controller.Configuration{
 		Kong: controller.Kong{
-			URL: cliConfig.KongAdminURL,
+			URL:        cliConfig.KongAdminURL,
+			FilterTags: cliConfig.KongAdminFilterTags,
 		},
 
 		ResyncPeriod:  cliConfig.SyncPeriod,

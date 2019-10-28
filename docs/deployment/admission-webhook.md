@@ -31,7 +31,7 @@ in the default case is `kong-validation-webhook.kong.svc`.
 Use openssl to generate a self-signed certificate:
 
 ```bash
-$ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365  \
+$ openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 365  \
     -nodes -subj "/CN=kong-validation-webhook.kong.svc"
 Generating a 2048 bit RSA private key
 ..........................................................+++
@@ -52,11 +52,11 @@ on how to generate a certificate using the in-built CA.
 Next, create a Kubernetes secret object based on the key and certificate that
 was generatd in the previous steps.
 Here, we assume that the PEM-encoded certificate is stored in a file named
-`cert.pem` and private key is stored in `key.pem`.
+`tls.crt` and private key is stored in `tls.key`.
 
 ```bash
 $ kubectl create secret tls kong-validation-webhook -n kong \
-    --key key.pem --cert cert.pem
+    --key tls.crt --cert tls.key
 secret/kong-validation-webhook created
 ```
 
@@ -103,7 +103,7 @@ webhooks:
     service:
       namespace: kong
       name: kong-validation-webhook
-    caBundle: $(cat cert.pem  | base64) " | kubectl apply -f -
+    caBundle: $(cat tls.crt  | base64) " | kubectl apply -f -
 ```
 
 ## Verify if it works

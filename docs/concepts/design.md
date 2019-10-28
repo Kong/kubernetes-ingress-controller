@@ -15,7 +15,7 @@ into a Kubernetes cluster. It is possible to configure plugins,
 load balancing, health checking and leverage all that Kong offers in a
 standalone installation.
 
-Following figure shows how it works:
+The following figure shows how it works:
 
 ![high-level-design](../images/high-level-design.png "High Level Design")
 
@@ -51,12 +51,12 @@ configuration:
   to use to talk to the upstream service and various other protocol
   specific settings. The Upstream object defines load balancing
   and healthchecking behavior.
-- Pods associated to a Service in Kubernetes map as a Target belonging
+- Pods associated with a Service in Kubernetes map as a Target belonging
   to the Upstream (the upstream corresponding to the Kubernetes
   Service) in Kong. Kong load balances across the Pods of your service.
   This means that all requests flowing through Kong are not directed via
   kube-proxy but directly to the pod.
 
-For more information on how Kong works with Routes, Services and Upstreams,
-please refer to the [Proxy](https://docs.konghq.com/latest/proxy/)
+For more information on how Kong works with Routes, Services, and Upstreams,
+please see the [Proxy](https://docs.konghq.com/latest/proxy/)
 and [Load balancing](https://docs.konghq.com/latest/loadbalancing/) references.

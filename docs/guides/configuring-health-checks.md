@@ -90,7 +90,7 @@ Observe the headers and you can see that Kong has proxied the request correctly.
 ## Setup passive health checking
 
 Now, let's setup passive HTTP health-check for our service.
-All health-checking is done for at Service-level and not Ingress-level.
+All health-checking is done at Service-level and not Ingress-level.
 
 Add the following KongIngress resource:
 
@@ -109,7 +109,7 @@ upstream:
 kongingress.configuration.konghq.com/demo-health-checking created
 ```
 
-Here, we are configuring Kong to short-ciruit reqeusts to a pod
+Here, we are configuring Kong to short-circuit requests to a pod
 if a pod throws 3 consecutive errors.
 
 Next, associate the KongIngress resource with `httpbin` service:
@@ -121,8 +121,8 @@ service/httpbin patched
 
 Now, let's send some traffic to test if this works:
 
-Let's send 2 reqeusts that represent a failure from upstream
-and the send a request for 200.
+Let's send 2 requests that represent a failure from upstream
+and then send a request for 200.
 Here we are using `/status/500` to simulate a failure from upstream.
 
 ```bash
@@ -222,15 +222,15 @@ Server: kong/1.2.1
 
 ```
 
-As we can see, Kong returns back a 503, representing that the service
+As we can see, Kong returns back a 503, representing that the service is
 unavailable. Since we have only one pod of httpbin running in our cluster,
 and that is throwing errors, Kong will not proxy anymore requests.
 
 Now we have a few options:
 
-- Delete the current httpbin pod, Kong will then proxy requests to the new
+- Delete the current httpbin pod; Kong will then proxy requests to the new
   pod that comes in its place.
-- Scale the httpbin deployment, Kong will then proxy requests to the new
+- Scale the httpbin deployment; Kong will then proxy requests to the new
   pods and leave the short-circuited pod out of the loop.
 - Manually change the pod health status in Kong using Kong's Admin API.
 
@@ -241,7 +241,7 @@ This is a feature which some services might need, where once a pod starts
 throwing errors, manual intervention is necessary before that pod can
 again handle requests.
 To get around this, we can introduce active health-check, where each instance
-of Kong actively probe pods to figure out if they are healthy or not.
+of Kong actively probes pods to figure out if they are healthy or not.
 
 ## Setup active health checking
 

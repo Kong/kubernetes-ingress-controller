@@ -110,7 +110,7 @@ $ TAG=DEV make docker-build
 Note: this will use the Docker daemon
 running on your system.
 If you're developing using minikube, you
-should exectue the following to use the
+should execute the following to use the
 Docker daemon running inside the Minikube VM:
 
 ```console

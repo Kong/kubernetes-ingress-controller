@@ -1,0 +1,12 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: demo
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        backend:
+          serviceName: grpc
+          servicePort: 9001

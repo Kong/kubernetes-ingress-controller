@@ -67,7 +67,6 @@ func (t *Queue) Enqueue(obj interface{}) {
 	}
 
 	ts := time.Now().UnixNano()
-	glog.V(3).Infof("queuing item %v", obj)
 	key, err := t.fn(obj)
 	if err != nil {
 		glog.Errorf("%v", err)

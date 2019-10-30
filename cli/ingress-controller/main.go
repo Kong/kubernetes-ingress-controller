@@ -318,7 +318,7 @@ func main() {
 	mux := http.NewServeMux()
 	go registerHandlers(cliConfig.EnableProfiling, 10254, kong, mux)
 
-	if "off" != os.Getenv("KONG_ANONYMOUS_REPORTS") {
+	if cliConfig.AnonymousReports {
 		hostname, err := os.Hostname()
 		if err != nil {
 			glog.Error(err)

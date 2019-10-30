@@ -158,6 +158,7 @@ config:
     - "demo: injected-by-kong"
 plugin: response-transformer
 ' | kubectl apply -f -
+kongplugin.configuration.konghq.com/add-response-header created
 ```
 
 Next, we will associate it with our Ingress rules:
@@ -221,14 +222,14 @@ Via: kong/1.2.1
 ```
 
 Here, we have successfully setup a plugin which is executed only when a
-request matches a specific Ingress rule.
+request matches a specific `Ingress` rule.
 
 ## Configuring plugins on Service resource
 
 Next, we will see how we can configure Kong to execute plugins for requests
 which are sent to a specific service.
 
-Let's add a KongPlugin resource for authentication on httpbin service:
+Let's add a `KongPlugin` resource for authentication on the httpbin service:
 
 ```bash
 $ echo "apiVersion: configuration.konghq.com/v1
@@ -250,7 +251,7 @@ service/httpbin patched
 ```
 
 Now, any request sent to the service will require authentication,
-no matter which Ingress rule it matched:
+no matter which `Ingress` rule it matched:
 
 ```bash
 $ curl -I $PROXY_IP/baz
@@ -274,7 +275,7 @@ Server: kong/1.2.1
 ```
 
 You can also see how the `demo` header was injected as the request also
-matched one of the rules defined in the `demo` Ingress resource.
+matched one of the rules defined in the `demo` `Ingress` resource.
 
 ## Configure consumer and credential
 
@@ -319,7 +320,7 @@ Now, we will protect our Kubernetes cluster.
 For this, we will be configuring a rate-limiting plugin, which
 will throttle requests coming from the same client.
 
-Let's create the KongPlugin resource:
+Let's create the `KongPlugin` resource:
 
 ```bash
 echo "
@@ -376,10 +377,10 @@ Via: kong/1.2.1
 
 Now, let's say we would like to give a specific consumer a higher rate-limit.
 
-For this, we can create a KongPlugin resource and then associate it with
+For this, we can create a `KongPlugin` resource and then associate it with
 a specific consumer.
 
-First, create the KongPlugin resource:
+First, create the `KongPlugin` resource:
 
 ```bash
 $ echo "
@@ -409,7 +410,7 @@ username: harry" | kubectl apply -f -
 kongconsumer.configuration.konghq.com/harry configured
 ```
 
-Note the annotation being added to the KongConsumer resource.
+Note the annotation being added to the `KongConsumer` resource.
 
 Now, if the request is made as the `harry` consumer, the client
 will be rate-limited differently:

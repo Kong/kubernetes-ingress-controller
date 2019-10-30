@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"errors"
 	"flag"
 	"os"
 	"strings"
@@ -25,146 +24,255 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 
 	apiv1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 )
 
-type headers []string
+const defaultKongAdminURL = "http://localhost:8001"
 
-func (h *headers) String() string {
-	return "my string representation"
+type cliConfig struct {
+	// Admission controller server properties
+	AdmissionWebhookListen   string
+	AdmissionWebhookCertPath string
+	AdmissionWebhookKeyPath  string
+
+	// Kong connection details
+	KongAdminURL           string
+	KongWorkspace          string
+	KongAdminHeaders       []string
+	KongAdminTLSSkipVerify bool
+	KongAdminTLSServerName string
+	KongAdminCACertPath    string
+
+	// Resource filtering
+	WatchNamespace string
+	IngressClass   string
+	ElectionID     string
+
+	// Ingress Status publish resource
+	PublishService         string
+	PublishStatusAddress   string
+	UpdateStatus           bool
+	UpdateStatusOnShutdown bool
+
+	// Rutnime behavior
+	SyncPeriod    time.Duration
+	SyncRateLimit float32
+
+	// k8s connection details
+	APIServerHost      string
+	KubeConfigFilePath string
+
+	// Performance
+	EnableProfiling bool
+
+	// Misc
+	ShowVersion bool
 }
 
-func (h *headers) Set(value string) error {
-	if len(strings.Split(value, ":")) < 2 {
-		return errors.New("header should be of form key:value")
-	}
-	*h = append(*h, value)
-	return nil
-}
+func flagSet() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("", pflag.ExitOnError)
 
-var (
-	admissionWebhookListen   string
-	admissionWebhookCertPath string
-	admissionWebhookKeyPath  string
-)
+	// Admission controller server properties
+	flags.String("admission-webhook-listen", ":8080",
+		`The address to start admission controller on (ip:port).
+Setting it to 'off' disables the admission controller.`)
+	flags.String("admission-webhook-cert-file", "/admission-webhook/tls.crt",
+		`Path to the PEM-encoded certificate file for
+TLS handshake`)
+	flags.String("admission-webhook-key-file", "/admission-webhook/tls.key",
+		`Path to the PEM-encoded private key file for
+TLS handshake`)
 
-func parseFlags() (bool, *controller.Configuration, error) {
-	var (
-		flags = pflag.NewFlagSet("", pflag.ExitOnError)
+	// Kong connection details
+	// deprecated
+	flags.String("kong-url", "",
+		`DEPRECATED, use --kong-admin-url
+The address of the Kong Admin URL to connect to in the
+format of protocol://address:port`)
+	// new
+	flags.String("kong-admin-url", defaultKongAdminURL,
+		`The address of the Kong Admin URL to connect to in the
+format of protocol://address:port`)
 
-		apiserverHost = flags.String("apiserver-host", "",
-			`The address of the Kubernetes Apiserver to connect to in the format of 
+	flags.String("kong-workspace", "",
+		"Workspace in Kong Enterprise to be configured")
+
+	// deprecated
+	flags.StringSlice("admin-header", nil,
+		`DEPRECATED, use --kong-admin-header
+add a header (key:value) to every Admin API call,
+this flag can be used multiple times to specify multiple headers`)
+	// new
+	flags.StringSlice("kong-admin-header", nil,
+		`add a header (key:value) to every Admin API call,
+this flag can be used multiple times to specify multiple headers`)
+
+	// deprecated
+	flags.Bool("admin-tls-skip-verify", false,
+		`DEPRECATED, use --kong-admin-tls-skip-verify
+Disable verification of TLS certificate of Kong's Admin endpoint.`)
+	// new
+	flags.Bool("kong-admin-tls-skip-verify", false,
+		"Disable verification of TLS certificate of Kong's Admin endpoint.")
+
+	// deprecated
+	flags.String("admin-tls-server-name", "",
+		`DEPRECATED, use --kong-admin-tls-server-name
+SNI name to use to verify the certificate presented by Kong in TLS.`)
+	// new
+	flags.String("kong-admin-tls-server-name", "",
+		"SNI name to use to verify the certificate presented by Kong in TLS.")
+
+	// deprecated
+	flags.String("admin-ca-cert-file", "",
+		`DEPRECATED, use --kong-admin-ca-cert-file
+Path to PEM-encoded CA certificate file to verify
+Kong's Admin SSL certificate.`)
+	// new
+	flags.String("kong-admin-ca-cert-file", "",
+		`Path to PEM-encoded CA certificate file to verify
+Kong's Admin SSL certificate.`)
+
+	// Resource filtering
+	flags.String("watch-namespace", apiv1.NamespaceAll,
+		`Namespace to watch for Ingress. Default is to watch all namespaces`)
+	flags.String("ingress-class", annotations.DefaultIngressClass,
+		`Name of the ingress class to route through this controller.`)
+	flags.String("election-id", "ingress-controller-leader",
+		`Election id to use for status update.`)
+
+	// Ingress Status publish resource
+	flags.String("publish-service", "",
+		`Service fronting the ingress controllers. Takes the form namespace/name.
+The controller will set the endpoint records on the ingress objects
+to reflect those on the service.`)
+	flags.String("publish-status-address", "",
+		`User customized address to be set in the status of ingress resources.
+The controller will set the endpoint records on the
+ingress using this address.`)
+	flags.Bool("update-status", true, `Indicates if the ingress controller
+should update the Ingress status IP/hostname.`)
+	flags.Bool("update-status-on-shutdown", true,
+		`Indicates if the ingress controller should update the Ingress status 
+IP/hostname when the controller is being stopped.`)
+
+	// Rutnime behavior
+	flags.Duration("sync-period", 600*time.Second,
+		`Relist and confirm cloud resources this often.`)
+	flags.Float32("sync-rate-limit", 0.3,
+		`Define the sync frequency upper limit`)
+
+	// k8s connection details
+	flags.String("apiserver-host", "",
+		`The address of the Kubernetes Apiserver to connect to in the format of 
 protocol://address:port, e.g., "http://localhost:8080.
 If not specified, the assumption is that the binary runs inside a 
 Kubernetes cluster and local discovery is attempted.`)
-		kubeConfigFile = flags.String("kubeconfig", "", "Path to kubeconfig file with authorization and master location information.")
+	flags.String("kubeconfig", "", "Path to kubeconfig file with "+
+		"authorization and master location information.")
 
-		ingressClass = flags.String("ingress-class", annotations.DefaultIngressClass,
-			`Name of the ingress class to route through this controller.`)
+	// Misc
+	flags.Bool("profiling", true, `Enable profiling via web interface host:port/debug/pprof/`)
+	flags.Bool("version", false,
+		`Shows release information about the Kong Ingress controller`)
 
-		publishSvc = flags.String("publish-service", "",
-			`Service fronting the ingress controllers. Takes the form namespace/name.
-		The controller will set the endpoint records on the ingress objects to reflect those on the service.`)
+	return flags
+}
 
-		resyncPeriod = flags.Duration("sync-period", 600*time.Second,
-			`Relist and confirm cloud resources this often. Default is 10 minutes`)
+func parseFlags() (cliConfig, error) {
 
-		watchNamespace = flags.String("watch-namespace", apiv1.NamespaceAll,
-			`Namespace to watch for Ingress. Default is to watch all namespaces`)
+	flagSet := flagSet()
 
-		profiling = flags.Bool("profiling", true, `Enable profiling via web interface host:port/debug/pprof/`)
-
-		updateStatus = flags.Bool("update-status", true, `Indicates if the
-		ingress controller should update the Ingress status IP/hostname. Default is true`)
-
-		electionID = flags.String("election-id", "ingress-controller-leader", `Election id to use for status update.`)
-
-		updateStatusOnShutdown = flags.Bool("update-status-on-shutdown", true,
-			`Indicates if the ingress controller should update the Ingress status 
-IP/hostname when the controller is being stopped. Default is true`)
-
-		showVersion = flags.Bool("version", false,
-			`Shows release information about the Kong Ingress controller`)
-
-		syncRateLimit = flags.Float32("sync-rate-limit", 0.3,
-			`Define the sync frequency upper limit`)
-
-		publishStatusAddress = flags.String("publish-status-address", "",
-			`User customized address to be set in the status of ingress resources.
-The controller will set the endpoint records on the ingress using this address.`)
-
-		kongURL = flags.String("kong-url", "http://localhost:8001",
-			"The address of the Kong Admin URL to connect to in the format of protocol://address:port")
-
-		kongTLSSkipVerify = flag.Bool("admin-tls-skip-verify", false,
-			"Disable verification of TLS certificate of Kong's Admin endpoint.")
-		kongTLSServerName = flag.String("admin-tls-server-name", "",
-			"SNI name to use to verify the certificate presented by Kong in TLS.")
-		kongCACert = flag.String("admin-ca-cert-file", "",
-			"Path to PEM-encoded CA certificate file to verify the Kong's Admin SSL certificate.")
-		workspace = flag.String("kong-workspace", "",
-			"Workspace in Kong Enterprise to be configured")
-
-		kongHeaders headers
-	)
-
-	flag.Var(&kongHeaders, "admin-header",
-		"add a header (key:value) to every Admin API call, flag can be used multiple times")
-
-	flag.StringVar(&admissionWebhookListen, "admission-webhook-listen", ":8080",
-		"The address to start admission controller on (ip:port)."+
-			" Setting it to `off` disables the admission controller.")
-	flag.StringVar(&admissionWebhookCertPath, "admission-webhook-cert-file",
-		"/admission-webhook/tls.crt",
-		"Path to the PEM-encoded certificate file for TLS handshake")
-	flag.StringVar(&admissionWebhookKeyPath, "admission-webhook-key-file",
-		"/admission-webhook/tls.key",
-		"Path to the PEM-encoded private key file for TLS handshake")
-
+	// glog
 	flag.Set("logtostderr", "true")
 
-	flags.AddGoFlagSet(flag.CommandLine)
-	flags.Parse(os.Args)
+	flagSet.AddGoFlagSet(flag.CommandLine)
+	flagSet.Parse(os.Args)
 
 	// Workaround for this issue:
 	// https://github.com/kubernetes/kubernetes/issues/17162
 	flag.CommandLine.Parse([]string{})
 
-	pflag.VisitAll(func(flag *pflag.Flag) {
-		glog.V(2).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
-	})
+	viper.SetEnvPrefix("CONTROLLER")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
+	viper.BindPFlags(flagSet)
 
-	if *showVersion {
-		return true, nil, nil
+	for key, value := range viper.AllSettings() {
+		glog.V(2).Infof("FLAG: --%s=%q", key, value)
 	}
 
-	config := &controller.Configuration{
-		Kong: controller.Kong{
-			URL:       *kongURL,
-			Headers:   kongHeaders,
-			Workspace: *workspace,
+	var config cliConfig
+	// Admission controller server properties
+	config.AdmissionWebhookListen = viper.GetString("admission-webhook-listen")
+	config.AdmissionWebhookCertPath =
+		viper.GetString("admission-webhook-cert-file")
+	config.AdmissionWebhookKeyPath =
+		viper.GetString("admission-webhook-key-file")
 
-			TLSServerName: *kongTLSServerName,
-			TLSSkipVerify: *kongTLSSkipVerify,
-			CACert:        *kongCACert,
-		},
-		APIServerHost:          *apiserverHost,
-		KubeConfigFile:         *kubeConfigFile,
-		UpdateStatus:           *updateStatus,
-		ElectionID:             *electionID,
-		EnableProfiling:        *profiling,
-		ResyncPeriod:           *resyncPeriod,
-		IngressClass:           *ingressClass,
-		Namespace:              *watchNamespace,
-		PublishService:         *publishSvc,
-		PublishStatusAddress:   *publishStatusAddress,
-		UpdateStatusOnShutdown: *updateStatusOnShutdown,
-		SyncRateLimit:          *syncRateLimit,
+	// Kong connection details
+	kongAdminURL := defaultKongAdminURL
+	oldURL := viper.GetString("kong-url")
+	newURL := viper.GetString("kong-admin-url")
+	if oldURL != "" {
+		kongAdminURL = oldURL
+	}
+	if newURL != defaultKongAdminURL {
+		kongAdminURL = newURL
+	}
+	config.KongAdminURL = kongAdminURL
+
+	config.KongWorkspace = viper.GetString("kong-workspace")
+
+	config.KongAdminHeaders = viper.GetStringSlice("admin-header")
+	kongAdminHeaders := viper.GetStringSlice("kong-admin-header")
+	if len(kongAdminHeaders) > 0 {
+		config.KongAdminHeaders = kongAdminHeaders
 	}
 
-	return false, config, nil
+	config.KongAdminTLSSkipVerify = viper.GetBool("admin-tls-skip-verify")
+	kongAdminTLSSkipVerify := viper.GetBool("kong-admin-tls-skip-verify")
+	if kongAdminTLSSkipVerify {
+		config.KongAdminTLSSkipVerify = kongAdminTLSSkipVerify
+	}
+
+	config.KongAdminTLSServerName = viper.GetString("admin-tls-server-name")
+	kongAdminTLSServerName := viper.GetString("kong-admin-tls-server-name")
+	if kongAdminTLSServerName != "" {
+		config.KongAdminTLSServerName = kongAdminTLSServerName
+	}
+
+	config.KongAdminCACertPath = viper.GetString("admin-ca-cert-file")
+	kongAdminCACertPath := viper.GetString("kong-admin-ca-cert-file")
+	if kongAdminCACertPath != "" {
+		config.KongAdminCACertPath = kongAdminCACertPath
+	}
+
+	// Resource filtering
+	config.WatchNamespace = viper.GetString("watch-namespace")
+	config.IngressClass = viper.GetString("ingress-class")
+	config.ElectionID = viper.GetString("election-id")
+
+	// Ingress Status publish resource
+	config.PublishService = viper.GetString("publish-service")
+	config.PublishStatusAddress = viper.GetString("publish-status-address")
+	config.UpdateStatus = viper.GetBool("update-status")
+	config.UpdateStatusOnShutdown = viper.GetBool("update-status-on-shutdown")
+
+	// Rutnime behavior
+	config.SyncPeriod = viper.GetDuration("sync-period")
+	config.SyncRateLimit = (float32)(viper.GetFloat64("sync-rate-limit"))
+
+	// k8s connection details
+	config.APIServerHost = viper.GetString("apiserver-host")
+	config.KubeConfigFilePath = viper.GetString("kubeconfig")
+
+	// Misc
+	config.EnableProfiling = viper.GetBool("profiling")
+	config.ShowVersion = viper.GetBool("version")
+	return config, nil
 }

@@ -38,7 +38,6 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	clientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
@@ -49,34 +48,23 @@ type Kong struct {
 	URL string
 	// Headers are injected into every request to Kong's Admin API
 	// to help with authorization/authentication.
-	Headers []string
-	Client  *kong.Client
-
-	TLSSkipVerify bool
-	TLSServerName string
-	CACert        string
+	Client *kong.Client
 
 	InMemory      bool
-	Database      string
 	HasTagSupport bool
+	Enterprise    bool
 
-	Enterprise bool
-	Version    semver.Version
-
-	// Workspace is the Kong Enterprise workspace being synced.
-	Workspace string
+	Version semver.Version
 }
 
 // Configuration contains all the settings required by an Ingress controller
 type Configuration struct {
 	Kong
 
-	APIServerHost  string
-	KubeConfigFile string
-	KubeClient     clientset.Interface
-	KubeConf       *rest.Config
+	KubeClient clientset.Interface
 
-	ResyncPeriod time.Duration
+	ResyncPeriod  time.Duration
+	SyncRateLimit float32
 
 	Namespace string
 
@@ -87,12 +75,8 @@ type Configuration struct {
 	PublishStatusAddress string
 
 	UpdateStatus           bool
-	ElectionID             string
 	UpdateStatusOnShutdown bool
-
-	EnableProfiling bool
-
-	SyncRateLimit float32
+	ElectionID             string
 
 	UseNetworkingV1beta1 bool
 }

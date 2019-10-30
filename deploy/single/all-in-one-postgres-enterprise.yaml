@@ -27,6 +27,10 @@ spec:
   validation:
     openAPIV3Schema:
       properties:
+        credentials:
+          items:
+            type: string
+          type: array
         custom_id:
           type: string
         username:

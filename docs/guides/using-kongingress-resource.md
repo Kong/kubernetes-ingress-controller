@@ -123,7 +123,7 @@ metadata:
 route:
   methods:
   - GET
-  strip_path: false" | k apply -f -
+  strip_path: false" | kubectl apply -f -
 kongingress.configuration.konghq.com/test created
 ```
 
@@ -203,7 +203,7 @@ service/echo patched
 Let's test this now:
 
 ```bash
-$ curl $PROXY_IP/foo/hello-world
+$ curl $PROXY_IP/foo
 Hostname: echo-d778ffcd8-vrrtw
 
 Pod Information:
@@ -218,11 +218,11 @@ Server values:
 Request Information:
 	client_address=10.60.1.10
 	method=GET
-	real path=/bar/foo/hello-world
+	real path=/bar/foo
 	query=
 	request_version=1.1
 	request_scheme=http
-	request_uri=http://35.233.170.67:8080/bar/foo/hello-world
+	request_uri=http://35.233.170.67:8080/bar/foo
 
 <-- clipped -->
 ```
@@ -232,20 +232,20 @@ Real path received by the upstream service (echo) is now changed to `/bar/foo`.
 Also, now all the requests will be sent to the same upstream pod:
 
 ```bash
-$ curl -s $PROXY_IP/foo/hello-world | grep "pod IP"
+$ curl -s $PROXY_IP/foo | grep "pod IP"
 	pod IP:	10.60.0.9
-$ curl -s $PROXY_IP/foo/hello-world | grep "pod IP"
+$ curl -s $PROXY_IP/foo | grep "pod IP"
 	pod IP:	10.60.0.9
-$ curl -s $PROXY_IP/foo/hello-world | grep "pod IP"
+$ curl -s $PROXY_IP/foo | grep "pod IP"
 	pod IP:	10.60.0.9
-$ curl -s $PROXY_IP/foo/hello-world | grep "pod IP"
+$ curl -s $PROXY_IP/foo | grep "pod IP"
 	pod IP:	10.60.0.9
-$ curl -s $PROXY_IP/foo/hello-world | grep "pod IP"
+$ curl -s $PROXY_IP/foo | grep "pod IP"
 	pod IP:	10.60.0.9
-$ curl -s $PROXY_IP/foo/hello-world | grep "pod IP"
+$ curl -s $PROXY_IP/foo | grep "pod IP"
 	pod IP:	10.60.0.9
 ```
 
 
 You can experiement with various load balancing and healthchecking settings
-that KongIngress resource exposes to suite your specific use-case.
+that KongIngress resource exposes to suit your specific use case.

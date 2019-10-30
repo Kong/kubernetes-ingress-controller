@@ -2,7 +2,7 @@
 
 This guide will walk through steps to setup Kong Ingress Controller with
 cert-manager to automate certificate management using Let's Encrypt.
-Any ACME based CA can be used in-place of Let's Encrypt as well.
+Any ACME-based CA can be used in-place of Let's Encrypt as well.
 
 ## Before you begin
 
@@ -44,7 +44,7 @@ job.batch/kong-migrations created
 
 ## Setup cert-manager
 
-Please follow cert-manager's [documentaion](https://docs.cert-manager.io/en/latest/getting-started/install/kubernetes.html)
+Please follow cert-manager's [documentation](https://docs.cert-manager.io/en/latest/getting-started/install/kubernetes.html)
 on how to install cert-manager onto your cluster.
 
 Once installed, verify all the components are running using:
@@ -159,7 +159,7 @@ Via: kong/1.1.2
 First, setup a ClusterIssuer for cert-manager
 
 ```bash
-echo "apiVersion: certmanager.k8s.io/v1alpha1
+echo "apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
 metadata:
   name: letsencrypt-prod
@@ -170,10 +170,11 @@ spec:
     http01: {}
     privateKeySecretRef:
       name: letsencrypt-prod
-    server: https://acme-v02.api.letsencrypt.org/directory" | k apply -f -
+    server: https://acme-v02.api.letsencrypt.org/directory" | kubectl apply -f -
 clusterissuer.certmanager.k8s.io/letsencrypt-prod created
 ```
 
+*Note*: If you run into issues configuring this, be sure that the group (`cert-manager.io`) and version (`v1alpha2`) match those in the output of `kubectl describe crd clusterissuer`.
 This directs cert-manager which CA authority to use to issue the certificate.
 
 Next, update your Ingress resource to provision a certificate and then use it:
@@ -186,7 +187,7 @@ metadata:
   name: demo-yolo42-com
   annotations:
     kubernetes.io/tls-acme: "true"
-    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   tls:
   - secretName: demo-yolo42-com
@@ -219,7 +220,7 @@ Things to note here:
 Once you update the Ingress resource, cert-manager will start provisioning
 the certificate and in sometime the certificate will be available for use.
 
-You can track the progress of certificate issueance:
+You can track the progress of certificate issuance:
 
 ```bash
 $ kubectl describe certificate demo-example-com

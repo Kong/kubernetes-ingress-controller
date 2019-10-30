@@ -81,7 +81,7 @@ func flagSet() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("", pflag.ExitOnError)
 
 	// Admission controller server properties
-	flags.String("admission-webhook-listen", ":8080",
+	flags.String("admission-webhook-listen", "off",
 		`The address to start admission controller on (ip:port).
 Setting it to 'off' disables the admission controller.`)
 	flags.String("admission-webhook-cert-file", "/admission-webhook/tls.crt",

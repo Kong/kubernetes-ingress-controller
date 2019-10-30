@@ -45,7 +45,7 @@ func TestDefaults(t *testing.T) {
 	conf, err := parseFlags()
 
 	expectedConf := cliConfig{
-		AdmissionWebhookListen:   ":8080",
+		AdmissionWebhookListen:   "off",
 		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
 		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
 
@@ -239,7 +239,7 @@ func TestDeprecatedFlags(t *testing.T) {
 		KongAdminTLSServerName: "kong-admin.example.com",
 		KongAdminCACertPath:    "/path/to/ca-cert",
 
-		AdmissionWebhookListen:   ":8080",
+		AdmissionWebhookListen:   "off",
 		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
 		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
 
@@ -285,6 +285,7 @@ func TestDeprecatedFlagPrecedences(t *testing.T) {
 		"--kong-admin-tls-server-name", "kong-admin-new.example.com",
 		"--admin-ca-cert-file", "/path/to/ca-cert",
 		"--kong-admin-ca-cert-file", "/path/to/new/ca-cert",
+		"--admission-webhook-listen", ":8080",
 	}
 	conf, err := parseFlags()
 

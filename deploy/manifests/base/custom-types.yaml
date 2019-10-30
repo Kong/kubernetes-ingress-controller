@@ -171,6 +171,8 @@ spec:
                 enum:
                 - http
                 - https
+                - grpc
+                - grpcs
             https_redirect_status_code:
               type: integer
         proxy:
@@ -181,6 +183,8 @@ spec:
               enum:
               - http
               - https
+              - grpc
+              - grpcs
             path:
               type: string
               pattern: ^/.*$

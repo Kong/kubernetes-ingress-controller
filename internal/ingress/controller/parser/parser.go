@@ -540,8 +540,12 @@ func overrideService(service *Service,
 		return
 	}
 	s := kongIngress.Proxy
+	// grpc(s) doesn't accept a service_path
 	if s.Protocol != nil {
 		service.Protocol = kong.String(*s.Protocol)
+		if *service.Protocol == *kong.String("grpcs") || *service.Protocol == *kong.String("grpc") {
+			service.Path = nil
+		}
 	}
 	if s.Path != nil {
 		service.Path = kong.String(*s.Path)
@@ -573,8 +577,14 @@ func overrideRoute(route *Route,
 	if len(r.Headers) != 0 {
 		route.Headers = r.Headers
 	}
+	// grpc(s) doesn't accept strip_path
 	if len(r.Protocols) != 0 {
 		route.Protocols = cloneStringPointerSlice(r.Protocols...)
+		for _, val := range r.Protocols {
+			if *val == *kong.String("grpc") || *val == *kong.String("grpcs") {
+				route.StripPath = kong.Bool(false)
+			}
+		}
 	}
 	if r.RegexPriority != nil {
 		route.RegexPriority = kong.Int(*r.RegexPriority)
@@ -582,6 +592,7 @@ func overrideRoute(route *Route,
 	if r.StripPath != nil {
 		route.StripPath = kong.Bool(*r.StripPath)
 	}
+
 	if r.PreserveHost != nil {
 		route.PreserveHost = kong.Bool(*r.PreserveHost)
 	}

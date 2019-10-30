@@ -41,8 +41,6 @@ import (
 
 var count counter.Counter
 
-const ingressControllerTag = "managed-by-ingress-controller"
-
 var upstreamDefaults = kong.Upstream{
 	Slots: kong.Int(10000),
 	Healthchecks: &kong.Healthcheck{
@@ -166,7 +164,7 @@ func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
 func (n *KongController) getIngressControllerTags() []string {
 	var res []string
 	if n.cfg.Kong.HasTagSupport {
-		res = append(res, ingressControllerTag)
+		res = append(res, n.cfg.Kong.FilterTags...)
 	}
 	return res
 }

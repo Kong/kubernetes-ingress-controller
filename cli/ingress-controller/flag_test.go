@@ -51,6 +51,7 @@ func TestDefaults(t *testing.T) {
 
 		KongAdminURL:           "http://localhost:8001",
 		KongWorkspace:          "",
+		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminHeaders:       []string{},
 		KongAdminTLSSkipVerify: false,
 		KongAdminTLSServerName: "",
@@ -94,6 +95,7 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 
 		"--kong-url", "https://kong.example.com",
 		"--kong-workspace", "yolo",
+		"--kong-admin-filter-tag", "foo-tag",
 		"--admin-header", "foo:bar",
 		"--admin-tls-skip-verify",
 		"--admin-tls-server-name", "kong-admin.example.com",
@@ -126,6 +128,7 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 
 		KongAdminURL:           "https://kong.example.com",
 		KongWorkspace:          "yolo",
+		KongAdminFilterTags:    []string{"foo-tag"},
 		KongAdminHeaders:       []string{"foo:bar"},
 		KongAdminTLSSkipVerify: true,
 		KongAdminTLSServerName: "kong-admin.example.com",
@@ -178,6 +181,7 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		AdmissionWebhookCertPath: "/new-cert-path",
 		AdmissionWebhookKeyPath:  "/new-key-path",
 
+		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminURL:           "http://localhost:8001",
 		KongWorkspace:          "",
 		KongAdminHeaders:       []string{},
@@ -229,6 +233,7 @@ func TestDeprecatedFlags(t *testing.T) {
 	expectedConf := cliConfig{
 		KongAdminURL:           "https://kong.example.com",
 		KongWorkspace:          "yolo",
+		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminHeaders:       []string{"foo:bar"},
 		KongAdminTLSSkipVerify: true,
 		KongAdminTLSServerName: "kong-admin.example.com",
@@ -286,6 +291,7 @@ func TestDeprecatedFlagPrecedences(t *testing.T) {
 	expectedConf := cliConfig{
 		KongAdminURL:           "http://kong.yolo42.com",
 		KongWorkspace:          "yolo",
+		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminHeaders:       []string{"fuu:baz"},
 		KongAdminTLSSkipVerify: true,
 		KongAdminTLSServerName: "kong-admin-new.example.com",
@@ -349,6 +355,56 @@ func TestKongAdminHeadersEnvVar(t *testing.T) {
 	defer os.Unsetenv(k)
 	conf, err := parseFlags()
 	assert.Equal([]string{"key0:value0", "key1:value1"}, conf.KongAdminHeaders)
+
+	assert.Nil(err, "unexpected error parsing default flags")
+}
+
+func TestKongFilterTags(t *testing.T) {
+	resetForTesting(func() { t.Fatal("bad parse") })
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	assert := assert.New(t)
+
+	// comma-separated
+	os.Args = []string{
+		"cmd",
+		"--kong-admin-filter-tag", "foo,bar",
+	}
+	conf, err := parseFlags()
+	assert.Equal([]string{"foo", "bar"}, conf.KongAdminFilterTags)
+
+	assert.Nil(err, "unexpected error parsing default flags")
+
+	resetForTesting(func() { t.Fatal("bad parse") })
+
+	// differnt flags
+	os.Args = []string{
+		"cmd",
+		"--kong-admin-filter-tag", "foo",
+		"--kong-admin-filter-tag", "bar",
+	}
+	conf, err = parseFlags()
+	assert.Equal([]string{"foo", "bar"}, conf.KongAdminFilterTags)
+
+	assert.Nil(err, "unexpected error parsing default flags")
+}
+
+func TestKongAdminFilterTagEnvVar(t *testing.T) {
+	resetForTesting(func() { t.Fatal("bad parse") })
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	assert := assert.New(t)
+
+	k := "CONTROLLER_KONG_ADMIN_FILTER_TAG"
+	v := "tag1 tag2"
+	os.Setenv(k, v)
+	defer os.Unsetenv(k)
+
+	conf, err := parseFlags()
+	assert.Equal([]string{"tag1", "tag2"},
+		conf.KongAdminFilterTags)
 
 	assert.Nil(err, "unexpected error parsing default flags")
 }

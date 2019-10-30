@@ -510,10 +510,8 @@ func (p *Parser) fillOverrides(state KongState) error {
 			state.Services[i].Backend.ServiceName)
 
 		if err == nil || kongIngress == nil {
-			fmt.Println("first case")
 			overrideService(&state.Services[i], kongIngress, svcAnns)
 		} else {
-			fmt.Println("default case")
 			glog.Error(errors.Wrapf(err, "fetching KongIngress for service %v/%v",
 				state.Services[i].Namespace,
 				state.Services[i].Backend.ServiceName))
@@ -523,7 +521,7 @@ func (p *Parser) fillOverrides(state KongState) error {
 		for j := 0; j < len(state.Services[i].Routes); j++ {
 			kongIngress, err := p.getKongIngressFromIngress(
 				&state.Services[i].Routes[j].Ingress)
-			if err == nil {
+			if err == nil || kongIngress == nil {
 				overrideRoute(&state.Services[i].Routes[j], kongIngress)
 			} else {
 				glog.Error(errors.Wrapf(err, "fetching KongIngress for Ingress '%v' in namespace '%v'",
@@ -549,7 +547,6 @@ func (p *Parser) fillOverrides(state KongState) error {
 func overrideService(service *Service,
 	kongIngress *configurationv1.KongIngress,
 	annotations map[string]string) {
-	fmt.Printf("Did we make it %v", service)
 	if service == nil {
 		return
 	}
@@ -558,7 +555,7 @@ func overrideService(service *Service,
 	}
 
 	routeAnns := annotations["configuration.konghq.com/protocol"]
-	fmt.Printf("Did we make it %v", routeAnns)
+
 	if len(routeAnns) > 0 && routeAnns == "grpc" || routeAnns == "grpcs" {
 		service.Protocol = kong.String(routeAnns)
 		service.Path = nil
@@ -571,8 +568,12 @@ func overrideServiceByKongIngress(service *Service,
 		return
 	}
 	s := kongIngress.Proxy
+	// grpc(s) doesn't accept a service_path
 	if s.Protocol != nil {
 		service.Protocol = kong.String(*s.Protocol)
+		if *service.Protocol == *kong.String("grpcs") || *service.Protocol == *kong.String("grpc") {
+			service.Path = nil
+		}
 	}
 	if s.Path != nil {
 		service.Path = kong.String(*s.Path)
@@ -602,18 +603,15 @@ func overrideRouteByKongIngress(route *Route,
 	if len(r.Headers) != 0 {
 		route.Headers = r.Headers
 	}
+	// grpc(s) doesn't accept strip_path
 	if len(r.Protocols) != 0 {
 		route.Protocols = cloneStringPointerSlice(r.Protocols...)
+		for _, val := range r.Protocols {
+			if *val == *kong.String("grpc") || *val == *kong.String("grpcs") {
+				route.StripPath = kong.Bool(false)
+			}
+		}
 	}
-	// grpc(s) doesn't accept strip_path
-	// if len(r.Protocols) != 0 {
-	// 	route.Protocols = cloneStringPointerSlice(r.Protocols...)
-	// 	for _, val := range r.Protocols {
-	// 		if *val == *kong.String("grpc") || *val == *kong.String("grpcs") {
-	// 			route.StripPath = kong.Bool(false)
-	// 		}
-	// 	}
-	// }
 	if r.RegexPriority != nil {
 		route.RegexPriority = kong.Int(*r.RegexPriority)
 	}
@@ -639,17 +637,12 @@ func overrideRoute(route *Route,
 	}
 
 	routeAnns := route.Ingress.Annotations["configuration.konghq.com/protocols"]
+
 	if len(routeAnns) > 0 && routeAnns == "grpc,grpcs" {
-		// TODO: set the relevant values [done]
 		// TODO: don't hardcode the things
 		route.Protocols = kong.StringSlice("grpc", "grpcs")
 		// grpc(s) doesn't accept strip_path
 		route.StripPath = kong.Bool(false)
-		// TODO: apply a new annotation that is "configuration.konghq.com/protocols" [done]
-		// TODO: How to configure the ports on Kong (this may be through service only???)
-		// TODO: remove the grpc-only thing
-		// --> with a value of "grpc, grpcs" [confirm whether it should be a string or an array of strings]
-		// [done]
 	}
 }
 

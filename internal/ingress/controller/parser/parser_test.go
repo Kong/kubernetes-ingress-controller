@@ -711,6 +711,56 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpc"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpc"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpc"),
+					Path:     nil,
+				},
+			},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpcs"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpcs"),
+					Path:     nil,
+				},
+			},
+		},
 	}
 
 	for _, testcase := range testTable {
@@ -827,6 +877,25 @@ func TestOverrideRoute(t *testing.T) {
 					Headers: map[string][]string{
 						"foo-header": {"bar-value"},
 					},
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts:     kong.StringSlice("foo.com"),
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+					StripPath: kong.Bool(false),
 				},
 			},
 		},

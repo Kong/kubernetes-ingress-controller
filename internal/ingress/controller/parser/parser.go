@@ -592,7 +592,6 @@ func overrideRoute(route *Route,
 	if r.StripPath != nil {
 		route.StripPath = kong.Bool(*r.StripPath)
 	}
-
 	if r.PreserveHost != nil {
 		route.PreserveHost = kong.Bool(*r.PreserveHost)
 	}

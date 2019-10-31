@@ -176,7 +176,7 @@ func (p *Parser) Build() (*KongState, error) {
 func processCredential(credType string, consumer *Consumer,
 	credConfig interface{}) error {
 	switch credType {
-	case "key-auth":
+	case "key-auth", "keyauth_credential":
 		var cred kong.KeyAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
@@ -184,14 +184,14 @@ func processCredential(credType string, consumer *Consumer,
 
 		}
 		consumer.KeyAuths = append(consumer.KeyAuths, &cred)
-	case "basic-auth":
+	case "basic-auth", "basicauth_credential":
 		var cred kong.BasicAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
 			return errors.Wrap(err, "failed to decode basic-auth credential")
 		}
 		consumer.BasicAuths = append(consumer.BasicAuths, &cred)
-	case "hmac-auth":
+	case "hmac-auth", "hmacauth_credential":
 		var cred kong.HMACAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
@@ -205,7 +205,7 @@ func processCredential(credType string, consumer *Consumer,
 			return errors.Wrap(err, "failed to decode oauth2 credential")
 		}
 		consumer.Oauth2Creds = append(consumer.Oauth2Creds, &cred)
-	case "jwt":
+	case "jwt", "jwt_secret":
 		var cred kong.JWTAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {

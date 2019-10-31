@@ -1576,6 +1576,22 @@ func Test_processCredential(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "keyauth_credential",
+			args: args{
+				credType:   "keyauth_credential",
+				consumer:   &Consumer{},
+				credConfig: map[string]string{"key": "foo"},
+			},
+			result: &Consumer{
+				KeyAuths: []*kong.KeyAuth{
+					{
+						Key: kong.String("foo"),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "basic-auth",
 			args: args{
 				credType: "basic-auth",
@@ -1596,9 +1612,49 @@ func Test_processCredential(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "basicauth_credential",
+			args: args{
+				credType: "basicauth_credential",
+				consumer: &Consumer{},
+				credConfig: map[string]string{
+					"username": "foo",
+					"password": "bar",
+				},
+			},
+			result: &Consumer{
+				BasicAuths: []*kong.BasicAuth{
+					{
+						Username: kong.String("foo"),
+						Password: kong.String("bar"),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "hmac-auth",
 			args: args{
 				credType: "hmac-auth",
+				consumer: &Consumer{},
+				credConfig: map[string]string{
+					"username": "foo",
+					"secret":   "bar",
+				},
+			},
+			result: &Consumer{
+				HMACAuths: []*kong.HMACAuth{
+					{
+						Username: kong.String("foo"),
+						Secret:   kong.String("bar"),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "hmacauth_credential",
+			args: args{
+				credType: "hmacauth_credential",
 				consumer: &Consumer{},
 				credConfig: map[string]string{
 					"username": "foo",
@@ -1643,6 +1699,30 @@ func Test_processCredential(t *testing.T) {
 			name: "jwt",
 			args: args{
 				credType: "jwt",
+				consumer: &Consumer{},
+				credConfig: map[string]string{
+					"key":            "foo",
+					"rsa_public_key": "bar",
+					"secret":         "baz",
+				},
+			},
+			result: &Consumer{
+				JWTAuths: []*kong.JWTAuth{
+					{
+						Key:          kong.String("foo"),
+						RSAPublicKey: kong.String("bar"),
+						Secret:       kong.String("baz"),
+						// set by default
+						Algorithm: kong.String("HS256"),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "jwt_secret",
+			args: args{
+				credType: "jwt_secret",
 				consumer: &Consumer{},
 				credConfig: map[string]string{
 					"key":            "foo",

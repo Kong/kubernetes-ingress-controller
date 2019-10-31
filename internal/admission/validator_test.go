@@ -32,6 +32,20 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			wantErr:     false,
 		},
 		{
+			name: "valid keyauth_credential",
+			args: args{
+				secret: corev1.Secret{
+					Data: map[string][]byte{
+						"key":          []byte("foo"),
+						"kongCredType": []byte("keyauth_credential"),
+					},
+				},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
 			name: "invalid key-auth credential",
 			args: args{
 				secret: corev1.Secret{

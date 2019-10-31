@@ -88,14 +88,23 @@ func (validator KongHTTPValidator) ValidatePlugin(
 }
 
 var (
+	keyAuthFields   = []string{"key"}
+	basicAuthFields = []string{"username", "password"}
+	hmacAuthFields  = []string{"username", "secret"}
+	jwtAuthFields   = []string{"algorithm", "rsa_public_key", "key", "redirect_uris"}
+
 	// TODO dynamically fetch these from Kong
 	credTypeToFields = map[string][]string{
-		"key-auth":   {"key"},
-		"basic-auth": {"username", "password"},
-		"hmac-auth":  {"username", "secret"},
-		"oauth2":     {"name", "client_id", "client_secret", "redirect_uris"},
-		"jwt":        {"algorithm", "rsa_public_key", "key", "secret"},
-		"acl":        {"group"},
+		"key-auth":             keyAuthFields,
+		"keyauth_credential":   keyAuthFields,
+		"basic-auth":           basicAuthFields,
+		"basicauth_credential": basicAuthFields,
+		"hmac-auth":            hmacAuthFields,
+		"hmacauth_credential":  hmacAuthFields,
+		"jwt":                  jwtAuthFields,
+		"jwt_secret":           jwtAuthFields,
+		"oauth2":               {"name", "client_id", "client_secret", "redirect_uris"},
+		"acl":                  {"group"},
 	}
 )
 

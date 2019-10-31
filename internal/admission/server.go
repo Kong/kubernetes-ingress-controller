@@ -9,6 +9,7 @@ import (
 	configuration "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	"github.com/pkg/errors"
 	admission "k8s.io/api/admission/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -78,6 +79,10 @@ var (
 		Group:    configuration.SchemeGroupVersion.Group,
 		Version:  configuration.SchemeGroupVersion.Version,
 		Resource: "kongplugins"}
+	secretGVResource = meta.GroupVersionResource{
+		Group:    corev1.SchemeGroupVersion.Group,
+		Version:  corev1.SchemeGroupVersion.Version,
+		Resource: "secrets"}
 )
 
 func (a Server) handleValidation(request admission.AdmissionRequest) (
@@ -112,6 +117,24 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 		}
 
 		ok, message, err = a.Validator.ValidatePlugin(plugin)
+		if err != nil {
+			return nil, err
+		}
+	case secretGVResource:
+		secret := corev1.Secret{}
+		deserializer := codecs.UniversalDeserializer()
+		_, _, err = deserializer.Decode(request.Object.Raw,
+			nil, &secret)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok = secret.Data["credType"]; !ok {
+			// secret does not look like a credential resource in Kong
+			ok = true
+			break
+		}
+
+		ok, message, err = a.Validator.ValidateCredential(secret)
 		if err != nil {
 			return nil, err
 		}

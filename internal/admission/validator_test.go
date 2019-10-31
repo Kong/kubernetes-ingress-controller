@@ -22,8 +22,8 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			args: args{
 				secret: corev1.Secret{
 					Data: map[string][]byte{
-						"key":      []byte("foo"),
-						"credType": []byte("key-auth"),
+						"key":          []byte("foo"),
+						"kongCredType": []byte("key-auth"),
 					},
 				},
 			},
@@ -36,8 +36,8 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			args: args{
 				secret: corev1.Secret{
 					Data: map[string][]byte{
-						"key-wrong": []byte("foo"),
-						"credType":  []byte("key-auth"),
+						"key-wrong":    []byte("foo"),
+						"kongCredType": []byte("key-auth"),
 					},
 				},
 			},
@@ -50,7 +50,7 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			args: args{
 				secret: corev1.Secret{
 					Data: map[string][]byte{
-						"credType": []byte("foo"),
+						"kongCredType": []byte("foo"),
 					},
 				},
 			},

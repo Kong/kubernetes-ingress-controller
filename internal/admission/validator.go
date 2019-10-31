@@ -107,7 +107,7 @@ var (
 func (validator KongHTTPValidator) ValidateCredential(
 	secret corev1.Secret) (bool, string, error) {
 
-	credTypeBytes, ok := secret.Data["credType"]
+	credTypeBytes, ok := secret.Data["kongCredType"]
 	if !ok {
 		// doesn't look like a credential resource
 		return true, "", nil

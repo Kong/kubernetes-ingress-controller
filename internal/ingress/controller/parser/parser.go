@@ -283,7 +283,7 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) error {
 				}
 				credConfig[k] = string(v)
 			}
-			credType, ok := credConfig["credType"].(string)
+			credType, ok := credConfig["kongCredType"].(string)
 			if !ok {
 				glog.Errorf("invalid credType in secret '%v/%v'",
 					consumer.Namespace, cred)

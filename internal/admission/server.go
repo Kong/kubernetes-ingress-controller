@@ -128,7 +128,7 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 		if err != nil {
 			return nil, err
 		}
-		if _, ok = secret.Data["credType"]; !ok {
+		if _, ok = secret.Data["kongCredType"]; !ok {
 			// secret does not look like a credential resource in Kong
 			ok = true
 			break

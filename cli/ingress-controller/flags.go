@@ -74,7 +74,8 @@ type cliConfig struct {
 	EnableProfiling bool
 
 	// Misc
-	ShowVersion bool
+	ShowVersion      bool
+	AnonymousReports bool
 }
 
 func flagSet() *pflag.FlagSet {
@@ -187,6 +188,8 @@ Kubernetes cluster and local discovery is attempted.`)
 	flags.Bool("profiling", true, `Enable profiling via web interface host:port/debug/pprof/`)
 	flags.Bool("version", false,
 		`Shows release information about the Kong Ingress controller`)
+	flags.Bool("anonymous-reports", true,
+		`Send anonymized usage data to help improve Kong`)
 
 	return flags
 }
@@ -283,5 +286,6 @@ func parseFlags() (cliConfig, error) {
 	// Misc
 	config.EnableProfiling = viper.GetBool("profiling")
 	config.ShowVersion = viper.GetBool("version")
+	config.AnonymousReports = viper.GetBool("anonymous-reports")
 	return config, nil
 }

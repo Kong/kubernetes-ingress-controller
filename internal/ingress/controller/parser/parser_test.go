@@ -1092,6 +1092,97 @@ func TestOverrideRoute(t *testing.T) {
 	})
 }
 
+func TestOverrideRoutePriority(t *testing.T) {
+	assert := assert.New(t)
+	var route Route
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+	var kongIngress configurationv1.KongIngress
+	kongIngress = configurationv1.KongIngress{
+		Route: &kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+
+	var netIngress networking.Ingress
+
+	netIngress = networking.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"configuration.konghq.com/protocols": "grpc,grpcs",
+			},
+		},
+	}
+
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+		Ingress: netIngress,
+	}
+	overrideRoute(&route, &kongIngress)
+	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
+	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
+}
+
+func TestOverrideRouteByKongIngress(t *testing.T) {
+	assert := assert.New(t)
+	var route Route
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+	var kongIngress configurationv1.KongIngress
+	kongIngress = configurationv1.KongIngress{
+		Route: &kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+
+	overrideRouteByKongIngress(&route, &kongIngress)
+	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
+	assert.NotPanics(func() {
+		overrideRoute(nil, nil)
+	})
+}
+func TestOverrideRouteByAnnotation(t *testing.T) {
+	assert := assert.New(t)
+	var route Route
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+
+	var netIngress networking.Ingress
+
+	netIngress = networking.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"configuration.konghq.com/protocols": "grpc,grpcs",
+			},
+		},
+	}
+
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+		Ingress: netIngress,
+	}
+	overrideRouteByAnnotation(&route, route.Ingress.GetAnnotations())
+	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
+	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
+
+	assert.NotPanics(func() {
+		overrideRoute(nil, nil)
+	})
+}
+
 func TestOverrideUpstream(t *testing.T) {
 	assert := assert.New(t)
 

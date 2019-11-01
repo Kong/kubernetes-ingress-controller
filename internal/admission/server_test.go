@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	admission "k8s.io/api/admission/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var decoder = codecs.UniversalDeserializer()
@@ -27,6 +28,11 @@ func (v KongFakeValidator) ValidateConsumer(
 
 func (v KongFakeValidator) ValidatePlugin(
 	k8sPlugin configuration.KongPlugin) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateCredential(
+	secret corev1.Secret) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

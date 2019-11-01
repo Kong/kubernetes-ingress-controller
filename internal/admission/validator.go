@@ -1,16 +1,20 @@
 package admission
 
 import (
+	"strings"
+
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configuration "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
 	ValidateConsumer(consumer configuration.KongConsumer) (bool, string, error)
 	ValidatePlugin(consumer configuration.KongPlugin) (bool, string, error)
+	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -80,6 +84,58 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if err != nil {
 		return false, "", err
 	}
+	return true, "", nil
+}
+
+var (
+	// TODO dynamically fetch these from Kong
+	credTypeToFields = map[string][]string{
+		"key-auth":   {"key"},
+		"basic-auth": {"username", "password"},
+		"hmac-auth":  {"username", "secret"},
+		"oauth2":     {"name", "client_id", "client_secret", "redirect_uris"},
+		"jwt":        {"algorithm", "rsa_public_key", "key", "secret"},
+		"acl":        {"group"},
+	}
+)
+
+// ValidateCredential checks if the secret contains a credential meant to
+// be installed in Kong. If so, then it verifies if all the required fields
+// are present in it or not. If valid, it returns true with an empty string,
+// else it returns false with the error messsage. If an error happens during
+// validation, error is returned.
+func (validator KongHTTPValidator) ValidateCredential(
+	secret corev1.Secret) (bool, string, error) {
+
+	credTypeBytes, ok := secret.Data["credType"]
+	if !ok {
+		// doesn't look like a credential resource
+		return true, "", nil
+	}
+	credType := string(credTypeBytes)
+
+	fields, ok := credTypeToFields[credType]
+	if !ok {
+		return false, "invalid credential type: " + credType, nil
+	}
+
+	var missingFields []string
+	for _, field := range fields {
+		if _, ok := secret.Data[field]; !ok {
+			missingFields = append(missingFields, field)
+		}
+	}
+	if len(missingFields) != 0 {
+		return false, "missing required field(s): " +
+			strings.Join(missingFields, ", "), nil
+	}
+
+	// TODO add unique key violation detection
+	// For each credential, there is a unique column, like key for key-auth,
+	// username for basic-auth; make an API call to Kong's Admin API
+	// and verify if there will be a violation, similar to how it's done
+	// for KongConsumer; return error if the resource is already present in
+	// Kong.
 	return true, "", nil
 }
 

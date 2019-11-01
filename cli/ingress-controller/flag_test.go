@@ -45,7 +45,7 @@ func TestDefaults(t *testing.T) {
 	conf, err := parseFlags()
 
 	expectedConf := cliConfig{
-		AdmissionWebhookListen:   ":8080",
+		AdmissionWebhookListen:   "off",
 		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
 		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
 
@@ -74,7 +74,8 @@ func TestDefaults(t *testing.T) {
 
 		EnableProfiling: true,
 
-		ShowVersion: false,
+		ShowVersion:      false,
+		AnonymousReports: true,
 	}
 	assert.Equal(expectedConf, conf)
 	assert.Nil(err, "unexpected error parsing default flags")
@@ -118,6 +119,7 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 
 		"--profiling=false",
 		"--version",
+		"--anonymous-reports=false",
 	}
 	conf, err := parseFlags()
 
@@ -149,8 +151,9 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		APIServerHost:      "kube-apiserver.internal",
 		KubeConfigFilePath: "/path/to/kubeconfig",
 
-		EnableProfiling: false,
-		ShowVersion:     true,
+		EnableProfiling:  false,
+		ShowVersion:      true,
+		AnonymousReports: false,
 	}
 	assert.Equal(expectedConf, conf)
 	assert.Nil(err, "unexpected error parsing default flags")
@@ -168,6 +171,7 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		"CONTROLLER_ADMISSION_WEBHOOK_LISTEN":    ":9001",
 		"CONTROLLER_ADMISSION_WEBHOOK_CERT_FILE": "/new-cert-path",
 		"CONTROLLER_ADMISSION_WEBHOOK_KEY_FILE":  "/new-key-path",
+		"CONTROLLER_ANONYMOUS_REPORTS":           "false",
 	}
 	for k, v := range envs {
 		os.Setenv(k, v)
@@ -206,7 +210,8 @@ func TestOverrideViaEnvVars(t *testing.T) {
 
 		EnableProfiling: true,
 
-		ShowVersion: false,
+		ShowVersion:      false,
+		AnonymousReports: false,
 	}
 	assert.Equal(expectedConf, conf)
 	assert.Nil(err, "unexpected error parsing default flags")
@@ -239,7 +244,7 @@ func TestDeprecatedFlags(t *testing.T) {
 		KongAdminTLSServerName: "kong-admin.example.com",
 		KongAdminCACertPath:    "/path/to/ca-cert",
 
-		AdmissionWebhookListen:   ":8080",
+		AdmissionWebhookListen:   "off",
 		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
 		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
 
@@ -260,7 +265,8 @@ func TestDeprecatedFlags(t *testing.T) {
 
 		EnableProfiling: true,
 
-		ShowVersion: false,
+		ShowVersion:      false,
+		AnonymousReports: true,
 	}
 	assert.Equal(expectedConf, conf)
 	assert.Nil(err, "unexpected error parsing default flags")
@@ -285,6 +291,7 @@ func TestDeprecatedFlagPrecedences(t *testing.T) {
 		"--kong-admin-tls-server-name", "kong-admin-new.example.com",
 		"--admin-ca-cert-file", "/path/to/ca-cert",
 		"--kong-admin-ca-cert-file", "/path/to/new/ca-cert",
+		"--admission-webhook-listen", ":8080",
 	}
 	conf, err := parseFlags()
 
@@ -318,7 +325,8 @@ func TestDeprecatedFlagPrecedences(t *testing.T) {
 
 		EnableProfiling: true,
 
-		ShowVersion: false,
+		ShowVersion:      false,
+		AnonymousReports: true,
 	}
 	assert.Equal(expectedConf, conf)
 	assert.Nil(err, "unexpected error parsing default flags")

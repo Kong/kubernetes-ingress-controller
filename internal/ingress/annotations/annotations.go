@@ -29,8 +29,12 @@ const (
 
 	configurationAnnotationKey = "configuration.konghq.com"
 
+	protocolAnnotationKey = "configuration.konghq.com/protocol"
+
+	protocolsAnnotationKey = "configuration.konghq.com/protocols"
+
 	// DefaultIngressClass defines the default class used
-	// by Kong's ingres controller.
+	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
 )
 
@@ -48,7 +52,7 @@ func validIngress(ingressAnnotationValue, ingressClass string) bool {
 	return ingressAnnotationValue == ingressClass
 }
 
-// IngressClassValidatorFunc returns a function which can valid if an object
+// IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
 	ingressClass string) func(obj metav1.Object) bool {
@@ -60,8 +64,7 @@ func IngressClassValidatorFunc(
 }
 
 // IngressClassValidatorFuncFromObjectMeta returns a function which
-// can valid if an ObjectMeta
-// belongs to an the ingressClass or not.
+// can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
 	ingressClass string) func(obj *metav1.ObjectMeta) bool {
 
@@ -93,6 +96,18 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 // information about the configuration to use in Routes, Services and Upstreams
 func ExtractConfigurationName(anns map[string]string) string {
 	return anns[configurationAnnotationKey]
+}
+
+// ExtractProtocolName extracts the name of the KongIngress object that holds
+// information about the protocol to use in Routes, Services and Upstreams
+func ExtractProtocolName(anns map[string]string) string {
+	return anns[protocolAnnotationKey]
+}
+
+// ExtractProtocolNames extracts the name of the KongIngress object that holds
+// information about the protocols to use in Routes, Services and Upstreams
+func ExtractProtocolNames(anns map[string]string) string {
+	return anns[protocolsAnnotationKey]
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

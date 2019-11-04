@@ -504,7 +504,6 @@ func (p *Parser) fillOverrides(state KongState) error {
 		if err == nil {
 			svcAnns = svc.Annotations
 		}
-
 		kongIngress, err := p.getKongIngressForService(
 			state.Services[i].Namespace,
 			state.Services[i].Backend.ServiceName)

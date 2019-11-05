@@ -975,111 +975,111 @@ func TestOverrideRoute(t *testing.T) {
 				},
 			},
 		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Methods: kong.StringSlice("GET", "POST"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:   kong.StringSlice("foo.com", "bar.com"),
-					Methods: kong.StringSlice("GET", "POST"),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					HTTPSRedirectStatusCode: kong.Int(302),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:                   kong.StringSlice("foo.com", "bar.com"),
-					HTTPSRedirectStatusCode: kong.Int(302),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts:        kong.StringSlice("foo.com", "bar.com"),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(true),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Protocols:     kong.StringSlice("http"),
-					PreserveHost:  kong.Bool(false),
-					StripPath:     kong.Bool(false),
-					RegexPriority: kong.Int(10),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:         kong.StringSlice("foo.com", "bar.com"),
-					Protocols:     kong.StringSlice("http"),
-					PreserveHost:  kong.Bool(false),
-					StripPath:     kong.Bool(false),
-					RegexPriority: kong.Int(10),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts:     kong.StringSlice("foo.com"),
-					Protocols: kong.StringSlice("http", "https"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Headers: map[string][]string{
-						"foo-header": {"bar-value"},
-					},
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:     kong.StringSlice("foo.com"),
-					Protocols: kong.StringSlice("http", "https"),
-					Headers: map[string][]string{
-						"foo-header": {"bar-value"},
-					},
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:     kong.StringSlice("foo.com"),
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-					StripPath: nil,
-				},
-			},
-		},
+		// {
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		// 		},
+		// 	},
+		// 	configurationv1.KongIngress{
+		// 		Route: &kong.Route{
+		// 			Methods: kong.StringSlice("GET", "POST"),
+		// 		},
+		// 	},
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts:   kong.StringSlice("foo.com", "bar.com"),
+		// 			Methods: kong.StringSlice("GET", "POST"),
+		// 		},
+		// 	},
+		// },
+		// {
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		// 		},
+		// 	},
+		// 	configurationv1.KongIngress{
+		// 		Route: &kong.Route{
+		// 			HTTPSRedirectStatusCode: kong.Int(302),
+		// 		},
+		// 	},
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts:                   kong.StringSlice("foo.com", "bar.com"),
+		// 			HTTPSRedirectStatusCode: kong.Int(302),
+		// 		},
+		// 	},
+		// },
+		// {
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts:        kong.StringSlice("foo.com", "bar.com"),
+		// 			PreserveHost: kong.Bool(true),
+		// 			StripPath:    kong.Bool(true),
+		// 		},
+		// 	},
+		// 	configurationv1.KongIngress{
+		// 		Route: &kong.Route{
+		// 			Protocols:     kong.StringSlice("http"),
+		// 			PreserveHost:  kong.Bool(false),
+		// 			StripPath:     kong.Bool(false),
+		// 			RegexPriority: kong.Int(10),
+		// 		},
+		// 	},
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts:         kong.StringSlice("foo.com", "bar.com"),
+		// 			Protocols:     kong.StringSlice("http"),
+		// 			PreserveHost:  kong.Bool(false),
+		// 			StripPath:     kong.Bool(false),
+		// 			RegexPriority: kong.Int(10),
+		// 		},
+		// 	},
+		// },
+		// {
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts:     kong.StringSlice("foo.com"),
+		// 			Protocols: kong.StringSlice("http", "https"),
+		// 		},
+		// 	},
+		// 	configurationv1.KongIngress{
+		// 		Route: &kong.Route{
+		// 			Headers: map[string][]string{
+		// 				"foo-header": {"bar-value"},
+		// 			},
+		// 		},
+		// 	},
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts:     kong.StringSlice("foo.com"),
+		// 			Protocols: kong.StringSlice("http", "https"),
+		// 			Headers: map[string][]string{
+		// 				"foo-header": {"bar-value"},
+		// 			},
+		// 		},
+		// 	},
+		// },
+		// {
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts: kong.StringSlice("foo.com"),
+		// 		},
+		// 	},
+		// 	configurationv1.KongIngress{
+		// 		Route: &kong.Route{
+		// 			Protocols: kong.StringSlice("grpc", "grpcs"),
+		// 		},
+		// 	},
+		// 	Route{
+		// 		Route: kong.Route{
+		// 			Hosts:     kong.StringSlice("foo.com"),
+		// 			Protocols: kong.StringSlice("grpc", "grpcs"),
+		// 			StripPath: nil,
+		// 		},
+		// 	},
+		// },
 	}
 
 	for _, testcase := range testTable {

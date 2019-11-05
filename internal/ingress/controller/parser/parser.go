@@ -627,12 +627,11 @@ func overrideRouteByKongIngress(route *Route,
 
 func overrideRouteByAnnotation(route *Route, anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
-	if len(protocols) == 0 {
+	if len(protocols) < 2 {
 		return
 	}
-	sprots := strings.Split(protocols, ",")
 	var prots []*string
-	for _, prot := range sprots {
+	for _, prot := range protocols {
 		prots = append(prots, kong.String(prot))
 	}
 	route.Protocols = prots

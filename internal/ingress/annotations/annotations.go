@@ -106,8 +106,8 @@ func ExtractProtocolName(anns map[string]string) string {
 
 // ExtractProtocolNames extracts the name of the KongIngress object that holds
 // information about the protocols to use in Routes, Services and Upstreams
-func ExtractProtocolNames(anns map[string]string) string {
-	return anns[protocolsAnnotationKey]
+func ExtractProtocolNames(anns map[string]string) []string {
+	return strings.Split(anns[protocolsAnnotationKey], ",")
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

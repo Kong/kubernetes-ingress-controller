@@ -580,11 +580,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -612,11 +608,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -645,11 +637,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -677,11 +665,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -710,11 +694,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -747,11 +727,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -761,7 +737,7 @@ func TestOverrideService(t *testing.T) {
 					Port:     kong.Int(80),
 					Name:     kong.String("foo"),
 					Protocol: kong.String("grpc"),
-					Path:     kong.String("/"),
+					Path:     nil,
 				},
 			},
 			configurationv1.KongIngress{
@@ -779,11 +755,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -793,7 +765,7 @@ func TestOverrideService(t *testing.T) {
 					Port:     kong.Int(80),
 					Name:     kong.String("foo"),
 					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
+					Path:     nil,
 				},
 			},
 			configurationv1.KongIngress{
@@ -811,11 +783,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{},
 			},
 		},
 		{
@@ -908,6 +876,68 @@ func TestOverrideService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						"configuration.konghq.com/protocol": "grpcs",
+					},
+				},
+			},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpcs"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"configuration.konghq.com/protocol": "https",
+					},
+				},
+			},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"configuration.konghq.com/protocol": "https",
 					},
 				},
 			},

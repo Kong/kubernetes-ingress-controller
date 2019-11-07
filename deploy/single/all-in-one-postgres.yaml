@@ -99,6 +99,8 @@ spec:
               enum:
               - http
               - https
+              - grpc
+              - grpcs
               type: string
             read_timeout:
               minimum: 0
@@ -131,6 +133,8 @@ spec:
                 enum:
                 - http
                 - https
+                - grpc
+                - grpcs
                 type: string
               type: array
             regex_priority:

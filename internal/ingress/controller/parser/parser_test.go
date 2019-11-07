@@ -1183,6 +1183,27 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 	})
 }
 
+func TestNormalizeProtocols(t *testing.T) {
+	assert := assert.New(t)
+	testTable := []struct {
+		inProtocols  []string
+		outProtocols []string
+	}{
+		{inProtocols: []string{"grpc", "grpcs"}, outProtocols: []string{"grpc", "grpcs"}},
+		{inProtocols: []string{"http", "https"}, outProtocols: []string{"http", "https"}},
+		{inProtocols: []string{"grpc", "http"}, outProtocols: []string{"http", "https"}},
+		{inProtocols: []string{"http", "grpcs"}, outProtocols: []string{"http", "https"}},
+	}
+
+	for _, testcase := range testTable {
+		normalizeProtocols(testcase.inProtocols)
+		assert.Equal(testcase.inProtocols, testcase.outProtocols)
+	}
+
+	assert.NotPanics(func() {
+		overrideUpstream(nil, nil)
+	})
+}
 func TestOverrideUpstream(t *testing.T) {
 	assert := assert.New(t)
 

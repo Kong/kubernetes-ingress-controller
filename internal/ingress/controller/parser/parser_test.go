@@ -1191,7 +1191,7 @@ func TestNormalizeProtocols(t *testing.T) {
 	})
 }
 
-func TestSanitizeProtocol(t *testing.T) {
+func TestValidateProtocol(t *testing.T) {
 	assert := assert.New(t)
 	testTable := []struct {
 		input  string
@@ -1204,7 +1204,7 @@ func TestSanitizeProtocol(t *testing.T) {
 		{"grcpsfdsafdsfafdshttp", false},
 	}
 	for _, testcase := range testTable {
-		isMatch := sanitizeProtocol(testcase.input)
+		isMatch := validateProtocol(testcase.input)
 		assert.Equal(isMatch, testcase.result)
 	}
 

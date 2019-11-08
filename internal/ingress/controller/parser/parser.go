@@ -570,7 +570,7 @@ func overrideServiceByKongIngress(service *Service,
 func overrideServiceByAnnotation(service *Service,
 	anns map[string]string) {
 	protocol := annotations.ExtractProtocolName(anns)
-	if protocol == "" || sanitizeProtocol(protocol) != true {
+	if protocol == "" || validateProtocol(protocol) != true {
 		return
 	}
 	service.Protocol = kong.String(protocol)
@@ -635,7 +635,7 @@ func normalizeProtocols(route *Route) {
 		if strings.Contains(*protocol, "http") {
 			http = true
 		}
-		if sanitizeProtocol(*protocol) != true {
+		if validateProtocol(*protocol) != true {
 			http = true
 		}
 	}
@@ -643,14 +643,10 @@ func normalizeProtocols(route *Route) {
 	if grpc && http {
 		route.Protocols = kong.StringSlice("http", "https")
 	}
-	// length check
-	if len(route.Protocols) < 1 {
-		return
-	}
 }
 
-// sanitizeProtocol returns a bool of whether string is a valid protocol
-func sanitizeProtocol(protocol string) bool {
+// validateProtocol returns a bool of whether string is a valid protocol
+func validateProtocol(protocol string) bool {
 	re2 := regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs$`)
 	match := re2.MatchString(protocol)
 	return match
@@ -664,8 +660,12 @@ func overrideRouteByAnnotation(route *Route, anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
 	var prots []*string
 	for _, prot := range protocols {
+		if validateProtocol(prot) != true {
+			return
+		}
 		prots = append(prots, kong.String(prot))
 	}
+
 	route.Protocols = prots
 }
 

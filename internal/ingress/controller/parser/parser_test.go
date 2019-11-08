@@ -1190,6 +1190,28 @@ func TestNormalizeProtocols(t *testing.T) {
 		overrideUpstream(nil, nil)
 	})
 }
+
+func TestSanitizeProtocol(t *testing.T) {
+	assert := assert.New(t)
+	testTable := []struct {
+		input  string
+		result bool
+	}{
+		{"http", true},
+		{"https", true},
+		{"grpc", true},
+		{"grpcs", true},
+		{"grcpsfdsafdsfafdshttp", false},
+	}
+	for _, testcase := range testTable {
+		isMatch := sanitizeProtocol(testcase.input)
+		assert.Equal(isMatch, testcase.result)
+	}
+
+	assert.NotPanics(func() {
+		overrideUpstream(nil, nil)
+	})
+}
 func TestOverrideUpstream(t *testing.T) {
 	assert := assert.New(t)
 

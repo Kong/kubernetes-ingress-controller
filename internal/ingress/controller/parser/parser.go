@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -569,7 +570,7 @@ func overrideServiceByKongIngress(service *Service,
 func overrideServiceByAnnotation(service *Service,
 	anns map[string]string) {
 	protocol := annotations.ExtractProtocolName(anns)
-	if protocol == "" {
+	if protocol == "" || sanitizeProtocol(protocol) != true {
 		return
 	}
 	service.Protocol = kong.String(protocol)
@@ -597,8 +598,8 @@ func overrideRouteByKongIngress(route *Route,
 	if kongIngress == nil || kongIngress.Route == nil {
 		return
 	}
-	r := kongIngress.Route
 
+	r := kongIngress.Route
 	if len(r.Methods) != 0 {
 		route.Methods = cloneStringPointerSlice(r.Methods...)
 	}
@@ -625,9 +626,6 @@ func overrideRouteByKongIngress(route *Route,
 // normalizeProtocols prevents users from mismatching grpc/http
 func normalizeProtocols(route *Route) {
 	protocols := route.Protocols
-	if len(protocols) < 1 {
-		return
-	}
 	var http, grpc bool
 
 	for _, protocol := range protocols {
@@ -637,23 +635,33 @@ func normalizeProtocols(route *Route) {
 		if strings.Contains(*protocol, "http") {
 			http = true
 		}
+		if sanitizeProtocol(*protocol) != true {
+			http = true
+		}
 	}
 
 	if grpc && http {
 		route.Protocols = kong.StringSlice("http", "https")
 	}
 	// length check
-
+	if len(route.Protocols) < 1 {
+		return
+	}
 }
 
-// sanitizeProtocol
+// sanitizeProtocol returns a bool of whether string is a valid protocol
+func sanitizeProtocol(protocol string) bool {
+	re2 := regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs$`)
+	match := re2.MatchString(protocol)
+	return match
+}
 
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route, anns map[string]string) {
-	protocols := annotations.ExtractProtocolNames(anns)
-	if len(protocols) < 2 {
+	if anns == nil {
 		return
 	}
+	protocols := annotations.ExtractProtocolNames(anns)
 	var prots []*string
 	for _, prot := range protocols {
 		prots = append(prots, kong.String(prot))

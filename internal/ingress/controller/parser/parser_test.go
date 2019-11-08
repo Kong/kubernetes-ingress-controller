@@ -1140,18 +1140,50 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 func TestNormalizeProtocols(t *testing.T) {
 	assert := assert.New(t)
 	testTable := []struct {
-		inProtocols  []string
-		outProtocols []string
+		inRoute  Route
+		outRoute Route
 	}{
-		{inProtocols: []string{"grpc", "grpcs"}, outProtocols: []string{"grpc", "grpcs"}},
-		{inProtocols: []string{"http", "https"}, outProtocols: []string{"http", "https"}},
-		{inProtocols: []string{"grpc", "http"}, outProtocols: []string{"http", "https"}},
-		{inProtocols: []string{"http", "grpcs"}, outProtocols: []string{"http", "https"}},
+		{
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("http", "https"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("http", "https"),
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("grpc", "https"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("http", "https"),
+				},
+			},
+		},
 	}
 
 	for _, testcase := range testTable {
-		normalizeProtocols(testcase.inProtocols)
-		assert.Equal(testcase.inProtocols, testcase.outProtocols)
+		normalizeProtocols(&testcase.inRoute)
+		assert.Equal(testcase.inRoute.Protocols, testcase.outRoute.Protocols)
 	}
 
 	assert.NotPanics(func() {

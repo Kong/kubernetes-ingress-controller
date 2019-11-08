@@ -623,12 +623,30 @@ func overrideRouteByKongIngress(route *Route,
 }
 
 // normalizeProtocols prevents users from mismatching grpc/http
-func normalizeProtocols(protocols []string) {
-	if strings.Trim(protocols[0], "s") != strings.Trim(protocols[1], "s") {
-		protocols[0] = "http"
-		protocols[1] = "https"
+func normalizeProtocols(route *Route) {
+	protocols := route.Protocols
+	if len(protocols) < 1 {
+		return
 	}
+	var http, grpc bool
+
+	for _, protocol := range protocols {
+		if strings.Contains(*protocol, "grpc") {
+			grpc = true
+		}
+		if strings.Contains(*protocol, "http") {
+			http = true
+		}
+	}
+
+	if grpc && http {
+		route.Protocols = kong.StringSlice("http", "https")
+	}
+	// length check
+
 }
+
+// sanitizeProtocol
 
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route, anns map[string]string) {
@@ -636,7 +654,6 @@ func overrideRouteByAnnotation(route *Route, anns map[string]string) {
 	if len(protocols) < 2 {
 		return
 	}
-	normalizeProtocols(protocols)
 	var prots []*string
 	for _, prot := range protocols {
 		prots = append(prots, kong.String(prot))
@@ -652,6 +669,7 @@ func overrideRoute(route *Route,
 	}
 	overrideRouteByKongIngress(route, kongIngress)
 	overrideRouteByAnnotation(route, route.Ingress.Annotations)
+	normalizeProtocols(route)
 	for _, val := range route.Protocols {
 		if *val == "grpc" || *val == "grpcs" {
 			// grpc(s) doesn't accept strip_path

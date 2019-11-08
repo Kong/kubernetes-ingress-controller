@@ -497,19 +497,19 @@ func (p *Parser) parseIngressRules(
 func (p *Parser) fillOverrides(state KongState) error {
 	for i := 0; i < len(state.Services); i++ {
 		// Services
+		var anns map[string]string
 		svc, err := p.store.GetService(
 			state.Services[i].Namespace,
 			state.Services[i].Backend.ServiceName)
-		var anns map[string]string
 		if err != nil {
-			glog.Errorf("Err getting services %v", err)
+			glog.Errorf("error getting services %v", err)
 		}
 		anns = svc.Annotations
 		kongIngress, err := p.getKongIngressForService(
 			state.Services[i].Namespace,
 			state.Services[i].Backend.ServiceName)
 		if err != nil {
-			glog.Errorf("Err getting kongIngress %v", err)
+			glog.Errorf("error getting kongIngress %v", err)
 		}
 		overrideService(&state.Services[i], kongIngress, anns)
 
@@ -518,7 +518,7 @@ func (p *Parser) fillOverrides(state KongState) error {
 			kongIngress, err := p.getKongIngressFromIngress(
 				&state.Services[i].Routes[j].Ingress)
 			if err != nil {
-				glog.Errorf("Err getting kongIngress %v", err)
+				glog.Errorf("error getting kongIngress %v", err)
 			}
 			overrideRoute(&state.Services[i].Routes[j], kongIngress)
 		}
@@ -569,7 +569,7 @@ func overrideServiceByKongIngress(service *Service,
 func overrideServiceByAnnotation(service *Service,
 	anns map[string]string) {
 	protocol := annotations.ExtractProtocolName(anns)
-	if len(protocol) == 0 {
+	if protocol == "" {
 		return
 	}
 	service.Protocol = kong.String(protocol)
@@ -656,6 +656,7 @@ func overrideRoute(route *Route,
 		if *val == "grpc" || *val == "grpcs" {
 			// grpc(s) doesn't accept strip_path
 			route.StripPath = nil
+			break
 		}
 	}
 }

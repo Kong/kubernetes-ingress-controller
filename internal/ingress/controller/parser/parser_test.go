@@ -555,7 +555,7 @@ func TestOverrideService(t *testing.T) {
 		inService      Service
 		inKongIngresss configurationv1.KongIngress
 		outService     Service
-		svc            *corev1.Service
+		inAnnotation   map[string]string
 	}{
 		{
 			Service{
@@ -579,9 +579,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -607,9 +605,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -636,9 +632,7 @@ func TestOverrideService(t *testing.T) {
 					Retries:  kong.Int(0),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -664,9 +658,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/new-path"),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -693,9 +685,7 @@ func TestOverrideService(t *testing.T) {
 					Retries:  kong.Int(1),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -726,9 +716,7 @@ func TestOverrideService(t *testing.T) {
 					WriteTimeout:   kong.Int(100),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -754,9 +742,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -782,9 +768,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
-			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -810,13 +794,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"configuration.konghq.com/protocol": "grpcs",
-					},
-				},
-			},
+			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
 		},
 		{
 			Service{
@@ -842,13 +820,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"configuration.konghq.com/protocol": "grpc",
-					},
-				},
-			},
+			map[string]string{"configuration.konghq.com/protocol": "grpc"},
 		},
 		{
 			Service{
@@ -872,13 +844,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"configuration.konghq.com/protocol": "grpcs",
-					},
-				},
-			},
+			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
 		},
 		{
 			Service{
@@ -904,13 +870,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"configuration.konghq.com/protocol": "https",
-					},
-				},
-			},
+			map[string]string{"configuration.konghq.com/protocol": "https"},
 		},
 		{
 			Service{
@@ -934,18 +894,12 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"configuration.konghq.com/protocol": "https",
-					},
-				},
-			},
+			map[string]string{"configuration.konghq.com/protocol": "https"},
 		},
 	}
 
 	for _, testcase := range testTable {
-		overrideService(&testcase.inService, &testcase.inKongIngresss, testcase.svc.GetAnnotations())
+		overrideService(&testcase.inService, &testcase.inKongIngresss, testcase.inAnnotation)
 		assert.Equal(testcase.inService, testcase.outService)
 	}
 

@@ -111,6 +111,8 @@ var supportedCreds = sets.NewString(
 	"oauth2",
 )
 
+var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs$`)
+
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
 	return Parser{store: store}
@@ -647,8 +649,7 @@ func normalizeProtocols(route *Route) {
 
 // validateProtocol returns a bool of whether string is a valid protocol
 func validateProtocol(protocol string) bool {
-	re2 := regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs$`)
-	match := re2.MatchString(protocol)
+	match := validProtocols.MatchString(protocol)
 	return match
 }
 

@@ -17,6 +17,7 @@ limitations under the License.
 package annotations
 
 import (
+	"reflect"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -49,6 +50,29 @@ func TestExtractConfigurationName(t *testing.T) {
 	}
 }
 
+func TestExtractProtocolName(t *testing.T) {
+	data := map[string]string{
+		"configuration.konghq.com/protocol": "grpc",
+	}
+
+	pn := ExtractProtocolName(data)
+	if pn != "grpc" {
+		t.Errorf("expected grpc as configuration name but got %v", pn)
+	}
+}
+
+func TestExtractProtocolNames(t *testing.T) {
+	data := map[string]string{
+		"configuration.konghq.com/protocols": "grpc,grpcs",
+	}
+
+	s := []string{"grpc", "grpcs"}
+
+	pns := ExtractProtocolNames(data)
+	if !reflect.DeepEqual(pns, s) {
+		t.Errorf("expected grpc,grpcs as configuration name but got %v", pns)
+	}
+}
 func TestIngrssClassValidatorFunc(t *testing.T) {
 	tests := []struct {
 		ingress    string

@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -109,6 +110,8 @@ var supportedCreds = sets.NewString(
 	"key-auth",
 	"oauth2",
 )
+
+var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs$`)
 
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
@@ -497,26 +500,30 @@ func (p *Parser) parseIngressRules(
 func (p *Parser) fillOverrides(state KongState) error {
 	for i := 0; i < len(state.Services); i++ {
 		// Services
-		kongIngress, err := p.getKongIngressForService(
-			state.Services[i].Namespace, state.Services[i].Backend.ServiceName)
-		if err == nil {
-			overrideService(&state.Services[i], kongIngress)
-		} else {
-			glog.Error(errors.Wrapf(err, "fetching KongIngress for service %v/%v",
-				state.Services[i].Namespace,
-				state.Services[i].Backend.ServiceName))
+		var anns map[string]string
+		svc, err := p.store.GetService(
+			state.Services[i].Namespace,
+			state.Services[i].Backend.ServiceName)
+		if err != nil {
+			glog.Errorf("error getting services %v", err)
 		}
+		anns = svc.Annotations
+		kongIngress, err := p.getKongIngressForService(
+			state.Services[i].Namespace,
+			state.Services[i].Backend.ServiceName)
+		if err != nil {
+			glog.Errorf("error getting kongIngress %v", err)
+		}
+		overrideService(&state.Services[i], kongIngress, anns)
 
 		// Routes
 		for j := 0; j < len(state.Services[i].Routes); j++ {
 			kongIngress, err := p.getKongIngressFromIngress(
 				&state.Services[i].Routes[j].Ingress)
-			if err == nil {
-				overrideRoute(&state.Services[i].Routes[j], kongIngress)
-			} else {
-				glog.Error(errors.Wrapf(err, "fetching KongIngress for Ingress '%v' in namespace '%v'",
-					state.Services[i].Routes[j].Ingress.Name, state.Services[i].Routes[j].Ingress.Namespace))
+			if err != nil {
+				glog.Errorf("error getting kongIngress %v", err)
 			}
+			overrideRoute(&state.Services[i].Routes[j], kongIngress)
 		}
 	}
 
@@ -534,9 +541,10 @@ func (p *Parser) fillOverrides(state KongState) error {
 	return nil
 }
 
-func overrideService(service *Service,
+// overrideServiceByKongIngress sets Service fields by KongIngress
+func overrideServiceByKongIngress(service *Service,
 	kongIngress *configurationv1.KongIngress) {
-	if service == nil || kongIngress == nil || kongIngress.Proxy == nil {
+	if kongIngress == nil || kongIngress.Proxy == nil {
 		return
 	}
 	s := kongIngress.Proxy
@@ -560,13 +568,40 @@ func overrideService(service *Service,
 	}
 }
 
-func overrideRoute(route *Route,
-	kongIngress *configurationv1.KongIngress) {
-	if route == nil || kongIngress == nil || kongIngress.Route == nil {
+// overrideServiceByAnnotation sets the Service protocol via annotation
+func overrideServiceByAnnotation(service *Service,
+	anns map[string]string) {
+	protocol := annotations.ExtractProtocolName(anns)
+	if protocol == "" || validateProtocol(protocol) != true {
 		return
 	}
-	r := kongIngress.Route
+	service.Protocol = kong.String(protocol)
+}
 
+// overrideService sets Service fields by KongIngress first, then by annotation
+func overrideService(service *Service,
+	kongIngress *configurationv1.KongIngress,
+	anns map[string]string) {
+	if service == nil {
+		return
+	}
+	overrideServiceByKongIngress(service, kongIngress)
+	overrideServiceByAnnotation(service, anns)
+
+	if *service.Protocol == "grpc" || *service.Protocol == "grpcs" {
+		// grpc(s) doesn't accept a path
+		service.Path = nil
+	}
+}
+
+// overrideRouteByKongIngress sets Route fields by KongIngress
+func overrideRouteByKongIngress(route *Route,
+	kongIngress *configurationv1.KongIngress) {
+	if kongIngress == nil || kongIngress.Route == nil {
+		return
+	}
+
+	r := kongIngress.Route
 	if len(r.Methods) != 0 {
 		route.Methods = cloneStringPointerSlice(r.Methods...)
 	}
@@ -587,6 +622,69 @@ func overrideRoute(route *Route,
 	}
 	if r.HTTPSRedirectStatusCode != nil {
 		route.HTTPSRedirectStatusCode = kong.Int(*r.HTTPSRedirectStatusCode)
+	}
+}
+
+// normalizeProtocols prevents users from mismatching grpc/http
+func normalizeProtocols(route *Route) {
+	protocols := route.Protocols
+	var http, grpc bool
+
+	for _, protocol := range protocols {
+		if strings.Contains(*protocol, "grpc") {
+			grpc = true
+		}
+		if strings.Contains(*protocol, "http") {
+			http = true
+		}
+		if validateProtocol(*protocol) != true {
+			http = true
+		}
+	}
+
+	if grpc && http {
+		route.Protocols = kong.StringSlice("http", "https")
+	}
+}
+
+// validateProtocol returns a bool of whether string is a valid protocol
+func validateProtocol(protocol string) bool {
+	match := validProtocols.MatchString(protocol)
+	return match
+}
+
+// overrideRouteByAnnotation sets Route protocols via annotation
+func overrideRouteByAnnotation(route *Route, anns map[string]string) {
+	if anns == nil {
+		return
+	}
+	protocols := annotations.ExtractProtocolNames(anns)
+	var prots []*string
+	for _, prot := range protocols {
+		if validateProtocol(prot) != true {
+			return
+		}
+		prots = append(prots, kong.String(prot))
+	}
+
+	route.Protocols = prots
+}
+
+// overrideRoute sets Route fields by KongIngress first, then by annotation
+func overrideRoute(route *Route,
+	kongIngress *configurationv1.KongIngress) {
+	if route == nil {
+		return
+	}
+	overrideRouteByKongIngress(route, kongIngress)
+	overrideRouteByAnnotation(route, route.Ingress.Annotations)
+	normalizeProtocols(route)
+	for _, val := range route.Protocols {
+		if *val == "grpc" || *val == "grpcs" {
+			// grpc(s) doesn't accept strip_path
+			route.StripPath = nil
+			break
+		}
 	}
 }
 
@@ -854,7 +952,7 @@ func (p *Parser) getKongIngressForService(namespace, serviceName string) (
 	return p.store.GetKongIngress(svc.Namespace, confName)
 }
 
-// getKongIngress checks if the Ingress contains an annotation for configuration
+// getKongIngressFromIngress checks if the Ingress contains an annotation for configuration
 // or if exists a KongIngress object with the same name than the Ingress
 func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
 	*configurationv1.KongIngress, error) {

@@ -555,6 +555,7 @@ func TestOverrideService(t *testing.T) {
 		inService      Service
 		inKongIngresss configurationv1.KongIngress
 		outService     Service
+		inAnnotation   map[string]string
 	}{
 		{
 			Service{
@@ -578,6 +579,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -603,6 +605,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -629,6 +632,7 @@ func TestOverrideService(t *testing.T) {
 					Retries:  kong.Int(0),
 				},
 			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -654,6 +658,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/new-path"),
 				},
 			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -680,6 +685,7 @@ func TestOverrideService(t *testing.T) {
 					Retries:  kong.Int(1),
 				},
 			},
+			map[string]string{},
 		},
 		{
 			Service{
@@ -710,16 +716,195 @@ func TestOverrideService(t *testing.T) {
 					WriteTimeout:   kong.Int(100),
 				},
 			},
+			map[string]string{},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpc"),
+					Path:     nil,
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpc"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpc"),
+					Path:     nil,
+				},
+			},
+			map[string]string{},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     nil,
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpcs"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpcs"),
+					Path:     nil,
+				},
+			},
+			map[string]string{},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpcs"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpcs"),
+					Path:     nil,
+				},
+			},
+			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpcs"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpc"),
+					Path:     nil,
+				},
+			},
+			map[string]string{"configuration.konghq.com/protocol": "grpc"},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("grpcs"),
+					Path:     nil,
+				},
+			},
+			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{
+					Protocol: kong.String("grpcs"),
+				},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			map[string]string{"configuration.konghq.com/protocol": "https"},
+		},
+		{
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			configurationv1.KongIngress{
+				Proxy: &kong.Service{},
+			},
+			Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("https"),
+					Path:     kong.String("/"),
+				},
+			},
+			map[string]string{"configuration.konghq.com/protocol": "https"},
 		},
 	}
 
 	for _, testcase := range testTable {
-		overrideService(&testcase.inService, &testcase.inKongIngresss)
+		overrideService(&testcase.inService, &testcase.inKongIngresss, testcase.inAnnotation)
 		assert.Equal(testcase.inService, testcase.outService)
 	}
 
 	assert.NotPanics(func() {
-		overrideService(nil, nil)
+		overrideService(nil, nil, nil)
 	})
 }
 
@@ -830,6 +1015,25 @@ func TestOverrideRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts:     kong.StringSlice("foo.com"),
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+					StripPath: nil,
+				},
+			},
+		},
 	}
 
 	for _, testcase := range testTable {
@@ -842,6 +1046,172 @@ func TestOverrideRoute(t *testing.T) {
 	})
 }
 
+func TestOverrideRoutePriority(t *testing.T) {
+	assert := assert.New(t)
+	var route Route
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+	var kongIngress configurationv1.KongIngress
+	kongIngress = configurationv1.KongIngress{
+		Route: &kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+
+	var netIngress networking.Ingress
+
+	netIngress = networking.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"configuration.konghq.com/protocols": "grpc,grpcs",
+			},
+		},
+	}
+
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+		Ingress: netIngress,
+	}
+	overrideRoute(&route, &kongIngress)
+	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
+	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
+}
+
+func TestOverrideRouteByKongIngress(t *testing.T) {
+	assert := assert.New(t)
+	var route Route
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+	var kongIngress configurationv1.KongIngress
+	kongIngress = configurationv1.KongIngress{
+		Route: &kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+
+	overrideRouteByKongIngress(&route, &kongIngress)
+	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
+	assert.NotPanics(func() {
+		overrideRoute(nil, nil)
+	})
+}
+func TestOverrideRouteByAnnotation(t *testing.T) {
+	assert := assert.New(t)
+	var route Route
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+	}
+
+	var netIngress networking.Ingress
+
+	netIngress = networking.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"configuration.konghq.com/protocols": "grpc,grpcs",
+			},
+		},
+	}
+
+	route = Route{
+		Route: kong.Route{
+			Hosts: kong.StringSlice("foo.com", "bar.com"),
+		},
+		Ingress: netIngress,
+	}
+	overrideRouteByAnnotation(&route, route.Ingress.GetAnnotations())
+	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
+	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
+
+	assert.NotPanics(func() {
+		overrideRoute(nil, nil)
+	})
+}
+
+func TestNormalizeProtocols(t *testing.T) {
+	assert := assert.New(t)
+	testTable := []struct {
+		inRoute  Route
+		outRoute Route
+	}{
+		{
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("grpc", "grpcs"),
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("http", "https"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("http", "https"),
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("grpc", "https"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Protocols: kong.StringSlice("http", "https"),
+				},
+			},
+		},
+	}
+
+	for _, testcase := range testTable {
+		normalizeProtocols(&testcase.inRoute)
+		assert.Equal(testcase.inRoute.Protocols, testcase.outRoute.Protocols)
+	}
+
+	assert.NotPanics(func() {
+		overrideUpstream(nil, nil)
+	})
+}
+
+func TestValidateProtocol(t *testing.T) {
+	assert := assert.New(t)
+	testTable := []struct {
+		input  string
+		result bool
+	}{
+		{"http", true},
+		{"https", true},
+		{"grpc", true},
+		{"grpcs", true},
+		{"grcpsfdsafdsfafdshttp", false},
+	}
+	for _, testcase := range testTable {
+		isMatch := validateProtocol(testcase.input)
+		assert.Equal(isMatch, testcase.result)
+	}
+
+	assert.NotPanics(func() {
+		overrideUpstream(nil, nil)
+	})
+}
 func TestOverrideUpstream(t *testing.T) {
 	assert := assert.New(t)
 

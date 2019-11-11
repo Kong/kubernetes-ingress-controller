@@ -32,8 +32,8 @@
 
 ## Update User Permissions
 
-> [Because of the way Kubernetes Engine checks permissions
-when you create a Role or ClusterRole, you must
+> Because of [the way Kubernetes Engine checks permissions
+when you create a Role or ClusterRole](https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control), you must
 first create a RoleBinding that grants you all of
 the permissions included in the role you want to create.
 An example workaround is to create a RoleBinding that
@@ -42,7 +42,7 @@ before attempting to create additional Role or
 ClusterRole permissions.
 This is a known issue in RBAC in Kubernetes and
 Kubernetes Engine versions 1.6 and
-later.](https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control).
+later.
 
 A fast workaround:
 

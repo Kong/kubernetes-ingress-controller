@@ -24,22 +24,19 @@ This tutorial was written using Google Kubernetes Engine.
 Execute the following to install the Ingress Controller:
 
 ```bash
-$ curl -sL https://bit.ly/kong-ingress | kubectl create -f -
+$ curl -sL https://bit.ly/k4k8s | kubectl create -f -
 namespace/kong created
 customresourcedefinition.apiextensions.k8s.io/kongplugins.configuration.konghq.com created
 customresourcedefinition.apiextensions.k8s.io/kongconsumers.configuration.konghq.com created
 customresourcedefinition.apiextensions.k8s.io/kongcredentials.configuration.konghq.com created
 customresourcedefinition.apiextensions.k8s.io/kongingresses.configuration.konghq.com created
-service/postgres created
-statefulset.apps/postgres created
 serviceaccount/kong-serviceaccount created
 clusterrole.rbac.authorization.k8s.io/kong-ingress-clusterrole created
 clusterrolebinding.rbac.authorization.k8s.io/kong-ingress-clusterrole-nisa-binding created
-service/kong-ingress-controller created
-deployment.extensions/kong-ingress-controller created
+configmap/kong-server-blocks created
 service/kong-proxy created
+service/kong-validation-webhook created
 deployment.extensions/kong created
-job.batch/kong-migrations created
 ```
 
 ## Setup cert-manager

@@ -1,0 +1,8 @@
+resources:
+- ./../base
+patchesStrategicMerge:
+- kong-enterprise-lite.yaml
+images:
+- name: kong
+  newName: kong-docker-kong-enterprise-lite.bintray.io/kong-enterprise-lite
+  newTag: 1.3.0.0-alpine

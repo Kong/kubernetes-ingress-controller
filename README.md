@@ -1,12 +1,12 @@
-# Kubernetes Ingress Controller for Kong
+# Kong for Kubernetes
 
 [![Build Status](https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master)](https://travis-ci.org/Kong/kubernetes-ingress-controller)
 
-Use [Kong][kong] for your Kubernetes [Ingress][ingress]
-and further configure [plugins][kong-hub], health checking,
+Use [Kong][kong] for Kubernetes [Ingress][ingress].  
+Configure [plugins][kong-hub], health checking,
 load balancing and more in Kong
-for your Kubernetes services, all using
-Custom Resource Definitions(CRDs).
+for Kubernetes Services, all using
+Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 ## Tables of content
 
@@ -65,47 +65,21 @@ To setup Kong Ingress Controller in your k8s cluster, execute:
 
 ```shell
 # using YAMLs
-kubectl apply -f https://bit.ly/kong-ingress
+kubectl apply -f https://bit.ly/k4k8s
 
 # or using Helm
-helm install stable/kong --set ingressController.enabled=true
+helm install stable/kong
 ```
 
-You can also spin up Kong Ingress Controller without a database dependency:
+If you are setting up Kong for Kubernetes Enterprise, please
+follow along [this guide](TODO).
 
-```
-# using YAMLs
-kubectl apply -f https://bit.ly/kong-ingress-dbless
-# or using Helm
-helm install stable/kong --set ingressController.enabled=true \
-  --set postgresql.enabled=false --set env.database=off
-```
-
-It takes a few minutes for all components to
-spin up.
-You now have set up Kong as your Ingress controller and
+It takes a few minutes for all components to spin up.
+You now have set up Kong as your Ingress point and
 all Ingress resources in your Kubernetes Cluster will be satisfied.
 
-Please refer to our [deployment documentation][deployment]
-for a detailed introduction to Kong Ingress Controller
-and Ingress spec.
-
-## Seeking help
-
-Please search through the posts on
-[Kong Nation](https://discuss.konghq.com/c/kubernetes) as it's
-likely that another user has run into the same problem.
-If you don't find an answer, please feel free to post a question.
-For a feature request, please post in
-[Feature Suggestions](https://discuss.konghq.com/c/feature-suggestions)
-category.
-
-You can also talk to us in the
-[#kong](https://kubernetes.slack.com/messages/kong) channel on the
-Kubernetes Slack server.
-
-If you've spotted a bug, please open an issue
-on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
+Follow the [Getting Started guide][getting-started-guide] to start
+using Ingress in Kubernetes.
 
 ## Documentation
 
@@ -126,6 +100,23 @@ Following are some helpful link:
 - [**Annotations**][annotations]:
   Associate plugins with your requests using annotations
 - [**FAQs**][faqs]: Frequently Asked Questions.
+
+## Seeking help
+
+Please search through the posts on
+[Kong Nation](https://discuss.konghq.com/c/kubernetes) as it's
+likely that another user has run into the same problem.
+If you don't find an answer, please feel free to post a question.
+For a feature request, please post in
+[Feature Suggestions](https://discuss.konghq.com/c/feature-suggestions)
+category.
+
+You can also talk to the developers behind Kong in the
+[#kong](https://kubernetes.slack.com/messages/kong) channel on the
+Kubernetes Slack server.
+
+If you've spotted a bug, please open an issue
+on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
 ## License
 
@@ -153,3 +144,4 @@ limitations under the License.
 [annotations]: docs/references/annotations.md
 [crds]: docs/references/custom-resources.md
 [faqs]: docs/faq.md
+[getting-started-guide]: docs/guides/getting-started.md

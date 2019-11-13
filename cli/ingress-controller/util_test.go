@@ -4,13 +4,15 @@ import "testing"
 
 func TestFixVersion(t *testing.T) {
 	validVersions := map[string]string{
-		"0.14.1":                    "0.14.1",
-		"0.14.2rc":                  "0.14.2-rc",
-		"0.14.2rc1":                 "0.14.2-rc1",
-		"0.14.2preview":             "0.14.2-preview",
-		"0.14.2preview1":            "0.14.2-preview1",
-		"0.33-enterprise-edition":   "0.33.0-enterprise",
-		"0.33-1-enterprise-edition": "0.33.1-enterprise",
+		"0.14.1":                          "0.14.1",
+		"0.14.2rc":                        "0.14.2-rc",
+		"0.14.2rc1":                       "0.14.2-rc1",
+		"0.14.2preview":                   "0.14.2-preview",
+		"0.14.2preview1":                  "0.14.2-preview1",
+		"0.33-enterprise-edition":         "0.33.0-enterprise",
+		"0.33-1-enterprise-edition":       "0.33.1-enterprise",
+		"1.3.0.0-enterprise-edition-lite": "1.3.0-0-enterprise-lite",
+		"1.3.0.0-enterprise-lite":         "1.3.0-0-enterprise-lite",
 	}
 	for inputVersion, expectedVersion := range validVersions {
 		v, err := getSemVerVer(inputVersion)

@@ -22,6 +22,7 @@ func getSemVerVer(v string) (semver.Version, error) {
 	}
 	if m[3] != "" {
 		m[3] = "-" + strings.Replace(m[3], "enterprise-edition", "enterprise", 1)
+		m[3] = strings.Replace(m[3], ".", "", -1)
 	}
 	v = fmt.Sprintf("%s.%s%s", m[1], m[2], m[3])
 	return semver.Make(v)

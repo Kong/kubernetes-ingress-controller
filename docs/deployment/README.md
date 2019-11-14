@@ -1,4 +1,4 @@
-# Deploying Kong Ingress Controller
+# Deploying Kong for Kubernetes
 
 Kong ingress controller can be installed on a local, managed
 or any Kubernetes cluster which supports a service of type `LoadBalancer`.
@@ -34,6 +34,11 @@ Once you've installed Kong Ingress Controller, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.
 
+## Deploying Kong for Kubernetes Enterprise
+
+Please follow [this guide](k4k8s-enterprise.md) to deploy Kong for Kubernetes
+Enterprise if you have purchased or are trying out Kong Enterprise.
+
 ## Deploying Admission Controller
 
 Kong Ingress Controller also ships with a Validating
@@ -48,8 +53,3 @@ guide to set it up.
 [2]: gke.md
 [3]: aks.md
 
-
-## Deploying Kong Enterprise Ingress Controller
-
-Please follow [this guide](kong-enterprise.md) to deploy Kong Enterprise Ingress Controller
-if you have purchased or are trying out Kong Enterprise.

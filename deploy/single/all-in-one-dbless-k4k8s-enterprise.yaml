@@ -480,20 +480,6 @@ spec:
   selector:
     app: ingress-kong
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: kong
-spec:
-  ports:
-  - name: pgql
-    port: 5432
-    protocol: TCP
-    targetPort: 5432
-  selector:
-    app: postgres
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -523,11 +509,7 @@ spec:
               key: license
               name: kong-enterprise-license
         - name: KONG_DATABASE
-          value: postgres
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
+          value: "off"
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "1"
         - name: KONG_NGINX_HTTP_INCLUDE
@@ -540,7 +522,7 @@ spec:
           value: 127.0.0.1:8444 ssl
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:0.36-2-alpine
+        image: kong-docker-kong-enterprise-lite.bintray.io/kong-enterprise-lite:1.3.0.0-alpine
         lifecycle:
           preStop:
             exec:
@@ -626,117 +608,8 @@ spec:
           timeoutSeconds: 1
       imagePullSecrets:
       - name: kong-enterprise-docker
-      initContainers:
-      - command:
-        - /bin/sh
-        - -c
-        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
-          sleep 2;  done;
-        env:
-        - name: KONG_LICENSE_DATA
-          valueFrom:
-            secretKeyRef:
-              key: license
-              name: kong-enterprise-license
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
-        image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:0.36-2-alpine
-        name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
       - configMap:
           name: kong-server-blocks
         name: kong-server-blocks
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: postgres
-  namespace: kong
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  serviceName: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - env:
-        - name: POSTGRES_USER
-          value: kong
-        - name: POSTGRES_PASSWORD
-          value: kong
-        - name: POSTGRES_DB
-          value: kong
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        image: postgres:9.5
-        name: postgres
-        ports:
-        - containerPort: 5432
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: datadir
-          subPath: pgdata
-      terminationGracePeriodSeconds: 60
-  volumeClaimTemplates:
-  - metadata:
-      name: datadir
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 1Gi
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kong-migrations
-  namespace: kong
-spec:
-  template:
-    metadata:
-      name: kong-migrations
-    spec:
-      containers:
-      - command:
-        - /bin/sh
-        - -c
-        - kong migrations bootstrap
-        env:
-        - name: KONG_LICENSE_DATA
-          valueFrom:
-            secretKeyRef:
-              key: license
-              name: kong-enterprise-license
-        - name: KONG_PG_PASSWORD
-          value: kong
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:0.36-2-alpine
-        name: kong-migrations
-      imagePullSecrets:
-      - name: kong-enterprise-docker
-      initContainers:
-      - command:
-        - /bin/sh
-        - -c
-        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db';
-          sleep 1; done
-        env:
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        image: busybox
-        name: wait-for-postgres
-      restartPolicy: OnFailure

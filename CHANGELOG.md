@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.6.2](#062---20191113)
  - [0.6.1](#061---20191009)
  - [0.6.0](#060---20190917)
  - [0.5.0](#050---20190625)
@@ -14,6 +15,13 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.6.2] - 2019/11/13
+
+### Summary
+
+This is a minor patch release to fix version parsing issue with new
+Kong Enterprise packages.
 
 ## [0.6.1] - 2019/10/09
 
@@ -468,6 +476,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.6.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.1...0.6.2
 [0.6.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.4.0...0.5.0

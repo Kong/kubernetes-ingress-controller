@@ -12,11 +12,11 @@ kustomize build ./deploy/manifests/base > deploy/single/all-in-one-dbless.yaml
 kustomize build ./deploy/manifests/postgres \
   > deploy/single/all-in-one-postgres.yaml
 # k4k8s Enterprise
-kustomize build ./deploy/manifests/enterprise-lite \
+kustomize build ./deploy/manifests/enterprise-k8s \
   > deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml
 ## k4k8s Enterprise with DB
-#kustomize build ./deploy/manifests/enterprise-lite \
-#  > deploy/single/all-in-one-postgres-enterprise-lite.yaml
+#kustomize build ./deploy/manifests/enterprise-k8s \
+#  > deploy/single/all-in-one-postgres-enterprise-k8s.yaml
 # Kong Enterprise
 kustomize build ./deploy/manifests/enterprise \
   > deploy/single/all-in-one-postgres-enterprise.yaml

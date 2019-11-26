@@ -1,15 +1,38 @@
 # Expose an external application
+This example shows how we can expose a service located outside the Kubernetes cluster using an Ingress.
 
-This example shows how we can expose a service located outside the Kubernetes cluster using an Ingress rule similar to the Kong [Getting Started guide][0]
+## Installation
 
-Requirements:
+Please follow the [deployment](../deployment) documentation to install
+Kong Ingress Controller on your Kubernetes cluster.
 
-- working Kubernetes cluster
-- Kong Ingress controller installed. Please check the [deploy guide][1]
+## Testing Connectivity to Kong
 
-1. Create a Kubernetes service
+This guide assumes that the `PROXY_IP` environment variable is
+set to contain the IP address or URL pointing to Kong.
+Please follow one of the
+[deployment guides](../deployment) to configure this environment variable.
 
-First we need to create a Kubernetes Service [type=ExternalName][2] using the hostname of the application we want to expose
+If everything is setup correctly, making a request to Kong should return
+HTTP 404 Not Found.
+
+```bash
+$ curl -i $PROXY_IP
+HTTP/1.1 404 Not Found
+Date: Fri, 21 Jun 2019 17:01:07 GMT
+Content-Type: application/json; charset=utf-8
+Connection: keep-alive
+Content-Length: 48
+Server: kong/1.2.1
+
+{"message":"no Route matched with those values"}
+```
+
+This is expected as Kong does not yet know how to proxy the request.
+
+## Create a Kubernetes service
+
+First we need to create a Kubernetes Service [type=ExternalName][0] using the hostname of the application we want to expose.
 
 ```bash
 echo "
@@ -26,7 +49,7 @@ spec:
 " | kubectl create -f -
 ```
 
-2. Configure a [request-transformer][3] plugin to remove the Host header from the original request.
+## Configure a [request-transformer][1] plugin to remove the Host header from the original request
 
 This removes the Host header so when the traffic reaches `httpbin.org` does not contain `foo.bar`
 
@@ -43,7 +66,7 @@ plugin: request-transformer
 " | kubectl create -f -
 ```
 
-3. Create an Ingress to expose the service in the host `foo.bar`
+## Create an Ingress to expose the service in the host `foo.bar`
 
 ```bash
 echo "
@@ -65,7 +88,7 @@ spec:
 " | kubectl create -f -
 ```
 
-4. Now we can test the service running:
+## Test the service
 
 ```bash
 export KONG_ADMIN_PORT=$(minikube service -n kong kong-ingress-controller --url --format "{{ .Port }}")
@@ -75,10 +98,9 @@ export HTTP_PORT=$(minikube  service -n kong kong-proxy --url --format "{{ .Port
 export HTTPS_PORT=$(minikube service -n kong kong-proxy --url --format "{{ .Port }}" | tail -1)
 
 http ${PROXY_IP}:${HTTP_PORT} Host:foo.bar
-
 ```
 
-5. What is configured in Kong?
+## View the Kong configuration
 
 ```bash
 http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/routes/
@@ -87,7 +109,6 @@ http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/
 http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/default.proxy-to-httpbin.80/targets
 ```
 
-[0]: https://getkong.org/docs/latest/getting-started/configuring-a-service/
-[1]: https://github.com/Kong/kubernetes-ingress-controller/tree/master/deploy
-[2]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
-[3]: https://getkong.org/plugins/request-transformer/
+
+[0]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
+[1]: https://getkong.org/plugins/request-transformer/

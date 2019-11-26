@@ -49,23 +49,6 @@ spec:
 " | kubectl create -f -
 ```
 
-## Configure a [request-transformer][1] plugin to remove the Host header from the original request
-
-This removes the Host header so when the traffic reaches `httpbin.org` does not contain `foo.bar`
-
-```bash
-echo "
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
-metadata:
-  name: transform-request-to-httpbin
-config:
-  remove:
-    headers: host
-plugin: request-transformer
-" | kubectl create -f -
-```
-
 ## Create an Ingress to expose the service in the host `foo.bar`
 
 ```bash
@@ -74,14 +57,11 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: proxy-from-k8s-to-httpbin
-  annotations:
-    plugins.konghq.com: transform-request-to-httpbin
 spec:
   rules:
-  - host: foo.bar
-    http:
+  - http:
       paths:
-      - path: /
+      - path: /foo
         backend:
           serviceName: proxy-to-httpbin
           servicePort: 80
@@ -91,24 +71,7 @@ spec:
 ## Test the service
 
 ```bash
-export KONG_ADMIN_PORT=$(minikube service -n kong kong-ingress-controller --url --format "{{ .Port }}")
-export KONG_ADMIN_IP=$(minikube service   -n kong kong-ingress-controller --url --format "{{ .IP }}")
-export PROXY_IP=$(minikube   service -n kong kong-proxy --url --format "{{ .IP }}" | head -1)
-export HTTP_PORT=$(minikube  service -n kong kong-proxy --url --format "{{ .Port }}" | head -1)
-export HTTPS_PORT=$(minikube service -n kong kong-proxy --url --format "{{ .Port }}" | tail -1)
-
-http ${PROXY_IP}:${HTTP_PORT} Host:foo.bar
+$ curl -i $PROXY_IP/foo
 ```
-
-## View the Kong configuration
-
-```bash
-http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/routes/
-http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/services/
-http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/
-http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/default.proxy-to-httpbin.80/targets
-```
-
 
 [0]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
-[1]: https://getkong.org/plugins/request-transformer/

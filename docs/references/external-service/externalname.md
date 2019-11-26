@@ -16,26 +16,26 @@ echo "
 kind: Service
 apiVersion: v1
 metadata:
-  name: proxy-to-mockbin
+  name: proxy-to-httpbin
 spec:
   ports:
   - protocol: TCP
     port: 80
   type: ExternalName
-  externalName: mockbin.org
+  externalName: httpbin.org
 " | kubectl create -f -
 ```
 
 2. Configure a [request-transformer][3] plugin to remove the Host header from the original request.
 
-This removes the Host header so when the traffic reaches `mockbin.org` does not contains `foo.bar`
+This removes the Host header so when the traffic reaches `httpbin.org` does not contain `foo.bar`
 
 ```bash
 echo "
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
-  name: transform-request-to-mockbin
+  name: transform-request-to-httpbin
 config:
   remove:
     headers: host
@@ -50,9 +50,9 @@ echo "
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: proxy-from-k8s-to-mockbin
+  name: proxy-from-k8s-to-httpbin
   annotations:
-    plugins.konghq.com: transform-request-to-mockbin
+    plugins.konghq.com: transform-request-to-httpbin
 spec:
   rules:
   - host: foo.bar
@@ -60,7 +60,7 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: proxy-to-mockbin
+          serviceName: proxy-to-httpbin
           servicePort: 80
 " | kubectl create -f -
 ```
@@ -84,7 +84,7 @@ http ${PROXY_IP}:${HTTP_PORT} Host:foo.bar
 http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/routes/
 http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/services/
 http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/
-http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/default.proxy-to-mockbin.80/targets
+http ${KONG_ADMIN_IP}:${KONG_ADMIN_PORT}/upstreams/default.proxy-to-httpbin.80/targets
 ```
 
 [0]: https://getkong.org/docs/latest/getting-started/configuring-a-service/

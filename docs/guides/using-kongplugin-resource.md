@@ -17,7 +17,7 @@ set to contain the IP address or URL pointing to Kong.
 If you've not done so, please follow one of the
 [deployment guides](../deployment) to configure this environment variable.
 
-If everything is setup correctly, making a request to Kong should return 
+If everything is setup correctly, making a request to Kong should return
 HTTP 404 Not Found.
 
 ```bash
@@ -32,7 +32,7 @@ Server: kong/1.2.1
 {"message":"no Route matched with those values"}
 ```
 
-This is expected as Kong doe not yet know how to proxy the request.
+This is expected as Kong does not yet know how to proxy the request.
 
 ## Installing sample services
 

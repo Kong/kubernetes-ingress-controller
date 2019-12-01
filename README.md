@@ -49,6 +49,8 @@ Kong for every release of the Kong Ingress Controller:
 | Kong Enterprise 0.34-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                |
 | Kong Enterprise 0.35-x   | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Kong Enterprise 0.36-x   | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: |
+| Kong Enterprise 1.3.x   | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: |
+
 
 ## Get started
 

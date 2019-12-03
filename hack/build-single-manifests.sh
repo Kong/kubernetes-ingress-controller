@@ -21,3 +21,5 @@ kustomize build ./deploy/manifests/enterprise-k8s \
 kustomize build ./deploy/manifests/enterprise \
   > deploy/single/all-in-one-postgres-enterprise.yaml
 
+# Kong Dev Config
+kustomize build ./deploy/manifests/dev-env > hack/dev-config.yaml

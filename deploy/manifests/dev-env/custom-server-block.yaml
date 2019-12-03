@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-server-blocks
+  namespace: kong
+data:
+  servers.conf: |
+    # Prometheus metrics server
+    server {
+        server_name kong_prometheus_exporter;
+        listen 0.0.0.0:9542; # can be any other port as well
+        access_log off;
+
+        location /metrics {
+            default_type text/plain;
+            content_by_lua_block {
+                 local prometheus = require "kong.plugins.prometheus.exporter"
+                 prometheus:collect()
+            }
+        }
+
+        location /nginx_status {
+            internal;
+            stub_status;
+        }
+    }
+    # Health check server
+    server {
+        server_name kong_health_check;
+        listen 0.0.0.0:9001; # can be any other port as well
+
+        access_log off;
+        location /health {
+          return 200;
+        }
+    }

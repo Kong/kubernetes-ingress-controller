@@ -32,11 +32,11 @@ This is expected as Kong does not yet know how to proxy the request.
 
 1. Add a grpc deployment and service
 
-`kubectl apply -f ../../deploy/manifests/sample-apps/grpc.yaml`
+`kubectl apply -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/sample-apps/grpc.yaml`
 
 2. Create a demo grpc ingress rule:
 
-`kubectl apply -f  ../../deploy/manifests/sample-apps/sample-grpc-ingress.yaml`
+`kubectl apply -f  https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/master/deploy/manifests/sample-apps/sample-grpc-ingress.yaml`
 
 3. Update your ingress with `kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com/protocols":"grpc,grpcs"}}}'`
 

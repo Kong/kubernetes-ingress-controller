@@ -2,33 +2,33 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: grpc
+  name: grpcbin
   labels:
-    app: grpc
+    app: grpcbin
 spec:
   ports:
   - name: http
     port: 80
     targetPort: 9001
   selector:
-    app: grpc
+    app: grpcbin
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: grpc
+  name: grpcbin
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: grpc
+      app: grpcbin
   template:
     metadata:
       labels:
-        app: grpc
+        app: grpcbin
     spec:
       containers:
       - image: moul/grpcbin
-        name: grpc
+        name: grpcbin
         ports:
         - containerPort: 9001

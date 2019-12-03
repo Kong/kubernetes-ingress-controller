@@ -134,12 +134,12 @@ guide for details on how to use this annotation.
 ## `configuration.konghq.com/protocol`
 
 This annotation can set a protocol — `http`, `https`, `grpc`, or `grpcs` —
-on a Service resource.
+on a Service resource. The services you define will map to the [Kong Service](https://docs.konghq.com/1.4.x/admin-api/#service-object), operating on the protocol that you set.
 
 ## `configuration.konghq.com/protocols`
 
 This annotation can set a pair of protocols (`http`,`https`) or (`grpc`,`grpcs`)
-on an Ingress resource.
+on an Ingress resource. The paths in the Ingress resources you define will map to the [Kong Routes](https://docs.konghq.com/1.4.x/admin-api/#route-object), operating on the protocol that you set.
 
 ## `ingress.kubernetes.io/service-upstream`
 

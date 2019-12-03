@@ -8,5 +8,5 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: grpc
+          serviceName: grpcbin
           servicePort: 9001

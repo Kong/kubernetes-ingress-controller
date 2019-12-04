@@ -11,6 +11,12 @@ prerequisites:
 - [Kong Enterprise License secret](#kong-enterprise-license-secret)
 - [Kong Enterprise Docker registry access](#kong-enterprise-docker-registry-access)
 
+In order to create those secrets the kong namespace needs to be created in advance
+```bash
+$ kubectl create namespace kong
+namespace/kong created
+```
+
 ## Kong Enterprise License secret
 
 Enterprise version requires a valid license to run.  

@@ -74,7 +74,7 @@ helm install stable/kong
 ```
 
 If you are setting up Kong for Kubernetes Enterprise, please
-follow along [this guide](TODO).
+follow along [this guide](https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/deployment/k4k8s-enterprise.md).
 
 It takes a few minutes for all components to spin up.
 You now have set up Kong as your Ingress point and

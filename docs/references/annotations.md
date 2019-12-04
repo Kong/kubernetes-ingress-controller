@@ -146,7 +146,6 @@ Ingress point — in this case,
 a [Kong Route](https://docs.konghq.com/latest/admin-api/#route-object) — and
 the external user or service.
 
-
 ## `ingress.kubernetes.io/service-upstream`
 
 By default, Kong Ingress Controller distributes traffic amongst all the Pods

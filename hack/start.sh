@@ -11,11 +11,9 @@ export POD_NAME=`kubectl get po -n $POD_NAMESPACE -l=app=ingress-kong  -o custom
 set +e
 pkill -f kubectl
 set -e
-
 kubectl proxy --port=8002 1> /dev/null &
 kubectl port-forward -n $POD_NAMESPACE $POD_NAME 8001:8001 1> /dev/null &
 
-cd ../../
 go run ./cli/ingress-controller \
   --apiserver-host http://127.0.0.1:8002 \
   --publish-service kong/kong-proxy \

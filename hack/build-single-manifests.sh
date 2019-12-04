@@ -22,4 +22,11 @@ kustomize build ./deploy/manifests/enterprise \
   > deploy/single/all-in-one-postgres-enterprise.yaml
 
 # Kong Dev Config
-kustomize build ./deploy/manifests/dev-env > hack/dev-config.yaml
+cat  ./deploy/manifests/base/namespace.yaml \
+     ./deploy/manifests/base/custom-types.yaml \
+     ./deploy/manifests/base/rbac.yaml \
+     ./deploy/manifests/base/service.yaml \
+     ./deploy/manifests/base/custom-server-block.yaml \
+     ./deploy/manifests/base/validation-service.yaml \
+     ./deploy/manifests/dev-env/kong-ingress-dbless.yaml \
+     > hack/dev-config.yaml

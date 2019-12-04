@@ -28,5 +28,5 @@ cat  ./deploy/manifests/base/namespace.yaml \
      ./deploy/manifests/base/service.yaml \
      ./deploy/manifests/base/custom-server-block.yaml \
      ./deploy/manifests/base/validation-service.yaml \
-     ./deploy/manifests/dev-env/kong-ingress-dbless.yaml \
-     > hack/dev-config.yaml
+     ./hack/dev-env/kong-ingress-dbless.yaml \
+     > hack/dev-env/dev-config.yaml

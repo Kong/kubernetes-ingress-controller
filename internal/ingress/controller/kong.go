@@ -226,7 +226,7 @@ func (n *KongController) toDeckContent(
 		content.Services = append(content.Services, service)
 	}
 
-	for _, plugin := range k8sState.GlobalPlugins {
+	for _, plugin := range k8sState.Plugins {
 		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}

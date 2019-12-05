@@ -365,7 +365,7 @@ func TestKongNativeState(t *testing.T) {
 			"global plugins",
 			args{
 				&parser.KongState{
-					GlobalPlugins: []parser.Plugin{
+					Plugins: []parser.Plugin{
 						{
 							Plugin: kong.Plugin{
 
@@ -387,7 +387,7 @@ func TestKongNativeState(t *testing.T) {
 			},
 			&KongDeclarativeConfig{
 				FormatVersion: "1.1",
-				Plugins: []kong.Plugin{
+				Plugins: []plugin{
 					{
 						Name: kong.String("basic-auth"),
 						Config: kong.Configuration{

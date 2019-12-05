@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/hbagdi/go-kong/kong"
@@ -1888,6 +1889,460 @@ func Test_processCredential(t *testing.T) {
 					err, tt.wantErr)
 			}
 			assert.Equal(t, tt.result, tt.args.consumer)
+		})
+	}
+}
+
+func Test_getPluginRelations(t *testing.T) {
+	type args struct {
+		state KongState
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]foreignRelations
+	}{
+		{
+			name: "empty state",
+			want: map[string]foreignRelations{},
+		},
+		{
+			name: "single consumer annotation",
+			args: args{
+				state: KongState{
+					Consumers: []Consumer{
+						{
+							Consumer: kong.Consumer{
+								Username: kong.String("foo-consumer"),
+							},
+							k8sKongConsumer: configurationv1.KongConsumer{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										"plugins.konghq.com": "foo,bar",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]foreignRelations{
+				"ns1:foo": {Consumer: []string{"foo-consumer"}},
+				"ns1:bar": {Consumer: []string{"foo-consumer"}},
+			},
+		},
+		{
+			name: "single service annotation",
+			args: args{
+				state: KongState{
+					Services: []Service{
+						{
+							Service: kong.Service{
+								Name: kong.String("foo-service"),
+							},
+							K8sService: corev1.Service{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										"plugins.konghq.com": "foo,bar",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]foreignRelations{
+				"ns1:foo": {Service: []string{"foo-service"}},
+				"ns1:bar": {Service: []string{"foo-service"}},
+			},
+		},
+		{
+			name: "single Ingress annotation",
+			args: args{
+				state: KongState{
+					Services: []Service{
+						{
+							Service: kong.Service{
+								Name: kong.String("foo-service"),
+							},
+							Routes: []Route{
+								{
+									Route: kong.Route{
+										Name: kong.String("foo-route"),
+									},
+									Ingress: networking.Ingress{
+										ObjectMeta: metav1.ObjectMeta{
+											Name:      "some-ingress",
+											Namespace: "ns2",
+											Annotations: map[string]string{
+												"plugins.konghq.com": "foo,bar",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]foreignRelations{
+				"ns2:foo": {Route: []string{"foo-route"}},
+				"ns2:bar": {Route: []string{"foo-route"}},
+			},
+		},
+		{
+			name: "multiple routes with annotation",
+			args: args{
+				state: KongState{
+					Services: []Service{
+						{
+							Service: kong.Service{
+								Name: kong.String("foo-service"),
+							},
+							Routes: []Route{
+								{
+									Route: kong.Route{
+										Name: kong.String("foo-route"),
+									},
+									Ingress: networking.Ingress{
+										ObjectMeta: metav1.ObjectMeta{
+											Name:      "some-ingress",
+											Namespace: "ns2",
+											Annotations: map[string]string{
+												"plugins.konghq.com": "foo,bar",
+											},
+										},
+									},
+								},
+								{
+									Route: kong.Route{
+										Name: kong.String("bar-route"),
+									},
+									Ingress: networking.Ingress{
+										ObjectMeta: metav1.ObjectMeta{
+											Name:      "some-ingress",
+											Namespace: "ns2",
+											Annotations: map[string]string{
+												"plugins.konghq.com": "bar,baz",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]foreignRelations{
+				"ns2:foo": {Route: []string{"foo-route"}},
+				"ns2:bar": {Route: []string{"foo-route", "bar-route"}},
+				"ns2:baz": {Route: []string{"bar-route"}},
+			},
+		},
+		{
+			name: "multiple consumers, routes and services",
+			args: args{
+				state: KongState{
+					Consumers: []Consumer{
+						{
+							Consumer: kong.Consumer{
+								Username: kong.String("foo-consumer"),
+							},
+							k8sKongConsumer: configurationv1.KongConsumer{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										"plugins.konghq.com": "foo,bar",
+									},
+								},
+							},
+						},
+						{
+							Consumer: kong.Consumer{
+								Username: kong.String("foo-consumer"),
+							},
+							k8sKongConsumer: configurationv1.KongConsumer{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns2",
+									Annotations: map[string]string{
+										"plugins.konghq.com": "foo,bar",
+									},
+								},
+							},
+						},
+						{
+							Consumer: kong.Consumer{
+								Username: kong.String("bar-consumer"),
+							},
+							k8sKongConsumer: configurationv1.KongConsumer{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										"plugins.konghq.com": "foobar",
+									},
+								},
+							},
+						},
+					},
+					Services: []Service{
+						{
+							Service: kong.Service{
+								Name: kong.String("foo-service"),
+							},
+							K8sService: corev1.Service{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										"plugins.konghq.com": "foo,bar",
+									},
+								},
+							},
+							Routes: []Route{
+								{
+									Route: kong.Route{
+										Name: kong.String("foo-route"),
+									},
+									Ingress: networking.Ingress{
+										ObjectMeta: metav1.ObjectMeta{
+											Name:      "some-ingress",
+											Namespace: "ns2",
+											Annotations: map[string]string{
+												"plugins.konghq.com": "foo,bar",
+											},
+										},
+									},
+								},
+								{
+									Route: kong.Route{
+										Name: kong.String("bar-route"),
+									},
+									Ingress: networking.Ingress{
+										ObjectMeta: metav1.ObjectMeta{
+											Name:      "some-ingress",
+											Namespace: "ns2",
+											Annotations: map[string]string{
+												"plugins.konghq.com": "bar,baz",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]foreignRelations{
+				"ns1:foo":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
+				"ns1:bar":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
+				"ns1:foobar": {Consumer: []string{"bar-consumer"}},
+				"ns2:foo":    {Consumer: []string{"foo-consumer"}, Route: []string{"foo-route"}},
+				"ns2:bar":    {Consumer: []string{"foo-consumer"}, Route: []string{"foo-route", "bar-route"}},
+				"ns2:baz":    {Route: []string{"bar-route"}},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getPluginRelations(tt.args.state); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getPluginRelations() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getCombinations(t *testing.T) {
+	type args struct {
+		relations foreignRelations
+	}
+	tests := []struct {
+		name string
+		args args
+		want []rel
+	}{
+		{
+			name: "empty",
+			args: args{
+				relations: foreignRelations{},
+			},
+			want: nil,
+		},
+		{
+			name: "plugins on consumer only",
+			args: args{
+				relations: foreignRelations{
+					Consumer: []string{"foo", "bar"},
+				},
+			},
+			want: []rel{
+				{
+					Consumer: "foo",
+				},
+				{
+					Consumer: "bar",
+				},
+			},
+		},
+		{
+			name: "plugins on service only",
+			args: args{
+				relations: foreignRelations{
+					Service: []string{"foo", "bar"},
+				},
+			},
+			want: []rel{
+				{
+					Service: "foo",
+				},
+				{
+					Service: "bar",
+				},
+			},
+		},
+		{
+			name: "plugins on routes only",
+			args: args{
+				relations: foreignRelations{
+					Route: []string{"foo", "bar"},
+				},
+			},
+			want: []rel{
+				{
+					Route: "foo",
+				},
+				{
+					Route: "bar",
+				},
+			},
+		},
+		{
+			name: "plugins on service and routes only",
+			args: args{
+				relations: foreignRelations{
+					Route:   []string{"foo", "bar"},
+					Service: []string{"foo", "bar"},
+				},
+			},
+			want: []rel{
+				{
+					Service: "foo",
+				},
+				{
+					Service: "bar",
+				},
+				{
+					Route: "foo",
+				},
+				{
+					Route: "bar",
+				},
+			},
+		},
+		{
+			name: "plugins on combination of route and consumer",
+			args: args{
+				relations: foreignRelations{
+					Route:    []string{"foo", "bar"},
+					Consumer: []string{"foo", "bar"},
+				},
+			},
+			want: []rel{
+				{
+					Consumer: "foo",
+					Route:    "foo",
+				},
+				{
+					Consumer: "bar",
+					Route:    "foo",
+				},
+				{
+					Consumer: "foo",
+					Route:    "bar",
+				},
+				{
+					Consumer: "bar",
+					Route:    "bar",
+				},
+			},
+		},
+		{
+			name: "plugins on combination of service and consumer",
+			args: args{
+				relations: foreignRelations{
+					Service:  []string{"foo", "bar"},
+					Consumer: []string{"foo", "bar"},
+				},
+			},
+			want: []rel{
+				{
+					Consumer: "foo",
+					Service:  "foo",
+				},
+				{
+					Consumer: "bar",
+					Service:  "foo",
+				},
+				{
+					Consumer: "foo",
+					Service:  "bar",
+				},
+				{
+					Consumer: "bar",
+					Service:  "bar",
+				},
+			},
+		},
+		{
+			name: "plugins on combination of service,route and consumer",
+			args: args{
+				relations: foreignRelations{
+					Consumer: []string{"c1", "c2"},
+					Route:    []string{"r1", "r2"},
+					Service:  []string{"s1", "s2"},
+				},
+			},
+			want: []rel{
+				{
+					Consumer: "c1",
+					Service:  "s1",
+				},
+				{
+					Consumer: "c2",
+					Service:  "s1",
+				},
+				{
+					Consumer: "c1",
+					Service:  "s2",
+				},
+				{
+					Consumer: "c2",
+					Service:  "s2",
+				},
+				{
+					Consumer: "c1",
+					Route:    "r1",
+				},
+				{
+					Consumer: "c2",
+					Route:    "r1",
+				},
+				{
+					Consumer: "c1",
+					Route:    "r2",
+				},
+				{
+					Consumer: "c2",
+					Route:    "r2",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getCombinations(tt.args.relations); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getCombinations() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

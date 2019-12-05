@@ -75,11 +75,11 @@ type Consumer struct {
 
 // KongState holds the configuration that should be applied to Kong.
 type KongState struct {
-	Services      []Service
-	Upstreams     []Upstream
-	Certificates  []Certificate
-	GlobalPlugins []Plugin
-	Consumers     []Consumer
+	Services     []Service
+	Upstreams    []Upstream
+	Certificates []Certificate
+	Plugins      []Plugin
+	Consumers    []Consumer
 }
 
 // Certificate represents the certificate object in Kong.
@@ -166,24 +166,14 @@ func (p *Parser) Build() (*KongState, error) {
 		return nil, errors.Wrap(err, "building consumers and credentials")
 	}
 
-	// TODO add processors for annotations on Ingress object
-
 	// process annotation plugins
-	p.fillPlugins(state)
+	state.Plugins = p.fillPlugins(state)
 
 	// generate Certificates and SNIs
 	state.Certificates, err = p.getCerts(parsedInfo.SecretNameToSNIs)
 	if err != nil {
 		return nil, err
 	}
-
-	// Global plugins
-	state.GlobalPlugins, err = p.globalPlugins()
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO add support for consumers and credentials
 
 	return &state, nil
 }
@@ -800,36 +790,151 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 	return res, nil
 }
 
-// TODO simplify and break this giant fn
-func (p *Parser) fillPlugins(state KongState) {
+type foreignRelations struct {
+	Consumer, Route, Service []string
+}
+
+func getPluginRelations(state KongState) map[string]foreignRelations {
+	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
+	pluginRels := map[string]foreignRelations{}
+	addConsumerRelation := func(namespace, pluginName, identifier string) {
+		pluginKey := namespace + ":" + pluginName
+		relations, ok := pluginRels[pluginKey]
+		if !ok {
+			relations = foreignRelations{}
+		}
+		relations.Consumer = append(relations.Consumer, identifier)
+		pluginRels[pluginKey] = relations
+	}
+	addRouteRelation := func(namespace, pluginName, identifier string) {
+		pluginKey := namespace + ":" + pluginName
+		relations, ok := pluginRels[pluginKey]
+		if !ok {
+			relations = foreignRelations{}
+		}
+		relations.Route = append(relations.Route, identifier)
+		pluginRels[pluginKey] = relations
+	}
+	addServiceRelation := func(namespace, pluginName, identifier string) {
+		pluginKey := namespace + ":" + pluginName
+		relations, ok := pluginRels[pluginKey]
+		if !ok {
+			relations = foreignRelations{}
+		}
+		relations.Service = append(relations.Service, identifier)
+		pluginRels[pluginKey] = relations
+	}
+
 	for i := range state.Services {
 		// service
-		svcKey := state.Services[i].Namespace + "/" +
-			state.Services[i].Backend.ServiceName
-		plugins, err := p.getPluginsFromAnnotations(state.Services[i].Namespace,
-			state.Services[i].K8sService.GetAnnotations())
-		if err != nil {
-			glog.Error(errors.Wrapf(err, "fetching KongPlugins for service '%s'", svcKey))
+		svc := state.Services[i].K8sService
+		pluginList := annotations.ExtractKongPluginsFromAnnotations(
+			svc.GetAnnotations())
+		for _, pluginName := range pluginList {
+			addServiceRelation(svc.Namespace, pluginName,
+				*state.Services[i].Name)
 		}
-		state.Services[i].Plugins = plugins
 		// route
 		for j := range state.Services[i].Routes {
-			plugins, err := p.getPluginsFromAnnotations(state.Services[i].Routes[j].Ingress.Namespace, state.Services[i].Routes[j].Ingress.GetAnnotations())
-			if err != nil {
-				glog.Error(errors.Wrapf(err, "fetching KongPlugins for a route in Ingress '%s'", svcKey))
+			ingress := state.Services[i].Routes[j].Ingress
+			pluginList := annotations.ExtractKongPluginsFromAnnotations(ingress.GetAnnotations())
+			for _, pluginName := range pluginList {
+				addRouteRelation(ingress.Namespace, pluginName, *state.Services[i].Routes[j].Name)
 			}
-			state.Services[i].Routes[j].Plugins = plugins
 		}
 	}
 	// consumer
-	for i, c := range state.Consumers {
-		plugins, err := p.getPluginsFromAnnotations(c.k8sKongConsumer.Namespace, c.k8sKongConsumer.GetAnnotations())
-		if err != nil {
-			glog.Error(errors.Wrapf(err, "fetching KongPlugins for consumer '%v/%v'", c.k8sKongConsumer.Namespace, c.k8sKongConsumer.Name))
+	for _, c := range state.Consumers {
+		pluginList := annotations.ExtractKongPluginsFromAnnotations(c.k8sKongConsumer.GetAnnotations())
+		for _, pluginName := range pluginList {
+			addConsumerRelation(c.k8sKongConsumer.Namespace, pluginName, *c.Username)
 		}
-		state.Consumers[i].Plugins = plugins
 	}
-	return
+	return pluginRels
+}
+
+type rel struct {
+	Consumer, Route, Service string
+}
+
+func getCombinations(relations foreignRelations) []rel {
+
+	var cartesianProduct []rel
+
+	if len(relations.Consumer) > 0 {
+		consumers := relations.Consumer
+		if len(relations.Route)+len(relations.Service) > 0 {
+			for _, service := range relations.Service {
+				for _, consumer := range consumers {
+					cartesianProduct = append(cartesianProduct, rel{
+						Service:  service,
+						Consumer: consumer,
+					})
+				}
+			}
+			for _, route := range relations.Route {
+				for _, consumer := range consumers {
+					cartesianProduct = append(cartesianProduct, rel{
+						Route:    route,
+						Consumer: consumer,
+					})
+				}
+			}
+		} else {
+			for _, consumer := range relations.Consumer {
+				cartesianProduct = append(cartesianProduct, rel{Consumer: consumer})
+			}
+		}
+	} else {
+		for _, service := range relations.Service {
+			cartesianProduct = append(cartesianProduct, rel{Service: service})
+		}
+		for _, route := range relations.Route {
+			cartesianProduct = append(cartesianProduct, rel{Route: route})
+		}
+	}
+
+	return cartesianProduct
+}
+
+func (p *Parser) fillPlugins(state KongState) []Plugin {
+	var plugins []Plugin
+	pluginRels := getPluginRelations(state)
+
+	for pluginIdentifier, relations := range pluginRels {
+		identifier := strings.Split(pluginIdentifier, ":")
+		namespace, kongPluginName := identifier[0], identifier[1]
+		plugin, err := p.getPlugin(namespace, kongPluginName)
+		if err != nil {
+			glog.Errorf("reading KongPlugin '%v/%v': %v", namespace,
+				kongPluginName, err)
+			continue
+		}
+
+		for _, rel := range getCombinations(relations) {
+			plugin := *plugin.DeepCopy()
+			// ID is populated because that is read by decK and in_memory
+			// translater too
+			if rel.Service != "" {
+				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
+			}
+			if rel.Route != "" {
+				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
+			}
+			if rel.Consumer != "" {
+				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
+			}
+			plugins = append(plugins, Plugin{plugin})
+		}
+	}
+
+	globalPlugins, err := p.globalPlugins()
+	if err != nil {
+		glog.Errorf("fetching global plugins: %v", err)
+	}
+	plugins = append(plugins, globalPlugins...)
+
+	return plugins
 }
 
 func (p *Parser) globalPlugins() ([]Plugin, error) {
@@ -958,43 +1063,32 @@ func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
 	return nil, nil
 }
 
-// getPluginsFromAnnotations extracts plugins to be applied on an ingress/service from annotations
-func (p *Parser) getPluginsFromAnnotations(namespace string, anns map[string]string) ([]kong.Plugin, error) {
-	pluginsInk8s := make(map[string]*configurationv1.KongPlugin)
-	pluginList := annotations.ExtractKongPluginsFromAnnotations(anns)
-	// override plugins configured by new annotation
-	for _, plugin := range pluginList {
-		k8sPlugin, err := p.store.GetKongPlugin(namespace, plugin)
-		if err != nil {
-			glog.Errorf("fetching KongPlugin %v/%v: %v", namespace, plugin, err)
-			continue
-		}
-		// ignore plugins with no name
-		if k8sPlugin.PluginName == "" {
-			glog.Errorf("KongPlugin Custom resource '%v' has no `plugin` property, the plugin will not be configured", k8sPlugin.Name)
-			continue
-		}
-		pluginsInk8s[k8sPlugin.PluginName] = k8sPlugin
+// getPlugin constructs a plugins from a KongPlugin resource.
+func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
+	var plugin kong.Plugin
+	k8sPlugin, err := p.store.GetKongPlugin(namespace, name)
+	if err != nil {
+		return plugin, errors.Wrapf(err, "fetching KongPlugin")
+	}
+	// ignore plugins with no name
+	if k8sPlugin.PluginName == "" {
+		return plugin, errors.Errorf("invalid empty 'plugin' property")
 	}
 
-	var plugins []kong.Plugin
-	for _, p := range pluginsInk8s {
-		plugin := kong.Plugin{
-			Name:   kong.String(p.PluginName),
-			Config: kong.Configuration(p.Config).DeepCopy(),
-		}
-		if p.RunOn != "" {
-			plugin.RunOn = kong.String(p.RunOn)
-		}
-		if p.Disabled {
-			plugin.Enabled = kong.Bool(false)
-		}
-		if len(p.Protocols) > 0 {
-			plugin.Protocols = kong.StringSlice(p.Protocols...)
-		}
-		plugins = append(plugins, plugin)
+	plugin = kong.Plugin{
+		Name:   kong.String(k8sPlugin.PluginName),
+		Config: kong.Configuration(k8sPlugin.Config).DeepCopy(),
 	}
-	return plugins, nil
+	if k8sPlugin.RunOn != "" {
+		plugin.RunOn = kong.String(k8sPlugin.RunOn)
+	}
+	if k8sPlugin.Disabled {
+		plugin.Enabled = kong.Bool(false)
+	}
+	if len(k8sPlugin.Protocols) > 0 {
+		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
+	}
+	return plugin, nil
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

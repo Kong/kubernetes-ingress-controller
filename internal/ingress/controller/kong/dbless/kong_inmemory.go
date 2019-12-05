@@ -56,6 +56,20 @@ type Consumer struct {
 	Oauth2Creds []*kong.Oauth2Credential `json:"oauth2_credentials,omitempty"`
 }
 
+type plugin struct {
+	CreatedAt *int               `json:"created_at,omitempty" yaml:"created_at,omitempty"`
+	ID        *string            `json:"id,omitempty" yaml:"id,omitempty"`
+	Name      *string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Route     string             `json:"route,omitempty" yaml:"route,omitempty"`
+	Service   string             `json:"service,omitempty" yaml:"service,omitempty"`
+	Consumer  string             `json:"consumer,omitempty" yaml:"consumer,omitempty"`
+	Config    kong.Configuration `json:"config,omitempty" yaml:"config,omitempty"`
+	Enabled   *bool              `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	RunOn     *string            `json:"run_on,omitempty" yaml:"run_on,omitempty"`
+	Protocols []*string          `json:"protocols,omitempty" yaml:"protocols,omitempty"`
+	Tags      []*string          `json:"tags,omitempty" yaml:"tags,omitempty"`
+}
+
 // KongDeclarativeConfig holds Kong's configuration and can be marshalled
 // into Kong's native declarative configuration.
 type KongDeclarativeConfig struct {
@@ -63,8 +77,52 @@ type KongDeclarativeConfig struct {
 	Services      []Service     `json:"services"`
 	Upstreams     []Upstream    `json:"upstreams"`
 	Certificates  []Certificate `json:"certificates"`
-	Plugins       []kong.Plugin `json:"plugins"`
+	Plugins       []plugin      `json:"plugins"`
 	Consumers     []Consumer    `json:"consumers"`
+}
+
+func copyToInternalPlugin(p kong.Plugin) plugin {
+	f := plugin{}
+	if p.ID != nil {
+		f.ID = p.ID
+	}
+	if p.Name != nil {
+		f.Name = p.Name
+	}
+	if p.Enabled != nil {
+		f.Enabled = p.Enabled
+	}
+	if p.RunOn != nil {
+		f.RunOn = p.RunOn
+	}
+	if p.Protocols != nil {
+		f.Protocols = p.Protocols
+	}
+	if p.Tags != nil {
+		f.Tags = p.Tags
+	}
+	if p.Config != nil {
+		f.Config = p.Config
+	}
+	//if p.Consumer != nil {
+	//	f.Consumer = *p.Consumer.Username
+	//}
+	//if p.Route != nil {
+	//	f.Route = *p.Route.Name
+	//}
+	//if p.Service != nil {
+	//	f.Service = *p.Service.Name
+	//}
+	if p.Consumer != nil {
+		f.Consumer = *p.Consumer.ID
+	}
+	if p.Route != nil {
+		f.Route = *p.Route.ID
+	}
+	if p.Service != nil {
+		f.Service = *p.Service.ID
+	}
+	return f
 }
 
 // KongNativeState takes in a parser state and spits out Kong's native
@@ -93,8 +151,8 @@ func KongNativeState(k8sState *parser.KongState) *KongDeclarativeConfig {
 		result.Services = append(result.Services, service)
 	}
 
-	for _, plugin := range k8sState.GlobalPlugins {
-		result.Plugins = append(result.Plugins, *plugin.DeepCopy())
+	for _, plugin := range k8sState.Plugins {
+		result.Plugins = append(result.Plugins, copyToInternalPlugin(plugin.Plugin))
 	}
 
 	for _, u := range k8sState.Upstreams {

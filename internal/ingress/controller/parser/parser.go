@@ -38,10 +38,11 @@ type Route struct {
 // service and other k8s metadata.
 type Service struct {
 	kong.Service
-	Backend   networking.IngressBackend
-	Namespace string
-	Routes    []Route
-	Plugins   []kong.Plugin
+	Backend    networking.IngressBackend
+	Namespace  string
+	Routes     []Route
+	Plugins    []kong.Plugin
+	K8sService corev1.Service
 }
 
 // Upstream is a wrapper around Upstream object in Kong.
@@ -128,6 +129,18 @@ func (p *Parser) Build() (*KongState, error) {
 	parsedInfo, err := p.parseIngressRules(ings)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing ingress rules")
+	}
+
+	// populate Kubernetes Service
+	for key, service := range parsedInfo.ServiceNameToServices {
+		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.ServiceName)
+		if err != nil {
+			glog.Errorf("getting service: %v", err)
+		}
+		if k8sSvc != nil {
+			service.K8sService = *k8sSvc
+		}
+		parsedInfo.ServiceNameToServices[key] = service
 	}
 
 	// add the routes and services to the state
@@ -500,17 +513,9 @@ func (p *Parser) parseIngressRules(
 func (p *Parser) fillOverrides(state KongState) error {
 	for i := 0; i < len(state.Services); i++ {
 		// Services
-		var anns map[string]string
-		svc, err := p.store.GetService(
-			state.Services[i].Namespace,
-			state.Services[i].Backend.ServiceName)
-		if err != nil {
-			glog.Errorf("error getting services %v", err)
-		}
-		anns = svc.Annotations
+		anns := state.Services[i].K8sService.Annotations
 		kongIngress, err := p.getKongIngressForService(
-			state.Services[i].Namespace,
-			state.Services[i].Backend.ServiceName)
+			state.Services[i].K8sService)
 		if err != nil {
 			glog.Errorf("error getting kongIngress %v", err)
 		}
@@ -530,7 +535,7 @@ func (p *Parser) fillOverrides(state KongState) error {
 	// Upstreams
 	for i := 0; i < len(state.Upstreams); i++ {
 		kongIngress, err := p.getKongIngressForService(
-			state.Upstreams[i].Service.Namespace, state.Upstreams[i].Service.Backend.ServiceName)
+			state.Upstreams[i].Service.K8sService)
 		if err == nil {
 			overrideUpstream(&state.Upstreams[i], kongIngress)
 		} else {
@@ -718,8 +723,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error)
 			Service: service,
 		}
 		svcKey := service.Namespace + "/" + service.Backend.ServiceName
-		targets, err := p.getServiceEndpoints(service.Namespace,
-			service.Backend.ServiceName,
+		targets, err := p.getServiceEndpoints(service.K8sService,
 			service.Backend.ServicePort.String())
 		if err != nil {
 			glog.Errorf("error getting endpoints for '%v' service: %v",
@@ -802,18 +806,12 @@ func (p *Parser) fillPlugins(state KongState) {
 		// service
 		svcKey := state.Services[i].Namespace + "/" +
 			state.Services[i].Backend.ServiceName
-		svc, err := p.store.GetService(state.Services[i].Namespace,
-			state.Services[i].Backend.ServiceName)
+		plugins, err := p.getPluginsFromAnnotations(state.Services[i].Namespace,
+			state.Services[i].K8sService.GetAnnotations())
 		if err != nil {
-			glog.Error(errors.Wrapf(err, "fetching service '%s'", svcKey))
-		} else {
-			plugins, err := p.getPluginsFromAnnotations(state.Services[i].Namespace,
-				svc.GetAnnotations())
-			if err != nil {
-				glog.Error(errors.Wrapf(err, "fetching KongPlugins for service '%s'", svcKey))
-			}
-			state.Services[i].Plugins = plugins
+			glog.Error(errors.Wrapf(err, "fetching KongPlugins for service '%s'", svcKey))
 		}
+		state.Services[i].Plugins = plugins
 		// route
 		for j := range state.Services[i].Routes {
 			plugins, err := p.getPluginsFromAnnotations(state.Services[i].Routes[j].Ingress.Namespace, state.Services[i].Routes[j].Ingress.GetAnnotations())
@@ -880,18 +878,12 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 	return plugins, nil
 }
 
-func (p *Parser) getServiceEndpoints(namespace, svcName string,
+func (p *Parser) getServiceEndpoints(svc corev1.Service,
 	backendPort string) ([]Target, error) {
 	var targets []Target
 	var endpoints []utils.Endpoint
 	var servicePort corev1.ServicePort
-	svc, err := p.store.GetService(namespace, svcName)
-	svcKey := namespace + "/" + svcName
-	if err != nil {
-		return nil, errors.Wrapf(err,
-			"error getting service '%v' from the cache", svcKey)
-	}
-	glog.V(3).Infof("obtaining port information for service %v", svcKey)
+	svcKey := svc.Namespace + "/" + svc.Name
 
 	for _, port := range svc.Spec.Ports {
 		// targetPort could be a string, use the name or the port (int)
@@ -921,7 +913,7 @@ func (p *Parser) getServiceEndpoints(namespace, svcName string,
 		}
 	}
 
-	endpoints = getEndpoints(svc, &servicePort,
+	endpoints = getEndpoints(&svc, &servicePort,
 		corev1.ProtocolTCP, p.store.GetEndpointsForService)
 	if len(endpoints) == 0 {
 		glog.Warningf("service %v does not have any active endpoints",
@@ -938,18 +930,13 @@ func (p *Parser) getServiceEndpoints(namespace, svcName string,
 	return targets, nil
 }
 
-func (p *Parser) getKongIngressForService(namespace, serviceName string) (
+func (p *Parser) getKongIngressForService(service corev1.Service) (
 	*configurationv1.KongIngress, error) {
-	svc, err := p.store.GetService(namespace, serviceName)
-	if err != nil {
-		return nil, errors.Wrapf(err, "fetching service '%s' from cache",
-			namespace+"/"+serviceName)
-	}
-	confName := annotations.ExtractConfigurationName(svc.Annotations)
+	confName := annotations.ExtractConfigurationName(service.Annotations)
 	if confName == "" {
 		return nil, nil
 	}
-	return p.store.GetKongIngress(svc.Namespace, confName)
+	return p.store.GetKongIngress(service.Namespace, confName)
 }
 
 // getKongIngressFromIngress checks if the Ingress contains an annotation for configuration

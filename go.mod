@@ -12,10 +12,9 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
-	github.com/hashicorp/go-memdb v1.0.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hbagdi/deck v0.5.1
-	github.com/hbagdi/go-kong v0.9.0
+	github.com/hbagdi/deck v0.6.2
+	github.com/hbagdi/go-kong v0.10.0
 	github.com/imdario/mergo v0.3.7
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mitchellh/mapstructure v1.1.2

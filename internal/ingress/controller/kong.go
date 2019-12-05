@@ -133,26 +133,44 @@ func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
 	return err
 }
 
-func (n *KongController) onUpdateDBMode(state *parser.KongState) error {
-
+func (n *KongController) onUpdateDBMode(parserState *parser.KongState) error {
 	client := n.cfg.Kong.Client
 
-	currentState, err := dump.GetState(client,
-		dump.Config{
-			SelectorTags: n.getIngressControllerTags(),
-		})
-	if err != nil {
-		return errors.Wrap(err, "loading configuration from kong")
-	}
-	targetState, err := n.toDeckKongState(state)
+	// parse to target file
+	targetContent, err := n.toDeckContent(parserState)
 	if err != nil {
 		return err
 	}
+
+	// read the current state
+	rawState, err := dump.Get(client, dump.Config{
+		SelectorTags: n.getIngressControllerTags(),
+	})
+	if err != nil {
+		return errors.Wrap(err, "loading configuration from kong")
+	}
+	currentState, err := state.Get(rawState)
+	if err != nil {
+		return err
+	}
+
+	// read the target state
+	rawState, err = file.Get(targetContent, currentState)
+	if err != nil {
+		return err
+	}
+	targetState, err := state.Get(rawState)
+	if err != nil {
+		return err
+	}
+
 	syncer, err := diff.NewSyncer(currentState, targetState)
 	if err != nil {
 		return errors.Wrap(err, "creating a new syncer")
 	}
-	errs := solver.Solve(nil, syncer, client, false)
+	// TODO configurable parallelism
+	//client.SetDebugMode(true)
+	errs := solver.Solve(nil, syncer, client, 10, false)
 	if errs != nil {
 		return utils.ErrArray{Errors: errs}
 	}
@@ -169,15 +187,15 @@ func (n *KongController) getIngressControllerTags() []string {
 	return res
 }
 
-func (n *KongController) toDeckKongState(
-	k8sState *parser.KongState) (*state.KongState, error) {
+func (n *KongController) toDeckContent(
+	k8sState *parser.KongState) (*file.Content, error) {
 	var content file.Content
 	var err error
 
 	for _, s := range k8sState.Services {
-		service := file.Service{Service: s.Service}
+		service := file.FService{Service: s.Service}
 		for _, p := range s.Plugins {
-			plugin := file.Plugin{
+			plugin := file.FPlugin{
 				Plugin: *p.DeepCopy(),
 			}
 			err = n.fillPlugin(&plugin)
@@ -189,11 +207,11 @@ func (n *KongController) toDeckKongState(
 		}
 
 		for _, r := range s.Routes {
-			route := file.Route{Route: r.Route}
+			route := file.FRoute{Route: r.Route}
 			n.fillRoute(&route.Route)
 
 			for _, p := range r.Plugins {
-				plugin := file.Plugin{
+				plugin := file.FPlugin{
 					Plugin: *p.DeepCopy(),
 				}
 				err = n.fillPlugin(&plugin)
@@ -209,7 +227,7 @@ func (n *KongController) toDeckKongState(
 	}
 
 	for _, plugin := range k8sState.GlobalPlugins {
-		plugin := file.Plugin{
+		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}
 		err = n.fillPlugin(&plugin)
@@ -221,23 +239,23 @@ func (n *KongController) toDeckKongState(
 	}
 
 	for _, u := range k8sState.Upstreams {
-		upstream := file.Upstream{Upstream: u.Upstream}
+		upstream := file.FUpstream{Upstream: u.Upstream}
 		for _, t := range u.Targets {
-			target := file.Target{Target: t.Target}
+			target := file.FTarget{Target: t.Target}
 			upstream.Targets = append(upstream.Targets, &target)
 		}
 		content.Upstreams = append(content.Upstreams, upstream)
 	}
 
 	for _, c := range k8sState.Certificates {
-		cert := file.Certificate{Certificate: c.Certificate}
+		cert := file.FCertificate{Certificate: c.Certificate}
 		content.Certificates = append(content.Certificates, cert)
 	}
 
 	for _, c := range k8sState.Consumers {
-		consumer := file.Consumer{Consumer: c.Consumer}
+		consumer := file.FConsumer{Consumer: c.Consumer}
 		for _, p := range c.Plugins {
-			consumer.Plugins = append(consumer.Plugins, &file.Plugin{Plugin: p})
+			consumer.Plugins = append(consumer.Plugins, &file.FPlugin{Plugin: p})
 		}
 		consumer.KeyAuths = c.KeyAuths
 		consumer.HMACAuths = c.HMACAuths
@@ -247,13 +265,14 @@ func (n *KongController) toDeckKongState(
 		consumer.Oauth2Creds = c.Oauth2Creds
 		content.Consumers = append(content.Consumers, consumer)
 	}
-
-	content.Info.SelectorTags = n.getIngressControllerTags()
-	targetState, _, _, err := file.GetStateFromContent(&content)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating a valid state for Kong")
+	selectorTags := n.getIngressControllerTags()
+	if len(selectorTags) > 0 {
+		content.Info = &file.Info{
+			SelectorTags: selectorTags,
+		}
 	}
-	return targetState, nil
+
+	return &content, nil
 }
 
 var kong110version = semver.MustParse("1.1.0")
@@ -271,7 +290,7 @@ func (n *KongController) fillRoute(route *kong.Route) {
 	}
 }
 
-func (n *KongController) fillPlugin(plugin *file.Plugin) error {
+func (n *KongController) fillPlugin(plugin *file.FPlugin) error {
 	if plugin == nil {
 		return errors.New("plugin is nil")
 	}

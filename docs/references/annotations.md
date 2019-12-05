@@ -9,6 +9,8 @@ It supports the following annotations:
 | [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy. | Coming soon |
 | [`plugins.konghq.com`](#pluginskonghqcom) | Run plugins for specific service or Ingress. | [Using KongPlugin resource](../guides/using-kongplugin-resource.md) |
 | [`configuration.konghq.com`](#configurationkonghqcom) | Fine grained routing and load-balancing. | [Using KongIngress resource](../guides/using-kongingress-resource.md)|
+| [`configuration.konghq.com/protocol`](#configurationkonghqcom/protocol) | Set protocol on a Service. |
+| [`configuration.konghq.com/protocols`](#configurationkonghqcom/protocols) | Set protocols on an Ingress. |
 | [`ingress.kubernetes.io/service-upstream`](#ingresskubernetesioservice-upstream) | Offload load-balancing to kube-proxy or sidecar. | Coming soon |
 
 ## `kubernetes.io/ingress.class`
@@ -128,6 +130,21 @@ and Upstream entities in Kong.
 Please follow the
 [Using the KongIngress resource](../guides/using-kongingress-resource.md)
 guide for details on how to use this annotation.
+
+## `configuration.konghq.com/protocol`
+
+This annotation sets a protocol — `http`, `https`, `grpc`, or `grpcs` —
+on a Service resource. The protocol is used for communication between a 
+[Kong Service](https://docs.konghq.com/latest/admin-api/#service-object) and 
+a Kubernetes Service, internally in the Kubernetes cluster.
+
+## `configuration.konghq.com/protocols`
+
+This annotation sets a pair of protocols (`http`,`https`) or (`grpc`,`grpcs`)
+on an Ingress resource. The protocols are used for communication between the
+Ingress point — in this case,
+a [Kong Route](https://docs.konghq.com/latest/admin-api/#route-object) — and
+the external user or service.
 
 ## `ingress.kubernetes.io/service-upstream`
 

@@ -18,11 +18,11 @@ Kong Ingress controller:
   This guide walks through how to use cert-manager along with Kong Ingress
   Controller to automate TLS certificate provisioning and using them
   to encrypt your API traffic.
-- [Configuring a fallback service](configuring-fallback-service.md)
+- [Configuring a fallback service](configuring-fallback-service.md)  
   This guide walks through how to setup a fallback service using Ingress
   resource. The fallback service will receive all requests that don't
   match against any of the defined Ingress rules.
-- [Using external service](using-external-service.md)
+- [Using external service](using-external-service.md)  
   This guide shows how to expose services running outside Kubernetes via Kong,
   using [External Name](https://kubernetes.io/docs/concepts/services-networking/service/#externalname)
   Services in Kubernetes.
@@ -40,7 +40,9 @@ Kong Ingress controller:
 - [Configuring circuit-breaker and health-checking](configuring-health-checks.md)  
   This guide walks through the usage of Circuit-breaking and health-checking
   features of Kong Ingress Controller.
-- [Setting up custom plugin](setting-up-custom-plugins.md)
+- [Setting up custom plugin](setting-up-custom-plugins.md)  
   This guide walks through
   installation of a custom plugin into Kong using
   ConfigMaps and Volumes.
+- [Using ingress with gRPC](using-ingress-with-grpc.md)  
+  This guide walks through how to use Kong Ingress Controller with gRPC.

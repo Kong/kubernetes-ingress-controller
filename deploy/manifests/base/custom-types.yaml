@@ -209,6 +209,8 @@ spec:
               - "round-robin"
               - "consistent-hashing"
               - "least-connections"
+            host_header:
+              type: string
             hash_on:
               type: string
             hash_on_cookie:

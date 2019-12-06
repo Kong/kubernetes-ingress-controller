@@ -243,6 +243,8 @@ spec:
                       type: object
                   type: object
               type: object
+            host_header:
+              type: string
             slots:
               minimum: 10
               type: integer

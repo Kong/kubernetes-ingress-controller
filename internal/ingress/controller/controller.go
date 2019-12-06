@@ -56,6 +56,8 @@ type Kong struct {
 	Enterprise    bool
 
 	Version semver.Version
+
+	Concurrency int
 }
 
 // Configuration contains all the settings required by an Ingress controller

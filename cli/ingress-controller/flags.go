@@ -45,6 +45,7 @@ type cliConfig struct {
 	// Kong connection details
 	KongAdminURL           string
 	KongWorkspace          string
+	KongAdminConcurrency   int
 	KongAdminFilterTags    []string
 	KongAdminHeaders       []string
 	KongAdminTLSSkipVerify bool
@@ -105,6 +106,9 @@ format of protocol://address:port`)
 
 	flags.String("kong-workspace", "",
 		"Workspace in Kong Enterprise to be configured")
+
+	flag.Int("kong-admin-concurrency", 10,
+		"Max number of concurrent requests sent to Kong's Admin API")
 
 	flags.StringSlice("kong-admin-filter-tag", []string{defaultKongFilterTag},
 		`add a header (key:value) to every Admin API call,
@@ -238,6 +242,7 @@ func parseFlags() (cliConfig, error) {
 	config.KongAdminURL = kongAdminURL
 
 	config.KongWorkspace = viper.GetString("kong-workspace")
+	config.KongAdminConcurrency = viper.GetInt("kong-admin-concurrency")
 	config.KongAdminFilterTags = viper.GetStringSlice("kong-admin-filter-tag")
 
 	config.KongAdminHeaders = viper.GetStringSlice("admin-header")

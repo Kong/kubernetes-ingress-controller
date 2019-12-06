@@ -59,8 +59,9 @@ import (
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
 	return controller.Configuration{
 		Kong: controller.Kong{
-			URL:        cliConfig.KongAdminURL,
-			FilterTags: cliConfig.KongAdminFilterTags,
+			URL:         cliConfig.KongAdminURL,
+			FilterTags:  cliConfig.KongAdminFilterTags,
+			Concurrency: cliConfig.KongAdminConcurrency,
 		},
 
 		ResyncPeriod:  cliConfig.SyncPeriod,
@@ -100,6 +101,11 @@ func main() {
 
 	if cliConfig.SyncPeriod.Seconds() < 10 {
 		glog.Fatalf("resync period (%vs) is too low", cliConfig.SyncPeriod.Seconds())
+	}
+
+	if cliConfig.KongAdminConcurrency < 1 {
+		glog.Fatalf("kong-admin-concurrency (%v) cannot be less than 1",
+			cliConfig.KongAdminConcurrency)
 	}
 
 	kubeCfg, kubeClient, err := createApiserverClient(cliConfig.APIServerHost,

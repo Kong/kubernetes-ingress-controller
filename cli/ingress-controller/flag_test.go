@@ -50,6 +50,7 @@ func TestDefaults(t *testing.T) {
 		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
 
 		KongAdminURL:           "http://localhost:8001",
+		KongAdminConcurrency:   10,
 		KongWorkspace:          "",
 		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminHeaders:       []string{},
@@ -95,6 +96,7 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		"--admission-webhook-key-file", "/key-file",
 
 		"--kong-url", "https://kong.example.com",
+		"--kong-admin-concurrency", "1",
 		"--kong-workspace", "yolo",
 		"--kong-admin-filter-tag", "foo-tag",
 		"--admin-header", "foo:bar",
@@ -129,6 +131,7 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		AdmissionWebhookKeyPath:  "/key-file",
 
 		KongAdminURL:           "https://kong.example.com",
+		KongAdminConcurrency:   1,
 		KongWorkspace:          "yolo",
 		KongAdminFilterTags:    []string{"foo-tag"},
 		KongAdminHeaders:       []string{"foo:bar"},
@@ -172,6 +175,7 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		"CONTROLLER_ADMISSION_WEBHOOK_CERT_FILE": "/new-cert-path",
 		"CONTROLLER_ADMISSION_WEBHOOK_KEY_FILE":  "/new-key-path",
 		"CONTROLLER_ANONYMOUS_REPORTS":           "false",
+		"CONTROLLER_KONG_ADMIN_CONCURRENCY":      "100",
 	}
 	for k, v := range envs {
 		os.Setenv(k, v)
@@ -187,6 +191,7 @@ func TestOverrideViaEnvVars(t *testing.T) {
 
 		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminURL:           "http://localhost:8001",
+		KongAdminConcurrency:   100,
 		KongWorkspace:          "",
 		KongAdminHeaders:       []string{},
 		KongAdminTLSSkipVerify: false,
@@ -238,6 +243,7 @@ func TestDeprecatedFlags(t *testing.T) {
 	expectedConf := cliConfig{
 		KongAdminURL:           "https://kong.example.com",
 		KongWorkspace:          "yolo",
+		KongAdminConcurrency:   10,
 		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminHeaders:       []string{"foo:bar"},
 		KongAdminTLSSkipVerify: true,
@@ -298,6 +304,7 @@ func TestDeprecatedFlagPrecedences(t *testing.T) {
 	expectedConf := cliConfig{
 		KongAdminURL:           "http://kong.yolo42.com",
 		KongWorkspace:          "yolo",
+		KongAdminConcurrency:   10,
 		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
 		KongAdminHeaders:       []string{"fuu:baz"},
 		KongAdminTLSSkipVerify: true,

@@ -168,9 +168,8 @@ func (n *KongController) onUpdateDBMode(parserState *parser.KongState) error {
 	if err != nil {
 		return errors.Wrap(err, "creating a new syncer")
 	}
-	// TODO configurable parallelism
 	//client.SetDebugMode(true)
-	errs := solver.Solve(nil, syncer, client, 10, false)
+	errs := solver.Solve(nil, syncer, client, n.cfg.Kong.Concurrency, false)
 	if errs != nil {
 		return utils.ErrArray{Errors: errs}
 	}

@@ -73,6 +73,18 @@ func TestExtractProtocolNames(t *testing.T) {
 		t.Errorf("expected grpc,grpcs as configuration name but got %v", pns)
 	}
 }
+
+func TestExtractClientCert(t *testing.T) {
+	data := map[string]string{
+		"configuration.konghq.com/client-cert": "secret1",
+	}
+
+	secret := ExtractClientCertificate(data)
+	if secret != "secret1" {
+		t.Errorf("expected secret as secret1 but got %v", secret)
+	}
+}
+
 func TestIngrssClassValidatorFunc(t *testing.T) {
 	tests := []struct {
 		ingress    string

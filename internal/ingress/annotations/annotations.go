@@ -33,6 +33,8 @@ const (
 
 	protocolsAnnotationKey = "configuration.konghq.com/protocols"
 
+	clientCertAnnotationKey = "configuration.konghq.com/client-cert"
+
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
@@ -106,6 +108,12 @@ func ExtractProtocolName(anns map[string]string) string {
 // ExtractProtocolNames extracts the protocols supplied in the annotation
 func ExtractProtocolNames(anns map[string]string) []string {
 	return strings.Split(anns[protocolsAnnotationKey], ",")
+}
+
+// ExtractClientCertificate extracts the secret name containing the
+// client-certificate to use.
+func ExtractClientCertificate(anns map[string]string) string {
+	return anns[clientCertAnnotationKey]
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

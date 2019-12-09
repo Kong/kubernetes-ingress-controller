@@ -34,7 +34,6 @@ import (
 	"github.com/hbagdi/deck/utils"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/imdario/mergo"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/kong/dbless"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/pkg/errors"
 )
@@ -86,17 +85,67 @@ var upstreamDefaults = kong.Upstream{
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
 func (n *KongController) OnUpdate(state *parser.KongState) error {
-	if n.cfg.InMemory {
-		return n.onUpdateInMemoryMode(state)
+
+	targetContent, err := n.toDeckContent(state)
+	if err != nil {
+		return err
 	}
-	return n.onUpdateDBMode(state)
+
+	if n.cfg.InMemory {
+		return n.onUpdateInMemoryMode(targetContent)
+	}
+	return n.onUpdateDBMode(targetContent)
 }
 
-func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
+func cleanUpNullsInPluginConfigs(state *file.Content) {
+
+	for _, s := range state.Services {
+		for _, p := range s.Plugins {
+			for k, v := range p.Config {
+				if v == nil {
+					delete(p.Config, k)
+				}
+			}
+		}
+		for _, r := range state.Routes {
+			for _, p := range r.Plugins {
+				for k, v := range p.Config {
+					if v == nil {
+						delete(p.Config, k)
+					}
+				}
+			}
+		}
+	}
+
+	for _, c := range state.Consumers {
+		for _, p := range c.Plugins {
+			for k, v := range p.Config {
+				if v == nil {
+					delete(p.Config, k)
+				}
+			}
+		}
+	}
+
+	for _, p := range state.Plugins {
+		for k, v := range p.Config {
+			if v == nil {
+				delete(p.Config, k)
+			}
+		}
+	}
+}
+
+func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
 	client := n.cfg.Kong.Client
 
-	config := dbless.KongNativeState(state)
-	jsonConfig, err := json.Marshal(&config)
+	// Kong will error out if this is set
+	state.Info = nil
+	// Kong errors out if `null`s are present in `config` of plugins
+	cleanUpNullsInPluginConfigs(state)
+
+	jsonConfig, err := json.Marshal(state)
 	if err != nil {
 		return errors.Wrap(err,
 			"marshaling Kong declarative configuration to JSON")
@@ -133,14 +182,8 @@ func (n *KongController) onUpdateInMemoryMode(state *parser.KongState) error {
 	return err
 }
 
-func (n *KongController) onUpdateDBMode(parserState *parser.KongState) error {
+func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 	client := n.cfg.Kong.Client
-
-	// parse to target file
-	targetContent, err := n.toDeckContent(parserState)
-	if err != nil {
-		return err
-	}
 
 	// read the current state
 	rawState, err := dump.Get(client, dump.Config{
@@ -189,6 +232,7 @@ func (n *KongController) getIngressControllerTags() []string {
 func (n *KongController) toDeckContent(
 	k8sState *parser.KongState) (*file.Content, error) {
 	var content file.Content
+	content.FormatVersion = "1.1"
 	var err error
 
 	for _, s := range k8sState.Services {

@@ -3,6 +3,13 @@
 Please follow the [deployment](../deployment) documentation to install
 Kong Ingress Controller onto your Kubernetes cluster.
 
+## Pre-requisite
+
+To make `gRPC` requests, you need a client which can invoke gRPC requests.
+In this guide, we use
+[`grpcurl`](https://github.com/fullstorydev/grpcurl#installation).
+Please ensure that you have that installed in on your local system.
+
 ## Testing connectivity to Kong
 
 This guide assumes that `PROXY_IP` environment variable is
@@ -29,19 +36,43 @@ This is expected as Kong does not yet know how to proxy the request.
 
 #### Running GRPC
 
-
 1. Add a grpc deployment and service
 
 ```bash
 $ kubectl apply -f https://bit.ly/grpcbin-service
+service/grpcbin created
+deployment.apps/grpcbin created
 ```
-2. Create a demo grpc ingress rule:
+1. Create a demo grpc ingress rule:
 
 ```bash
-$ kubectl apply -f https://bit.ly/sample-grpcbin-ingress
+$ echo "apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: demo
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        backend:
+          serviceName: grpcbin
+          servicePort: 9001" | kubectl apply -f -
+ingress.extensions/demo created
 ```
-3. Update your ingress with `kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com/protocols":"grpc,grpcs"}}}'`
+1. Update your ingress with
+`kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com/protocols":"grpc,grpcs"}}}'`.
+By default, all routes are assumed to be either HTTP or HTTPS. This annotation
+informs Kong that this route is a gRPC(s) route and not a plain HTTP route.
 
-4. Update your grpc service with `kubectl patch svc grpc -p '{"metadata":{"annotations":{"configuration.konghq.com/protocol":"grpcs"}}}'`
+1. Update your grpc service with
+`kubectl patch svc grpc -p '{"metadata":{"annotations":{"configuration.konghq.com/protocol":"grpcs"}}}'`.
+Similar to routes, Kong assumes that services are HTTP-based by default.
+With this annotation, we configure Kong to use gRPCs protocol when it
+talks to the upstream service.
 
-5. You should be able to run a request over grpcs via `grpcurl -v -d '{"greeting": "Kong 1.3!"}' -H 'kong-debug: 1' -insecure $PROXY_IP:443 hello.HelloService.SayHello`.
+1. You should be able to run a request over `gRPC`:
+
+```
+grpcurl -v -d '{"greeting": "Kong Hello world!"}' -insecure $PROXY_IP:443 hello.HelloService.SayHello
+```

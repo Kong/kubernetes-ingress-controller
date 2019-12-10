@@ -119,9 +119,6 @@ func (n *KongController) syncIngress(interface{}) error {
 		glog.Errorf("unexpected failure updating Kong configuration: \n%v", err)
 		return err
 	}
-	glog.Info("successfully synced configuration to Kong")
-
-	n.runningConfig = state
 
 	return nil
 }
@@ -211,8 +208,6 @@ type KongController struct {
 	stopCh   chan struct{}
 	updateCh *channels.RingChannel
 
-	// runningConfig contains the running configuration in the Backend
-	runningConfig     *parser.KongState
 	runningConfigHash [32]byte
 
 	isShuttingDown bool

@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"sort"
+	"strings"
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
@@ -85,16 +87,31 @@ var upstreamDefaults = kong.Upstream{
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
 func (n *KongController) OnUpdate(state *parser.KongState) error {
-
 	targetContent, err := n.toDeckContent(state)
 	if err != nil {
 		return err
 	}
 
-	if n.cfg.InMemory {
-		return n.onUpdateInMemoryMode(targetContent)
+	jsonConfig, err := json.Marshal(targetContent)
+	if err != nil {
+		return errors.Wrap(err,
+			"marshaling Kong declarative configuration to JSON")
 	}
-	return n.onUpdateDBMode(targetContent)
+	shaSum := sha256.Sum256(jsonConfig)
+	if reflect.DeepEqual(n.runningConfigHash, shaSum) {
+		glog.Info("no configuration change, skipping sync to Kong")
+		return nil
+	}
+	if n.cfg.InMemory {
+		err = n.onUpdateInMemoryMode(targetContent)
+	} else {
+		err = n.onUpdateDBMode(targetContent)
+	}
+	if err == nil {
+		glog.Info("successfully synced configuration to Kong")
+		n.runningConfigHash = shaSum
+	}
+	return err
 }
 
 func cleanUpNullsInPluginConfigs(state *file.Content) {
@@ -151,10 +168,6 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
 			"marshaling Kong declarative configuration to JSON")
 	}
 
-	if reflect.DeepEqual(n.runningConfigHash, sha256.Sum256(jsonConfig)) {
-		glog.V(2).Info("no configuration change, skipping call sync config")
-		return nil
-	}
 	type reqBody struct {
 		Config string `json:"config"`
 	}
@@ -177,7 +190,6 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
 	if err != nil {
 		return errors.Wrap(err, "posting new config to /config")
 	}
-	n.runningConfigHash = sha256.Sum256(jsonConfig)
 
 	return err
 }
@@ -247,6 +259,9 @@ func (n *KongController) toDeckContent(
 					*plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
+			sort.SliceStable(service.Plugins, func(i, j int) bool {
+				return strings.Compare(*service.Plugins[i].Name, *service.Plugins[j].Name) > 0
+			})
 		}
 
 		for _, r := range s.Routes {
@@ -263,11 +278,20 @@ func (n *KongController) toDeckContent(
 						*plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
+				sort.SliceStable(route.Plugins, func(i, j int) bool {
+					return strings.Compare(*route.Plugins[i].Name, *route.Plugins[j].Name) > 0
+				})
 			}
 			service.Routes = append(service.Routes, &route)
 		}
+		sort.SliceStable(service.Routes, func(i, j int) bool {
+			return strings.Compare(*service.Routes[i].Name, *service.Routes[j].Name) > 0
+		})
 		content.Services = append(content.Services, service)
 	}
+	sort.SliceStable(content.Services, func(i, j int) bool {
+		return strings.Compare(*content.Services[i].Name, *content.Services[j].Name) > 0
+	})
 
 	for _, plugin := range k8sState.Plugins {
 		plugin := file.FPlugin{
@@ -280,6 +304,10 @@ func (n *KongController) toDeckContent(
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}
+	sort.SliceStable(content.Plugins, func(i, j int) bool {
+		return strings.Compare(pluginString(content.Plugins[i]),
+			pluginString(content.Plugins[j])) > 0
+	})
 
 	for _, u := range k8sState.Upstreams {
 		n.fillUpstream(&u.Upstream)
@@ -288,13 +316,22 @@ func (n *KongController) toDeckContent(
 			target := file.FTarget{Target: t.Target}
 			upstream.Targets = append(upstream.Targets, &target)
 		}
+		sort.SliceStable(upstream.Targets, func(i, j int) bool {
+			return strings.Compare(*upstream.Targets[i].Target.Target, *upstream.Targets[j].Target.Target) > 0
+		})
 		content.Upstreams = append(content.Upstreams, upstream)
 	}
+	sort.SliceStable(content.Upstreams, func(i, j int) bool {
+		return strings.Compare(*content.Upstreams[i].Name, *content.Upstreams[j].Name) > 0
+	})
 
 	for _, c := range k8sState.Certificates {
 		cert := file.FCertificate{Certificate: c.Certificate}
 		content.Certificates = append(content.Certificates, cert)
 	}
+	sort.SliceStable(content.Certificates, func(i, j int) bool {
+		return strings.Compare(*content.Certificates[i].Cert, *content.Certificates[j].Cert) > 0
+	})
 
 	for _, c := range k8sState.Consumers {
 		consumer := file.FConsumer{Consumer: c.Consumer}
@@ -309,6 +346,9 @@ func (n *KongController) toDeckContent(
 		consumer.Oauth2Creds = c.Oauth2Creds
 		content.Consumers = append(content.Consumers, consumer)
 	}
+	sort.SliceStable(content.Consumers, func(i, j int) bool {
+		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
+	})
 	selectorTags := n.getIngressControllerTags()
 	if len(selectorTags) > 0 {
 		content.Info = &file.Info{
@@ -317,6 +357,23 @@ func (n *KongController) toDeckContent(
 	}
 
 	return &content, nil
+}
+
+func pluginString(plugin file.FPlugin) string {
+	result := ""
+	if plugin.Name != nil {
+		result = *plugin.Name
+	}
+	if plugin.Consumer != nil && plugin.Consumer.ID != nil {
+		result += *plugin.Consumer.ID
+	}
+	if plugin.Route != nil && plugin.Route.ID != nil {
+		result += *plugin.Route.ID
+	}
+	if plugin.Service != nil && plugin.Service.ID != nil {
+		result += *plugin.Service.ID
+	}
+	return result
 }
 
 var (

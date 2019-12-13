@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -72,6 +73,151 @@ Gn+T2uCyOP4a1DTUoPyoNJXo
 		},
 	}
 )
+
+func TestServiceClientCertificate(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("valid client-cert annotation", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					TLS: []networking.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+		}
+
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret1",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"configuration.konghq.com/client-cert": "secret1",
+					},
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Secrets:   secrets,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Certificates),
+			"expected one certificates to be rendered")
+		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+			*state.Certificates[0].ID)
+
+		assert.Equal(1, len(state.Services))
+		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+			*state.Services[0].ClientCertificate.ID)
+	})
+	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					TLS: []networking.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"configuration.konghq.com/client-cert": "secret1",
+					},
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(0, len(state.Certificates),
+			"expected no certificates to be rendered")
+
+		assert.Equal(1, len(state.Services))
+		assert.Nil(state.Services[0].ClientCertificate)
+	})
+}
 
 func TestParserSecret(t *testing.T) {
 	assert := assert.New(t)

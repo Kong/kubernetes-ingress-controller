@@ -140,6 +140,24 @@ func (p *Parser) Build() (*KongState, error) {
 		if k8sSvc != nil {
 			service.K8sService = *k8sSvc
 		}
+		secretName := annotations.ExtractClientCertificate(
+			service.K8sService.GetAnnotations())
+		if secretName != "" {
+			secret, err := p.store.GetSecret(service.K8sService.Namespace,
+				secretName)
+			secretKey := service.K8sService.Namespace + "/" + secretName
+			// ensure that the cert is loaded into Kong
+			if _, ok := parsedInfo.SecretNameToSNIs[secretKey]; !ok {
+				parsedInfo.SecretNameToSNIs[secretKey] = []string{}
+			}
+			if err == nil {
+				service.ClientCertificate = &kong.Certificate{
+					ID: kong.String(string(secret.UID)),
+				}
+			} else {
+				glog.Errorf("getting secret: %v: %v", secretKey, err)
+			}
+		}
 		parsedInfo.ServiceNameToServices[key] = service
 	}
 
@@ -769,6 +787,7 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 		if !ok {
 			kongCert = Certificate{
 				Certificate: kong.Certificate{
+					ID:   kong.String(string(secret.UID)),
 					Cert: kong.String(cert),
 					Key:  kong.String(key),
 				},

@@ -168,6 +168,9 @@ func KongNativeState(k8sState *parser.KongState) *KongDeclarativeConfig {
 			Key:  c.Key,
 			Cert: c.Cert,
 		}
+		if c.ID != nil {
+			cert.ID = kong.String(*c.ID)
+		}
 		for _, sni := range c.SNIs {
 			cert.SNIs = append(cert.SNIs, kong.SNI{Name: kong.String(*sni)})
 		}

@@ -65,11 +65,11 @@ secret/kong-validation-webhook created
 Once the secret is created, update the Ingress Controller deployment:
 
 Execute the following command to patch the Kong Ingress Controller deployment
-to mount the certificate and key pair:
+to mount the certificate and key pair and also enable the admission controller:
 
 ```bash
 $ kubectl patch deploy -n kong ingress-kong
-    -p '{"spec":{"template":{"spec":{"containers":[{"name":"ingress-controller","volumeMounts":[{"name":"validation-webhook","mountPath":"/admission-webhook"}]}],"volumes":[{"secret":{"secretName":"kong-validation-webhook"},"name":"validation-webhook"}]}}}}'
+    -p '{"spec":{"template":{"spec":{"containers":[{"name":"ingress-controller","env":[{"name":"CONTROLLER_ADMISSION_WEBHOOK_LISTEN","value":":8080"}],"volumeMounts":[{"name":"validation-webhook","mountPath":"/admission-webhook"}]}],"volumes":[{"secret":{"secretName":"kong-validation-webhook"},"name":"validation-webhook"}]}}}}'
 deployment.extensions/ingress-kong patched
 ```
 

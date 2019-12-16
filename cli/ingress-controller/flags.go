@@ -111,8 +111,8 @@ format of protocol://address:port`)
 		"Max number of concurrent requests sent to Kong's Admin API")
 
 	flags.StringSlice("kong-admin-filter-tag", []string{defaultKongFilterTag},
-		`add a header (key:value) to every Admin API call,
-this flag can be used multiple times to specify multiple tags`)
+		`The tag used to manage and filter entities in Kong
+This flag can be specified multiple times to specify multiple tags.`)
 
 	// deprecated
 	flags.StringSlice("admin-header", nil,

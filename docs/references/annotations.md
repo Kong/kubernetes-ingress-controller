@@ -6,12 +6,13 @@ It supports the following annotations:
 
 | Annotation name | Description | Guide |
 |-----------------|-------------|-------|
-| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy. | Coming soon |
+| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy. | |
 | [`plugins.konghq.com`](#pluginskonghqcom) | Run plugins for specific service or Ingress. | [Using KongPlugin resource](../guides/using-kongplugin-resource.md) |
 | [`configuration.konghq.com`](#configurationkonghqcom) | Fine grained routing and load-balancing. | [Using KongIngress resource](../guides/using-kongingress-resource.md)|
 | [`configuration.konghq.com/protocol`](#configurationkonghqcom/protocol) | Set protocol on a Service. |
 | [`configuration.konghq.com/protocols`](#configurationkonghqcom/protocols) | Set protocols on an Ingress. |
-| [`ingress.kubernetes.io/service-upstream`](#ingresskubernetesioservice-upstream) | Offload load-balancing to kube-proxy or sidecar. | Coming soon |
+| [`configuration.konghq.com/client-cert`](#configurationkonghqcom/client-cert) | Client certificate and key pair Kong should use to authenticate itself to the upstream service. |
+| [`ingress.kubernetes.io/service-upstream`](#ingresskubernetesioservice-upstream) | Offload load-balancing to kube-proxy or sidecar. | |
 
 ## `kubernetes.io/ingress.class`
 
@@ -145,6 +146,20 @@ on an Ingress resource. The protocols are used for communication between the
 Ingress point — in this case,
 a [Kong Route](https://docs.konghq.com/latest/admin-api/#route-object) — and
 the external user or service.
+
+## `configuration.konghq.com/client-cert`
+
+This annotation sets the certificate and key-pair Kong should use to
+authenticate itself against the upstream service, if the upstream service
+is performing mutual-TLS (mTLS) authentication.
+
+The value of this annotation should be the name of the Kubernetes TLS Secret
+resource which contains the TLS cert and key pair.
+
+Under the hood, the controller creates a Certificate in Kong and then
+sets the
+[`service.client_certificate`](https://docs.konghq.com/latest/admin-api/#service-object)
+for the service.
 
 ## `ingress.kubernetes.io/service-upstream`
 

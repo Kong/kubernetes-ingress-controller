@@ -1,36 +1,66 @@
 # CLI Arguments
 
-Use the following flags to tweak the behavior of Kong Ingress Controller:
+Various settings and configurations of the controller can be tweaked
+using CLI flags.
+
+## Environment variables
+
+Each flag defined in the table below can also be configured using
+an environment variable. The name of the environment variable is `CONTROLLER_`
+string followed by the name of flag in uppercase.
+
+For example, `--ingress-class` can be configured using the following
+environment variable:
+
+```
+CONTROLLER_INGRESS_CLASS=kong-foobar
+```
+
+It is recommended that all the configuration is done via environment variables
+and not CLI flags.
+
+## Flags
+
+Following table describes all the flags that are available:
 
 |  Flag | Type | Default | Description |
 |-------|------|---------|-------------|
-| **Configuration** |
-| `--ingress-class` | `string` | `kong` | Ingress class name to use to filter Ingress and custom resources when multiple Ingress Controllers are running in the same Kubernetes cluster. |
-| `--election-id` | `string` | `ingress-controller-leader` | The name of ConfigMap (in the same namespace) to use to facilitate leader-election between multiple instances of the controller. |
-| `--watch-namespace` | `string` | none | Namespace to watch for Ingress and custom resources. The default value of an empty string results in the controller watching for resources in all namespaces and configuring Kong accordingly. |
-| `--kong-workspace` | `string` | `default` | Name of the workspace to be configured via the Ingress Controller. The workspace must be already created. |
-| `--kong-url` | `string` | `http://localhost:8001` | The address of the Kong Admin URL to connect to in the format of protocol://address:port. If Kong's Admin API is not co-located with the Ingress Controller, please update it using this flag. |
-| `--apiserver-host` | `string` | none | The address of the Kubernetes Apiserver to connect to in the format of protocol://address:port. If not specified, the assumption is that the binary runs inside a Kubernetes cluster and local discovery is attempted. |
-| `--kubeconfig` | `string` | none | Path to kubeconfig file with authorization and master location information. |
-| `--publish-service` | `string` | none | The namespaces and name of the Kubernetes Service fronting Kong Ingress Controller in the form of `namespace/name`. The controller will set the status of the Ingress resouces to match the endpoints of this service. In reference deployments, this is `kong/kong-proxy`. |
-| `--profiling` | `boolean` | `true` | Enable profiling via web interface at `/debug/pprof/` |
-| `--publish-status-address` | `string` | none | User customized address to be set as the status of ingress resources. The controller will set the status of the Ingress resourde to this address.|
-| `--sync-period` | `duration` | `10m` | Relist and resync all the configuration every so often. |
-| `--sync-rate-limit` | `float32` | `0.3` | Define the maximum per second sync frequency. |
-| `--update-status` | `boolean` | `true` | If true, the controller will update the status of the Ingress resource with the endpoints of the service in `--publish-service`. |
-| `--update-status-on-shutdown` | `boolean` | `true`  | If true, the controller will update the status of the Ingress resource when it being stoppped. |
-| `--version` | `boolean` | `false` | Shows release information about the Kong Ingress controller and exit |
-| `--help` | `boolean` | `false` | Shows this documentation on the CLI and exit. |
-| **Authentication**|
-| `--admin-header` | `string` in the form of `key:value` | none | Add a header (key:value) to every HTTP request to Kong's Admin API; it can be used multiple times to inject multiple headers |
-| `--admin-ca-cert-file` | `string` | none | Path to PEM-encoded CA certificate file to verify the certificate served on Kong's Admin API |
-| `--admin-tls-server-name` | `string` | none | SNI name to use for verification of the certificate presented by Kong |
-| `--admin-tls-skip-verify` | `boolean` | `false` | Disable verification of TLS certificate of Kong's Admin endpoint |
-|**Logging**|
-| `--alsologtostderr` | `boolean` | `false` | Logs are written to standard error as well as to files. |
-| `--log_backtrace_at` | `file:N` | none | When set to a file and line number holding a logging statement, such as -log_backtrace_at=gopherflakes.go:234 a stack trace will be written to the Info log whenever execution hits that statement. (Unlike with -vmodule, the ".go" must be present.) |
-| `--log_dir` | `string` | none | Log files will be written to this directory instead of the default temporary directory. |
-| `--stderrthreshold` | `string` | `ERROR` | logs at or above this threshold go to stderr |
-| `--logtostderr` | `boolean` | `false` | Logs are written to standard error instead of to files. |
-| `-v or --v` | `int` | `0`| Enable V-leveled logging at the specified level |
-| `--vmodule` | `string` | none | The syntax of the argument is a comma-separated list of pattern=N, where pattern is a literal file name (minus the ".go" suffix) or "glob" pattern and N is a V level. For instance, -vmodule=gopher*=3 sets the V level to 3 in all Go files whose names begin "gopher".|
+| --admin-ca-cert-file                 |`string`   | none                            | DEPRECATED, use `--kong-admin-ca-cert-file`|
+| --admin-header                       |`string`   | none                            | DEPRECATED, use `--kong-admin-header`|
+| --admin-tls-server-name              |`string`   | none                            | DEPRECATED, use `--kong-admin-tls-server-name`|
+| --admin-tls-skip-verify              |`boolean`  | none                            | DEPRECATED, use `--kong-admin-tls-skip-verify`|
+| --admission-webhook-cert-file        |`string`   | `/admission-webhook/tls.crt`    | Path to the PEM-encoded certificate file for TLS handshake.|
+| --admission-webhook-key-file         |`string`   | `/admission-webhook/tls.key`    | Path to the PEM-encoded private key file for TLS handshake.|
+| --admission-webhook-listen           |`string`   | `off`                           | The address to start admission controller on (ip:port). Setting it to 'off' disables the admission controller.|
+| --alsologtostderr                    |`boolean`  | `false`                         | Logs are written to standard error as well as to files.|
+| --anonymous-reports                  |`string`   | `true`                          | Send anonymized usage data to help improve Kong.|
+| --apiserver-host                     |`string`   | none                            | The address of the Kubernetes Apiserver to connect to in the format of protocol://address:port, e.g., "http://localhost:8080. If not specified, the assumption is that the binary runs inside a Kubernetes cluster and local discovery is attempted.|
+| --election-id                        |`string`   | `ingress-controller-leader`     | The name of ConfigMap (in the same namespace) to use to facilitate leader-election between multiple instances of the controller.|
+| --ingress-class                      |`string`   | `kong`                          | Ingress class name to use to filter Ingress and custom resources when multiple Ingress Controllers are running in the same Kubernetes cluster.|
+| --kong-admin-ca-cert-file            |`string`   | none                            | Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.|
+| --kong-admin-concurrency             |`int`      | `10`                            | Max number of concurrent requests sent to Kong's Admin API.|
+| --kong-admin-filter-tag              |`string`   | `managed-by-ingress-controller` | The tag used to manage entities in Kong.|
+| --kong-admin-header                  |`string`   | none                            | Add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers.|
+| --kong-admin-tls-server-name         |`string`   | none                            | SNI name to use to verify the certificate presented by Kong in TLS.|
+| --kong-admin-tls-skip-verify         |`boolean`  | `false`                         | Disable verification of TLS certificate of Kong's Admin endpoint.|
+| --kong-admin-url                     |`string`   | `http://localhost:8001`         | The address of the Kong Admin URL to connect to in the format of `protocol://address:port`.|
+| --kong-url                           |`string`   | none                            | DEPRECATED, use `--kong-admin-url` |
+| --kong-workspace                     |`string`   | `default`                       | Workspace in Kong Enterprise to be configured.|
+| --kubeconfig                         |`string`   | none                            | Path to kubeconfig file with authorization and master location information.|
+| --log_backtrace_at                   |`string`   | none                            | When set to a file and line number holding a logging statement, such as -log_backtrace_at=gopherflakes.go:234 a stack trace will be written to the Info log whenever execution hits that statement. (Unlike with -vmodule, the ".go" must be present.)|
+| --log_dir                            |`string`   | none                            | If non-empty, write log files in this directory.|
+| --logtostderr                        |`boolean`  | `true`                          | Logs to standard error instead of files.|
+| --profiling                          |`boolean`  | `true`                          | Enable profiling via web interface `host:port/debug/pprof/`. |
+| --publish-service                    |`string`   | none                            | The namespaces and name of the Kubernetes Service fronting Kong Ingress Controller in the form of namespace/name. The controller will set the status of the Ingress resouces to match the endpoints of this service. In reference deployments, this is kong/kong-proxy.|
+| --publish-status-address             |`string`   | none                            | User customized address to be set in the status of ingress resources. The controller will set the endpoint records on the ingress using this address.|
+| --stderrthreshold                    |`string`   | `2`                             | logs at or above this threshold go to stderr.|
+| --sync-period                        |`duration` | `10m`                           | Relist and confirm cloud resources this often.|
+| --sync-rate-limit                    |`float32`  | `0.3`                           | Define the sync frequency upper limit. |
+| --update-status                      |`boolean`  | `true`                          | Indicates if the ingress controller should update the Ingress status IP/hostname.|
+| --update-status-on-shutdown          |`boolean`  | `true`                          | Indicates if the ingress controller should update the Ingress status IP/hostname when the controller is being stopped.|
+|  -v, --v Level                        `int`      | `0`                             | | Enable V-leveled logging at the specified level.|
+| --version                            |`boolean`  | `false`                         | Shows release information about the Kong Ingress controller.|
+| --vmodule moduleSpec                 |`string`   | none                            | The syntax of the argument is a comma-separated list of pattern=N, where pattern is a literal file name (minus the ".go" suffix) or "glob" pattern and N is a V level. For instance, -vmodule=gopher*=3 sets the V level to 3 in all Go files whose names begin "gopher".|
+| --watch-namespace                    |`string`   | none                            | Namespace to watch for Ingress and custom resources. The default value of an empty string results in the controller watching for resources in all namespaces and configuring Kong accordingly.|
+| --help                               |`boolean`  | `false`                         | Shows this documentation on the CLI and exit.|
+

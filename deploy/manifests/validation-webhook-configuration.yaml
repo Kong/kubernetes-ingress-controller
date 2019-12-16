@@ -16,6 +16,15 @@ webhooks:
     resources:
     - kongconsumers
     - kongplugins
+  - apiGroups:
+    - ""
+    apiVersions:
+    - "v1"
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
   failurePolicy: Fail
   clientConfig:
     service:

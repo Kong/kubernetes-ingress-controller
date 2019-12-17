@@ -16,7 +16,7 @@ The following CRDs allow users to declaratively configure all aspects of Kong:
 - [**KongIngress**](#kongingress)  
 - [**KongPlugin**](#kongplugin)
 - [**KongConsumer**](#kongconsumer)
-- [**KongCredential**](#kongcredential)
+- [**KongCredential (Deprecated)**](#kongcredential-deprecated)
 
 ## KongIngress
 
@@ -75,10 +75,15 @@ This custom resource configures `Consumers` in Kong.
 Every `KongConsumer` resource in Kubernetes directly translates to a
 [Consumer][kong-consumer] object in Kong.
 
-## KongCredential
+## KongCredential (Deprecated)
 
-Once a `KongConsumer` resource is created, credentials associated with the `Consumer`
-can be provisioned inside Kong.
+Once a `KongConsumer` resource is created,
+credentials associated with the `Consumer` can be provisioned inside Kong
+using KongCredential custom resource.
+
+This Custom Resource has been deprecated and will be removed in a future
+release.
+Instead, please use secret-based credentials.
 
 [k8s-crd]: https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/
 [kong-consumer]: https://getkong.org/docs/latest/admin-api/#consumer-object

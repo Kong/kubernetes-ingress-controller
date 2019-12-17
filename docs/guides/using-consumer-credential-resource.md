@@ -1,8 +1,8 @@
 # Provisioning Consumers and Credentials
 
-This guide walks through how to use the KongConsumer and KongCredential resources to provision Consumers and associated credentials in Kong.
-These resources can be used to provision Consumers and
-associated credentials in Kong.
+This guide walks through how to use the KongConsumer custom
+resource and use Secret resources to associate credentials with those
+consumers.
 
 ## Installation
 
@@ -156,28 +156,43 @@ kongconsumer.configuration.konghq.com/harry created
 Now, let's provision an API-key associated with
 this consumer so that we can pass the authentication imposed by Kong:
 
+Next, we will create a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
+resource with an API-key inside it:
+
 ```bash
-echo "apiVersion: configuration.konghq.com/v1
-kind: KongCredential
-metadata:
-  name: harry-apikey
-consumerRef: harry
-type: key-auth
-config:
-  key: sooper-secret-key" | kubectl apply -f -
-kongcredential.configuration.konghq.com/harry-apikey created
+kubectl create secret generic harry-apikey  \
+  --from-literal=kongCredType=key-auth  \
+  --from-literal=key=my-sooper-secret-key
 ```
 
-Here, we specify the type of credential as `key-auth` and then specify
-the API key using the `key` configuration value. This lets us declaratively
-provision credentials as well.
+The type of credential is specified via `kongCredType`.
+You can create the Secret using any other method as well.
+
+Since we are using the Secret resource,
+Kubernetes will encrypt and store this API-key for us.
+
+Next, we will associate this API-key with the consumer we created previously.
+
+Please note that we are not re-creating the KongConsumer resource but
+only updating it to add the `credentials` array:
+
+```bash
+$ echo "apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: harry
+username: harry
+credentials:
+- harry-apikey" | kubectl apply -f -
+kongconsumer.configuration.konghq.com/harry configured
+```
 
 ## Use the credential
 
 Now, use the credential to pass authentication:
 
 ```bash
-$ curl -i -H 'apikey: sooper-secret-key' $PROXY_IP/foo/status/200
+$ curl -i -H 'apikey: my-sooper-secret-key' $PROXY_IP/foo/status/200
 HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
 Content-Length: 0

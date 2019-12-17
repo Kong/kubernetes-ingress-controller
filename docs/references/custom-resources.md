@@ -13,7 +13,8 @@ Following CRDs enables users to declaratively configure all aspects of Kong:
   in Kubernetes.
 - [**KongConsumer**](#kongconsumer):
   This resource maps to the [Consumer][kong-consumer] entity in Kong.
-- [**KongCredential**](#kongcredential): This resource maps to
+- [**KongCredential (Deprecated)**](#kongcredential-deprecated):
+  This resource maps to
   a credential (key-auth, basic-auth, jwt, hmac-auth) that is associated with
   a specific KongConsumer.
 
@@ -250,7 +251,7 @@ username: team-X
 When this resource is created, a corresponding consumer entity will be
 created in Kong.
 
-## KongCredential
+## KongCredential (Deprecated)
 
 This custom resource can be used to configure a consumer specific
 entities in Kong.

@@ -98,12 +98,21 @@ webhooks:
     resources:
     - kongconsumers
     - kongplugins
+  - apiGroups:
+    - ''
+    apiVersions:
+    - 'v1'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
   failurePolicy: Fail
   clientConfig:
     service:
       namespace: kong
       name: kong-validation-webhook
-    caBundle: $(cat tls.crt  | base64) " | kubectl apply -f -
+    caBundle: $(cat tls.crt  | base64 -w 0) " | kubectl apply -f -
 ```
 
 ## Verify if it works
@@ -155,4 +164,23 @@ config:
 plugin: correlation-id
 " | kubectl apply -f -
 Error from server: error when creating "STDIN": admission webhook "validations.kong.konghq.com" denied the request: 400 Bad Request {"fields":{"config":{"foo":"unknown field"}},"name":"schema violation","code":2,"message":"schema violation (config.foo: unknown field)"}
+```
+
+### Verify incorrect credential secrets
+
+With 0.7 and above versions of the controller, validations also take place
+for incorrect secret types and wrong parameters to the secrets:
+
+```bash
+$ kubectl create secret generic some-credential \
+  --from-literal=kongCredType=basic-auth \
+  --from-literal=username=foo
+Error from server: admission webhook "validations.kong.konghq.com" denied the request: missing required field(s): password
+```
+
+```bash
+kubectl create secret generic some-credential \
+  --from-literal=kongCredType=wrong-auth \
+  --from-literal=sdfkey=my-sooper-secret-key
+Error from server: admission webhook "validations.kong.konghq.com" denied the request: invalid credential type: wrong-auth
 ```

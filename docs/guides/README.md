@@ -46,3 +46,6 @@ Kong Ingress controller:
   ConfigMaps and Volumes.
 - [Using ingress with gRPC](using-ingress-with-grpc.md)  
   This guide walks through how to use Kong Ingress Controller with gRPC.
+- [Setting up upstream mTLS](upstream-mtls.md)  
+  This guide gives an overview of how to setup mutual TLS authentication
+  between Kong and your upstream server.

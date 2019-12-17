@@ -18,27 +18,27 @@
 
 ## [0.6.2] - 2019/11/13
 
-### Summary
+#### Summary
 
 This is a minor patch release to fix version parsing issue with new
 Kong Enterprise packages.
 
 ## [0.6.1] - 2019/10/09
 
-### Summary
+#### Summary
 
 This is a minor patch release to update Kong Ingress Controller's
 Docker image to use a non-root by default.
 
 ## [0.6.0] - 2019/09/17
 
-### Summary
+#### Summary
 
-This release brings introduces an Admission Controller for CRDs,
+This release introduces an Admission Controller for CRDs,
 Istio compatibility, support for `networking/ingress`,
-Kong 1.3 addtions and enhancements to documentation and deployments.
+Kong 1.3 additions and enhancements to documentation and deployments.
 
-### Added
+#### Added
 
 - **Service Mesh integration** Kong Ingress Controller can now be deployed
   alongside Service Mesh solutions like Kuma and Istio. In such a deployment,
@@ -46,7 +46,7 @@ Kong 1.3 addtions and enhancements to documentation and deployments.
   mesh takes care of these aspects for internal service-to-service traffic.
 - **`ingress.kubernetes.io/service-upstream`**, a new annotation has
   been introduced.
-  Adding this annotation to a kubernetes service resource
+  Adding this annotation to a Kubernetes service resource
   will result in Kong directly forwarding traffic to kube-proxy.
   In other words, Kong will not send traffic directly to the pods.
   [#365](https://github.com/Kong/kubernetes-ingress-controller/pull/365)
@@ -62,7 +62,7 @@ Kong 1.3 addtions and enhancements to documentation and deployments.
     [#371](https://github.com/Kong/kubernetes-ingress-controller/pull/371)
 - **Admission controller** Kong Ingress Controller now ships with an in-built
   admission controller for KongPlugin and KongConsumer entities. The validations
-  stop users from mis-configuring the Ingress controller.
+  stop users from misconfiguring the Ingress controller.
   [#372](https://github.com/Kong/kubernetes-ingress-controller/pull/372)
 - **Kong 1.3 support**:
   - HTTP Header based routing is now supported using `KongIngress.Route.Headers`
@@ -79,7 +79,7 @@ Kong 1.3 addtions and enhancements to documentation and deployments.
   side-car to Kong in proxy mode. There is no dedicated deployment for Kong
   Ingress Controller that needs to be run.
 
-### Fixed
+#### Fixed
 
 - SNIs and Certificates are now de-duplicated across namespaces.
   [#360](https://github.com/Kong/kubernetes-ingress-controller/issues/#360)
@@ -110,7 +110,7 @@ and numerous bug-fixes and enhancements.
 
 #### Added
 
-- Kong 1.2 is now supported, meaning wildcard hosts in TLS section of Ingress
+- Kong 1.2 is now supported, meaning wild-card hosts in TLS section of Ingress
   resources are allowed.
 - **Automated TLS certificates using Let's Encrypt**: Use Kong's Ingress
   Controller and
@@ -164,7 +164,7 @@ Please read the changelog and test in your environment.
 #### Breaking Changes
 
 - :warning: Annotation `<plugin-name>.plugin.konghq.com`
-  (deprecatd in 0.2.0) is no longer supported.
+  (deprecated in 0.2.0) is no longer supported.
 - :warning: `--default-backend-service` CLI flag is now removed. The default
   service will now be picked up from the default backend in the Ingress rules.
 - :warning: Service and Upstream entity overrides via KongIngress CRD are now
@@ -189,7 +189,7 @@ Please read the changelog and test in your environment.
 - New `run_on` and `protocols` properties are added to KongPlugin CRD.
   These can be used to further tune behaviors of plugins
   in Service Mesh deployments.
-- New fields are added to KongIngress CRD to support HTTPS Active healthchecks.
+- New fields are added to KongIngress CRD to support HTTPS Active health-checks.
 - Ingress Controller is now built using Go 1.12.
 - Default service, which handles all traffic that is not matched against
   any of the Ingress rules, is now configured using the default backend
@@ -274,7 +274,7 @@ Please read the changelog and test in your environment.
    path based rule for a Kubernetes Service
    would not setup Routes and Service in Kong.
    [#190](https://github.com/Kong/kubernetes-ingress-controller/pull/190)
- - Fix a nil pointer reference when overiding Ingress resource with KongIngress
+ - Fix a nil pointer reference when overriding Ingress resource with KongIngress
    [#188](https://github.com/Kong/kubernetes-ingress-controller/pull/188)
 
 
@@ -363,7 +363,7 @@ Please read the changelog and test in your environment.
 #### Fixed
 
  - Avoid issuing unnecessary PATCH requests on Services in Kong during the
-   reconcillation loop, which lead to unnecessary Router rebuilds inside Kong.
+   reconciliation loop, which lead to unnecessary Router rebuilds inside Kong.
    [#107](https://github.com/Kong/kubernetes-ingress-controller/pull/107)
  - Fixed the diffing logic for plugin configuration between KongPlugin
    resource in k8s and plugin config in Kong to avoid false positives.
@@ -419,14 +419,14 @@ Please read the changelog and test in your environment.
    The same `KongPlugin` resource can be used across
    multiple Ingress/Service resources.
    [#121](https://github.com/Kong/kubernetes-ingress-controller/pull/121)
- - The custom resource definitions now have a shortname for all the
-   CRDs, making it easy to interract with `kubectl`.
+ - The custom resource definitions now have a short-name for all the
+   CRDs, making it easy to interact with `kubectl`.
    [#120](https://github.com/Kong/kubernetes-ingress-controller/pull/120)
 
 #### Fixed
 
  - Avoid issuing unnecessary PATCH requests on Services in Kong during the
-   reconcillation loop, which lead to unnecessary Router rebuilds inside Kong.
+   reconciliation loop, which lead to unnecessary Router rebuilds inside Kong.
    [#107](https://github.com/Kong/kubernetes-ingress-controller/pull/107)
  - Fixed the diffing logic for plugin configuration between KongPlugin
    resource in k8s and plugin config in Kong to avoid false positives.
@@ -441,7 +441,7 @@ Please read the changelog and test in your environment.
 #### Breaking Changes
 
  - :warning: **Declarative Consumers in Kong** Kong consumers can be
-   declaritively configured via `KongConsumer` custom resources. Any consumers
+   declaratively configured via `KongConsumer` custom resources. Any consumers
    created directly in Kong without a corresponding `KongConsumer` custom
    resource will be deleted by the ingress controller.
    [#81](https://github.com/Kong/kubernetes-ingress-controller/pull/81)

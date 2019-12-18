@@ -27,7 +27,6 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	"github.com/hbagdi/deck/counter"
 	"github.com/hbagdi/deck/diff"
 	"github.com/hbagdi/deck/dump"
 	"github.com/hbagdi/deck/file"
@@ -35,53 +34,9 @@ import (
 	"github.com/hbagdi/deck/state"
 	"github.com/hbagdi/deck/utils"
 	"github.com/hbagdi/go-kong/kong"
-	"github.com/imdario/mergo"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/pkg/errors"
 )
-
-var count counter.Counter
-
-var upstreamDefaults = kong.Upstream{
-	Slots: kong.Int(10000),
-	Healthchecks: &kong.Healthcheck{
-		Active: &kong.ActiveHealthcheck{
-			Concurrency: kong.Int(10),
-			Healthy: &kong.Healthy{
-				HTTPStatuses: []int{200, 302},
-				Interval:     kong.Int(0),
-				Successes:    kong.Int(0),
-			},
-			HTTPPath:               kong.String("/"),
-			Timeout:                kong.Int(1),
-			HTTPSVerifyCertificate: kong.Bool(true),
-			Type:                   kong.String("http"),
-			Unhealthy: &kong.Unhealthy{
-				HTTPFailures: kong.Int(0),
-				TCPFailures:  kong.Int(0),
-				Timeouts:     kong.Int(0),
-				HTTPStatuses: []int{429, 404, 500, 501, 502, 503, 504, 505},
-			},
-		},
-		Passive: &kong.PassiveHealthcheck{
-			Healthy: &kong.Healthy{
-				HTTPStatuses: []int{200, 201, 202, 203, 204, 205,
-					206, 207, 208, 226, 300, 301, 302, 303, 304, 305,
-					306, 307, 308},
-				Successes: kong.Int(0),
-			},
-			Unhealthy: &kong.Unhealthy{
-				HTTPFailures: kong.Int(0),
-				TCPFailures:  kong.Int(0),
-				Timeouts:     kong.Int(0),
-				HTTPStatuses: []int{429, 500, 503},
-			},
-		},
-	},
-	HashOn:           kong.String("none"),
-	HashFallback:     kong.String("none"),
-	HashOnCookiePath: kong.String("/"),
-}
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
 // returning nil implies the synchronization finished correctly.
@@ -430,45 +385,4 @@ func (n *KongController) fillPlugin(plugin *file.FPlugin) error {
 		}
 	}
 	return nil
-}
-
-type intTransformer struct {
-}
-
-func (t intTransformer) Transformer(typ reflect.Type) func(dst,
-	src reflect.Value) error {
-	var a *int
-	var ar []int
-	if typ == reflect.TypeOf(ar) {
-		return func(dst, src reflect.Value) error {
-			if dst.CanSet() {
-				if reflect.DeepEqual(reflect.Zero(dst.Type()).Interface(),
-					dst.Interface()) {
-					return nil
-				}
-			}
-			return nil
-		}
-	}
-	if typ == reflect.TypeOf(a) {
-		return func(dst, src reflect.Value) error {
-			if dst.CanSet() {
-				if reflect.DeepEqual(reflect.Zero(dst.Type()).Interface(),
-					dst.Interface()) {
-					return nil
-				}
-			}
-			return nil
-		}
-	}
-	return nil
-}
-
-func setDefaultsInUpstream(upstream *kong.Upstream) error {
-	err := mergo.Merge(upstream, upstreamDefaults,
-		mergo.WithTransformers(intTransformer{}))
-	if err != nil {
-		return errors.Wrap(err, "error overriding upstream")
-	}
-	return err
 }

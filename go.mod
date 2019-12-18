@@ -15,7 +15,6 @@ require (
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hbagdi/deck v0.6.2
 	github.com/hbagdi/go-kong v0.10.0
-	github.com/imdario/mergo v0.3.7
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/onsi/ginkgo v1.8.0 // indirect

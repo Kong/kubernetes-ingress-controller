@@ -223,6 +223,7 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 	if err != nil {
 		return errors.Wrap(err, "creating a new syncer")
 	}
+	syncer.SilenceWarnings = true
 	//client.SetDebugMode(true)
 	errs := solver.Solve(nil, syncer, client, n.cfg.Kong.Concurrency, false)
 	if errs != nil {

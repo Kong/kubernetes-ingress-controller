@@ -162,30 +162,23 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
 	// Kong errors out if `null`s are present in `config` of plugins
 	cleanUpNullsInPluginConfigs(state)
 
-	jsonConfig, err := json.Marshal(state)
+	config, err := json.Marshal(state)
 	if err != nil {
 		return errors.Wrap(err,
 			"marshaling Kong declarative configuration to JSON")
 	}
-
-	type reqBody struct {
-		Config string `json:"config"`
-	}
-	json, err := json.Marshal(&reqBody{Config: string(jsonConfig)})
-	if err != nil {
-		//TODO annotate
-		return errors.Wrap(err,
-			"marshaling /config request body")
-	}
 	req, err := http.NewRequest("POST", n.cfg.Kong.URL+"/config",
-		bytes.NewReader(json))
+		bytes.NewReader(config))
 	if err != nil {
 		return errors.Wrap(err, "creating new HTTP request for /config")
 	}
 	req.Header.Add("content-type", "application/json")
+
 	queryString := req.URL.Query()
 	queryString.Add("check_hash", "1")
+
 	req.URL.RawQuery = queryString.Encode()
+
 	_, err = client.Do(nil, req, nil)
 	if err != nil {
 		return errors.Wrap(err, "posting new config to /config")

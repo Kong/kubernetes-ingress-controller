@@ -67,6 +67,7 @@ Please refer to the following documents detailing this process:
 - [Custom Resource Definitions](references/custom-resources.md)
 - [Annotations](references/annotations.md)
 - [CLI arguments](references/cli-arguments.md)
+- [Version compatibility matrix](references/version-compatibility.md)
 
 ## FAQs
 

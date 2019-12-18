@@ -33,24 +33,10 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 ## Version support matrix
 
-The following matrix lists supported versions of
-Kong for every release of the Kong Ingress Controller:
-
-| Kong Ingress Controller  | <= 0.0.4           | 0.0.5              | 0.1.x              | 0.2.x              | 0.3.x              | 0.4.x              | 0.5.x              | 0.6.x              |
-|--------------------------|:------------------:|:------------------:|:------------------:|:------------------:|:------------------:|:------------------:|:------------------:|:------------------:|
-| Kong 0.13.x              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                |
-| Kong 0.14.x              | :x:                | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                | :x:                |
-| Kong 1.0.x               | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kong 1.1.x               | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kong 1.2.x               | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kong 1.3.x               | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: |
-| Kong Enterprise 0.32-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                |
-| Kong Enterprise 0.33-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                |
-| Kong Enterprise 0.34-x   | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :x:                | :x:                |
-| Kong Enterprise 0.35-x   | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kong Enterprise 0.36-x   | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: |
-| Kong Enterprise 1.3.x   | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: |
-
+[Version compatibility doc](docs/references/version-compatibility.md)
+details on compatibility between versions of the
+controller and versions of Kong, Kong for Kubernetes Enterprise and
+Kong Enterprise.
 
 ## Get started
 

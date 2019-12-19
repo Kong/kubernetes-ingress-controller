@@ -89,12 +89,12 @@ following custom resources as well:
 ## `plugins.konghq.com`
 
 Kong's power comes from its plugin architecture, where plugins can modify
-the request and response or impose certain policies on the requests being
-proxied.
+the request and response or impose certain policies on the requests as they
+are proxied to your service.
 
 With Kong Ingress Controller, plugins can be configured by creating `KongPlugin`
-Custom Resources and then associating them with an Ingress, Service or
-KongConsumer resources.
+Custom Resources and then associating them with an Ingress, Service,
+KongConsumer or a combination of those.
 
 Following is an example of how to use the annotation:
 
@@ -112,9 +112,20 @@ will result in the plugin being executed at Service-level in Kong,
 meaning the plugin will be
 executed for every request that is proxied, no matter which Route it came from.
 
-This annotation can be applied to a KongConsumer resource, which results in
-plugin being executed whenever the specific consumer is accessing any of
-the defined APIs.
+This annotation can also be applied to a KongConsumer resource,
+which results in plugin being executed whenever the specific consumer
+is accessing any of the defined APIs.
+
+Finally, this annotation can also be applied on a combination of the
+following resources:
+- **Ingress and KongConsumer**  
+  If an Ingress resource and a KongConsumer resource share a plugin in the
+  `plugins.konghq.com` annotation then the plugin will be created for the
+  combination of those to resources in Kong.
+- **Service and KongConsumer**  
+  Same as the above case, if you would like to give a specific consumer or
+  client of your service some special treatment, you can do so by applying
+  the same annotation to both of the resources.
 
 Please follow the
 [Using the KongPlugin resource](../guides/using-kongplugin-resource.md)

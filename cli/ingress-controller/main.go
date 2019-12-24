@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/eapache/channels"
+	"github.com/fatih/color"
 	"github.com/golang/glog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hbagdi/go-kong/kong"
@@ -81,6 +82,7 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 }
 
 func main() {
+	color.Output = ioutil.Discard
 	rand.Seed(time.Now().UnixNano())
 
 	fmt.Println(version())

@@ -158,7 +158,10 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 	}
 
 	// read the target state
-	rawState, err = file.Get(targetContent, currentState)
+	rawState, err = file.Get(targetContent, file.RenderConfig{
+		CurrentState: currentState,
+		KongVersion:  n.cfg.Kong.Version,
+	})
 	if err != nil {
 		return err
 	}
@@ -173,7 +176,7 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 	}
 	syncer.SilenceWarnings = true
 	//client.SetDebugMode(true)
-	errs := solver.Solve(nil, syncer, client, n.cfg.Kong.Concurrency, false)
+	_, errs := solver.Solve(nil, syncer, client, n.cfg.Kong.Concurrency, false)
 	if errs != nil {
 		return utils.ErrArray{Errors: errs}
 	}

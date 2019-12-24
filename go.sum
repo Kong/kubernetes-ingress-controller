@@ -87,8 +87,8 @@ github.com/hashicorp/golang-lru v0.5.3 h1:YPkqC67at8FYaadspW/6uE0COsBxS2656RLEr8
 github.com/hashicorp/golang-lru v0.5.3/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/hbagdi/deck v0.6.2 h1:fDQaOotBeYtARZWd3FZKxX2axKSBBldAYYs1NLUjwDY=
-github.com/hbagdi/deck v0.6.2/go.mod h1:lylbHF0uctz/7NFBVIwoyHQIHhAHP6GWlN6PpkXWt0o=
+github.com/hbagdi/deck v0.7.1-0.20191223190449-3d9f90945d9d h1:SjYfjEWb6S4PZyKZjwlVB92xRTeYkNo3Bmz0Z7Tuq8Y=
+github.com/hbagdi/deck v0.7.1-0.20191223190449-3d9f90945d9d/go.mod h1:os/MU1bMYLYJ6WoZUFFSHTBB14BQGBuZ3vtZSu4sTJs=
 github.com/hbagdi/go-kong v0.10.0 h1:FQzMx9d+lRc/poUzjnOb5aOvZqjuTQPpNw8O2Exv440=
 github.com/hbagdi/go-kong v0.10.0/go.mod h1:NzIC8BWQK05XAHLZsXO931W1N6E1giEEt5xqRMEPlto=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=

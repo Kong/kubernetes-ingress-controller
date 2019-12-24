@@ -14,7 +14,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hbagdi/deck v0.6.2
+	github.com/hbagdi/deck v0.7.1-0.20191223190449-3d9f90945d9d
 	github.com/hbagdi/go-kong v0.10.0
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mitchellh/mapstructure v1.1.2

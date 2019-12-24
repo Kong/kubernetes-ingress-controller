@@ -124,6 +124,10 @@ this flag can be used multiple times to specify multiple headers`)
 		`add a header (key:value) to every Admin API call,
 this flag can be used multiple times to specify multiple headers`)
 
+	flags.String("kong-admin-token", "",
+		`Sets the value of the 'kong-admin-token' header; useful for
+authentication/authorization for Kong Enterprise enviornments`)
+
 	// deprecated
 	flags.Bool("admin-tls-skip-verify", false,
 		`DEPRECATED, use --kong-admin-tls-skip-verify
@@ -249,6 +253,12 @@ func parseFlags() (cliConfig, error) {
 	kongAdminHeaders := viper.GetStringSlice("kong-admin-header")
 	if len(kongAdminHeaders) > 0 {
 		config.KongAdminHeaders = kongAdminHeaders
+	}
+
+	kongAdminToken := viper.GetString("kong-admin-token")
+	if kongAdminToken != "" {
+		config.KongAdminHeaders = append(config.KongAdminHeaders,
+			"kong-admin-token:"+kongAdminToken)
 	}
 
 	config.KongAdminTLSSkipVerify = viper.GetBool("admin-tls-skip-verify")

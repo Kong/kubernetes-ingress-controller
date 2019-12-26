@@ -100,6 +100,7 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		"--kong-workspace", "yolo",
 		"--kong-admin-filter-tag", "foo-tag",
 		"--admin-header", "foo:bar",
+		"--kong-admin-token", "my-token",
 		"--admin-tls-skip-verify",
 		"--admin-tls-server-name", "kong-admin.example.com",
 		"--admin-ca-cert-file", "/path/to/ca-cert",
@@ -134,7 +135,7 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		KongAdminConcurrency:   1,
 		KongWorkspace:          "yolo",
 		KongAdminFilterTags:    []string{"foo-tag"},
-		KongAdminHeaders:       []string{"foo:bar"},
+		KongAdminHeaders:       []string{"foo:bar", "kong-admin-token:my-token"},
 		KongAdminTLSSkipVerify: true,
 		KongAdminTLSServerName: "kong-admin.example.com",
 		KongAdminCACertPath:    "/path/to/ca-cert",
@@ -176,6 +177,7 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		"CONTROLLER_ADMISSION_WEBHOOK_KEY_FILE":  "/new-key-path",
 		"CONTROLLER_ANONYMOUS_REPORTS":           "false",
 		"CONTROLLER_KONG_ADMIN_CONCURRENCY":      "100",
+		"CONTROLLER_KONG_ADMIN_TOKEN":            "my-secret-token",
 	}
 	for k, v := range envs {
 		os.Setenv(k, v)
@@ -193,7 +195,7 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		KongAdminURL:           "http://localhost:8001",
 		KongAdminConcurrency:   100,
 		KongWorkspace:          "",
-		KongAdminHeaders:       []string{},
+		KongAdminHeaders:       []string{"kong-admin-token:my-secret-token"},
 		KongAdminTLSSkipVerify: false,
 		KongAdminTLSServerName: "",
 		KongAdminCACertPath:    "",

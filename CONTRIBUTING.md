@@ -30,35 +30,18 @@ make without coding:
 If you wish to contribute code (features or bug fixes), see the [Submitting a
 patch](#submitting-a-patch) section.
 
-## Development environement
+## Development environment
 
 ## Environment
 
-- Golang version >= 1.10 installed
+- Golang version >= 1.12 installed
 - Access to a k8s cluster, you can use Minikube or GKE
-- Install dep for dependency management
 - make
 - Docker (for building)
 
 ## Dependencies
 
-The build uses dependencies in the `vendor` directory, which
-must be installed before building a binary/image. Occasionally, you
-might need to update the dependencies.
-
-Check the version of `dep` you are using and make sure it is up to date.
-If you have an older version of `dep`, you can update it as follows:
-
-```console
-$ go get -u github.com/golang/dep
-```
-
-This will automatically save the dependencies to the `vendor/` directory.
-
-```console
-$ cd $GOPATH/src/github.com/kong/ingress-controller
-$ dep ensure -v -vendor-only
-```
+The build uses dependencies are managed by [go modules](https://blog.golang.org/using-go-modules) 
 
 ## Running in dev mode
 

@@ -41,7 +41,7 @@ SUMMARY_GOES_HERE
 ### What happened
 
 
-### Expected behvaior
+### Expected behavior
 
 
 ### Steps To Reproduce

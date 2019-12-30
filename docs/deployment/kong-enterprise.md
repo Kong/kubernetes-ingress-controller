@@ -1,19 +1,30 @@
 # Kong Ingress Controller with Kong Enterprise
 
 This guide walks through setting up Kong Ingress Controller using Kong
-Enterprise.
+Enterprise. This architecture is described in detail in [this doc](../concepts/k4k8s-with-kong-enterprise.md).
 
-Kong Ingress Controller is compatible with Kong Enterprise.
-For version compatibility, please checkout the
-[version matrix](../../README.md#version-support-matrix).
+We assume that we start from scratch and you don't have Kong Enterprise
+deployed. For the sake of simplicity, we will deploy Kong Enterprise and
+it's database in Kubernetes itself. You can safely run them outside
+Kubernetes as well.
 
-Before we can deploy the Ingress Controller, we need to satisfy two
-prerequisites:
+## Prerequisites
+
+Before we can deploy Kong Ingress Controller with Kong Enterprise,
+we need to satisfy the following prerequisites:
 
 - [Kong Enterprise License secret](#kong-enterprise-license-secret)
 - [Kong Enterprise Docker registry access](#kong-enterprise-docker-registry-access)
+- [Kong Enterprise bootstrap password](#kong-enterprise-bootstrap-password)
 
-## Kong Enterprise License secret
+In order to create these secrets, let's provision the `kong`
+namespace first:
+```bash
+$ kubectl create namespace kong
+namespace/kong created
+```
+
+### Kong Enterprise License secret
 
 Kong Enterprise requires a valid license to run.
 As part of sign up for Kong Enterprise, you should have received a license file.
@@ -31,7 +42,7 @@ Please note:
   Kong Ingress Controller. If you are deploying in a different namespace,
   please change this value.
 
-## Kong Enterprise Docker registry access
+### Kong Enterprise Docker registry access
 
 Next, we need to setup Docker credentials in order to allow Kubernetes
 nodes to pull down Kong Enterprise Docker image, which is hosted as a private
@@ -50,6 +61,16 @@ secret/kong-enterprise-docker created
 Once these are created, we are ready to deploy Kong Enterprise
 Ingress Controller.
 
+### Kong Enterprise bootstrap password
+
+Next, we need to create a secret containing the password using which we can login into Kong Manager.
+Please replace `cloudnative` with a random password of your choice and note it down.
+
+```bash
+kubectl create secret generic kong-enterprise-superuser-password  -n kong --from-literal=password=cloudnative
+
+```
+
 ## Deploy the Kong Ingress Controller
 
 ```bash
@@ -63,24 +84,55 @@ Kong Enterprise as it's core:
 ```bash
 $ kubectl get pods -n kong
 NAME                            READY   STATUS      RESTARTS   AGE
-ingress-kong-79784d576d-fbvs4   2/2     Running     1          10h
-ingress-kong-79784d576d-sszcc   2/2     Running     2          10h
-kong-migrations-6xvst           0/1     Completed   0          20h
-postgres-0                      1/1     Running     0          20h
+ingress-kong-548b9cff98-n44zj   2/2     Running     0          21s
+kong-migrations-pzrzz           0/1     Completed   0          4m3s
+postgres-0                      1/1     Running     0          4m3s
 ```
 
 You can also see the `kong-proxy` service:
 
 ```bash
-$ kubectl get service kong-proxy -n kong
-NAME         TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                      AGE
-kong-proxy   LoadBalancer   10.63.254.78   35.233.198.16   80:32697/TCP,443:32365/TCP   22h
+$ kubectl get services -n kong
+NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
+kong-admin                LoadBalancer   10.63.255.85    34.83.95.105    80:30574/TCP                 4m35s
+kong-manager              LoadBalancer   10.63.247.16    34.83.242.237   80:31045/TCP                 4m34s
+kong-proxy                LoadBalancer   10.63.242.31    35.230.122.13   80:32006/TCP,443:32007/TCP   4m34s
+kong-validation-webhook   ClusterIP      10.63.240.154   <none>          443/TCP                      4m34s
+postgres                  ClusterIP      10.63.241.104   <none>          5432/TCP                     4m34s
+
 ```
 
 > Note: Depending on the Kubernetes distribution you are using, you might or might
-not see an external IP address assigned to the service. Please see
+not see an external IP assigned to the three LoadBalancer type services. Please see
 your provider's guide on obtaining an IP address for a Kubernetes Service of
-type `LoadBalancer`.
+type `LoadBalancer`. If you are running Minikube, you will not get an
+external IP address.
+
+## Setup Kong Manager
+
+Next, if you browse to the IP address or host of the `kong-manager` service in your Browser,
+which in our case is `http://34.83.242.237`.
+Kong Manager should load in your browser.
+Try logging in to the Manager with the username `kong_admin`
+and the password you supplied in the prerequisite, it should fail.
+The reason being we've not yet told Kong Manager where it can find the Admin API.
+
+Let's set that up. We will take the External IP address of `kong-admin` service and
+set the environment variable `KONG_ADMIN_API_URI`:
+
+```bash
+KONG_ADMIN_IP=$(k get svc -n kong kong-admin --output=jsonpath='{.status.loadBalancer.ingress[0].ip}')
+kubectl patch deployment -n kong ingress-kong -p "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_ADMIN_API_URI\", \"value\": \"${KONG_ADMIN_IP}\" }]}]}}}}"
+```
+
+It will take a few minutes to roll out the updated deployment and once the new
+`ingress-kong` pod is up and running, you should be able to log into the Kong Manager UI.
+
+As you follow along with other guides on how to use your newly deployed Kong Ingress Controller,
+you will be able to browse Kong Manager and see changes reflectded in the UI as Kong's
+configuration changes.
+
+## Start using your Enterprise Ingress Controller
 
 Let's setup an environment variable to hold the IP address:
 
@@ -88,9 +140,19 @@ Let's setup an environment variable to hold the IP address:
 $ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong kong-proxy)
 ```
 
-> Note: It may take a while for Google to actually associate the
-IP address to the `kong-proxy` Service.
-
 Once you've installed Kong Ingress Controller, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.
+
+## Customizing by use-case.
+
+The deployment in this guide is a point to start using Ingress Controller.
+Based on your existing architecture, this deployment will require custom
+work to make sure that it needs all of your requirements.
+
+In this guide, there are three load-balancers deployed for each of
+Kong Proxy, Kong Admin and Kong Manager services. It is possible and
+recommended to instead have a single Load balancer and then use DNS names
+and Ingress resources to expose the Admin and Manager services outside
+the cluster.
+

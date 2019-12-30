@@ -1,9 +1,21 @@
 # Kong for Kubernetes Enterprise
 
-Kong for Kubernetes is an enterprise version, which includes
-Enterprise plugins and support subscription.
+Kong for Kubernetes Enterprise is an enhanced version of
+the Open-Source Ingress Controller. It includes all
+Enterprise plugins and comes with 24x7 support for worry-free
+production deployment.
+This is available to enterprise customers of Kong, Inc. only.
 
-This guide walks through its setup.
+## Table of content
+
+- [Prerequisites](#prerequisites)
+- [Installers](#installers)
+    - [YAML manifests](#yaml-manifests)
+    - [Kustomize](#kustomize)
+    - [Helm](#helm)
+- [Using Kong for Kubernetes Enterprise](#using-kong-for-kubernetes-enterprise)
+
+## Prerequisites
 
 Before we can deploy Kong, we need to satisfy two
 prerequisites:
@@ -13,12 +25,13 @@ prerequisites:
 
 In order to create these secrets, let's provision the `kong`
 namespace first:
+
 ```bash
 $ kubectl create namespace kong
 namespace/kong created
 ```
 
-## Kong Enterprise License secret
+### Kong Enterprise License secret
 
 Enterprise version requires a valid license to run.  
 As part of sign up for Kong Enterprise, you should have received a license file.
@@ -38,13 +51,16 @@ Please note:
   Kong Ingress Controller. If you are deploying in a different namespace,
   please change this value.
 
-## Kong Enterprise Docker registry access
+### Kong Enterprise Docker registry access
 
 Next, we need to setup Docker credentials in order to allow Kubernetes
 nodes to pull down Kong Enterprise Docker image, which is hosted as a private
 repository.
-As part of your sign up for Kong Enterprise, you should have received credentials
-for these as well.
+As part of your sign up for Kong Enterprise, you should have received
+credentials to access Enterprise Bintray repositories.
+Your username is the same username you use
+to log in to Bintray and password
+is an API-key that can be provisioned via Bintray.
 
 ```bash
 $ kubectl create secret -n kong docker-registry kong-enterprise-docker \
@@ -56,9 +72,17 @@ secret/kong-enterprise-docker created
 
 Again, please take a note of the namespace `kong`.
 
-Once these are created, we are ready to deploy Kong for Kubernetes Enterprise.
+## Installers
 
-## Deploy Kong for Kubernetes Enterprise
+Once the secrets are in-place, we can proceed with installation.
+
+Kong for Kubernetes can be installed using an installer of
+your choice:
+
+### YAML manifests
+
+Execute the following to install Kong for Kubernetes Enteprise using YAML
+manifests:
 
 ```bash
 $ kubectl apply -f https://bit.ly/k4k8s-enterprise
@@ -94,5 +118,41 @@ $ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip
 > Note: It may take a while for your cloud provider to actually associate the
 IP address to the `kong-proxy` Service.
 
-Once you've installed Kong, please follow our
+### Kustomize
+
+Use Kustomize to install Kong for Kubernetes Enterprise:
+
+```
+kustomize build github.com/kong/kubernetes-ingress-controller/deploy/manifests/enterprise-k8s
+```
+
+You can use the above URL as a base kustomization and build on top of it
+as well.
+
+Once installed, set an environment variable, $PROXY_IP with the External IP address of
+the `kong-proxy` service in `kong` namespace:
+
+```
+export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong kong-proxy)
+```
+
+### Helm
+
+You can use Helm to install Kong via the official Helm chart:
+
+```
+helm repo update
+helm install stable/kong --name demo --namespace kong --values https://fstlnk.in/k4k8s-enterprise-helm-values
+```
+
+Once installed, set an environment variable, $PROXY_IP with the External IP address of
+the `demo-kong-proxy` service in `kong` namespace:
+
+```
+export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong demo-kong-proxy)
+```
+
+## Using Kong for Kubernetes Enterprise
+
+Once you've installed Kong for Kubernetes Enterprise, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn more.

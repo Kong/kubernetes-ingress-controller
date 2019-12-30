@@ -1,4 +1,4 @@
-# Kong Ingress Controller with Kong Enterprise
+# Kong for Kubernetes with Kong Enterprise
 
 This guide walks through setting up Kong Ingress Controller using Kong
 Enterprise. This architecture is described in detail in [this doc](../concepts/k4k8s-with-kong-enterprise.md).
@@ -8,11 +8,16 @@ deployed. For the sake of simplicity, we will deploy Kong Enterprise and
 it's database in Kubernetes itself. You can safely run them outside
 Kubernetes as well.
 
+## Table of content
+
+- [Prerequisites](#prerequisites)
+- [Install](#install)
+- [Using Kong for Kubernetes](#using-kong-for-kubernetes-with-kong-enterprise)
+
 ## Prerequisites
 
 Before we can deploy Kong Ingress Controller with Kong Enterprise,
 we need to satisfy the following prerequisites:
-
 - [Kong Enterprise License secret](#kong-enterprise-license-secret)
 - [Kong Enterprise Docker registry access](#kong-enterprise-docker-registry-access)
 - [Kong Enterprise bootstrap password](#kong-enterprise-bootstrap-password)
@@ -47,8 +52,11 @@ Please note:
 Next, we need to setup Docker credentials in order to allow Kubernetes
 nodes to pull down Kong Enterprise Docker image, which is hosted as a private
 repository.
-As part of your sign up for Kong Enterprise, you should have received credentials
-for these as well.
+As part of your sign up for Kong Enterprise, you should have received
+credentials to access Enterprise Bintray repositories.
+Your username is the same username you use
+to log in to Bintray and password
+is an API-key that can be provisioned via Bintray.
 
 ```bash
 $ kubectl create secret -n kong docker-registry kong-enterprise-docker \
@@ -57,9 +65,6 @@ $ kubectl create secret -n kong docker-registry kong-enterprise-docker \
     --docker-password=<your-password>
 secret/kong-enterprise-docker created
 ```
-
-Once these are created, we are ready to deploy Kong Enterprise
-Ingress Controller.
 
 ### Kong Enterprise bootstrap password
 
@@ -71,7 +76,10 @@ kubectl create secret generic kong-enterprise-superuser-password  -n kong --from
 
 ```
 
-## Deploy the Kong Ingress Controller
+Once these are created, we are ready to deploy Kong Enterprise
+Ingress Controller.
+
+## Install
 
 ```bash
 $ kubectl apply -f https://bit.ly/kong-ingress-enterprise
@@ -108,7 +116,7 @@ your provider's guide on obtaining an IP address for a Kubernetes Service of
 type `LoadBalancer`. If you are running Minikube, you will not get an
 external IP address.
 
-## Setup Kong Manager
+### Setup Kong Manager
 
 Next, if you browse to the IP address or host of the `kong-manager` service in your Browser,
 which in our case is `http://34.83.242.237`.
@@ -132,19 +140,18 @@ As you follow along with other guides on how to use your newly deployed Kong Ing
 you will be able to browse Kong Manager and see changes reflectded in the UI as Kong's
 configuration changes.
 
-## Start using your Enterprise Ingress Controller
+## Using Kong for Kubernetes with Kong Enterprise
 
-Let's setup an environment variable to hold the IP address:
+Let's setup an environment variable to hold the IP address of `kong-proxy` service:
 
 ```bash
 $ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong kong-proxy)
 ```
 
-Once you've installed Kong Ingress Controller, please follow our
-[getting started](../guides/getting-started.md) tutorial to learn
-about how to use the Ingress Controller.
+Once you've installed Kong for Kubernetes Enterprise, please follow our
+[getting started](../guides/getting-started.md) tutorial to learn more.
 
-## Customizing by use-case.
+## Customizing by use-case
 
 The deployment in this guide is a point to start using Ingress Controller.
 Based on your existing architecture, this deployment will require custom
@@ -155,4 +162,3 @@ Kong Proxy, Kong Admin and Kong Manager services. It is possible and
 recommended to instead have a single Load balancer and then use DNS names
 and Ingress resources to expose the Admin and Manager services outside
 the cluster.
-

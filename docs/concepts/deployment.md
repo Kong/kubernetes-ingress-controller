@@ -269,10 +269,30 @@ There are a few different ways of accomplishing this:
 
 ## Runtime
 
-Kong Ingress Controller is compatible with Kong and Kong Enterprise.
+Kong Ingress Controller is compatible a variety of runtimes:
 
-If you are a Kong Enterprise customer, you can leverage enterprise features.
-Please ensure that you are running a compatible version of
-Kong Ingress Controller alongwith your Kong Enterprise installation.
+### Kong Gateway (OSS)
+
+This is the [Open-Source Gateway](https://github.com/kong/kong) runtime.
+The Ingress Controller is primarily developed against releases of the
+open-source gateway.
+
+### Kong Enterprise K8S
+
+If you are a Kong Enterprise customer, you have access to two more runtimes.
+
+The first one, Kong Enterprise K8S, is an package that takes the Open-Source
+Kong Gateway and adds enterprise-only plugins to it.
+
+You simply need to deploy Kong Enterprise K8S instead of the Open-Source
+Gateway in-order to take full-advantage of enterprise plugins.
+
+### Kong Enterprise
+
+Kong Ingress Controller is also compatible with the full-blown version of
+Kong Enterprise. This runtime ships with Kong Manager, Kong Portal, and a
+number of other enterprise-only features.
+[This doc](k4k8s-with-kong-enterprise.md) provides a high-level
+overivew of the architecture.
 
 [k8s-namespace]: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/

@@ -94,7 +94,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.6.2
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.7.0
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook

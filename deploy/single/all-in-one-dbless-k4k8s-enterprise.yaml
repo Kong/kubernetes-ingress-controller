@@ -524,7 +524,7 @@ spec:
           value: 127.0.0.1:8444 ssl
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:1.3.0.0-alpine
+        image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:1.4.2.0-alpine
         lifecycle:
           preStop:
             exec:

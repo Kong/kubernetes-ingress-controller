@@ -1,6 +1,6 @@
 # Kong for Kubernetes
 
-[![Build Status](https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master)](https://travis-ci.org/Kong/kubernetes-ingress-controller)
+[![Build Status][badge-travis-image]][badge-travis-url]
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].  
 Configure [plugins][kong-hub], health checking,
@@ -11,37 +11,36 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 ## Tables of content
 
 - [**Features**](#features)
-- [**Version support matrix**](#version-support-matrix)
 - [**Get started**](#get-started)
 - [**Documentation**](#documentation)
+- [**Version support matrix**](#version-support-matrix)
+- [**Master branch builds**](#master-branch-builds)
 - [**Seeking help**](#seeking-help)
 - [**License**](#license)
 
 ## Features
 
-- **Ingress routing**: Use [Ingress][ingress] resources to configure Kong
-- **Health checking and Load-balancing**: Load balance requests across
-  your pods and supports active & passive health-checks.
-- **Configure Plugins**: Execute custom code
-  as a request is proxied to your service.
-- **Request/response transformations**: Use plugins to
+- **Ingress routing**  
+  Use [Ingress][ingress] resources to configure Kong
+- **Enhanced API management using plugins**  
+  Use a wide-array of [plugins][kong-hub]
+  to monitor, transform, protect your traffic.
+- **Native gRPC support**
+  Proxy gRPC traffic and gain visibility into it using
+  Kong's plugin.
+- **Health checking and Load-balancing**  
+  Load balance requests across your pods and supports active & passive health-checks.
+- **Request/response transformations**  
+  Use plugins to
   modify your requests/responses on the fly.
-- **Authentication**: Protect your services using authentication
-  plugins.
-- **Declarative configuration for Kong** Configure all of Kong
+- **Authentication**  
+  Protect your services using authentication methods
+  of your choice.
+- **Declarative configuration for Kong**  
+  Configure all of Kong
   using CRDs in Kubernetes and manage Kong declaratively.
 
-## Version support matrix
-
-[Version compatibility doc](docs/references/version-compatibility.md)
-details on compatibility between versions of the
-controller and versions of Kong, Kong for Kubernetes Enterprise and
-Kong Enterprise.
-
 ## Get started
-
-You can deploy Kong Ingress Controller on any
-Kubernetes cluster which supports a Service of `type: LoadBalancer`.
 
 You can use
 [Minikube](https://kubernetes.io/docs/setup/minikube/)
@@ -49,22 +48,19 @@ on your local machine or use
 a hosted k8s service like
 [GKE](https://cloud.google.com/kubernetes-engine/).
 
-To setup Kong Ingress Controller in your k8s cluster, execute:
+Setting up Kong for Kubernetes is as simple as:
 
 ```shell
 # using YAMLs
-kubectl apply -f https://bit.ly/k4k8s
+$ kubectl apply -f https://bit.ly/k4k8s
 
 # or using Helm
-helm install stable/kong
+$ helm repo update
+$ helm install stable/kong
 ```
 
 If you are setting up Kong for Kubernetes Enterprise, please
 follow along [this guide](https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/deployment/k4k8s-enterprise.md).
-
-It takes a few minutes for all components to spin up.
-You now have set up Kong as your Ingress point and
-all Ingress resources in your Kubernetes Cluster will be satisfied.
 
 Follow the [Getting Started guide][getting-started-guide] to start
 using Ingress in Kubernetes.
@@ -75,19 +71,22 @@ All documentation around Kong Ingress Controller is present in this
 repository inside the [docs][docs] directory.
 Pull Requests are welcome for additions and corrections.
 
-Following are some helpful link:
+## Version support matrix
 
-- [**Getting Started**](docs/guides/getting-started.md):
-  Get Kubernetes Ingress setup up and running.
-- [**Deployment**][deployment]:
-  Deployment guides for Minikube, GKE
-  and other types of clusters.
-- [**Custom Resources Definitions (CRDs)**][crds]:
-  Use custom resources
-  to configure Kong in addition to the Ingress resource.
-- [**Annotations**][annotations]:
-  Associate plugins with your requests using annotations
-- [**FAQs**][faqs]: Frequently Asked Questions.
+[Version compatibility doc](docs/references/version-compatibility.md)
+details on compatibility between versions of the
+controller and versions of Kong, Kong for Kubernetes Enterprise and
+Kong Enterprise.
+
+## Master branch builds
+
+If you would like to use the latest and the greatest version of the controller,
+you can use `latest` tag from the [master repository][bintray-master-builds]
+hosted on Bintray:
+
+```
+docker pull kong-docker-kubernetes-ingress-controller.bintray.io/master:latest
+```
 
 ## Seeking help
 
@@ -109,7 +108,7 @@ on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 ## License
 
 ```text
-Copyright 2018 Kong Inc.
+Copyright 2018-2020 Kong Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -133,3 +132,6 @@ limitations under the License.
 [crds]: docs/references/custom-resources.md
 [faqs]: docs/faq.md
 [getting-started-guide]: docs/guides/getting-started.md
+[badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
+[badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
+[bintray-master-builds]: https://bintray.com/kong/kubernetes-ingress-controller/master

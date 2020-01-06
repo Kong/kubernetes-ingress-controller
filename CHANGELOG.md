@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.7.0](#070---20200106)
  - [0.6.2](#062---20191113)
  - [0.6.1](#061---20191009)
  - [0.6.0](#060---20190917)
@@ -15,6 +16,115 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.7.0] - 2020/01/06
+
+#### Summary
+
+This release adds secret-based credentials, gRPC routing, upstream mutual
+authentication, DB-less deployment by default and performance improvements.
+
+#### Breaking changes
+
+- The default value of `--admission-webhook-listen` flag is now `off` to avoid
+  an error in the logs when the cert and key pair is not provided. Users will
+  have to explicitly set this flag to `:8080` to enable it. Please do note that
+  it is recommended to always set up the Admission Controller.
+
+#### Added
+
+- **Multi-port services** Ingress rules forwarding traffic to multiple ports
+  of the same services are now supported. The names of the services configured
+  in Kong have been changed to include the port number/name for uniqueness.
+  [#404](https://github.com/Kong/kubernetes-ingress-controller/pull/404)
+- When using the controller with Kong Enterprise,
+  Controller now attempts to create the workspace configured via
+  `--kong-workspace`, if it does not exist.
+  [#429](https://github.com/Kong/kubernetes-ingress-controller/pull/429)
+- **Controller configuration revamped** Configuration of the controller itself
+  can now be tweaked via environment flags and CLI flags, both. Environment
+  variables and Secrets can be used to pass sensitive information to the
+  controller.
+  [#436](https://github.com/Kong/kubernetes-ingress-controller/pull/436)
+- **Encrypted credentials via Secrets** Credentials can now be configured via
+  `Secret` resource from the Kubernetes core API. These credentials are
+  encrypted at rest by Kubernetes. The controller loads these secrets into
+  Kong's memory or database from the Kubernetes data-store.
+  [#430](https://github.com/Kong/kubernetes-ingress-controller/pull/430)
+- **Multi-entity plugins** Plugins can now be configured for a combination of
+  an Ingress rule(s) and KongConsumer or a combination of a Service
+  and KongConsumer.
+  [#386](https://github.com/Kong/kubernetes-ingress-controller/issues/386)
+- **Mutual authentication using mTLS** Kong and the Kubernetes Service can
+  mutually authenticate each other now. Use the new
+  `configuration.konghq.com/client-cert` annotation on a Kubernetes Service
+  to specify the cert-key pair Kong should use to authenticate itself.
+  [#483](https://github.com/Kong/kubernetes-ingress-controller/pull/483)
+- **gRPC routing** Kong Ingress Controller can now expose and proxy gRPC
+  protocol based services, in addition to HTTP-based services. These can
+  be configured using the core Ingress resource itself.
+  [#454](https://github.com/Kong/kubernetes-ingress-controller/pull/454)
+- **Performance improvement** Number of sync calls to Kong, in both DB and
+  DB-less mode, should be reduced by an order of magnitude for most deployments.
+  This will also improve Kong's performance.
+  [#484](https://github.com/Kong/kubernetes-ingress-controller/pull/484)
+- `credentials` property has been added to the `KongConsumer` Custom Resource. 
+  This property holds the references to the secrets containing the credentials.
+  [#430](https://github.com/Kong/kubernetes-ingress-controller/pull/430)
+- Flag `--kong-admin-filter-tag` has been added to change the tag used
+  to filter and managed entity in Kong's database. This defaults to
+  `managed-by-ingress-controller`.
+  [#440](https://github.com/Kong/kubernetes-ingress-controller/pull/440)
+- Flag `--kong-admin-concurrency` has been added to control the number of
+  concurrent requests between the controller and Kong's Admin API.
+  This defaults to `10`.
+  [#481](https://github.com/Kong/kubernetes-ingress-controller/pull/481)
+- Flag `--kong-admin-token` has been added to supply the RBAC token
+  for the Admin API for Kong Enterprise deployments.
+  [#489](https://github.com/Kong/kubernetes-ingress-controller/pull/489)
+- Admission Controller now validates Secret-based credentials. It ensures that
+  the required fields are set in the secret and the credential type is a
+  valid one.
+  [#446](https://github.com/Kong/kubernetes-ingress-controller/pull/446)
+- `http2` is now enabled by default on the TLS port.
+  [#456](https://github.com/Kong/kubernetes-ingress-controller/pull/456)
+- DB-less or the in-memory mode is now the new default in the reference
+  manifests. It is recommended to run Kong without a database for Ingress
+  Controller deployments.
+  [#456](https://github.com/Kong/kubernetes-ingress-controller/pull/456)
+- `upstream.host_header` property has been added to the `KongIngress` Custom
+  Resource. This property can be used to change the `host` header in every
+  request that is sent to the upstream service.
+  [#478](https://github.com/Kong/kubernetes-ingress-controller/pull/478)
+
+#### Fixed
+
+- Every event in the queue is not logged anymore as it can leak sensitive
+  information in the logs. Thanks to [@goober](https://github.com/goober)
+  for the report.
+  [#439](https://github.com/Kong/kubernetes-ingress-controller/pull/439)
+- For database deployments, `upstream` entity are now created with `round-robin`
+  as default `algorithm` to avoid false positives during a sync operation.
+  These false positives can have a negative impact on Kong's performance.
+  [#480](https://github.com/Kong/kubernetes-ingress-controller/pull/480)
+
+
+#### Deprecated
+
+- `KongCredential` Custom Resource is now deprecated and will be remove in a
+  future release. Instead, please use Secret-based credentials.
+  [#430](https://github.com/Kong/kubernetes-ingress-controller/pull/430):
+- Following flags have been deprecated and new ones have been added in place
+  [#436](https://github.com/Kong/kubernetes-ingress-controller/pull/436):
+  - `--kong-url`, instead use `--kong-admin-url`
+  - `--admin-tls-skip-verify`, instead use `--kong-admin-tls-skip-verify`
+  - `--admin-header`, instead use `--kong-admin-header`
+  - `--admin-tls-server-name`, instead use `--kong-admin-tls-server-name`
+  - `--admin-ca-cert-file`, instead use `--kong-admin-ca-cert-file`
+
+#### Under the hood
+
+- decK has been bumped up to v0.6.2.
 
 ## [0.6.2] - 2019/11/13
 
@@ -476,6 +586,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.2...0.7.0
 [0.6.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.1...0.6.2
 [0.6.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.5.0...0.6.0

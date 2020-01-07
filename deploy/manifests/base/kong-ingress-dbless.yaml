@@ -56,24 +56,25 @@ spec:
           containerPort: 9542
           protocol: TCP
         livenessProbe:
-          failureThreshold: 3
           httpGet:
             path: /health
             port: 9001
             scheme: HTTP
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
           periodSeconds: 10
           successThreshold: 1
-          timeoutSeconds: 1
+          failureThreshold: 3
         readinessProbe:
-          failureThreshold: 3
           httpGet:
             path: /health
             port: 9001
             scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
           periodSeconds: 10
           successThreshold: 1
-          timeoutSeconds: 1
+          failureThreshold: 3
         volumeMounts:
         - name: kong-server-blocks
           mountPath: /kong
@@ -101,23 +102,25 @@ spec:
           containerPort: 8080
           protocol: TCP
         livenessProbe:
-          failureThreshold: 3
           httpGet:
             path: /healthz
             port: 10254
             scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
           periodSeconds: 10
           successThreshold: 1
-          timeoutSeconds: 1
+          failureThreshold: 3
         readinessProbe:
-          failureThreshold: 3
           httpGet:
             path: /healthz
             port: 10254
             scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
           periodSeconds: 10
           successThreshold: 1
-          timeoutSeconds: 1
+          failureThreshold: 3
       volumes:
       - name: kong-server-blocks
         configMap:

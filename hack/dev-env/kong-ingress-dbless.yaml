@@ -45,15 +45,25 @@ spec:
               - -c
               - kong quit
         livenessProbe:
-          failureThreshold: 3
           httpGet:
             path: /health
             port: 9001
             scheme: HTTP
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
           periodSeconds: 10
           successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9001
+            scheme: HTTP
+          initialDelaySeconds: 5
           timeoutSeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
         name: proxy
         ports:
         - containerPort: 8000

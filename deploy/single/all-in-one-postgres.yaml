@@ -551,7 +551,7 @@ spec:
             path: /health
             port: 9001
             scheme: HTTP
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
@@ -572,6 +572,7 @@ spec:
             path: /health
             port: 9001
             scheme: HTTP
+          initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
@@ -604,6 +605,7 @@ spec:
             path: /healthz
             port: 10254
             scheme: HTTP
+          initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
@@ -618,6 +620,7 @@ spec:
             path: /healthz
             port: 10254
             scheme: HTTP
+          initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1

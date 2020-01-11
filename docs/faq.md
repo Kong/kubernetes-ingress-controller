@@ -21,3 +21,5 @@ won't be deleted by the Ingress Controller.
 
 [k8s-service]: http://kubernetes.io/docs/user-guide/services
 [kube-proxy]: http://kubernetes.io/docs/admin/kube-proxy
+
+### Is it possible to add the Custom plugins to Kong for Kubernetes?

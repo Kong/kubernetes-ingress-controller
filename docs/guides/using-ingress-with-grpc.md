@@ -60,19 +60,25 @@ spec:
           servicePort: 9001" | kubectl apply -f -
 ingress.extensions/demo created
 ```
-1. Update your ingress with
-`kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com/protocols":"grpc,grpcs"}}}'`.
+1. Next, we need to update the Ingress rule to specify gRPC as the protocol.
 By default, all routes are assumed to be either HTTP or HTTPS. This annotation
-informs Kong that this route is a gRPC(s) route and not a plain HTTP route.
+informs Kong that this route is a gRPC(s) route and not a plain HTTP route:
 
-1. Update your grpc service with
-`kubectl patch svc grpc -p '{"metadata":{"annotations":{"configuration.konghq.com/protocol":"grpcs"}}}'`.
+```
+$ kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com/protocols":"grpc,grpcs"}}}'
+```
+
+1. Next, we also update the upstream protocol to be `grpcs`.
 Similar to routes, Kong assumes that services are HTTP-based by default.
 With this annotation, we configure Kong to use gRPCs protocol when it
-talks to the upstream service.
+talks to the upstream service:
+
+```
+$ kubectl patch svc grpcbin -p '{"metadata":{"annotations":{"configuration.konghq.com/protocol":"grpcs"}}}'
+```
 
 1. You should be able to run a request over `gRPC`:
 
 ```
-grpcurl -v -d '{"greeting": "Kong Hello world!"}' -insecure $PROXY_IP:443 hello.HelloService.SayHello
+$ grpcurl -v -d '{"greeting": "Kong Hello world!"}' -insecure $PROXY_IP:443 hello.HelloService.SayHello
 ```

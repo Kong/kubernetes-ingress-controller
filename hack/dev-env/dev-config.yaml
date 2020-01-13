@@ -61,6 +61,8 @@ spec:
             enum:
             - http
             - https
+            - grpc
+            - grpcs
             - tcp
             - tls
 

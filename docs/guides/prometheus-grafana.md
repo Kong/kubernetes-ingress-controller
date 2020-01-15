@@ -90,13 +90,15 @@ To install Grafana, execute the following:
 helm install stable/grafana --name grafana --namespace monitoring --values http://bit.ly/2FuFVfV --version 1.22.1
 ```
 
-## Install Kong Ingress Controller
+## Install Kong
 
-We will use Kong's Helm chart to install Kong Ingress Controller
+We will use Kong's Helm chart to install Kong
 but you can also use plain manifests for this purpose.
 
 ```bash
-helm install stable/kong --name kong --namespace kong --values https://bit.ly/2YDHyoh
+helm repo add kong https://charts.konghq.com
+helm repo update
+helm install kong/kong --name kong --namespace kong --values https://bit.ly/2QTWJE5 --version 1.0.0
 ```
 
 ### Enable Prometheus plugin in Kong
@@ -137,7 +139,7 @@ kubectl --namespace monitoring port-forward $POD_NAME 3000 &
 
 # You can access Grafana in your browser at localhost:3000
 
-POD_NAME=$(kubectl get pods --namespace kong -l "app=kong" -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods --namespace kong -o jsonpath="{.items[0].metadata.name}")
 kubectl --namespace kong port-forward $POD_NAME 8000 &
 
 # Kong proxy port is now your localhost 8000 port

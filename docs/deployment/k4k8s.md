@@ -56,8 +56,9 @@ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
 You can use Helm to install Kong via the official Helm chart:
 
 ```
+helm repo add kong https://charts.konghq.com
 helm repo update
-helm install stable/kong --name demo --namespace kong
+helm install kong/kong --name demo --namespace kong
 ```
 
 Once installed, set an environment variable, $PROXY_IP with the External IP address of

@@ -55,8 +55,9 @@ Setting up Kong for Kubernetes is as simple as:
 $ kubectl apply -f https://bit.ly/k4k8s
 
 # or using Helm
+$ helm repo add kong https://charts.konghq.com
 $ helm repo update
-$ helm install stable/kong
+$ helm install kong/kong
 ```
 
 If you are setting up Kong for Kubernetes Enterprise, please

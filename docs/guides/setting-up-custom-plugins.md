@@ -164,7 +164,9 @@ to deploy Kong Ingress Controller:
 kustomize build github.com/hbagdi/yaml/kong/kong-custom-plugin | kubectl apply -f -
 
 # or helm
-helm install stable/kong --values values.yaml
+helm repo add kong https://charts.konghq.com
+helm repo update
+helm install kong/kong --values values.yaml
 ```
 
 Once you have got Kong up and running, configure your

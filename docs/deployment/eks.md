@@ -37,7 +37,9 @@ Alternatively, you can use our helm chart as well.
 Please ensure that you have Tiller working and then execute:
 
 ```bash
-$ helm install stable/kong --set ingressController.enabled=true
+$ helm repo add kong https://charts.konghq.com
+$ helm repo update
+$ helm install kong/kong
 ```
 
 *Note:* this process could take up to five minutes the first time.

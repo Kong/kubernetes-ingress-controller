@@ -100,6 +100,9 @@ metadata:
   name: kong-validations
 webhooks:
 - name: validations.kong.konghq.com
+  failurePolicy: Fail
+  sideEffects: None
+  admissionReviewVersions: ["v1beta1"]
   rules:
   - apiGroups:
     - configuration.konghq.com
@@ -120,7 +123,6 @@ webhooks:
     - UPDATE
     resources:
     - secrets
-  failurePolicy: Fail
   clientConfig:
     service:
       namespace: kong

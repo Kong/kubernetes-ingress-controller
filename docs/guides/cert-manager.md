@@ -73,7 +73,7 @@ Any HTTP-based application can be used, for the purpose of the demo, install
 the following echo server:
 
 ```bash
-curl -sL bit.ly/echo-server | kubectl apply -f -
+curl -sL bit.ly/echo-service | kubectl apply -f -
 service/echo created
 deployment.apps/echo created
 ```

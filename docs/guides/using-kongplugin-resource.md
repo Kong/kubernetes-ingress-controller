@@ -46,7 +46,7 @@ deployment.apps/httpbin created
 ```
 
 ```bash
-$ kubectl apply -f https://bit.ly/echo-server
+$ kubectl apply -f https://bit.ly/echo-service
 service/echo created
 deployment.apps/echo created
 ```

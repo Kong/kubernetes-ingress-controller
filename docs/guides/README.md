@@ -49,3 +49,6 @@ Kong Ingress controller:
 - [Setting up upstream mTLS](upstream-mtls.md)  
   This guide gives an overview of how to setup mutual TLS authentication
   between Kong and your upstream server.
+- [Preserveing Client IP address](preserve-client-ip.md)  
+  This guide gives an overview of different methods to preserve the Client
+  IP address.

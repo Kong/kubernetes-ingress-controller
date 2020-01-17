@@ -37,7 +37,7 @@ This is expected as Kong does not yet know how to proxy the request.
 We will start by installing the echo service.
 
 ```bash
-$ kubectl apply -f https://bit.ly/echo-server
+$ kubectl apply -f https://bit.ly/echo-service
 service/echo created
 deployment.apps/echo created
 ```

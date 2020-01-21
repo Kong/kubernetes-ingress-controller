@@ -163,12 +163,14 @@ metadata:
   namespace: cert-manager
 spec:
   acme:
-    email: user@example.com # please change this
-    http01: {}
+    email: user@example.com #please change this
     privateKeySecretRef:
       name: letsencrypt-prod
-    server: https://acme-v02.api.letsencrypt.org/directory" | kubectl apply -f -
-clusterissuer.certmanager.k8s.io/letsencrypt-prod created
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+    - http01:
+        ingress: {}" | kubectl apply -f -
+clusterissuer.cert-manager.io/letsencrypt-prod configured
 ```
 
 *Note*: If you run into issues configuring this, be sure that the group (`cert-manager.io`) and version (`v1alpha2`) match those in the output of `kubectl describe crd clusterissuer`.

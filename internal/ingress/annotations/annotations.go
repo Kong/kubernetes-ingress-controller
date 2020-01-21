@@ -23,17 +23,19 @@ import (
 )
 
 const (
+	annotationPrefix = "configuration.konghq.com"
+
 	ingressClassKey = "kubernetes.io/ingress.class"
 
 	pluginsAnnotationKey = "plugins.konghq.com"
 
-	configurationAnnotationKey = "configuration.konghq.com"
+	configurationAnnotationKey = annotationPrefix
 
-	protocolAnnotationKey = "configuration.konghq.com/protocol"
+	protocolAnnotationKey = annotationPrefix + "/protocol"
 
-	protocolsAnnotationKey = "configuration.konghq.com/protocols"
+	protocolsAnnotationKey = annotationPrefix + "/protocols"
 
-	clientCertAnnotationKey = "configuration.konghq.com/client-cert"
+	clientCertAnnotationKey = annotationPrefix + "/client-cert"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.

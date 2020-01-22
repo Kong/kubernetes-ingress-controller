@@ -61,10 +61,6 @@ func (reh ResourceEventHandler) OnDelete(obj interface{}) {
 	if !reh.IsValidIngresClass(object) {
 		return
 	}
-	reh.UpdateCh.In() <- Event{
-		Type: DeleteEvent,
-		Obj:  obj,
-	}
 
 	reh.UpdateCh.In() <- Event{
 		Type: DeleteEvent,

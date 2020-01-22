@@ -986,10 +986,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 			continue
 		}
 		res[pluginName] = Plugin{
-			Plugin: kong.Plugin{
-				Name:   kong.String(pluginName),
-				Config: kong.Configuration(k8sPlugin.Config),
-			},
+			Plugin: kongPluginFromK8SPlugin(k8sPlugin),
 		}
 	}
 	for _, plugin := range duplicates {
@@ -1093,8 +1090,12 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	if k8sPlugin.PluginName == "" {
 		return plugin, errors.Errorf("invalid empty 'plugin' property")
 	}
+	plugin = kongPluginFromK8SPlugin(*k8sPlugin)
+	return plugin, nil
+}
 
-	plugin = kong.Plugin{
+func kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) kong.Plugin {
+	plugin := kong.Plugin{
 		Name:   kong.String(k8sPlugin.PluginName),
 		Config: kong.Configuration(k8sPlugin.Config).DeepCopy(),
 	}
@@ -1107,7 +1108,7 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
 	}
-	return plugin, nil
+	return plugin
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

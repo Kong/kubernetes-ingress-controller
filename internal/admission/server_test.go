@@ -76,7 +76,102 @@ func TestValidateKongConsumer(t *testing.T) {
     "object": {
       "apiVersion": "configuration.konghq.com/v1",
       "kind": "KongConsumer"
-    }
+    },
+	"operation": "CREATE"
+  }
+}
+	`
+	req, err := http.NewRequest("POST", "", bytes.NewBuffer([]byte(body)))
+	assert.Nil(err)
+	handler.ServeHTTP(res, req)
+	assert.Equal(200, res.Code)
+	var review admission.AdmissionReview
+	_, _, err = decoder.Decode([]byte(res.Body.String()), nil, &review)
+	assert.Nil(err)
+	assert.Equal("b2df61dd-ab5b-4cb4-9be0-878533c83892",
+		string(review.Response.UID))
+	assert.True(review.Response.Allowed)
+}
+
+func TestValidateKongConsumerOnUsernameChange(t *testing.T) {
+	assert := assert.New(t)
+	res := httptest.NewRecorder()
+	server := Server{
+		Validator: KongFakeValidator{
+			Result: true,
+		},
+	}
+	handler := http.HandlerFunc(server.ServeHTTP)
+	// TODO how to marshal k8s object to correct JSON?
+	body := `
+{
+  "kind": "AdmissionReview",
+  "apiVersion": "admission.k8s.io/v1beta1",
+  "request": {
+    "uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
+    "resource": {
+      "group": "configuration.konghq.com",
+      "version": "v1",
+      "resource": "kongconsumers"
+    },
+    "object": {
+      "apiVersion": "configuration.konghq.com/v1",
+      "kind": "KongConsumer",
+	  "username":"foo"
+    },
+    "oldObject": {
+      "apiVersion": "configuration.konghq.com/v1",
+      "kind": "KongConsumer",
+	  "username":"bar"
+    },
+	"operation": "UPDATE"
+  }
+}
+	`
+	req, err := http.NewRequest("POST", "", bytes.NewBuffer([]byte(body)))
+	assert.Nil(err)
+	handler.ServeHTTP(res, req)
+	assert.Equal(200, res.Code)
+	var review admission.AdmissionReview
+	_, _, err = decoder.Decode([]byte(res.Body.String()), nil, &review)
+	assert.Nil(err)
+	assert.Equal("b2df61dd-ab5b-4cb4-9be0-878533c83892",
+		string(review.Response.UID))
+	assert.True(review.Response.Allowed)
+}
+
+func TestValidateKongConsumerOnEqualUpdate(t *testing.T) {
+	assert := assert.New(t)
+	res := httptest.NewRecorder()
+	server := Server{
+		Validator: KongFakeValidator{
+			Result: true,
+		},
+	}
+	handler := http.HandlerFunc(server.ServeHTTP)
+	// TODO how to marshal k8s object to correct JSON?
+	body := `
+{
+  "kind": "AdmissionReview",
+  "apiVersion": "admission.k8s.io/v1beta1",
+  "request": {
+    "uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
+    "resource": {
+      "group": "configuration.konghq.com",
+      "version": "v1",
+      "resource": "kongconsumers"
+    },
+    "object": {
+      "apiVersion": "configuration.konghq.com/v1",
+      "kind": "KongConsumer",
+	  "username":"foo"
+    },
+    "oldObject": {
+      "apiVersion": "configuration.konghq.com/v1",
+      "kind": "KongConsumer",
+	  "username":"foo"
+    },
+	"operation": "UPDATE"
   }
 }
 	`
@@ -116,7 +211,8 @@ func TestValidateKongConsumerInvalid(t *testing.T) {
     "object": {
       "apiVersion": "configuration.konghq.com/v1",
       "kind": "KongConsumer"
-    }
+    },
+	"operation": "CREATE"
   }
 }
 	`
@@ -157,7 +253,49 @@ func TestValidateKongConsumerOnError(t *testing.T) {
     "object": {
       "apiVersion": "configuration.konghq.com/v1",
       "kind": "KongConsumer"
-    }
+    },
+	"operation": "CREATE"
+  }
+}
+	`
+	req, err := http.NewRequest("POST", "", bytes.NewBuffer([]byte(body)))
+	assert.Nil(err)
+	handler.ServeHTTP(res, req)
+	assert.Equal(500, res.Code)
+	assert.Equal("error making API call to kong\n", res.Body.String())
+}
+
+func TestValidateKongConsumerOnUsernameChangeError(t *testing.T) {
+	assert := assert.New(t)
+	res := httptest.NewRecorder()
+	server := Server{
+		Validator: KongFakeValidator{
+			Error: errors.New("error making API call to kong"),
+		},
+	}
+	handler := http.HandlerFunc(server.ServeHTTP)
+	body := `
+{
+  "kind": "AdmissionReview",
+  "apiVersion": "admission.k8s.io/v1beta1",
+  "request": {
+    "uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
+    "resource": {
+      "group": "configuration.konghq.com",
+      "version": "v1",
+      "resource": "kongconsumers"
+    },
+    "object": {
+      "apiVersion": "configuration.konghq.com/v1",
+      "kind": "KongConsumer",
+	  "username":"foo"
+    },
+    "oldObject": {
+      "apiVersion": "configuration.konghq.com/v1",
+      "kind": "KongConsumer",
+	  "username":"bar"
+    },
+	"operation": "UPDATE"
   }
 }
 	`
@@ -192,7 +330,8 @@ func TestUnknownResource(t *testing.T) {
     "object": {
       "apiVersion": "configuration.konghq.com/v1",
       "kind": "KongConsumer"
-    }
+    },
+	"operation": "CREATE"
   }
 }
 	`

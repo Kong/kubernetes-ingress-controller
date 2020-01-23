@@ -28,25 +28,26 @@ Please note that this is not supported by all of the public Cloud providers.
 
 ## Proxy Protocol
 
-If your Load Balancer supports Proxy Protocol, then you can configure
-Kong to pick up the Client IP address via this protocol.
-This method is used when an L4 Load Balancer is used, i.e. TCP connections
-are terminated at the Load balancer.
+If you have an L4 Load Balancer that supports Proxy Protocol, and you're
+terminating TCP connections at the Load Balancer before passing traffic
+onward to Kong, then you can configure Kong to pick up the Client IP
+address via this protocol.
 
-You will need to tweak `KONG_PROXY_LISTEN` environment variable to add
-`proxy_protocol` suffix to each listen directive and set `KONG_REAL_IP_HEADER`
-to `proxy_protocol`.
+Once you have configured the Load Balancer to use Proxy Protocol, you
+need to set the following environment variables in Kong for Kong to
+receive the Client IP from the Proxy Protocol header.
+
+- [`KONG_TRUSTED_IPS`](https://docs.konghq.com/latest/configuration/#trusted_ips)
+- [`KONG_PROXY_LISTEN`](https://docs.konghq.com/latest/configuration/#proxy_listen)
+- [`KONG_REAL_IP_HEADER`](https://docs.konghq.com/latest/configuration/#real_ip_header)
 
 For example:
 
 ```
-KONG_PROXY_LISTEN="0.0.0.0:8000 proxy_protocol, 0.0.0.0:8443 ssl proxy_protocol
+KONG_TRUSTED_IPS=0.0.0.0/0,::/0  # This trusts all IPs
+KONG_PROXY_LISTEN="0.0.0.0:8000 proxy_protocol, 0.0.0.0:8443 ssl proxy_protocol"
 KONG_REAL_IP_HEADER=proxy_protocol
 ```
-
-Please read the documentation on
-[`proxy_listen`](https://docs.konghq.com/latest/configuration/#proxy_listen)
-for more details.
 
 ## HTTP headers
 
@@ -54,11 +55,11 @@ If you are using an L7 Load Balancer, i.e. HTTP requests are being terminated
 at the Load Balancer, then you need to use `x-forwarded-for` or `x-real-ip`
 header to preserve details of the connection between the Client and Load Balancer.
 
-You should configure the Load Balancer to inject these headers and then
+You should configure the Load Balancer to inject these headers, and then
 you need to set the following environment variables in Kong for Kong to pick up
 the Client IP address from HTTP headers:
 
-- [`KONG_TRUSTED_IPS`](https://docs.konghq.com/latest/configuration/#trusted_ips)  
+- [`KONG_TRUSTED_IPS`](https://docs.konghq.com/latest/configuration/#trusted_ips)
 - [`KONG_REAL_IP_HEADER`](https://docs.konghq.com/latest/configuration/#real_ip_header)
 - Optional [`KONG_REAL_IP_RECURSIVE`](https://docs.konghq.com/latest/configuration/#real_ip_recursive)
 
@@ -83,10 +84,10 @@ You can use `ExternalTrafficPolicy: Cluster` to preserve the Client IP address.
 
 You have two options:
 
-- L4 Load Balancer  
+- L4 Load Balancer
   In this case, you need to use the Proxy Protocol method to preserve Client IP
   address.
-- L7 Load Balancer  
+- L7 Load Balancer
   In this case, you need to use the HTTP headers method to preserve the Client
   IP address.
 

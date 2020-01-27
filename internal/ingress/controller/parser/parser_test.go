@@ -74,6 +74,41 @@ Gn+T2uCyOP4a1DTUoPyoNJXo
 	}
 )
 
+func TestGlobalPlugin(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("global plugins are processed correctly", func(t *testing.T) {
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KongPlugins: []*configurationv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					PluginName: "key-auth",
+					Protocols:  []string{"grpc"},
+					Config: configurationv1.Configuration{
+						"foo": "bar",
+					},
+				},
+			},
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Plugins),
+			"expected one plugin to be rendered")
+		assert.Equal("key-auth", *state.Plugins[0].Name)
+		assert.Equal(1, len(state.Plugins[0].Protocols))
+		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
+		assert.Equal(kong.Configuration{"foo": "bar"}, state.Plugins[0].Config)
+	})
+}
+
 func TestServiceClientCertificate(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("valid client-cert annotation", func(t *testing.T) {

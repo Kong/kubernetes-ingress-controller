@@ -102,11 +102,33 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 		if err != nil {
 			return nil, err
 		}
-
-		ok, message, err = a.Validator.ValidateConsumer(consumer)
-		if err != nil {
-			return nil, err
+		switch request.Operation {
+		case admission.Create:
+			ok, message, err = a.Validator.ValidateConsumer(consumer)
+			if err != nil {
+				return nil, err
+			}
+		case admission.Update:
+			var oldConsumer configuration.KongConsumer
+			_, _, err = deserializer.Decode(request.OldObject.Raw,
+				nil, &oldConsumer)
+			if err != nil {
+				return nil, err
+			}
+			// validate only if the username is being changed
+			if consumer.Username != oldConsumer.Username {
+				ok, message, err = a.Validator.ValidateConsumer(consumer)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				ok = true
+			}
+		default:
+			return nil, errors.New("unknown operation '" +
+				string(request.Operation) + "'")
 		}
+
 	case pluginGVResource:
 		plugin := configuration.KongPlugin{}
 		deserializer := codecs.UniversalDeserializer()

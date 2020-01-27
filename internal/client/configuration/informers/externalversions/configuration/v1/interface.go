@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// KongClusterPlugins returns a KongClusterPluginInformer.
+	KongClusterPlugins() KongClusterPluginInformer
 	// KongConsumers returns a KongConsumerInformer.
 	KongConsumers() KongConsumerInformer
 	// KongCredentials returns a KongCredentialInformer.
@@ -43,6 +45,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// KongClusterPlugins returns a KongClusterPluginInformer.
+func (v *version) KongClusterPlugins() KongClusterPluginInformer {
+	return &kongClusterPluginInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // KongConsumers returns a KongConsumerInformer.

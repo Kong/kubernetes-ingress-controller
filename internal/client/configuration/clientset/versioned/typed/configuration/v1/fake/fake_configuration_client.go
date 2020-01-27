@@ -28,6 +28,10 @@ type FakeConfigurationV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeConfigurationV1) KongClusterPlugins() v1.KongClusterPluginInterface {
+	return &FakeKongClusterPlugins{c}
+}
+
 func (c *FakeConfigurationV1) KongConsumers(namespace string) v1.KongConsumerInterface {
 	return &FakeKongConsumers{c, namespace}
 }

@@ -26,6 +26,7 @@ import (
 
 type ConfigurationV1Interface interface {
 	RESTClient() rest.Interface
+	KongClusterPluginsGetter
 	KongConsumersGetter
 	KongCredentialsGetter
 	KongIngressesGetter
@@ -35,6 +36,10 @@ type ConfigurationV1Interface interface {
 // ConfigurationV1Client is used to interact with features provided by the configuration.konghq.com group.
 type ConfigurationV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ConfigurationV1Client) KongClusterPlugins() KongClusterPluginInterface {
+	return newKongClusterPlugins(c)
 }
 
 func (c *ConfigurationV1Client) KongConsumers(namespace string) KongConsumerInterface {

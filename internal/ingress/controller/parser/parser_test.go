@@ -253,6 +253,114 @@ func TestServiceClientCertificate(t *testing.T) {
 		assert.Nil(state.Services[0].ClientCertificate)
 	})
 }
+func TestDefaultBackend(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("default backend is processed correctly", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ing-with-default-backend",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					Backend: &networking.IngressBackend{
+						ServiceName: "default-svc",
+						ServicePort: intstr.FromInt(80),
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default-svc",
+					Namespace: "default",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+		assert.Equal("default.default-svc.80", *state.Services[0].Name)
+		assert.Equal("default-svc.default.80.svc", *state.Services[0].Host)
+		assert.Equal(1, len(state.Services[0].Routes),
+			"expected one routes to be rendered")
+		assert.Equal("default.ing-with-default-backend", *state.Services[0].Routes[0].Name)
+		assert.Equal("/", *state.Services[0].Routes[0].Paths[0])
+	})
+
+	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					TLS: []networking.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"configuration.konghq.com/client-cert": "secret1",
+					},
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(0, len(state.Certificates),
+			"expected no certificates to be rendered")
+
+		assert.Equal(1, len(state.Services))
+		assert.Nil(state.Services[0].ClientCertificate)
+	})
+}
 
 func TestParserSecret(t *testing.T) {
 	assert := assert.New(t)

@@ -454,8 +454,10 @@ func (p *Parser) parseIngressRules(
 				if !ok {
 					service = Service{
 						Service: kong.Service{
-							Name:           kong.String(serviceName),
-							Host:           kong.String(rule.Backend.ServiceName + "." + ingress.Namespace + "." + rule.Backend.ServicePort.String() + ".svc"),
+							Name: kong.String(serviceName),
+							Host: kong.String(rule.Backend.ServiceName +
+								"." + ingress.Namespace + "." +
+								rule.Backend.ServicePort.String() + ".svc"),
 							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
@@ -490,8 +492,15 @@ func (p *Parser) parseIngressRules(
 			service = Service{
 				Service: kong.Service{
 					Name: kong.String(serviceName),
-					Host: kong.String(defaultBackend.ServiceName + "." + ingress.Namespace + "." + defaultBackend.ServicePort.String() + ".svc"),
-					Port: kong.Int(80),
+					Host: kong.String(defaultBackend.ServiceName + "." +
+						ingress.Namespace + "." +
+						defaultBackend.ServicePort.String() + ".svc"),
+					Port:           kong.Int(80),
+					Protocol:       kong.String("http"),
+					ConnectTimeout: kong.Int(60000),
+					ReadTimeout:    kong.Int(60000),
+					WriteTimeout:   kong.Int(60000),
+					Retries:        kong.Int(5),
 				},
 				Namespace: ingress.Namespace,
 				Backend:   *defaultBackend,

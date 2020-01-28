@@ -285,6 +285,11 @@ func main() {
 	cacheStores.Plugin = kongPluginInformer.GetStore()
 	informers = append(informers, kongPluginInformer)
 
+	kongClusterPluginInformer := kongInformerFactory.Configuration().V1().KongClusterPlugins().Informer()
+	kongClusterPluginInformer.AddEventHandler(reh)
+	cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
+	informers = append(informers, kongClusterPluginInformer)
+
 	kongConsumerInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()
 	kongConsumerInformer.AddEventHandler(reh)
 	cacheStores.Consumer = kongConsumerInformer.GetStore()

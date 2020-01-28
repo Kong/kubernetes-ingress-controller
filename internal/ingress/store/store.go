@@ -31,6 +31,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+// ErrNotFound error is returned when a lookup results in no resource.
+// This type is meant to be used for error handling using `errors.As()`.
 type ErrNotFound struct {
 	message string
 }

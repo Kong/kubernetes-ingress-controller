@@ -277,6 +277,60 @@ func TestFakeStorePlugins(t *testing.T) {
 	assert.Nil(plugin)
 }
 
+func TestFakeStoreClusterPlugins(t *testing.T) {
+	assert := assert.New(t)
+
+	plugins := []*configurationv1.KongClusterPlugin{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
+	assert.Nil(err)
+	assert.NotNil(store)
+	plugins, err = store.ListGlobalKongClusterPlugins()
+	assert.Len(plugins, 0)
+
+	plugins = []*configurationv1.KongClusterPlugin{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+				Labels: map[string]string{
+					"global": "true",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+				Labels: map[string]string{
+					"global": "true",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "baz",
+			},
+		},
+	}
+	store, err = NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
+	assert.Nil(err)
+	assert.NotNil(store)
+	plugins, err = store.ListGlobalKongClusterPlugins()
+	assert.Len(plugins, 2)
+
+	plugin, err := store.GetKongClusterPlugin("foo")
+	assert.NotNil(plugin)
+	assert.Nil(err)
+
+	plugin, err = store.GetKongClusterPlugin("does-not-exist")
+	assert.NotNil(err)
+	assert.Nil(plugin)
+}
+
 func TestFakeStoreCredentials(t *testing.T) {
 	assert := assert.New(t)
 

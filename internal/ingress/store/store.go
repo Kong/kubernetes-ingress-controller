@@ -31,6 +31,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+type ErrNotFound struct {
+	message string
+}
+
+func (e ErrNotFound) Error() string {
+	if e.message == "" {
+		return "not found"
+	}
+	return e.message
+}
+
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
@@ -91,7 +102,7 @@ func (s Store) GetSecret(namespace, name string) (*apiv1.Secret, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("secret %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("Secret %v not found", key)}
 	}
 	return secret.(*apiv1.Secret), nil
 }
@@ -104,7 +115,7 @@ func (s Store) GetService(namespace, name string) (*apiv1.Service, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("service %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("Service %v not found", key)}
 	}
 	return service.(*apiv1.Service), nil
 }
@@ -133,7 +144,7 @@ func (s Store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints,
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("could not find endpoints for service %v", key)
+		return nil, ErrNotFound{fmt.Sprintf("Endpoints for service %v not found", key)}
 	}
 	return eps.(*apiv1.Endpoints), nil
 }
@@ -146,7 +157,7 @@ func (s Store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugi
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("plugin %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("KongPlugin %v not found", key)}
 	}
 	return p.(*configurationv1.KongPlugin), nil
 }
@@ -158,7 +169,7 @@ func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPl
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("plugin %v was not found", name)
+		return nil, ErrNotFound{fmt.Sprintf("KongClusterPluign %v not found", name)}
 	}
 	return p.(*configurationv1.KongClusterPlugin), nil
 }
@@ -171,7 +182,7 @@ func (s Store) GetKongIngress(namespace, name string) (*configurationv1.KongIngr
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("KongIngress %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("KongIngress %v not found", name)}
 	}
 	return p.(*configurationv1.KongIngress), nil
 }
@@ -184,7 +195,7 @@ func (s Store) GetKongConsumer(namespace, name string) (*configurationv1.KongCon
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("consumer %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("KongConsumer %v not found", key)}
 	}
 	return p.(*configurationv1.KongConsumer), nil
 }

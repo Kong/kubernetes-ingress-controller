@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/pkg/errors"
 	"testing"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
@@ -169,6 +170,7 @@ func TestFakeStoreService(t *testing.T) {
 
 	service, err = store.GetService("default", "does-not-exists")
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(service)
 }
 
@@ -192,6 +194,7 @@ func TestFakeStoreEndpiont(t *testing.T) {
 
 	c, err = store.GetEndpointsForService("default", "does-not-exist")
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(c)
 }
 
@@ -217,6 +220,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 	c, err = store.GetKongConsumer("default", "does-not-exist")
 	assert.Nil(c)
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 }
 
 func TestFakeStorePlugins(t *testing.T) {
@@ -274,6 +278,7 @@ func TestFakeStorePlugins(t *testing.T) {
 
 	plugin, err = store.GetKongPlugin("default", "does-not-exist")
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)
 }
 
@@ -328,6 +333,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 
 	plugin, err = store.GetKongClusterPlugin("does-not-exist")
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)
 }
 
@@ -376,6 +382,7 @@ func TestFakeStoreSecret(t *testing.T) {
 	secret, err = store.GetSecret("default", "does-not-exist")
 	assert.Nil(secret)
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 }
 
 func TestFakeKongIngress(t *testing.T) {
@@ -399,4 +406,5 @@ func TestFakeKongIngress(t *testing.T) {
 	kingress, err = store.GetKongIngress("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.Nil(kingress)
+	assert.True(errors.As(err, &ErrNotFound{}))
 }

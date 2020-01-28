@@ -964,7 +964,7 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 		namespace, kongPluginName := identifier[0], identifier[1]
 		plugin, err := p.getPlugin(namespace, kongPluginName)
 		if err != nil {
-			glog.Errorf("reading KongPlugin '%v/%v': %v", namespace,
+			glog.Errorf("fetching KongPlugin '%v/%v': %v", namespace,
 				kongPluginName, err)
 			continue
 		}
@@ -998,7 +998,7 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 func (p *Parser) globalPlugins() ([]Plugin, error) {
 	globalPlugins, err := p.store.ListGlobalKongPlugins()
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing global plugins:")
+		return nil, errors.Wrap(err, "error listing global KongPlugins:")
 	}
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
@@ -1026,6 +1026,31 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 		}
 		res[pluginName] = Plugin{
 			Plugin: kongPluginFromK8SPlugin(k8sPlugin),
+		}
+	}
+
+	globalClusterPlugins, err := p.store.ListGlobalKongClusterPlugins()
+	if err != nil {
+		return nil, errors.Wrap(err, "error listing global KongClusterPlugins")
+	}
+	for i := 0; i < len(globalClusterPlugins); i++ {
+		k8sPlugin := *globalClusterPlugins[i]
+		pluginName := k8sPlugin.PluginName
+		// empty pluginName skip it
+		if pluginName == "" {
+			glog.Errorf("KongPlugin '%v' does not specify a plugin name",
+				k8sPlugin.Name)
+			continue
+		}
+		if _, ok := res[pluginName]; ok {
+			glog.Error("Multiple KongPlugin definitions found with"+
+				" 'global' annotation for '", pluginName,
+				"', the plugin will not be applied")
+			duplicates = append(duplicates, pluginName)
+			continue
+		}
+		res[pluginName] = Plugin{
+			Plugin: kongPluginFromK8SClusterPlugin(k8sPlugin),
 		}
 	}
 	for _, plugin := range duplicates {
@@ -1123,7 +1148,28 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	var plugin kong.Plugin
 	k8sPlugin, err := p.store.GetKongPlugin(namespace, name)
 	if err != nil {
-		return plugin, errors.Wrapf(err, "fetching KongPlugin")
+		// if no namespaced plugin definition, then
+		// search for cluster level-plugin definition
+		if errors.As(err, &store.ErrNotFound{}) {
+			clusterPlugin, err := p.store.GetKongClusterPlugin(name)
+			// not found
+			if errors.As(err, &store.ErrNotFound{}) {
+				return plugin, errors.New(
+					"no KongPlugin or KongClusterPlugin was found")
+			}
+			if err != nil {
+				return plugin, err
+			}
+			if clusterPlugin.PluginName == "" {
+				return plugin, errors.Errorf("invalid empty 'plugin' property")
+			}
+			plugin = kongPluginFromK8SClusterPlugin(*clusterPlugin)
+			return plugin, err
+		}
+		// handle other errors
+		if err != nil {
+			return plugin, err
+		}
 	}
 	// ignore plugins with no name
 	if k8sPlugin.PluginName == "" {
@@ -1133,21 +1179,53 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	return plugin, nil
 }
 
+// plugin is a intermediate type to hold plugin related configuration
+type plugin struct {
+	Name   string
+	Config configurationv1.Configuration
+
+	RunOn     string
+	Disabled  bool
+	Protocols []string
+}
+
+func toKongPlugin(plugin plugin) kong.Plugin {
+	result := kong.Plugin{
+		Name:   kong.String(plugin.Name),
+		Config: kong.Configuration(*plugin.Config.DeepCopy()),
+	}
+	if plugin.RunOn != "" {
+		result.RunOn = kong.String(plugin.RunOn)
+	}
+	if plugin.Disabled {
+		result.Enabled = kong.Bool(false)
+	}
+	if len(plugin.Protocols) > 0 {
+		result.Protocols = kong.StringSlice(plugin.Protocols...)
+	}
+	return result
+}
+
+func kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin) kong.Plugin {
+	return toKongPlugin(plugin{
+		Name:   k8sPlugin.PluginName,
+		Config: k8sPlugin.Config,
+
+		RunOn:     k8sPlugin.RunOn,
+		Disabled:  k8sPlugin.Disabled,
+		Protocols: k8sPlugin.Protocols,
+	})
+}
+
 func kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) kong.Plugin {
-	plugin := kong.Plugin{
-		Name:   kong.String(k8sPlugin.PluginName),
-		Config: kong.Configuration(k8sPlugin.Config).DeepCopy(),
-	}
-	if k8sPlugin.RunOn != "" {
-		plugin.RunOn = kong.String(k8sPlugin.RunOn)
-	}
-	if k8sPlugin.Disabled {
-		plugin.Enabled = kong.Bool(false)
-	}
-	if len(k8sPlugin.Protocols) > 0 {
-		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
-	}
-	return plugin
+	return toKongPlugin(plugin{
+		Name:   k8sPlugin.PluginName,
+		Config: k8sPlugin.Config,
+
+		RunOn:     k8sPlugin.RunOn,
+		Disabled:  k8sPlugin.Disabled,
+		Protocols: k8sPlugin.Protocols,
+	})
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

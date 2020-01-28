@@ -94,18 +94,36 @@ func TestGlobalPlugin(t *testing.T) {
 					},
 				},
 			},
+			KongClusterPlugins: []*configurationv1.KongClusterPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "bar-plugin",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					PluginName: "basic-auth",
+					Config: configurationv1.Configuration{
+						"foo1": "bar1",
+					},
+				},
+			},
 		})
 		assert.Nil(err)
 		parser := New(store)
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
-		assert.Equal(1, len(state.Plugins),
+		assert.Equal(2, len(state.Plugins),
 			"expected one plugin to be rendered")
+
 		assert.Equal("key-auth", *state.Plugins[0].Name)
 		assert.Equal(1, len(state.Plugins[0].Protocols))
 		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
 		assert.Equal(kong.Configuration{"foo": "bar"}, state.Plugins[0].Config)
+
+		assert.Equal("basic-auth", *state.Plugins[1].Name)
+		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[1].Config)
 	})
 }
 
@@ -553,6 +571,279 @@ func TestParserSecret(t *testing.T) {
 			"SNIs are de-duplicated")
 	})
 }
+
+func TestPluginAnnotations(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("simple association", func(t *testing.T) {
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "foo-svc",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+			},
+		}
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "foo-plugin",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		plugins := []*configurationv1.KongPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "key-auth",
+				Protocols:  []string{"grpc"},
+				Config: configurationv1.Configuration{
+					"foo": "bar",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:   ingresses,
+			Services:    services,
+			KongPlugins: plugins,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Plugins),
+			"expected no plugins to be rendered with missing plugin")
+		assert.Equal("key-auth", *state.Plugins[0].Name)
+		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
+	})
+	t.Run("KongPlugin takes precedence over KongPlugin", func(t *testing.T) {
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "foo-svc",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+			},
+		}
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "foo-plugin",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		clusterPlugins := []*configurationv1.KongClusterPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "basic-auth",
+				Protocols:  []string{"grpc"},
+				Config: configurationv1.Configuration{
+					"foo": "bar",
+				},
+			},
+		}
+		plugins := []*configurationv1.KongPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "key-auth",
+				Protocols:  []string{"grpc"},
+				Config: configurationv1.Configuration{
+					"foo": "bar",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:          ingresses,
+			Services:           services,
+			KongPlugins:        plugins,
+			KongClusterPlugins: clusterPlugins,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Plugins),
+			"expected no plugins to be rendered with missing plugin")
+		assert.Equal("key-auth", *state.Plugins[0].Name)
+		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
+	})
+	t.Run("KongClusterPlugin association", func(t *testing.T) {
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "foo-svc",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+			},
+		}
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "foo-plugin",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		clusterPlugins := []*configurationv1.KongClusterPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "basic-auth",
+				Protocols:  []string{"grpc"},
+				Config: configurationv1.Configuration{
+					"foo": "bar",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:          ingresses,
+			Services:           services,
+			KongClusterPlugins: clusterPlugins,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Plugins),
+			"expected no plugins to be rendered with missing plugin")
+		assert.Equal("basic-auth", *state.Plugins[0].Name)
+		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
+	})
+	t.Run("missing plugin", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "does-not-exist",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(0, len(state.Plugins),
+			"expected no plugins to be rendered with missing plugin")
+	})
+}
+
 func TestParseIngressRules(t *testing.T) {
 	assert := assert.New(t)
 	p := Parser{}

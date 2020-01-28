@@ -39,10 +39,12 @@ type Storer interface {
 	GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error)
 	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
+	GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
 
 	ListIngresses() []*networking.Ingress
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
+	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
 	ListKongCredentials() []*configurationv1.KongCredential
 }
@@ -66,6 +68,7 @@ type CacheStores struct {
 	Endpoint cache.Store
 
 	Plugin        cache.Store
+	ClusterPlugin cache.Store
 	Consumer      cache.Store
 	Credential    cache.Store
 	Configuration cache.Store
@@ -148,6 +151,18 @@ func (s Store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugi
 	return p.(*configurationv1.KongPlugin), nil
 }
 
+// GetKongClusterPlugin returns the 'name' KongClusterPlugin resource.
+func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error) {
+	p, exists, err := s.stores.ClusterPlugin.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("plugin %v was not found", name)
+	}
+	return p.(*configurationv1.KongClusterPlugin), nil
+}
+
 // GetKongIngress returns the 'name' KongIngress resource in namespace.
 func (s Store) GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
@@ -217,6 +232,30 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
+			if ok && s.isValidIngresClass(&p.ObjectMeta) {
+				plugins = append(plugins, p)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return plugins, nil
+}
+
+// ListGlobalKongClusterPlugins returns all KongClusterPlugin resources
+// filtered by the ingress.class annotation and with the
+// label global:"true".
+func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error) {
+
+	var plugins []*configurationv1.KongClusterPlugin
+	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
+	if err != nil {
+		return nil, err
+	}
+	err = cache.ListAll(s.stores.ClusterPlugin,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			p, ok := ob.(*configurationv1.KongClusterPlugin)
 			if ok && s.isValidIngresClass(&p.ObjectMeta) {
 				plugins = append(plugins, p)
 			}

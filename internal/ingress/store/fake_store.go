@@ -17,16 +17,22 @@ func keyFunc(obj interface{}) (string, error) {
 	return namespace.String() + "/" + name.String(), nil
 }
 
+func clusterResourceKeyFunc(obj interface{}) (string, error) {
+	v := reflect.Indirect(reflect.ValueOf(obj))
+	return v.FieldByName("Name").String(), nil
+}
+
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	Ingresses       []*networking.Ingress
-	Services        []*apiv1.Service
-	Endpoints       []*apiv1.Endpoints
-	Secrets         []*apiv1.Secret
-	KongPlugins     []*configurationv1.KongPlugin
-	KongIngresses   []*configurationv1.KongIngress
-	KongConsumers   []*configurationv1.KongConsumer
-	KongCredentials []*configurationv1.KongCredential
+	Ingresses          []*networking.Ingress
+	Services           []*apiv1.Service
+	Endpoints          []*apiv1.Endpoints
+	Secrets            []*apiv1.Secret
+	KongPlugins        []*configurationv1.KongPlugin
+	KongClusterPlugins []*configurationv1.KongClusterPlugin
+	KongIngresses      []*configurationv1.KongIngress
+	KongConsumers      []*configurationv1.KongConsumer
+	KongCredentials    []*configurationv1.KongCredential
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -90,6 +96,13 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	kongClusterPluginsStore := cache.NewStore(clusterResourceKeyFunc)
+	for _, p := range objects.KongClusterPlugins {
+		err := kongClusterPluginsStore.Add(p)
+		if err != nil {
+			return nil, err
+		}
+	}
 	s = Store{
 		stores: CacheStores{
 			Ingress:  ingressStore,
@@ -98,6 +111,7 @@ func NewFakeStore(
 			Secret:   secretsStore,
 
 			Plugin:        kongPluginsStore,
+			ClusterPlugin: kongClusterPluginsStore,
 			Consumer:      consumerStore,
 			Credential:    kongCredentialsStore,
 			Configuration: kongIngressStore,

@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.7.1](#071---20200131)
  - [0.7.0](#070---20200106)
  - [0.6.2](#062---20191113)
  - [0.6.1](#061---20191009)
@@ -16,6 +17,28 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.7.1] - 2020/01/31
+
+#### Summary
+
+This releases contains bug-fixes only. All users are advised to upgrade.
+
+#### Fixed
+
+- De-duplicate SNIs when the same SNI is associated with multiple secrets.
+  [#510](https://github.com/Kong/kubernetes-ingress-controller/issues/510)
+- `plugin.RunOn` is not injected when Kong version >= 2.0.0.
+  [#521](https://github.com/Kong/kubernetes-ingress-controller/issues/521)
+- Parse default backend in `Ingress` resource correctly.
+  [#511](https://github.com/Kong/kubernetes-ingress-controller/issues/511)
+- KongPlugin resources with `global: true` label are correctly processed
+  to include `protocols` fields while rendering Kong's configuration.
+  [#502](https://github.com/Kong/kubernetes-ingress-controller/issues/502)
+- Admission Controller: correctly process updates to `KongConsumer` resource
+  [#501](https://github.com/Kong/kubernetes-ingress-controller/issues/501)
+- Do not send multiple update events for a single CRD update
+  [#514](https://github.com/Kong/kubernetes-ingress-controller/issues/514)
 
 ## [0.7.0] - 2020/01/06
 
@@ -586,6 +609,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.7.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.2...0.7.0
 [0.6.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.1...0.6.2
 [0.6.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.0...0.6.1

@@ -332,6 +332,7 @@ var (
 	kong110version = semver.MustParse("1.1.0")
 	kong120version = semver.MustParse("1.2.0")
 	kong130version = semver.MustParse("1.3.0")
+	kong200version = semver.MustParse("2.0.0")
 
 	kongEnterprise036version = semver.MustParse("0.36.0")
 )
@@ -386,6 +387,9 @@ func (n *KongController) fillPlugin(plugin *file.FPlugin) error {
 			// TODO read this from the schema endpoint
 			plugin.Protocols = kong.StringSlice("http", "https")
 		}
+	}
+	if n.cfg.Kong.Version.GTE(kong200version) {
+		plugin.RunOn = nil
 	}
 	return nil
 }

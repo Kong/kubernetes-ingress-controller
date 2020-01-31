@@ -2635,3 +2635,75 @@ func Test_getCombinations(t *testing.T) {
 		})
 	}
 }
+
+func Test_processTLSSections(t *testing.T) {
+	type args struct {
+		tlsSections []networking.IngressTLS
+		namespace   string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string][]string
+	}{
+		{
+			args: args{
+				tlsSections: []networking.IngressTLS{
+					{
+						Hosts: []string{
+							"1.example.com",
+							"2.example.com",
+						},
+						SecretName: "sooper-secret",
+					},
+					{
+						Hosts: []string{
+							"3.example.com",
+							"4.example.com",
+						},
+						SecretName: "sooper-secret2",
+					},
+				},
+				namespace: "foo",
+			},
+			want: map[string][]string{
+				"foo/sooper-secret":  {"1.example.com", "2.example.com"},
+				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
+			},
+		},
+		{
+			args: args{
+				tlsSections: []networking.IngressTLS{
+					{
+						Hosts: []string{
+							"1.example.com",
+						},
+						SecretName: "sooper-secret",
+					},
+					{
+						Hosts: []string{
+							"3.example.com",
+							"1.example.com",
+							"4.example.com",
+						},
+						SecretName: "sooper-secret2",
+					},
+				},
+				namespace: "foo",
+			},
+			want: map[string][]string{
+				"foo/sooper-secret":  {"1.example.com"},
+				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := map[string][]string{}
+			processTLSSections(tt.args.tlsSections, tt.args.namespace, got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("processTLSSections() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

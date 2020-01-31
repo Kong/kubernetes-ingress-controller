@@ -378,8 +378,51 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) error {
 	return nil
 }
 
+func filterHosts(secretNameToSNIs map[string][]string, hosts []string) []string {
+	hostsToAdd := []string{}
+	seenHosts := map[string]bool{}
+	for _, hosts := range secretNameToSNIs {
+		for _, host := range hosts {
+			seenHosts[host] = true
+		}
+	}
+	for _, host := range hosts {
+		if !seenHosts[host] {
+			hostsToAdd = append(hostsToAdd, host)
+		}
+	}
+	return hostsToAdd
+}
+
+func processTLSSections(tlsSections []networking.IngressTLS,
+	namespace string, secretNameToSNIs map[string][]string) {
+	// TODO: optmize: collect all TLS sections and process at the same
+	// time to avoid regenerating the seen map; or use a seen map in the
+	// parser struct itself.
+	for _, tls := range tlsSections {
+		if len(tls.Hosts) == 0 {
+			continue
+		}
+		if tls.SecretName == "" {
+			continue
+		}
+		hosts := tls.Hosts
+		secretName := namespace + "/" + tls.SecretName
+		hosts = filterHosts(secretNameToSNIs, hosts)
+		if secretNameToSNIs[secretName] != nil {
+			hosts = append(hosts, secretNameToSNIs[secretName]...)
+		}
+		secretNameToSNIs[secretName] = hosts
+	}
+}
+
 func (p *Parser) parseIngressRules(
 	ingressList []*networking.Ingress) (*parsedIngressRules, error) {
+
+	sort.SliceStable(ingressList, func(i, j int) bool {
+		return ingressList[i].CreationTimestamp.Before(
+			&ingressList[j].CreationTimestamp)
+	})
 
 	// generate the following:
 	// Services and Routes
@@ -396,20 +439,7 @@ func (p *Parser) parseIngressRules(
 
 		}
 
-		for _, tls := range ingressSpec.TLS {
-			if len(tls.Hosts) == 0 {
-				continue
-			}
-			if tls.SecretName == "" {
-				continue
-			}
-			hosts := tls.Hosts
-			secretName := ingress.Namespace + "/" + tls.SecretName
-			if secretNameToSNIs[secretName] != nil {
-				hosts = append(hosts, secretNameToSNIs[secretName]...)
-			}
-			secretNameToSNIs[secretName] = hosts
-		}
+		processTLSSections(ingressSpec.TLS, ingress.Namespace, secretNameToSNIs)
 
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host

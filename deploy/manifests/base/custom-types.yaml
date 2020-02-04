@@ -237,6 +237,8 @@ spec:
                 - https
                 - grpc
                 - grpcs
+                - tcp
+                - tls
             https_redirect_status_code:
               type: integer
         proxy:
@@ -342,3 +344,75 @@ spec:
                   properties:
                     healthy: *healthy
                     unhealthy: *unhealthy
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: tcpingresses.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  version: v1beta1
+  scope: Namespaced
+  names:
+    kind: TCPIngress
+    plural: tcpingresses
+  additionalPrinterColumns:
+  - name: Address
+    type: string
+    description: Address of the load balancer
+    JSONPath: .status.loadBalancer.ingress[*].ip
+  - name: Age
+    type: date
+    description: Age
+    JSONPath: .metadata.creationTimestamp
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          type: object
+          properties:
+            tls:
+              type: array
+              items:
+                type: object
+                properties:
+                  hosts:
+                    type: array
+                    items:
+                      type: string
+                  secretName:
+                    type: string
+            rules:
+              type: array
+              items:
+                type: object
+                properties:
+                  host:
+                    type: string
+                  port:
+                    type: integer
+                    format: int32
+                  backend:
+                    type: object
+                    properties:
+                      serviceName:
+                        type: string
+                      servicePort:
+                        format: int32
+                        type: integer
+        status:
+          type: object
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

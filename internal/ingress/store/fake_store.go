@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -25,6 +26,7 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
 	Ingresses          []*networking.Ingress
+	TCPIngresses       []*configurationv1beta1.TCPIngress
 	Services           []*apiv1.Service
 	Endpoints          []*apiv1.Endpoints
 	Secrets            []*apiv1.Secret
@@ -43,6 +45,13 @@ func NewFakeStore(
 	ingressStore := cache.NewStore(keyFunc)
 	for _, ingress := range objects.Ingresses {
 		err := ingressStore.Add(ingress)
+		if err != nil {
+			return nil, err
+		}
+	}
+	tcpIngressStore := cache.NewStore(keyFunc)
+	for _, ingress := range objects.TCPIngresses {
+		err := tcpIngressStore.Add(ingress)
 		if err != nil {
 			return nil, err
 		}
@@ -105,10 +114,11 @@ func NewFakeStore(
 	}
 	s = Store{
 		stores: CacheStores{
-			Ingress:  ingressStore,
-			Service:  serviceStore,
-			Endpoint: endpointStore,
-			Secret:   secretsStore,
+			Ingress:    ingressStore,
+			TCPIngress: tcpIngressStore,
+			Service:    serviceStore,
+			Endpoint:   endpointStore,
+			Secret:     secretsStore,
 
 			Plugin:        kongPluginsStore,
 			ClusterPlugin: kongClusterPluginsStore,

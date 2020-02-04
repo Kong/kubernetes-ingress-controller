@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	v1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -63,6 +64,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongIngresses().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("kongplugins"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongPlugins().Informer()}, nil
+
+		// Group=configuration.konghq.com, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("tcpingresses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1beta1().TCPIngresses().Informer()}, nil
 
 	}
 

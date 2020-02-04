@@ -19,5 +19,5 @@ fi
 all \
 ${PACKAGE_NAME}/internal/client/configuration \
 ${PACKAGE_NAME}/internal/apis \
-configuration:v1 \
+"configuration:v1,v1beta1" \
 --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt

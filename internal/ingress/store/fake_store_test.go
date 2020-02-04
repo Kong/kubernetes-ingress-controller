@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -148,6 +149,56 @@ func TestFakeStoreIngress(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	assert.Len(store.ListIngresses(), 1)
+}
+
+func TestFakeStoreListTCPIngress(t *testing.T) {
+	assert := assert.New(t)
+
+	ingresses := []*configurationv1beta1.TCPIngress{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: configurationv1beta1.IngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 9000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "not-kong",
+				},
+			},
+			Spec: configurationv1beta1.IngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 8000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "bar-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{TCPIngresses: ingresses})
+	assert.Nil(err)
+	assert.NotNil(store)
+	ings, err := store.ListTCPIngresses()
+	assert.Nil(err)
+	assert.Len(ings, 1)
 }
 
 func TestFakeStoreService(t *testing.T) {

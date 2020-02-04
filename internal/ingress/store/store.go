@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/glog"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -56,6 +57,7 @@ type Storer interface {
 	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
 
 	ListIngresses() []*networking.Ingress
+	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
@@ -75,10 +77,11 @@ type Store struct {
 // CacheStores stores cache.Store for all Kinds of k8s objects that
 // the Ingress Controller reads.
 type CacheStores struct {
-	Ingress  cache.Store
-	Service  cache.Store
-	Secret   cache.Store
-	Endpoint cache.Store
+	Ingress    cache.Store
+	TCPIngress cache.Store
+	Service    cache.Store
+	Secret     cache.Store
+	Endpoint   cache.Store
 
 	Plugin        cache.Store
 	ClusterPlugin cache.Store
@@ -135,6 +138,23 @@ func (s Store) ListIngresses() []*networking.Ingress {
 	}
 
 	return ingresses
+}
+
+// ListTCPIngresses returns the list of TCP Ingresses from
+// configuration.konghq.com group.
+func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
+	var ingresses []*configurationv1beta1.TCPIngress
+	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
+		func(ob interface{}) {
+			ing, ok := ob.(*configurationv1beta1.TCPIngress)
+			if ok && s.isValidIngresClass(&ing.ObjectMeta) {
+				ingresses = append(ingresses, ing)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return ingresses, nil
 }
 
 // GetEndpointsForService returns the internal endpoints for service

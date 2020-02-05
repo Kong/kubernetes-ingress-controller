@@ -54,7 +54,7 @@ $ helm install kong/kong
 ## Setup environment variables
 
 Next, we will setup an environment variable with the IP address at which
-Kong is accesssible. This will be used to actually send reqeusts into the
+Kong is accessible. This will be used to actually send requests into the
 Kubernetes cluster.
 
 ```bash

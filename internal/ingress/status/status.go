@@ -27,6 +27,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
+	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	pool "gopkg.in/go-playground/pool.v3"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -55,11 +57,13 @@ type Sync interface {
 type ingressLister interface {
 	// ListIngresses returns the list of Ingresses
 	ListIngresses() []*networking.Ingress
+	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
 }
 
 // Config ...
 type Config struct {
-	Client clientset.Interface
+	CoreClient       clientset.Interface
+	KongConfigClient configurationClientSet.Interface
 
 	OnStartedLeading func()
 
@@ -114,10 +118,10 @@ func (s statusSync) Shutdown(isLeader bool) {
 
 	// on shutdown we remove information about the leader election to
 	// avoid up to 30 seconds of delay in start the synchronization process
-	c, err := s.Client.CoreV1().ConfigMaps(s.pod.Namespace).Get(s.electionID, metav1.GetOptions{})
+	c, err := s.CoreClient.CoreV1().ConfigMaps(s.pod.Namespace).Get(s.electionID, metav1.GetOptions{})
 	if err == nil {
 		c.Annotations = map[string]string{}
-		s.Client.CoreV1().ConfigMaps(s.pod.Namespace).Update(c)
+		s.CoreClient.CoreV1().ConfigMaps(s.pod.Namespace).Update(c)
 	}
 
 	if !s.UpdateStatusOnShutdown {
@@ -169,7 +173,7 @@ func (s statusSync) keyfunc(input interface{}) (interface{}, error) {
 
 // NewStatusSyncer returns a new Sync instance
 func NewStatusSyncer(config Config) Sync {
-	pod, err := utils.GetPodDetails(config.Client)
+	pod, err := utils.GetPodDetails(config.CoreClient)
 	if err != nil {
 		glog.Fatalf("unexpected error obtaining pod information: %v", err)
 	}
@@ -216,7 +220,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 	}
 
 	ns, name, _ := utils.ParseNameNS(s.PublishService)
-	svc, err := s.Client.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+	svc, err := s.CoreClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +239,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 		return addrs, nil
 	default:
 		// get information about all the pods running the ingress controller
-		pods, err := s.Client.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
+		pods, err := s.CoreClient.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
 			LabelSelector: labels.SelectorFromSet(s.pod.Labels).String(),
 		})
 		if err != nil {
@@ -248,7 +252,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 				continue
 			}
 
-			name := utils.GetNodeIPOrName(s.Client, pod.Spec.NodeName)
+			name := utils.GetNodeIPOrName(s.CoreClient, pod.Spec.NodeName)
 			if !inSlice(name, addrs) {
 				addrs = append(addrs, name)
 			}
@@ -269,7 +273,7 @@ func inSlice(e string, arr []string) bool {
 }
 
 func (s *statusSync) isRunningMultiplePods() bool {
-	pods, err := s.Client.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
+	pods, err := s.CoreClient.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(s.pod.Labels).String(),
 	})
 	if err != nil {
@@ -300,6 +304,10 @@ func sliceToStatus(endpoints []string) []apiv1.LoadBalancerIngress {
 // updateStatus changes the status information of Ingress rules
 func (s *statusSync) updateStatus(newIngressPoint []apiv1.LoadBalancerIngress) {
 	ings := s.IngressLister.ListIngresses()
+	tcpIngresses, err := s.IngressLister.ListTCPIngresses()
+	if err != nil {
+		glog.Errorf("error listing TPCIngresses for status update")
+	}
 
 	p := pool.NewLimited(10)
 	defer p.Close()
@@ -307,7 +315,10 @@ func (s *statusSync) updateStatus(newIngressPoint []apiv1.LoadBalancerIngress) {
 	batch := p.Batch()
 
 	for _, ing := range ings {
-		batch.Queue(s.runUpdate(ing, newIngressPoint, s.Client))
+		batch.Queue(s.runUpdate(ing, newIngressPoint, s.CoreClient))
+	}
+	for _, ing := range tcpIngresses {
+		batch.Queue(s.runUpdateTCPIngress(ing, newIngressPoint, s.KongConfigClient))
 	}
 
 	batch.QueueComplete()
@@ -359,6 +370,41 @@ func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalan
 			if err != nil {
 				glog.Warningf("error updating ingress rule: %v", err)
 			}
+		}
+		return true, nil
+	}
+}
+
+func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
+	status []apiv1.LoadBalancerIngress,
+	client configurationClientSet.Interface) pool.WorkFunc {
+	return func(wu pool.WorkUnit) (interface{}, error) {
+		if wu.IsCancelled() {
+			return nil, nil
+		}
+
+		sort.SliceStable(status, lessLoadBalancerIngress(status))
+
+		curIPs := ing.Status.LoadBalancer.Ingress
+		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
+
+		if ingressSliceEqual(status, curIPs) {
+			glog.V(3).Infof("skipping update of TCPIngress %v/%v (no change)", ing.Namespace, ing.Name)
+			return true, nil
+		}
+
+		ingClient := client.ConfigurationV1beta1().TCPIngresses(ing.Namespace)
+
+		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching TCPIngress %v/%v", ing.Namespace, ing.Name))
+		}
+
+		glog.Infof("updating TCPIngress %v/%v status to %v", currIng.Namespace, currIng.Name, status)
+		currIng.Status.LoadBalancer.Ingress = status
+		_, err = ingClient.UpdateStatus(currIng)
+		if err != nil {
+			glog.Warningf("error updating status of TCPIngress: %v", err)
 		}
 		return true, nil
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
@@ -64,7 +65,8 @@ type Kong struct {
 type Configuration struct {
 	Kong
 
-	KubeClient clientset.Interface
+	KubeClient       clientset.Interface
+	KongConfigClient configurationClientSet.Interface
 
 	ResyncPeriod  time.Duration
 	SyncRateLimit float32
@@ -166,7 +168,8 @@ func NewKongController(config *Configuration,
 
 	if config.UpdateStatus {
 		n.syncStatus = status.NewStatusSyncer(status.Config{
-			Client:                 config.KubeClient,
+			CoreClient:             config.KubeClient,
+			KongConfigClient:       config.KongConfigClient,
 			PublishService:         config.PublishService,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,

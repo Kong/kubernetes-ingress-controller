@@ -14,6 +14,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
@@ -29,16 +30,26 @@ import (
 // rule.
 type Route struct {
 	kong.Route
+
 	// Ingress object associated with this route
 	Ingress networking.Ingress
+	// TCPIngress object associated with this route
+	TCPIngress configurationv1beta1.TCPIngress
+	// Is this route coming from TCPIngress or networking.Ingress?
+	IsTCP   bool
 	Plugins []kong.Plugin
+}
+
+type backend struct {
+	Name string
+	Port intstr.IntOrString
 }
 
 // Service represents a service in Kong and holds routes associated with the
 // service and other k8s metadata.
 type Service struct {
 	kong.Service
-	Backend    networking.IngressBackend
+	Backend    backend
 	Namespace  string
 	Routes     []Route
 	Plugins    []kong.Plugin
@@ -112,7 +123,7 @@ var supportedCreds = sets.NewString(
 	"oauth2",
 )
 
-var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs$`)
+var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
 
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
@@ -125,15 +136,19 @@ func New(store store.Storer) Parser {
 func (p *Parser) Build() (*KongState, error) {
 	var state KongState
 	ings := p.store.ListIngresses()
+	tcpIngresses, err := p.store.ListTCPIngresses()
+	if err != nil {
+		glog.Errorf("error listing TCPIngresses: %v", err)
+	}
 	// parse ingress rules
-	parsedInfo, err := p.parseIngressRules(ings)
+	parsedInfo, err := p.parseIngressRules(ings, tcpIngresses)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing ingress rules")
 	}
 
 	// populate Kubernetes Service
 	for key, service := range parsedInfo.ServiceNameToServices {
-		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.ServiceName)
+		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.Name)
 		if err != nil {
 			glog.Errorf("getting service: %v", err)
 		}
@@ -416,12 +431,30 @@ func processTLSSections(tlsSections []networking.IngressTLS,
 	}
 }
 
+func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
+	var result []networking.IngressTLS
+
+	for _, t := range tls {
+		result = append(result, networking.IngressTLS{
+			Hosts:      t.Hosts,
+			SecretName: t.SecretName,
+		})
+	}
+	return result
+}
+
 func (p *Parser) parseIngressRules(
-	ingressList []*networking.Ingress) (*parsedIngressRules, error) {
+	ingressList []*networking.Ingress,
+	tcpIngressList []*configurationv1beta1.TCPIngress) (*parsedIngressRules, error) {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
+	})
+
+	sort.SliceStable(tcpIngressList, func(i, j int) bool {
+		return tcpIngressList[i].CreationTimestamp.Before(
+			&tcpIngressList[j].CreationTimestamp)
 	})
 
 	// generate the following:
@@ -497,12 +530,96 @@ func (p *Parser) parseIngressRules(
 							Retries:        kong.Int(5),
 						},
 						Namespace: ingress.Namespace,
-						Backend:   rule.Backend,
+						Backend: backend{
+							Name: rule.Backend.ServiceName,
+							Port: rule.Backend.ServicePort,
+						},
 					}
 				}
 				service.Routes = append(service.Routes, r)
 				serviceNameToServices[serviceName] = service
 			}
+		}
+	}
+
+	for i := 0; i < len(tcpIngressList); i++ {
+		ingress := *tcpIngressList[i]
+		ingressSpec := ingress.Spec
+
+		processTLSSections(toNetworkingTLS(ingressSpec.TLS),
+			ingress.Namespace, secretNameToSNIs)
+
+		for i, rule := range ingressSpec.Rules {
+
+			if rule.Port <= 0 {
+				glog.Errorf("invalid port value (%v) in TCPIngress %v/%v",
+					rule.Port, ingress.Namespace, ingress.Name)
+				continue
+			}
+			r := Route{
+				IsTCP:      true,
+				TCPIngress: ingress,
+				Route: kong.Route{
+					// TODO Figure out a way to name the routes
+					// This is not a stable scheme
+					// 1. If a user adds a route in the middle,
+					// due to a shift, all the following routes will
+					// be PATCHED
+					// 2. Is it guaranteed that the order is stable?
+					// Meaning, the routes will always appear in the same
+					// order?
+					Name:      kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i)),
+					Protocols: kong.StringSlice("tcp", "tls"),
+					Destinations: []*kong.CIDRPort{
+						{
+							Port: kong.Int(rule.Port),
+						},
+					},
+				},
+			}
+			host := rule.Host
+			if host != "" {
+				r.SNIs = kong.StringSlice(host)
+			}
+			if rule.Backend.ServiceName == "" {
+				glog.Errorf("invalid empty serviceName in"+
+					"TCPIngress %v/%v", ingress.Namespace, ingress.Name)
+				continue
+			}
+			if rule.Backend.ServicePort <= 0 {
+				glog.Errorf("invalid servicePort (%v) in"+
+					"TCPIngress %v/%v", rule.Backend.ServicePort,
+					ingress.Namespace, ingress.Name)
+				continue
+			}
+
+			serviceName := ingress.Namespace + "." +
+				rule.Backend.ServiceName + "." +
+				strconv.Itoa(rule.Backend.ServicePort)
+			service, ok := serviceNameToServices[serviceName]
+			if !ok {
+				service = Service{
+					Service: kong.Service{
+						Name: kong.String(serviceName),
+						Host: kong.String(rule.Backend.ServiceName +
+							"." + ingress.Namespace + "." +
+							strconv.Itoa(rule.Backend.ServicePort) + ".svc"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("tcp"),
+						ConnectTimeout: kong.Int(60000),
+						ReadTimeout:    kong.Int(60000),
+						WriteTimeout:   kong.Int(60000),
+						Retries:        kong.Int(5),
+					},
+					Namespace: ingress.Namespace,
+					Backend: backend{
+						Name: rule.Backend.ServiceName,
+						Port: intstr.FromInt(rule.Backend.ServicePort),
+					},
+				}
+			}
+			service.Routes = append(service.Routes, r)
+			serviceNameToServices[serviceName] = service
 		}
 	}
 
@@ -533,7 +650,10 @@ func (p *Parser) parseIngressRules(
 					Retries:        kong.Int(5),
 				},
 				Namespace: ingress.Namespace,
-				Backend:   *defaultBackend,
+				Backend: backend{
+					Name: defaultBackend.ServiceName,
+					Port: defaultBackend.ServicePort,
+				},
 			}
 		}
 		r := Route{
@@ -570,8 +690,16 @@ func (p *Parser) fillOverrides(state KongState) error {
 
 		// Routes
 		for j := 0; j < len(state.Services[i].Routes); j++ {
-			kongIngress, err := p.getKongIngressFromIngress(
-				&state.Services[i].Routes[j].Ingress)
+			var kongIngress *configurationv1.KongIngress
+			var err error
+			if state.Services[i].Routes[j].IsTCP {
+				kongIngress, err = p.getKongIngressFromTCPIngress(
+					&state.Services[i].Routes[j].TCPIngress)
+			} else {
+				kongIngress, err = p.getKongIngressFromIngress(
+					&state.Services[i].Routes[j].Ingress)
+			}
+
 			if err != nil {
 				glog.Errorf("error getting kongIngress %v", err)
 			}
@@ -587,7 +715,7 @@ func (p *Parser) fillOverrides(state KongState) error {
 			overrideUpstream(&state.Upstreams[i], kongIngress)
 		} else {
 			glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
-				state.Upstreams[i].Service.Backend.ServiceName, state.Upstreams[i].Service.Namespace))
+				state.Upstreams[i].Service.Backend.Name, state.Upstreams[i].Service.Namespace))
 		}
 	}
 	return nil
@@ -729,7 +857,11 @@ func overrideRoute(route *Route,
 		return
 	}
 	overrideRouteByKongIngress(route, kongIngress)
-	overrideRouteByAnnotation(route, route.Ingress.Annotations)
+	anns := route.Ingress.Annotations
+	if route.IsTCP {
+		anns = route.TCPIngress.Annotations
+	}
+	overrideRouteByAnnotation(route, anns)
 	normalizeProtocols(route)
 	for _, val := range route.Protocols {
 		if *val == "grpc" || *val == "grpcs" {
@@ -762,16 +894,16 @@ func overrideUpstream(upstream *Upstream,
 func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error) {
 	var upstreams []Upstream
 	for _, service := range serviceMap {
-		upstreamName := service.Backend.ServiceName + "." + service.Namespace + "." + service.Backend.ServicePort.String() + ".svc"
+		upstreamName := service.Backend.Name + "." + service.Namespace + "." + service.Backend.Port.String() + ".svc"
 		upstream := Upstream{
 			Upstream: kong.Upstream{
 				Name: kong.String(upstreamName),
 			},
 			Service: service,
 		}
-		svcKey := service.Namespace + "/" + service.Backend.ServiceName
+		svcKey := service.Namespace + "/" + service.Backend.Name
 		targets, err := p.getServiceEndpoints(service.K8sService,
-			service.Backend.ServicePort.String())
+			service.Backend.Port.String())
 		if err != nil {
 			glog.Errorf("error getting endpoints for '%v' service: %v",
 				svcKey, err)
@@ -1124,23 +1256,40 @@ func (p *Parser) getKongIngressForService(service corev1.Service) (
 	return p.store.GetKongIngress(service.Namespace, confName)
 }
 
-// getKongIngressFromIngress checks if the Ingress contains an annotation for configuration
-// or if exists a KongIngress object with the same name than the Ingress
-func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
+func (p *Parser) getKongIngressFromIngressAnnotations(namespace, name string,
+	anns map[string]string) (
 	*configurationv1.KongIngress, error) {
-	confName := annotations.ExtractConfigurationName(ing.Annotations)
+	confName := annotations.ExtractConfigurationName(anns)
 	if confName != "" {
-		ki, err := p.store.GetKongIngress(ing.Namespace, confName)
+		ki, err := p.store.GetKongIngress(namespace, confName)
 		if err == nil {
 			return ki, nil
 		}
 	}
 
-	ki, err := p.store.GetKongIngress(ing.Namespace, ing.Name)
+	ki, err := p.store.GetKongIngress(namespace, name)
 	if err == nil {
 		return ki, err
 	}
 	return nil, nil
+}
+
+// getKongIngressFromIngress checks if the Ingress
+// contains an annotation for configuration
+// or if exists a KongIngress object with the same name than the Ingress
+func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
+	*configurationv1.KongIngress, error) {
+	return p.getKongIngressFromIngressAnnotations(ing.Namespace,
+		ing.Name, ing.Annotations)
+}
+
+// getKongIngressFromTCPIngress checks if the TCPIngress contains an
+// annotation for configuration
+// or if exists a KongIngress object with the same name than the Ingress
+func (p *Parser) getKongIngressFromTCPIngress(ing *configurationv1beta1.TCPIngress) (
+	*configurationv1.KongIngress, error) {
+	return p.getKongIngressFromIngressAnnotations(ing.Namespace,
+		ing.Name, ing.Annotations)
 }
 
 // getPlugin constructs a plugins from a KongPlugin resource.

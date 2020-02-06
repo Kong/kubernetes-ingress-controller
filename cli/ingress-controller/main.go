@@ -232,6 +232,8 @@ func main() {
 		informers.WithNamespace(cliConfig.WatchNamespace),
 	)
 	confClient, _ := configurationclientv1.NewForConfig(kubeCfg)
+	controllerConfig.KongConfigClient = confClient
+
 	kongInformerFactory := configurationinformer.NewSharedInformerFactoryWithOptions(
 		confClient,
 		cliConfig.SyncPeriod,
@@ -274,6 +276,11 @@ func main() {
 	servicesInformer.AddEventHandler(reh)
 	cacheStores.Service = servicesInformer.GetStore()
 	informers = append(informers, servicesInformer)
+
+	tcpIngressInformer := kongInformerFactory.Configuration().V1beta1().TCPIngresses().Informer()
+	tcpIngressInformer.AddEventHandler(reh)
+	cacheStores.TCPIngress = tcpIngressInformer.GetStore()
+	informers = append(informers, tcpIngressInformer)
 
 	kongIngressInformer := kongInformerFactory.Configuration().V1().KongIngresses().Informer()
 	kongIngressInformer.AddEventHandler(reh)

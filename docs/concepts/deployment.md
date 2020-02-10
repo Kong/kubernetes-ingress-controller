@@ -256,7 +256,14 @@ There are a few different ways of accomplishing this:
   an Ingress Controller will satisfy Ingress rules created in all the namespaces
   inside a Kubernetes cluster.
   Use the annotation on Ingress and Custom resources to segment
-  the Ingress resources between multiple Ingress Controllers.
+  the Ingress resources between multiple Ingress Controllers.  
+  **Warning!**  
+  When you use another Ingress Controler, which is default for cluster
+  (without set any `kubernetes.io/ingress.class`), be aware of using default `kong`
+  ingress class. There is special behavior of the default `kong` ingress class,
+  where any ingress resource that is not annotated is picked up.
+  Therefore with different ingress class then `kong`, you have to use that
+  ingress class with every Kong CRD object (plugin, consumer) which you use.
 - Namespace based isolation:  
   Kong Ingress Controller supports a deployment option where it will satisfy
   Ingress resources in a specific namespace. With this model, one can deploy

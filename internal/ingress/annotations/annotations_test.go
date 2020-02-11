@@ -85,6 +85,17 @@ func TestExtractClientCert(t *testing.T) {
 	}
 }
 
+func TestExtractStripPath(t *testing.T) {
+	data := map[string]string{
+		"configuration.konghq.com/strip-path": "true",
+	}
+
+	secret := ExtractStripPath(data)
+	if secret != "true" {
+		t.Errorf("expected strip-path as true but got %v", secret)
+	}
+}
+
 func TestIngrssClassValidatorFunc(t *testing.T) {
 	tests := []struct {
 		ingress    string

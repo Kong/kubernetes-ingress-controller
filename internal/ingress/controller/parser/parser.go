@@ -748,14 +748,41 @@ func overrideServiceByKongIngress(service *Service,
 	}
 }
 
-// overrideServiceByAnnotation sets the Service protocol via annotation
-func overrideServiceByAnnotation(service *Service,
-	anns map[string]string) {
+func overrideServicePath(service *kong.Service, anns map[string]string) {
+	if service == nil {
+		return
+	}
+	path := annotations.ExtractPath(anns)
+	if path == "" {
+		return
+	}
+	// kong errors if path doesn't start with `/`
+	if !strings.HasPrefix(path, "/") {
+		return
+	}
+	service.Path = kong.String(path)
+}
+
+func overrideServiceProtocol(service *kong.Service, anns map[string]string) {
+	if service == nil {
+		return
+	}
 	protocol := annotations.ExtractProtocolName(anns)
 	if protocol == "" || validateProtocol(protocol) != true {
 		return
 	}
 	service.Protocol = kong.String(protocol)
+}
+
+// overrideServiceByAnnotation modifies the Kong service based on annotations
+// on the Kubernetes service.
+func overrideServiceByAnnotation(service *kong.Service,
+	anns map[string]string) {
+	if service == nil {
+		return
+	}
+	overrideServiceProtocol(service, anns)
+	overrideServicePath(service, anns)
 }
 
 // overrideService sets Service fields by KongIngress first, then by annotation
@@ -766,7 +793,7 @@ func overrideService(service *Service,
 		return
 	}
 	overrideServiceByKongIngress(service, kongIngress)
-	overrideServiceByAnnotation(service, anns)
+	overrideServiceByAnnotation(&service.Service, anns)
 
 	if *service.Protocol == "grpc" || *service.Protocol == "grpcs" {
 		// grpc(s) doesn't accept a path

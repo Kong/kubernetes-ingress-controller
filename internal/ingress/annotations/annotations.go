@@ -39,6 +39,7 @@ const (
 
 	stripPathAnnotationKey = annotationPrefix + "/strip-path"
 
+	pathAnnotationKey = annotationPrefix + "/path"
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
@@ -124,6 +125,12 @@ func ExtractClientCertificate(anns map[string]string) string {
 // the boolean string "true" or "false".
 func ExtractStripPath(anns map[string]string) string {
 	return anns[stripPathAnnotationKey]
+}
+
+// ExtractPath extracts the path annotations containing the
+// HTTP path.
+func ExtractPath(anns map[string]string) string {
+	return anns[pathAnnotationKey]
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

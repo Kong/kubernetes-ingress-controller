@@ -833,11 +833,27 @@ func validateProtocol(protocol string) bool {
 	return match
 }
 
-// overrideRouteByAnnotation sets Route protocols via annotation
-func overrideRouteByAnnotation(route *Route, anns map[string]string) {
-	if anns == nil {
+func overrideRouteStripPath(route *kong.Route, anns map[string]string) {
+	if route == nil {
 		return
 	}
+
+	stripPathValue := annotations.ExtractStripPath(anns)
+	if stripPathValue == "" {
+		return
+	}
+	stripPathValue = strings.ToLower(stripPathValue)
+	switch stripPathValue {
+	case "true":
+		route.StripPath = kong.Bool(true)
+	case "false":
+		route.StripPath = kong.Bool(false)
+	default:
+		return
+	}
+}
+
+func overrideRouteProtocols(route *kong.Route, anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
 	var prots []*string
 	for _, prot := range protocols {
@@ -850,6 +866,16 @@ func overrideRouteByAnnotation(route *Route, anns map[string]string) {
 	route.Protocols = prots
 }
 
+// overrideRouteByAnnotation sets Route protocols via annotation
+func overrideRouteByAnnotation(route *Route) {
+	anns := route.Ingress.Annotations
+	if route.IsTCP {
+		anns = route.TCPIngress.Annotations
+	}
+	overrideRouteProtocols(&route.Route, anns)
+	overrideRouteStripPath(&route.Route, anns)
+}
+
 // overrideRoute sets Route fields by KongIngress first, then by annotation
 func overrideRoute(route *Route,
 	kongIngress *configurationv1.KongIngress) {
@@ -857,11 +883,7 @@ func overrideRoute(route *Route,
 		return
 	}
 	overrideRouteByKongIngress(route, kongIngress)
-	anns := route.Ingress.Annotations
-	if route.IsTCP {
-		anns = route.TCPIngress.Annotations
-	}
-	overrideRouteByAnnotation(route, anns)
+	overrideRouteByAnnotation(route)
 	normalizeProtocols(route)
 	for _, val := range route.Protocols {
 		if *val == "grpc" || *val == "grpcs" {

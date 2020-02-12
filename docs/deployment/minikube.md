@@ -58,9 +58,9 @@ Kong is accesssible. This will be used to actually send reqeusts into the
 Kubernetes cluster.
 
 ```bash
-$ export PROXY_IP=$(minikube service -n kong kong-kong-proxy --url | head -1)
-# If installed by helm without specifying namespace, use the line below instead.
-# $ export PROXY_IP=$(minikube service kong-kong-proxy --url | head -1)
+$ export PROXY_IP=$(minikube service -n kong kong-proxy --url | head -1)
+# If installed by helm, service name would be "<release-name>-kong-proxy".
+# $ export PROXY_IP=$(minikube service <release-name>-kong-proxy --url | head -1)
 $ echo $PROXY_IP
 http://192.168.99.100:32728
 ```

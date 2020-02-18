@@ -359,6 +359,87 @@ func TestKongRouteAnnotations(t *testing.T) {
 	})
 }
 
+func TestKongServiceAnnotations(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("path annotation is correctly processed", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"configuration.konghq.com/path": "/baz",
+					},
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+		assert.Equal(kong.Service{
+			Name:           kong.String("default.foo-svc.80"),
+			Host:           kong.String("foo-svc.default.80.svc"),
+			Path:           kong.String("/baz"),
+			Port:           kong.Int(80),
+			ConnectTimeout: kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			WriteTimeout:   kong.Int(60000),
+			Retries:        kong.Int(5),
+			Protocol:       kong.String("http"),
+		}, state.Services[0].Service)
+
+		assert.Equal(1, len(state.Services[0].Routes),
+			"expected one route to be rendered")
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.bar.00"),
+			StripPath:     kong.Bool(true),
+			Hosts:         kong.StringSlice("example.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+			RegexPriority: kong.Int(0),
+		}, state.Services[0].Routes[0].Route)
+	})
+}
+
 func TestDefaultBackend(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("default backend is processed correctly", func(t *testing.T) {
@@ -3300,5 +3381,70 @@ func Test_overrideRouteStripPath(t *testing.T) {
 		if !reflect.DeepEqual(tt.args.route, tt.want) {
 			t.Errorf("overrideRouteStripPath() got = %v, want %v", tt.args.route, tt.want)
 		}
+	}
+}
+
+func Test_overrideServicePath(t *testing.T) {
+	type args struct {
+		service *kong.Service
+		anns    map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *kong.Service
+	}{
+		{},
+		{
+			name: "basic empty service",
+			args: args{
+				service: &kong.Service{},
+			},
+			want: &kong.Service{},
+		},
+		{
+			name: "set to valid value",
+			args: args{
+				service: &kong.Service{},
+				anns: map[string]string{
+					"configuration.konghq.com/path": "/foo",
+				},
+			},
+			want: &kong.Service{
+				Path: kong.String("/foo"),
+			},
+		},
+		{
+			name: "does not set path if doesn't start with /",
+			args: args{
+				service: &kong.Service{},
+				anns: map[string]string{
+					"configuration.konghq.com/path": "foo",
+				},
+			},
+			want: &kong.Service{},
+		},
+		{
+			name: "overrides any other value",
+			args: args{
+				service: &kong.Service{
+					Path: kong.String("/foo"),
+				},
+				anns: map[string]string{
+					"configuration.konghq.com/path": "/bar",
+				},
+			},
+			want: &kong.Service{
+				Path: kong.String("/bar"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			overrideServicePath(tt.args.service, tt.args.anns)
+			if !reflect.DeepEqual(tt.args.service, tt.want) {
+				t.Errorf("overrideServicePath() got = %v, want %v", tt.args.service, tt.want)
+			}
+		})
 	}
 }

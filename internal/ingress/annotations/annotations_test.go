@@ -128,3 +128,35 @@ func TestIngrssClassValidatorFunc(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractPath(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/path": "/foo",
+				},
+			},
+			want: "/foo",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ExtractPath(tt.args.anns); got != tt.want {
+				t.Errorf("ExtractPath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

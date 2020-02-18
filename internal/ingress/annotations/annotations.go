@@ -39,6 +39,7 @@ const (
 	stripPathKey         = "/strip-path"
 	pathKey              = "/path"
 	httpsRedirectCodeKey = "/https-redirect-status-code"
+	preserveHostKey      = "/preserve-host"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -164,6 +165,11 @@ func ExtractPath(anns map[string]string) string {
 // code annotation value.
 func ExtractHTTPSRedirectStatusCode(anns map[string]string) string {
 	return valueFromAnnotation(httpsRedirectCodeKey, anns)
+}
+
+// ExtractPreserveHost extracts the preserve-host annotation value.
+func ExtractPreserveHost(anns map[string]string) string {
+	return valueFromAnnotation(preserveHostKey, anns)
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

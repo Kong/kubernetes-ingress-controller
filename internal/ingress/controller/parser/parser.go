@@ -913,6 +913,22 @@ func overrideRouteHTTPSRedirectCode(route *kong.Route, anns map[string]string) {
 	route.HTTPSRedirectStatusCode = kong.Int(statusCode)
 }
 
+func overrideRoutePreserveHost(route *kong.Route, anns map[string]string) {
+	preserveHostValue := annotations.ExtractPreserveHost(anns)
+	if preserveHostValue == "" {
+		return
+	}
+	preserveHostValue = strings.ToLower(preserveHostValue)
+	switch preserveHostValue {
+	case "true":
+		route.PreserveHost = kong.Bool(true)
+	case "false":
+		route.PreserveHost = kong.Bool(false)
+	default:
+		return
+	}
+}
+
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route) {
 	anns := route.Ingress.Annotations
@@ -922,6 +938,7 @@ func overrideRouteByAnnotation(route *Route) {
 	overrideRouteProtocols(&route.Route, anns)
 	overrideRouteStripPath(&route.Route, anns)
 	overrideRouteHTTPSRedirectCode(&route.Route, anns)
+	overrideRoutePreserveHost(&route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation

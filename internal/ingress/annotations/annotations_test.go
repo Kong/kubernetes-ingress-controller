@@ -487,3 +487,54 @@ func TestExtractStripPath(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractHTTPSRedirectStatusCode(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/https-redirect-status-code": "301",
+				},
+			},
+			want: "301",
+		},
+		{
+			name: "non-empty new group",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/https-redirect-status-code": "302",
+				},
+			},
+			want: "302",
+		},
+		{
+			name: "group preference",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/https-redirect-status-code": "301",
+					"konghq.com/https-redirect-status-code":               "302",
+				},
+			},
+			want: "302",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ExtractHTTPSRedirectStatusCode(tt.args.anns); got != tt.want {
+				t.Errorf("ExtractHTTPSRedirectStatusCode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

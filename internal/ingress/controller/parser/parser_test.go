@@ -357,6 +357,163 @@ func TestKongRouteAnnotations(t *testing.T) {
 			RegexPriority: kong.Int(0),
 		}, state.Services[0].Routes[0].Route)
 	})
+	t.Run("https-redirect-status-code annotation is correctly processed",
+		func(t *testing.T) {
+			ingresses := []*networking.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"konghq.com/https-redirect-status-code": "301",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "example.com",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: networking.IngressBackend{
+													ServiceName: "foo-svc",
+													ServicePort: intstr.FromInt(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			services := []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc",
+						Namespace: "default",
+					},
+				},
+			}
+			store, err := store.NewFakeStore(store.FakeObjects{
+				Ingresses: ingresses,
+				Services:  services,
+			})
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+
+			assert.Equal(1, len(state.Services),
+				"expected one service to be rendered")
+			assert.Equal(kong.Service{
+				Name:           kong.String("default.foo-svc.80"),
+				Host:           kong.String("foo-svc.default.80.svc"),
+				Path:           kong.String("/"),
+				Port:           kong.Int(80),
+				ConnectTimeout: kong.Int(60000),
+				ReadTimeout:    kong.Int(60000),
+				WriteTimeout:   kong.Int(60000),
+				Retries:        kong.Int(5),
+				Protocol:       kong.String("http"),
+			}, state.Services[0].Service)
+
+			assert.Equal(1, len(state.Services[0].Routes),
+				"expected one route to be rendered")
+			assert.Equal(kong.Route{
+				Name:                    kong.String("default.bar.00"),
+				StripPath:               kong.Bool(true),
+				HTTPSRedirectStatusCode: kong.Int(301),
+				Hosts:                   kong.StringSlice("example.com"),
+				PreserveHost:            kong.Bool(true),
+				Paths:                   kong.StringSlice("/"),
+				Protocols:               kong.StringSlice("http", "https"),
+				RegexPriority:           kong.Int(0),
+			}, state.Services[0].Routes[0].Route)
+		})
+	t.Run("bad https-redirect-status-code annotation is ignored",
+		func(t *testing.T) {
+			ingresses := []*networking.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"konghq.com/https-redirect-status-code": "whoops",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "example.com",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: networking.IngressBackend{
+													ServiceName: "foo-svc",
+													ServicePort: intstr.FromInt(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			services := []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc",
+						Namespace: "default",
+					},
+				},
+			}
+			store, err := store.NewFakeStore(store.FakeObjects{
+				Ingresses: ingresses,
+				Services:  services,
+			})
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+
+			assert.Equal(1, len(state.Services),
+				"expected one service to be rendered")
+			assert.Equal(kong.Service{
+				Name:           kong.String("default.foo-svc.80"),
+				Host:           kong.String("foo-svc.default.80.svc"),
+				Path:           kong.String("/"),
+				Port:           kong.Int(80),
+				ConnectTimeout: kong.Int(60000),
+				ReadTimeout:    kong.Int(60000),
+				WriteTimeout:   kong.Int(60000),
+				Retries:        kong.Int(5),
+				Protocol:       kong.String("http"),
+			}, state.Services[0].Service)
+
+			assert.Equal(1, len(state.Services[0].Routes),
+				"expected one route to be rendered")
+			assert.Equal(kong.Route{
+				Name:          kong.String("default.bar.00"),
+				StripPath:     kong.Bool(true),
+				Hosts:         kong.StringSlice("example.com"),
+				PreserveHost:  kong.Bool(true),
+				Paths:         kong.StringSlice("/"),
+				Protocols:     kong.StringSlice("http", "https"),
+				RegexPriority: kong.Int(0),
+			}, state.Services[0].Routes[0].Route)
+		})
 }
 
 func TestKongServiceAnnotations(t *testing.T) {
@@ -3377,10 +3534,10 @@ func Test_overrideRouteStripPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			overrideRouteStripPath(tt.args.route, tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideRouteStripPath() got = %v, want %v", tt.args.route, tt.want)
+			}
 		})
-		if !reflect.DeepEqual(tt.args.route, tt.want) {
-			t.Errorf("overrideRouteStripPath() got = %v, want %v", tt.args.route, tt.want)
-		}
 	}
 }
 
@@ -3444,6 +3601,67 @@ func Test_overrideServicePath(t *testing.T) {
 			overrideServicePath(tt.args.service, tt.args.anns)
 			if !reflect.DeepEqual(tt.args.service, tt.want) {
 				t.Errorf("overrideServicePath() got = %v, want %v", tt.args.service, tt.want)
+			}
+		})
+	}
+}
+
+func Test_overrideRouteHTTPSRedirectCode(t *testing.T) {
+	type args struct {
+		route *kong.Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *kong.Route
+	}{
+		{},
+		{
+			name: "basic empty route",
+			args: args{
+				route: &kong.Route{},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "basic sanity",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/https-redirect-status-code": "301",
+				},
+			},
+			want: &kong.Route{
+				HTTPSRedirectStatusCode: kong.Int(301),
+			},
+		},
+		{
+			name: "random integer value",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/https-redirect-status-code": "42",
+				},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "random string",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/https-redirect-status-code": "foo",
+				},
+			},
+			want: &kong.Route{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			overrideRouteHTTPSRedirectCode(tt.args.route, tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideRouteHTTPSRedirectCode() got = %v, want %v", tt.args.route, tt.want)
 			}
 		})
 	}

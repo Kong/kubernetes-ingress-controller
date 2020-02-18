@@ -31,13 +31,14 @@ const (
 	deprecatedPluginsKey       = "plugins.konghq.com"
 	deprecatedConfigurationKey = deprecatedAnnotationPrefix
 
-	configurationKey = "/override"
-	pluginsKey       = "/plugins"
-	protocolKey      = "/protocol"
-	protocolsKey     = "/protocols"
-	clientCertKey    = "/client-cert"
-	stripPathKey     = "/strip-path"
-	pathKey          = "/path"
+	configurationKey     = "/override"
+	pluginsKey           = "/plugins"
+	protocolKey          = "/protocol"
+	protocolsKey         = "/protocols"
+	clientCertKey        = "/client-cert"
+	stripPathKey         = "/strip-path"
+	pathKey              = "/path"
+	httpsRedirectCodeKey = "/https-redirect-status-code"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -157,6 +158,12 @@ func ExtractStripPath(anns map[string]string) string {
 // HTTP path.
 func ExtractPath(anns map[string]string) string {
 	return valueFromAnnotation(pathKey, anns)
+}
+
+// ExtractHTTPSRedirectStatusCode extracts the https redirect status
+// code annotation value.
+func ExtractHTTPSRedirectStatusCode(anns map[string]string) string {
+	return valueFromAnnotation(httpsRedirectCodeKey, anns)
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

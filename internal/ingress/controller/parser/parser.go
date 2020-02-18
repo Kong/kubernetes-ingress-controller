@@ -893,6 +893,26 @@ func overrideRouteProtocols(route *kong.Route, anns map[string]string) {
 	route.Protocols = prots
 }
 
+func overrideRouteHTTPSRedirectCode(route *kong.Route, anns map[string]string) {
+	code := annotations.ExtractHTTPSRedirectStatusCode(anns)
+	if code == "" {
+		return
+	}
+	statusCode, err := strconv.Atoi(code)
+	if err != nil {
+		return
+	}
+	if statusCode != 426 &&
+		statusCode != 301 &&
+		statusCode != 302 &&
+		statusCode != 307 &&
+		statusCode != 308 {
+		return
+	}
+
+	route.HTTPSRedirectStatusCode = kong.Int(statusCode)
+}
+
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route) {
 	anns := route.Ingress.Annotations
@@ -901,6 +921,7 @@ func overrideRouteByAnnotation(route *Route) {
 	}
 	overrideRouteProtocols(&route.Route, anns)
 	overrideRouteStripPath(&route.Route, anns)
+	overrideRouteHTTPSRedirectCode(&route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation

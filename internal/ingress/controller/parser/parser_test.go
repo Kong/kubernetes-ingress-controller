@@ -280,7 +280,84 @@ func TestServiceClientCertificate(t *testing.T) {
 
 func TestKongRouteAnnotations(t *testing.T) {
 	assert := assert.New(t)
-	t.Run("strip-path annotation is correctly processed", func(t *testing.T) {
+	t.Run("strip-path annotation is correctly processed (true)", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"configuration.konghq.com/strip-path": "trUe",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+		assert.Equal(kong.Service{
+			Name:           kong.String("default.foo-svc.80"),
+			Host:           kong.String("foo-svc.default.80.svc"),
+			Path:           kong.String("/"),
+			Port:           kong.Int(80),
+			ConnectTimeout: kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			WriteTimeout:   kong.Int(60000),
+			Retries:        kong.Int(5),
+			Protocol:       kong.String("http"),
+		}, state.Services[0].Service)
+
+		assert.Equal(1, len(state.Services[0].Routes),
+			"expected one route to be rendered")
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.bar.00"),
+			StripPath:     kong.Bool(true),
+			Hosts:         kong.StringSlice("example.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+			RegexPriority: kong.Int(0),
+		}, state.Services[0].Routes[0].Route)
+	})
+	t.Run("strip-path annotation is correctly processed (false)", func(t *testing.T) {
 		ingresses := []*networking.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -427,7 +504,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
 				Name:                    kong.String("default.bar.00"),
-				StripPath:               kong.Bool(true),
+				StripPath:               kong.Bool(false),
 				HTTPSRedirectStatusCode: kong.Int(301),
 				Hosts:                   kong.StringSlice("example.com"),
 				PreserveHost:            kong.Bool(true),
@@ -506,7 +583,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
 				Name:          kong.String("default.bar.00"),
-				StripPath:     kong.Bool(true),
+				StripPath:     kong.Bool(false),
 				Hosts:         kong.StringSlice("example.com"),
 				PreserveHost:  kong.Bool(true),
 				Paths:         kong.StringSlice("/"),
@@ -584,7 +661,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
 				Name:          kong.String("default.bar.00"),
-				StripPath:     kong.Bool(true),
+				StripPath:     kong.Bool(false),
 				Hosts:         kong.StringSlice("example.com"),
 				PreserveHost:  kong.Bool(false),
 				Paths:         kong.StringSlice("/"),
@@ -662,7 +739,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
 				Name:          kong.String("default.bar.00"),
-				StripPath:     kong.Bool(true),
+				StripPath:     kong.Bool(false),
 				Hosts:         kong.StringSlice("example.com"),
 				PreserveHost:  kong.Bool(true),
 				Paths:         kong.StringSlice("/"),
@@ -743,7 +820,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			"expected one route to be rendered")
 		assert.Equal(kong.Route{
 			Name:          kong.String("default.bar.00"),
-			StripPath:     kong.Bool(true),
+			StripPath:     kong.Bool(false),
 			Hosts:         kong.StringSlice("example.com"),
 			PreserveHost:  kong.Bool(true),
 			Paths:         kong.StringSlice("/"),

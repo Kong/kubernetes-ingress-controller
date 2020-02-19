@@ -482,8 +482,6 @@ func (p *Parser) parseIngressRules(
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
-				isACMEChallenge := strings.HasPrefix(path, "/.well-known/acme-challenge/")
-
 				if path == "" {
 					path = "/"
 				}
@@ -500,7 +498,7 @@ func (p *Parser) parseIngressRules(
 						// order?
 						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
 						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(!isACMEChallenge),
+						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
 						Protocols:     kong.StringSlice("http", "https"),
 						RegexPriority: kong.Int(0),
@@ -661,7 +659,7 @@ func (p *Parser) parseIngressRules(
 			Route: kong.Route{
 				Name:          kong.String(ingress.Namespace + "." + ingress.Name),
 				Paths:         kong.StringSlice("/"),
-				StripPath:     kong.Bool(true),
+				StripPath:     kong.Bool(false),
 				PreserveHost:  kong.Bool(true),
 				Protocols:     kong.StringSlice("http", "https"),
 				RegexPriority: kong.Int(0),

@@ -129,7 +129,7 @@ Let's set that up. We will take the External IP address of `kong-admin` service 
 set the environment variable `KONG_ADMIN_API_URI`:
 
 ```bash
-KONG_ADMIN_IP=$(k get svc -n kong kong-admin --output=jsonpath='{.status.loadBalancer.ingress[0].ip}')
+KONG_ADMIN_IP=$(kubectl get svc -n kong kong-admin --output=jsonpath='{.status.loadBalancer.ingress[0].ip}')
 kubectl patch deployment -n kong ingress-kong -p "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_ADMIN_API_URI\", \"value\": \"${KONG_ADMIN_IP}\" }]}]}}}}"
 ```
 

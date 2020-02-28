@@ -614,7 +614,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
       imagePullSecrets:
-      - name: kong-enterprise-docker
+      - name: kong-enterprise-k8s-docker
       serviceAccountName: kong-serviceaccount
       volumes:
       - configMap:

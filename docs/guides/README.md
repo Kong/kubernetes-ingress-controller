@@ -27,7 +27,7 @@ Kong Ingress controller:
   match against any of the defined Ingress rules.
 - [Using external service](using-external-service.md)  
   This guide shows how to expose services running outside Kubernetes via Kong,
-  using [External Name](https://kubernetes.io/docs/concepts/services-networking/service/#externalname)  
+  using [External Name](https://kubernetes.io/docs/concepts/services-networking/service/#externalname)
   Services in Kubernetes.
 - [Configuring HTTPS redirects for your services](configuring-https-redirect.md)  
   This guide walks through how to configure Kong Ingress Controller to

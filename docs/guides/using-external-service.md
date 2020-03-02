@@ -49,7 +49,7 @@ spec:
 " | kubectl create -f -
 ```
 
-## Create an Ingress to expose the service in the host `foo.bar`
+## Create an Ingress to expose the service at the path `/foo`
 
 ```bash
 echo "

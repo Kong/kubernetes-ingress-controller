@@ -143,7 +143,7 @@ You can use Helm to install Kong via the official Helm chart:
 ```
 helm repo add kong https://charts.konghq.com
 helm repo update
-helm install kong/kong --name demo --namespace kong --values https://fstlnk.in/k4k8s-enterprise-helm-values
+helm install kong/kong --name demo --namespace kong --values https://l.yolo42.com/k4k8s-enterprise-helm-values
 ```
 
 Once installed, set an environment variable, $PROXY_IP with the External IP address of

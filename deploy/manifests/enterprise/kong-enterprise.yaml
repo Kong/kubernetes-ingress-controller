@@ -7,7 +7,7 @@ spec:
   template:
     spec:
       imagePullSecrets:
-      - name: kong-enterprise-docker
+      - name: kong-enterprise-edition-docker
       initContainers:
       - name: wait-for-migrations
         env:
@@ -58,7 +58,7 @@ spec:
   template:
     spec:
       imagePullSecrets:
-      - name: kong-enterprise-docker
+      - name: kong-enterprise-edition-docker
       containers:
       - name: kong-migrations
         env:

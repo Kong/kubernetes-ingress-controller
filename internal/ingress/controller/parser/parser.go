@@ -1115,7 +1115,7 @@ func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
 	if err == nil {
 		return ki, nil
 	}
-	return nil, err
+	return nil, nil
 }
 
 // getPlugin constructs a plugins from a KongPlugin resource.

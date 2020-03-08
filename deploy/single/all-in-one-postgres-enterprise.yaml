@@ -683,7 +683,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
       imagePullSecrets:
-      - name: kong-enterprise-docker
+      - name: kong-enterprise-edition-docker
       initContainers:
       - command:
         - /bin/sh
@@ -788,7 +788,7 @@ spec:
         image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:1.3.0.1-alpine
         name: kong-migrations
       imagePullSecrets:
-      - name: kong-enterprise-docker
+      - name: kong-enterprise-edition-docker
       initContainers:
       - command:
         - /bin/sh

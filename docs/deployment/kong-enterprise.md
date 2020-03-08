@@ -59,11 +59,11 @@ to log in to Bintray and password
 is an API-key that can be provisioned via Bintray.
 
 ```bash
-$ kubectl create secret -n kong docker-registry kong-enterprise-docker \
+$ kubectl create secret -n kong docker-registry kong-enterprise-edition-docker \
     --docker-server=kong-docker-kong-enterprise-edition-docker.bintray.io \
-    --docker-username=<your-username> \
-    --docker-password=<your-password>
-secret/kong-enterprise-docker created
+    --docker-username=<your-bintray-username@kong> \
+    --docker-password=<your-bintray-api-key>
+secret/kong-enterprise-edition-docker created
 ```
 
 ### Kong Enterprise bootstrap password

@@ -11,6 +11,7 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
 
 func Test_keyFunc(t *testing.T) {
@@ -199,6 +200,47 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 	ings, err := store.ListTCPIngresses()
 	assert.Nil(err)
 	assert.Len(ings, 1)
+}
+
+func TestFakeStoreListKnativeIngress(t *testing.T) {
+	assert := assert.New(t)
+
+	ingresses := []*knative.Ingress{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{KnativeIngresses: ingresses})
+	assert.Nil(err)
+	assert.NotNil(store)
+	ings, err := store.ListKnativeIngresses()
+	assert.Len(ings, 1)
+	assert.Nil(err)
 }
 
 func TestFakeStoreService(t *testing.T) {

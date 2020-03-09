@@ -1113,7 +1113,7 @@ func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
 
 	ki, err := p.store.GetKongIngress(ing.Namespace, ing.Name)
 	if err == nil {
-		return ki, err
+		return ki, nil
 	}
 	return nil, nil
 }

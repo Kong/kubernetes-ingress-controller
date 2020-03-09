@@ -9,6 +9,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
 
 func keyFunc(obj interface{}) (string, error) {
@@ -35,6 +36,8 @@ type FakeObjects struct {
 	KongIngresses      []*configurationv1.KongIngress
 	KongConsumers      []*configurationv1.KongConsumer
 	KongCredentials    []*configurationv1.KongCredential
+
+	KnativeIngresses []*knative.Ingress
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -112,6 +115,15 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+
+	knativeIngressStore := cache.NewStore(keyFunc)
+	for _, ingress := range objects.KnativeIngresses {
+		err := knativeIngressStore.Add(ingress)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	s = Store{
 		stores: CacheStores{
 			Ingress:    ingressStore,
@@ -125,6 +137,8 @@ func NewFakeStore(
 			Consumer:      consumerStore,
 			Credential:    kongCredentialsStore,
 			Configuration: kongIngressStore,
+
+			KnativeIngress: knativeIngressStore,
 		},
 		isValidIngresClass: annotations.IngressClassValidatorFuncFromObjectMeta("kong"),
 	}

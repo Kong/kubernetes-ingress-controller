@@ -55,6 +55,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+	knativeclient "knative.dev/serving/pkg/client/clientset/versioned"
+	knativeinformer "knative.dev/serving/pkg/client/informers/externalversions"
 )
 
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
@@ -240,6 +242,23 @@ func main() {
 		configurationinformer.WithNamespace(cliConfig.WatchNamespace),
 	)
 
+	knativeClient, _ := knativeclient.NewForConfig(kubeCfg)
+
+	var knativeInformerFactory knativeinformer.SharedInformerFactory
+	err = discovery.ServerSupportsVersion(knativeClient.Discovery(), schema.GroupVersion{
+		Group:   "networking.internal.knative.dev",
+		Version: "v1alpha1",
+	})
+	if err == nil {
+		controllerConfig.EnableKnativeIngressSupport = true
+		controllerConfig.KnativeClient = knativeClient
+		knativeInformerFactory = knativeinformer.NewSharedInformerFactoryWithOptions(
+			knativeClient,
+			cliConfig.SyncPeriod,
+			knativeinformer.WithNamespace(cliConfig.WatchNamespace),
+		)
+	}
+
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
@@ -307,6 +326,13 @@ func main() {
 	cacheStores.Credential = kongCredentialInformer.GetStore()
 	informers = append(informers, kongCredentialInformer)
 
+	if controllerConfig.EnableKnativeIngressSupport {
+		knativeIngressInformer := knativeInformerFactory.Networking().V1alpha1().Ingresses().Informer()
+		knativeIngressInformer.AddEventHandler(reh)
+		cacheStores.KnativeIngress = knativeIngressInformer.GetStore()
+		informers = append(informers, knativeIngressInformer)
+	}
+
 	stopCh := make(chan struct{})
 	for _, informer := range informers {
 		go informer.Run(stopCh)
@@ -316,10 +342,7 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	store := store.New(
-		cacheStores,
-		annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass),
-	)
+	store := store.New(cacheStores, cliConfig.IngressClass)
 	kong, err := controller.NewKongController(&controllerConfig, updateChannel,
 		store)
 	if err != nil {

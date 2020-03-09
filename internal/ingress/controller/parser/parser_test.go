@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
 
 type TLSPair struct {
@@ -747,6 +748,133 @@ func TestKongRouteAnnotations(t *testing.T) {
 				RegexPriority: kong.Int(0),
 			}, state.Services[0].Routes[0].Route)
 		})
+}
+
+func TestKnativeIngressAndPlugins(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("knative ingress rule and service-level plugin", func(t *testing.T) {
+		ingresses := []*knative.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "knative-ingress",
+					Namespace: "foo-ns",
+				},
+				Spec: knative.IngressSpec{
+					Rules: []knative.IngressRule{
+						{
+							Hosts: []string{"my-func.example.com"},
+							HTTP: &knative.HTTPIngressRuleValue{
+								Paths: []knative.HTTPIngressPath{
+									{
+										Path: "/",
+										AppendHeaders: map[string]string{
+											"foo": "bar",
+										},
+										Splits: []knative.IngressBackendSplit{
+											{
+												IngressBackend: knative.IngressBackend{
+													ServiceNamespace: "foo-ns",
+													ServiceName:      "foo-svc",
+													ServicePort:      intstr.FromInt(42),
+												},
+												Percent: 100,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "foo-ns",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "knative-key-auth",
+					},
+				},
+			},
+		}
+		plugins := []*configurationv1.KongPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "knative-key-auth",
+					Namespace: "foo-ns",
+				},
+				PluginName: "key-auth",
+				Protocols:  []string{"http"},
+				Config: configurationv1.Configuration{
+					"foo":     "bar",
+					"knative": "yo",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: ingresses,
+			Services:         services,
+			KongPlugins:      plugins,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+		svc := state.Services[0]
+
+		assert.Equal(kong.Service{
+			Name:           kong.String("foo-ns.foo-svc.42"),
+			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Path:           kong.String("/"),
+			Port:           kong.Int(80),
+			ConnectTimeout: kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			WriteTimeout:   kong.Int(60000),
+			Retries:        kong.Int(5),
+			Protocol:       kong.String("http"),
+		}, svc.Service)
+
+		assert.Equal(1, len(svc.Plugins), "expected one request-transformer plugin")
+		assert.Equal(kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"add": map[string]interface{}{
+					"headers": []string{"foo:bar"},
+				},
+			},
+		}, svc.Plugins[0])
+
+		assert.Equal(1, len(svc.Routes),
+			"expected one route to be rendered")
+		assert.Equal(kong.Route{
+			Name:          kong.String("foo-ns.knative-ingress.00"),
+			StripPath:     kong.Bool(false),
+			Hosts:         kong.StringSlice("my-func.example.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+			RegexPriority: kong.Int(0),
+		}, svc.Routes[0].Route)
+
+		assert.Equal(1, len(state.Plugins), "expected one key-auth plugin")
+		assert.Equal(kong.Plugin{
+			Name: kong.String("key-auth"),
+			Config: kong.Configuration{
+				"foo":     "bar",
+				"knative": "yo",
+			},
+			Service: &kong.Service{
+				ID: kong.String("foo-ns.foo-svc.42"),
+			},
+			Protocols: kong.StringSlice("http"),
+		}, state.Plugins[0].Plugin)
+	})
 }
 
 func TestKongServiceAnnotations(t *testing.T) {
@@ -1820,6 +1948,185 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 		assert.Nil(err)
+	})
+}
+
+func TestParseKnativeIngressRules(t *testing.T) {
+	assert := assert.New(t)
+	p := Parser{}
+	ingressList := []*knative.Ingress{
+		// 0
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{},
+				},
+			},
+		},
+		// 1
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// 2
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "bar-ns",
+												ServiceName:      "bar-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 20,
+										},
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	t.Run("no ingress returns empty info", func(t *testing.T) {
+		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{})
+		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Nil(err)
+	})
+	t.Run("empty ingress returns empty info", func(t *testing.T) {
+		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{
+			ingressList[0],
+		})
+		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Nil(err)
+	})
+	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
+		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{
+			ingressList[1],
+		})
+		assert.Nil(err)
+		assert.Equal(1, len(parsedInfo))
+		svc := parsedInfo["foo-ns.foo-svc.42"]
+		assert.Equal(kong.Service{
+			Name:           kong.String("foo-ns.foo-svc.42"),
+			Port:           kong.Int(80),
+			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Path:           kong.String("/"),
+			Protocol:       kong.String("http"),
+			WriteTimeout:   kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			ConnectTimeout: kong.Int(60000),
+			Retries:        kong.Int(5),
+		}, svc.Service)
+		assert.Equal(kong.Route{
+			Name:          kong.String("foo-namespace.foo.00"),
+			RegexPriority: kong.Int(0),
+			StripPath:     kong.Bool(false),
+			Paths:         kong.StringSlice("/"),
+			PreserveHost:  kong.Bool(true),
+			Protocols:     kong.StringSlice("http", "https"),
+			Hosts:         kong.StringSlice("my-func.example.com"),
+		}, svc.Routes[0].Route)
+		assert.Equal(kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"add": map[string]interface{}{
+					"headers": []string{"foo:bar"},
+				},
+			},
+		}, svc.Plugins[0])
+	})
+	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
+		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{
+			ingressList[2],
+		})
+		assert.Nil(err)
+		assert.Equal(1, len(parsedInfo))
+		svc := parsedInfo["foo-ns.foo-svc.42"]
+		assert.Equal(kong.Service{
+			Name:           kong.String("foo-ns.foo-svc.42"),
+			Port:           kong.Int(80),
+			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Path:           kong.String("/"),
+			Protocol:       kong.String("http"),
+			WriteTimeout:   kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			ConnectTimeout: kong.Int(60000),
+			Retries:        kong.Int(5),
+		}, svc.Service)
+		assert.Equal(kong.Route{
+			Name:          kong.String("foo-namespace.foo.00"),
+			RegexPriority: kong.Int(0),
+			StripPath:     kong.Bool(false),
+			Paths:         kong.StringSlice("/"),
+			PreserveHost:  kong.Bool(true),
+			Protocols:     kong.StringSlice("http", "https"),
+			Hosts:         kong.StringSlice("my-func.example.com"),
+		}, svc.Routes[0].Route)
+		assert.Equal(kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"add": map[string]interface{}{
+					"headers": []string{"foo:bar"},
+				},
+			},
+		}, svc.Plugins[0])
 	})
 }
 
@@ -3968,6 +4275,144 @@ func Test_overrideRoutePreserveHost(t *testing.T) {
 			overrideRoutePreserveHost(tt.args.route, tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRoutePreserveHost() got = %v, want %v", tt.args.route, tt.want)
+			}
+		})
+	}
+}
+
+func Test_knativeSelectSplit(t *testing.T) {
+	type args struct {
+		splits []knative.IngressBackendSplit
+	}
+	tests := []struct {
+		name string
+		args args
+		want knative.IngressBackendSplit
+	}{
+		{
+			name: "empty ingress",
+		},
+		{
+			name: "no split",
+			args: args{
+				splits: []knative.IngressBackendSplit{
+					{
+						IngressBackend: knative.IngressBackend{
+							ServiceNamespace: "foo-ns",
+							ServiceName:      "foo-svc",
+							ServicePort:      intstr.FromInt(42),
+						},
+						Percent: 100,
+					},
+				},
+			},
+			want: knative.IngressBackendSplit{
+				IngressBackend: knative.IngressBackend{
+					ServiceNamespace: "foo-ns",
+					ServiceName:      "foo-svc",
+					ServicePort:      intstr.FromInt(42),
+				},
+				Percent: 100,
+			},
+		},
+		{
+			name: "less than 100%% but one split only",
+			args: args{
+				splits: []knative.IngressBackendSplit{
+					{
+						IngressBackend: knative.IngressBackend{
+							ServiceNamespace: "foo-ns",
+							ServiceName:      "foo-svc",
+							ServicePort:      intstr.FromInt(42),
+						},
+						Percent: 42,
+					},
+				},
+			},
+			want: knative.IngressBackendSplit{
+				IngressBackend: knative.IngressBackend{
+					ServiceNamespace: "foo-ns",
+					ServiceName:      "foo-svc",
+					ServicePort:      intstr.FromInt(42),
+				},
+				Percent: 42,
+			},
+		},
+		{
+			name: "multiple splits with unequal splits",
+			args: args{
+				splits: []knative.IngressBackendSplit{
+					{
+						IngressBackend: knative.IngressBackend{
+							ServiceNamespace: "bar-ns",
+							ServiceName:      "bar-svc",
+							ServicePort:      intstr.FromInt(42),
+						},
+						Percent: 42,
+					},
+					{
+						IngressBackend: knative.IngressBackend{
+							ServiceNamespace: "foo-ns",
+							ServiceName:      "foo-svc",
+							ServicePort:      intstr.FromInt(42),
+						},
+						Percent: 58,
+					},
+				},
+			},
+			want: knative.IngressBackendSplit{
+				IngressBackend: knative.IngressBackend{
+					ServiceNamespace: "foo-ns",
+					ServiceName:      "foo-svc",
+					ServicePort:      intstr.FromInt(42),
+				},
+				Percent: 58,
+			},
+		},
+		{
+			name: "multiple splits with unequal splits",
+			args: args{
+				splits: []knative.IngressBackendSplit{
+					{
+						IngressBackend: knative.IngressBackend{
+							ServiceNamespace: "bar-ns",
+							ServiceName:      "bar-svc",
+							ServicePort:      intstr.FromInt(42),
+						},
+						Percent: 40,
+					},
+					{
+						IngressBackend: knative.IngressBackend{
+							ServiceNamespace: "baz-ns",
+							ServiceName:      "baz-svc",
+							ServicePort:      intstr.FromInt(42),
+						},
+						Percent: 20,
+					},
+					{
+						IngressBackend: knative.IngressBackend{
+							ServiceNamespace: "foo-ns",
+							ServiceName:      "foo-svc",
+							ServicePort:      intstr.FromInt(42),
+						},
+						Percent: 40,
+					},
+				},
+			},
+			want: knative.IngressBackendSplit{
+				IngressBackend: knative.IngressBackend{
+					ServiceNamespace: "bar-ns",
+					ServiceName:      "bar-svc",
+					ServicePort:      intstr.FromInt(42),
+				},
+				Percent: 40,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := knativeSelectSplit(tt.args.splits); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("knativeSelectSplit() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -42,6 +42,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
+	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
 )
 
 // Kong Represents a Kong client and connection information
@@ -67,6 +68,7 @@ type Configuration struct {
 
 	KubeClient       clientset.Interface
 	KongConfigClient configurationClientSet.Interface
+	KnativeClient    knativeClientSet.Interface
 
 	ResyncPeriod  time.Duration
 	SyncRateLimit float32
@@ -83,7 +85,8 @@ type Configuration struct {
 	UpdateStatusOnShutdown bool
 	ElectionID             string
 
-	UseNetworkingV1beta1 bool
+	UseNetworkingV1beta1        bool
+	EnableKnativeIngressSupport bool
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -170,6 +173,7 @@ func NewKongController(config *Configuration,
 		n.syncStatus = status.NewStatusSyncer(status.Config{
 			CoreClient:             config.KubeClient,
 			KongConfigClient:       config.KongConfigClient,
+			KnativeClient:          config.KnativeClient,
 			PublishService:         config.PublishService,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,

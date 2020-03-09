@@ -24,6 +24,7 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -144,6 +145,18 @@ func (p *Parser) Build() (*KongState, error) {
 	parsedInfo, err := p.parseIngressRules(ings, tcpIngresses)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing ingress rules")
+	}
+
+	knativeIngresses, err := p.store.ListKnativeIngresses()
+	if err != nil {
+		glog.Errorf("error listing knative Ingresses: %v", err)
+	}
+	servicesFromKnative, err := p.parseKnativeIngressRules(knativeIngresses)
+	if err != nil {
+		glog.Errorf("error parsing Knative Ingress rules: %v", err)
+	}
+	for name, service := range servicesFromKnative {
+		parsedInfo.ServiceNameToServices[name] = service
 	}
 
 	// populate Kubernetes Service
@@ -441,6 +454,126 @@ func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.Ingress
 		})
 	}
 	return result
+}
+
+func (p *Parser) parseKnativeIngressRules(ingressList []*knative.Ingress) (
+	map[string]Service, error) {
+
+	sort.SliceStable(ingressList, func(i, j int) bool {
+		return ingressList[i].CreationTimestamp.Before(
+			&ingressList[j].CreationTimestamp)
+	})
+
+	services := map[string]Service{}
+
+	for i := 0; i < len(ingressList); i++ {
+		ingress := *ingressList[i]
+		ingressSpec := ingress.Spec
+
+		for i, rule := range ingressSpec.Rules {
+			hosts := rule.Hosts
+			if rule.HTTP == nil {
+				continue
+			}
+			for j, rule := range rule.HTTP.Paths {
+				path := rule.Path
+
+				if path == "" {
+					path = "/"
+				}
+				r := Route{
+					Route: kong.Route{
+						// TODO Figure out a way to name the routes
+						// This is not a stable scheme
+						// 1. If a user adds a route in the middle,
+						// due to a shift, all the following routes will
+						// be PATCHED
+						// 2. Is it guaranteed that the order is stable?
+						// Meaning, the routes will always appear in the same
+						// order?
+						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
+						Paths:         kong.StringSlice(path),
+						StripPath:     kong.Bool(false),
+						PreserveHost:  kong.Bool(true),
+						Protocols:     kong.StringSlice("http", "https"),
+						RegexPriority: kong.Int(0),
+					},
+				}
+				r.Hosts = kong.StringSlice(hosts...)
+
+				knativeBackend := knativeSelectSplit(rule.Splits)
+				serviceName := knativeBackend.ServiceNamespace + "." +
+					knativeBackend.ServiceName + "." +
+					knativeBackend.ServicePort.String()
+				serviceHost := knativeBackend.ServiceName + "." +
+					knativeBackend.ServiceNamespace + "." +
+					knativeBackend.ServicePort.String() + ".svc"
+				service, ok := services[serviceName]
+				if !ok {
+
+					var headers []string
+					for key, value := range knativeBackend.AppendHeaders {
+						headers = append(headers, key+":"+value)
+					}
+					for key, value := range rule.AppendHeaders {
+						headers = append(headers, key+":"+value)
+					}
+
+					service = Service{
+						Service: kong.Service{
+							Name:           kong.String(serviceName),
+							Host:           kong.String(serviceHost),
+							Port:           kong.Int(80),
+							Protocol:       kong.String("http"),
+							Path:           kong.String("/"),
+							ConnectTimeout: kong.Int(60000),
+							ReadTimeout:    kong.Int(60000),
+							WriteTimeout:   kong.Int(60000),
+							Retries:        kong.Int(5),
+						},
+						Namespace: ingress.Namespace,
+						Backend: backend{
+							Name: knativeBackend.ServiceName,
+							Port: knativeBackend.ServicePort,
+						},
+						Plugins: []kong.Plugin{
+							{
+								Name: kong.String("request-transformer"),
+								Config: kong.Configuration{
+									"add": map[string]interface{}{
+										"headers": headers,
+									},
+								},
+							},
+						},
+					}
+				}
+				service.Routes = append(service.Routes, r)
+				services[serviceName] = service
+			}
+		}
+	}
+
+	return services, nil
+}
+
+func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
+	if len(splits) == 0 {
+		glog.Error("knative Ingress has no backends")
+		return knative.IngressBackendSplit{}
+	}
+	res := splits[0]
+	maxPercentage := splits[0].Percent
+	if len(splits) == 1 {
+		return res
+	}
+	for i := 1; i < len(splits); i++ {
+		if splits[i].Percent > maxPercentage {
+			res = splits[i]
+			maxPercentage = res.Percent
+		}
+	}
+	return res
 }
 
 func (p *Parser) parseIngressRules(

@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -30,6 +31,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
+)
+
+const (
+	knativeIngressClassKey = "networking.knative.dev/ingress.class"
 )
 
 // ErrNotFound error is returned when a lookup results in no resource.
@@ -58,6 +64,7 @@ type Storer interface {
 
 	ListIngresses() []*networking.Ingress
 	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
+	ListKnativeIngresses() ([]*knative.Ingress, error)
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
@@ -70,6 +77,8 @@ type Storer interface {
 // It is ingressClass filter aware.
 type Store struct {
 	stores CacheStores
+
+	ingressClass string
 
 	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
 }
@@ -88,14 +97,16 @@ type CacheStores struct {
 	Consumer      cache.Store
 	Credential    cache.Store
 	Configuration cache.Store
+
+	KnativeIngress cache.Store
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores,
-	isValidIngresClassFunc func(objectMeta *metav1.ObjectMeta) bool) Storer {
+func New(cs CacheStores, ingressClass string) Storer {
 	return Store{
 		stores:             cs,
-		isValidIngresClass: isValidIngresClassFunc,
+		ingressClass:       ingressClass,
+		isValidIngresClass: annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 	}
 }
 
@@ -148,6 +159,35 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 		func(ob interface{}) {
 			ing, ok := ob.(*configurationv1beta1.TCPIngress)
 			if ok && s.isValidIngresClass(&ing.ObjectMeta) {
+				ingresses = append(ingresses, ing)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return ingresses, nil
+}
+
+func (s Store) validKnativeIngressClass(objectMeta *metav1.ObjectMeta) bool {
+	ingressAnnotationValue := objectMeta.GetAnnotations()[knativeIngressClassKey]
+	if ingressAnnotationValue == "" &&
+		s.ingressClass == annotations.DefaultIngressClass {
+		return true
+	}
+	return ingressAnnotationValue == s.ingressClass
+}
+
+// ListKnativeIngresses returns the list of TCP Ingresses from
+// configuration.konghq.com group.
+func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
+	var ingresses []*knative.Ingress
+	if s.stores.KnativeIngress == nil {
+		return ingresses, nil
+	}
+	err := cache.ListAll(s.stores.KnativeIngress, labels.NewSelector(),
+		func(ob interface{}) {
+			ing, ok := ob.(*knative.Ingress)
+			if ok && s.validKnativeIngressClass(&ing.ObjectMeta) {
 				ingresses = append(ingresses, ing)
 			}
 		})

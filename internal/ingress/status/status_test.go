@@ -26,6 +26,7 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
@@ -257,6 +258,13 @@ func (til *testIngressLister) ListIngresses() []*networking.Ingress {
 func (til *testIngressLister) ListTCPIngresses() (
 	[]*configurationv1beta1.TCPIngress, error) {
 	var ingresses []*configurationv1beta1.TCPIngress
+
+	return ingresses, nil
+}
+
+func (til *testIngressLister) ListKnativeIngresses() (
+	[]*knative.Ingress, error) {
+	var ingresses []*knative.Ingress
 
 	return ingresses, nil
 }

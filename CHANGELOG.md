@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.8.0](#080---20200325)
  - [0.7.1](#071---20200131)
  - [0.7.0](#070---20200106)
  - [0.6.2](#062---20191113)
@@ -17,6 +18,74 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.8.0] - 2020/03/25
+
+#### Breaking changes
+
+- **`strip_path` disabled by default**  
+  The value of `strip_path` of routes in Kong is now set to `false`.
+  If you are upgrading from a previous version, please carefully test the change
+  before rolling it out as this change can possibly break the routing
+  for your clusters.
+  You can use `konghq.com/strip-path` annotation to set the value to `true`.
+
+#### Deprecations
+
+The following annotations are now deprecated and will be removed in a future
+release:
+- `configuration.konghq.com`
+- `plugins.konghq.com`
+- `configuration.konghq.com/protocols`
+- `configuration.konghq.com/protocol`
+- `configuration.konghq.com/client-cert`
+
+Please read the annotations document for new annotations.
+
+#### Added
+
+- **Knative Ingress support**  The controller can now proxy traffic for
+  serverless workloads running on top of Knative. Users can also select
+  Kong plugins to execute on a per Knative workload/service basis.
+  [#563](https://github.com/Kong/kubernetes-ingress-controller/pull/563)
+- **TCP/TLS routing**  New Custom Resource TCPIngress has been introduced
+  to support TCP proxy. SNI-based proxying is also supported for TLS encrypted
+  TCP streams.
+  [#527](https://github.com/Kong/kubernetes-ingress-controller/pull/527)
+- **New Custom Resource KongClusterPlugin**  Plugin configuration can now
+  be shared acrossed Kubernetes namespaces using `KongClusterPlugin`, a new
+  cluster-level Custom Resource.
+  [#520](https://github.com/Kong/kubernetes-ingress-controller/pull/520)
+- **New annotation group `konghq.com`** A new annotations group has
+  been introduced which should simplify configuration and reduce the need of
+  `KongIngress` resource in most use-cases. The following new annotations
+  have been introduced:
+  - `konghq.com/plugins`
+  - `konghq.com/override`
+  - `konghq.com/client-cert`
+  - `konghq.com/protocols`
+  - `konghq.com/protocol`
+  - `konghq.com/preserve-host`
+  - `konghq.com/plugins`
+  - `konghq.com/override`
+  - `konghq.com/path`
+  - `konghq.com/strip-path`
+  - `konghq.com/https-redirect-status-code`
+
+#### Fixed
+
+- Admission webhook now checks for the correct fields for JWT credential
+  type.
+  [#556](https://github.com/Kong/kubernetes-ingress-controller/pull/556)
+
+#### Under the hood
+
+- decK has been upgraded to v1.0.3.
+  [#576](https://github.com/Kong/kubernetes-ingress-controller/pull/576)
+- Go has been upgraded to 1.14.
+  [#579](https://github.com/Kong/kubernetes-ingress-controller/pull/579)
+- Alpine docker image has been upgraded to 3.11.
+  [#567](https://github.com/Kong/kubernetes-ingress-controller/pull/567)
 
 ## [0.7.1] - 2020/01/31
 
@@ -609,6 +678,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.2...0.7.0
 [0.6.2]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.1...0.6.2

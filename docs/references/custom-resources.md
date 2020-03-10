@@ -21,12 +21,12 @@ Following CRDs enables users to declaratively configure all aspects of Kong:
 ## KongPlugin
 
 This resource provides an API to configure plugins inside Kong using
-Kubernetes-styled APIs.
+Kubernetes-style resources.
 
 Please see the [concept](../concepts/custom-resources.md#KongPlugin)
 document for how the resource should be used.
 
-The following snippet shows the properties available:
+The following snippet shows the properties available in KongPlugin resource:
 
 ```yaml
 apiVersion: configuration.konghq.com/v1
@@ -48,16 +48,19 @@ plugin: <name-of-plugin> # like key-auth, rate-limiting etc
   required to configure the plugin.
   All configuration values specific to the type of plugin go in here.
   Please read the documentation of the plugin being configured to set values
-  in here.
+  in here. For any plugin in Kong, anything that goes in the `config` JSON
+  key in the Admin API request, goes into the  `config` YAML key in this resource.
+  Please use a valid JSON to YAML convertor and place the content under the
+  `config` key in the YAML above.
 - `plugin` field determines the name of the plugin in Kong.
   This field was introduced in Kong Ingress Controller 0.2.0.
 - Setting a label `global` to `"true"` will result in the plugin being
   applied globally in Kong, meaning it will be executed for every
   request that is proxied via Kong.
 
-**Please note:** validation of the configuration fields is left to the user.
-Setting invalid fields will result in errors in the Ingress Controller.
-This behavior is set to improve in the future.
+**Please note:** validation of the configuration fields is left to the user
+by default. It is advised to setup and use the admission validating controller
+to catch user errors.
 
 The plugins can be associated with Ingress
 or Service object in Kubernetes using `plugins.konghq.com` annotation.
@@ -123,6 +126,28 @@ A plugin can also be applied to a specific KongConsumer by adding
 Please follow the
 [Using the KongPlugin resource](../guides/using-kongplugin-resource.md)
 guide for details on how to use this resource.
+
+## KongClusterPlugin
+
+A `KongClusterPlugin` is same as `KongPlugin` resource. The only difference
+being that it is a Kubernetes cluster-level resource instead of a
+namespaced resource.
+
+Please consult the [KongPlugin](#kongplugin) section for details.
+
+*Example:*
+
+KongClusterPlugin example:
+
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: request-id
+config:
+  header_name: my-request-id
+plugin: correlation-id
+```
 
 ## KongIngress
 

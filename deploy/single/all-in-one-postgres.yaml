@@ -516,6 +516,7 @@ spec:
         prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
+        kuma.io/gateway: enabled
       labels:
         app: ingress-kong
     spec:

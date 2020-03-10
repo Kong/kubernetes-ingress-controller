@@ -1559,7 +1559,7 @@ type plugin struct {
 func toKongPlugin(plugin plugin) kong.Plugin {
 	result := kong.Plugin{
 		Name:   kong.String(plugin.Name),
-		Config: kong.Configuration(*plugin.Config.DeepCopy()),
+		Config: kong.Configuration(plugin.Config).DeepCopy(),
 	}
 	if plugin.RunOn != "" {
 		result.RunOn = kong.String(plugin.RunOn)

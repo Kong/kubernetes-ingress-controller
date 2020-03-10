@@ -1312,6 +1312,12 @@ func TestPluginAnnotations(t *testing.T) {
 				Protocols:  []string{"grpc"},
 				Config: configurationv1.Configuration{
 					"foo": "bar",
+					"add": map[string]interface{}{
+						"headers": []interface{}{
+							"header1:value1",
+							"header2:value2",
+						},
+					},
 				},
 			},
 		}
@@ -1328,8 +1334,21 @@ func TestPluginAnnotations(t *testing.T) {
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
-		assert.Equal("key-auth", *state.Plugins[0].Name)
-		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
+		p := state.Plugins[0].Plugin
+		p.Route = nil
+		assert.Equal(p, kong.Plugin{
+			Name:      kong.String("key-auth"),
+			Protocols: kong.StringSlice("grpc"),
+			Config: kong.Configuration{
+				"foo": "bar",
+				"add": map[string]interface{}{
+					"headers": []interface{}{
+						"header1:value1",
+						"header2:value2",
+					},
+				},
+			},
+		})
 	})
 	t.Run("KongPlugin takes precedence over KongPlugin", func(t *testing.T) {
 		services := []*corev1.Service{

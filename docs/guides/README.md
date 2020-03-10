@@ -52,3 +52,6 @@ Kong Ingress controller:
 - [Preserveing Client IP address](preserve-client-ip.md)  
   This guide gives an overview of different methods to preserve the Client
   IP address.
+- [Using KongClusterPlugin resource](using-kongclusterplugin-resource.md)  
+  This guide walks through setting up plugins that can be shared across
+  Kubernetes namespaces.

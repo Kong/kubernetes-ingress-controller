@@ -522,19 +522,12 @@ rules:
   - watch
 - apiGroups:
   - ""
-  resourceNames:
-  - ingress-controller-leader-kong
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - ""
   resources:
   - configmaps
   verbs:
   - create
+  - get
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding

@@ -501,21 +501,10 @@ rules:
   - ""
   resources:
   - configmaps
-  resourceNames:
-  # Defaults to "<election-id>-<ingress-class>"
-  # Here: "<ingress-controller-leader>-<kong>"
-  # This has to be adapted if you change either parameter
-  # when launching the kong-ingress-controller.
-  - "ingress-controller-leader-kong"
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
   verbs:
   - create
+  - get
+  - update
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1

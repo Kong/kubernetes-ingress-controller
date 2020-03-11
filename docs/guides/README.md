@@ -55,3 +55,6 @@ Kong Ingress controller:
 - [Using KongClusterPlugin resource](using-kongclusterplugin-resource.md)  
   This guide walks through setting up plugins that can be shared across
   Kubernetes namespaces.
+- [Using Kong with Knative](using-kong-with-knative.md)  
+  This guide gives an overview of how to setup Kong as the Ingress point
+  for Knative workloads.

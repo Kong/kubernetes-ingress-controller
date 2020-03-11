@@ -63,6 +63,12 @@ rules:
 - apiGroups:
   - "configuration.konghq.com"
   resources:
+  - tcpingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - "configuration.konghq.com"
+  resources:
   - kongplugins
   - kongclusterplugins
   - kongcredentials

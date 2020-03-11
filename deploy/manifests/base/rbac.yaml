@@ -38,6 +38,7 @@ rules:
 - apiGroups:
   - "networking.k8s.io"
   - "extensions"
+  - "networking.internal.knative.dev"
   resources:
   - ingresses
   verbs:
@@ -54,6 +55,7 @@ rules:
 - apiGroups:
   - "networking.k8s.io"
   - "extensions"
+  - "networking.internal.knative.dev"
   resources:
   - ingresses/status
   verbs:
@@ -62,9 +64,11 @@ rules:
   - "configuration.konghq.com"
   resources:
   - kongplugins
+  - kongclusterplugins
   - kongcredentials
   - kongconsumers
   - kongingresses
+  - tcpingresses
   verbs:
   - get
   - list

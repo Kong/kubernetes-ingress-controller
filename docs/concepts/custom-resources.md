@@ -13,10 +13,11 @@ for storing configuration specific to Kong.
 
 The following CRDs allow users to declaratively configure all aspects of Kong:
 
-- [**KongIngress**](#kongingress)  
+- [**KongIngress**](#kongingress)
 - [**KongPlugin**](#kongplugin)
 - [**KongClusterPlugin**](#kongclusterplugin)
 - [**KongConsumer**](#kongconsumer)
+- [**TCPIngress**](#tcpingress)
 - [**KongCredential (Deprecated)**](#kongcredential-deprecated)
 
 ## KongIngress
@@ -89,6 +90,16 @@ KongClusterPlugin with the same name.
 This custom resource configures `Consumers` in Kong.
 Every `KongConsumer` resource in Kubernetes directly translates to a
 [Consumer][kong-consumer] object in Kong.
+
+## TCPIngress
+
+This Custom Resource is used for exposing non-HTTP
+and non-GRPC services running inside Kubernetes to
+the outside world via Kong. This proves to be useful when
+you want to use a single cloud LoadBalancer for all kinds
+of traffic into your Kubernetes cluster.
+
+It is very similar to the Ingress resource that ships with Kubernetes.
 
 ## KongCredential (Deprecated)
 

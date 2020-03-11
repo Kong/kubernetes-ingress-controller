@@ -13,6 +13,9 @@ Following CRDs enables users to declaratively configure all aspects of Kong:
   in Kubernetes.
 - [**KongConsumer**](#kongconsumer):
   This resource maps to the [Consumer][kong-consumer] entity in Kong.
+- [**TCPIngress**](#tcpingress):
+  This resource can configure TCP-based routing in Kong for non-HTTP
+  services running inside Kubernetes.
 - [**KongCredential (Deprecated)**](#kongcredential-deprecated):
   This resource maps to
   a credential (key-auth, basic-auth, jwt, hmac-auth) that is associated with
@@ -152,7 +155,7 @@ plugin: correlation-id
 ## KongIngress
 
 Ingress resource spec in Kubernetes can define routing policies
-based on HTTP Host header and paths.  
+based on HTTP Host header and paths.
 While this is sufficient in most cases,
 sometimes, users may want more control over routing at the Ingress level.
 `KongIngress` serves as an "extension" to Ingress resource.
@@ -247,6 +250,35 @@ route:
   - http
   - https
 ```
+
+## TCPIngress
+
+The Ingress resource in Kubernetes is HTTP-only.
+This custom resource is modeled similar to the Ingress resource but for
+TCP and TLS SNI based routing purposes:
+
+```yaml
+apiVersion: configuration.konghq.com/v1beta1
+kind: TCPIngress
+metadata:
+  name: <object name>
+  namespace: <object namespace>
+spec:
+  rules:
+  - host: <SNI, optional>
+    port: <port on which to expose this service, required>
+    backend:
+      serviceName: <name of the kubernetes service, required>
+      servicePort: <port number to forward on the service, required>
+```
+
+If `host` is not specified, then port-based TCP routing is performed. Kong
+doesn't care about the content of TCP stream in this case.
+
+If `host` is specified, then Kong expects the TCP stream to be TLS-encrypted
+and Kong will terminate the TLS session based on the SNI.
+Also note that, the port in this case should be configured with `ssl` parameter
+in Kong.
 
 ## KongConsumer
 

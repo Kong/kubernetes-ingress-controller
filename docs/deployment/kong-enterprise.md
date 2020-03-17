@@ -24,6 +24,7 @@ we need to satisfy the following prerequisites:
 
 In order to create these secrets, let's provision the `kong`
 namespace first:
+
 ```bash
 $ kubectl create namespace kong
 namespace/kong created
@@ -72,8 +73,8 @@ Next, we need to create a secret containing the password using which we can logi
 Please replace `cloudnative` with a random password of your choice and note it down.
 
 ```bash
-kubectl create secret generic kong-enterprise-superuser-password  -n kong --from-literal=password=cloudnative
-
+$ kubectl create secret generic kong-enterprise-superuser-password  -n kong --from-literal=password=cloudnative
+secret/kong-enterprise-superuser-password created
 ```
 
 Once these are created, we are ready to deploy Kong Enterprise

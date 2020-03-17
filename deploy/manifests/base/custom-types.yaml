@@ -251,6 +251,8 @@ spec:
               - https
               - grpc
               - grpcs
+              - tcp
+              - tls
             path:
               type: string
               pattern: ^/.*$

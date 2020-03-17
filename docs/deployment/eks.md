@@ -15,7 +15,7 @@
 Deploy Kong Ingress Controller using `kubectl`:
 
 ```bash
-$ curl -sL https://bit.ly/k4k8s | kubectl create -f -
+$ kubectl create -f https://bit.ly/k4k8s
 namespace/kong created
 customresourcedefinition.apiextensions.k8s.io/kongplugins.configuration.konghq.com created
 customresourcedefinition.apiextensions.k8s.io/kongconsumers.configuration.konghq.com created

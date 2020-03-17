@@ -35,7 +35,7 @@ Setup an echo-server application to demonstrate how
 to use Kong Ingress Controller:
 
 ```bash
-$ curl -sL bit.ly/echo-service | kubectl apply -f -
+$ kubectl apply -f https://bit.ly/echo-service
 service/echo created
 deployment.apps/echo created
 ```

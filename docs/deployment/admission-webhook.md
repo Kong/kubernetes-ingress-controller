@@ -9,7 +9,8 @@ you need to generate as part of the deployment.
 Following guide walks through a setup of how to create the required key-pair
 and enable the admission controller.
 
-Please note that this requires Kong Ingress Controller >= 0.6.
+Please note that this requires Kong Ingress Controller >= 0.6 to be
+already installed in the cluster.
 
 ## tldr;
 
@@ -194,7 +195,7 @@ Error from server: admission webhook "validations.kong.konghq.com" denied the re
 ```
 
 ```bash
-kubectl create secret generic some-credential \
+$ kubectl create secret generic some-credential \
   --from-literal=kongCredType=wrong-auth \
   --from-literal=sdfkey=my-sooper-secret-key
 Error from server: admission webhook "validations.kong.konghq.com" denied the request: invalid credential type: wrong-auth

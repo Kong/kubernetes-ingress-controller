@@ -52,11 +52,13 @@ spec:
 ## Create an Ingress to expose the service at the path `/foo`
 
 ```bash
-echo "
+echo '
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: proxy-from-k8s-to-httpbin
+  annotations:
+    konghq.com/strip-path: "true"
 spec:
   rules:
   - http:
@@ -65,7 +67,7 @@ spec:
         backend:
           serviceName: proxy-to-httpbin
           servicePort: 80
-" | kubectl create -f -
+' | kubectl create -f -
 ```
 
 ## Test the service

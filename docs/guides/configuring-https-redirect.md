@@ -47,11 +47,13 @@ deployment.apps/httpbin created
 Create an Ingress rule to proxy the httpbin service we just created:
 
 ```bash
-$ echo "
+$ echo '
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: demo
+  annotations:
+    konghq.com/strip-path: "true"
 spec:
   rules:
   - http:
@@ -60,7 +62,7 @@ spec:
         backend:
           serviceName: httpbin
           servicePort: 80
-" | kubectl apply -f -
+' | kubectl apply -f -
 ingress.extensions/demo created
 ```
 
@@ -104,7 +106,7 @@ Next, we need to associate the KongIngress resource with the Ingress resource
 we created before:
 
 ```bash
-$ kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com":"https-only"}}}'
+$ kubectl patch ingress demo -p '{"metadata":{"annotations":{"konghq.com/override":"https-only"}}}'
 ingress.extensions/demo patched
 ```
 

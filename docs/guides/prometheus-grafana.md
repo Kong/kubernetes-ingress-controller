@@ -107,14 +107,15 @@ We will enable the Promtheus plugin in Kong at the global level, meaning
 each request that flows into the Kubernetes cluster gets tracked in Prometheus:
 
 ```bash
-echo "apiVersion: configuration.konghq.com/v1
+$ echo 'apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
-  labels:
-    global: \"true\"
   name: prometheus
+  labels:
+    global: "true"
 plugin: prometheus
-" | kubectl apply -f -
+' | kubectl apply -f -
+kongplugin.configuration.konghq.com/prometheus created
 ```
 
 ## Set Up Port Forwards
@@ -188,19 +189,9 @@ This will configure Kong to proxy traffic destined for these services correctly.
 Execute the following:
 
 ```bash
-echo "apiVersion: configuration.konghq.com/v1
-kind: KongIngress
-metadata:
-  name: strip-path
-route:
-  strip_path: true
-" | kubectl apply -f -
-
 echo "apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  annotations:
-    configuration.konghq.com: strip-path
   name: sample-ingresses
 spec:
   rules:

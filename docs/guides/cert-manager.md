@@ -24,7 +24,7 @@ This tutorial was written using Google Kubernetes Engine.
 Execute the following to install the Ingress Controller:
 
 ```bash
-$ curl -sL https://bit.ly/k4k8s | kubectl create -f -
+$ kubectl create -f https://bit.ly/k4k8s
 namespace/kong created
 customresourcedefinition.apiextensions.k8s.io/kongplugins.configuration.konghq.com created
 customresourcedefinition.apiextensions.k8s.io/kongconsumers.configuration.konghq.com created
@@ -73,7 +73,7 @@ Any HTTP-based application can be used, for the purpose of the demo, install
 the following echo server:
 
 ```bash
-curl -sL bit.ly/echo-service | kubectl apply -f -
+$ kubectl apply -f https://bit.ly/echo-service
 service/echo created
 deployment.apps/echo created
 ```
@@ -156,7 +156,7 @@ Via: kong/1.1.2
 First, setup a ClusterIssuer for cert-manager
 
 ```bash
-echo "apiVersion: cert-manager.io/v1alpha2
+$ echo "apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
 metadata:
   name: letsencrypt-prod
@@ -173,7 +173,10 @@ spec:
 clusterissuer.cert-manager.io/letsencrypt-prod configured
 ```
 
-*Note*: If you run into issues configuring this, be sure that the group (`cert-manager.io`) and version (`v1alpha2`) match those in the output of `kubectl describe crd clusterissuer`.
+*Note*: If you run into issues configuring this,
+be sure that the group (`cert-manager.io`) and
+version (`v1alpha2`) match those in the output of
+`kubectl describe crd clusterissuer`.
 This directs cert-manager which CA authority to use to issue the certificate.
 
 Next, update your Ingress resource to provision a certificate and then use it:

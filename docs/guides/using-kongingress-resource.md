@@ -95,11 +95,11 @@ Server values:
 Request Information:
 	client_address=10.60.1.10
 	method=GET
-	real path=/
+	real path=/foo
 	query=
 	request_version=1.1
 	request_scheme=http
-	request_uri=http://35.233.170.67:8080/
+	request_uri=http://35.233.170.67:8080/foo
 <-- clipped -- >
 ```
 
@@ -123,27 +123,27 @@ metadata:
 route:
   methods:
   - GET
-  strip_path: false" | kubectl apply -f -
+  strip_path: true" | kubectl apply -f -
 kongingress.configuration.konghq.com/test created
 ```
 
 Now, let's associate this KongIngress resource with our Ingress resource
-using the `configuration.konghq.com` annotation.
+using the `konghq.com/override` annotation.
 
 ```bash
-$ kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com":"sample-customization"}}}'
+$ kubectl patch ingress demo -p '{"metadata":{"annotations":{"konghq.com/override":"sample-customization"}}}'
 ingress.extensions/demo patched
 ```
 
-Now, Kong will proxy only GET requests on `/foo` path and not strip
-away `/foo`:
+Now, Kong will proxy only GET requests on `/foo/bar` path and
+strip away `/foo`:
 
 ```bash
 $ curl -s $PROXY_IP/foo -X POST
 {"message":"no Route matched with those values"}
 
 
-$ curl -s $PROXY_IP/foo
+$ curl -s $PROXY_IP/foo/baz
 
 
 Hostname: echo-d778ffcd8-vrrtw
@@ -160,14 +160,14 @@ Server values:
 Request Information:
 	client_address=10.60.1.10
 	method=GET
-	real path=/foo
+	real path=/baz
 	query=
 	request_version=1.1
 	request_scheme=http
-	request_uri=http://35.233.170.67:8080/foo
+	request_uri=http://35.233.170.67:8080/baz
 ```
 
-As you can see, the real path value is `/foo`.
+As you can see, the real path value is `/baz`.
 
 ## Use KongIngress with Service resource
 
@@ -203,7 +203,7 @@ service/echo patched
 Let's test this now:
 
 ```bash
-$ curl $PROXY_IP/foo
+$ curl $PROXY_IP/foo/baz
 Hostname: echo-d778ffcd8-vrrtw
 
 Pod Information:
@@ -218,16 +218,16 @@ Server values:
 Request Information:
 	client_address=10.60.1.10
 	method=GET
-	real path=/bar/foo
+	real path=/bar/baz
 	query=
 	request_version=1.1
 	request_scheme=http
-	request_uri=http://35.233.170.67:8080/bar/foo
+	request_uri=http://35.233.170.67:8080/bar/baz
 
 <-- clipped -->
 ```
 
-Real path received by the upstream service (echo) is now changed to `/bar/foo`.
+Real path received by the upstream service (echo) is now changed to `/bar/baz`.
 
 Also, now all the requests will be sent to the same upstream pod:
 

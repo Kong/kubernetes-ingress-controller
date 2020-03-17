@@ -55,11 +55,13 @@ deployment.apps/httpbin created
 Create an Ingress rule to proxy the httpbin service we just created:
 
 ```bash
-$ echo "
+$ echo '
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: demo
+  annotations:
+    konghq.com/strip-path: "true"
 spec:
   rules:
   - http:
@@ -68,7 +70,7 @@ spec:
         backend:
           serviceName: httpbin
           servicePort: 80
-" | kubectl apply -f -
+' | kubectl apply -f -
 ingress.extensions/demo created
 ```
 

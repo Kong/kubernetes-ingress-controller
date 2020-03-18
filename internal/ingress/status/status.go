@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
+	knativeApis "knative.dev/pkg/apis"
 	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
 
@@ -411,6 +412,8 @@ func toKnativeLBStatus(coreLBStatus []apiv1.LoadBalancerIngress) []knative.LoadB
 	return res
 }
 
+var ingressCondSet = knativeApis.NewLivingConditionSet()
+
 func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 	status []apiv1.LoadBalancerIngress,
 	client knativeClientSet.Interface) pool.WorkFunc {
@@ -423,11 +426,6 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 		curIPs := toCoreLBStatus(ing.Status.PublicLoadBalancer)
 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
 
-		if ingressSliceEqual(status, curIPs) {
-			glog.Errorf("skipping update of Knative %v/%v (no change)", ing.Namespace, ing.Name)
-			return true, nil
-		}
-
 		ingClient := client.NetworkingV1alpha1().Ingresses(ing.Namespace)
 
 		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
@@ -435,10 +433,19 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 			return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching Knative %v/%v", ing.Namespace, ing.Name))
 		}
 
+		if ingressSliceEqual(status, curIPs) &&
+			currIng.Status.ObservedGeneration == currIng.GetObjectMeta().GetGeneration() {
+			glog.Errorf("skipping update of Knative %v/%v (no change)", ing.Namespace, ing.Name)
+			return true, nil
+		}
+
 		glog.Infof("updating Knative %v/%v status to %v", currIng.Namespace, currIng.Name, status)
-		currIng.Status.PublicLoadBalancer = &knative.LoadBalancerStatus{Ingress: toKnativeLBStatus(status)}
-		// TODO knative is going to deprecate this
-		currIng.Status.LoadBalancer = &knative.LoadBalancerStatus{Ingress: toKnativeLBStatus(status)}
+		lbStatus := toKnativeLBStatus(status)
+		currIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus, lbStatus)
+		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionReady)
+		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
+		currIng.Status.ObservedGeneration = currIng.GetObjectMeta().GetGeneration()
+
 		_, err = ingClient.UpdateStatus(currIng)
 		if err != nil {
 			glog.Warningf("error updating status of KnativeIngress: %v", err)

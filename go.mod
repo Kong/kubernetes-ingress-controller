@@ -31,6 +31,6 @@ require (
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v0.17.0
-	knative.dev/pkg v0.0.0-20200205160431-4ec5e09f716b // indirect
+	knative.dev/pkg v0.0.0-20200205160431-4ec5e09f716b
 	knative.dev/serving v0.12.1
 )

@@ -32,6 +32,39 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			wantErr:     false,
 		},
 		{
+			name: "valid jwt credential",
+			args: args{
+				secret: corev1.Secret{
+					Data: map[string][]byte{
+						"algorithm":      []byte("foo-algorithm"),
+						"key":            []byte("foo-key"),
+						"secret":         []byte("foo-secret"),
+						"rsa_public_key": []byte("my-key"),
+						"kongCredType":   []byte("key-auth"),
+					},
+				},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name: "valid jwt credential without rsa_public_key",
+			args: args{
+				secret: corev1.Secret{
+					Data: map[string][]byte{
+						"algorithm":    []byte("foo-algorithm"),
+						"key":          []byte("foo-key"),
+						"secret":       []byte("foo-secret"),
+						"kongCredType": []byte("key-auth"),
+					},
+				},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
 			name: "valid keyauth_credential",
 			args: args{
 				secret: corev1.Secret{

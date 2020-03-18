@@ -91,7 +91,7 @@ var (
 	keyAuthFields   = []string{"key"}
 	basicAuthFields = []string{"username", "password"}
 	hmacAuthFields  = []string{"username", "secret"}
-	jwtAuthFields   = []string{"algorithm", "rsa_public_key", "key", "redirect_uris"}
+	jwtAuthFields   = []string{"algorithm", "rsa_public_key", "key", "secret"}
 
 	// TODO dynamically fetch these from Kong
 	credTypeToFields = map[string][]string{

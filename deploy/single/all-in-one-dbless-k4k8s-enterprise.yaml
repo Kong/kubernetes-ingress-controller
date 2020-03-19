@@ -162,6 +162,8 @@ spec:
               - https
               - grpc
               - grpcs
+              - tcp
+              - tls
               type: string
             read_timeout:
               minimum: 0

@@ -1490,7 +1490,7 @@ func (p *Parser) getKongIngressFromIngressAnnotations(namespace, name string,
 
 	ki, err := p.store.GetKongIngress(namespace, name)
 	if err == nil {
-		return ki, err
+		return ki, nil
 	}
 	return nil, nil
 }

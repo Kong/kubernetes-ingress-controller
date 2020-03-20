@@ -41,6 +41,7 @@ Following table describes all the flags that are available:
 | --kong-admin-concurrency             |`int`      | `10`                            | Max number of concurrent requests sent to Kong's Admin API.|
 | --kong-admin-filter-tag              |`string`   | `managed-by-ingress-controller` | The tag used to manage entities in Kong.|
 | --kong-admin-header                  |`string`   | none                            | Add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers.|
+| --kong-admin-token                   |`string`   | none                            | Set the Kong Enterprise RBAC token to be used by the controller.|
 | --kong-admin-tls-server-name         |`string`   | none                            | SNI name to use to verify the certificate presented by Kong in TLS.|
 | --kong-admin-tls-skip-verify         |`boolean`  | `false`                         | Disable verification of TLS certificate of Kong's Admin endpoint.|
 | --kong-admin-url                     |`string`   | `http://localhost:8001`         | The address of the Kong Admin URL to connect to in the format of `protocol://address:port`.|

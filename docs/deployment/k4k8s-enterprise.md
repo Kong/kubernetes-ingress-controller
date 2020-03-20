@@ -63,11 +63,11 @@ to log in to Bintray and password
 is an API-key that can be provisioned via Bintray.
 
 ```bash
-$ kubectl create secret -n kong docker-registry kong-enterprise-docker \
+$ kubectl create secret -n kong docker-registry kong-enterprise-k8s-docker \
     --docker-server=kong-docker-kong-enterprise-k8s.bintray.io \
-    --docker-username=<your-username> \
-    --docker-password=<your-password>
-secret/kong-enterprise-docker created
+    --docker-username=<your-bintray-username@kong> \
+    --docker-password=<your-bintray-api-key>
+secret/kong-enterprise-k8s-docker created
 ```
 
 Again, please take a note of the namespace `kong`.
@@ -143,7 +143,7 @@ You can use Helm to install Kong via the official Helm chart:
 ```
 helm repo add kong https://charts.konghq.com
 helm repo update
-helm install kong/kong --name demo --namespace kong --values https://fstlnk.in/k4k8s-enterprise-helm-values
+helm install kong/kong --name demo --namespace kong --values https://l.yolo42.com/k4k8s-enterprise-helm-values
 ```
 
 Once installed, set an environment variable, $PROXY_IP with the External IP address of

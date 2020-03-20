@@ -4,21 +4,21 @@
 
 1. Install [`minikube`](https://github.com/kubernetes/minikube)
 
-    Minikube is a tool that makes it easy to run Kubernetes locally.
-    Minikube runs a single-node Kubernetes cluster inside a VM on your laptop
-    for users looking to try out Kubernetes or develop with it day-to-day.
+   Minikube is a tool that makes it easy to run Kubernetes locally.
+   Minikube runs a single-node Kubernetes cluster inside a VM on your laptop
+   for users looking to try out Kubernetes or develop with it day-to-day.
 
 1. Start `minikube`
 
-    ```bash
-    minikube start
-    ```
+   ```bash
+   minikube start
+   ```
 
-    It will take a few minutes to get all resources provisioned.
+   It will take a few minutes to get all resources provisioned.
 
-    ```bash
-    kubectl get nodes
-    ```
+   ```bash
+   kubectl get nodes
+   ```
 
 ## Deploy Kong Ingress Controller
 
@@ -54,11 +54,13 @@ $ helm install kong/kong
 ## Setup environment variables
 
 Next, we will setup an environment variable with the IP address at which
-Kong is accesssible. This will be used to actually send reqeusts into the
+Kong is accessible. This will be used to actually send requests into the
 Kubernetes cluster.
 
 ```bash
 $ export PROXY_IP=$(minikube service -n kong kong-proxy --url | head -1)
+# If installed by helm, service name would be "<release-name>-kong-proxy".
+# $ export PROXY_IP=$(minikube service <release-name>-kong-proxy --url | head -1)
 $ echo $PROXY_IP
 http://192.168.99.100:32728
 ```

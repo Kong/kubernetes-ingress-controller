@@ -660,6 +660,7 @@ spec:
   template:
     metadata:
       annotations:
+        kuma.io/gateway: enabled
         prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""

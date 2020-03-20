@@ -177,7 +177,6 @@ func NewKongController(config *Configuration,
 			PublishService:         config.PublishService,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,
-			ElectionID:             electionID,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
 			UseNetworkingV1beta1:   config.UseNetworkingV1beta1,
 			OnStartedLeading: func() {
@@ -226,11 +225,19 @@ type KongController struct {
 	PluginSchemaStore PluginSchemaStore
 }
 
-// Start start a new NGINX master process running in foreground.
+// Start starts a new NGINX master process running in foreground, blocking until the next call to
+// Stop.
 func (n *KongController) Start() {
 	glog.Infof("starting Ingress controller")
 
-	go n.elector.Run()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		<-n.stopCh
+		cancel()
+	}()
+
+	go n.elector.Run(ctx)
 
 	if n.syncStatus != nil {
 		go n.syncStatus.Run()
@@ -244,7 +251,7 @@ func (n *KongController) Start() {
 		select {
 		case event := <-n.updateCh.Out():
 			if n.isShuttingDown {
-				break
+				return
 			}
 			if evt, ok := event.(Event); ok {
 				glog.V(3).Infof("Event %v received - object %v", evt.Type, evt.Obj)
@@ -261,12 +268,12 @@ func (n *KongController) Start() {
 				glog.Warningf("unexpected event type received %T", event)
 			}
 		case <-n.stopCh:
-			break
+			return
 		}
 	}
 }
 
-// Stop gracefully stops the NGINX master process.
+// Stop stops the NGINX master process gracefully.
 func (n *KongController) Stop() error {
 	n.isShuttingDown = true
 
@@ -279,10 +286,12 @@ func (n *KongController) Stop() error {
 	}
 
 	glog.Infof("shutting down controller queues")
+	// Closing the stop channel will cause us to give up leadership.
+	wasLeader := n.elector.IsLeader()
 	close(n.stopCh)
 	go n.syncQueue.Shutdown()
 	if n.syncStatus != nil {
-		n.syncStatus.Shutdown(n.elector.IsLeader())
+		n.syncStatus.Shutdown(wasLeader)
 	}
 
 	return nil
@@ -351,13 +360,14 @@ func (n *KongController) handleBasicAuthUpdates(event Event) error {
 	client := n.cfg.Kong.Client
 
 	// find the ID of the cred from Kong
-	outdatedCred, err := client.BasicAuths.Get(nil, &username, cred.Username)
+	ctx := context.TODO()
+	outdatedCred, err := client.BasicAuths.Get(ctx, &username, cred.Username)
 	if err != nil {
 		return errors.Wrap(err, "fetching basic-auth credential")
 	}
 	cred.ID = outdatedCred.ID
 	// update it
-	_, err = client.BasicAuths.Create(nil, &username, &cred)
+	_, err = client.BasicAuths.Create(ctx, &username, &cred)
 	if err != nil {
 		return errors.Wrap(err, "updating basic-auth credential")
 	}

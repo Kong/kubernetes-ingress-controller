@@ -76,8 +76,6 @@ type Config struct {
 
 	PublishStatusAddress string
 
-	ElectionID string
-
 	UpdateStatusOnShutdown bool
 
 	IngressLister ingressLister
@@ -97,7 +95,6 @@ type statusSync struct {
 	// pod contains runtime information about this pod
 	pod *utils.PodInfo
 
-	electionID string
 	// workqueue used to keep in sync the status IP/s
 	// in the Ingress rules
 	syncQueue *task.Queue
@@ -116,17 +113,8 @@ func (s statusSync) Callbacks() leaderelection.LeaderCallbacks {
 // if there is no other instances running.
 func (s statusSync) Shutdown(isLeader bool) {
 	go s.syncQueue.Shutdown()
-	// remove IP from Ingress
 	if !isLeader {
 		return
-	}
-
-	// on shutdown we remove information about the leader election to
-	// avoid up to 30 seconds of delay in start the synchronization process
-	c, err := s.CoreClient.CoreV1().ConfigMaps(s.pod.Namespace).Get(s.electionID, metav1.GetOptions{})
-	if err == nil {
-		c.Annotations = map[string]string{}
-		s.CoreClient.CoreV1().ConfigMaps(s.pod.Namespace).Update(c)
 	}
 
 	if !s.UpdateStatusOnShutdown {
@@ -134,6 +122,7 @@ func (s statusSync) Shutdown(isLeader bool) {
 		return
 	}
 
+	// Remove our IP address from all Ingress "status" subresources that mention it.
 	glog.Infof("updating status of Ingress rules (remove)")
 
 	addrs, err := s.runningAddresses()
@@ -184,8 +173,7 @@ func NewStatusSyncer(config Config) Sync {
 	}
 
 	st := statusSync{
-		pod: pod,
-
+		pod:    pod,
 		Config: config,
 	}
 	st.syncQueue = task.NewCustomTaskQueue(st.sync, st.keyfunc)

@@ -228,6 +228,11 @@ spec:
               type: boolean
             preserve_host:
               type: boolean
+            path_handling:
+              type: string
+              enum:
+              - "v0"
+              - "v1"
             protocols:
               type: array
               items:

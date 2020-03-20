@@ -961,6 +961,9 @@ func overrideRouteByKongIngress(route *Route,
 	if r.HTTPSRedirectStatusCode != nil {
 		route.HTTPSRedirectStatusCode = kong.Int(*r.HTTPSRedirectStatusCode)
 	}
+	if r.PathHandling != nil {
+		route.PathHandling = kong.String(*r.PathHandling)
+	}
 }
 
 // normalizeProtocols prevents users from mismatching grpc/http

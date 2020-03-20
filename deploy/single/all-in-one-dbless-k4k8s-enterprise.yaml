@@ -189,6 +189,11 @@ spec:
               items:
                 type: string
               type: array
+            path_handling:
+              enum:
+              - v0
+              - v1
+              type: string
             preserve_host:
               type: boolean
             protocols:

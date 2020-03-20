@@ -2635,6 +2635,24 @@ func TestOverrideRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
+					PathHandling: kong.String("v1"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts:        kong.StringSlice("foo.com"),
+					PathHandling: kong.String("v1"),
+				},
+			},
+		},
 	}
 
 	for _, testcase := range testTable {

@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/viper"
 
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/klog"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 )
@@ -203,7 +204,6 @@ Kubernetes cluster and local discovery is attempted.`)
 }
 
 func parseFlags() (cliConfig, error) {
-
 	flagSet := flagSet()
 
 	// glog
@@ -211,6 +211,17 @@ func parseFlags() (cliConfig, error) {
 
 	flagSet.AddGoFlagSet(flag.CommandLine)
 	flagSet.Parse(os.Args)
+
+	// klog
+	// Adapted from the following example:
+	// https://github.com/kubernetes/klog/blob/master/examples/coexist_glog/coexist_glog.go
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+	flag.CommandLine.VisitAll(func(f1 *flag.Flag) {
+		if f2 := klogFlags.Lookup(f1.Name); f2 != nil {
+			f2.Value.Set(f1.Value.String())
+		}
+	})
 
 	// Workaround for this issue:
 	// https://github.com/kubernetes/kubernetes/issues/17162

@@ -345,6 +345,11 @@ func (n *KongController) fillRoute(route *kong.Route) {
 			route.HTTPSRedirectStatusCode = kong.Int(426)
 		}
 	}
+	if n.cfg.Kong.Version.GTE(kong200version) {
+		if route.PathHandling == nil {
+			route.PathHandling = kong.String("v0")
+		}
+	}
 }
 
 func (n *KongController) fillUpstream(upstream *kong.Upstream) {

@@ -6,28 +6,33 @@ require (
 	contrib.go.opencensus.io/exporter/ocagent v0.6.0 // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0 // indirect
 	contrib.go.opencensus.io/exporter/stackdriver v0.12.9 // indirect
-	github.com/blang/semver v3.5.0+incompatible
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/eapache/channels v1.1.0
-	github.com/fatih/color v1.7.0
+	github.com/fatih/color v1.9.0
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-containerregistry v0.0.0-20200131185320-aec8da010de2 // indirect
+	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
+	github.com/hashicorp/go-memdb v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hbagdi/deck v0.7.1-0.20191223190449-3d9f90945d9d
-	github.com/hbagdi/go-kong v0.10.0
+	github.com/hbagdi/deck v1.0.3
+	github.com/hbagdi/go-kong v0.11.0
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
-	github.com/mattn/go-colorable v0.1.2 // indirect
-	github.com/mitchellh/mapstructure v1.1.2
+	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/mitchellh/mapstructure v1.2.1
 	github.com/openzipkin/zipkin-go v0.2.2 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.3.2
+	github.com/spf13/viper v1.6.2
 	github.com/stretchr/testify v1.4.0
 	github.com/tidwall/gjson v1.2.1
 	github.com/tidwall/match v1.0.1 // indirect
 	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
+	golang.org/x/sys v0.0.0-20200317113312-5766fd39f98d // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1
+	gopkg.in/ini.v1 v1.55.0 // indirect
 	k8s.io/api v0.17.4
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v0.17.4

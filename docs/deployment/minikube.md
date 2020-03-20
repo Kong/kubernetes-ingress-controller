@@ -46,7 +46,12 @@ Please ensure that you've Tiller working and then execute:
 ```bash
 $ helm repo add kong https://charts.konghq.com
 $ helm repo update
+
+# Helm 2
 $ helm install kong/kong
+
+# Helm 3
+$ helm install kong/kong --generate-name --set ingressController.installCRDs=false
 ```
 
 > Note: this process could take up to five minutes the first time.

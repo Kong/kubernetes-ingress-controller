@@ -170,9 +170,11 @@ kind: KongIngress
 metadata:
   name: configuration-demo
 upstream:
+  slots: 10
   hash_on: none
   hash_fallback: none
   healthchecks:
+    threshold: 25
     active:
       concurrency: 10
       healthy:
@@ -202,7 +204,6 @@ upstream:
         - 503
         tcp_failures: 0
         timeouts: 0
-    slots: 10
 proxy:
   protocol: http
   path: /

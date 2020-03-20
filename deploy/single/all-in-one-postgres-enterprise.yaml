@@ -307,6 +307,8 @@ spec:
                           type: integer
                       type: object
                   type: object
+                threshold:
+                  type: integer
               type: object
             host_header:
               type: string

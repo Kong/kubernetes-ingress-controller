@@ -141,9 +141,19 @@ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
 You can use Helm to install Kong via the official Helm chart:
 
 ```
-helm repo add kong https://charts.konghq.com
-helm repo update
-helm install kong/kong --name demo --namespace kong --values https://l.yolo42.com/k4k8s-enterprise-helm-values
+$ helm repo add kong https://charts.konghq.com
+$ helm repo update
+
+# Helm 2
+$ helm install kong/kong \
+    --name demo --namespace kong \
+    --values https://l.yolo42.com/k4k8s-enterprise-helm-values
+
+# Helm 3
+$ helm install kong/kong --generate-name
+    --name demo --namespace kong \
+    --values https://l.yolo42.com/k4k8s-enterprise-helm-values \
+     --set ingressController.installCRDs=false
 ```
 
 Once installed, set an environment variable, $PROXY_IP with the External IP address of

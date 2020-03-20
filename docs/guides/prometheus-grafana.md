@@ -96,9 +96,20 @@ We will use Kong's Helm chart to install Kong
 but you can also use plain manifests for this purpose.
 
 ```bash
-helm repo add kong https://charts.konghq.com
-helm repo update
-helm install kong/kong --name kong --namespace kong --values https://bit.ly/2QTWJE5 --version 1.0.0
+helm install kong/kong
+$ helm repo add kong https://charts.konghq.com
+$ helm repo update
+
+# Helm 2
+$ helm install kong/kong \
+    --name kong --namespace kong \
+    --values https://bit.ly/2QTWJE5 --version 1.0.0
+
+# Helm 3
+$ helm install kong/kong \
+    --name kong --namespace kong \
+    --values https://bit.ly/2QTWJE5 --version 1.0.0 \
+    --set ingressController.installCRDs=false
 ```
 
 ### Enable Prometheus plugin in Kong

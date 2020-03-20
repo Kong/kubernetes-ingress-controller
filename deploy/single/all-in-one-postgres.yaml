@@ -162,6 +162,8 @@ spec:
               - https
               - grpc
               - grpcs
+              - tcp
+              - tls
               type: string
             read_timeout:
               minimum: 0
@@ -677,7 +679,7 @@ spec:
           value: 127.0.0.1:8444 ssl
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        image: kong:1.4
+        image: kong:2.0
         lifecycle:
           preStop:
             exec:
@@ -850,7 +852,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:1.4
+        image: kong:2.0
         name: kong-migrations
       initContainers:
       - command:

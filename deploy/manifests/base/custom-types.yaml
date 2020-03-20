@@ -297,6 +297,8 @@ spec:
             healthchecks:
               type: object
               properties:
+                threshold:
+                  type: integer
                 active:
                   type: object
                   properties:

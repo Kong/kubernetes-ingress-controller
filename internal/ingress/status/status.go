@@ -101,7 +101,7 @@ type statusSync struct {
 	callbacks leaderelection.LeaderCallbacks
 }
 
-// Run starts the loop to keep the status in sync
+// Run starts the loop to keep the status in sync.
 func (s statusSync) Run() {
 }
 
@@ -109,8 +109,10 @@ func (s statusSync) Callbacks() leaderelection.LeaderCallbacks {
 	return s.callbacks
 }
 
-// Shutdown stop the sync. In case the instance is the leader it will remove the current IP
-// if there is no other instances running.
+// Shutdown stop the sync.
+//
+// When this instance is the leader it will remove its current IP address if no other instances are
+// running.
 func (s statusSync) Shutdown(isLeader bool) {
 	go s.syncQueue.Shutdown()
 	if !isLeader {
@@ -127,22 +129,22 @@ func (s statusSync) Shutdown(isLeader bool) {
 
 	addrs, err := s.runningAddresses()
 	if err != nil {
-		glog.Errorf("error obtaining running IPs: %v", addrs)
+		glog.Errorf("error obtaining IP addresses of running ingress controllers: %v", err)
 		return
 	}
 
 	if len(addrs) > 1 {
-		// leave the job to the next leader
-		glog.Infof("leaving status update for next leader (%v)", len(addrs))
+		// Leave the job to the next leader.
+		glog.Infof("leaving status update for next leader (%d other candidates)", len(addrs)-1)
 		return
 	}
 
 	if s.isRunningMultiplePods() {
-		glog.V(2).Infof("skipping Ingress status update (multiple pods running - another one will be elected as master)")
+		glog.V(2).Infof("skipping Ingress status update (multiple pods running; another one will be elected as leader)")
 		return
 	}
 
-	glog.Infof("removing address from ingress status (%v)", addrs)
+	glog.Infof("removing address from Ingress status (%v)", addrs)
 	s.updateStatus([]apiv1.LoadBalancerIngress{})
 }
 

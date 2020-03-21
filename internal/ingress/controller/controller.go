@@ -297,8 +297,8 @@ func (n *KongController) Stop() error {
 	return nil
 }
 
-// handleBasicAuthUpdates updates basic-auth password field
-// in Kong whenever it is changed.
+// handleBasicAuthUpdates updates basic-auth password field in Kong whenever it is changed.
+//
 // Kong hashes basic-auth passwords in DB and API responses once created.
 // Due to this reason, one can't perform a 'diff' with them.
 // This function filters for basic-auth password changes and applies them

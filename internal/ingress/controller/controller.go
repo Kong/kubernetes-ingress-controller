@@ -214,6 +214,10 @@ type KongController struct {
 	stopCh   chan struct{}
 	updateCh *channels.RingChannel
 
+	// wgBackgroundActive tracks how many background goroutines are running, on which we'll wait to
+	// stop in Stop.
+	wgBackgroundActive sync.WaitGroup
+
 	runningConfigHash [32]byte
 
 	isShuttingDown bool
@@ -237,14 +241,28 @@ func (n *KongController) Start() {
 		cancel()
 	}()
 
-	go n.elector.Run(ctx)
-
-	if n.syncStatus != nil {
-		go n.syncStatus.Run()
+	goTallied := func(f func()) {
+		n.wgBackgroundActive.Add(1)
+		go func() {
+			defer n.wgBackgroundActive.Done()
+			f()
+		}()
 	}
 
-	go n.syncQueue.Run(time.Second, n.stopCh)
-	// force initial sync
+	goTallied(func() {
+		n.elector.Run(ctx)
+	})
+
+	if n.syncStatus != nil {
+		goTallied(func() {
+			n.syncStatus.Run()
+		})
+	}
+
+	goTallied(func() {
+		n.syncQueue.Run(time.Second, n.stopCh)
+	})
+	// Force initial sync.
 	n.syncQueue.Enqueue(&networking.Ingress{})
 
 	for {
@@ -285,14 +303,16 @@ func (n *KongController) Stop() error {
 		return fmt.Errorf("shutdown already in progress")
 	}
 
-	glog.Infof("shutting down controller queues")
-	// Closing the stop channel will cause us to give up leadership.
-	wasLeader := n.elector.IsLeader()
-	close(n.stopCh)
-	go n.syncQueue.Shutdown()
 	if n.syncStatus != nil {
-		n.syncStatus.Shutdown(wasLeader)
+		// Finish writing to any Ingress objects before giving up leadership.
+		n.syncStatus.Shutdown(n.elector.IsLeader())
 	}
+	glog.Infof("shutting down controller queues")
+	n.syncQueue.Shutdown()
+	// Closing the stop channel will cause us to give up leadership.
+	close(n.stopCh)
+	glog.Infof("awaiting completion of shutdown procedures")
+	n.wgBackgroundActive.Wait()
 
 	return nil
 }

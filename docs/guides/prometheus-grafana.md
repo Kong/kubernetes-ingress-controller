@@ -42,7 +42,7 @@ We’ll install both Prometheus and Grafana in a dedicated ‘monitoring’ name
 To install Prometheus, execute the following:
 
 ```bash
-helm install --name prometheus stable/prometheus --namespace monitoring --values https://bit.ly/2RgzDtg --version 8.4.1
+$ helm install --name prometheus stable/prometheus --namespace monitoring --values https://bit.ly/2RgzDtg --version 11.0.3
 ```
 
 ### Grafana
@@ -87,7 +87,7 @@ dashboards:
 To install Grafana, execute the following:
 
 ```bash
-helm install stable/grafana --name grafana --namespace monitoring --values http://bit.ly/2FuFVfV --version 1.22.1
+$ helm install stable/grafana --name grafana --namespace monitoring --values http://bit.ly/2FuFVfV --version 5.0.8
 ```
 
 ## Install Kong
@@ -96,20 +96,14 @@ We will use Kong's Helm chart to install Kong
 but you can also use plain manifests for this purpose.
 
 ```bash
-helm install kong/kong
 $ helm repo add kong https://charts.konghq.com
 $ helm repo update
 
-# Helm 2
-$ helm install kong/kong \
-    --name kong --namespace kong \
-    --values https://bit.ly/2QTWJE5 --version 1.0.0
+# helm 2
+$ helm install kong/kong --namespace kong --name mykong --version 1.3.1 --values https://bit.ly/2UAv0ZE
 
-# Helm 3
-$ helm install kong/kong \
-    --name kong --namespace kong \
-    --values https://bit.ly/2QTWJE5 --version 1.0.0 \
-    --set ingressController.installCRDs=false
+# helm 3
+$ helm install kong/kong --namespace kong --name mykong --version 1.3.1 --values https://bit.ly/2UAv0ZE --set ingressController.installCRDs=false
 ```
 
 ### Enable Prometheus plugin in Kong
@@ -146,7 +140,7 @@ kubectl --namespace monitoring  port-forward $POD_NAME 9090 &
 
 # You can access Prometheus in your browser at localhost:9090
 
-POD_NAME=$(kubectl get pods --namespace monitoring -l "app=grafana" -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods --namespace monitoring -l "app.kubernetes.io/instance=grafana" -o jsonpath="{.items[0].metadata.name}")
 kubectl --namespace monitoring port-forward $POD_NAME 3000 &
 
 # You can access Grafana in your browser at localhost:3000

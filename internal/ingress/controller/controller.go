@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/blang/semver"
@@ -220,7 +221,7 @@ type KongController struct {
 
 	runningConfigHash [32]byte
 
-	isShuttingDown bool
+	isShuttingDown uint32
 
 	store store.Storer
 
@@ -268,7 +269,7 @@ func (n *KongController) Start() {
 	for {
 		select {
 		case event := <-n.updateCh.Out():
-			if n.isShuttingDown {
+			if v := atomic.LoadUint32(&n.isShuttingDown); v != 0 {
 				return
 			}
 			if evt, ok := event.(Event); ok {
@@ -283,7 +284,7 @@ func (n *KongController) Start() {
 					glog.Errorf("error handling basic-auth update: %v", err)
 				}
 			} else {
-				glog.Warningf("unexpected event type received %T", event)
+				glog.Warningf("unexpected event type received: %T", event)
 			}
 		case <-n.stopCh:
 			return
@@ -293,7 +294,7 @@ func (n *KongController) Start() {
 
 // Stop stops the NGINX master process gracefully.
 func (n *KongController) Stop() error {
-	n.isShuttingDown = true
+	atomic.StoreUint32(&n.isShuttingDown, 1)
 
 	n.stopLock.Lock()
 	defer n.stopLock.Unlock()

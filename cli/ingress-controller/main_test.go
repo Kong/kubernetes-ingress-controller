@@ -21,7 +21,6 @@ import (
 	"os"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/eapache/channels"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
@@ -80,24 +79,16 @@ func TestHandleSigterm(t *testing.T) {
 		store.New(store.CacheStores{}, conf.IngressClass),
 	)
 
-	exitCh := make(chan int)
+	exitCh := make(chan int, 1)
 	go handleSigterm(kong, make(chan struct{}), exitCh)
 
 	t.Logf("sending SIGTERM to process PID %v", syscall.Getpid())
-	err = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-	if err != nil {
+	if err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM); err != nil {
 		t.Errorf("unexpected error sending SIGTERM signal")
 	}
 
-	time.Sleep(1 * time.Second)
-
-	select {
-	case code := <-exitCh:
-		if code != 1 {
-			t.Errorf("expected exit code 1 but %v received", code)
-		}
-	default:
-		t.Errorf("expected exit code to be available")
+	// Allow test to time out if no value becomes avaialble soon enough.
+	if code := <-exitCh; code != 1 {
+		t.Errorf("expected exit code 1 but %v received", code)
 	}
-
 }

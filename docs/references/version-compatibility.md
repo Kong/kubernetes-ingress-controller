@@ -31,6 +31,7 @@ Open-Source Kong Gateway compatibility (the previous section).
 |-----------------------------|:------------------:|:------------------:|:------------------:|
 | Kong-enterprise-k8s 1.3.x.y | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Kong-enterprise-k8s 1.4.x.y | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kong-enterprise-k8s 2.0.x.y | :x:                | :x:                | :white_check_mark: |
 
 ## Kong Enterprise
 

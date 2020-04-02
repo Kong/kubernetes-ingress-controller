@@ -1,0 +1,8 @@
+resources:
+- ../base
+patchesStrategicMerge:
+- labels.yaml
+nameSuffix: "-dbless-v20"
+images:
+- name: kong
+  newTag: "2.0"

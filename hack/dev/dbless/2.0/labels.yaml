@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: kong-dev
+  labels:
+    version: "20"
+    db: "false"
+spec:
+  selector:
+    matchLabels:
+      version: "20"
+      db: "false"
+  template:
+    metadata:
+      labels:
+        version: "20"
+        db: "false"

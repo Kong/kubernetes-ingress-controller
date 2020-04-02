@@ -55,3 +55,13 @@ Kong Ingress controller:
 - [Preserveing Client IP address](preserve-client-ip.md)  
   This guide gives an overview of different methods to preserve the Client
   IP address.
+- [Using KongClusterPlugin resource](using-kongclusterplugin-resource.md)  
+  This guide walks through setting up plugins that can be shared across
+  Kubernetes namespaces.
+- [Using Kong with Knative](using-kong-with-knative.md)  
+  This guide gives an overview of how to setup Kong as the Ingress point
+  for Knative workloads.
+- [Exposing TCP-based service](using-tcpingress.md)  
+  This guide gives an overview of how to use TCPIngress resource to expose
+  non-HTTP based services outside a Kubernetes cluster.
+

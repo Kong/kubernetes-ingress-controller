@@ -16,7 +16,7 @@ set to contain the IP address or URL pointing to Kong.
 Please follow one of the
 [deployment guides](../deployment) to configure this environment variable.
 
-If everything is setup correctly, making a request to Kong should return 
+If everything is setup correctly, making a request to Kong should return
 HTTP 404 Not Found.
 
 ```bash
@@ -39,7 +39,7 @@ For the purpose of this guide, we will setup an [httpbin](https://httpbin.org)
 service in the cluster and proxy it.
 
 ```bash
-kubectl apply -f https://bit.ly/k8s-httpbin
+$ kubectl apply -f https://bit.ly/k8s-httpbin
 service/httpbin created
 deployment.apps/httpbin created
 ```
@@ -47,11 +47,13 @@ deployment.apps/httpbin created
 Create an Ingress rule to proxy the httpbin service we just created:
 
 ```bash
-$ echo "
+$ echo '
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: demo
+  annotations:
+    konghq.com/strip-path: "true"
 spec:
   rules:
   - http:
@@ -60,7 +62,7 @@ spec:
         backend:
           serviceName: httpbin
           servicePort: 80
-" | kubectl apply -f -
+' | kubectl apply -f -
 ingress.extensions/demo created
 ```
 
@@ -100,16 +102,17 @@ kongplugin.configuration.konghq.com/httpbin-auth created
 ```
 
 Now, associate this plugin with the previous Ingress rule we created
-using the `plugins.konghq.com` annotation:
+using the `konghq.com/plugins` annotation:
 
 ```bash
-$ echo "
+$ echo '
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: demo
   annotations:
-    plugins.konghq.com: httpbin-auth
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: httpbin-auth
 spec:
   rules:
   - http:
@@ -118,7 +121,7 @@ spec:
         backend:
           serviceName: httpbin
           servicePort: 80
-" | kubectl apply -f -
+' | kubectl apply -f -
 ```
 
 Any request matching the proxying rules defined in the `demo` ingress will
@@ -160,9 +163,10 @@ Next, we will create a [Secret](https://kubernetes.io/docs/concepts/configuratio
 resource with an API-key inside it:
 
 ```bash
-kubectl create secret generic harry-apikey  \
+$ kubectl create secret generic harry-apikey  \
   --from-literal=kongCredType=key-auth  \
   --from-literal=key=my-sooper-secret-key
+secret/harry-apikey created
 ```
 
 The type of credential is specified via `kongCredType`.

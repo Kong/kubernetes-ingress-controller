@@ -28,6 +28,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
@@ -41,6 +42,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
+	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
 )
 
 // Kong Represents a Kong client and connection information
@@ -64,7 +66,9 @@ type Kong struct {
 type Configuration struct {
 	Kong
 
-	KubeClient clientset.Interface
+	KubeClient       clientset.Interface
+	KongConfigClient configurationClientSet.Interface
+	KnativeClient    knativeClientSet.Interface
 
 	ResyncPeriod  time.Duration
 	SyncRateLimit float32
@@ -81,7 +85,8 @@ type Configuration struct {
 	UpdateStatusOnShutdown bool
 	ElectionID             string
 
-	UseNetworkingV1beta1 bool
+	UseNetworkingV1beta1        bool
+	EnableKnativeIngressSupport bool
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -166,7 +171,9 @@ func NewKongController(config *Configuration,
 
 	if config.UpdateStatus {
 		n.syncStatus = status.NewStatusSyncer(status.Config{
-			Client:                 config.KubeClient,
+			CoreClient:             config.KubeClient,
+			KongConfigClient:       config.KongConfigClient,
+			KnativeClient:          config.KnativeClient,
 			PublishService:         config.PublishService,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,

@@ -21,6 +21,8 @@ import (
 
 	"github.com/golang/glog"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -29,7 +31,25 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
+
+const (
+	knativeIngressClassKey = "networking.knative.dev/ingress.class"
+)
+
+// ErrNotFound error is returned when a lookup results in no resource.
+// This type is meant to be used for error handling using `errors.As()`.
+type ErrNotFound struct {
+	message string
+}
+
+func (e ErrNotFound) Error() string {
+	if e.message == "" {
+		return "not found"
+	}
+	return e.message
+}
 
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
@@ -39,10 +59,14 @@ type Storer interface {
 	GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error)
 	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
+	GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
 
 	ListIngresses() []*networking.Ingress
+	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
+	ListKnativeIngresses() ([]*knative.Ingress, error)
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
+	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
 	ListKongCredentials() []*configurationv1.KongCredential
 }
@@ -54,29 +78,35 @@ type Storer interface {
 type Store struct {
 	stores CacheStores
 
+	ingressClass string
+
 	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
 }
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that
 // the Ingress Controller reads.
 type CacheStores struct {
-	Ingress  cache.Store
-	Service  cache.Store
-	Secret   cache.Store
-	Endpoint cache.Store
+	Ingress    cache.Store
+	TCPIngress cache.Store
+	Service    cache.Store
+	Secret     cache.Store
+	Endpoint   cache.Store
 
 	Plugin        cache.Store
+	ClusterPlugin cache.Store
 	Consumer      cache.Store
 	Credential    cache.Store
 	Configuration cache.Store
+
+	KnativeIngress cache.Store
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores,
-	isValidIngresClassFunc func(objectMeta *metav1.ObjectMeta) bool) Storer {
+func New(cs CacheStores, ingressClass string) Storer {
 	return Store{
 		stores:             cs,
-		isValidIngresClass: isValidIngresClassFunc,
+		ingressClass:       ingressClass,
+		isValidIngresClass: annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 	}
 }
 
@@ -88,7 +118,7 @@ func (s Store) GetSecret(namespace, name string) (*apiv1.Secret, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("secret %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("Secret %v not found", key)}
 	}
 	return secret.(*apiv1.Secret), nil
 }
@@ -101,7 +131,7 @@ func (s Store) GetService(namespace, name string) (*apiv1.Service, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("service %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("Service %v not found", key)}
 	}
 	return service.(*apiv1.Service), nil
 }
@@ -121,6 +151,52 @@ func (s Store) ListIngresses() []*networking.Ingress {
 	return ingresses
 }
 
+// ListTCPIngresses returns the list of TCP Ingresses from
+// configuration.konghq.com group.
+func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
+	var ingresses []*configurationv1beta1.TCPIngress
+	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
+		func(ob interface{}) {
+			ing, ok := ob.(*configurationv1beta1.TCPIngress)
+			if ok && s.isValidIngresClass(&ing.ObjectMeta) {
+				ingresses = append(ingresses, ing)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return ingresses, nil
+}
+
+func (s Store) validKnativeIngressClass(objectMeta *metav1.ObjectMeta) bool {
+	ingressAnnotationValue := objectMeta.GetAnnotations()[knativeIngressClassKey]
+	if ingressAnnotationValue == "" &&
+		s.ingressClass == annotations.DefaultIngressClass {
+		return true
+	}
+	return ingressAnnotationValue == s.ingressClass
+}
+
+// ListKnativeIngresses returns the list of TCP Ingresses from
+// configuration.konghq.com group.
+func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
+	var ingresses []*knative.Ingress
+	if s.stores.KnativeIngress == nil {
+		return ingresses, nil
+	}
+	err := cache.ListAll(s.stores.KnativeIngress, labels.NewSelector(),
+		func(ob interface{}) {
+			ing, ok := ob.(*knative.Ingress)
+			if ok && s.validKnativeIngressClass(&ing.ObjectMeta) {
+				ingresses = append(ingresses, ing)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return ingresses, nil
+}
+
 // GetEndpointsForService returns the internal endpoints for service
 // 'namespace/name' inside k8s.
 func (s Store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error) {
@@ -130,7 +206,7 @@ func (s Store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints,
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("could not find endpoints for service %v", key)
+		return nil, ErrNotFound{fmt.Sprintf("Endpoints for service %v not found", key)}
 	}
 	return eps.(*apiv1.Endpoints), nil
 }
@@ -143,9 +219,21 @@ func (s Store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugi
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("plugin %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("KongPlugin %v not found", key)}
 	}
 	return p.(*configurationv1.KongPlugin), nil
+}
+
+// GetKongClusterPlugin returns the 'name' KongClusterPlugin resource.
+func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error) {
+	p, exists, err := s.stores.ClusterPlugin.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("KongClusterPluign %v not found", name)}
+	}
+	return p.(*configurationv1.KongClusterPlugin), nil
 }
 
 // GetKongIngress returns the 'name' KongIngress resource in namespace.
@@ -156,7 +244,7 @@ func (s Store) GetKongIngress(namespace, name string) (*configurationv1.KongIngr
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("KongIngress %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("KongIngress %v not found", name)}
 	}
 	return p.(*configurationv1.KongIngress), nil
 }
@@ -169,7 +257,7 @@ func (s Store) GetKongConsumer(namespace, name string) (*configurationv1.KongCon
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("consumer %v was not found", key)
+		return nil, ErrNotFound{fmt.Sprintf("KongConsumer %v not found", key)}
 	}
 	return p.(*configurationv1.KongConsumer), nil
 }
@@ -217,6 +305,30 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
+			if ok && s.isValidIngresClass(&p.ObjectMeta) {
+				plugins = append(plugins, p)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return plugins, nil
+}
+
+// ListGlobalKongClusterPlugins returns all KongClusterPlugin resources
+// filtered by the ingress.class annotation and with the
+// label global:"true".
+func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error) {
+
+	var plugins []*configurationv1.KongClusterPlugin
+	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
+	if err != nil {
+		return nil, err
+	}
+	err = cache.ListAll(s.stores.ClusterPlugin,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			p, ok := ob.(*configurationv1.KongClusterPlugin)
 			if ok && s.isValidIngresClass(&p.ObjectMeta) {
 				plugins = append(plugins, p)
 			}

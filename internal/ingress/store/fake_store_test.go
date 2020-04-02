@@ -1,14 +1,17 @@
 package store
 
 import (
+	"github.com/pkg/errors"
 	"testing"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
 
 func Test_keyFunc(t *testing.T) {
@@ -149,6 +152,97 @@ func TestFakeStoreIngress(t *testing.T) {
 	assert.Len(store.ListIngresses(), 1)
 }
 
+func TestFakeStoreListTCPIngress(t *testing.T) {
+	assert := assert.New(t)
+
+	ingresses := []*configurationv1beta1.TCPIngress{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: configurationv1beta1.IngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 9000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "not-kong",
+				},
+			},
+			Spec: configurationv1beta1.IngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 8000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "bar-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{TCPIngresses: ingresses})
+	assert.Nil(err)
+	assert.NotNil(store)
+	ings, err := store.ListTCPIngresses()
+	assert.Nil(err)
+	assert.Len(ings, 1)
+}
+
+func TestFakeStoreListKnativeIngress(t *testing.T) {
+	assert := assert.New(t)
+
+	ingresses := []*knative.Ingress{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{KnativeIngresses: ingresses})
+	assert.Nil(err)
+	assert.NotNil(store)
+	ings, err := store.ListKnativeIngresses()
+	assert.Len(ings, 1)
+	assert.Nil(err)
+}
+
 func TestFakeStoreService(t *testing.T) {
 	assert := assert.New(t)
 
@@ -169,6 +263,7 @@ func TestFakeStoreService(t *testing.T) {
 
 	service, err = store.GetService("default", "does-not-exists")
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(service)
 }
 
@@ -192,6 +287,7 @@ func TestFakeStoreEndpiont(t *testing.T) {
 
 	c, err = store.GetEndpointsForService("default", "does-not-exist")
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(c)
 }
 
@@ -217,6 +313,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 	c, err = store.GetKongConsumer("default", "does-not-exist")
 	assert.Nil(c)
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 }
 
 func TestFakeStorePlugins(t *testing.T) {
@@ -274,6 +371,62 @@ func TestFakeStorePlugins(t *testing.T) {
 
 	plugin, err = store.GetKongPlugin("default", "does-not-exist")
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.Nil(plugin)
+}
+
+func TestFakeStoreClusterPlugins(t *testing.T) {
+	assert := assert.New(t)
+
+	plugins := []*configurationv1.KongClusterPlugin{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
+	assert.Nil(err)
+	assert.NotNil(store)
+	plugins, err = store.ListGlobalKongClusterPlugins()
+	assert.Len(plugins, 0)
+
+	plugins = []*configurationv1.KongClusterPlugin{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+				Labels: map[string]string{
+					"global": "true",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+				Labels: map[string]string{
+					"global": "true",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "baz",
+			},
+		},
+	}
+	store, err = NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
+	assert.Nil(err)
+	assert.NotNil(store)
+	plugins, err = store.ListGlobalKongClusterPlugins()
+	assert.Len(plugins, 2)
+
+	plugin, err := store.GetKongClusterPlugin("foo")
+	assert.NotNil(plugin)
+	assert.Nil(err)
+
+	plugin, err = store.GetKongClusterPlugin("does-not-exist")
+	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)
 }
 
@@ -322,6 +475,7 @@ func TestFakeStoreSecret(t *testing.T) {
 	secret, err = store.GetSecret("default", "does-not-exist")
 	assert.Nil(secret)
 	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
 }
 
 func TestFakeKongIngress(t *testing.T) {
@@ -345,4 +499,5 @@ func TestFakeKongIngress(t *testing.T) {
 	kingress, err = store.GetKongIngress("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.Nil(kingress)
+	assert.True(errors.As(err, &ErrNotFound{}))
 }

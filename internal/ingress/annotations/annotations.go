@@ -25,15 +25,21 @@ import (
 const (
 	ingressClassKey = "kubernetes.io/ingress.class"
 
-	pluginsAnnotationKey = "plugins.konghq.com"
+	deprecatedAnnotationPrefix = "configuration.konghq.com"
+	annotationPrefix           = "konghq.com"
 
-	configurationAnnotationKey = "configuration.konghq.com"
+	deprecatedPluginsKey       = "plugins.konghq.com"
+	deprecatedConfigurationKey = deprecatedAnnotationPrefix
 
-	protocolAnnotationKey = "configuration.konghq.com/protocol"
-
-	protocolsAnnotationKey = "configuration.konghq.com/protocols"
-
-	clientCertAnnotationKey = "configuration.konghq.com/client-cert"
+	configurationKey     = "/override"
+	pluginsKey           = "/plugins"
+	protocolKey          = "/protocol"
+	protocolsKey         = "/protocols"
+	clientCertKey        = "/client-cert"
+	stripPathKey         = "/strip-path"
+	pathKey              = "/path"
+	httpsRedirectCodeKey = "/https-redirect-status-code"
+	preserveHostKey      = "/preserve-host"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -76,12 +82,34 @@ func IngressClassValidatorFuncFromObjectMeta(
 	}
 }
 
+// valueFromAnnotation returns the value of an annotation with key.
+// key is without the annotation prefix of configuration.konghq.com or
+// konghq.com.
+// It first looks up key under the konghq.com group and if one doesn't
+// exist then it looks up the configuration.konghq.com  annotation group.
+func valueFromAnnotation(key string, anns map[string]string) string {
+	value, exists := anns[annotationPrefix+key]
+	if exists {
+		return value
+	}
+	return anns[deprecatedAnnotationPrefix+key]
+}
+
+func pluginsFromAnnotations(anns map[string]string) (string, bool) {
+	value, exists := anns[annotationPrefix+pluginsKey]
+	if exists {
+		return value, exists
+	}
+	value, exists = anns[deprecatedPluginsKey]
+	return value, exists
+}
+
 // ExtractKongPluginsFromAnnotations extracts information about Kong
 // Plugins configured using plugins.konghq.com annotation.
 // This returns a list of KongPlugin resource names that should be applied.
 func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 	var kongPluginCRs []string
-	v, ok := anns[pluginsAnnotationKey]
+	v, ok := pluginsFromAnnotations(anns)
 	if !ok {
 		return kongPluginCRs
 	}
@@ -97,23 +125,51 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 // ExtractConfigurationName extracts the name of the KongIngress object that holds
 // information about the configuration to use in Routes, Services and Upstreams
 func ExtractConfigurationName(anns map[string]string) string {
-	return anns[configurationAnnotationKey]
+	value, exists := anns[annotationPrefix+configurationKey]
+	if exists {
+		return value
+	}
+	return anns[deprecatedConfigurationKey]
 }
 
 // ExtractProtocolName extracts the protocol supplied in the annotation
 func ExtractProtocolName(anns map[string]string) string {
-	return anns[protocolAnnotationKey]
+	return valueFromAnnotation(protocolKey, anns)
 }
 
 // ExtractProtocolNames extracts the protocols supplied in the annotation
 func ExtractProtocolNames(anns map[string]string) []string {
-	return strings.Split(anns[protocolsAnnotationKey], ",")
+	val := valueFromAnnotation(protocolsKey, anns)
+	return strings.Split(val, ",")
 }
 
 // ExtractClientCertificate extracts the secret name containing the
 // client-certificate to use.
 func ExtractClientCertificate(anns map[string]string) string {
-	return anns[clientCertAnnotationKey]
+	return valueFromAnnotation(clientCertKey, anns)
+}
+
+// ExtractStripPath extracts the strip-path annotations containing the
+// the boolean string "true" or "false".
+func ExtractStripPath(anns map[string]string) string {
+	return valueFromAnnotation(stripPathKey, anns)
+}
+
+// ExtractPath extracts the path annotations containing the
+// HTTP path.
+func ExtractPath(anns map[string]string) string {
+	return valueFromAnnotation(pathKey, anns)
+}
+
+// ExtractHTTPSRedirectStatusCode extracts the https redirect status
+// code annotation value.
+func ExtractHTTPSRedirectStatusCode(anns map[string]string) string {
+	return valueFromAnnotation(httpsRedirectCodeKey, anns)
+}
+
+// ExtractPreserveHost extracts the preserve-host annotation value.
+func ExtractPreserveHost(anns map[string]string) string {
+	return valueFromAnnotation(preserveHostKey, anns)
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

@@ -16,7 +16,7 @@ env:
   - GOPROXY=https://proxy.golang.org
 
 go:
-  - "1.13"
+  - "1.14"
 
 go_import_path: github.com/kong/kubernetes-ingress-controller
 

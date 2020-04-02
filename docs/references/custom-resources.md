@@ -13,6 +13,9 @@ Following CRDs enables users to declaratively configure all aspects of Kong:
   in Kubernetes.
 - [**KongConsumer**](#kongconsumer):
   This resource maps to the [Consumer][kong-consumer] entity in Kong.
+- [**TCPIngress**](#tcpingress):
+  This resource can configure TCP-based routing in Kong for non-HTTP
+  services running inside Kubernetes.
 - [**KongCredential (Deprecated)**](#kongcredential-deprecated):
   This resource maps to
   a credential (key-auth, basic-auth, jwt, hmac-auth) that is associated with
@@ -21,12 +24,12 @@ Following CRDs enables users to declaratively configure all aspects of Kong:
 ## KongPlugin
 
 This resource provides an API to configure plugins inside Kong using
-Kubernetes-styled APIs.
+Kubernetes-style resources.
 
 Please see the [concept](../concepts/custom-resources.md#KongPlugin)
 document for how the resource should be used.
 
-The following snippet shows the properties available:
+The following snippet shows the properties available in KongPlugin resource:
 
 ```yaml
 apiVersion: configuration.konghq.com/v1
@@ -48,16 +51,19 @@ plugin: <name-of-plugin> # like key-auth, rate-limiting etc
   required to configure the plugin.
   All configuration values specific to the type of plugin go in here.
   Please read the documentation of the plugin being configured to set values
-  in here.
+  in here. For any plugin in Kong, anything that goes in the `config` JSON
+  key in the Admin API request, goes into the  `config` YAML key in this resource.
+  Please use a valid JSON to YAML convertor and place the content under the
+  `config` key in the YAML above.
 - `plugin` field determines the name of the plugin in Kong.
   This field was introduced in Kong Ingress Controller 0.2.0.
 - Setting a label `global` to `"true"` will result in the plugin being
   applied globally in Kong, meaning it will be executed for every
   request that is proxied via Kong.
 
-**Please note:** validation of the configuration fields is left to the user.
-Setting invalid fields will result in errors in the Ingress Controller.
-This behavior is set to improve in the future.
+**Please note:** validation of the configuration fields is left to the user
+by default. It is advised to setup and use the admission validating controller
+to catch user errors.
 
 The plugins can be associated with Ingress
 or Service object in Kubernetes using `plugins.konghq.com` annotation.
@@ -124,10 +130,32 @@ Please follow the
 [Using the KongPlugin resource](../guides/using-kongplugin-resource.md)
 guide for details on how to use this resource.
 
+## KongClusterPlugin
+
+A `KongClusterPlugin` is same as `KongPlugin` resource. The only difference
+being that it is a Kubernetes cluster-level resource instead of a
+namespaced resource.
+
+Please consult the [KongPlugin](#kongplugin) section for details.
+
+*Example:*
+
+KongClusterPlugin example:
+
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: request-id
+config:
+  header_name: my-request-id
+plugin: correlation-id
+```
+
 ## KongIngress
 
 Ingress resource spec in Kubernetes can define routing policies
-based on HTTP Host header and paths.  
+based on HTTP Host header and paths.
 While this is sufficient in most cases,
 sometimes, users may want more control over routing at the Ingress level.
 `KongIngress` serves as an "extension" to Ingress resource.
@@ -170,9 +198,11 @@ kind: KongIngress
 metadata:
   name: configuration-demo
 upstream:
+  slots: 10
   hash_on: none
   hash_fallback: none
   healthchecks:
+    threshold: 25
     active:
       concurrency: 10
       healthy:
@@ -202,7 +232,6 @@ upstream:
         - 503
         tcp_failures: 0
         timeouts: 0
-    slots: 10
 proxy:
   protocol: http
   path: /
@@ -221,6 +250,35 @@ route:
   - http
   - https
 ```
+
+## TCPIngress
+
+The Ingress resource in Kubernetes is HTTP-only.
+This custom resource is modeled similar to the Ingress resource but for
+TCP and TLS SNI based routing purposes:
+
+```yaml
+apiVersion: configuration.konghq.com/v1beta1
+kind: TCPIngress
+metadata:
+  name: <object name>
+  namespace: <object namespace>
+spec:
+  rules:
+  - host: <SNI, optional>
+    port: <port on which to expose this service, required>
+    backend:
+      serviceName: <name of the kubernetes service, required>
+      servicePort: <port number to forward on the service, required>
+```
+
+If `host` is not specified, then port-based TCP routing is performed. Kong
+doesn't care about the content of TCP stream in this case.
+
+If `host` is specified, then Kong expects the TCP stream to be TLS-encrypted
+and Kong will terminate the TLS session based on the SNI.
+Also note that, the port in this case should be configured with `ssl` parameter
+in Kong.
 
 ## KongConsumer
 

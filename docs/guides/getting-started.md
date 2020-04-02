@@ -35,7 +35,7 @@ Setup an echo-server application to demonstrate how
 to use Kong Ingress Controller:
 
 ```bash
-$ curl -sL bit.ly/echo-service | kubectl apply -f -
+$ kubectl apply -f https://bit.ly/echo-service
 service/echo created
 deployment.apps/echo created
 ```
@@ -121,7 +121,7 @@ kind: Ingress
 metadata:
   name: demo-example-com
   annotations:
-    plugins.konghq.com: request-id
+    konghq.com/plugins: request-id
 spec:
   rules:
   - host: example.com
@@ -168,11 +168,11 @@ Server values:
 Request Information:
         client_address=172.17.0.2
         method=GET
-        real path=/sample
+        real path=/bar/sample
         query=
         request_version=1.1
         request_scheme=http
-        request_uri=http://example.com:8080/sample
+        request_uri=http://example.com:8080/bar/sample
 
 Request Headers:
         accept=*/*
@@ -217,12 +217,12 @@ plugin: rate-limiting
 kongplugin.configuration.konghq.com/rl-by-ip created
 ```
 
-Next, apply the `plugins.konghq.com` annotation on the Kubernetes Service
+Next, apply the `konghq.com/plugins` annotation on the Kubernetes Service
 that needs rate-limiting:
 
 ```bash
 kubectl patch svc echo \
-  -p '{"metadata":{"annotations":{"plugins.konghq.com": "rl-by-ip\n"}}}'
+  -p '{"metadata":{"annotations":{"konghq.com/plugins": "rl-by-ip\n"}}}'
 ```
 
 Now, any request sent to this service will be protected by a rate-limit

@@ -14,6 +14,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
@@ -23,22 +24,33 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
 // rule.
 type Route struct {
 	kong.Route
+
 	// Ingress object associated with this route
 	Ingress networking.Ingress
+	// TCPIngress object associated with this route
+	TCPIngress configurationv1beta1.TCPIngress
+	// Is this route coming from TCPIngress or networking.Ingress?
+	IsTCP   bool
 	Plugins []kong.Plugin
+}
+
+type backend struct {
+	Name string
+	Port intstr.IntOrString
 }
 
 // Service represents a service in Kong and holds routes associated with the
 // service and other k8s metadata.
 type Service struct {
 	kong.Service
-	Backend    networking.IngressBackend
+	Backend    backend
 	Namespace  string
 	Routes     []Route
 	Plugins    []kong.Plugin
@@ -112,7 +124,7 @@ var supportedCreds = sets.NewString(
 	"oauth2",
 )
 
-var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs$`)
+var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
 
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
@@ -125,15 +137,31 @@ func New(store store.Storer) Parser {
 func (p *Parser) Build() (*KongState, error) {
 	var state KongState
 	ings := p.store.ListIngresses()
+	tcpIngresses, err := p.store.ListTCPIngresses()
+	if err != nil {
+		glog.Errorf("error listing TCPIngresses: %v", err)
+	}
 	// parse ingress rules
-	parsedInfo, err := p.parseIngressRules(ings)
+	parsedInfo, err := p.parseIngressRules(ings, tcpIngresses)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing ingress rules")
 	}
 
+	knativeIngresses, err := p.store.ListKnativeIngresses()
+	if err != nil {
+		glog.Errorf("error listing knative Ingresses: %v", err)
+	}
+	servicesFromKnative, err := p.parseKnativeIngressRules(knativeIngresses)
+	if err != nil {
+		glog.Errorf("error parsing Knative Ingress rules: %v", err)
+	}
+	for name, service := range servicesFromKnative {
+		parsedInfo.ServiceNameToServices[name] = service
+	}
+
 	// populate Kubernetes Service
 	for key, service := range parsedInfo.ServiceNameToServices {
-		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.ServiceName)
+		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.Name)
 		if err != nil {
 			glog.Errorf("getting service: %v", err)
 		}
@@ -416,12 +444,150 @@ func processTLSSections(tlsSections []networking.IngressTLS,
 	}
 }
 
-func (p *Parser) parseIngressRules(
-	ingressList []*networking.Ingress) (*parsedIngressRules, error) {
+func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
+	var result []networking.IngressTLS
+
+	for _, t := range tls {
+		result = append(result, networking.IngressTLS{
+			Hosts:      t.Hosts,
+			SecretName: t.SecretName,
+		})
+	}
+	return result
+}
+
+func (p *Parser) parseKnativeIngressRules(ingressList []*knative.Ingress) (
+	map[string]Service, error) {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
+	})
+
+	services := map[string]Service{}
+
+	for i := 0; i < len(ingressList); i++ {
+		ingress := *ingressList[i]
+		ingressSpec := ingress.Spec
+
+		for i, rule := range ingressSpec.Rules {
+			hosts := rule.Hosts
+			if rule.HTTP == nil {
+				continue
+			}
+			for j, rule := range rule.HTTP.Paths {
+				path := rule.Path
+
+				if path == "" {
+					path = "/"
+				}
+				r := Route{
+					Route: kong.Route{
+						// TODO Figure out a way to name the routes
+						// This is not a stable scheme
+						// 1. If a user adds a route in the middle,
+						// due to a shift, all the following routes will
+						// be PATCHED
+						// 2. Is it guaranteed that the order is stable?
+						// Meaning, the routes will always appear in the same
+						// order?
+						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
+						Paths:         kong.StringSlice(path),
+						StripPath:     kong.Bool(false),
+						PreserveHost:  kong.Bool(true),
+						Protocols:     kong.StringSlice("http", "https"),
+						RegexPriority: kong.Int(0),
+					},
+				}
+				r.Hosts = kong.StringSlice(hosts...)
+
+				knativeBackend := knativeSelectSplit(rule.Splits)
+				serviceName := knativeBackend.ServiceNamespace + "." +
+					knativeBackend.ServiceName + "." +
+					knativeBackend.ServicePort.String()
+				serviceHost := knativeBackend.ServiceName + "." +
+					knativeBackend.ServiceNamespace + "." +
+					knativeBackend.ServicePort.String() + ".svc"
+				service, ok := services[serviceName]
+				if !ok {
+
+					var headers []string
+					for key, value := range knativeBackend.AppendHeaders {
+						headers = append(headers, key+":"+value)
+					}
+					for key, value := range rule.AppendHeaders {
+						headers = append(headers, key+":"+value)
+					}
+
+					service = Service{
+						Service: kong.Service{
+							Name:           kong.String(serviceName),
+							Host:           kong.String(serviceHost),
+							Port:           kong.Int(80),
+							Protocol:       kong.String("http"),
+							Path:           kong.String("/"),
+							ConnectTimeout: kong.Int(60000),
+							ReadTimeout:    kong.Int(60000),
+							WriteTimeout:   kong.Int(60000),
+							Retries:        kong.Int(5),
+						},
+						Namespace: ingress.Namespace,
+						Backend: backend{
+							Name: knativeBackend.ServiceName,
+							Port: knativeBackend.ServicePort,
+						},
+						Plugins: []kong.Plugin{
+							{
+								Name: kong.String("request-transformer"),
+								Config: kong.Configuration{
+									"add": map[string]interface{}{
+										"headers": headers,
+									},
+								},
+							},
+						},
+					}
+				}
+				service.Routes = append(service.Routes, r)
+				services[serviceName] = service
+			}
+		}
+	}
+
+	return services, nil
+}
+
+func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
+	if len(splits) == 0 {
+		glog.Error("knative Ingress has no backends")
+		return knative.IngressBackendSplit{}
+	}
+	res := splits[0]
+	maxPercentage := splits[0].Percent
+	if len(splits) == 1 {
+		return res
+	}
+	for i := 1; i < len(splits); i++ {
+		if splits[i].Percent > maxPercentage {
+			res = splits[i]
+			maxPercentage = res.Percent
+		}
+	}
+	return res
+}
+
+func (p *Parser) parseIngressRules(
+	ingressList []*networking.Ingress,
+	tcpIngressList []*configurationv1beta1.TCPIngress) (*parsedIngressRules, error) {
+
+	sort.SliceStable(ingressList, func(i, j int) bool {
+		return ingressList[i].CreationTimestamp.Before(
+			&ingressList[j].CreationTimestamp)
+	})
+
+	sort.SliceStable(tcpIngressList, func(i, j int) bool {
+		return tcpIngressList[i].CreationTimestamp.Before(
+			&tcpIngressList[j].CreationTimestamp)
 	})
 
 	// generate the following:
@@ -449,8 +615,6 @@ func (p *Parser) parseIngressRules(
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
-				isACMEChallenge := strings.HasPrefix(path, "/.well-known/acme-challenge/")
-
 				if path == "" {
 					path = "/"
 				}
@@ -467,7 +631,7 @@ func (p *Parser) parseIngressRules(
 						// order?
 						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
 						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(!isACMEChallenge),
+						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
 						Protocols:     kong.StringSlice("http", "https"),
 						RegexPriority: kong.Int(0),
@@ -497,12 +661,96 @@ func (p *Parser) parseIngressRules(
 							Retries:        kong.Int(5),
 						},
 						Namespace: ingress.Namespace,
-						Backend:   rule.Backend,
+						Backend: backend{
+							Name: rule.Backend.ServiceName,
+							Port: rule.Backend.ServicePort,
+						},
 					}
 				}
 				service.Routes = append(service.Routes, r)
 				serviceNameToServices[serviceName] = service
 			}
+		}
+	}
+
+	for i := 0; i < len(tcpIngressList); i++ {
+		ingress := *tcpIngressList[i]
+		ingressSpec := ingress.Spec
+
+		processTLSSections(toNetworkingTLS(ingressSpec.TLS),
+			ingress.Namespace, secretNameToSNIs)
+
+		for i, rule := range ingressSpec.Rules {
+
+			if rule.Port <= 0 {
+				glog.Errorf("invalid port value (%v) in TCPIngress %v/%v",
+					rule.Port, ingress.Namespace, ingress.Name)
+				continue
+			}
+			r := Route{
+				IsTCP:      true,
+				TCPIngress: ingress,
+				Route: kong.Route{
+					// TODO Figure out a way to name the routes
+					// This is not a stable scheme
+					// 1. If a user adds a route in the middle,
+					// due to a shift, all the following routes will
+					// be PATCHED
+					// 2. Is it guaranteed that the order is stable?
+					// Meaning, the routes will always appear in the same
+					// order?
+					Name:      kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i)),
+					Protocols: kong.StringSlice("tcp", "tls"),
+					Destinations: []*kong.CIDRPort{
+						{
+							Port: kong.Int(rule.Port),
+						},
+					},
+				},
+			}
+			host := rule.Host
+			if host != "" {
+				r.SNIs = kong.StringSlice(host)
+			}
+			if rule.Backend.ServiceName == "" {
+				glog.Errorf("invalid empty serviceName in"+
+					"TCPIngress %v/%v", ingress.Namespace, ingress.Name)
+				continue
+			}
+			if rule.Backend.ServicePort <= 0 {
+				glog.Errorf("invalid servicePort (%v) in"+
+					"TCPIngress %v/%v", rule.Backend.ServicePort,
+					ingress.Namespace, ingress.Name)
+				continue
+			}
+
+			serviceName := ingress.Namespace + "." +
+				rule.Backend.ServiceName + "." +
+				strconv.Itoa(rule.Backend.ServicePort)
+			service, ok := serviceNameToServices[serviceName]
+			if !ok {
+				service = Service{
+					Service: kong.Service{
+						Name: kong.String(serviceName),
+						Host: kong.String(rule.Backend.ServiceName +
+							"." + ingress.Namespace + "." +
+							strconv.Itoa(rule.Backend.ServicePort) + ".svc"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("tcp"),
+						ConnectTimeout: kong.Int(60000),
+						ReadTimeout:    kong.Int(60000),
+						WriteTimeout:   kong.Int(60000),
+						Retries:        kong.Int(5),
+					},
+					Namespace: ingress.Namespace,
+					Backend: backend{
+						Name: rule.Backend.ServiceName,
+						Port: intstr.FromInt(rule.Backend.ServicePort),
+					},
+				}
+			}
+			service.Routes = append(service.Routes, r)
+			serviceNameToServices[serviceName] = service
 		}
 	}
 
@@ -533,7 +781,10 @@ func (p *Parser) parseIngressRules(
 					Retries:        kong.Int(5),
 				},
 				Namespace: ingress.Namespace,
-				Backend:   *defaultBackend,
+				Backend: backend{
+					Name: defaultBackend.ServiceName,
+					Port: defaultBackend.ServicePort,
+				},
 			}
 		}
 		r := Route{
@@ -541,7 +792,7 @@ func (p *Parser) parseIngressRules(
 			Route: kong.Route{
 				Name:          kong.String(ingress.Namespace + "." + ingress.Name),
 				Paths:         kong.StringSlice("/"),
-				StripPath:     kong.Bool(true),
+				StripPath:     kong.Bool(false),
 				PreserveHost:  kong.Bool(true),
 				Protocols:     kong.StringSlice("http", "https"),
 				RegexPriority: kong.Int(0),
@@ -570,8 +821,16 @@ func (p *Parser) fillOverrides(state KongState) error {
 
 		// Routes
 		for j := 0; j < len(state.Services[i].Routes); j++ {
-			kongIngress, err := p.getKongIngressFromIngress(
-				&state.Services[i].Routes[j].Ingress)
+			var kongIngress *configurationv1.KongIngress
+			var err error
+			if state.Services[i].Routes[j].IsTCP {
+				kongIngress, err = p.getKongIngressFromTCPIngress(
+					&state.Services[i].Routes[j].TCPIngress)
+			} else {
+				kongIngress, err = p.getKongIngressFromIngress(
+					&state.Services[i].Routes[j].Ingress)
+			}
+
 			if err != nil {
 				glog.Errorf("error getting kongIngress %v", err)
 			}
@@ -587,7 +846,7 @@ func (p *Parser) fillOverrides(state KongState) error {
 			overrideUpstream(&state.Upstreams[i], kongIngress)
 		} else {
 			glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
-				state.Upstreams[i].Service.Backend.ServiceName, state.Upstreams[i].Service.Namespace))
+				state.Upstreams[i].Service.Backend.Name, state.Upstreams[i].Service.Namespace))
 		}
 	}
 	return nil
@@ -620,14 +879,41 @@ func overrideServiceByKongIngress(service *Service,
 	}
 }
 
-// overrideServiceByAnnotation sets the Service protocol via annotation
-func overrideServiceByAnnotation(service *Service,
-	anns map[string]string) {
+func overrideServicePath(service *kong.Service, anns map[string]string) {
+	if service == nil {
+		return
+	}
+	path := annotations.ExtractPath(anns)
+	if path == "" {
+		return
+	}
+	// kong errors if path doesn't start with `/`
+	if !strings.HasPrefix(path, "/") {
+		return
+	}
+	service.Path = kong.String(path)
+}
+
+func overrideServiceProtocol(service *kong.Service, anns map[string]string) {
+	if service == nil {
+		return
+	}
 	protocol := annotations.ExtractProtocolName(anns)
 	if protocol == "" || validateProtocol(protocol) != true {
 		return
 	}
 	service.Protocol = kong.String(protocol)
+}
+
+// overrideServiceByAnnotation modifies the Kong service based on annotations
+// on the Kubernetes service.
+func overrideServiceByAnnotation(service *kong.Service,
+	anns map[string]string) {
+	if service == nil {
+		return
+	}
+	overrideServiceProtocol(service, anns)
+	overrideServicePath(service, anns)
 }
 
 // overrideService sets Service fields by KongIngress first, then by annotation
@@ -638,7 +924,7 @@ func overrideService(service *Service,
 		return
 	}
 	overrideServiceByKongIngress(service, kongIngress)
-	overrideServiceByAnnotation(service, anns)
+	overrideServiceByAnnotation(&service.Service, anns)
 
 	if *service.Protocol == "grpc" || *service.Protocol == "grpcs" {
 		// grpc(s) doesn't accept a path
@@ -675,6 +961,9 @@ func overrideRouteByKongIngress(route *Route,
 	if r.HTTPSRedirectStatusCode != nil {
 		route.HTTPSRedirectStatusCode = kong.Int(*r.HTTPSRedirectStatusCode)
 	}
+	if r.PathHandling != nil {
+		route.PathHandling = kong.String(*r.PathHandling)
+	}
 }
 
 // normalizeProtocols prevents users from mismatching grpc/http
@@ -705,11 +994,27 @@ func validateProtocol(protocol string) bool {
 	return match
 }
 
-// overrideRouteByAnnotation sets Route protocols via annotation
-func overrideRouteByAnnotation(route *Route, anns map[string]string) {
-	if anns == nil {
+func overrideRouteStripPath(route *kong.Route, anns map[string]string) {
+	if route == nil {
 		return
 	}
+
+	stripPathValue := annotations.ExtractStripPath(anns)
+	if stripPathValue == "" {
+		return
+	}
+	stripPathValue = strings.ToLower(stripPathValue)
+	switch stripPathValue {
+	case "true":
+		route.StripPath = kong.Bool(true)
+	case "false":
+		route.StripPath = kong.Bool(false)
+	default:
+		return
+	}
+}
+
+func overrideRouteProtocols(route *kong.Route, anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
 	var prots []*string
 	for _, prot := range protocols {
@@ -722,6 +1027,54 @@ func overrideRouteByAnnotation(route *Route, anns map[string]string) {
 	route.Protocols = prots
 }
 
+func overrideRouteHTTPSRedirectCode(route *kong.Route, anns map[string]string) {
+	code := annotations.ExtractHTTPSRedirectStatusCode(anns)
+	if code == "" {
+		return
+	}
+	statusCode, err := strconv.Atoi(code)
+	if err != nil {
+		return
+	}
+	if statusCode != 426 &&
+		statusCode != 301 &&
+		statusCode != 302 &&
+		statusCode != 307 &&
+		statusCode != 308 {
+		return
+	}
+
+	route.HTTPSRedirectStatusCode = kong.Int(statusCode)
+}
+
+func overrideRoutePreserveHost(route *kong.Route, anns map[string]string) {
+	preserveHostValue := annotations.ExtractPreserveHost(anns)
+	if preserveHostValue == "" {
+		return
+	}
+	preserveHostValue = strings.ToLower(preserveHostValue)
+	switch preserveHostValue {
+	case "true":
+		route.PreserveHost = kong.Bool(true)
+	case "false":
+		route.PreserveHost = kong.Bool(false)
+	default:
+		return
+	}
+}
+
+// overrideRouteByAnnotation sets Route protocols via annotation
+func overrideRouteByAnnotation(route *Route) {
+	anns := route.Ingress.Annotations
+	if route.IsTCP {
+		anns = route.TCPIngress.Annotations
+	}
+	overrideRouteProtocols(&route.Route, anns)
+	overrideRouteStripPath(&route.Route, anns)
+	overrideRouteHTTPSRedirectCode(&route.Route, anns)
+	overrideRoutePreserveHost(&route.Route, anns)
+}
+
 // overrideRoute sets Route fields by KongIngress first, then by annotation
 func overrideRoute(route *Route,
 	kongIngress *configurationv1.KongIngress) {
@@ -729,7 +1082,7 @@ func overrideRoute(route *Route,
 		return
 	}
 	overrideRouteByKongIngress(route, kongIngress)
-	overrideRouteByAnnotation(route, route.Ingress.Annotations)
+	overrideRouteByAnnotation(route)
 	normalizeProtocols(route)
 	for _, val := range route.Protocols {
 		if *val == "grpc" || *val == "grpcs" {
@@ -762,16 +1115,16 @@ func overrideUpstream(upstream *Upstream,
 func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error) {
 	var upstreams []Upstream
 	for _, service := range serviceMap {
-		upstreamName := service.Backend.ServiceName + "." + service.Namespace + "." + service.Backend.ServicePort.String() + ".svc"
+		upstreamName := service.Backend.Name + "." + service.Namespace + "." + service.Backend.Port.String() + ".svc"
 		upstream := Upstream{
 			Upstream: kong.Upstream{
 				Name: kong.String(upstreamName),
 			},
 			Service: service,
 		}
-		svcKey := service.Namespace + "/" + service.Backend.ServiceName
+		svcKey := service.Namespace + "/" + service.Backend.Name
 		targets, err := p.getServiceEndpoints(service.K8sService,
-			service.Backend.ServicePort.String())
+			service.Backend.Port.String())
 		if err != nil {
 			glog.Errorf("error getting endpoints for '%v' service: %v",
 				svcKey, err)
@@ -964,7 +1317,7 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 		namespace, kongPluginName := identifier[0], identifier[1]
 		plugin, err := p.getPlugin(namespace, kongPluginName)
 		if err != nil {
-			glog.Errorf("reading KongPlugin '%v/%v': %v", namespace,
+			glog.Errorf("fetching KongPlugin '%v/%v': %v", namespace,
 				kongPluginName, err)
 			continue
 		}
@@ -998,7 +1351,7 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 func (p *Parser) globalPlugins() ([]Plugin, error) {
 	globalPlugins, err := p.store.ListGlobalKongPlugins()
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing global plugins:")
+		return nil, errors.Wrap(err, "error listing global KongPlugins:")
 	}
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
@@ -1026,6 +1379,31 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 		}
 		res[pluginName] = Plugin{
 			Plugin: kongPluginFromK8SPlugin(k8sPlugin),
+		}
+	}
+
+	globalClusterPlugins, err := p.store.ListGlobalKongClusterPlugins()
+	if err != nil {
+		return nil, errors.Wrap(err, "error listing global KongClusterPlugins")
+	}
+	for i := 0; i < len(globalClusterPlugins); i++ {
+		k8sPlugin := *globalClusterPlugins[i]
+		pluginName := k8sPlugin.PluginName
+		// empty pluginName skip it
+		if pluginName == "" {
+			glog.Errorf("KongPlugin '%v' does not specify a plugin name",
+				k8sPlugin.Name)
+			continue
+		}
+		if _, ok := res[pluginName]; ok {
+			glog.Error("Multiple KongPlugin definitions found with"+
+				" 'global' annotation for '", pluginName,
+				"', the plugin will not be applied")
+			duplicates = append(duplicates, pluginName)
+			continue
+		}
+		res[pluginName] = Plugin{
+			Plugin: kongPluginFromK8SClusterPlugin(k8sPlugin),
 		}
 	}
 	for _, plugin := range duplicates {
@@ -1099,23 +1477,40 @@ func (p *Parser) getKongIngressForService(service corev1.Service) (
 	return p.store.GetKongIngress(service.Namespace, confName)
 }
 
-// getKongIngressFromIngress checks if the Ingress contains an annotation for configuration
-// or if exists a KongIngress object with the same name than the Ingress
-func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
+func (p *Parser) getKongIngressFromIngressAnnotations(namespace, name string,
+	anns map[string]string) (
 	*configurationv1.KongIngress, error) {
-	confName := annotations.ExtractConfigurationName(ing.Annotations)
+	confName := annotations.ExtractConfigurationName(anns)
 	if confName != "" {
-		ki, err := p.store.GetKongIngress(ing.Namespace, confName)
+		ki, err := p.store.GetKongIngress(namespace, confName)
 		if err == nil {
 			return ki, nil
 		}
 	}
 
-	ki, err := p.store.GetKongIngress(ing.Namespace, ing.Name)
+	ki, err := p.store.GetKongIngress(namespace, name)
 	if err == nil {
-		return ki, err
+		return ki, nil
 	}
 	return nil, nil
+}
+
+// getKongIngressFromIngress checks if the Ingress
+// contains an annotation for configuration
+// or if exists a KongIngress object with the same name than the Ingress
+func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
+	*configurationv1.KongIngress, error) {
+	return p.getKongIngressFromIngressAnnotations(ing.Namespace,
+		ing.Name, ing.Annotations)
+}
+
+// getKongIngressFromTCPIngress checks if the TCPIngress contains an
+// annotation for configuration
+// or if exists a KongIngress object with the same name than the Ingress
+func (p *Parser) getKongIngressFromTCPIngress(ing *configurationv1beta1.TCPIngress) (
+	*configurationv1.KongIngress, error) {
+	return p.getKongIngressFromIngressAnnotations(ing.Namespace,
+		ing.Name, ing.Annotations)
 }
 
 // getPlugin constructs a plugins from a KongPlugin resource.
@@ -1123,7 +1518,28 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	var plugin kong.Plugin
 	k8sPlugin, err := p.store.GetKongPlugin(namespace, name)
 	if err != nil {
-		return plugin, errors.Wrapf(err, "fetching KongPlugin")
+		// if no namespaced plugin definition, then
+		// search for cluster level-plugin definition
+		if errors.As(err, &store.ErrNotFound{}) {
+			clusterPlugin, err := p.store.GetKongClusterPlugin(name)
+			// not found
+			if errors.As(err, &store.ErrNotFound{}) {
+				return plugin, errors.New(
+					"no KongPlugin or KongClusterPlugin was found")
+			}
+			if err != nil {
+				return plugin, err
+			}
+			if clusterPlugin.PluginName == "" {
+				return plugin, errors.Errorf("invalid empty 'plugin' property")
+			}
+			plugin = kongPluginFromK8SClusterPlugin(*clusterPlugin)
+			return plugin, err
+		}
+		// handle other errors
+		if err != nil {
+			return plugin, err
+		}
 	}
 	// ignore plugins with no name
 	if k8sPlugin.PluginName == "" {
@@ -1133,21 +1549,53 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	return plugin, nil
 }
 
+// plugin is a intermediate type to hold plugin related configuration
+type plugin struct {
+	Name   string
+	Config configurationv1.Configuration
+
+	RunOn     string
+	Disabled  bool
+	Protocols []string
+}
+
+func toKongPlugin(plugin plugin) kong.Plugin {
+	result := kong.Plugin{
+		Name:   kong.String(plugin.Name),
+		Config: kong.Configuration(plugin.Config).DeepCopy(),
+	}
+	if plugin.RunOn != "" {
+		result.RunOn = kong.String(plugin.RunOn)
+	}
+	if plugin.Disabled {
+		result.Enabled = kong.Bool(false)
+	}
+	if len(plugin.Protocols) > 0 {
+		result.Protocols = kong.StringSlice(plugin.Protocols...)
+	}
+	return result
+}
+
+func kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin) kong.Plugin {
+	return toKongPlugin(plugin{
+		Name:   k8sPlugin.PluginName,
+		Config: k8sPlugin.Config,
+
+		RunOn:     k8sPlugin.RunOn,
+		Disabled:  k8sPlugin.Disabled,
+		Protocols: k8sPlugin.Protocols,
+	})
+}
+
 func kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) kong.Plugin {
-	plugin := kong.Plugin{
-		Name:   kong.String(k8sPlugin.PluginName),
-		Config: kong.Configuration(k8sPlugin.Config).DeepCopy(),
-	}
-	if k8sPlugin.RunOn != "" {
-		plugin.RunOn = kong.String(k8sPlugin.RunOn)
-	}
-	if k8sPlugin.Disabled {
-		plugin.Enabled = kong.Bool(false)
-	}
-	if len(k8sPlugin.Protocols) > 0 {
-		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
-	}
-	return plugin
+	return toKongPlugin(plugin{
+		Name:   k8sPlugin.PluginName,
+		Config: k8sPlugin.Config,
+
+		RunOn:     k8sPlugin.RunOn,
+		Disabled:  k8sPlugin.Disabled,
+		Protocols: k8sPlugin.Protocols,
+	})
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

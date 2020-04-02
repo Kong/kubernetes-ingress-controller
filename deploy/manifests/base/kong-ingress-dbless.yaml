@@ -17,13 +17,14 @@ spec:
         prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
+        kuma.io/gateway: enabled
       labels:
         app: ingress-kong
     spec:
       serviceAccountName: kong-serviceaccount
       containers:
       - name: proxy
-        image: kong:1.4
+        image: kong:2.0
         securityContext:
           runAsUser: 1000
         env:
@@ -95,7 +96,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.7.1
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.8.0
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook

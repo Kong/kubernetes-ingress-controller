@@ -22,6 +22,8 @@ import (
 	clientset "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1"
 	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1/fake"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1beta1"
+	fakeconfigurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,4 +81,9 @@ var _ clientset.Interface = &Clientset{}
 // ConfigurationV1 retrieves the ConfigurationV1Client
 func (c *Clientset) ConfigurationV1() configurationv1.ConfigurationV1Interface {
 	return &fakeconfigurationv1.FakeConfigurationV1{Fake: &c.Fake}
+}
+
+// ConfigurationV1beta1 retrieves the ConfigurationV1beta1Client
+func (c *Clientset) ConfigurationV1beta1() configurationv1beta1.ConfigurationV1beta1Interface {
+	return &fakeconfigurationv1beta1.FakeConfigurationV1beta1{Fake: &c.Fake}
 }

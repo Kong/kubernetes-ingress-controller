@@ -15,7 +15,7 @@
 Deploy Kong Ingress Controller using `kubectl`:
 
 ```bash
-$ curl -sL https://bit.ly/k4k8s | kubectl create -f -
+$ kubectl create -f https://bit.ly/k4k8s
 namespace/kong created
 customresourcedefinition.apiextensions.k8s.io/kongplugins.configuration.konghq.com created
 customresourcedefinition.apiextensions.k8s.io/kongconsumers.configuration.konghq.com created
@@ -39,7 +39,12 @@ Please ensure that you've Tiller working and then execute:
 ```bash
 $ helm repo add kong https://charts.konghq.com
 $ helm repo update
+
+# Helm 2
 $ helm install kong/kong
+
+# Helm 3
+$ helm install kong/kong --generate-name --set ingressController.installCRDs=false
 ```
 
 *Note:* this process could take up to five minutes the first time.

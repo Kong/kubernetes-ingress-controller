@@ -65,7 +65,7 @@ By default, all routes are assumed to be either HTTP or HTTPS. This annotation
 informs Kong that this route is a gRPC(s) route and not a plain HTTP route:
 
 ```
-$ kubectl patch ingress demo -p '{"metadata":{"annotations":{"configuration.konghq.com/protocols":"grpc,grpcs"}}}'
+$ kubectl patch ingress demo -p '{"metadata":{"annotations":{"konghq.com/protocols":"grpc,grpcs"}}}'
 ```
 
 1. Next, we also update the upstream protocol to be `grpcs`.
@@ -74,7 +74,7 @@ With this annotation, we configure Kong to use gRPCs protocol when it
 talks to the upstream service:
 
 ```
-$ kubectl patch svc grpcbin -p '{"metadata":{"annotations":{"configuration.konghq.com/protocol":"grpcs"}}}'
+$ kubectl patch svc grpcbin -p '{"metadata":{"annotations":{"konghq.com/protocol":"grpcs"}}}'
 ```
 
 1. You should be able to run a request over `gRPC`:

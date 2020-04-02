@@ -35,6 +35,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&KongConsumerList{},
 		&KongCredential{},
 		&KongCredentialList{},
+		&KongClusterPlugin{},
+		&KongClusterPluginList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

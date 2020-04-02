@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1
 
+// KongClusterPluginListerExpansion allows custom methods to be added to
+// KongClusterPluginLister.
+type KongClusterPluginListerExpansion interface{}
+
 // KongConsumerListerExpansion allows custom methods to be added to
 // KongConsumerLister.
 type KongConsumerListerExpansion interface{}

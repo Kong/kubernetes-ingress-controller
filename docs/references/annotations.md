@@ -9,15 +9,15 @@ Following annotations are supported on Ingress resources:
 | Annotation name | Description |
 |-----------------|-------------|
 | [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy |
-| [`konghq.com/plugins`](#konghqcom/plugins) | Run plugins for specific Ingress. |
-| [`konghq.com/protocols`](#konghqcom/protocols) | Set protocols to handle for each Ingress resource. |
-| [`konghq.com/preserve-host`](#konghqcom/preserve-host) | Pass the `host` header as is to the upstream service. |
-| [`konghq.com/strip-path`](#konghqcom/strip-path) | Strip the path defined in Ingress resource and then forward the request to the upstream service. |
-| [`konghq.com/https-redirect-status-code`](#konghqcom/https-redirect-status-code) | Set the HTTPS redirect status code to use when an HTTP request is recieved. |
-| [`konghq.com/override`](#konghqcom/override) | Control other routing attributes via `KongIngress` resource. |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcom/plugins) |
+| [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for specific Ingress. |
+| [`konghq.com/protocols`](#konghqcomprotocols) | Set protocols to handle for each Ingress resource. |
+| [`konghq.com/preserve-host`](#konghqcompreserve-host) | Pass the `host` header as is to the upstream service. |
+| [`konghq.com/strip-path`](#konghqcomstrip-path) | Strip the path defined in Ingress resource and then forward the request to the upstream service. |
+| [`konghq.com/https-redirect-status-code`](#konghqcomhttps-redirect-status-code) | Set the HTTPS redirect status code to use when an HTTP request is recieved. |
+| [`konghq.com/override`](#konghqcomoverride) | Control other routing attributes via `KongIngress` resource. |
+| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
 | DEPRECATED [`configuration.konghq.com`](#configurationkonghqcom) | Please use [`konghq.com/override`](#konghqcomoverride) |
-| DEPRECATED [`configuration.konghq.com/protocols`](#configurationkonghqcom/protocols) | Please use [`konghq.com/protocols`](#konghqcom/protocols) |
+| DEPRECATED [`configuration.konghq.com/protocols`](#configurationkonghqcomprotocols) | Please use [`konghq.com/protocols`](#konghqcomprotocols) |
 
 ## Service resource
 
@@ -25,16 +25,16 @@ Following annotations are supported on Service resources:
 
 | Annotation name | Description |
 |-----------------|-------------|
-| [`konghq.com/plugins`](#konghqcom/plugins) | Run plugins for a specific Service |
-| [`konghq.com/protocol`](#konghqcom/protocol) | Set protocol Kong should use to talk to a Kubernetes service |
-| [`konghq.com/path`](#konghqcom/path) | HTTP Path that is always prepended to each request that is forwarded to a Kubernetes service |
-| [`konghq.com/client-cert`](#konghqcom/client-cert) | Client certificate and key pair Kong should use to authenticate itself to a specific Kubernetes service |
+| [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for a specific Service |
+| [`konghq.com/protocol`](#konghqcomprotocol) | Set protocol Kong should use to talk to a Kubernetes service |
+| [`konghq.com/path`](#konghqcompath) | HTTP Path that is always prepended to each request that is forwarded to a Kubernetes service |
+| [`konghq.com/client-cert`](#konghqcomclient-cert) | Client certificate and key pair Kong should use to authenticate itself to a specific Kubernetes service |
 | [`konghq.com/override`](#konghqcomoverride) | Fine grained routing and load-balancing |
 | [`ingress.kubernetes.io/service-upstream`](#ingresskubernetesioservice-upstream) | Offload load-balancing to kube-proxy or sidecar |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcom/plugins) |
+| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
 | DEPRECATED [`configuration.konghq.com`](#configurationkonghqcom) | Please use [`konghq.com/override`](#konghqcomoverride) |
-| DEPRECATED [`configuration.konghq.com/protocol`](#configurationkonghqcom/protocol) | Please use [`konghq.com/protocol`](#konghqcom/protocol) |
-| DEPRECATED [`configuration.konghq.com/client-cert`](#configurationkonghqcom/client-cert) | Please use [`konghq.com/client-cert`](#konghqcom/client-cert) |
+| DEPRECATED [`configuration.konghq.com/protocol`](#configurationkonghqcomprotocol) | Please use [`konghq.com/protocol`](#konghqcomprotocol) |
+| DEPRECATED [`configuration.konghq.com/client-cert`](#configurationkonghqcomclient-cert) | Please use [`konghq.com/client-cert`](#konghqcomclient-cert) |
 
 ## KongConsumer resource
 
@@ -43,8 +43,8 @@ Following annotaitons are supported on KongConsumer resources:
 | Annotation name | Description |
 |-----------------|-------------|
 | [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the KongConsumers that a controller should satisfy |
-| [`konghq.com/plugins`](#konghqcom/plugins) | Run plugins for a specific consumer |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcom/plugins) |
+| [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for a specific consumer |
+| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
 
 ## Annotations
 
@@ -342,7 +342,7 @@ You need Kong Ingress Controller >= 0.6 for this annotation.
 
 > DEPRECATED in Controller 0.8
 
-Please instead use [`konghq.com/plugins`](#konghqcom/plugins).
+Please instead use [`konghq.com/plugins`](#konghqcomplugins).
 
 ### `configuration.konghq.com`
 
@@ -354,16 +354,16 @@ Please instead use [`konghq.com/override`](#konghqcomoverride).
 
 > DEPRECATED in Controller 0.8
 
-Please instead use [`konghq.com/protocol`](#konghqcom/protocol).
+Please instead use [`konghq.com/protocol`](#konghqcomprotocol).
 
 ### `configuration.konghq.com/protocols`
 
 > DEPRECATED in Controller 0.8
 
-Please instead use [`konghq.com/protocols`](#konghqcom/protocols).
+Please instead use [`konghq.com/protocols`](#konghqcomprotocols).
 
 ### `configuration.konghq.com/client-cert`
 
 > DEPRECATED in Controller 0.8
 
-Please instead use [`konghq.com/client-cert`](#konghqcom/client-cert).
+Please instead use [`konghq.com/client-cert`](#konghqcomclient-cert).

@@ -3,6 +3,9 @@ TAG?=0.8.0
 REPO_INFO=$(shell git config --get remote.origin.url)
 IMGNAME?=kong-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
+# only for dev
+DB?=false
+RUN_VERSION?=20
 
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
@@ -46,3 +49,7 @@ container:
     --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
     --build-arg REPO_INFO=${REPO_INFO} \
     -t ${IMAGE}:${TAG} .
+
+.PHONY: run
+run:
+	./hack/dev/start.sh ${DB} ${RUN_VERSION}

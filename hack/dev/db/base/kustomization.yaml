@@ -1,0 +1,7 @@
+resources:
+- ./../../dbless/base
+- migration.yaml
+- postgres.yaml
+namespace: kong-dev
+patchesStrategicMerge:
+- kong-db.yaml

@@ -1,0 +1,8 @@
+resources:
+- ../base
+patchesStrategicMerge:
+- labels.yaml
+nameSuffix: "-db-v20"
+images:
+- name: kong
+  newTag: "2.0"

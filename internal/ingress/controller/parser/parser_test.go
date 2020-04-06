@@ -4504,6 +4504,18 @@ func Test_overrideRouteRegexPriority(t *testing.T) {
 			},
 		},
 		{
+			name: "negative integer",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/regex-priority": "-10",
+				},
+			},
+			want: &kong.Route{
+				RegexPriority: kong.Int(-10),
+			},
+		},
+		{
 			name: "random float value",
 			args: args{
 				route: &kong.Route{},

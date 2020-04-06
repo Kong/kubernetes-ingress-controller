@@ -179,7 +179,7 @@ func HasServiceUpstreamAnnotation(anns map[string]string) bool {
 	return anns["ingress.kubernetes.io/service-upstream"] == "true"
 }
 
-// ExtractRegexPriority extracts the preserve-host annotation value.
+// ExtractRegexPriority extracts the regex-priority annotation value.
 func ExtractRegexPriority(anns map[string]string) string {
 	return valueFromAnnotation(regexPriorityKey, anns)
 }

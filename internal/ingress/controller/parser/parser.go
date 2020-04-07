@@ -1063,6 +1063,19 @@ func overrideRoutePreserveHost(route *kong.Route, anns map[string]string) {
 	}
 }
 
+func overrideRouteRegexPriority(route *kong.Route, anns map[string]string) {
+	priority := annotations.ExtractRegexPriority(anns)
+	if priority == "" {
+		return
+	}
+	regexPriority, err := strconv.Atoi(priority)
+	if err != nil {
+		return
+	}
+
+	route.RegexPriority = kong.Int(regexPriority)
+}
+
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route) {
 	anns := route.Ingress.Annotations
@@ -1073,6 +1086,7 @@ func overrideRouteByAnnotation(route *Route) {
 	overrideRouteStripPath(&route.Route, anns)
 	overrideRouteHTTPSRedirectCode(&route.Route, anns)
 	overrideRoutePreserveHost(&route.Route, anns)
+	overrideRouteRegexPriority(&route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation

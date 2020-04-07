@@ -570,3 +570,54 @@ func TestExtractPreserveHost(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractRegexPriority(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty old group",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/regex-priority": "5",
+				},
+			},
+			want: "5",
+		},
+		{
+			name: "non-empty new group",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/regex-priority": "10",
+				},
+			},
+			want: "10",
+		},
+		{
+			name: "group preference",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/regex-priority": "5",
+					"konghq.com/regex-priority":               "10",
+				},
+			},
+			want: "10",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ExtractRegexPriority(tt.args.anns); got != tt.want {
+				t.Errorf("ExtractRegexPriority() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

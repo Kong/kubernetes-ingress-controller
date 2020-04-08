@@ -318,7 +318,10 @@ credentials:
 ## Use the credential
 
 Now to use a JWT to pass authentication. Let's store the user and admin jwt's
-in some environment variables. `USER_JWT` and `ADMIN_JWT`
+in some environment variables. `USER_JWT` and `ADMIN_JWT`. If you are using
+an identity provider, you should be able to login and get out a JWT from their
+API. If you are generating your own, go through the process of generating your
+own.
 
 Let's test the get route
 

@@ -1,6 +1,8 @@
 # Configuring ACL Plugin
 
-This guide walks through configuring the Kong ACL Plugin. The ACL Plugin requires the use of at least one Authentication plugin. This example will use the JWT Auth Plugin
+This guide walks through configuring the Kong ACL Plugin. The ACL Plugin
+requires the use of at least one Authentication plugin. This example will use
+the JWT Auth Plugin
 
 ## Installation
 
@@ -188,7 +190,9 @@ spec:
 ' | kubectl apply -f -
 ```
 
-Any requests matching the proxying rules for `demo-get` and `demo` post will now require a valid JWT and the consumer for the JWT to be associate with the right ACL.
+Any requests matching the proxying rules for `demo-get` and `demo` post will
+now require a valid JWT and the consumer for the JWT to be associate with the
+right ACL.
 
 ```bash
 $ curl -i $PROXY_IP/get
@@ -244,11 +248,21 @@ username: plain-user
 
 ## Secrets
 
-Next, let's provision some Secrets for the KongConsumers to reference. Each ACL will need it's own Secret and each JWT public key will need it's own Secret. The credential type is specified in the `kongCredType` field. In this case we'll be using `jwt` and `acl`. You can create a secret using any other method as well.
+Next, let's provision some Secrets for the KongConsumers to reference. Each
+ACL will need it's own Secret and each JWT public key will need it's own
+Secret. The credential type is specified in the `kongCredType` field. In this
+case we'll be using `jwt` and `acl`. You can create a secret using any other
+method as well.
 
-The JWT signing algorithm is set in the `algorithm` field. The if using a public key like this example it is stored in the `rsa_pulic_key` field. If you are using a secret signing key, use the `secret` field. The last field to set if you are using `RS256` or `ES256` is the `key` field. This should match the `iss` field in the JWT you will be sending. You can check this value by decoding your JWT over at [https://jwt.io](https://jwt.io)
+The JWT signing algorithm is set in the `algorithm` field. The if using a
+public key like this example it is stored in the `rsa_pulic_key` field. If you
+are using a secret signing key, use the `secret` field. The last field to set
+if you are using `RS256` or `ES256` is the `key` field. This should match the
+`iss` field in the JWT you will be sending. You can check this value by
+decoding your JWT over at [https://jwt.io](https://jwt.io)
 
-Since we are using the Secret resource, Kubernetes will encrypt and store the JWT signing key and ACL group for us.
+Since we are using the Secret resource, Kubernetes will encrypt and store the
+JWT signing key and ACL group for us.
 
 ### JWT signing key
 
@@ -259,7 +273,9 @@ $ kubectl create secret \
   --from-literal=kongCredType=jwt  \
   --from-literal=key="admin-issuer" \
   --from-literal=algorithm=RS256 \
-  --from-literal=rsa_public_key="-----BEGIN PUBLIC KEY-----\nMIIBIjA....-----END PUBLIC KEY-----"
+  --from-literal=rsa_public_key="-----BEGIN PUBLIC KEY-----
+  MIIBIjA....
+  -----END PUBLIC KEY-----"
 
 # create a second secret with a different key
 $ kubectl create secret \
@@ -267,12 +283,15 @@ $ kubectl create secret \
   --from-literal=kongCredType=jwt  \
   --from-literal=key="user-issuer" \
   --from-literal=algorithm=RS256 \
-  --from-literal=rsa_public_key="-----BEGIN PUBLIC KEY-----\qwerlkjqer....-----END PUBLIC KEY-----"
+  --from-literal=rsa_public_key="-----BEGIN PUBLIC KEY-----
+  qwerlkjqer....
+  -----END PUBLIC KEY-----"
 ```
 
 ## Assign the credentials
 
-In order to for the ACL and JWT to be validated by Kong, the secrets will need to be referenced by the KongConsumers we created earlier. Let's update those.
+In order to for the ACL and JWT to be validated by Kong, the secrets will need
+to be referenced by the KongConsumers we created earlier. Let's update those.
 
 ```bash
 $ echo "
@@ -298,7 +317,8 @@ credentials:
 
 ## Use the credential
 
-Now to use a JWT to pass authentication. Let's store the user and admin jwt's in some environment variables. `USER_JWT` and `ADMIN_JWT`
+Now to use a JWT to pass authentication. Let's store the user and admin jwt's
+in some environment variables. `USER_JWT` and `ADMIN_JWT`
 
 Let's test the get route
 
@@ -372,7 +392,9 @@ Via: kong/2.0.2
 Now let's test the post route
 
 ```bash
-$ curl -i -X POST --data "foo=bar" -H "Authorization: Bearer ${USER_JWT}" $PROXY_IP/get
+$ curl -i -X POST --data "foo=bar" \
+-H "Authorization: Bearer ${USER_JWT}" $PROXY_IP/post
+
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Length: 947
@@ -410,7 +432,8 @@ Via: kong/2.0.2
   "url": "http://some.url/post"
 }
 
-$ curl -i -X POST --data "foo=bar" -H "Authorization: Bearer ${ADMIN_JWT}" $PROXY_IP/get
+$ curl -i -X POST --data "foo=bar" \
+-H "Authorization: Bearer ${ADMIN_JWT}" $PROXY_IP/post
 
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -454,7 +477,9 @@ Via: kong/2.0.2
 
 ## Adding ACL's
 
-The JWT plugin doesn't provide the ability to authroize a given issuer to a given ingress. To do this we need to use the ACL plugin. Let's create an admin ACL config
+The JWT plugin doesn't provide the ability to authroize a given issuer to a
+given ingress. To do this we need to use the ACL plugin. Let's create an admin
+ACL config
 
 ```bash
 $ echo "
@@ -468,7 +493,9 @@ config:
 " | kubectl apply -f -
 ```
 
-Then let's create a user ACL config. We want our admin to be able to access the same resources as the user, so let's make sure we include them in the whitelist.
+Then let's create a user ACL config. We want our admin to be able to access
+the same resources as the user, so let's make sure we include them in the
+whitelist.
 
 ```bash
 $ echo "
@@ -497,7 +524,8 @@ $ kubectl create secret \
   --from-literal=group=app-user
 ```
 
-After we create the secrets, the consumers need to be updated to reference the ACL credentials
+After we create the secrets, the consumers need to be updated to reference the
+ACL credentials
 
 ```bash
 $ echo "
@@ -523,7 +551,9 @@ credentials:
 " | kubectl apply -f -
 ```
 
-The last thing to configure is the ingress to use the new plguins. Note, if you set more than one ACL plugin, the last one supplied will be the only one evaluated.
+The last thing to configure is the ingress to use the new plguins. Note, if you
+set more than one ACL plugin, the last one supplied will be the only one
+evaluated.
 
 ```bash
 $ echo '
@@ -637,7 +667,8 @@ Via: kong/2.0.2
 Now let's test the post route
 
 ```bash
-$ curl -i -X POST --data "foo=bar" -H "Authorization: Bearer ${USER_JWT}" $PROXY_IP/get
+$ curl -i -X POST --data "foo=bar" \
+-H "Authorization: Bearer ${USER_JWT}" $PROXY_IP/get
 HTTP/1.1 403 Forbidden
 Date: Mon, 06 Apr 2020 07:11:59 GMT
 Content-Type: application/json; charset=utf-8
@@ -649,10 +680,12 @@ Server: kong/2.0.2
 {"message":"You cannot consume this service"}
 ```
 
-The `plain-user` user is not in the `admin-acl` whitelist, and is therefore unauthorized to access the resource
+The `plain-user` user is not in the `admin-acl` whitelist, and is therefore
+unauthorized to access the resource
 
 ```bash
-$ curl -i -X POST --data "foo=bar" -H "Authorization: Bearer ${ADMIN_JWT}" $PROXY_IP/get
+$ curl -i -X POST --data "foo=bar" \
+-H "Authorization: Bearer ${ADMIN_JWT}" $PROXY_IP/get
 
 HTTP/1.1 200 OK
 Content-Type: application/json

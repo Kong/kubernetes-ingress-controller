@@ -3,6 +3,7 @@ package parser
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -20,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1483,8 +1485,12 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
-		res[pluginName] = Plugin{
-			Plugin: kongPluginFromK8SPlugin(k8sPlugin),
+		if plugin, err := p.kongPluginFromK8SPlugin(k8sPlugin); err == nil {
+			res[pluginName] = Plugin{
+				Plugin: plugin,
+			}
+		} else {
+			glog.Errorf("Failed to generate configuration for plugin %v: %v", pluginName, err)
 		}
 	}
 
@@ -1508,8 +1514,12 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
-		res[pluginName] = Plugin{
-			Plugin: kongPluginFromK8SClusterPlugin(k8sPlugin),
+		if plugin, err := p.kongPluginFromK8SClusterPlugin(k8sPlugin); err == nil {
+			res[pluginName] = Plugin{
+				Plugin: plugin,
+			}
+		} else {
+			glog.Errorf("Failed to generate configuration for plugin %v: %v", pluginName, err)
 		}
 	}
 	for _, plugin := range duplicates {
@@ -1639,11 +1649,7 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 			if clusterPlugin.PluginName == "" {
 				return plugin, errors.Errorf("invalid empty 'plugin' property")
 			}
-			plugin = kongPluginFromK8SClusterPlugin(*clusterPlugin)
-			return plugin, err
-		}
-		// handle other errors
-		if err != nil {
+			plugin, err = p.kongPluginFromK8SClusterPlugin(*clusterPlugin)
 			return plugin, err
 		}
 	}
@@ -1651,8 +1657,35 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	if k8sPlugin.PluginName == "" {
 		return plugin, errors.Errorf("invalid empty 'plugin' property")
 	}
-	plugin = kongPluginFromK8SPlugin(*k8sPlugin)
-	return plugin, nil
+
+	plugin, err = p.kongPluginFromK8SPlugin(*k8sPlugin)
+	return plugin, err
+}
+
+func (p *Parser) secretToConfiguration(reference configurationv1.SecretValueFromSource, namespace string) (configurationv1.Configuration, error) {
+	secret, err := p.store.GetSecret(namespace, reference.SecretKeyRef.Name)
+	if err != nil {
+		return configurationv1.Configuration{}, errors.Errorf("error fetching credential secret '%v/%v': %v",
+			namespace, reference.SecretKeyRef.Name, err)
+	}
+	secretVal, ok := secret.Data[reference.SecretKeyRef.Key]
+	if !ok {
+		return configurationv1.Configuration{}, errors.Errorf("no key '%v' in secret '%v/%v'",
+			reference.SecretKeyRef.Key, namespace, reference.SecretKeyRef.Name)
+	}
+	var config configurationv1.Configuration
+	if err := json.Unmarshal(secretVal, &config); err != nil {
+		if err := yaml.Unmarshal(secretVal, &config); err != nil {
+			return configurationv1.Configuration{}, errors.Errorf("key '%v' in secret '%v/%v' contains neither valid JSON nor valid YAML)",
+				reference.SecretKeyRef.Key, namespace, reference.SecretKeyRef.Name)
+		}
+	}
+	return config, nil
+}
+
+func (p *Parser) namespacedSecretToConfiguration(reference configurationv1.NamespacedSecretValueFromSource) (configurationv1.Configuration, error) {
+	bareReference := configurationv1.SecretValueFromSource{SecretKeyRef: reference.SecretKeyRef}
+	return p.secretToConfiguration(bareReference, reference.Namespace)
 }
 
 // plugin is a intermediate type to hold plugin related configuration
@@ -1682,7 +1715,17 @@ func toKongPlugin(plugin plugin) kong.Plugin {
 	return result
 }
 
-func kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin) kong.Plugin {
+func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
+	var err error
+	if k8sPlugin.ConfigFrom != (configurationv1.NamespacedSecretValueFromSource{}) {
+		if len(k8sPlugin.Config) > 0 {
+			err = errors.Errorf("plugin '%v' has both Config and ConfigFrom set", k8sPlugin.Name)
+		} else {
+			config, configError := p.namespacedSecretToConfiguration(k8sPlugin.ConfigFrom)
+			err = configError
+			k8sPlugin.Config = config
+		}
+	}
 	return toKongPlugin(plugin{
 		Name:   k8sPlugin.PluginName,
 		Config: k8sPlugin.Config,
@@ -1690,18 +1733,28 @@ func kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin)
 		RunOn:     k8sPlugin.RunOn,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: k8sPlugin.Protocols,
-	})
+	}), err
 }
 
-func kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) kong.Plugin {
+func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
+	var err error
+	if k8sPlugin.ConfigFrom != (configurationv1.SecretValueFromSource{}) {
+		if len(k8sPlugin.Config) > 0 {
+			err = errors.Errorf("plugin '%v/%v' has both Config and ConfigFrom set",
+				k8sPlugin.Namespace, k8sPlugin.Name)
+		} else {
+			config, configError := p.secretToConfiguration(k8sPlugin.ConfigFrom, k8sPlugin.Namespace)
+			err = configError
+			k8sPlugin.Config = config
+		}
+	}
 	return toKongPlugin(plugin{
-		Name:   k8sPlugin.PluginName,
-		Config: k8sPlugin.Config,
-
+		Name:      k8sPlugin.PluginName,
+		Config:    k8sPlugin.Config,
 		RunOn:     k8sPlugin.RunOn,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: k8sPlugin.Protocols,
-	})
+	}), err
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

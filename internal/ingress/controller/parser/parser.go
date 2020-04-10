@@ -842,8 +842,9 @@ func (p *Parser) fillOverrides(state KongState) error {
 	for i := 0; i < len(state.Upstreams); i++ {
 		kongIngress, err := p.getKongIngressForService(
 			state.Upstreams[i].Service.K8sService)
+		anns := state.Upstreams[i].Service.K8sService.Annotations
 		if err == nil {
-			overrideUpstream(&state.Upstreams[i], kongIngress)
+			overrideUpstream(&state.Upstreams[i], kongIngress, anns)
 		} else {
 			glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
 				state.Upstreams[i].Service.Backend.Name, state.Upstreams[i].Service.Namespace))
@@ -1115,14 +1116,87 @@ func cloneStringPointerSlice(array ...*string) []*string {
 	return res
 }
 
-func overrideUpstream(upstream *Upstream,
-	kongIngress *configurationv1.KongIngress) {
-	if kongIngress == nil || kongIngress.Upstream == nil || upstream == nil {
+func overrideUpstreamHostHeader(upstream *kong.Upstream, anns map[string]string) {
+	if upstream == nil {
 		return
 	}
+	host := annotations.ExtractHostHeader(anns)
+	if host == "" {
+		return
+	}
+	upstream.HostHeader = kong.String(host)
+}
+
+// overrideUpstreamByAnnotation modifies the Kong upstream based on annotations
+// on the Kubernetes service.
+func overrideUpstreamByAnnotation(upstream *kong.Upstream,
+	anns map[string]string) {
+	if upstream == nil {
+		return
+	}
+	overrideUpstreamHostHeader(upstream, anns)
+}
+
+// overrideUpstreamByKongIngress modifies the Kong upstream based on KongIngresses
+// associated with the Kubernetes service.
+func overrideUpstreamByKongIngress(upstream *Upstream,
+	kongIngress *configurationv1.KongIngress) {
+	if upstream == nil {
+		return
+	}
+
+	if kongIngress == nil || kongIngress.Upstream == nil {
+		return
+	}
+	u := kongIngress.Upstream
+	if u.HostHeader != nil {
+		upstream.HostHeader = kong.String(*u.HostHeader)
+	}
+	if u.Algorithm != nil {
+		upstream.Algorithm = kong.String(*u.Algorithm)
+	}
+	if u.Slots != nil {
+		upstream.Slots = kong.Int(*u.Slots)
+	}
+	if u.Healthchecks != nil {
+		upstream.Healthchecks = u.Healthchecks
+	}
+	if u.HashOn != nil {
+		upstream.HashOn = kong.String(*u.HashOn)
+	}
+	if u.HashFallback != nil {
+		upstream.HashFallback = kong.String(*u.HashFallback)
+	}
+	if u.HashOnHeader != nil {
+		upstream.HashOnHeader = kong.String(*u.HashOnHeader)
+	}
+	if u.HashFallback != nil {
+		upstream.HashFallback = kong.String(*u.HashFallback)
+	}
+	if u.HashFallbackHeader != nil {
+		upstream.HashFallbackHeader = kong.String(*u.HashFallbackHeader)
+	}
+	if u.HashOnCookie != nil {
+		upstream.HashOnCookie = kong.String(*u.HashOnCookie)
+	}
+	if u.HashOnCookiePath != nil {
+		upstream.HashOnCookiePath = kong.String(*u.HashOnCookiePath)
+	}
+}
+
+// overrideUpstream sets Upstream fields by KongIngress first, then by annotation
+func overrideUpstream(upstream *Upstream,
+	kongIngress *configurationv1.KongIngress,
+	anns map[string]string) {
+	if upstream == nil {
+		return
+	}
+
+	overrideUpstreamByKongIngress(upstream, kongIngress)
+	overrideUpstreamByAnnotation(&upstream.Upstream, anns)
+
 	// name is the only field that is set
 	name := *upstream.Upstream.Name
-	upstream.Upstream = *kongIngress.Upstream.DeepCopy()
 	upstream.Name = &name
 }
 

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -28,6 +29,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -349,12 +351,15 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	go handleSigterm(kong, stopCh, func(code int) {
-		os.Exit(code)
-	})
-
+	exitCh := make(chan int, 1)
+	var wg sync.WaitGroup
 	mux := http.NewServeMux()
-	go registerHandlers(cliConfig.EnableProfiling, 10254, kong, mux)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		serveHTTP(cliConfig.EnableProfiling, 10254, mux, stopCh)
+	}()
+	go handleSigterm(kong, stopCh, exitCh)
 
 	if cliConfig.AnonymousReports {
 		hostname, err := os.Hostname()
@@ -397,12 +402,13 @@ func main() {
 		}()
 	}
 	kong.Start()
+	wg.Wait()
+	os.Exit(<-exitCh)
 }
 
 type exiter func(code int)
 
-func handleSigterm(kong *controller.KongController, stopCh chan struct{},
-	exit exiter) {
+func handleSigterm(kong *controller.KongController, stopCh chan<- struct{}, exitCh chan<- int) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
 	<-signalChan
@@ -411,15 +417,10 @@ func handleSigterm(kong *controller.KongController, stopCh chan struct{},
 	exitCode := 0
 	close(stopCh)
 	if err := kong.Stop(); err != nil {
-		glog.Infof("Error during shutdown %v", err)
+		glog.Warningf("Stopping Kong controller failed: %v", err)
 		exitCode = 1
 	}
-
-	glog.Infof("Handled quit, awaiting pod deletion")
-	time.Sleep(10 * time.Second)
-
-	glog.Infof("Exiting with %v", exitCode)
-	exit(exitCode)
+	exitCh <- exitCode
 }
 
 // createApiserverClient creates new Kubernetes Apiserver client. When kubeconfig or apiserverHost param is empty
@@ -512,8 +513,7 @@ func handleFatalInitError(err error) {
 		"https://github.com/kubernetes/ingress-nginx/blob/master/docs/troubleshooting.md", err)
 }
 
-func registerHandlers(enableProfiling bool, port int, ic *controller.KongController, mux *http.ServeMux) {
-
+func serveHTTP(enableProfiling bool, port int, mux *http.ServeMux, stop <-chan struct{}) {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -554,5 +554,24 @@ func registerHandlers(enableProfiling bool, port int, ic *controller.KongControl
 		WriteTimeout:      300 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
-	glog.Fatal(server.ListenAndServe())
+	serveDone := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case <-stop:
+			// Allow the server to drain for as long as it takes.
+			if err := server.Shutdown(context.Background()); err != nil {
+				// We know the error wasn't due to a timeout.
+				glog.Warningf("Shutting down HTTP server failed: %v", err)
+			}
+		case <-serveDone:
+		}
+	}()
+	if err := server.ListenAndServe(); err != http.ErrServerClosed {
+		glog.Fatalf("HTTP server failed: %v", err)
+		close(serveDone)
+	}
+	wg.Wait()
 }

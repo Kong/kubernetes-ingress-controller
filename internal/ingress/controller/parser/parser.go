@@ -1149,7 +1149,9 @@ func overrideUpstreamByKongIngress(upstream *Upstream,
 		return
 	}
 
-	// name is the only field that is set
+	// The upstream within the KongIngress has no name.
+	// As this overwrites the entire upstream object, we must restore the
+	// original name after.
 	name := *upstream.Upstream.Name
 	upstream.Upstream = *kongIngress.Upstream.DeepCopy()
 	upstream.Name = &name

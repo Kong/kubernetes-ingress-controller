@@ -37,6 +37,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 	networking "k8s.io/api/networking/v1beta1"
 	clientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -215,9 +216,8 @@ type KongController struct {
 	stopCh   chan struct{}
 	updateCh *channels.RingChannel
 
-	// wgBackgroundActive tracks how many background goroutines are running, on which we'll wait to
-	// stop in Stop.
-	wgBackgroundActive sync.WaitGroup
+	// backgroundGroup tracks running background goroutines, on which we'll wait to stop in Stop.
+	backgroundGroup errgroup.Group
 
 	runningConfigHash [32]byte
 
@@ -242,26 +242,23 @@ func (n *KongController) Start() {
 		cancel()
 	}()
 
-	goTallied := func(f func()) {
-		n.wgBackgroundActive.Add(1)
-		go func() {
-			defer n.wgBackgroundActive.Done()
-			f()
-		}()
-	}
+	var group errgroup.Group
 
-	goTallied(func() {
+	group.Go(func() error {
 		n.elector.Run(ctx)
+		return nil
 	})
 
 	if n.syncStatus != nil {
-		goTallied(func() {
+		group.Go(func() error {
 			n.syncStatus.Run()
+			return nil
 		})
 	}
 
-	goTallied(func() {
+	group.Go(func() error {
 		n.syncQueue.Run(time.Second, n.stopCh)
+		return nil
 	})
 	// Force initial sync.
 	n.syncQueue.Enqueue(&networking.Ingress{})
@@ -313,7 +310,9 @@ func (n *KongController) Stop() error {
 	// Closing the stop channel will cause us to give up leadership.
 	close(n.stopCh)
 	glog.Infof("awaiting completion of shutdown procedures")
-	n.wgBackgroundActive.Wait()
+	if err := n.backgroundGroup.Wait(); err != nil {
+		glog.Errorf("background controller task failed: %v", err)
+	}
 
 	return nil
 }

@@ -1148,40 +1148,11 @@ func overrideUpstreamByKongIngress(upstream *Upstream,
 	if kongIngress == nil || kongIngress.Upstream == nil {
 		return
 	}
-	u := kongIngress.Upstream
-	if u.HostHeader != nil {
-		upstream.HostHeader = kong.String(*u.HostHeader)
-	}
-	if u.Algorithm != nil {
-		upstream.Algorithm = kong.String(*u.Algorithm)
-	}
-	if u.Slots != nil {
-		upstream.Slots = kong.Int(*u.Slots)
-	}
-	if u.Healthchecks != nil {
-		upstream.Healthchecks = u.Healthchecks
-	}
-	if u.HashOn != nil {
-		upstream.HashOn = kong.String(*u.HashOn)
-	}
-	if u.HashFallback != nil {
-		upstream.HashFallback = kong.String(*u.HashFallback)
-	}
-	if u.HashOnHeader != nil {
-		upstream.HashOnHeader = kong.String(*u.HashOnHeader)
-	}
-	if u.HashFallback != nil {
-		upstream.HashFallback = kong.String(*u.HashFallback)
-	}
-	if u.HashFallbackHeader != nil {
-		upstream.HashFallbackHeader = kong.String(*u.HashFallbackHeader)
-	}
-	if u.HashOnCookie != nil {
-		upstream.HashOnCookie = kong.String(*u.HashOnCookie)
-	}
-	if u.HashOnCookiePath != nil {
-		upstream.HashOnCookiePath = kong.String(*u.HashOnCookiePath)
-	}
+
+	// name is the only field that is set
+	name := *upstream.Upstream.Name
+	upstream.Upstream = *kongIngress.Upstream.DeepCopy()
+	upstream.Name = &name
 }
 
 // overrideUpstream sets Upstream fields by KongIngress first, then by annotation
@@ -1194,10 +1165,6 @@ func overrideUpstream(upstream *Upstream,
 
 	overrideUpstreamByKongIngress(upstream, kongIngress)
 	overrideUpstreamByAnnotation(&upstream.Upstream, anns)
-
-	// name is the only field that is set
-	name := *upstream.Upstream.Name
-	upstream.Name = &name
 }
 
 func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error) {

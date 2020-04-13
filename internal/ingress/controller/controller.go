@@ -72,8 +72,9 @@ type Configuration struct {
 	KongConfigClient configurationClientSet.Interface
 	KnativeClient    knativeClientSet.Interface
 
-	ResyncPeriod  time.Duration
-	SyncRateLimit float32
+	ResyncPeriod      time.Duration
+	SyncRateLimit     float32
+	EnableReverseSync bool
 
 	Namespace string
 
@@ -219,7 +220,7 @@ type KongController struct {
 	// backgroundGroup tracks running background goroutines, on which we'll wait to stop in Stop.
 	backgroundGroup errgroup.Group
 
-	runningConfigHash [32]byte
+	runningConfigHash []byte
 
 	isShuttingDown uint32
 

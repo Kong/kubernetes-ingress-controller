@@ -63,9 +63,10 @@ type cliConfig struct {
 	UpdateStatus           bool
 	UpdateStatusOnShutdown bool
 
-	// Rutnime behavior
-	SyncPeriod    time.Duration
-	SyncRateLimit float32
+	// Runtime behavior
+	SyncPeriod        time.Duration
+	SyncRateLimit     float32
+	EnableReverseSync bool
 
 	// k8s connection details
 	APIServerHost      string
@@ -182,6 +183,7 @@ IP/hostname when the controller is being stopped.`)
 		`Relist and confirm cloud resources this often.`)
 	flags.Float32("sync-rate-limit", 0.3,
 		`Define the sync frequency upper limit`)
+	flag.Bool("enable-reverse-sync", false, `Enable reverse checks from Kong to Kubernetes`)
 
 	// k8s connection details
 	flags.String("apiserver-host", "",
@@ -293,6 +295,7 @@ func parseFlags() (cliConfig, error) {
 	// Rutnime behavior
 	config.SyncPeriod = viper.GetDuration("sync-period")
 	config.SyncRateLimit = (float32)(viper.GetFloat64("sync-rate-limit"))
+	config.EnableReverseSync = viper.GetBool("enable-reverse-sync")
 
 	// k8s connection details
 	config.APIServerHost = viper.GetString("apiserver-host")

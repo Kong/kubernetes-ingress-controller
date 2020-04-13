@@ -554,19 +554,24 @@ func serveHTTP(enableProfiling bool, port int, mux *http.ServeMux, stop <-chan s
 		WriteTimeout:      300 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	serveDone := make(chan struct{})
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		<-stop
-		wg.Add(1)
 		defer wg.Done()
-		// Allow the server to drain for as long as it takes.
-		if err := server.Shutdown(context.Background()); err != nil {
-			// We know the error wasn't due to a timeout.
-			glog.Warningf("Shutting down HTTP server failed: %v", err)
+		select {
+		case <-stop:
+			// Allow the server to drain for as long as it takes.
+			if err := server.Shutdown(context.Background()); err != nil {
+				// We know the error wasn't due to a timeout.
+				glog.Warningf("Shutting down HTTP server failed: %v", err)
+			}
+		case <-serveDone:
 		}
 	}()
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
 		glog.Fatalf("HTTP server failed: %v", err)
+		close(serveDone)
 	}
 	wg.Wait()
 }

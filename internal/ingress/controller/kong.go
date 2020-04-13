@@ -278,7 +278,7 @@ func (n *KongController) toDeckContent(
 	})
 
 	for _, c := range k8sState.Certificates {
-		cert := file.FCertificate{Certificate: c.Certificate}
+		cert := getFCertificateFromKongCert(c.Certificate)
 		content.Certificates = append(content.Certificates, cert)
 	}
 	sort.SliceStable(content.Certificates, func(i, j int) bool {
@@ -309,6 +309,30 @@ func (n *KongController) toDeckContent(
 	}
 
 	return &content, nil
+}
+func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
+	var res file.FCertificate
+	if kongCert.ID != nil {
+		res.ID = kong.String(*kongCert.ID)
+	}
+	if kongCert.Key != nil {
+		res.Key = kong.String(*kongCert.Key)
+	}
+	if kongCert.Cert != nil {
+		res.Cert = kong.String(*kongCert.Cert)
+	}
+	res.SNIs = getSNIs(kongCert.SNIs)
+	return res
+}
+
+func getSNIs(names []*string) []kong.SNI {
+	var snis []kong.SNI
+	for _, name := range names {
+		snis = append(snis, kong.SNI{
+			Name: kong.String(*name),
+		})
+	}
+	return snis
 }
 
 func pluginString(plugin file.FPlugin) string {

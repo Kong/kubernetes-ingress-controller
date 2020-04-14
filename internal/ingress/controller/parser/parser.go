@@ -842,8 +842,9 @@ func (p *Parser) fillOverrides(state KongState) error {
 	for i := 0; i < len(state.Upstreams); i++ {
 		kongIngress, err := p.getKongIngressForService(
 			state.Upstreams[i].Service.K8sService)
+		anns := state.Upstreams[i].Service.K8sService.Annotations
 		if err == nil {
-			overrideUpstream(&state.Upstreams[i], kongIngress)
+			overrideUpstream(&state.Upstreams[i], kongIngress, anns)
 		} else {
 			glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
 				state.Upstreams[i].Service.Backend.Name, state.Upstreams[i].Service.Namespace))
@@ -1115,15 +1116,57 @@ func cloneStringPointerSlice(array ...*string) []*string {
 	return res
 }
 
-func overrideUpstream(upstream *Upstream,
-	kongIngress *configurationv1.KongIngress) {
-	if kongIngress == nil || kongIngress.Upstream == nil || upstream == nil {
+func overrideUpstreamHostHeader(upstream *kong.Upstream, anns map[string]string) {
+	if upstream == nil {
 		return
 	}
-	// name is the only field that is set
+	host := annotations.ExtractHostHeader(anns)
+	if host == "" {
+		return
+	}
+	upstream.HostHeader = kong.String(host)
+}
+
+// overrideUpstreamByAnnotation modifies the Kong upstream based on annotations
+// on the Kubernetes service.
+func overrideUpstreamByAnnotation(upstream *kong.Upstream,
+	anns map[string]string) {
+	if upstream == nil {
+		return
+	}
+	overrideUpstreamHostHeader(upstream, anns)
+}
+
+// overrideUpstreamByKongIngress modifies the Kong upstream based on KongIngresses
+// associated with the Kubernetes service.
+func overrideUpstreamByKongIngress(upstream *Upstream,
+	kongIngress *configurationv1.KongIngress) {
+	if upstream == nil {
+		return
+	}
+
+	if kongIngress == nil || kongIngress.Upstream == nil {
+		return
+	}
+
+	// The upstream within the KongIngress has no name.
+	// As this overwrites the entire upstream object, we must restore the
+	// original name after.
 	name := *upstream.Upstream.Name
 	upstream.Upstream = *kongIngress.Upstream.DeepCopy()
 	upstream.Name = &name
+}
+
+// overrideUpstream sets Upstream fields by KongIngress first, then by annotation
+func overrideUpstream(upstream *Upstream,
+	kongIngress *configurationv1.KongIngress,
+	anns map[string]string) {
+	if upstream == nil {
+		return
+	}
+
+	overrideUpstreamByKongIngress(upstream, kongIngress)
+	overrideUpstreamByAnnotation(&upstream.Upstream, anns)
 }
 
 func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error) {

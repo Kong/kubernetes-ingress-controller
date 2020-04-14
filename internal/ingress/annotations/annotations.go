@@ -41,6 +41,7 @@ const (
 	httpsRedirectCodeKey = "/https-redirect-status-code"
 	preserveHostKey      = "/preserve-host"
 	regexPriorityKey     = "/regex-priority"
+	hostHeaderKey        = "/host-header"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -179,7 +180,12 @@ func HasServiceUpstreamAnnotation(anns map[string]string) bool {
 	return anns["ingress.kubernetes.io/service-upstream"] == "true"
 }
 
-// ExtractRegexPriority extracts the regex-priority annotation value.
+// ExtractRegexPriority extracts the host-header annotation value.
 func ExtractRegexPriority(anns map[string]string) string {
 	return valueFromAnnotation(regexPriorityKey, anns)
+}
+
+// ExtractHostHeader extracts the regex-priority annotation value.
+func ExtractHostHeader(anns map[string]string) string {
+	return valueFromAnnotation(hostHeaderKey, anns)
 }

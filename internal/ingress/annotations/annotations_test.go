@@ -621,3 +621,54 @@ func TestExtractRegexPriority(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractHostHeader(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty old group",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/host-header": "example.com",
+				},
+			},
+			want: "example.com",
+		},
+		{
+			name: "non-empty new group",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-header": "example.net",
+				},
+			},
+			want: "example.net",
+		},
+		{
+			name: "group preference",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/host-header": "example.com",
+					"konghq.com/host-header":               "example.net",
+				},
+			},
+			want: "example.net",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ExtractHostHeader(tt.args.anns); got != tt.want {
+				t.Errorf("ExtractHostHeader() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

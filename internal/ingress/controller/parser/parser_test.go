@@ -1112,6 +1112,91 @@ func TestKongServiceAnnotations(t *testing.T) {
 			RegexPriority: kong.Int(0),
 		}, state.Services[0].Routes[0].Route)
 	})
+
+	t.Run("host-header annotation is correctly processed", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"configuration.konghq.com/host-header": "example.com",
+					},
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+		assert.Equal(kong.Service{
+			Name:           kong.String("default.foo-svc.80"),
+			Host:           kong.String("foo-svc.default.80.svc"),
+			Path:           kong.String("/"),
+			Port:           kong.Int(80),
+			ConnectTimeout: kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			WriteTimeout:   kong.Int(60000),
+			Retries:        kong.Int(5),
+			Protocol:       kong.String("http"),
+		}, state.Services[0].Service)
+
+		assert.Equal(1, len(state.Upstreams),
+			"expected one upstream to be rendered")
+		assert.Equal(kong.Upstream{
+			Name:       kong.String("foo-svc.default.80.svc"),
+			HostHeader: kong.String("example.com"),
+		}, state.Upstreams[0].Upstream)
+
+		assert.Equal(1, len(state.Services[0].Routes),
+			"expected one route to be rendered")
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.bar.00"),
+			StripPath:     kong.Bool(false),
+			Hosts:         kong.StringSlice("example.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+			RegexPriority: kong.Int(0),
+		}, state.Services[0].Routes[0].Route)
+	})
 }
 
 func TestDefaultBackend(t *testing.T) {
@@ -2962,7 +3047,7 @@ func TestNormalizeProtocols(t *testing.T) {
 	}
 
 	assert.NotPanics(func() {
-		overrideUpstream(nil, nil)
+		overrideUpstream(nil, nil, make(map[string]string))
 	})
 }
 
@@ -2984,7 +3069,7 @@ func TestValidateProtocol(t *testing.T) {
 	}
 
 	assert.NotPanics(func() {
-		overrideUpstream(nil, nil)
+		overrideUpstream(nil, nil, make(map[string]string))
 	})
 }
 func TestOverrideUpstream(t *testing.T) {
@@ -3044,12 +3129,12 @@ func TestOverrideUpstream(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
-		overrideUpstream(&testcase.inUpstream, &testcase.inKongIngresss)
+		overrideUpstream(&testcase.inUpstream, &testcase.inKongIngresss, make(map[string]string))
 		assert.Equal(testcase.inUpstream, testcase.outUpstream)
 	}
 
 	assert.NotPanics(func() {
-		overrideUpstream(nil, nil)
+		overrideUpstream(nil, nil, make(map[string]string))
 	})
 }
 

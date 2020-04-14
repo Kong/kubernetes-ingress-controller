@@ -69,8 +69,9 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 			Concurrency: cliConfig.KongAdminConcurrency,
 		},
 
-		ResyncPeriod:  cliConfig.SyncPeriod,
-		SyncRateLimit: cliConfig.SyncRateLimit,
+		ResyncPeriod:      cliConfig.SyncPeriod,
+		SyncRateLimit:     cliConfig.SyncRateLimit,
+		EnableReverseSync: cliConfig.EnableReverseSync,
 
 		Namespace: cliConfig.WatchNamespace,
 

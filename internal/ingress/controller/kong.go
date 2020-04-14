@@ -47,26 +47,39 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 		return err
 	}
 
-	jsonConfig, err := json.Marshal(targetContent)
-	if err != nil {
-		return errors.Wrap(err,
-			"marshaling Kong declarative configuration to JSON")
-	}
-	shaSum := sha256.Sum256(jsonConfig)
-	if reflect.DeepEqual(n.runningConfigHash, shaSum) {
-		glog.Info("no configuration change, skipping sync to Kong")
-		return nil
+	var shaSum []byte
+	// disable optimization if reverse sync is enabled
+	if !n.cfg.EnableReverseSync {
+		shaSum, err = generateSHA(targetContent)
+		if err != nil {
+			return err
+		}
+		if reflect.DeepEqual(n.runningConfigHash, shaSum) {
+			glog.Info("no configuration change, skipping sync to Kong")
+			return nil
+		}
 	}
 	if n.cfg.InMemory {
 		err = n.onUpdateInMemoryMode(targetContent)
 	} else {
 		err = n.onUpdateDBMode(targetContent)
 	}
-	if err == nil {
-		glog.Info("successfully synced configuration to Kong")
-		n.runningConfigHash = shaSum
+	if err != nil {
+		return err
 	}
-	return err
+	n.runningConfigHash = shaSum
+	glog.Info("successfully synced configuration to Kong")
+	return nil
+}
+
+func generateSHA(targetContent *file.Content) ([]byte, error) {
+	jsonConfig, err := json.Marshal(targetContent)
+	if err != nil {
+		return nil, errors.Wrap(err,
+			"marshaling Kong declarative configuration to JSON")
+	}
+	shaSum := sha256.Sum256(jsonConfig)
+	return shaSum[:], nil
 }
 
 func cleanUpNullsInPluginConfigs(state *file.Content) {

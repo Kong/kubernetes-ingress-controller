@@ -29,6 +29,8 @@ import (
 
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	pool "gopkg.in/go-playground/pool.v3"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -38,11 +40,9 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	knativeApis "knative.dev/pkg/apis"
+	"knative.dev/pkg/network"
 	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
 const (
@@ -431,6 +431,19 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 		glog.Infof("updating Knative %v/%v status to %v", currIng.Namespace, currIng.Name, status)
 		lbStatus := toKnativeLBStatus(status)
+
+		// TODO: handle the case when s.PublishService is empty
+		namespace, svcName, err := utils.ParseNameNS(s.PublishService)
+		clusterDomain := network.GetClusterDomainName()
+		if err != nil {
+			return false, err
+		}
+
+		for i := 0; i < len(lbStatus); i++ {
+			lbStatus[i].DomainInternal = fmt.Sprintf("%s.%s.svc.%s",
+				svcName, namespace, clusterDomain)
+		}
+
 		currIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus, lbStatus)
 		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionReady)
 		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)

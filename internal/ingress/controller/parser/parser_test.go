@@ -1197,6 +1197,86 @@ func TestKongServiceAnnotations(t *testing.T) {
 			RegexPriority: kong.Int(0),
 		}, state.Services[0].Routes[0].Route)
 	})
+
+	t.Run("methods annotation is correctly processed",
+		func(t *testing.T) {
+			ingresses := []*networking.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"konghq.com/methods": "POST,GET",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "example.com",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: networking.IngressBackend{
+													ServiceName: "foo-svc",
+													ServicePort: intstr.FromInt(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			services := []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc",
+						Namespace: "default",
+					},
+				},
+			}
+			store, err := store.NewFakeStore(store.FakeObjects{
+				Ingresses: ingresses,
+				Services:  services,
+			})
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+
+			assert.Equal(1, len(state.Services),
+				"expected one service to be rendered")
+			assert.Equal(kong.Service{
+				Name:           kong.String("default.foo-svc.80"),
+				Host:           kong.String("foo-svc.default.80.svc"),
+				Path:           kong.String("/"),
+				Port:           kong.Int(80),
+				ConnectTimeout: kong.Int(60000),
+				ReadTimeout:    kong.Int(60000),
+				WriteTimeout:   kong.Int(60000),
+				Retries:        kong.Int(5),
+				Protocol:       kong.String("http"),
+			}, state.Services[0].Service)
+
+			assert.Equal(1, len(state.Services[0].Routes),
+				"expected one route to be rendered")
+			assert.Equal(kong.Route{
+				Name:          kong.String("default.bar.00"),
+				StripPath:     kong.Bool(false),
+				RegexPriority: kong.Int(0),
+				Hosts:         kong.StringSlice("example.com"),
+				PreserveHost:  kong.Bool(true),
+				Paths:         kong.StringSlice("/"),
+				Protocols:     kong.StringSlice("http", "https"),
+				Methods:       kong.StringSlice("POST", "GET"),
+			}, state.Services[0].Routes[0].Route)
+		})
 }
 
 func TestDefaultBackend(t *testing.T) {
@@ -4626,6 +4706,57 @@ func Test_overrideRouteRegexPriority(t *testing.T) {
 			overrideRouteRegexPriority(tt.args.route, tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteRegexPriority() got = %v, want %v", tt.args.route, tt.want)
+			}
+		})
+	}
+}
+
+func Test_overrideRouteMethods(t *testing.T) {
+	type args struct {
+		route *kong.Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *kong.Route
+	}{
+		{},
+		{
+			name: "basic empty route",
+			args: args{
+				route: &kong.Route{},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "basic sanity",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/methods": "POST,GET",
+				},
+			},
+			want: &kong.Route{
+				Methods: kong.StringSlice("POST", "GET"),
+			},
+		},
+		{
+			name: "non-string",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/methods": "-10,GET",
+				},
+			},
+			want: &kong.Route{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			overrideRouteMethods(tt.args.route, tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideRouteMethods() got = %v, want %v", tt.args.route, tt.want)
 			}
 		})
 	}

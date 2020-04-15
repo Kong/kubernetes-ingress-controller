@@ -672,3 +672,54 @@ func TestExtractHostHeader(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractMethods(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "empty",
+			want: []string{},
+		},
+		{
+			name: "legacy annotation",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/methods": "POST,GET",
+				},
+			},
+			want: []string{"POST", "GET"},
+		},
+		{
+			name: "new annotation",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/methods": "POST,GET",
+				},
+			},
+			want: []string{"POST", "GET"},
+		},
+		{
+			name: "annotation priority",
+			args: args{
+				anns: map[string]string{
+					"configuration.konghq.com/methods": "GET,POST",
+					"konghq.com/methods":               "POST,PUT",
+				},
+			},
+			want: []string{"POST", "PUT"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ExtractMethods(tt.args.anns); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExtractMethods() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -125,6 +125,7 @@ var supportedCreds = sets.NewString(
 )
 
 var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
+var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
@@ -1077,6 +1078,25 @@ func overrideRouteRegexPriority(route *kong.Route, anns map[string]string) {
 	route.RegexPriority = kong.Int(regexPriority)
 }
 
+func overrideRouteMethods(route *kong.Route, anns map[string]string) {
+	annMethods := annotations.ExtractMethods(anns)
+	if len(annMethods) == 0 {
+		return
+	}
+	var methods []*string
+	for _, method := range annMethods {
+		if validMethods.MatchString(method) {
+			methods = append(methods, kong.String(method))
+		} else {
+			// if any method is invalid (not an uppercase alpha string),
+			// discard everything
+			return
+		}
+	}
+
+	route.Methods = methods
+}
+
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route) {
 	anns := route.Ingress.Annotations
@@ -1088,6 +1108,7 @@ func overrideRouteByAnnotation(route *Route) {
 	overrideRouteHTTPSRedirectCode(&route.Route, anns)
 	overrideRoutePreserveHost(&route.Route, anns)
 	overrideRouteRegexPriority(&route.Route, anns)
+	overrideRouteMethods(&route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation

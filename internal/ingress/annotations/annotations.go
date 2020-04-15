@@ -42,6 +42,7 @@ const (
 	preserveHostKey      = "/preserve-host"
 	regexPriorityKey     = "/regex-priority"
 	hostHeaderKey        = "/host-header"
+	methodsKey           = "/methods"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -188,4 +189,13 @@ func ExtractRegexPriority(anns map[string]string) string {
 // ExtractHostHeader extracts the regex-priority annotation value.
 func ExtractHostHeader(anns map[string]string) string {
 	return valueFromAnnotation(hostHeaderKey, anns)
+}
+
+// ExtractMethods extracts the methods annotation value.
+func ExtractMethods(anns map[string]string) []string {
+	val := valueFromAnnotation(methodsKey, anns)
+	if val == "" {
+		return []string{}
+	}
+	return strings.Split(val, ",")
 }

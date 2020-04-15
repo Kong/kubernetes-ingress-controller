@@ -537,16 +537,16 @@ func (p *Parser) parseKnativeIngressRules(ingressList []*knative.Ingress) (
 							Name: knativeBackend.ServiceName,
 							Port: knativeBackend.ServicePort,
 						},
-						Plugins: []kong.Plugin{
-							{
-								Name: kong.String("request-transformer"),
-								Config: kong.Configuration{
-									"add": map[string]interface{}{
-										"headers": headers,
-									},
+					}
+					if len(headers) > 0 {
+						service.Plugins = append(service.Plugins, kong.Plugin{
+							Name: kong.String("request-transformer"),
+							Config: kong.Configuration{
+								"add": map[string]interface{}{
+									"headers": headers,
 								},
 							},
-						},
+						})
 					}
 				}
 				service.Routes = append(service.Routes, r)

@@ -1,4 +1,4 @@
-# Configuring a fallback service
+# Configuring https redirect
 
 This guide walks through how to configure Kong Ingress Controller to
 redirect HTTP request to HTTPS so that all communication

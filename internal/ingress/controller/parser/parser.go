@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
@@ -536,16 +537,16 @@ func (p *Parser) parseKnativeIngressRules(ingressList []*knative.Ingress) (
 							Name: knativeBackend.ServiceName,
 							Port: knativeBackend.ServicePort,
 						},
-						Plugins: []kong.Plugin{
-							{
-								Name: kong.String("request-transformer"),
-								Config: kong.Configuration{
-									"add": map[string]interface{}{
-										"headers": headers,
-									},
+					}
+					if len(headers) > 0 {
+						service.Plugins = append(service.Plugins, kong.Plugin{
+							Name: kong.String("request-transformer"),
+							Config: kong.Configuration{
+								"add": map[string]interface{}{
+									"headers": headers,
 								},
 							},
-						},
+						})
 					}
 				}
 				service.Routes = append(service.Routes, r)
@@ -1217,7 +1218,11 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 	error) {
 	snisAdded := make(map[string]bool)
 	// map of cert public key + private key to certificate
-	certs := make(map[string]Certificate)
+	type certWrapper struct {
+		cert              kong.Certificate
+		CreationTimestamp metav1.Time
+	}
+	certs := make(map[string]certWrapper)
 
 	for secretKey, SNIs := range secretsToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
@@ -1234,26 +1239,32 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 		}
 		kongCert, ok := certs[cert+key]
 		if !ok {
-			kongCert = Certificate{
-				Certificate: kong.Certificate{
+			kongCert = certWrapper{
+				cert: kong.Certificate{
 					ID:   kong.String(string(secret.UID)),
 					Cert: kong.String(cert),
 					Key:  kong.String(key),
 				},
+				CreationTimestamp: secret.CreationTimestamp,
+			}
+		} else {
+			if kongCert.CreationTimestamp.After(secret.CreationTimestamp.Time) {
+				kongCert.cert.ID = kong.String(string(secret.UID))
+				kongCert.CreationTimestamp = secret.CreationTimestamp
 			}
 		}
 
 		for _, sni := range SNIs {
 			if !snisAdded[sni] {
 				snisAdded[sni] = true
-				kongCert.SNIs = append(kongCert.SNIs, kong.String(sni))
+				kongCert.cert.SNIs = append(kongCert.cert.SNIs, kong.String(sni))
 			}
 		}
 		certs[cert+key] = kongCert
 	}
 	var res []Certificate
 	for _, cert := range certs {
-		res = append(res, cert)
+		res = append(res, Certificate{cert.cert})
 	}
 	return res, nil
 }

@@ -75,3 +75,17 @@ IP address to the `kong-proxy` Service.
 Once you've installed Kong Ingress Controller, please follow our
 [getting started](../guides/getting-started.md) tutorial to learn
 about how to use the Ingress Controller.
+
+## TLS configuration
+
+Versions of Kong prior to 2.0.0 default to using [the "modern" cipher suite
+list](https://wiki.mozilla.org/Security/Server_Side_TLS). This is not
+compatible with ELBs when the ELB terminates TLS at the edge and establishes a
+new session with Kong. This error will appear in Kong's logs:
+
+```
+*7961 SSL_do_handshake() failed (SSL: error:1417A0C1:SSL routines:tls_post_process_client_hello:no shared cipher) while SSL handshaking
+```
+
+To correct this issue, set `KONG_SSL_CIPHER_SUITE=intermediate` in your
+environment variables.

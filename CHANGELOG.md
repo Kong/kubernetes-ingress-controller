@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.8.1](#081---20200415)
  - [0.8.0](#080---20200325)
  - [0.7.1](#071---20200131)
  - [0.7.0](#070---20200106)
@@ -18,6 +19,25 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.8.1] - 2020/04/15
+
+#### Added
+
+- Added `--enable-reverse-sync` flag to enable checks from Kong to kubernetes
+  state. This should be enabled only if a human has access to Kong's Admin API
+  or Kong Manager (for Enterprise users). This flag will disable an optimization
+  in the controller and result in an increase read activity on Kong's Admin
+  API and database.
+  [#559](https://github.com/Kong/kubernetes-ingress-controller/issues/559)
+
+#### Fixed
+
+- Fix certificate and SNI sync to avoid a deadlock due to a conflict when
+  Kong is running with a database backend.
+  [#524](https://github.com/Kong/kubernetes-ingress-controller/issues/524)
+- Correctly set Knative Ingress Status
+  [#600](https://github.com/Kong/kubernetes-ingress-controller/pull/600)
 
 ## [0.8.0] - 2020/03/25
 
@@ -678,6 +698,7 @@ Please read the changelog and test in your environment.
  - The initial versions rapidly were iterated delivering
    a working ingress controller.
 
+[0.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.6.2...0.7.0

@@ -29,6 +29,8 @@ import (
 
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	pool "gopkg.in/go-playground/pool.v3"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -38,11 +40,9 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	knativeApis "knative.dev/pkg/apis"
+	"knative.dev/pkg/network"
 	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
 const (
@@ -76,8 +76,6 @@ type Config struct {
 
 	PublishStatusAddress string
 
-	ElectionID string
-
 	UpdateStatusOnShutdown bool
 
 	IngressLister ingressLister
@@ -97,14 +95,13 @@ type statusSync struct {
 	// pod contains runtime information about this pod
 	pod *utils.PodInfo
 
-	electionID string
 	// workqueue used to keep in sync the status IP/s
 	// in the Ingress rules
 	syncQueue *task.Queue
 	callbacks leaderelection.LeaderCallbacks
 }
 
-// Run starts the loop to keep the status in sync
+// Run starts the loop to keep the status in sync.
 func (s statusSync) Run() {
 }
 
@@ -112,21 +109,14 @@ func (s statusSync) Callbacks() leaderelection.LeaderCallbacks {
 	return s.callbacks
 }
 
-// Shutdown stop the sync. In case the instance is the leader it will remove the current IP
-// if there is no other instances running.
+// Shutdown stop the sync.
+//
+// When this instance is the leader it will remove its current IP address if no other instances are
+// running.
 func (s statusSync) Shutdown(isLeader bool) {
 	go s.syncQueue.Shutdown()
-	// remove IP from Ingress
 	if !isLeader {
 		return
-	}
-
-	// on shutdown we remove information about the leader election to
-	// avoid up to 30 seconds of delay in start the synchronization process
-	c, err := s.CoreClient.CoreV1().ConfigMaps(s.pod.Namespace).Get(s.electionID, metav1.GetOptions{})
-	if err == nil {
-		c.Annotations = map[string]string{}
-		s.CoreClient.CoreV1().ConfigMaps(s.pod.Namespace).Update(c)
 	}
 
 	if !s.UpdateStatusOnShutdown {
@@ -134,26 +124,27 @@ func (s statusSync) Shutdown(isLeader bool) {
 		return
 	}
 
+	// Remove our IP address from all Ingress "status" subresources that mention it.
 	glog.Infof("updating status of Ingress rules (remove)")
 
 	addrs, err := s.runningAddresses()
 	if err != nil {
-		glog.Errorf("error obtaining running IPs: %v", addrs)
+		glog.Errorf("error obtaining IP addresses of running ingress controllers: %v", err)
 		return
 	}
 
 	if len(addrs) > 1 {
-		// leave the job to the next leader
-		glog.Infof("leaving status update for next leader (%v)", len(addrs))
+		// Leave the job to the next leader.
+		glog.Infof("leaving status update for next leader (%d other candidates)", len(addrs)-1)
 		return
 	}
 
 	if s.isRunningMultiplePods() {
-		glog.V(2).Infof("skipping Ingress status update (multiple pods running - another one will be elected as master)")
+		glog.V(2).Infof("skipping Ingress status update (multiple pods running; another one will be elected as leader)")
 		return
 	}
 
-	glog.Infof("removing address from ingress status (%v)", addrs)
+	glog.Infof("removing address from Ingress status (%v)", addrs)
 	s.updateStatus([]apiv1.LoadBalancerIngress{})
 }
 
@@ -184,8 +175,7 @@ func NewStatusSyncer(config Config) Sync {
 	}
 
 	st := statusSync{
-		pod: pod,
-
+		pod:    pod,
 		Config: config,
 	}
 	st.syncQueue = task.NewCustomTaskQueue(st.sync, st.keyfunc)
@@ -441,6 +431,19 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 		glog.Infof("updating Knative %v/%v status to %v", currIng.Namespace, currIng.Name, status)
 		lbStatus := toKnativeLBStatus(status)
+
+		// TODO: handle the case when s.PublishService is empty
+		namespace, svcName, err := utils.ParseNameNS(s.PublishService)
+		clusterDomain := network.GetClusterDomainName()
+		if err != nil {
+			return false, err
+		}
+
+		for i := 0; i < len(lbStatus); i++ {
+			lbStatus[i].DomainInternal = fmt.Sprintf("%s.%s.svc.%s",
+				svcName, namespace, clusterDomain)
+		}
+
 		currIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus, lbStatus)
 		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionReady)
 		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)

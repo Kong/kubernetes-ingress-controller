@@ -21,7 +21,6 @@ import (
 	"os"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/eapache/channels"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
@@ -72,26 +71,24 @@ func TestHandleSigterm(t *testing.T) {
 		t.Errorf("unexpected error creating Kong controller: %v", err)
 	}
 
-	kong, err := controller.NewKongController(&controller.Configuration{
-		KubeClient: kubeClient,
-	},
+	kong, err := controller.NewKongController(
+		&controller.Configuration{
+			KubeClient: kubeClient,
+		},
 		channels.NewRingChannel(1024),
 		store.New(store.CacheStores{}, conf.IngressClass),
 	)
 
-	go handleSigterm(kong, make(chan struct{}), func(code int) {
-		if code != 1 {
-			t.Errorf("expected exit code 1 but %v received", code)
-		}
-
-		return
-	})
-
-	time.Sleep(1 * time.Second)
+	exitCh := make(chan int, 1)
+	go handleSigterm(kong, make(chan struct{}), exitCh)
 
 	t.Logf("sending SIGTERM to process PID %v", syscall.Getpid())
-	err = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-	if err != nil {
+	if err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM); err != nil {
 		t.Errorf("unexpected error sending SIGTERM signal")
+	}
+
+	// Allow test to time out if no value becomes avaialble soon enough.
+	if code := <-exitCh; code != 1 {
+		t.Errorf("expected exit code 1 but %v received", code)
 	}
 }

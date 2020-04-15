@@ -28,7 +28,7 @@ modifying or deleting Kong's configuration.
 Hence, it is important that the deployment
 ensures that the likelihood of this happening is as small as possible.
 
-In the example deployements, the Controller and Kong's Admin API communicate
+In the example deployments, the Controller and Kong's Admin API communicate
 over the loopback (`lo`) interface of the pod.
 Kong is not performing any kind of authorization or
 authentication on the Admin API, hence the API is accessible only

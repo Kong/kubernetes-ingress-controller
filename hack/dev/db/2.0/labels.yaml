@@ -1,0 +1,71 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    version: "20"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      version: "20"
+  template:
+    metadata:
+      labels:
+        version: "20"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: kong-dev
+  labels:
+    version: "20"
+    db: "true"
+spec:
+  selector:
+    matchLabels:
+      version: "20"
+      db: "true"
+  template:
+    metadata:
+      labels:
+        version: "20"
+        db: "true"
+    spec:
+      initContainers:
+      - name: wait-for-migrations
+        env:
+        - name: KONG_PG_HOST
+          value: "postgres-db-v20"
+      containers:
+      - name: proxy
+        env:
+        - name: KONG_DATABASE
+          value: postgres
+        - name: KONG_PG_HOST
+          value: "postgres-db-v20"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        env:
+        - name: KONG_PG_HOST
+          value: "postgres-db-v20"
+      containers:
+      - name: kong-migrations
+        env:
+        - name: KONG_PG_HOST
+          value: "postgres-db-v20"

@@ -1,0 +1,4 @@
+resources:
+- custom-types.yaml
+- namespace.yaml
+- dummy-publish-service.yaml

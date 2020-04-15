@@ -23,4 +23,4 @@ kustomize build ./deploy/manifests/enterprise \
 
 # Kong Dev Config
 cat ./deploy/manifests/base/custom-types.yaml \
-  > hack/dev-env/base/custom-types.yaml
+  > hack/dev/common/custom-types.yaml

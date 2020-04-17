@@ -943,7 +943,18 @@ func overrideRouteByKongIngress(route *Route,
 
 	r := kongIngress.Route
 	if len(r.Methods) != 0 {
-		route.Methods = cloneStringPointerSlice(r.Methods...)
+		invalid := false
+		for _, method := range r.Methods {
+			if !validMethods.MatchString(*method) {
+				// if any method is invalid (not an uppercase alpha string),
+				// discard everything
+				glog.Errorf("invalid method found while processing '%v': %v", route.Name, *method)
+				invalid = true
+			}
+		}
+		if !invalid {
+			route.Methods = cloneStringPointerSlice(r.Methods...)
+		}
 	}
 	if len(r.Headers) != 0 {
 		route.Headers = r.Headers
@@ -1090,6 +1101,7 @@ func overrideRouteMethods(route *kong.Route, anns map[string]string) {
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
+			glog.Errorf("invalid method found while processing '%v': %v", route.Name, method)
 			return
 		}
 	}

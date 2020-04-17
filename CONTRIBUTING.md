@@ -69,7 +69,7 @@ go run -tags gcp ./cli/ingress-controller/ \
 --kubeconfig ~/.kube/config \
 --publish-service=kong/kong-proxy \
 --apiserver-host=http://localhost:8002 \
---kong-url http://localhost:8001
+--kong-admin-url http://localhost:8001
 ```
 
 ## Building

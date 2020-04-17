@@ -45,4 +45,4 @@ kubectl port-forward -n $POD_NAMESPACE $POD_NAME \
 go run ./cli/ingress-controller \
   --apiserver-host http://127.0.0.1:8002 \
   --publish-service kong-dev/kong-fake-publish-proxy \
-  --kong-url=http://127.0.0.1:8001
+  --kong-admin-url=http://127.0.0.1:8001

@@ -8,7 +8,7 @@ Controller should be able to continue to function with minimum possible
 service disruption.
 
 Kong Ingress Controller is composed of two parts: 1. Kong, which handles
-the rquests, 2. Controller, which configures Kong dynamically.
+the requests, 2. Controller, which configures Kong dynamically.
 
 Kong itself can be deployed in a Highly available manner by deploying
 multiple instances (or pods). Kong nodes are state-less, meaning a Kong pod

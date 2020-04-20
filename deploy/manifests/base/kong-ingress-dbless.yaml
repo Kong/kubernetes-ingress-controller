@@ -82,7 +82,7 @@ spec:
       - name: ingress-controller
         args:
         - /kong-ingress-controller
-        - --kong-url=https://localhost:8444
+        - --kong-admin-url=https://localhost:8444
         - --admin-tls-skip-verify
         - --publish-service=kong/kong-proxy
         env:

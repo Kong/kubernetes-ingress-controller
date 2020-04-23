@@ -635,7 +635,6 @@ metadata:
   name: kong-proxy
   namespace: kong
 spec:
-  externalTrafficPolicy: Local
   ports:
   - name: proxy
     port: 80

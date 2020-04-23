@@ -74,11 +74,11 @@ details that can help you preserve the client IP address:
 
 ### GKE
 
-You can use `ExternalTrafficPolicy: Cluster` to preserve the Client IP address.
+You can use `ExternalTrafficPolicy: Local` to preserve the Client IP address.
 
 ### AKS
 
-You can use `ExternalTrafficPolicy: Cluster` to preserve the Client IP address.
+You can use `ExternalTrafficPolicy: Local` to preserve the Client IP address.
 
 ### EKS
 

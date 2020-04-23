@@ -948,7 +948,8 @@ func overrideRouteByKongIngress(route *Route,
 			if !validMethods.MatchString(*method) {
 				// if any method is invalid (not an uppercase alpha string),
 				// discard everything
-				glog.Errorf("invalid method found while processing '%v': %v", route.Name, *method)
+				glog.Errorf("invalid method found while processing ingress '%v/%v': %v",
+					route.Ingress.Namespace, route.Ingress.Name, *method)
 				invalid = true
 			}
 		}

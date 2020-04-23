@@ -2877,7 +2877,25 @@ func TestOverrideRoute(t *testing.T) {
 			},
 			configurationv1.KongIngress{
 				Route: &kong.Route{
-					Methods: kong.StringSlice("GET", "true"),
+					Methods: kong.StringSlice("GET   ", "post"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts:   kong.StringSlice("foo.com", "bar.com"),
+					Methods: kong.StringSlice("GET", "POST"),
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com", "bar.com"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
+					Methods: kong.StringSlice("GET", "-1"),
 				},
 			},
 			Route{

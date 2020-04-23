@@ -3,6 +3,8 @@ package parser
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -88,11 +90,12 @@ type Consumer struct {
 
 // KongState holds the configuration that should be applied to Kong.
 type KongState struct {
-	Services     []Service
-	Upstreams    []Upstream
-	Certificates []Certificate
-	Plugins      []Plugin
-	Consumers    []Consumer
+	Services       []Service
+	Upstreams      []Upstream
+	Certificates   []Certificate
+	CACertificates []kong.CACertificate
+	Plugins        []Plugin
+	Consumers      []Consumer
 }
 
 // Certificate represents the certificate object in Kong.
@@ -223,7 +226,62 @@ func (p *Parser) Build() (*KongState, error) {
 		return nil, err
 	}
 
+	// populate CA certificates in Kong
+	state.CACertificates, err = p.getCACerts()
+
 	return &state, nil
+}
+
+func (p *Parser) getCACerts() ([]kong.CACertificate, error) {
+	caCertSecrets, err := p.store.ListCACerts()
+	if err != nil {
+		return nil, err
+	}
+
+	var caCerts []kong.CACertificate
+	for _, certSecret := range caCertSecrets {
+		secretName := certSecret.Namespace + "/" + certSecret.Name
+
+		idbytes, idExists := certSecret.Data["id"]
+		if !idExists {
+			glog.Errorf("invalid CA certificate in secret '%s':"+
+				" missing 'id' field in data", secretName)
+			continue
+		}
+
+		caCertbytes, certExists := certSecret.Data["cert"]
+		if !certExists {
+			glog.Errorf("invalid CA certificate in secret '%s':"+
+				" missing 'cert' field in data", secretName)
+			continue
+		}
+
+		pemBlock, _ := pem.Decode(caCertbytes)
+		if pemBlock == nil {
+			glog.Errorf("invalid CA certificate in secret '%s':"+
+				" invalid PEM-encoded block", secretName)
+			continue
+		}
+		x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
+		if err != nil {
+			glog.Error("failed to parse certificate" + err.Error())
+			glog.Errorf("invalid CA certificate in secret '%s': %s",
+				secretName, err)
+			continue
+		}
+		if !x509Cert.IsCA {
+			glog.Errorf("invalid CA certificate in secret '%s': "+
+				"certificate is missing the 'CA' basic constraint", secretName)
+			continue
+		}
+
+		caCerts = append(caCerts, kong.CACertificate{
+			ID:   kong.String(string(idbytes)),
+			Cert: kong.String(string(caCertbytes)),
+		})
+	}
+
+	return caCerts, nil
 }
 
 func processCredential(credType string, consumer *Consumer,

@@ -126,6 +126,7 @@ var supportedCreds = sets.NewString(
 )
 
 var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
+var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
@@ -943,7 +944,22 @@ func overrideRouteByKongIngress(route *Route,
 
 	r := kongIngress.Route
 	if len(r.Methods) != 0 {
-		route.Methods = cloneStringPointerSlice(r.Methods...)
+		invalid := false
+		var methods []*string
+		for _, method := range r.Methods {
+			sanitizedMethod := strings.TrimSpace(strings.ToUpper(*method))
+			if validMethods.MatchString(sanitizedMethod) {
+				methods = append(methods, kong.String(sanitizedMethod))
+			} else {
+				// if any method is invalid (not an uppercase alpha string),
+				// discard everything
+				glog.Errorf("invalid method found while processing '%v': %v", route.Route.Name, *method)
+				invalid = true
+			}
+		}
+		if !invalid {
+			route.Methods = methods
+		}
 	}
 	if len(r.Headers) != 0 {
 		route.Headers = r.Headers
@@ -1078,6 +1094,27 @@ func overrideRouteRegexPriority(route *kong.Route, anns map[string]string) {
 	route.RegexPriority = kong.Int(regexPriority)
 }
 
+func overrideRouteMethods(route *kong.Route, anns map[string]string) {
+	annMethods := annotations.ExtractMethods(anns)
+	if len(annMethods) == 0 {
+		return
+	}
+	var methods []*string
+	for _, method := range annMethods {
+		sanitizedMethod := strings.TrimSpace(strings.ToUpper(method))
+		if validMethods.MatchString(sanitizedMethod) {
+			methods = append(methods, kong.String(sanitizedMethod))
+		} else {
+			// if any method is invalid (not an uppercase alpha string),
+			// discard everything
+			glog.Errorf("invalid method found while processing '%v': %v", route.Name, method)
+			return
+		}
+	}
+
+	route.Methods = methods
+}
+
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route) {
 	anns := route.Ingress.Annotations
@@ -1089,6 +1126,7 @@ func overrideRouteByAnnotation(route *Route) {
 	overrideRouteHTTPSRedirectCode(&route.Route, anns)
 	overrideRoutePreserveHost(&route.Route, anns)
 	overrideRouteRegexPriority(&route.Route, anns)
+	overrideRouteMethods(&route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation

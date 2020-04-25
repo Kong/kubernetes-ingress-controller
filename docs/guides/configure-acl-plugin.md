@@ -671,7 +671,7 @@ Now let's test the post route
 
 ```bash
 $ curl -i -X POST --data "foo=bar" \
--H "Authorization: Bearer ${USER_JWT}" $PROXY_IP/get
+-H "Authorization: Bearer ${USER_JWT}" $PROXY_IP/post
 HTTP/1.1 403 Forbidden
 Date: Mon, 06 Apr 2020 07:11:59 GMT
 Content-Type: application/json; charset=utf-8
@@ -688,7 +688,7 @@ unauthorized to access the resource
 
 ```bash
 $ curl -i -X POST --data "foo=bar" \
--H "Authorization: Bearer ${ADMIN_JWT}" $PROXY_IP/get
+-H "Authorization: Bearer ${ADMIN_JWT}" $PROXY_IP/post
 
 HTTP/1.1 200 OK
 Content-Type: application/json

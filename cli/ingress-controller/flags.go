@@ -41,6 +41,8 @@ type cliConfig struct {
 	AdmissionWebhookListen   string
 	AdmissionWebhookCertPath string
 	AdmissionWebhookKeyPath  string
+	AdmissionWebhookCert     string
+	AdmissionWebhookKey      string
 
 	// Kong connection details
 	KongAdminURL           string
@@ -51,6 +53,7 @@ type cliConfig struct {
 	KongAdminTLSSkipVerify bool
 	KongAdminTLSServerName string
 	KongAdminCACertPath    string
+	KongAdminCACert        string
 
 	// Resource filtering
 	WatchNamespace string
@@ -93,6 +96,10 @@ TLS handshake`)
 	flags.String("admission-webhook-key-file", "/admission-webhook/tls.key",
 		`Path to the PEM-encoded private key file for
 TLS handshake`)
+	flags.String("admission-webhook-cert", "",
+		`PEM-encoded certificate for TLS handshake`)
+	flags.String("admission-webhook-key", "",
+		`PEM-encoded private key for TLS handshake`)
 
 	// Kong connection details
 	// deprecated
@@ -155,6 +162,10 @@ Kong's Admin SSL certificate.`)
 		`Path to PEM-encoded CA certificate file to verify
 Kong's Admin SSL certificate.`)
 
+	flags.String("kong-admin-ca-cert", "",
+		`PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
+
+	// Resource filtering
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
@@ -234,6 +245,10 @@ func parseFlags() (cliConfig, error) {
 		viper.GetString("admission-webhook-cert-file")
 	config.AdmissionWebhookKeyPath =
 		viper.GetString("admission-webhook-key-file")
+	config.AdmissionWebhookCert =
+		viper.GetString("admission-webhook-cert")
+	config.AdmissionWebhookKey =
+		viper.GetString("admission-webhook-key")
 
 	// Kong connection details
 	kongAdminURL := defaultKongAdminURL
@@ -279,6 +294,11 @@ func parseFlags() (cliConfig, error) {
 	kongAdminCACertPath := viper.GetString("kong-admin-ca-cert-file")
 	if kongAdminCACertPath != "" {
 		config.KongAdminCACertPath = kongAdminCACertPath
+	}
+
+	kongAdminCACert := viper.GetString("kong-admin-ca-cert")
+	if kongAdminCACert != "" {
+		config.KongAdminCACert = kongAdminCACert
 	}
 
 	// Resource filtering

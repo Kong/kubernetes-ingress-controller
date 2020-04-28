@@ -158,6 +158,18 @@ func main() {
 		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
 	}
 
+	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
+		glog.Fatalf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
+			"are set. Please remove one or the other")
+	}
+	if cliConfig.KongAdminCACert != "" {
+		certPool := x509.NewCertPool()
+		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
+		if !ok {
+			glog.Fatalf("failed to load CACert")
+		}
+		tlsConfig.RootCAs = certPool
+	}
 	if cliConfig.KongAdminCACertPath != "" {
 		certPath := cliConfig.KongAdminCACertPath
 		certPool := x509.NewCertPool()
@@ -392,14 +404,44 @@ func main() {
 				Client: kongClient,
 			},
 		}
+		var cert tls.Certificate
+		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert != "" {
+			if cliConfig.AdmissionWebhookCertPath != "/admission-webhook/tls.crt" {
+				glog.Fatalf("both --admission-webhook-cert-file and --admission-webhook-cert" +
+					"are set. Please remove one or the other")
+			}
+		}
+		if cliConfig.AdmissionWebhookKeyPath != "" && cliConfig.AdmissionWebhookKey != "" {
+			if cliConfig.AdmissionWebhookKeyPath != "/admission-webhook/tls.key" {
+				glog.Fatalf("both --admission-webhook-cert-key and --admission-webhook-key" +
+					"are set. Please remove one or the other")
+			}
+		}
+		if cliConfig.AdmissionWebhookCert != "" {
+			var err error
+			cert, err = tls.X509KeyPair([]byte(cliConfig.AdmissionWebhookCert), []byte(cliConfig.AdmissionWebhookKey))
+			if err != nil {
+				glog.Fatalf("failed to load admission webhook cert: %s", err)
+			}
+		}
+		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert == "" {
+			var err error
+			cert, err = tls.LoadX509KeyPair(cliConfig.AdmissionWebhookCertPath, cliConfig.AdmissionWebhookKeyPath)
+			if err != nil {
+				glog.Fatalf("failed to load admission webhook cert: %s", err)
+			}
+		}
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+		server := http.Server{
+			Addr:      cliConfig.AdmissionWebhookListen,
+			TLSConfig: tlsConfig,
+			Handler:   admissionServer,
+		}
 		go func() {
 			glog.Error("error running the admission controller server:",
-				http.ListenAndServeTLS(
-					cliConfig.AdmissionWebhookListen,
-					cliConfig.AdmissionWebhookCertPath,
-					cliConfig.AdmissionWebhookKeyPath,
-					admissionServer,
-				))
+				server.ListenAndServeTLS("", ""))
 		}()
 	}
 	kong.Start()

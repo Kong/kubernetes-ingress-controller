@@ -77,6 +77,63 @@ Gn+T2uCyOP4a1DTUoPyoNJXo
 -----END PRIVATE KEY-----`,
 		},
 	}
+
+	caCert1 = `-----BEGIN CERTIFICATE-----
+MIIEvjCCAqagAwIBAgIJALabx/Nup200MA0GCSqGSIb3DQEBCwUAMBMxETAPBgNV
+BAMMCFlvbG80Mi4xMCAXDTE5MDkxNTE2Mjc1M1oYDzIxMTkwODIyMTYyNzUzWjAT
+MREwDwYDVQQDDAhZb2xvNDIuMTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
+ggIBANIW67Ay0AtTeBY2mORaGet/VPL5jnBRz0zkZ4Jt7fEq3lbxYaJBnFI8wtz3
+bHLtLsxkvOFujEMY7HVd+iTqbJ7hLBtK0AdgXDjf+HMmoWM7x0PkZO+3XSqyRBbI
+YNoEaQvYBNIXrKKJbXIU6higQaXYszeN8r3+RIbcTIlZxy28msivEGfGTrNujQFc
+r/eyf+TLHbRqh0yg4Dy/U/T6fqamGhFrjupRmOMugwF/BHMH2JHhBYkkzuZLgV2u
+7Yh1S5FRlh11am5vWuRSbarnx72hkJ99rUb6szOWnJKKew8RSn3CyhXbS5cb0QRc
+ugRc33p/fMucJ4mtCJ2Om1QQe83G1iV2IBn6XJuCvYlyWH8XU0gkRxWD7ZQsl0bB
+8AFTkVsdzb94OM8Y6tWI5ybS8rwl8b3r3fjyToIWrwK4WDJQuIUx4nUHObDyw+KK
++MmqwpAXQWbNeuAc27FjuJm90yr/163aGuInNY5Wiz6CM8WhFNAi/nkEY2vcxKKx
+irSdSTkbnrmLFAYrThaq0BWTbW2mwkOatzv4R2kZzBUOiSjRLPnbyiPhI8dHLeGs
+wMxiTXwyPi8iQvaIGyN4DPaSEiZ1GbexyYFdP7sJJD8tG8iccbtJYquq3cDaPTf+
+qv5M6R/JuMqtUDheLSpBNK+8vIe5e3MtGFyrKqFXdynJtfHVAgMBAAGjEzARMA8G
+A1UdEwQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggIBAK0BmL5B1fPSMbFy8Hbc
+/ESEunt4HGaRWmZZSa/aOtTjhKyDXLLJZz3C4McugfOf9BvvmAOZU4uYjfHTnNH2
+Z3neBkdTpQuJDvrBPNoCtJns01X/nuqFaTK/Tt9ZjAcVeQmp51RwhyiD7nqOJ/7E
+Hp2rC6gH2ABXeexws4BDoZPoJktS8fzGWdFBCHzf4mCJcb4XkI+7GTYpglR818L3
+dMNJwXeuUsmxxKScBVH6rgbgcEC/6YwepLMTHB9VcH3X5VCfkDIyPYLWmvE0gKV7
+6OU91E2Rs8PzbJ3EuyQpJLxFUQp8ohv5zaNBlnMb76UJOPR6hXfst5V+e7l5Dgwv
+Dh4CeO46exmkEsB+6R3pQR8uOFtubH2snA0S3JA1ji6baP5Y9Wh9bJ5McQUgbAPE
+sCRBFoDLXOj3EgzibohC5WrxN3KIMxlQnxPl3VdQvp4gF899mn0Z9V5dAsGPbxRd
+quE+DwfXkm0Sa6Ylwqrzu2OvSVgbMliF3UnWbNsDD5KcHGIaFxVC1qkwK4cT3pyS
+58i/HAB2+P+O+MltQUDiuw0OSUFDC0IIjkDfxLVffbF+27ef9C5NG81QlwTz7TuN
+zeigcsBKooMJTszxCl6dtxSyWTj7hJWXhy9pXsm1C1QulG6uT4RwCa3m0QZoO7G+
+6Wu6lP/kodPuoNubstIuPdi2
+-----END CERTIFICATE-----`
+	caCert2 = `-----BEGIN CERTIFICATE-----
+MIIEvjCCAqagAwIBAgIJAPf5iqimiR2BMA0GCSqGSIb3DQEBCwUAMBMxETAPBgNV
+BAMMCFlvbG80Mi4yMCAXDTE5MDkxNTE2Mjc1OVoYDzIxMTkwODIyMTYyNzU5WjAT
+MREwDwYDVQQDDAhZb2xvNDIuMjCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
+ggIBANIW67Ay0AtTeBY2mORaGet/VPL5jnBRz0zkZ4Jt7fEq3lbxYaJBnFI8wtz3
+bHLtLsxkvOFujEMY7HVd+iTqbJ7hLBtK0AdgXDjf+HMmoWM7x0PkZO+3XSqyRBbI
+YNoEaQvYBNIXrKKJbXIU6higQaXYszeN8r3+RIbcTIlZxy28msivEGfGTrNujQFc
+r/eyf+TLHbRqh0yg4Dy/U/T6fqamGhFrjupRmOMugwF/BHMH2JHhBYkkzuZLgV2u
+7Yh1S5FRlh11am5vWuRSbarnx72hkJ99rUb6szOWnJKKew8RSn3CyhXbS5cb0QRc
+ugRc33p/fMucJ4mtCJ2Om1QQe83G1iV2IBn6XJuCvYlyWH8XU0gkRxWD7ZQsl0bB
+8AFTkVsdzb94OM8Y6tWI5ybS8rwl8b3r3fjyToIWrwK4WDJQuIUx4nUHObDyw+KK
++MmqwpAXQWbNeuAc27FjuJm90yr/163aGuInNY5Wiz6CM8WhFNAi/nkEY2vcxKKx
+irSdSTkbnrmLFAYrThaq0BWTbW2mwkOatzv4R2kZzBUOiSjRLPnbyiPhI8dHLeGs
+wMxiTXwyPi8iQvaIGyN4DPaSEiZ1GbexyYFdP7sJJD8tG8iccbtJYquq3cDaPTf+
+qv5M6R/JuMqtUDheLSpBNK+8vIe5e3MtGFyrKqFXdynJtfHVAgMBAAGjEzARMA8G
+A1UdEwQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggIBALNx2xaS5nv1QjEqtiCO
+EA/ZTXbs+il6cf6ZyUwFXs7d3OKx6Kk2Nr7wGgM1M5WuTyIGKtZspz9ThzYmsuN/
+UBCSKLw3X7U2fLiHJDipXboU1txasTErUTPJs/Vq4v7PWh8sMLCQH/ha4FAOXR0M
+Uie+VgSJNKoQSj7G1hzU/LZv0KdvJ45mQBCnBXrUrGgeEcRqubbkDKgdBh7dJQzW
+Xgy6rPb6H1aXbsSuRuUVv/xFHJoCdZJmqPH4JTMYRbHNS2km9nHVJzmtL6pQFe32
+24wfpue9geFndOE9bDU9/cqoRYA4Pce4V5qDL0wL9W4uPmyPDkulKNQtAvZnDA9V
+6ccYYthlTBr62UEnw7zZOnSm0q4fB2o82/6bdPwrT7WhbHZQWN7SeqYNWAbYZ1EE
+40f5IpTwZ7E5LaG62qPhKLXame7SPAaqaQ9aCTYxaWR7XSYBsvCBRanjRq0r9Tql
+T1I8lwssIgbA3XubokI+IMkLDEpCQ27niWXOZL5y2M3xyutd6PPjmEEmoHMkOrZL
+etlxzx2CCoUDXKkYW2gZKEozwBZ+eBgUj8WB5g/8jGDAI0qzYnfAgiahjGwlEUtP
+hJiPG/YFADw0m5b/8OMCZ6AXNhxjdweHniDxY2HE734Nwm9mG/7UbkdvhR05tqFh
+G4KCViLH0cXt/TgW1sYB2o9Z
+-----END CERTIFICATE-----`
 )
 
 func TestGlobalPlugin(t *testing.T) {
@@ -132,6 +189,141 @@ func TestGlobalPlugin(t *testing.T) {
 
 		assert.Equal("basic-auth", *state.Plugins[1].Name)
 		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[1].Config)
+	})
+}
+
+func TestCACertificate(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("valid CACertificte is processed", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
+					"cert": []byte(caCert1),
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Secrets: secrets,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.CACertificates))
+		assert.Equal(kong.CACertificate{
+			ID:   kong.String("8214a145-a328-4c56-ab72-2973a56d4eae"),
+			Cert: kong.String(caCert1),
+		}, state.CACertificates[0])
+	})
+	t.Run("multiple CACertifictes are processed", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
+					"cert": []byte(caCert1),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
+					"cert": []byte(caCert2),
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Secrets: secrets,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(2, len(state.CACertificates))
+	})
+	t.Run("invalid CACertifictes are ignored", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
+					"cert": []byte(caCert1),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id": []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
+					// cert is missing
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "baz",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					// id is missing
+					"cert": []byte(caCert2),
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Secrets: secrets,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.CACertificates))
+		assert.Equal(kong.CACertificate{
+			ID:   kong.String("8214a145-a328-4c56-ab72-2973a56d4eae"),
+			Cert: kong.String(caCert1),
+		}, state.CACertificates[0])
 	})
 }
 

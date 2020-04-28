@@ -17,7 +17,6 @@ metadata:
     # Enable Proxy Protocol when Kong is listening for proxy-protocol
     #service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
 spec:
-  externalTrafficPolicy: Local
   type: LoadBalancer
   ports:
   - name: proxy

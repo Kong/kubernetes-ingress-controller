@@ -37,7 +37,7 @@ you can skip these steps.
 
 First, we will install Prometheus with a
 scrape interval of 10 seconds to have fine-grained data points for all metrics.
-We’ll install both Prometheus and Grafana in a dedicated ‘monitoring’ namespace.
+We’ll install both Prometheus and Grafana in a dedicated `monitoring` namespace.
 
 To install Prometheus, execute the following:
 
@@ -194,10 +194,13 @@ This will configure Kong to proxy traffic destined for these services correctly.
 Execute the following:
 
 ```bash
-echo "apiVersion: extensions/v1beta1
+echo '
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: sample-ingresses
+  annotations:
+    konghq.com/strip-path: "true"
 spec:
   rules:
   - http:
@@ -213,7 +216,8 @@ spec:
      - path: /invoice
        backend:
          serviceName: invoice
-         servicePort: 80" | kubectl apply -f -
+         servicePort: 80
+' | kubectl apply -f -
 ```
 
 ## Let’s Create Some Traffic

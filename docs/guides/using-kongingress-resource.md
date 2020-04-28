@@ -105,12 +105,11 @@ Request Information:
 
 ## Use KongIngress with Ingress resource
 
-Kong will strip the path defined in the Ingress rule before proxying
-the request to the service.
+By default, Kong will proxy the entire path to the service.
 This can be seen in the real path value in the above response.
 
-We can configure Kong to not strip out this path and to only respond to GET requests
-for this particular Ingress rule.
+We can configure Kong to strip out the part of the path defined in the
+Ingress rule and to only respond to GET requests for this particular rule.
 
 To modify these behaviours, let's first create a KongIngress resource
 defining the new behaviour:
@@ -135,7 +134,7 @@ $ kubectl patch ingress demo -p '{"metadata":{"annotations":{"konghq.com/overrid
 ingress.extensions/demo patched
 ```
 
-Now, Kong will proxy only GET requests on `/foo/bar` path and
+Now, Kong will proxy only GET requests on `/foo` path and
 strip away `/foo`:
 
 ```bash

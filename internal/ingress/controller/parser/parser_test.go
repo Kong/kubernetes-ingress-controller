@@ -136,8 +136,8 @@ func TestGlobalPlugin(t *testing.T) {
 }
 
 func TestSecretConfigurationPlugin(t *testing.T) {
-	jwtPluginConfig := "{\"run_on_preflight\": false}" // JSON
-	basicAuthPluginConfig := "hide_credentials: true"  // YAML
+	jwtPluginConfig := `{"run_on_preflight": false}`  // JSON
+	basicAuthPluginConfig := "hide_credentials: true" // YAML
 	assert := assert.New(t)
 	stock := store.FakeObjects{
 		Services: []*corev1.Service{

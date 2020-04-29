@@ -1665,7 +1665,7 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 func (p *Parser) secretToConfiguration(reference configurationv1.SecretValueFromSource, namespace string) (configurationv1.Configuration, error) {
 	secret, err := p.store.GetSecret(namespace, reference.SecretKeyRef.Name)
 	if err != nil {
-		return configurationv1.Configuration{}, errors.Errorf("error fetching credential secret '%v/%v': %v",
+		return configurationv1.Configuration{}, errors.Errorf("error fetching plugin configuration secret '%v/%v': %v",
 			namespace, reference.SecretKeyRef.Name, err)
 	}
 	secretVal, ok := secret.Data[reference.SecretKeyRef.Key]
@@ -1748,13 +1748,14 @@ func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (
 			k8sPlugin.Config = config
 		}
 	}
-	return toKongPlugin(plugin{
+	kongPlugin := toKongPlugin(plugin{
 		Name:      k8sPlugin.PluginName,
 		Config:    k8sPlugin.Config,
 		RunOn:     k8sPlugin.RunOn,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: k8sPlugin.Protocols,
-	}), err
+	})
+	return kongPlugin, err
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

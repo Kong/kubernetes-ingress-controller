@@ -32,8 +32,10 @@ import (
 )
 
 const (
-	defaultKongAdminURL  = "http://localhost:8001"
-	defaultKongFilterTag = "managed-by-ingress-controller"
+	defaultKongAdminURL             = "http://localhost:8001"
+	defaultKongFilterTag            = "managed-by-ingress-controller"
+	defaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
+	defaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
 )
 
 type cliConfig struct {
@@ -90,10 +92,10 @@ func flagSet() *pflag.FlagSet {
 	flags.String("admission-webhook-listen", "off",
 		`The address to start admission controller on (ip:port).
 Setting it to 'off' disables the admission controller.`)
-	flags.String("admission-webhook-cert-file", "/admission-webhook/tls.crt",
+	flags.String("admission-webhook-cert-file", defaultAdmissionWebhookCertPath,
 		`Path to the PEM-encoded certificate file for
 TLS handshake`)
-	flags.String("admission-webhook-key-file", "/admission-webhook/tls.key",
+	flags.String("admission-webhook-key-file", defaultAdmissionWebhookKeyPath,
 		`Path to the PEM-encoded private key file for
 TLS handshake`)
 	flags.String("admission-webhook-cert", "",

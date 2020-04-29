@@ -405,17 +405,13 @@ func main() {
 			},
 		}
 		var cert tls.Certificate
-		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert != "" {
-			if cliConfig.AdmissionWebhookCertPath != "/admission-webhook/tls.crt" {
-				glog.Fatalf("both --admission-webhook-cert-file and --admission-webhook-cert" +
-					"are set. Please remove one or the other")
-			}
+		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert != defaultAdmissionWebhookCertPath {
+			glog.Fatalf("both --admission-webhook-cert-file and --admission-webhook-cert" +
+				"are set. Please remove one or the other")
 		}
-		if cliConfig.AdmissionWebhookKeyPath != "" && cliConfig.AdmissionWebhookKey != "" {
-			if cliConfig.AdmissionWebhookKeyPath != "/admission-webhook/tls.key" {
-				glog.Fatalf("both --admission-webhook-cert-key and --admission-webhook-key" +
-					"are set. Please remove one or the other")
-			}
+		if cliConfig.AdmissionWebhookKeyPath != "" && cliConfig.AdmissionWebhookKey != defaultAdmissionWebhookKeyPath {
+			glog.Fatalf("both --admission-webhook-cert-key and --admission-webhook-key" +
+				"are set. Please remove one or the other")
 		}
 		if cliConfig.AdmissionWebhookCert != "" {
 			var err error

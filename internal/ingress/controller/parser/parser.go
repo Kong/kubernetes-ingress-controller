@@ -12,6 +12,7 @@ import (
 
 	"strconv"
 
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
@@ -21,7 +22,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

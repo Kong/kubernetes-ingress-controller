@@ -1490,7 +1490,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 				Plugin: plugin,
 			}
 		} else {
-			glog.Errorf("Failed to generate configuration for plugin %v: %v", pluginName, err)
+			glog.Errorf("Failed to generate configuration for plugin %v/%v: %v", k8sPlugin.Namespace, pluginName, err)
 		}
 	}
 
@@ -1519,7 +1519,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 				Plugin: plugin,
 			}
 		} else {
-			glog.Errorf("Failed to generate configuration for plugin %v: %v", pluginName, err)
+			glog.Errorf("Failed to generate configuration for cluster plugin %v: %v", pluginName, err)
 		}
 	}
 	for _, plugin := range duplicates {

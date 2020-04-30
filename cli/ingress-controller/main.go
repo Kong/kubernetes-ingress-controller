@@ -420,7 +420,7 @@ func main() {
 				glog.Fatalf("failed to load admission webhook cert: %s", err)
 			}
 		}
-		if cliConfig.AdmissionWebhookCertPath != "" {
+		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert == "" {
 			var err error
 			cert, err = tls.LoadX509KeyPair(cliConfig.AdmissionWebhookCertPath, cliConfig.AdmissionWebhookKeyPath)
 			if err != nil {

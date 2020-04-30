@@ -1721,7 +1721,7 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongCl
 	config := k8sPlugin.Config
 	if k8sPlugin.ConfigFrom != (configurationv1.NamespacedSecretValueFromSource{}) {
 		if len(k8sPlugin.Config) > 0 {
-			err = errors.Errorf("cluster plugin '%v' has both Config and ConfigFrom set", k8sPlugin.Name)
+			return kong.Plugin{}, errors.Errorf("cluster plugin '%v' has both Config and ConfigFrom set", k8sPlugin.Name)
 		} else {
 			config, configError = p.namespacedSecretToConfiguration(k8sPlugin.ConfigFrom)
 			if configError != nil {
@@ -1747,7 +1747,7 @@ func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (
 	config := k8sPlugin.Config
 	if k8sPlugin.ConfigFrom != (configurationv1.SecretValueFromSource{}) {
 		if len(k8sPlugin.Config) > 0 {
-			err = errors.Errorf("plugin '%v/%v' has both Config and ConfigFrom set",
+			return kong.Plugin{}, errors.Errorf("plugin '%v/%v' has both Config and ConfigFrom set",
 				k8sPlugin.Namespace, k8sPlugin.Name)
 		} else {
 			config, configError = p.secretToConfiguration(k8sPlugin.ConfigFrom, k8sPlugin.Namespace)

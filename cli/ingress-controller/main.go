@@ -420,6 +420,9 @@ func main() {
 				glog.Fatalf("failed to load admission webhook cert: %s", err)
 			}
 		}
+		// although this is partially checked earlier, that check does not fail if it sees the default path
+		// we don't want to overwrite any certs set by admission-webhook-cert, but also don't want to run this
+		// first, as it can potentially result in a fatal error
 		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert == "" {
 			var err error
 			cert, err = tls.LoadX509KeyPair(cliConfig.AdmissionWebhookCertPath, cliConfig.AdmissionWebhookKeyPath)

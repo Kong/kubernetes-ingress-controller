@@ -517,7 +517,30 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			"expected no plugins to be rendered")
 	})
 
-	t.Run("plugins unparsable configuration are not constructed", func(t *testing.T) {
+	t.Run("secretToConfiguration handles valid configuration and discards invalid configuration", func(t *testing.T) {
+		jwtPluginConfig := `{"run_on_preflight": false}`                      // JSON
+		basicAuthPluginConfig := "hide_credentials: true"                     // YAML
+		badJwtPluginConfig := "{\"run_on_preflight\": false bad broken json}" // not JSON
+		badBasicAuthPluginConfig := "111111"                                  // not YAML
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"jwt-config":            []byte(jwtPluginConfig),
+					"basic-auth-config":     []byte(basicAuthPluginConfig),
+					"bad-jwt-config":        []byte(badJwtPluginConfig),
+					"bad-basic-auth-config": []byte(badBasicAuthPluginConfig),
+				},
+			},
+		}
+		assert.Nil(nil)          // TODO: stub noop test, need new type first before constructing input
+		assert.NotEmpty(secrets) // also garbage
+	})
+	t.Run("plugins with unparsable configuration are not constructed", func(t *testing.T) {
 		jwtPluginConfig := "{\"run_on_preflight\": false bad broken json}" // not JSON
 		basicAuthPluginConfig := "111111"                                  // not YAML
 		objects := stock

@@ -1663,28 +1663,28 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 }
 
 func (p *Parser) secretToConfiguration(reference configurationv1.SecretValueFromSource, namespace string) (configurationv1.Configuration, error) {
-	secret, err := p.store.GetSecret(namespace, reference.SecretKeyRef.Name)
+	secret, err := p.store.GetSecret(namespace, reference.Secret)
 	if err != nil {
 		return configurationv1.Configuration{}, errors.Errorf("error fetching plugin configuration secret '%v/%v': %v",
-			namespace, reference.SecretKeyRef.Name, err)
+			namespace, reference.Secret, err)
 	}
-	secretVal, ok := secret.Data[reference.SecretKeyRef.Key]
+	secretVal, ok := secret.Data[reference.Key]
 	if !ok {
 		return configurationv1.Configuration{}, errors.Errorf("no key '%v' in secret '%v/%v'",
-			reference.SecretKeyRef.Key, namespace, reference.SecretKeyRef.Name)
+			reference.Key, namespace, reference.Secret)
 	}
 	var config configurationv1.Configuration
 	if err := json.Unmarshal(secretVal, &config); err != nil {
 		if err := yaml.Unmarshal(secretVal, &config); err != nil {
 			return configurationv1.Configuration{}, errors.Errorf("key '%v' in secret '%v/%v' contains neither valid JSON nor valid YAML)",
-				reference.SecretKeyRef.Key, namespace, reference.SecretKeyRef.Name)
+				reference.Key, namespace, reference.Secret)
 		}
 	}
 	return config, nil
 }
 
 func (p *Parser) namespacedSecretToConfiguration(reference configurationv1.NamespacedSecretValueFromSource) (configurationv1.Configuration, error) {
-	bareReference := configurationv1.SecretValueFromSource{SecretKeyRef: reference.SecretKeyRef}
+	bareReference := configurationv1.SecretValueFromSource{Secret: reference.Secret, Key: reference.Key}
 	return p.secretToConfiguration(bareReference, reference.Namespace)
 }
 

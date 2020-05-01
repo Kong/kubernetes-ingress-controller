@@ -222,12 +222,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 				PluginName: "jwt",
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "jwt-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "jwt-config",
+					Secret: "conf-secret",
 				},
 			},
 			{
@@ -237,12 +233,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 				PluginName: "jwt",
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "jwt-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "jwt-config",
+					Secret: "conf-secret",
 				},
 			},
 		}
@@ -257,12 +249,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				Protocols:  []string{"http"},
 				PluginName: "basic-auth",
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
 					Namespace: "default",
 				},
 			},
@@ -273,12 +261,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				Protocols:  []string{"http"},
 				PluginName: "basic-auth",
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
 					Namespace: "default",
 				},
 			},
@@ -332,12 +316,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 				PluginName: "jwt",
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "missing-key",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "missing-key",
+					Secret: "conf-secret",
 				},
 			},
 			{
@@ -347,12 +327,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 				PluginName: "jwt",
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "missing-key",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "missing-key",
+					Secret: "conf-secret",
 				},
 			},
 		}
@@ -367,12 +343,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				Protocols:  []string{"http"},
 				PluginName: "basic-auth",
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "missing-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
 					Namespace: "default",
 				},
 			},
@@ -383,12 +355,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				Protocols:  []string{"http"},
 				PluginName: "basic-auth",
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "missing-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
 					Namespace: "default",
 				},
 			},
@@ -430,12 +398,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				PluginName: "jwt",
 				Config:     configurationv1.Configuration{"fake": true},
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "jwt-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "jwt-config",
+					Secret: "conf-secret",
 				},
 			},
 			{
@@ -446,12 +410,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				PluginName: "jwt",
 				Config:     configurationv1.Configuration{"fake": true},
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "jwt-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "jwt-config",
+					Secret: "conf-secret",
 				},
 			},
 		}
@@ -467,12 +427,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				PluginName: "basic-auth",
 				Config:     configurationv1.Configuration{"fake": true},
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
 					Namespace: "default",
 				},
 			},
@@ -484,12 +440,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				PluginName: "basic-auth",
 				Config:     configurationv1.Configuration{"fake": true},
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
 					Namespace: "default",
 				},
 			},
@@ -518,11 +470,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 	})
 
 	t.Run("secretToConfiguration handles valid configuration and discards invalid configuration", func(t *testing.T) {
-		jwtPluginConfig := `{"run_on_preflight": false}`                      // JSON
-		basicAuthPluginConfig := "hide_credentials: true"                     // YAML
-		badJwtPluginConfig := "{\"run_on_preflight\": false bad broken json}" // not JSON
-		badBasicAuthPluginConfig := "111111"                                  // not YAML
-		secrets := []*corev1.Secret{
+		objects := stock
+		jwtPluginConfig := `{"run_on_preflight": false}`  // JSON
+		basicAuthPluginConfig := "hide_credentials: true" // YAML
+		badJwtPluginConfig := "22222"                     // not JSON
+		badBasicAuthPluginConfig := "111111"              // not YAML
+		objects.Secrets = []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
@@ -537,12 +490,46 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 			},
 		}
-		assert.Nil(nil)          // TODO: stub noop test, need new type first before constructing input
-		assert.NotEmpty(secrets) // also garbage
+		references := []*configurationv1.SecretValueFromSource{
+			{
+				Secret: "conf-secret",
+				Key:    "jwt-config",
+			},
+			{
+				Secret: "conf-secret",
+				Key:    "basic-auth-config",
+			},
+		}
+		badReferences := []*configurationv1.SecretValueFromSource{
+			{
+				Secret: "conf-secret",
+				Key:    "bad-basic-auth-config",
+			},
+			{
+				Secret: "conf-secret",
+				Key:    "bad-jwt-config",
+			},
+		}
+		store, err := store.NewFakeStore(objects)
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		for _, testcase := range references {
+			config, err := parser.secretToConfiguration(*testcase, "default")
+			assert.NotEmpty(config)
+			assert.Nil(err)
+		}
+		for _, testcase := range badReferences {
+			config, err := parser.secretToConfiguration(*testcase, "default")
+			assert.Empty(config)
+			assert.NotEmpty(err)
+		}
 	})
 	t.Run("plugins with unparsable configuration are not constructed", func(t *testing.T) {
-		jwtPluginConfig := "{\"run_on_preflight\": false bad broken json}" // not JSON
-		basicAuthPluginConfig := "111111"                                  // not YAML
+		jwtPluginConfig := "22222"        // not JSON
+		basicAuthPluginConfig := "111111" // not YAML
 		objects := stock
 		objects.KongPlugins = []*configurationv1.KongPlugin{
 			{
@@ -555,12 +542,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 				PluginName: "jwt",
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "missing-key",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "missing-key",
+					Secret: "conf-secret",
 				},
 			},
 			{
@@ -570,12 +553,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 				PluginName: "jwt",
 				ConfigFrom: configurationv1.SecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "missing-key",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "conf-secret",
-						},
-					},
+					Key:    "missing-key",
+					Secret: "conf-secret",
 				},
 			},
 		}
@@ -590,12 +569,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				Protocols:  []string{"http"},
 				PluginName: "basic-auth",
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "missing-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
 					Namespace: "default",
 				},
 			},
@@ -606,12 +581,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				Protocols:  []string{"http"},
 				PluginName: "basic-auth",
 				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "basic-auth-config",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "missing-secret",
-						},
-					},
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
 					Namespace: "default",
 				},
 			},

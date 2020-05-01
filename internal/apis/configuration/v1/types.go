@@ -6,7 +6,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -120,17 +119,21 @@ type KongPlugin struct {
 
 // SecretValueFromSource represents the source of a secret value
 type SecretValueFromSource struct {
-	// The secret key to select from
-	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef,omitempty"`
+	// the secret containing the key
+	Secret string `json:"name,omitempty"`
+	// the key containing the value
+	Key string `json:"key,omitempty"`
 }
 
 // NamespacedSecretValueFromSource represents the source of a secret value,
 // specifying the secret namespace
 type NamespacedSecretValueFromSource struct {
-	// The secret key to select from
-	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef,omitempty"`
 	// The namespace containing the secret
 	Namespace string `json:"namespace,omitempty"`
+	// the secret containing the key
+	Secret string `json:"name,omitempty"`
+	// the key containing the value
+	Key string `json:"key,omitempty"`
 }
 
 // KongPluginList is a top-level list type. The client methods for lists are automatically created.

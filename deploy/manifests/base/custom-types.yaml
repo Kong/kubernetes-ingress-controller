@@ -47,6 +47,11 @@ spec:
           properties:
             secretKeyRef:
               type: object
+              properties:
+                name:
+                  type: string
+                key:
+                  type: string
         run_on:
           type: string
           enum:
@@ -114,8 +119,13 @@ spec:
           properties:
             secretKeyRef:
               type: object
-            namespace:
-              type: string
+              properties:
+                namespace:
+                  type: string
+                name:
+                  type: string
+                key:
+                  type: string
         run_on:
           type: string
           enum:

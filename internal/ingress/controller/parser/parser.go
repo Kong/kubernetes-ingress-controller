@@ -1548,7 +1548,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 				Plugin: plugin,
 			}
 		} else {
-			glog.Errorf("Failed to generate configuration for plugin %v/%v: %v", k8sPlugin.Namespace, pluginName, err)
+			glog.Errorf("Failed to generate configuration for KongPlugin %v/%v: %v", k8sPlugin.Namespace, pluginName, err)
 		}
 	}
 
@@ -1577,7 +1577,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 				Plugin: plugin,
 			}
 		} else {
-			glog.Errorf("Failed to generate configuration for cluster plugin %v: %v", pluginName, err)
+			glog.Errorf("Failed to generate configuration for KongClusterPlugin %v: %v", pluginName, err)
 		}
 	}
 	for _, plugin := range duplicates {
@@ -1779,11 +1779,11 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongCl
 	config := k8sPlugin.Config
 	if k8sPlugin.ConfigFrom != (configurationv1.NamespacedSecretValueFromSource{}) {
 		if len(k8sPlugin.Config) > 0 {
-			return kong.Plugin{}, errors.Errorf("cluster plugin '%v' has both Config and ConfigFrom set", k8sPlugin.Name)
+			return kong.Plugin{}, errors.Errorf("KongClusterPlugin '%v' has both Config and ConfigFrom set", k8sPlugin.Name)
 		}
 		config, configError = p.namespacedSecretToConfiguration(k8sPlugin.ConfigFrom)
 		if configError != nil {
-			err = fmt.Errorf("error parsing config for cluster plugin %v: %w", k8sPlugin.Name, configError)
+			err = fmt.Errorf("error parsing config for KongClusterPlugin %v: %w", k8sPlugin.Name, configError)
 		}
 		k8sPlugin.Config = config
 	}
@@ -1809,7 +1809,7 @@ func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (
 		}
 		config, configError = p.secretToConfiguration(k8sPlugin.ConfigFrom, k8sPlugin.Namespace)
 		if configError != nil {
-			err = fmt.Errorf("error parsing config for plugin '%v/%v': %w", k8sPlugin.Name, k8sPlugin.Namespace, configError)
+			err = fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w", k8sPlugin.Name, k8sPlugin.Namespace, configError)
 		}
 		k8sPlugin.Config = config
 	}

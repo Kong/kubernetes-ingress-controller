@@ -635,7 +635,6 @@ metadata:
   name: kong-proxy
   namespace: kong
 spec:
-  externalTrafficPolicy: Local
   ports:
   - name: proxy
     port: 80
@@ -782,17 +781,18 @@ spec:
         volumeMounts:
         - mountPath: /kong
           name: kong-server-blocks
-      - args:
-        - /kong-ingress-controller
-        - --kong-url=https://localhost:8444
-        - --admin-tls-skip-verify
-        - --publish-service=kong/kong-proxy
-        env:
+      - env:
         - name: CONTROLLER_KONG_ADMIN_TOKEN
           valueFrom:
             secretKeyRef:
               key: password
               name: kong-enterprise-superuser-password
+        - name: CONTROLLER_KONG_ADMIN_URL
+          value: https://127.0.0.1:8444
+        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
+          value: "true"
+        - name: CONTROLLER_PUBLISH_SERVICE
+          value: kong/kong-proxy
         - name: POD_NAME
           valueFrom:
             fieldRef:

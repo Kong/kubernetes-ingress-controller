@@ -80,12 +80,13 @@ spec:
         - name: kong-server-blocks
           mountPath: /kong
       - name: ingress-controller
-        args:
-        - /kong-ingress-controller
-        - --kong-url=https://localhost:8444
-        - --admin-tls-skip-verify
-        - --publish-service=kong/kong-proxy
         env:
+        - name: CONTROLLER_KONG_ADMIN_URL
+          value: "https://127.0.0.1:8444"
+        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
+          value: "true"
+        - name: CONTROLLER_PUBLISH_SERVICE
+          value: "kong/kong-proxy"
         - name: POD_NAME
           valueFrom:
             fieldRef:

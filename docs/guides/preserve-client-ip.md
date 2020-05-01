@@ -16,7 +16,7 @@ It is recommended that you give this a read.
 
 Following methods are possible to preserve Client IP address:
 
-## ExternalTrafficPolicy: Cluster
+## ExternalTrafficPolicy: Local
 
 As explained in
 [Kubernetes docs](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip),
@@ -74,11 +74,11 @@ details that can help you preserve the client IP address:
 
 ### GKE
 
-You can use `ExternalTrafficPolicy: Cluster` to preserve the Client IP address.
+You can use `ExternalTrafficPolicy: Local` to preserve the Client IP address.
 
 ### AKS
 
-You can use `ExternalTrafficPolicy: Cluster` to preserve the Client IP address.
+You can use `ExternalTrafficPolicy: Local` to preserve the Client IP address.
 
 ### EKS
 

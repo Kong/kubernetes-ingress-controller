@@ -58,7 +58,7 @@ type KongClusterPlugin struct {
 	Config Configuration `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
-	ConfigFrom NamespacedSecretValueFromSource `json:"configFrom,omitempty"`
+	ConfigFrom NamespacedSecretValueFromSource `json:"configFrom.secretKeyRef,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`
@@ -103,7 +103,7 @@ type KongPlugin struct {
 	Config Configuration `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
-	ConfigFrom SecretValueFromSource `json:"configFrom,omitempty"`
+	ConfigFrom SecretValueFromSource `json:"configFrom.secretKeyRef,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`

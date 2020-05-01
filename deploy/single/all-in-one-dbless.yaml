@@ -39,6 +39,24 @@ spec:
       properties:
         config:
           type: object
+        configFrom:
+          properties:
+            secretKeyRef:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                namespace:
+                  type: string
+              required:
+              - name
+              - key
+              - namespace
+              type: object
+          required:
+          - secretKeyRef
+          type: object
         disabled:
           type: boolean
         plugin:
@@ -358,6 +376,21 @@ spec:
     openAPIV3Schema:
       properties:
         config:
+          type: object
+        configFrom:
+          properties:
+            secretKeyRef:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+              required:
+              - name
+              - key
+              type: object
+          required:
+          - secretKeyRef
           type: object
         disabled:
           type: boolean

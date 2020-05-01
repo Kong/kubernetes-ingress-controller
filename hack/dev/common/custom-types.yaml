@@ -42,6 +42,21 @@ spec:
           type: boolean
         config:
           type: object
+        configFrom:
+          type: object
+          required:
+            - secretKeyRef
+          properties:
+            secretKeyRef:
+              type: object
+              required:
+                - name
+                - key
+              properties:
+                name:
+                  type: string
+                key:
+                  type: string
         run_on:
           type: string
           enum:
@@ -104,6 +119,24 @@ spec:
           type: boolean
         config:
           type: object
+        configFrom:
+          type: object
+          required:
+            - secretKeyRef
+          properties:
+            secretKeyRef:
+              type: object
+              required:
+                - name
+                - key
+                - namespace
+              properties:
+                namespace:
+                  type: string
+                name:
+                  type: string
+                key:
+                  type: string
         run_on:
           type: string
           enum:

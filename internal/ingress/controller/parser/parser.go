@@ -1783,9 +1783,8 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongCl
 		}
 		config, configError = p.namespacedSecretToConfiguration(k8sPlugin.ConfigFrom)
 		if configError != nil {
-			err = fmt.Errorf("error parsing config for KongClusterPlugin %v: %w", k8sPlugin.Name, configError)
+			return kong.Plugin{}, errors.Errorf("error parsing config for KongClusterPlugin %v: %w", k8sPlugin.Name, configError)
 		}
-		k8sPlugin.Config = config
 	}
 	kongPlugin := toKongPlugin(plugin{
 		Name:   k8sPlugin.PluginName,
@@ -1804,7 +1803,7 @@ func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (
 	config := k8sPlugin.Config
 	if k8sPlugin.ConfigFrom != (configurationv1.SecretValueFromSource{}) {
 		if len(k8sPlugin.Config) > 0 {
-			return kong.Plugin{}, errors.Errorf("plugin '%v/%v' has both Config and ConfigFrom set",
+			return kong.Plugin{}, errors.Errorf("KongPlugin '%v/%v' has both Config and ConfigFrom set",
 				k8sPlugin.Namespace, k8sPlugin.Name)
 		}
 		config, configError = p.secretToConfiguration(k8sPlugin.ConfigFrom, k8sPlugin.Namespace)

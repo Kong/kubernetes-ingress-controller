@@ -192,6 +192,482 @@ func TestGlobalPlugin(t *testing.T) {
 	})
 }
 
+func TestSecretConfigurationPlugin(t *testing.T) {
+	jwtPluginConfig := `{"run_on_preflight": false}`  // JSON
+	basicAuthPluginConfig := "hide_credentials: true" // YAML
+	assert := assert.New(t)
+	stock := store.FakeObjects{
+		Services: []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "foo-svc",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+			},
+		},
+		Ingresses: []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "foo-plugin",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "bar-plugin",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.net",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}}
+	t.Run("plugins with secret configuration are processed correctly", func(t *testing.T) {
+		objects := stock
+		objects.KongPlugins = []*configurationv1.KongPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "global-foo-plugin",
+					Namespace: "default",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				PluginName: "jwt",
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "jwt-config",
+					Secret: "conf-secret",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "jwt",
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "jwt-config",
+					Secret: "conf-secret",
+				},
+			},
+		}
+		objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
+					Namespace: "default",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar-plugin",
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
+					Namespace: "default",
+				},
+			},
+		}
+		objects.Secrets = []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"jwt-config":        []byte(jwtPluginConfig),
+					"basic-auth-config": []byte(basicAuthPluginConfig),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(objects)
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(4, len(state.Plugins),
+			"expected four plugins to be rendered")
+
+		sort.SliceStable(state.Plugins, func(i, j int) bool {
+			return strings.Compare(*state.Plugins[i].Name, *state.Plugins[j].Name) > 0
+		})
+		assert.Equal("jwt", *state.Plugins[0].Name)
+		assert.Equal(kong.Configuration{"run_on_preflight": false}, state.Plugins[0].Config)
+		assert.Equal("jwt", *state.Plugins[1].Name)
+		assert.Equal(kong.Configuration{"run_on_preflight": false}, state.Plugins[1].Config)
+
+		assert.Equal("basic-auth", *state.Plugins[2].Name)
+		assert.Equal(kong.Configuration{"hide_credentials": true}, state.Plugins[2].Config)
+		assert.Equal("basic-auth", *state.Plugins[3].Name)
+		assert.Equal(kong.Configuration{"hide_credentials": true}, state.Plugins[3].Config)
+	})
+
+	t.Run("plugins with missing secrets or keys are not constructed", func(t *testing.T) {
+		objects := stock
+		objects.KongPlugins = []*configurationv1.KongPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "global-foo-plugin",
+					Namespace: "default",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				PluginName: "jwt",
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "missing-key",
+					Secret: "conf-secret",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "jwt",
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "missing-key",
+					Secret: "conf-secret",
+				},
+			},
+		}
+		objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
+					Namespace: "default",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar-plugin",
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
+					Namespace: "default",
+				},
+			},
+		}
+		objects.Secrets = []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"jwt-config":        []byte(jwtPluginConfig),
+					"basic-auth-config": []byte(basicAuthPluginConfig),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(objects)
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(0, len(state.Plugins),
+			"expected no plugins to be rendered")
+	})
+
+	t.Run("plugins with both config and configFrom are not constructed", func(t *testing.T) {
+		objects := stock
+		objects.KongPlugins = []*configurationv1.KongPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "global-foo-plugin",
+					Namespace: "default",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				PluginName: "jwt",
+				Config:     configurationv1.Configuration{"fake": true},
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "jwt-config",
+					Secret: "conf-secret",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "jwt",
+				Config:     configurationv1.Configuration{"fake": true},
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "jwt-config",
+					Secret: "conf-secret",
+				},
+			},
+		}
+		objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				Config:     configurationv1.Configuration{"fake": true},
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
+					Namespace: "default",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar-plugin",
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				Config:     configurationv1.Configuration{"fake": true},
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "conf-secret",
+					Namespace: "default",
+				},
+			},
+		}
+		objects.Secrets = []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"jwt-config":        []byte(jwtPluginConfig),
+					"basic-auth-config": []byte(basicAuthPluginConfig),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(objects)
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(0, len(state.Plugins),
+			"expected no plugins to be rendered")
+	})
+
+	t.Run("secretToConfiguration handles valid configuration and discards invalid configuration", func(t *testing.T) {
+		objects := stock
+		jwtPluginConfig := `{"run_on_preflight": false}`  // JSON
+		basicAuthPluginConfig := "hide_credentials: true" // YAML
+		badJwtPluginConfig := "22222"                     // not JSON
+		badBasicAuthPluginConfig := "111111"              // not YAML
+		objects.Secrets = []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"jwt-config":            []byte(jwtPluginConfig),
+					"basic-auth-config":     []byte(basicAuthPluginConfig),
+					"bad-jwt-config":        []byte(badJwtPluginConfig),
+					"bad-basic-auth-config": []byte(badBasicAuthPluginConfig),
+				},
+			},
+		}
+		references := []*configurationv1.SecretValueFromSource{
+			{
+				Secret: "conf-secret",
+				Key:    "jwt-config",
+			},
+			{
+				Secret: "conf-secret",
+				Key:    "basic-auth-config",
+			},
+		}
+		badReferences := []*configurationv1.SecretValueFromSource{
+			{
+				Secret: "conf-secret",
+				Key:    "bad-basic-auth-config",
+			},
+			{
+				Secret: "conf-secret",
+				Key:    "bad-jwt-config",
+			},
+		}
+		store, err := store.NewFakeStore(objects)
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		for _, testcase := range references {
+			config, err := parser.secretToConfiguration(*testcase, "default")
+			assert.NotEmpty(config)
+			assert.Nil(err)
+		}
+		for _, testcase := range badReferences {
+			config, err := parser.secretToConfiguration(*testcase, "default")
+			assert.Empty(config)
+			assert.NotEmpty(err)
+		}
+	})
+	t.Run("plugins with unparsable configuration are not constructed", func(t *testing.T) {
+		jwtPluginConfig := "22222"        // not JSON
+		basicAuthPluginConfig := "111111" // not YAML
+		objects := stock
+		objects.KongPlugins = []*configurationv1.KongPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "global-foo-plugin",
+					Namespace: "default",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				PluginName: "jwt",
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "missing-key",
+					Secret: "conf-secret",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-plugin",
+					Namespace: "default",
+				},
+				PluginName: "jwt",
+				ConfigFrom: configurationv1.SecretValueFromSource{
+					Key:    "missing-key",
+					Secret: "conf-secret",
+				},
+			},
+		}
+		objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
+					},
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
+					Namespace: "default",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar-plugin",
+				},
+				Protocols:  []string{"http"},
+				PluginName: "basic-auth",
+				ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
+					Key:       "basic-auth-config",
+					Secret:    "missing-secret",
+					Namespace: "default",
+				},
+			},
+		}
+		objects.Secrets = []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"jwt-config":        []byte(jwtPluginConfig),
+					"basic-auth-config": []byte(basicAuthPluginConfig),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(objects)
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(0, len(state.Plugins),
+			"expected no plugins to be rendered")
+	})
+}
+
 func TestCACertificate(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("valid CACertificte is processed", func(t *testing.T) {

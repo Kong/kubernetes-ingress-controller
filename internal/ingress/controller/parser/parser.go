@@ -3,12 +3,9 @@ package parser
 import (
 	"bytes"
 	"crypto/tls"
-<<<<<<< HEAD
-	"encoding/json"
-=======
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
->>>>>>> next
 	"fmt"
 	"reflect"
 	"regexp"

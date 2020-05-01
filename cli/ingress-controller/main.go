@@ -203,6 +203,11 @@ func main() {
 	if kongDB == "off" {
 		controllerConfig.Kong.InMemory = true
 	}
+	if kongDB == "cassandra" {
+		glog.Error("running controller with kong backed by cassandra is " +
+			"deprecated; please consider using postgres or in-memory mode")
+	}
+
 	req, _ := http.NewRequest("GET",
 		cliConfig.KongAdminURL+"/tags", nil)
 	res, err := kongClient.Do(nil, req, nil)

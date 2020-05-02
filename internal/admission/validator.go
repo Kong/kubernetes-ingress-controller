@@ -147,7 +147,3 @@ func (validator KongHTTPValidator) ValidateCredential(
 	// Kong.
 	return true, "", nil
 }
-
-func empty(s *string) bool {
-	return s == nil && *s == ""
-}

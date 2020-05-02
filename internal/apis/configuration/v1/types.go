@@ -146,8 +146,8 @@ func (in *Configuration) DeepCopyInto(out *Configuration) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	dec := gob.NewDecoder(&buf)
-	enc.Encode(in)  // ignoring error XXX
-	dec.Decode(out) // ignoring error XXX
+	_ = enc.Encode(in)  // ignoring error XXX
+	_ = dec.Decode(out) // ignoring error XXX
 }
 
 // +genclient

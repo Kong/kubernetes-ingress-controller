@@ -523,7 +523,9 @@ func serveHTTP(enableProfiling bool, port int, mux *http.ServeMux, stop <-chan s
 	mux.HandleFunc("/build", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		b, _ := json.Marshal(version())
-		w.Write(b)
+		if _, err := w.Write(b); err != nil {
+			glog.Errorf("profiling server /build: %v", err)
+		}
 	})
 
 	mux.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {

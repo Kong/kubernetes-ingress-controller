@@ -187,11 +187,14 @@ func NewStatusSyncer(config Config) Sync {
 				st.Config.OnStartedLeading()
 			}
 			go st.syncQueue.Run(time.Second, ctx.Done())
-			wait.PollUntil(updateInterval, func() (bool, error) {
+			err := wait.PollUntil(updateInterval, func() (bool, error) {
 				// send a dummy object to the queue to force a sync
 				st.syncQueue.Enqueue("sync status")
 				return false, nil
 			}, ctx.Done())
+			if err != nil {
+				glog.Errorf("status syncer: polling: %v", err)
+			}
 		},
 		OnStoppedLeading: func() {
 			glog.V(2).Infof("I am not status update leader anymore")

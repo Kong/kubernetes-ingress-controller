@@ -39,8 +39,8 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
-	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
-	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
+	configclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
@@ -239,13 +239,13 @@ func main() {
 		cliConfig.SyncPeriod,
 		informers.WithNamespace(cliConfig.WatchNamespace),
 	)
-	confClient, _ := configurationclientv1.NewForConfig(kubeCfg)
+	confClient, _ := configclientv1.NewForConfig(kubeCfg)
 	controllerConfig.KongConfigClient = confClient
 
-	kongInformerFactory := configurationinformer.NewSharedInformerFactoryWithOptions(
+	kongInformerFactory := configinformer.NewSharedInformerFactoryWithOptions(
 		confClient,
 		cliConfig.SyncPeriod,
-		configurationinformer.WithNamespace(cliConfig.WatchNamespace),
+		configinformer.WithNamespace(cliConfig.WatchNamespace),
 	)
 
 	knativeClient, _ := knativeclient.NewForConfig(kubeCfg)

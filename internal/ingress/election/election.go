@@ -48,7 +48,9 @@ func (e elector) Run(ctx context.Context) {
 			if retryCount > 0 {
 				backoff.Next(backoffID, backoff.Clock.Now())
 				delay := backoff.Get(backoffID)
-				glog.Warningf("leader election session %d terminated unexpectedly; waiting %s before proceeding", retryCount+1, delay)
+				glog.Warningf("leader election session %d terminated "+
+					"unexpectedly; waiting %s before proceeding", retryCount+1,
+					delay)
 				select {
 				case <-time.After(delay):
 				case <-ctx.Done():

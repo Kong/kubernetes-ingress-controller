@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
-	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	pool "gopkg.in/go-playground/pool.v3"
@@ -67,7 +67,7 @@ type ingressLister interface {
 // Config ...
 type Config struct {
 	CoreClient       clientset.Interface
-	KongConfigClient configurationClientSet.Interface
+	KongConfigClient configClientSet.Interface
 	KnativeClient    knativeClientSet.Interface
 
 	OnStartedLeading func()
@@ -462,7 +462,7 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
 	status []apiv1.LoadBalancerIngress,
-	client configurationClientSet.Interface) pool.WorkFunc {
+	client configClientSet.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {
 			return nil, nil

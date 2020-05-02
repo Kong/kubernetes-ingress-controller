@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
@@ -69,7 +69,7 @@ type Configuration struct {
 	Kong
 
 	KubeClient       clientset.Interface
-	KongConfigClient configurationClientSet.Interface
+	KongConfigClient configClientSet.Interface
 	KnativeClient    knativeClientSet.Interface
 
 	ResyncPeriod      time.Duration

@@ -86,7 +86,7 @@ func TestValidateKongConsumer(t *testing.T) {
 	handler.ServeHTTP(res, req)
 	assert.Equal(200, res.Code)
 	var review admission.AdmissionReview
-	_, _, err = decoder.Decode([]byte(res.Body.String()), nil, &review)
+	_, _, err = decoder.Decode(res.Body.Bytes(), nil, &review)
 	assert.Nil(err)
 	assert.Equal("b2df61dd-ab5b-4cb4-9be0-878533c83892",
 		string(review.Response.UID))
@@ -133,7 +133,7 @@ func TestValidateKongConsumerOnUsernameChange(t *testing.T) {
 	handler.ServeHTTP(res, req)
 	assert.Equal(200, res.Code)
 	var review admission.AdmissionReview
-	_, _, err = decoder.Decode([]byte(res.Body.String()), nil, &review)
+	_, _, err = decoder.Decode(res.Body.Bytes(), nil, &review)
 	assert.Nil(err)
 	assert.Equal("b2df61dd-ab5b-4cb4-9be0-878533c83892",
 		string(review.Response.UID))
@@ -180,7 +180,7 @@ func TestValidateKongConsumerOnEqualUpdate(t *testing.T) {
 	handler.ServeHTTP(res, req)
 	assert.Equal(200, res.Code)
 	var review admission.AdmissionReview
-	_, _, err = decoder.Decode([]byte(res.Body.String()), nil, &review)
+	_, _, err = decoder.Decode(res.Body.Bytes(), nil, &review)
 	assert.Nil(err)
 	assert.Equal("b2df61dd-ab5b-4cb4-9be0-878533c83892",
 		string(review.Response.UID))
@@ -221,7 +221,7 @@ func TestValidateKongConsumerInvalid(t *testing.T) {
 	handler.ServeHTTP(res, req)
 	assert.Equal(200, res.Code)
 	var review admission.AdmissionReview
-	_, _, err = decoder.Decode([]byte(res.Body.String()), nil, &review)
+	_, _, err = decoder.Decode(res.Body.Bytes(), nil, &review)
 	assert.Nil(err)
 	assert.Equal("b2df61dd-ab5b-4cb4-9be0-878533c83892",
 		string(review.Response.UID))
@@ -374,7 +374,7 @@ func TestValidateKongPlugin(t *testing.T) {
 	handler.ServeHTTP(res, req)
 	assert.Equal(200, res.Code)
 	var review admission.AdmissionReview
-	_, _, err = decoder.Decode([]byte(res.Body.String()), nil, &review)
+	_, _, err = decoder.Decode(res.Body.Bytes(), nil, &review)
 	assert.Nil(err)
 	assert.Equal("b2df61dd-ab5b-4cb4-9be0-878533c83892",
 		string(review.Response.UID))

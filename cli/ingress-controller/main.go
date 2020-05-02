@@ -407,8 +407,6 @@ func main() {
 	os.Exit(<-exitCh)
 }
 
-type exiter func(code int)
-
 func handleSigterm(kong *controller.KongController, stopCh chan<- struct{}, exitCh chan<- int) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
@@ -498,8 +496,6 @@ const (
 	// High enough Burst to fit all expected use cases. Burst=0 is not set here, because
 	// client code is overriding it.
 	defaultBurst = 1e6
-
-	fakeCertificate = "default-fake-certificate"
 )
 
 /**

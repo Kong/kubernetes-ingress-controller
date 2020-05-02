@@ -395,7 +395,7 @@ func TestKongFilterTags(t *testing.T) {
 
 	resetForTesting(func() { t.Fatal("bad parse") })
 
-	// differnt flags
+	// different flags
 	os.Args = []string{
 		"cmd",
 		"--kong-admin-filter-tag", "foo",

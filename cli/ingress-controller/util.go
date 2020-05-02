@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -17,7 +18,7 @@ func getSemVerVer(v string) (semver.Version, error) {
 	re := regexp.MustCompile(`(\d+\.\d+)(?:[\.-](\d+))?(?:\-?(.+)$|$)`)
 	m := re.FindStringSubmatch(v)
 	if len(m) != 4 {
-		return semver.Version{}, fmt.Errorf("Unknown Kong version")
+		return semver.Version{}, fmt.Errorf("Unknown Kong version : '%v'", v)
 	}
 	if m[2] == "" {
 		m[2] = "0"
@@ -35,7 +36,7 @@ func ensureWorkspace(client *kong.Client, workspace string) error {
 	if err != nil {
 		return err
 	}
-	_, err = client.Do(nil, req, nil)
+	_, err = client.Do(context.TODO(), req, nil)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			if err := createWorkspace(client, workspace); err != nil {
@@ -54,6 +55,6 @@ func createWorkspace(client *kong.Client, workspace string) error {
 	if err != nil {
 		return err
 	}
-	_, err = client.Do(nil, req, nil)
+	_, err = client.Do(context.TODO(), req, nil)
 	return err
 }

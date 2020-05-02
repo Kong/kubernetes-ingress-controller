@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"testing"
@@ -13,7 +14,7 @@ import (
 func TestMain(m *testing.M) {
 	reportsHost = "localhost"
 	pingInterval = 1
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestReporterOnce(t *testing.T) {

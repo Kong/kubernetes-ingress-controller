@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/hbagdi/go-kong/kong"
@@ -45,7 +46,7 @@ func (p *PluginSchemaStore) Schema(pluginName string) (map[string]interface{}, e
 		return nil, err
 	}
 	schema := make(map[string]interface{})
-	_, err = p.client.Do(nil, req, &schema)
+	_, err = p.client.Do(context.TODO(), req, &schema)
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"net/http"
@@ -147,7 +148,7 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
 
 	req.URL.RawQuery = queryString.Encode()
 
-	_, err = client.Do(nil, req, nil)
+	_, err = client.Do(context.TODO(), req, nil)
 	if err != nil {
 		return errors.Wrap(err, "posting new config to /config")
 	}

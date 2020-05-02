@@ -209,9 +209,6 @@ func parseFlags() (cliConfig, error) {
 	flagSet := flagSet()
 
 	// glog
-	if err := flag.Set("logtostderr", "true"); err != nil {
-		return cliConfig{}, err
-	}
 
 	flagSet.AddGoFlagSet(flag.CommandLine)
 	if err := flagSet.Parse(os.Args); err != nil {

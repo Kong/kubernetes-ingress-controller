@@ -165,7 +165,7 @@ func main() {
 		if err != nil {
 			glog.Fatalf("failed to read CACert: %s", certPath)
 		}
-		ok := certPool.AppendCertsFromPEM([]byte(cert))
+		ok := certPool.AppendCertsFromPEM(cert)
 		if !ok {
 			glog.Fatalf("failed to load CACert: %s", certPath)
 		}

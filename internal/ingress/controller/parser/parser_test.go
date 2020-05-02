@@ -2697,16 +2697,13 @@ func TestOverrideRoutePriority(t *testing.T) {
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
 	}
-	var kongIngress configurationv1.KongIngress
-	kongIngress = configurationv1.KongIngress{
+	kongIngress := configurationv1.KongIngress{
 		Route: &kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
 	}
 
-	var netIngress networking.Ingress
-
-	netIngress = networking.Ingress{
+	netIngress := networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"configuration.konghq.com/protocols": "grpc,grpcs",
@@ -2727,14 +2724,12 @@ func TestOverrideRoutePriority(t *testing.T) {
 
 func TestOverrideRouteByKongIngress(t *testing.T) {
 	assert := assert.New(t)
-	var route Route
-	route = Route{
+	route := Route{
 		Route: kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
 	}
-	var kongIngress configurationv1.KongIngress
-	kongIngress = configurationv1.KongIngress{
+	kongIngress := configurationv1.KongIngress{
 		Route: &kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
@@ -2755,9 +2750,7 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		},
 	}
 
-	var netIngress networking.Ingress
-
-	netIngress = networking.Ingress{
+	netIngress := networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"configuration.konghq.com/protocols": "grpc,grpcs",

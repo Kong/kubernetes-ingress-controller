@@ -148,7 +148,6 @@ func (in *Configuration) DeepCopyInto(out *Configuration) {
 	dec := gob.NewDecoder(&buf)
 	enc.Encode(in)  // ignoring error XXX
 	dec.Decode(out) // ignoring error XXX
-	return
 }
 
 // +genclient
@@ -237,5 +236,4 @@ func (in *KongCredential) DeepCopyInto(out *KongCredential) {
 			glog.Errorf("unexpected error copying configuration: %v", err)
 		}
 	}
-	return
 }

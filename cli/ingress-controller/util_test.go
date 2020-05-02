@@ -33,6 +33,4 @@ func TestFixVersion(t *testing.T) {
 			t.Errorf("expecting error converting %s, getting no errors", inputVersion)
 		}
 	}
-
-	return
 }

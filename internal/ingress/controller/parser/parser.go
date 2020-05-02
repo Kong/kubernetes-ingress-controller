@@ -900,7 +900,7 @@ func overrideServiceProtocol(service *kong.Service, anns map[string]string) {
 		return
 	}
 	protocol := annotations.ExtractProtocolName(anns)
-	if protocol == "" || validateProtocol(protocol) != true {
+	if protocol == "" || !validateProtocol(protocol) {
 		return
 	}
 	service.Protocol = kong.String(protocol)
@@ -979,7 +979,7 @@ func normalizeProtocols(route *Route) {
 		if strings.Contains(*protocol, "http") {
 			http = true
 		}
-		if validateProtocol(*protocol) != true {
+		if !validateProtocol(*protocol) {
 			http = true
 		}
 	}
@@ -1019,7 +1019,7 @@ func overrideRouteProtocols(route *kong.Route, anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
 	var prots []*string
 	for _, prot := range protocols {
-		if validateProtocol(prot) != true {
+		if !validateProtocol(prot) {
 			return
 		}
 		prots = append(prots, kong.String(prot))

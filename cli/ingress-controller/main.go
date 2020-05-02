@@ -378,7 +378,7 @@ func main() {
 		info := utils.Info{
 			KongVersion:       root["version"].(string),
 			KICVersion:        RELEASE,
-			KubernetesVersion: fmt.Sprintf("%s", k8sVersion),
+			KubernetesVersion: k8sVersion.String(),
 			Hostname:          hostname,
 			ID:                uuid,
 			KongDB:            kongDB,

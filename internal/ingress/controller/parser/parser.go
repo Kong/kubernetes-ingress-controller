@@ -1774,16 +1774,16 @@ func toKongPlugin(plugin plugin) kong.Plugin {
 }
 
 func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
-	var err error
 	var configError error
 	config := k8sPlugin.Config
+	if k8sPlugin.ConfigFrom != (configurationv1.NamespacedSecretValueFromSource{}) && len(k8sPlugin.Config) > 0 {
+		return kong.Plugin{}, errors.Errorf("KongClusterPlugin '/%v' has both Config and ConfigFrom set",
+			k8sPlugin.Name)
+	}
 	if k8sPlugin.ConfigFrom != (configurationv1.NamespacedSecretValueFromSource{}) {
-		if len(k8sPlugin.Config) > 0 {
-			return kong.Plugin{}, errors.Errorf("KongClusterPlugin '%v' has both Config and ConfigFrom set", k8sPlugin.Name)
-		}
 		config, configError = p.namespacedSecretToConfiguration(k8sPlugin.ConfigFrom)
 		if configError != nil {
-			return kong.Plugin{}, errors.Errorf("error parsing config for KongClusterPlugin %v: %w", k8sPlugin.Name, configError)
+			return kong.Plugin{}, fmt.Errorf("error parsing config for KongClusterPlugin %v: %w", k8sPlugin.Name, configError)
 		}
 	}
 	kongPlugin := toKongPlugin(plugin{
@@ -1794,21 +1794,20 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongCl
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: k8sPlugin.Protocols,
 	})
-	return kongPlugin, err
+	return kongPlugin, nil
 }
 
 func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
-	var err error
 	var configError error
 	config := k8sPlugin.Config
+	if k8sPlugin.ConfigFrom != (configurationv1.SecretValueFromSource{}) && len(k8sPlugin.Config) > 0 {
+		return kong.Plugin{}, errors.Errorf("KongPlugin '%v/%v' has both Config and ConfigFrom set",
+			k8sPlugin.Namespace, k8sPlugin.Name)
+	}
 	if k8sPlugin.ConfigFrom != (configurationv1.SecretValueFromSource{}) {
-		if len(k8sPlugin.Config) > 0 {
-			return kong.Plugin{}, errors.Errorf("KongPlugin '%v/%v' has both Config and ConfigFrom set",
-				k8sPlugin.Namespace, k8sPlugin.Name)
-		}
 		config, configError = p.secretToConfiguration(k8sPlugin.ConfigFrom, k8sPlugin.Namespace)
 		if configError != nil {
-			err = fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w", k8sPlugin.Name, k8sPlugin.Namespace, configError)
+			return kong.Plugin{}, fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w", k8sPlugin.Name, k8sPlugin.Namespace, configError)
 		}
 		k8sPlugin.Config = config
 	}
@@ -1820,7 +1819,7 @@ func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: k8sPlugin.Protocols,
 	})
-	return kongPlugin, err
+	return kongPlugin, nil
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

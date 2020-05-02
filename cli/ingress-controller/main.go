@@ -183,11 +183,14 @@ func main() {
 		glog.Fatalf("Error creating Kong Rest client: %v", err)
 	}
 
-	root, err := kongClient.Root(nil)
+	root, err := kongClient.Root(context.Background())
 	if err != nil {
 		glog.Fatalf("%v", err)
 	}
 	v, err := getSemVerVer(root["version"].(string))
+	if err != nil {
+		glog.Fatalf("Error determining Kong version: %v", err)
+	}
 
 	glog.Infof("kong version: %s", v)
 	kongConfiguration := root["configuration"].(map[string]interface{})
@@ -205,7 +208,7 @@ func main() {
 	}
 	req, _ := http.NewRequest("GET",
 		cliConfig.KongAdminURL+"/tags", nil)
-	res, err := kongClient.Do(nil, req, nil)
+	res, err := kongClient.Do(context.Background(), req, nil)
 	if err == nil && res.StatusCode == 200 {
 		controllerConfig.Kong.HasTagSupport = true
 	}

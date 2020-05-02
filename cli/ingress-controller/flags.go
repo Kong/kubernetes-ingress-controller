@@ -209,19 +209,27 @@ func parseFlags() (cliConfig, error) {
 	flagSet := flagSet()
 
 	// glog
-	flag.Set("logtostderr", "true")
+	if err := flag.Set("logtostderr", "true"); err != nil {
+		return cliConfig{}, err
+	}
 
 	flagSet.AddGoFlagSet(flag.CommandLine)
-	flagSet.Parse(os.Args)
+	if err := flagSet.Parse(os.Args); err != nil {
+		return cliConfig{}, err
+	}
 
 	// Workaround for this issue:
 	// https://github.com/kubernetes/kubernetes/issues/17162
-	flag.CommandLine.Parse([]string{})
+	if err := flag.CommandLine.Parse([]string{}); err != nil {
+		return cliConfig{}, err
+	}
 
 	viper.SetEnvPrefix("CONTROLLER")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-	viper.BindPFlags(flagSet)
+	if err := viper.BindPFlags(flagSet); err != nil {
+		return cliConfig{}, err
+	}
 
 	for key, value := range viper.AllSettings() {
 		glog.V(2).Infof("FLAG: --%s=%q", key, value)

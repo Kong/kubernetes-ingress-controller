@@ -315,7 +315,10 @@ func TestStatusActions(t *testing.T) {
 	//  wait for the election
 	time.Sleep(100 * time.Millisecond)
 	// execute sync
-	fk.sync("just-test")
+	err := fk.sync("just-test")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	newIPs := []apiv1.LoadBalancerIngress{{
 		IP: "11.0.0.2",

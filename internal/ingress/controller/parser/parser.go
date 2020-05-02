@@ -1336,7 +1336,7 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 		for _, rel := range getCombinations(relations) {
 			plugin := *plugin.DeepCopy()
 			// ID is populated because that is read by decK and in_memory
-			// translater too
+			// translator too
 			if rel.Service != "" {
 				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
 			}

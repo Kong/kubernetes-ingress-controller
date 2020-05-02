@@ -127,7 +127,7 @@ this flag can be used multiple times to specify multiple headers`)
 
 	flags.String("kong-admin-token", "",
 		`Sets the value of the 'kong-admin-token' header; useful for
-authentication/authorization for Kong Enterprise enviornments`)
+authentication/authorization for Kong Enterprise environments`)
 
 	// deprecated
 	flags.Bool("admin-tls-skip-verify", false,

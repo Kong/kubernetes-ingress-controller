@@ -31,6 +31,8 @@ Following table describes all the flags that are available:
 | --admin-tls-skip-verify              |`boolean`  | none                            | DEPRECATED, use `--kong-admin-tls-skip-verify`|
 | --admission-webhook-cert-file        |`string`   | `/admission-webhook/tls.crt`    | Path to the PEM-encoded certificate file for TLS handshake.|
 | --admission-webhook-key-file         |`string`   | `/admission-webhook/tls.key`    | Path to the PEM-encoded private key file for TLS handshake.|
+| --admission-webhook-cert             |`string`   | none                            | PEM-encoded certificate string for TLS handshake.|
+| --admission-webhook-key              |`string`   | none                            | PEM-encoded private key string for TLS handshake.|
 | --admission-webhook-listen           |`string`   | `off`                           | The address to start admission controller on (ip:port). Setting it to 'off' disables the admission controller.|
 | --alsologtostderr                    |`boolean`  | `false`                         | Logs are written to standard error as well as to files.|
 | --anonymous-reports                  |`string`   | `true`                          | Send anonymized usage data to help improve Kong.|
@@ -38,6 +40,7 @@ Following table describes all the flags that are available:
 | --election-id                        |`string`   | `ingress-controller-leader`     | The name of ConfigMap (in the same namespace) to use to facilitate leader-election between multiple instances of the controller.|
 | --ingress-class                      |`string`   | `kong`                          | Ingress class name to use to filter Ingress and custom resources when multiple Ingress Controllers are running in the same Kubernetes cluster.|
 | --kong-admin-ca-cert-file            |`string`   | none                            | Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.|
+| --kong-admin-ca-cert                 |`string`   | none                            | PEM-encoded CA certificate string to verify Kong's Admin SSL certificate.|
 | --kong-admin-concurrency             |`int`      | `10`                            | Max number of concurrent requests sent to Kong's Admin API.|
 | --kong-admin-filter-tag              |`string`   | `managed-by-ingress-controller` | The tag used to manage entities in Kong.|
 | --kong-admin-header                  |`string`   | none                            | Add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers.|

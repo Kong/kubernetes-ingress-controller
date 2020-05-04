@@ -1548,7 +1548,8 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 				Plugin: plugin,
 			}
 		} else {
-			glog.Errorf("Failed to generate configuration for KongPlugin %v/%v: %v", k8sPlugin.Namespace, pluginName, err)
+			glog.Errorf("Failed to generate configuration for KongPlugin "+
+				"%v/%v: %v", k8sPlugin.Namespace, pluginName, err)
 		}
 	}
 
@@ -1577,7 +1578,8 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 				Plugin: plugin,
 			}
 		} else {
-			glog.Errorf("Failed to generate configuration for KongClusterPlugin %v: %v", pluginName, err)
+			glog.Errorf("Failed to generate configuration "+
+				"for KongClusterPlugin %v: %v", pluginName, err)
 		}
 	}
 	for _, plugin := range duplicates {
@@ -1720,29 +1722,39 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	return plugin, err
 }
 
-func (p *Parser) secretToConfiguration(reference configurationv1.SecretValueFromSource, namespace string) (configurationv1.Configuration, error) {
+func (p *Parser) secretToConfiguration(
+	reference configurationv1.SecretValueFromSource, namespace string) (
+	configurationv1.Configuration, error) {
 	secret, err := p.store.GetSecret(namespace, reference.Secret)
 	if err != nil {
-		return configurationv1.Configuration{}, errors.Errorf("error fetching plugin configuration secret '%v/%v': %v",
+		return configurationv1.Configuration{}, errors.Errorf(
+			"error fetching plugin configuration secret '%v/%v': %v",
 			namespace, reference.Secret, err)
 	}
 	secretVal, ok := secret.Data[reference.Key]
 	if !ok {
-		return configurationv1.Configuration{}, errors.Errorf("no key '%v' in secret '%v/%v'",
-			reference.Key, namespace, reference.Secret)
+		return configurationv1.Configuration{},
+			errors.Errorf("no key '%v' in secret '%v/%v'",
+				reference.Key, namespace, reference.Secret)
 	}
 	var config configurationv1.Configuration
 	if err := json.Unmarshal(secretVal, &config); err != nil {
 		if err := yaml.Unmarshal(secretVal, &config); err != nil {
-			return configurationv1.Configuration{}, errors.Errorf("key '%v' in secret '%v/%v' contains neither valid JSON nor valid YAML)",
-				reference.Key, namespace, reference.Secret)
+			return configurationv1.Configuration{},
+				errors.Errorf("key '%v' in secret '%v/%v' contains neither "+
+					"valid JSON nor valid YAML)",
+					reference.Key, namespace, reference.Secret)
 		}
 	}
 	return config, nil
 }
 
-func (p *Parser) namespacedSecretToConfiguration(reference configurationv1.NamespacedSecretValueFromSource) (configurationv1.Configuration, error) {
-	bareReference := configurationv1.SecretValueFromSource{Secret: reference.Secret, Key: reference.Key}
+func (p *Parser) namespacedSecretToConfiguration(
+	reference configurationv1.NamespacedSecretValueFromSource) (
+	configurationv1.Configuration, error) {
+	bareReference := configurationv1.SecretValueFromSource{
+		Secret: reference.Secret,
+		Key:    reference.Key}
 	return p.secretToConfiguration(bareReference, reference.Namespace)
 }
 
@@ -1773,17 +1785,25 @@ func toKongPlugin(plugin plugin) kong.Plugin {
 	return result
 }
 
-func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
+func (p *Parser) kongPluginFromK8SClusterPlugin(
+	k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
 	var configError error
 	config := k8sPlugin.Config
-	if k8sPlugin.ConfigFrom != (configurationv1.NamespacedSecretValueFromSource{}) && len(k8sPlugin.Config) > 0 {
-		return kong.Plugin{}, errors.Errorf("KongClusterPlugin '/%v' has both Config and ConfigFrom set",
-			k8sPlugin.Name)
+	if k8sPlugin.ConfigFrom !=
+		(configurationv1.NamespacedSecretValueFromSource{}) &&
+		len(k8sPlugin.Config) > 0 {
+		return kong.Plugin{},
+			errors.Errorf("KongClusterPlugin '/%v' has both "+
+				"Config and ConfigFrom set", k8sPlugin.Name)
 	}
-	if k8sPlugin.ConfigFrom != (configurationv1.NamespacedSecretValueFromSource{}) {
-		config, configError = p.namespacedSecretToConfiguration(k8sPlugin.ConfigFrom)
+	if k8sPlugin.ConfigFrom != (configurationv1.
+		NamespacedSecretValueFromSource{}) {
+		config, configError = p.namespacedSecretToConfiguration(
+			k8sPlugin.ConfigFrom)
 		if configError != nil {
-			return kong.Plugin{}, fmt.Errorf("error parsing config for KongClusterPlugin %v: %w", k8sPlugin.Name, configError)
+			return kong.Plugin{},
+				fmt.Errorf("error parsing config for KongClusterPlugin %v: %w",
+					k8sPlugin.Name, configError)
 		}
 	}
 	kongPlugin := toKongPlugin(plugin{
@@ -1797,17 +1817,25 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongCl
 	return kongPlugin, nil
 }
 
-func (p *Parser) kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
+func (p *Parser) kongPluginFromK8SPlugin(
+	k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
 	var configError error
 	config := k8sPlugin.Config
-	if k8sPlugin.ConfigFrom != (configurationv1.SecretValueFromSource{}) && len(k8sPlugin.Config) > 0 {
-		return kong.Plugin{}, errors.Errorf("KongPlugin '%v/%v' has both Config and ConfigFrom set",
-			k8sPlugin.Namespace, k8sPlugin.Name)
+	if k8sPlugin.ConfigFrom !=
+		(configurationv1.SecretValueFromSource{}) &&
+		len(k8sPlugin.Config) > 0 {
+		return kong.Plugin{},
+			errors.Errorf("KongPlugin '%v/%v' has both "+
+				"Config and ConfigFrom set",
+				k8sPlugin.Namespace, k8sPlugin.Name)
 	}
 	if k8sPlugin.ConfigFrom != (configurationv1.SecretValueFromSource{}) {
-		config, configError = p.secretToConfiguration(k8sPlugin.ConfigFrom, k8sPlugin.Namespace)
+		config, configError = p.secretToConfiguration(
+			k8sPlugin.ConfigFrom, k8sPlugin.Namespace)
 		if configError != nil {
-			return kong.Plugin{}, fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w", k8sPlugin.Name, k8sPlugin.Namespace, configError)
+			return kong.Plugin{},
+				fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w",
+					k8sPlugin.Name, k8sPlugin.Namespace, configError)
 		}
 		k8sPlugin.Config = config
 	}

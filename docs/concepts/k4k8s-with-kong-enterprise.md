@@ -18,7 +18,8 @@ Kubernetes with Kong Enterprise.
 As seen in the diagram below, this deployment consists of
 Kong for Kubernetes deployed in Kubernetes, and is hooked up with
 a database. If there are services running outside Kubernetes,
-a regular Kong Gateway proxy can be deployed there and connected to the same database. This provides a single pane of visibility of
+a regular Kong Gateway proxy can be deployed there and connected to the same
+database. This provides a single pane of visibility of
 all services that are running in your infrastructure.
 
 

@@ -211,6 +211,9 @@ func (p *Parser) Build() (*KongState, error) {
 
 	// populate CA certificates in Kong
 	state.CACertificates, err = p.getCACerts()
+	if err != nil {
+		return nil, err
+	}
 
 	return &state, nil
 }

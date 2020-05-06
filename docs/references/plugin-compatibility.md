@@ -126,7 +126,9 @@ There are [two distributions of Kong Enterprise](https://github.com/Kong/kuberne
 |vault-auth                      |  :white_check_mark:              |  :white_check_mark:                        |
 
 <sup>1</sup> Only used with Dev Portal
+
 <sup>2</sup> request-transformer now has feature parity with
   request-transformer-advanced. request-transformer-advanced remains only for
   compatibility with existing configurations.
+
 <sup>3</sup> Only used with Vitals

@@ -36,6 +36,7 @@ import (
 
 const (
 	knativeIngressClassKey = "networking.knative.dev/ingress.class"
+	caCertKey              = "konghq.com/ca-cert"
 )
 
 // ErrNotFound error is returned when a lookup results in no resource.
@@ -69,6 +70,7 @@ type Storer interface {
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
 	ListKongCredentials() []*configurationv1.KongCredential
+	ListCACerts() ([]*apiv1.Secret, error)
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -337,6 +339,29 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 		return nil, err
 	}
 	return plugins, nil
+}
+
+// ListCACerts returns all Secrets containing the label
+// "konghq.com/ca-cert"="true".
+func (s Store) ListCACerts() ([]*apiv1.Secret, error) {
+	var secrets []*apiv1.Secret
+	req, err := labels.NewRequirement(caCertKey,
+		selection.Equals, []string{"true"})
+	if err != nil {
+		return nil, err
+	}
+	err = cache.ListAll(s.stores.Secret,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			p, ok := ob.(*apiv1.Secret)
+			if ok {
+				secrets = append(secrets, p)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return secrets, nil
 }
 
 var ingressConversionScheme *runtime.Scheme

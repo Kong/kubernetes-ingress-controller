@@ -558,6 +558,43 @@ subjects:
   namespace: kong
 ---
 apiVersion: v1
+data:
+  servers.conf: |
+    # Prometheus metrics server
+    server {
+        server_name kong_prometheus_exporter;
+        listen 0.0.0.0:9542; # can be any other port as well
+        access_log off;
+
+        location /metrics {
+            default_type text/plain;
+            content_by_lua_block {
+                 local prometheus = require "kong.plugins.prometheus.exporter"
+                 prometheus:collect()
+            }
+        }
+
+        location /nginx_status {
+            internal;
+            stub_status;
+        }
+    }
+    # Health check server
+    server {
+        server_name kong_health_check;
+        listen 0.0.0.0:9001; # can be any other port as well
+
+        access_log off;
+        location /health {
+          return 200;
+        }
+    }
+kind: ConfigMap
+metadata:
+  name: kong-server-blocks
+  namespace: kong
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: kong-admin
@@ -655,7 +692,7 @@ spec:
     metadata:
       annotations:
         kuma.io/gateway: enabled
-        prometheus.io/port: "8100"
+        prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
@@ -676,12 +713,6 @@ spec:
           value: "on"
         - name: KONG_ADMIN_GUI_SESSION_CONF
           value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        - name: KONG_ADMIN_LISTEN
-          value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
         - name: KONG_DATABASE
           value: postgres
         - name: KONG_PG_HOST
@@ -690,12 +721,16 @@ spec:
           value: kong
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "1"
+        - name: KONG_NGINX_HTTP_INCLUDE
+          value: /kong/servers.conf
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_PROXY_ERROR_LOG
-          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
         image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:1.3.0.1-alpine
         lifecycle:
           preStop:
@@ -707,8 +742,8 @@ spec:
         livenessProbe:
           failureThreshold: 3
           httpGet:
-            path: /status
-            port: 8100
+            path: /health
+            port: 9001
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -728,14 +763,14 @@ spec:
         - containerPort: 8443
           name: proxy-ssl
           protocol: TCP
-        - containerPort: 8100
+        - containerPort: 9542
           name: metrics
           protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /status
-            port: 8100
+            path: /health
+            port: 9001
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -743,6 +778,9 @@ spec:
           timeoutSeconds: 1
         securityContext:
           runAsUser: 1000
+        volumeMounts:
+        - mountPath: /kong
+          name: kong-server-blocks
       - env:
         - name: CONTROLLER_KONG_ADMIN_TOKEN
           valueFrom:
@@ -813,6 +851,10 @@ spec:
         image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:1.3.0.1-alpine
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
+      volumes:
+      - configMap:
+          name: kong-server-blocks
+        name: kong-server-blocks
 ---
 apiVersion: apps/v1
 kind: StatefulSet

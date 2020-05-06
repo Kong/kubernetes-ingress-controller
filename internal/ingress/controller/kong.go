@@ -297,14 +297,6 @@ func (n *KongController) toDeckContent(
 		return strings.Compare(*content.Certificates[i].Cert, *content.Certificates[j].Cert) > 0
 	})
 
-	for _, c := range k8sState.CACertificates {
-		content.CACertificates = append(content.CACertificates,
-			file.FCACertificate{CACertificate: c})
-	}
-	sort.SliceStable(content.CACertificates, func(i, j int) bool {
-		return strings.Compare(*content.CACertificates[i].Cert, *content.CACertificates[j].Cert) > 0
-	})
-
 	for _, c := range k8sState.Consumers {
 		consumer := file.FConsumer{Consumer: c.Consumer}
 		for _, p := range c.Plugins {

@@ -158,18 +158,6 @@ func main() {
 		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
 	}
 
-	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
-		glog.Fatalf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
-			"are set. Please remove one or the other")
-	}
-	if cliConfig.KongAdminCACert != "" {
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
-		if !ok {
-			glog.Fatalf("failed to load CACert")
-		}
-		tlsConfig.RootCAs = certPool
-	}
 	if cliConfig.KongAdminCACertPath != "" {
 		certPath := cliConfig.KongAdminCACertPath
 		certPool := x509.NewCertPool()
@@ -218,11 +206,6 @@ func main() {
 	if kongDB == "off" {
 		controllerConfig.Kong.InMemory = true
 	}
-	if kongDB == "cassandra" {
-		glog.Error("running controller with kong backed by cassandra is " +
-			"deprecated; please consider using postgres or in-memory mode")
-	}
-
 	req, _ := http.NewRequest("GET",
 		cliConfig.KongAdminURL+"/tags", nil)
 	res, err := kongClient.Do(context.Background(), req, nil)
@@ -412,43 +395,14 @@ func main() {
 				Client: kongClient,
 			},
 		}
-		var cert tls.Certificate
-		if cliConfig.AdmissionWebhookCertPath != defaultAdmissionWebhookCertPath && cliConfig.AdmissionWebhookCert != "" {
-			glog.Fatalf("both --admission-webhook-cert-file and --admission-webhook-cert" +
-				"are set. Please remove one or the other")
-		}
-		if cliConfig.AdmissionWebhookKeyPath != defaultAdmissionWebhookKeyPath && cliConfig.AdmissionWebhookKey != "" {
-			glog.Fatalf("both --admission-webhook-cert-key and --admission-webhook-key" +
-				"are set. Please remove one or the other")
-		}
-		if cliConfig.AdmissionWebhookCert != "" {
-			var err error
-			cert, err = tls.X509KeyPair([]byte(cliConfig.AdmissionWebhookCert), []byte(cliConfig.AdmissionWebhookKey))
-			if err != nil {
-				glog.Fatalf("failed to load admission webhook cert: %s", err)
-			}
-		}
-		// although this is partially checked earlier, that check does not fail if it sees the default path
-		// we don't want to overwrite any certs set by admission-webhook-cert, but also don't want to run this
-		// first, as it can potentially result in a fatal error
-		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert == "" {
-			var err error
-			cert, err = tls.LoadX509KeyPair(cliConfig.AdmissionWebhookCertPath, cliConfig.AdmissionWebhookKeyPath)
-			if err != nil {
-				glog.Fatalf("failed to load admission webhook cert: %s", err)
-			}
-		}
-		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-		}
-		server := http.Server{
-			Addr:      cliConfig.AdmissionWebhookListen,
-			TLSConfig: tlsConfig,
-			Handler:   admissionServer,
-		}
 		go func() {
 			glog.Error("error running the admission controller server:",
-				server.ListenAndServeTLS("", ""))
+				http.ListenAndServeTLS(
+					cliConfig.AdmissionWebhookListen,
+					cliConfig.AdmissionWebhookCertPath,
+					cliConfig.AdmissionWebhookKeyPath,
+					admissionServer,
+				))
 		}()
 	}
 	kong.Start()

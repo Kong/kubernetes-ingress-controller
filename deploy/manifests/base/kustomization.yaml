@@ -3,5 +3,6 @@ resources:
 - custom-types.yaml
 - rbac.yaml
 - service.yaml
+- custom-server-block.yaml
 - validation-service.yaml
 - kong-ingress-dbless.yaml

@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       annotations:
-        prometheus.io/port: "8100"
+        prometheus.io/port: "9542"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
         kuma.io/gateway: enabled
@@ -28,28 +28,20 @@ spec:
         securityContext:
           runAsUser: 1000
         env:
-          # servers
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        - name: KONG_ADMIN_LISTEN
-          value: 127.0.0.1:8444 ssl
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
-          # DB
         - name: KONG_DATABASE
           value: "off"
-          # runtime tweaks
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "1"
-          # logging
+        - name: KONG_NGINX_HTTP_INCLUDE
+          value: "/kong/servers.conf"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
-        # - name: KONG_PROXY_ACCESS_LOG
-        # - value: /dev/stdout
-        - name: KONG_PROXY_ERROR_LOG
-          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 127.0.0.1:8444 ssl
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
         lifecycle:
           preStop:
             exec:
@@ -62,12 +54,12 @@ spec:
           containerPort: 8443
           protocol: TCP
         - name: metrics
-          containerPort: 8100
+          containerPort: 9542
           protocol: TCP
         livenessProbe:
           httpGet:
-            path: /status
-            port: 8100
+            path: /health
+            port: 9001
             scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 1
@@ -76,14 +68,17 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /status
-            port: 8100
+            path: /health
+            port: 9001
             scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 1
           periodSeconds: 10
           successThreshold: 1
           failureThreshold: 3
+        volumeMounts:
+        - name: kong-server-blocks
+          mountPath: /kong
       - name: ingress-controller
         env:
         - name: CONTROLLER_KONG_ADMIN_URL
@@ -128,3 +123,7 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           failureThreshold: 3
+      volumes:
+      - name: kong-server-blocks
+        configMap:
+          name: kong-server-blocks

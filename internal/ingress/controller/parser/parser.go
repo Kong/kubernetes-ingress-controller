@@ -3,8 +3,6 @@ package parser
 import (
 	"bytes"
 	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -90,12 +88,11 @@ type Consumer struct {
 
 // KongState holds the configuration that should be applied to Kong.
 type KongState struct {
-	Services       []Service
-	Upstreams      []Upstream
-	Certificates   []Certificate
-	CACertificates []kong.CACertificate
-	Plugins        []Plugin
-	Consumers      []Consumer
+	Services     []Service
+	Upstreams    []Upstream
+	Certificates []Certificate
+	Plugins      []Plugin
+	Consumers    []Consumer
 }
 
 // Certificate represents the certificate object in Kong.
@@ -129,7 +126,6 @@ var supportedCreds = sets.NewString(
 )
 
 var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
-var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
@@ -209,62 +205,7 @@ func (p *Parser) Build() (*KongState, error) {
 	// generate Certificates and SNIs
 	state.Certificates = p.getCerts(parsedInfo.SecretNameToSNIs)
 
-	// populate CA certificates in Kong
-	state.CACertificates, err = p.getCACerts()
-
 	return &state, nil
-}
-
-func (p *Parser) getCACerts() ([]kong.CACertificate, error) {
-	caCertSecrets, err := p.store.ListCACerts()
-	if err != nil {
-		return nil, err
-	}
-
-	var caCerts []kong.CACertificate
-	for _, certSecret := range caCertSecrets {
-		secretName := certSecret.Namespace + "/" + certSecret.Name
-
-		idbytes, idExists := certSecret.Data["id"]
-		if !idExists {
-			glog.Errorf("invalid CA certificate in secret '%s':"+
-				" missing 'id' field in data", secretName)
-			continue
-		}
-
-		caCertbytes, certExists := certSecret.Data["cert"]
-		if !certExists {
-			glog.Errorf("invalid CA certificate in secret '%s':"+
-				" missing 'cert' field in data", secretName)
-			continue
-		}
-
-		pemBlock, _ := pem.Decode(caCertbytes)
-		if pemBlock == nil {
-			glog.Errorf("invalid CA certificate in secret '%s':"+
-				" invalid PEM-encoded block", secretName)
-			continue
-		}
-		x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
-		if err != nil {
-			glog.Error("failed to parse certificate" + err.Error())
-			glog.Errorf("invalid CA certificate in secret '%s': %s",
-				secretName, err)
-			continue
-		}
-		if !x509Cert.IsCA {
-			glog.Errorf("invalid CA certificate in secret '%s': "+
-				"certificate is missing the 'CA' basic constraint", secretName)
-			continue
-		}
-
-		caCerts = append(caCerts, kong.CACertificate{
-			ID:   kong.String(string(idbytes)),
-			Cert: kong.String(string(caCertbytes)),
-		})
-	}
-
-	return caCerts, nil
 }
 
 func processCredential(credType string, consumer *Consumer,
@@ -884,9 +825,8 @@ func (p *Parser) fillOverrides(state KongState) {
 	for i := 0; i < len(state.Upstreams); i++ {
 		kongIngress, err := p.getKongIngressForService(
 			state.Upstreams[i].Service.K8sService)
-		anns := state.Upstreams[i].Service.K8sService.Annotations
 		if err == nil {
-			overrideUpstream(&state.Upstreams[i], kongIngress, anns)
+			overrideUpstream(&state.Upstreams[i], kongIngress)
 		} else {
 			glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
 				state.Upstreams[i].Service.Backend.Name, state.Upstreams[i].Service.Namespace))
@@ -983,22 +923,7 @@ func overrideRouteByKongIngress(route *Route,
 
 	r := kongIngress.Route
 	if len(r.Methods) != 0 {
-		invalid := false
-		var methods []*string
-		for _, method := range r.Methods {
-			sanitizedMethod := strings.TrimSpace(strings.ToUpper(*method))
-			if validMethods.MatchString(sanitizedMethod) {
-				methods = append(methods, kong.String(sanitizedMethod))
-			} else {
-				// if any method is invalid (not an uppercase alpha string),
-				// discard everything
-				glog.Errorf("invalid method found while processing '%v': %v", route.Route.Name, *method)
-				invalid = true
-			}
-		}
-		if !invalid {
-			route.Methods = methods
-		}
+		route.Methods = cloneStringPointerSlice(r.Methods...)
 	}
 	if len(r.Headers) != 0 {
 		route.Headers = r.Headers
@@ -1120,40 +1045,6 @@ func overrideRoutePreserveHost(route *kong.Route, anns map[string]string) {
 	}
 }
 
-func overrideRouteRegexPriority(route *kong.Route, anns map[string]string) {
-	priority := annotations.ExtractRegexPriority(anns)
-	if priority == "" {
-		return
-	}
-	regexPriority, err := strconv.Atoi(priority)
-	if err != nil {
-		return
-	}
-
-	route.RegexPriority = kong.Int(regexPriority)
-}
-
-func overrideRouteMethods(route *kong.Route, anns map[string]string) {
-	annMethods := annotations.ExtractMethods(anns)
-	if len(annMethods) == 0 {
-		return
-	}
-	var methods []*string
-	for _, method := range annMethods {
-		sanitizedMethod := strings.TrimSpace(strings.ToUpper(method))
-		if validMethods.MatchString(sanitizedMethod) {
-			methods = append(methods, kong.String(sanitizedMethod))
-		} else {
-			// if any method is invalid (not an uppercase alpha string),
-			// discard everything
-			glog.Errorf("invalid method found while processing '%v': %v", route.Name, method)
-			return
-		}
-	}
-
-	route.Methods = methods
-}
-
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route) {
 	anns := route.Ingress.Annotations
@@ -1164,8 +1055,6 @@ func overrideRouteByAnnotation(route *Route) {
 	overrideRouteStripPath(&route.Route, anns)
 	overrideRouteHTTPSRedirectCode(&route.Route, anns)
 	overrideRoutePreserveHost(&route.Route, anns)
-	overrideRouteRegexPriority(&route.Route, anns)
-	overrideRouteMethods(&route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation
@@ -1194,57 +1083,15 @@ func cloneStringPointerSlice(array ...*string) []*string {
 	return res
 }
 
-func overrideUpstreamHostHeader(upstream *kong.Upstream, anns map[string]string) {
-	if upstream == nil {
-		return
-	}
-	host := annotations.ExtractHostHeader(anns)
-	if host == "" {
-		return
-	}
-	upstream.HostHeader = kong.String(host)
-}
-
-// overrideUpstreamByAnnotation modifies the Kong upstream based on annotations
-// on the Kubernetes service.
-func overrideUpstreamByAnnotation(upstream *kong.Upstream,
-	anns map[string]string) {
-	if upstream == nil {
-		return
-	}
-	overrideUpstreamHostHeader(upstream, anns)
-}
-
-// overrideUpstreamByKongIngress modifies the Kong upstream based on KongIngresses
-// associated with the Kubernetes service.
-func overrideUpstreamByKongIngress(upstream *Upstream,
+func overrideUpstream(upstream *Upstream,
 	kongIngress *configurationv1.KongIngress) {
-	if upstream == nil {
+	if kongIngress == nil || kongIngress.Upstream == nil || upstream == nil {
 		return
 	}
-
-	if kongIngress == nil || kongIngress.Upstream == nil {
-		return
-	}
-
-	// The upstream within the KongIngress has no name.
-	// As this overwrites the entire upstream object, we must restore the
-	// original name after.
+	// name is the only field that is set
 	name := *upstream.Upstream.Name
 	upstream.Upstream = *kongIngress.Upstream.DeepCopy()
 	upstream.Name = &name
-}
-
-// overrideUpstream sets Upstream fields by KongIngress first, then by annotation
-func overrideUpstream(upstream *Upstream,
-	kongIngress *configurationv1.KongIngress,
-	anns map[string]string) {
-	if upstream == nil {
-		return
-	}
-
-	overrideUpstreamByKongIngress(upstream, kongIngress)
-	overrideUpstreamByAnnotation(&upstream.Upstream, anns)
 }
 
 func (p *Parser) getUpstreams(serviceMap map[string]Service) []Upstream {

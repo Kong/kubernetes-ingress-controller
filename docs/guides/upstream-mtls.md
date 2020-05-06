@@ -45,12 +45,12 @@ Please make sure that the trusted certificates are correctly
 mounted into Kong's container and the path to certificate is correctly
 reflected in the above environment variable.
 
-## Configure Kong to present it's certificate to the upstream server
+## Configure Kong to present its certificate to the upstream server
 
 In the above section, we achieved one side of mutual authentication,
 where Kong has been configured to verify the identity of the upstream server.
 
-In this section, we will configure Kong to present it's identity to the
+In this section, we will configure Kong to present its identity to the
 upstream server.
 
 To configure this, you have two options, depending on your use-case.
@@ -78,8 +78,8 @@ KONG_NGINX_PROXY_PROXY_SSL_CERTIFICATE="/path/to/client_cert.pem"
 KONG_NGINX_PROXY_PROXY_SSL_CERTIFICATE_KEY="/path/to/key.pem"
 ```
 
-Once configured, Kong will present it's client certificate to each every
-upstream server that it talks to.
+Once configured, Kong will present its client certificate to every upstream
+server that it talks to.
 
 ### Per service annotation
 

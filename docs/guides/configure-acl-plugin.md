@@ -249,8 +249,8 @@ username: plain-user
 ## Secrets
 
 Next, let's provision some Secrets for the KongConsumers to reference. Each
-ACL will need it's own Secret and each JWT public key will need it's own
-Secret. The credential type is specified in the `kongCredType` field. In this
+ACL will need its own Secret and each JWT public key will need its own Secret.
+The credential type is specified in the `kongCredType` field. In this
 case we'll be using `jwt` and `acl`. You can create a secret using any other
 method as well.
 

@@ -155,7 +155,7 @@ In the current policy, each Kong node is tracking a rate-limit in-memory
 and it will allow 5 requests to go through for a client.
 There is no synchronization of the rate-limit information across Kong nodes.
 In use-cases where rate-limiting is used as a protection mechanism and to
-avoid over-loading your services, each Kong node tracking it's own counter
+avoid over-loading your services, each Kong node tracking its own counter
 for requests is good enough as a malicious user will hit rate-limits on all
 nodes eventually.
 Or if the load-balancer in-front of Kong is performing some

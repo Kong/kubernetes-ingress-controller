@@ -102,7 +102,7 @@ func (n *KongController) syncIngress(interface{}) error {
 		return nil
 	}
 
-	// If in-memory mode, each Kong instance runs with it's own controller
+	// If in-memory mode, each Kong instance runs with its own controller
 	if !n.cfg.Kong.InMemory &&
 		!n.elector.IsLeader() {
 		glog.V(2).Infof("skipping synchronization of configuration because I am not the leader.")

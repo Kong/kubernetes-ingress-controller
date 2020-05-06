@@ -5,7 +5,7 @@ Enterprise. This architecture is described in detail in [this doc](../concepts/k
 
 We assume that we start from scratch and you don't have Kong Enterprise
 deployed. For the sake of simplicity, we will deploy Kong Enterprise and
-it's database in Kubernetes itself. You can safely run them outside
+its database in Kubernetes itself. You can safely run them outside
 Kubernetes as well.
 
 ## Table of content
@@ -88,7 +88,7 @@ $ kubectl apply -f https://bit.ly/kong-ingress-enterprise
 
 It takes a little while to bootstrap the database.
 Once bootstrapped, you should see Kong Ingress Controller running with
-Kong Enterprise as it's core:
+Kong Enterprise as its core:
 
 ```bash
 $ kubectl get pods -n kong

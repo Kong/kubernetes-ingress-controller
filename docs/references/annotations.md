@@ -355,6 +355,11 @@ address of an individual target (the Pod IP for controller-managed
 configuration). This annotation overrides the default behavior and sends
 the annotation value as the `Host` header value.
 
+If `konghq.com/preserve-host: true` is present on an Ingress (or
+`route.preserve_host: true` is present in a linked KongIngress), it will take
+precedence over this annotation, and requests to the application will use the
+hostname in the Ingress rule.
+
 Sample usage:
 
 ```yaml

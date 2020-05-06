@@ -87,7 +87,7 @@ func TestHandleSigterm(t *testing.T) {
 		t.Errorf("unexpected error sending SIGTERM signal")
 	}
 
-	// Allow test to time out if no value becomes avaialble soon enough.
+	// Allow test to time out if no value becomes availalble soon enough.
 	if code := <-exitCh; code != 1 {
 		t.Errorf("expected exit code 1 but %v received", code)
 	}

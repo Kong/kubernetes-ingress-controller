@@ -136,7 +136,7 @@ this flag can be used multiple times to specify multiple headers`)
 
 	flags.String("kong-admin-token", "",
 		`Sets the value of the 'kong-admin-token' header; useful for
-authentication/authorization for Kong Enterprise enviornments`)
+authentication/authorization for Kong Enterprise environments`)
 
 	// deprecated
 	flags.Bool("admin-tls-skip-verify", false,
@@ -222,19 +222,24 @@ func parseFlags() (cliConfig, error) {
 	flagSet := flagSet()
 
 	// glog
-	flag.Set("logtostderr", "true")
 
 	flagSet.AddGoFlagSet(flag.CommandLine)
-	flagSet.Parse(os.Args)
+	if err := flagSet.Parse(os.Args); err != nil {
+		return cliConfig{}, err
+	}
 
 	// Workaround for this issue:
 	// https://github.com/kubernetes/kubernetes/issues/17162
-	flag.CommandLine.Parse([]string{})
+	if err := flag.CommandLine.Parse([]string{}); err != nil {
+		return cliConfig{}, err
+	}
 
 	viper.SetEnvPrefix("CONTROLLER")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-	viper.BindPFlags(flagSet)
+	if err := viper.BindPFlags(flagSet); err != nil {
+		return cliConfig{}, err
+	}
 
 	for key, value := range viper.AllSettings() {
 		glog.V(2).Infof("FLAG: --%s=%q", key, value)

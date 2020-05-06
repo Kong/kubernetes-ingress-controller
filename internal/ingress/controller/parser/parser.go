@@ -147,19 +147,14 @@ func (p *Parser) Build() (*KongState, error) {
 		glog.Errorf("error listing TCPIngresses: %v", err)
 	}
 	// parse ingress rules
-	parsedInfo, err := p.parseIngressRules(ings, tcpIngresses)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing ingress rules")
-	}
+	parsedInfo := p.parseIngressRules(ings, tcpIngresses)
 
 	knativeIngresses, err := p.store.ListKnativeIngresses()
 	if err != nil {
 		glog.Errorf("error listing knative Ingresses: %v", err)
 	}
-	servicesFromKnative, err := p.parseKnativeIngressRules(knativeIngresses)
-	if err != nil {
-		glog.Errorf("error parsing Knative Ingress rules: %v", err)
-	}
+	servicesFromKnative := p.parseKnativeIngressRules(knativeIngresses)
+
 	for name, service := range servicesFromKnative {
 		parsedInfo.ServiceNameToServices[name] = service
 	}
@@ -200,34 +195,25 @@ func (p *Parser) Build() (*KongState, error) {
 	}
 
 	// generate Upstreams and Targets from service defs
-	state.Upstreams, err = p.getUpstreams(parsedInfo.ServiceNameToServices)
-	if err != nil {
-		return nil, errors.Wrap(err, "building upstreams and targets")
-	}
+	state.Upstreams = p.getUpstreams(parsedInfo.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
-	err = p.fillOverrides(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "overriding KongIngress values")
-	}
+	p.fillOverrides(state)
 
 	// generate consumers and credentials
-	err = p.fillConsumersAndCredentials(&state)
-	if err != nil {
-		return nil, errors.Wrap(err, "building consumers and credentials")
-	}
+	p.fillConsumersAndCredentials(&state)
 
 	// process annotation plugins
 	state.Plugins = p.fillPlugins(state)
 
 	// generate Certificates and SNIs
-	state.Certificates, err = p.getCerts(parsedInfo.SecretNameToSNIs)
-	if err != nil {
-		return nil, err
-	}
+	state.Certificates = p.getCerts(parsedInfo.SecretNameToSNIs)
 
 	// populate CA certificates in Kong
 	state.CACertificates, err = p.getCACerts()
+	if err != nil {
+		return nil, err
+	}
 
 	return &state, nil
 }
@@ -361,7 +347,7 @@ func decodeCredential(credConfig interface{},
 	return nil
 }
 
-func (p *Parser) fillConsumersAndCredentials(state *KongState) error {
+func (p *Parser) fillConsumersAndCredentials(state *KongState) {
 	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
@@ -463,7 +449,6 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) error {
 	for _, c := range consumerIndex {
 		state.Consumers = append(state.Consumers, c)
 	}
-	return nil
 }
 
 func filterHosts(secretNameToSNIs map[string][]string, hosts []string) []string {
@@ -516,8 +501,8 @@ func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.Ingress
 	return result
 }
 
-func (p *Parser) parseKnativeIngressRules(ingressList []*knative.Ingress) (
-	map[string]Service, error) {
+func (p *Parser) parseKnativeIngressRules(
+	ingressList []*knative.Ingress) map[string]Service {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -614,7 +599,7 @@ func (p *Parser) parseKnativeIngressRules(ingressList []*knative.Ingress) (
 		}
 	}
 
-	return services, nil
+	return services
 }
 
 func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
@@ -638,7 +623,7 @@ func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBac
 
 func (p *Parser) parseIngressRules(
 	ingressList []*networking.Ingress,
-	tcpIngressList []*configurationv1beta1.TCPIngress) (*parsedIngressRules, error) {
+	tcpIngressList []*configurationv1beta1.TCPIngress) *parsedIngressRules {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -865,10 +850,10 @@ func (p *Parser) parseIngressRules(
 	return &parsedIngressRules{
 		SecretNameToSNIs:      secretNameToSNIs,
 		ServiceNameToServices: serviceNameToServices,
-	}, nil
+	}
 }
 
-func (p *Parser) fillOverrides(state KongState) error {
+func (p *Parser) fillOverrides(state KongState) {
 	for i := 0; i < len(state.Services); i++ {
 		// Services
 		anns := state.Services[i].K8sService.Annotations
@@ -910,7 +895,6 @@ func (p *Parser) fillOverrides(state KongState) error {
 				state.Upstreams[i].Service.Backend.Name, state.Upstreams[i].Service.Namespace))
 		}
 	}
-	return nil
 }
 
 // overrideServiceByKongIngress sets Service fields by KongIngress
@@ -960,7 +944,7 @@ func overrideServiceProtocol(service *kong.Service, anns map[string]string) {
 		return
 	}
 	protocol := annotations.ExtractProtocolName(anns)
-	if protocol == "" || validateProtocol(protocol) != true {
+	if protocol == "" || !validateProtocol(protocol) {
 		return
 	}
 	service.Protocol = kong.String(protocol)
@@ -1054,7 +1038,7 @@ func normalizeProtocols(route *Route) {
 		if strings.Contains(*protocol, "http") {
 			http = true
 		}
-		if validateProtocol(*protocol) != true {
+		if !validateProtocol(*protocol) {
 			http = true
 		}
 	}
@@ -1094,7 +1078,7 @@ func overrideRouteProtocols(route *kong.Route, anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
 	var prots []*string
 	for _, prot := range protocols {
-		if validateProtocol(prot) != true {
+		if !validateProtocol(prot) {
 			return
 		}
 		prots = append(prots, kong.String(prot))
@@ -1266,7 +1250,7 @@ func overrideUpstream(upstream *Upstream,
 	overrideUpstreamByAnnotation(&upstream.Upstream, anns)
 }
 
-func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error) {
+func (p *Parser) getUpstreams(serviceMap map[string]Service) []Upstream {
 	var upstreams []Upstream
 	for _, service := range serviceMap {
 		upstreamName := service.Backend.Name + "." + service.Namespace + "." + service.Backend.Port.String() + ".svc"
@@ -1276,17 +1260,12 @@ func (p *Parser) getUpstreams(serviceMap map[string]Service) ([]Upstream, error)
 			},
 			Service: service,
 		}
-		svcKey := service.Namespace + "/" + service.Backend.Name
-		targets, err := p.getServiceEndpoints(service.K8sService,
+		targets := p.getServiceEndpoints(service.K8sService,
 			service.Backend.Port.String())
-		if err != nil {
-			glog.Errorf("error getting endpoints for '%v' service: %v",
-				svcKey, err)
-		}
 		upstream.Targets = targets
 		upstreams = append(upstreams, upstream)
 	}
-	return upstreams, nil
+	return upstreams
 }
 
 func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
@@ -1310,8 +1289,7 @@ func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
 	return cert, key, nil
 }
 
-func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
-	error) {
+func (p *Parser) getCerts(secretsToSNIs map[string][]string) []Certificate {
 	snisAdded := make(map[string]bool)
 	// map of cert public key + private key to certificate
 	type certWrapper struct {
@@ -1362,7 +1340,7 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) ([]Certificate,
 	for _, cert := range certs {
 		res = append(res, Certificate{cert.cert})
 	}
-	return res, nil
+	return res
 }
 
 type foreignRelations struct {
@@ -1489,7 +1467,7 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 		for _, rel := range getCombinations(relations) {
 			plugin := *plugin.DeepCopy()
 			// ID is populated because that is read by decK and in_memory
-			// translater too
+			// translator too
 			if rel.Service != "" {
 				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
 			}
@@ -1581,7 +1559,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 }
 
 func (p *Parser) getServiceEndpoints(svc corev1.Service,
-	backendPort string) ([]Target, error) {
+	backendPort string) []Target {
 	var targets []Target
 	var endpoints []utils.Endpoint
 	var servicePort corev1.ServicePort
@@ -1605,7 +1583,7 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 			glog.Warningf("only numeric ports are allowed in"+
 				" ExternalName services: %v is not valid as a TCP/UDP port",
 				backendPort)
-			return targets, nil
+			return targets
 		}
 
 		servicePort = corev1.ServicePort{
@@ -1629,7 +1607,7 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 		}
 		targets = append(targets, target)
 	}
-	return targets, nil
+	return targets
 }
 
 func (p *Parser) getKongIngressForService(service corev1.Service) (

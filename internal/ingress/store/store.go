@@ -368,8 +368,12 @@ var ingressConversionScheme *runtime.Scheme
 
 func init() {
 	ingressConversionScheme = runtime.NewScheme()
-	extensions.AddToScheme(ingressConversionScheme)
-	networking.AddToScheme(ingressConversionScheme)
+	if err := extensions.AddToScheme(ingressConversionScheme); err != nil {
+		panic(err)
+	}
+	if err := networking.AddToScheme(ingressConversionScheme); err != nil {
+		panic(err)
+	}
 }
 
 func networkingIngressV1Beta1(obj interface{}) *networking.Ingress {

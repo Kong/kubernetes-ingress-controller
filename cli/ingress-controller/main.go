@@ -39,8 +39,8 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
-	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
-	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
+	configclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
@@ -177,7 +177,7 @@ func main() {
 		if err != nil {
 			glog.Fatalf("failed to read CACert: %s", certPath)
 		}
-		ok := certPool.AppendCertsFromPEM([]byte(cert))
+		ok := certPool.AppendCertsFromPEM(cert)
 		if !ok {
 			glog.Fatalf("failed to load CACert: %s", certPath)
 		}
@@ -195,11 +195,14 @@ func main() {
 		glog.Fatalf("Error creating Kong Rest client: %v", err)
 	}
 
-	root, err := kongClient.Root(nil)
+	root, err := kongClient.Root(context.Background())
 	if err != nil {
 		glog.Fatalf("%v", err)
 	}
 	v, err := getSemVerVer(root["version"].(string))
+	if err != nil {
+		glog.Fatalf("Error determining Kong version: %v", err)
+	}
 
 	glog.Infof("kong version: %s", v)
 	kongConfiguration := root["configuration"].(map[string]interface{})
@@ -222,7 +225,7 @@ func main() {
 
 	req, _ := http.NewRequest("GET",
 		cliConfig.KongAdminURL+"/tags", nil)
-	res, err := kongClient.Do(nil, req, nil)
+	res, err := kongClient.Do(context.Background(), req, nil)
 	if err == nil && res.StatusCode == 200 {
 		controllerConfig.Kong.HasTagSupport = true
 	}
@@ -253,13 +256,13 @@ func main() {
 		cliConfig.SyncPeriod,
 		informers.WithNamespace(cliConfig.WatchNamespace),
 	)
-	confClient, _ := configurationclientv1.NewForConfig(kubeCfg)
+	confClient, _ := configclientv1.NewForConfig(kubeCfg)
 	controllerConfig.KongConfigClient = confClient
 
-	kongInformerFactory := configurationinformer.NewSharedInformerFactoryWithOptions(
+	kongInformerFactory := configinformer.NewSharedInformerFactoryWithOptions(
 		confClient,
 		cliConfig.SyncPeriod,
-		configurationinformer.WithNamespace(cliConfig.WatchNamespace),
+		configinformer.WithNamespace(cliConfig.WatchNamespace),
 	)
 
 	knativeClient, _ := knativeclient.NewForConfig(kubeCfg)
@@ -395,7 +398,7 @@ func main() {
 		info := utils.Info{
 			KongVersion:       root["version"].(string),
 			KICVersion:        RELEASE,
-			KubernetesVersion: fmt.Sprintf("%s", k8sVersion),
+			KubernetesVersion: k8sVersion.String(),
 			Hostname:          hostname,
 			ID:                uuid,
 			KongDB:            kongDB,
@@ -452,8 +455,6 @@ func main() {
 	wg.Wait()
 	os.Exit(<-exitCh)
 }
-
-type exiter func(code int)
 
 func handleSigterm(kong *controller.KongController, stopCh chan<- struct{}, exitCh chan<- int) {
 	signalChan := make(chan os.Signal, 1)
@@ -544,8 +545,6 @@ const (
 	// High enough Burst to fit all expected use cases. Burst=0 is not set here, because
 	// client code is overriding it.
 	defaultBurst = 1e6
-
-	fakeCertificate = "default-fake-certificate"
 )
 
 /**
@@ -570,7 +569,9 @@ func serveHTTP(enableProfiling bool, port int, mux *http.ServeMux, stop <-chan s
 	mux.HandleFunc("/build", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		b, _ := json.Marshal(version())
-		w.Write(b)
+		if _, err := w.Write(b); err != nil {
+			glog.Errorf("profiling server /build: %v", err)
+		}
 	})
 
 	mux.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {

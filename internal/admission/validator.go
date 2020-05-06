@@ -1,6 +1,7 @@
 package admission
 
 import (
+	"context"
 	"strings"
 
 	"github.com/golang/glog"
@@ -33,7 +34,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	if consumer.Username == "" {
 		return false, "username cannot be empty", nil
 	}
-	c, err := validator.Client.Consumers.Get(nil, &consumer.Username)
+	c, err := validator.Client.Consumers.Get(context.TODO(), &consumer.Username)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			return true, "", nil
@@ -74,7 +75,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if err != nil {
 		return false, "", err
 	}
-	resp, err := validator.Client.Do(nil, req, nil)
+	resp, err := validator.Client.Do(context.Background(), req, nil)
 	if err != nil {
 		return false, err.Error(), nil
 	}
@@ -146,8 +147,4 @@ func (validator KongHTTPValidator) ValidateCredential(
 	// for KongConsumer; return error if the resource is already present in
 	// Kong.
 	return true, "", nil
-}
-
-func empty(s *string) bool {
-	return s == nil && *s == ""
 }

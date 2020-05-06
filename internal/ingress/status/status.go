@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
-	configurationClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	pool "gopkg.in/go-playground/pool.v3"
@@ -67,7 +67,7 @@ type ingressLister interface {
 // Config ...
 type Config struct {
 	CoreClient       clientset.Interface
-	KongConfigClient configurationClientSet.Interface
+	KongConfigClient configClientSet.Interface
 	KnativeClient    knativeClientSet.Interface
 
 	OnStartedLeading func()
@@ -187,11 +187,14 @@ func NewStatusSyncer(config Config) Sync {
 				st.Config.OnStartedLeading()
 			}
 			go st.syncQueue.Run(time.Second, ctx.Done())
-			wait.PollUntil(updateInterval, func() (bool, error) {
+			err := wait.PollUntil(updateInterval, func() (bool, error) {
 				// send a dummy object to the queue to force a sync
 				st.syncQueue.Enqueue("sync status")
 				return false, nil
 			}, ctx.Done())
+			if err != nil {
+				glog.Errorf("status syncer: polling: %v", err)
+			}
 		},
 		OnStoppedLeading: func() {
 			glog.V(2).Infof("I am not status update leader anymore")
@@ -459,7 +462,7 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
 	status []apiv1.LoadBalancerIngress,
-	client configurationClientSet.Interface) pool.WorkFunc {
+	client configClientSet.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {
 			return nil, nil

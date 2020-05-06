@@ -1843,25 +1843,23 @@ func TestParseIngressRules(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{})
 		assert.Equal(&parsedIngressRules{
 			ServiceNameToServices: make(map[string]Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
-		assert.Nil(err)
 	})
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[0]})
 		assert.Equal(&parsedIngressRules{
 			ServiceNameToServices: make(map[string]Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
-		assert.Nil(err)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
 			ingressList[0],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -1870,10 +1868,9 @@ func TestParseIngressRules(t *testing.T) {
 
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
-		assert.Nil(err)
 	})
 	t.Run("simple TCPIngress rule is parsed", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[1]})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
@@ -1892,10 +1889,9 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		}, route.Route)
-		assert.Nil(err)
 	})
 	t.Run("TCPIngress rule with host is parsed", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[2]})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
@@ -1915,10 +1911,9 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		}, route.Route)
-		assert.Nil(err)
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
 			ingressList[0],
 			ingressList[2],
 		}, []*configurationv1beta1.TCPIngress{})
@@ -1932,65 +1927,57 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
 		assert.Equal(0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
-		assert.Nil(err)
 	})
 	t.Run("ingress rule with TLS", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
 			ingressList[1],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
-
-		assert.Nil(err)
 	})
 	t.Run("TCPIngress with TLS", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[3]})
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
-
-		assert.Nil(err)
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
 			ingressList[3],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
+		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
+			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Port)
 
-		assert.Equal("/.well-known/acme-challenge/yolo", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Hosts[0])
+		assert.Equal("/.well-known/acme-challenge/yolo",
+			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Paths[0])
+		assert.Equal("example.com",
+			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Hosts[0])
 		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
-
-		assert.Nil(err)
 	})
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
 			ingressList[4],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
-
-		assert.Nil(err)
 	})
 	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
 		assert.NotPanics(func() {
-			_, err := p.parseIngressRules([]*networking.Ingress{
+			p.parseIngressRules([]*networking.Ingress{
 				ingressList[5],
 			}, []*configurationv1beta1.TCPIngress{})
-			assert.Nil(err)
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
-		parsedInfo, err := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
 			ingressList[6],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
-		assert.Nil(err)
 	})
 }
 
@@ -2088,22 +2075,19 @@ func TestParseKnativeIngressRules(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{})
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{})
 		assert.Equal(map[string]Service{}, parsedInfo)
-		assert.Nil(err)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[0],
 		})
 		assert.Equal(map[string]Service{}, parsedInfo)
-		assert.Nil(err)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[1],
 		})
-		assert.Nil(err)
 		assert.Equal(1, len(parsedInfo))
 		svc := parsedInfo["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
@@ -2136,10 +2120,9 @@ func TestParseKnativeIngressRules(t *testing.T) {
 		}, svc.Plugins[0])
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo, err := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[2],
 		})
-		assert.Nil(err)
 		assert.Equal(1, len(parsedInfo))
 		svc := parsedInfo["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
@@ -2697,16 +2680,13 @@ func TestOverrideRoutePriority(t *testing.T) {
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
 	}
-	var kongIngress configurationv1.KongIngress
-	kongIngress = configurationv1.KongIngress{
+	kongIngress := configurationv1.KongIngress{
 		Route: &kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
 	}
 
-	var netIngress networking.Ingress
-
-	netIngress = networking.Ingress{
+	netIngress := networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"configuration.konghq.com/protocols": "grpc,grpcs",
@@ -2727,14 +2707,12 @@ func TestOverrideRoutePriority(t *testing.T) {
 
 func TestOverrideRouteByKongIngress(t *testing.T) {
 	assert := assert.New(t)
-	var route Route
-	route = Route{
+	route := Route{
 		Route: kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
 	}
-	var kongIngress configurationv1.KongIngress
-	kongIngress = configurationv1.KongIngress{
+	kongIngress := configurationv1.KongIngress{
 		Route: &kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
@@ -2755,9 +2733,7 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		},
 	}
 
-	var netIngress networking.Ingress
-
-	netIngress = networking.Ingress{
+	netIngress := networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"configuration.konghq.com/protocols": "grpc,grpcs",

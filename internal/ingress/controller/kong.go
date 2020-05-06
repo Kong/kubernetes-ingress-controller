@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"net/http"
@@ -42,12 +43,10 @@ import (
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
 func (n *KongController) OnUpdate(state *parser.KongState) error {
-	targetContent, err := n.toDeckContent(state)
-	if err != nil {
-		return err
-	}
+	targetContent := n.toDeckContent(state)
 
 	var shaSum []byte
+	var err error
 	// disable optimization if reverse sync is enabled
 	if !n.cfg.EnableReverseSync {
 		shaSum, err = generateSHA(targetContent)
@@ -147,7 +146,7 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
 
 	req.URL.RawQuery = queryString.Encode()
 
-	_, err = client.Do(nil, req, nil)
+	_, err = client.Do(context.TODO(), req, nil)
 	if err != nil {
 		return errors.Wrap(err, "posting new config to /config")
 	}
@@ -207,7 +206,7 @@ func (n *KongController) getIngressControllerTags() []string {
 }
 
 func (n *KongController) toDeckContent(
-	k8sState *parser.KongState) (*file.Content, error) {
+	k8sState *parser.KongState) *file.Content {
 	var content file.Content
 	content.FormatVersion = "1.1"
 	var err error
@@ -321,7 +320,7 @@ func (n *KongController) toDeckContent(
 		}
 	}
 
-	return &content, nil
+	return &content
 }
 func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate

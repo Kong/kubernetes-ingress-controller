@@ -120,18 +120,21 @@ type KongPlugin struct {
 // ConfigSource is a wrapper around SecretValueFromSource
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ConfigSource struct {
-	SecretValue SecretValueFromSource `json:"secretKeyRef,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	SecretValue     SecretValueFromSource `json:"secretKeyRef,omitempty"`
 }
 
 // NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type NamespacedConfigSource struct {
-	SecretValue NamespacedSecretValueFromSource `json:"secretKeyRef,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	SecretValue     NamespacedSecretValueFromSource `json:"secretKeyRef,omitempty"`
 }
 
 // SecretValueFromSource represents the source of a secret value
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SecretValueFromSource struct {
+	metav1.TypeMeta `json:",inline"`
 	// the secret containing the key
 	Secret string `json:"name,omitempty"`
 	// the key containing the value
@@ -142,6 +145,7 @@ type SecretValueFromSource struct {
 // specifying the secret namespace
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type NamespacedSecretValueFromSource struct {
+	metav1.TypeMeta `json:",inline"`
 	// The namespace containing the secret
 	Namespace string `json:"namespace,omitempty"`
 	// the secret containing the key

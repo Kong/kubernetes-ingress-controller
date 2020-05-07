@@ -279,9 +279,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "jwt-config",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
 					},
 				},
 				{
@@ -290,9 +292,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "jwt-config",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
 					},
 				},
 			}
@@ -306,10 +310,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "conf-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
 					},
 				},
 				{
@@ -318,10 +324,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "conf-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
 					},
 				},
 			}
@@ -379,9 +387,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "missing-key",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
 					},
 				},
 				{
@@ -390,9 +400,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "missing-key",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
 					},
 				},
 			}
@@ -406,10 +418,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "missing-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
 					},
 				},
 				{
@@ -418,10 +432,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "missing-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
 					},
 				},
 			}
@@ -462,9 +478,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					PluginName: "jwt",
 					Config:     configurationv1.Configuration{"fake": true},
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "jwt-config",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
 					},
 				},
 				{
@@ -474,9 +492,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					PluginName: "jwt",
 					Config:     configurationv1.Configuration{"fake": true},
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "jwt-config",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
 					},
 				},
 			}
@@ -491,10 +511,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
 					Config:     configurationv1.Configuration{"fake": true},
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "conf-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
 					},
 				},
 				{
@@ -504,10 +526,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
 					Config:     configurationv1.Configuration{"fake": true},
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "conf-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
 					},
 				},
 			}
@@ -608,9 +632,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "missing-key",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
 					},
 				},
 				{
@@ -619,9 +645,11 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.SecretValueFromSource{
-						Key:    "missing-key",
-						Secret: "conf-secret",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
 					},
 				},
 			}
@@ -635,10 +663,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "missing-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
 					},
 				},
 				{
@@ -647,10 +677,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedSecretValueFromSource{
-						Key:       "basic-auth-config",
-						Secret:    "missing-secret",
-						Namespace: "default",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
 					},
 				},
 			}

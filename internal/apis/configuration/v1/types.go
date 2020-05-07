@@ -58,7 +58,7 @@ type KongClusterPlugin struct {
 	Config Configuration `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
-	ConfigFrom NamespacedSecretValueFromSource `json:"configFrom.secretKeyRef,omitempty"`
+	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`
@@ -103,7 +103,7 @@ type KongPlugin struct {
 	Config Configuration `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
-	ConfigFrom SecretValueFromSource `json:"configFrom.secretKeyRef,omitempty"`
+	ConfigFrom ConfigSource `json:"configFrom,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`
@@ -117,7 +117,20 @@ type KongPlugin struct {
 	Protocols []string `json:"protocols,omitempty"`
 }
 
+// ConfigSource is a wrapper around SecretValueFromSource
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type ConfigSource struct {
+	SecretValue SecretValueFromSource `json:"secretKeyRef,omitempty"`
+}
+
+// NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type NamespacedConfigSource struct {
+	SecretValue NamespacedSecretValueFromSource `json:"secretKeyRef,omitempty"`
+}
+
 // SecretValueFromSource represents the source of a secret value
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SecretValueFromSource struct {
 	// the secret containing the key
 	Secret string `json:"name,omitempty"`
@@ -127,6 +140,7 @@ type SecretValueFromSource struct {
 
 // NamespacedSecretValueFromSource represents the source of a secret value,
 // specifying the secret namespace
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type NamespacedSecretValueFromSource struct {
 	// The namespace containing the secret
 	Namespace string `json:"namespace,omitempty"`

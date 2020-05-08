@@ -44,6 +44,10 @@ metadata:
 disabled: <boolean>  # optionally disable the plugin in Kong
 config:              # configuration for the plugin
     key: value
+configFrom:
+    secretKeyRef:
+       name: <Secret name>
+       key: <Secret key>
 plugin: <name-of-plugin> # like key-auth, rate-limiting etc
 ```
 
@@ -55,6 +59,11 @@ plugin: <name-of-plugin> # like key-auth, rate-limiting etc
   key in the Admin API request, goes into the  `config` YAML key in this resource.
   Please use a valid JSON to YAML convertor and place the content under the
   `config` key in the YAML above.
+- `configFrom` contains a reference to a Secret and key, where the key contains
+  a complete JSON or YAML configuration. This should be used when the plugin
+  configuration contains sensitive information, such as AWS credentials in the
+  Lambda plugin or the client secret in the OIDC plugin. Only one of `config`
+  or `configFrom` may be used in a KongPlugin, not both at once.
 - `plugin` field determines the name of the plugin in Kong.
   This field was introduced in Kong Ingress Controller 0.2.0.
 - Setting a label `global` to `"true"` will result in the plugin being
@@ -68,7 +77,9 @@ to catch user errors.
 The plugins can be associated with Ingress
 or Service object in Kubernetes using `plugins.konghq.com` annotation.
 
-*Example:*
+### Examples
+
+#### Applying a plugin to a service
 
 Given the following plugin:
 
@@ -79,6 +90,7 @@ metadata:
   name: request-id
 config:
   header_name: my-request-id
+  echo_downstream: true
 plugin: correlation-id
 ```
 
@@ -103,7 +115,9 @@ spec:
     app: myapp-service
 ```
 
-It can be applied to a specific ingress (route or routes):
+#### Applying a plugin to an ingress
+
+The KongPlugin above can be applied to a specific ingress (route or routes):
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -130,6 +144,34 @@ Please follow the
 [Using the KongPlugin resource](../guides/using-kongplugin-resource.md)
 guide for details on how to use this resource.
 
+#### Applying a plugin with a secret configuration
+
+The plugin above can be modified to store its configuration in a secret:
+
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: request-id
+configFrom:
+  secretKeyRef:
+    name: plugin-conf-secret
+    key: request-id
+plugin: correlation-id
+```
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: plugin-conf-secret
+stringData:
+  request-id: |
+    header_name: my-request-id
+    echo_downstream: true
+type: Opaque
+```
+
 ## KongClusterPlugin
 
 A `KongClusterPlugin` is same as `KongPlugin` resource. The only difference
@@ -149,8 +191,15 @@ metadata:
   name: request-id
 config:
   header_name: my-request-id
+configFrom:
+    secretKeyRef:
+       name: <Secret name>
+       key: <Secret key>
+       namespace: <Secret namespace>
 plugin: correlation-id
 ```
+
+As with KongPlugin, only one of `config` or `configFrom` can be used.
 
 ## KongIngress
 

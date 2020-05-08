@@ -68,6 +68,7 @@ Please refer to the following documents detailing this process:
 - [Annotations](references/annotations.md)
 - [CLI arguments](references/cli-arguments.md)
 - [Version compatibility matrix](references/version-compatibility.md)
+- [Plugin compatibility matrix](references/plugin-compatibility.md)
 
 ## FAQs
 

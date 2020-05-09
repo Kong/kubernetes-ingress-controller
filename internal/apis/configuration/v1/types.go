@@ -57,6 +57,9 @@ type KongClusterPlugin struct {
 	// Config contains the plugin configuration.
 	Config Configuration `json:"config,omitempty"`
 
+	// ConfigFrom references a secret containing the plugin configuration.
+	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
+
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`
 
@@ -99,6 +102,9 @@ type KongPlugin struct {
 	// Config contains the plugin configuration.
 	Config Configuration `json:"config,omitempty"`
 
+	// ConfigFrom references a secret containing the plugin configuration.
+	ConfigFrom ConfigSource `json:"configFrom,omitempty"`
+
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`
 
@@ -109,6 +115,43 @@ type KongPlugin struct {
 	// Protocols configures plugin to run on requests received on specific
 	// protocols.
 	Protocols []string `json:"protocols,omitempty"`
+}
+
+// ConfigSource is a wrapper around SecretValueFromSource
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type ConfigSource struct {
+	metav1.TypeMeta `json:",inline"`
+	SecretValue     SecretValueFromSource `json:"secretKeyRef,omitempty"`
+}
+
+// NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type NamespacedConfigSource struct {
+	metav1.TypeMeta `json:",inline"`
+	SecretValue     NamespacedSecretValueFromSource `json:"secretKeyRef,omitempty"`
+}
+
+// SecretValueFromSource represents the source of a secret value
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type SecretValueFromSource struct {
+	metav1.TypeMeta `json:",inline"`
+	// the secret containing the key
+	Secret string `json:"name,omitempty"`
+	// the key containing the value
+	Key string `json:"key,omitempty"`
+}
+
+// NamespacedSecretValueFromSource represents the source of a secret value,
+// specifying the secret namespace
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type NamespacedSecretValueFromSource struct {
+	metav1.TypeMeta `json:",inline"`
+	// The namespace containing the secret
+	Namespace string `json:"namespace,omitempty"`
+	// the secret containing the key
+	Secret string `json:"name,omitempty"`
+	// the key containing the value
+	Key string `json:"key,omitempty"`
 }
 
 // KongPluginList is a top-level list type. The client methods for lists are automatically created.

@@ -37,14 +37,11 @@ As part of sign up for Kong Enterprise, you should have received a license file.
 Save the license file temporarily to disk and execute the following:
 
 ```bash
-$ kubectl create secret generic kong-enterprise-license --from-file=./license -n kong
+$ kubectl create secret generic kong-enterprise-license --from-file=license=./license.json -n kong
 secret/kong-enterprise-license created
 ```
 
-Please note:
-
-- There is no `.json` extension in the `--from-file` parameter.
-- `-n kong` specifies the namespace in which you are deploying
+Please note that `-n kong` specifies the namespace in which you are deploying
   Kong Ingress Controller. If you are deploying in a different namespace,
   please change this value.
 

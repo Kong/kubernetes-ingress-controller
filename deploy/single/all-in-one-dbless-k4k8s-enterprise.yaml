@@ -44,18 +44,16 @@ spec:
             secretKeyRef:
               properties:
                 key:
+                  required: true
                   type: string
                 name:
+                  required: true
                   type: string
                 namespace:
+                  required: true
                   type: string
-              required:
-              - name
-              - key
-              - namespace
+              required: true
               type: object
-          required:
-          - secretKeyRef
           type: object
         disabled:
           type: boolean
@@ -382,15 +380,13 @@ spec:
             secretKeyRef:
               properties:
                 key:
+                  required: true
                   type: string
                 name:
+                  required: true
                   type: string
-              required:
-              - name
-              - key
+              required: true
               type: object
-          required:
-          - secretKeyRef
           type: object
         disabled:
           type: boolean
@@ -671,7 +667,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:2.0.2.0-alpine
+        image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:2.0.4.1-alpine
         lifecycle:
           preStop:
             exec:

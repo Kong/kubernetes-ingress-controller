@@ -44,18 +44,16 @@ spec:
           type: object
         configFrom:
           type: object
-          required:
-            - secretKeyRef
           properties:
             secretKeyRef:
               type: object
-              required:
-                - name
-                - key
+              required: true
               properties:
                 name:
+                  required: true
                   type: string
                 key:
+                  required: true
                   type: string
         run_on:
           type: string
@@ -121,22 +119,20 @@ spec:
           type: object
         configFrom:
           type: object
-          required:
-            - secretKeyRef
           properties:
             secretKeyRef:
               type: object
-              required:
-                - name
-                - key
-                - namespace
+              required: true
               properties:
                 namespace:
                   type: string
+                  required: true
                 name:
                   type: string
+                  required: true
                 key:
                   type: string
+                  required: true
         run_on:
           type: string
           enum:

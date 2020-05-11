@@ -64,4 +64,7 @@ Kong Ingress controller:
 - [Exposing TCP-based service](using-tcpingress.md)  
   This guide gives an overview of how to use TCPIngress resource to expose
   non-HTTP based services outside a Kubernetes cluster.
+- [Using mtls-auth plugin](using-mtls-auth-plugin.md)  
+  This guide gives an overview of how to use `mtls-auth` plugin and CA
+  certificates to authenticate requests using client certificates.
 

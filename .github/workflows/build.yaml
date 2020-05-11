@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'next'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.14'
+    - name: Cache Go modules
+      uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Build and push
+      run: ./ci/build-master.sh
+      evn:
+        BINTRAY_KEY: ${{  secrets.BINTRAY_KEY }}
+        BINTRAY_USER: ${{  secrets.BINTRAY_USER }}

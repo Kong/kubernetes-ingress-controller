@@ -24,7 +24,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
     - name: Build and push
-      run: ./ci/build-master.sh
+      run: ./.ci/build-master.sh
       env:
         BINTRAY_KEY: ${{  secrets.BINTRAY_KEY }}
         BINTRAY_USER: ${{  secrets.BINTRAY_USER }}

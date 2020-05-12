@@ -68,6 +68,7 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 			FilterTags:  cliConfig.KongAdminFilterTags,
 			Concurrency: cliConfig.KongAdminConcurrency,
 		},
+		KongCustomEntitiesSecret: cliConfig.KongCustomEntitiesSecret,
 
 		ResyncPeriod:      cliConfig.SyncPeriod,
 		SyncRateLimit:     cliConfig.SyncRateLimit,

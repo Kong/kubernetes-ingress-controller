@@ -67,4 +67,7 @@ Kong Ingress controller:
 - [Using mtls-auth plugin](using-mtls-auth-plugin.md)  
   This guide gives an overview of how to use `mtls-auth` plugin and CA
   certificates to authenticate requests using client certificates.
+- [Configuring custom entities in Kong](configuring-custom-entities.md)  
+  This guide gives an overview of how to configure custom entities for
+  deployments of Kong Ingress Controller running without a database.
 

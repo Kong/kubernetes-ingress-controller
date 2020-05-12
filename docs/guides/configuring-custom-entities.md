@@ -13,9 +13,12 @@ Ingress Controller.
 
 > Note: All entities shipped with Kong are supported by Kong Ingress Controller
 out of the box. This guide applies only if you have a custom entity in your
-plugin. Custom plugins have first-class support in Kong Ingress Controller
-via the `KongPlugin` CRD. Please read [this](../setting-up-custom-plugins.md)
-guide for details.
+plugin. To check if your plugin contains a custom entity, the source code
+will usually contain a `daos.lua` file.
+Custom plugins have first-class support in Kong Ingress Controller
+via the `KongPlugin` CRD.
+Please read [the custom plugin guide](../setting-up-custom-plugins.md) instead
+if you are only using Custom plugins.
 
 ## Caveats
 
@@ -93,7 +96,8 @@ Multiple instances of such an entity are represented as follows:
 
 If you have more than one custom entities that you would like to configure
 then you can create other entities by specifying the entity name at the root
-level of the JSON and then list the entities as a JSON array.
+level of the JSON as the key and then a JSON array containing the
+custom entities as the value of the key.
 
 To configure custom entities in a DB-less instance of Kong,
 you first need to create such a JSON representation of your entities.
@@ -145,10 +149,16 @@ the controller will dynamically fetch the updated secret and configure Kong.
 You can verify that the custom entity was actually created in Kong's memory
 using the `GET /xkcds` (endpoint will differ based on the name of the entity)
 on Kong's Admin API.
-For most deployments, you will need to exec inside the Kong container and
-perform:
+You can forward traffic from your local machine to the Kong Pod to access it:
+
 ```bash
-$ curl -k https://localhost:8444/<entity-name>
+$ kubectl port-forward kong/kong-pod-name 8444:8444
+```
+
+and in a separate terminal:
+
+```bash
+ $ curl -k https://localhost:8444/<entity-name>
 ```
 
 ## Using the custom entity

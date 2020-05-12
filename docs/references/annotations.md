@@ -249,7 +249,7 @@ konghq.com/https-redirect-status-code: "301"
 
 Please note the quotes (`"`) around the integer value.
 
-### `konghq.com/https-regex-priority`
+### `konghq.com/regex-priority`
 
 > Available since controller 0.9
 

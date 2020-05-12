@@ -33,9 +33,10 @@ import (
 	"github.com/hbagdi/deck/file"
 	"github.com/hbagdi/deck/solver"
 	"github.com/hbagdi/deck/state"
-	"github.com/hbagdi/deck/utils"
+	deckutils "github.com/hbagdi/deck/utils"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/pkg/errors"
 )
 
@@ -45,11 +46,21 @@ import (
 func (n *KongController) OnUpdate(state *parser.KongState) error {
 	targetContent := n.toDeckContent(state)
 
-	var shaSum []byte
+	var customEntities []byte
 	var err error
+	// process any custom entities
+	if n.cfg.InMemory && n.cfg.KongCustomEntitiesSecret != "" {
+		customEntities, err = n.fetchCustomEntities()
+		if err != nil {
+			// failure to fetch custom entities shouldn't block updates
+			glog.Error("failed to fetch custom entities: ", err)
+		}
+	}
+
+	var shaSum []byte
 	// disable optimization if reverse sync is enabled
 	if !n.cfg.EnableReverseSync {
-		shaSum, err = generateSHA(targetContent)
+		shaSum, err = generateSHA(targetContent, customEntities)
 		if err != nil {
 			return err
 		}
@@ -59,7 +70,7 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 		}
 	}
 	if n.cfg.InMemory {
-		err = n.onUpdateInMemoryMode(targetContent)
+		err = n.onUpdateInMemoryMode(targetContent, customEntities)
 	} else {
 		err = n.onUpdateDBMode(targetContent)
 	}
@@ -71,13 +82,23 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 	return nil
 }
 
-func generateSHA(targetContent *file.Content) ([]byte, error) {
+func generateSHA(targetContent *file.Content,
+	customEntities []byte) ([]byte, error) {
+
+	var buffer bytes.Buffer
+
 	jsonConfig, err := json.Marshal(targetContent)
 	if err != nil {
 		return nil, errors.Wrap(err,
 			"marshaling Kong declarative configuration to JSON")
 	}
-	shaSum := sha256.Sum256(jsonConfig)
+	buffer.Write(jsonConfig)
+
+	if customEntities != nil {
+		buffer.Write(customEntities)
+	}
+
+	shaSum := sha256.Sum256(buffer.Bytes())
 	return shaSum[:], nil
 }
 
@@ -121,7 +142,78 @@ func cleanUpNullsInPluginConfigs(state *file.Content) {
 	}
 }
 
-func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
+func renderConfigWithCustomEntities(state *file.Content,
+	customEntitiesJSONBytes []byte) ([]byte, error) {
+
+	var kongCoreConfig []byte
+	var err error
+
+	kongCoreConfig, err = json.Marshal(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "marshaling kong config into json")
+	}
+
+	// fast path
+	if len(customEntitiesJSONBytes) == 0 {
+		return kongCoreConfig, nil
+	}
+
+	// slow path
+	mergeMap := map[string]interface{}{}
+	var result []byte
+	var customEntities map[string]interface{}
+
+	// unmarshal core config into the merge map
+	err = json.Unmarshal(kongCoreConfig, &mergeMap)
+	if err != nil {
+		return nil, errors.Wrap(err,
+			"unmarshalling kong config into map[string]interface{}")
+	}
+
+	// unmarshal custom entities config into the merge map
+	err = json.Unmarshal(customEntitiesJSONBytes, &customEntities)
+	if err != nil {
+		// do not error out when custom entities are messed up
+		glog.Error(errors.Wrap(err,
+			"unmarshalling custom entities from secret data"))
+	} else {
+		for k, v := range customEntities {
+			if _, exists := mergeMap[k]; !exists {
+				mergeMap[k] = v
+			}
+		}
+	}
+
+	// construct the final configuration
+	result, err = json.Marshal(mergeMap)
+	if err != nil {
+		err = errors.Wrap(err,
+			"marshaling final config into JSON")
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (n *KongController) fetchCustomEntities() ([]byte, error) {
+	ns, name, err := utils.ParseNameNS(n.cfg.KongCustomEntitiesSecret)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing kong custom entities secret")
+	}
+	secret, err := n.store.GetSecret(ns, name)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching custom entities")
+	}
+	config, ok := secret.Data["config"]
+	if !ok {
+		return nil, errors.Errorf("'config' key not found in "+
+			"custom entities secret '%v'", n.cfg.KongCustomEntitiesSecret)
+	}
+	return config, nil
+}
+
+func (n *KongController) onUpdateInMemoryMode(state *file.Content,
+	customEntities []byte) error {
 	client := n.cfg.Kong.Client
 
 	// Kong will error out if this is set
@@ -129,11 +221,11 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content) error {
 	// Kong errors out if `null`s are present in `config` of plugins
 	cleanUpNullsInPluginConfigs(state)
 
-	config, err := json.Marshal(state)
+	config, err := renderConfigWithCustomEntities(state, customEntities)
 	if err != nil {
-		return errors.Wrap(err,
-			"marshaling Kong declarative configuration to JSON")
+		return errors.Wrap(err, "constructing kong configuration")
 	}
+
 	req, err := http.NewRequest("POST", n.cfg.Kong.URL+"/config",
 		bytes.NewReader(config))
 	if err != nil {
@@ -190,7 +282,7 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 	//client.SetDebugMode(true)
 	_, errs := solver.Solve(nil, syncer, client, n.cfg.Kong.Concurrency, false)
 	if errs != nil {
-		return utils.ErrArray{Errors: errs}
+		return deckutils.ErrArray{Errors: errs}
 	}
 	return nil
 }

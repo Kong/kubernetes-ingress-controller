@@ -50,6 +50,7 @@ Following table describes all the flags that are available:
 | --kong-admin-url                     |`string`   | `http://localhost:8001`         | The address of the Kong Admin URL to connect to in the format of `protocol://address:port`.|
 | --kong-url                           |`string`   | none                            | DEPRECATED, use `--kong-admin-url` |
 | --kong-workspace                     |`string`   | `default`                       | Workspace in Kong Enterprise to be configured.|
+| --kong-custom-entities-secret        |`string`   | none                            | Secret containing custom entities to be populated in DB-less mode, takes the form `namespace/name`.|
 | --kubeconfig                         |`string`   | none                            | Path to kubeconfig file with authorization and master location information.|
 | --log_backtrace_at                   |`string`   | none                            | When set to a file and line number holding a logging statement, such as -log_backtrace_at=gopherflakes.go:234 a stack trace will be written to the Info log whenever execution hits that statement. (Unlike with -vmodule, the ".go" must be present.)|
 | --log_dir                            |`string`   | none                            | If non-empty, write log files in this directory.|

@@ -1,15 +1,15 @@
 # Configuring Custom Entities
 
-This is an **advanced** level guide for users using custom entities in Kong.
-Most users do need to use this feature.
+This is an **advanced-level** guide for users using custom entities in Kong.
+Most users do not need to use this feature.
 
 Kong has in-built extensibility with its plugin architecture.
 Plugins in Kong have a `config` property where users can store configuration
 for any custom plugin and this suffices in most use cases.
-In some use-cases, custom entities are created in Kong via plugins
-which are used to store additional configuration.
-This guide elaborates on how such custom entities can be used Kong Ingress
-Controller.
+In some use cases, plugins define custom entities to store additional
+configuration outside the plugin instance itself.
+This guide elaborates on how such custom entities can be used with the Kong
+Ingress Controller.
 
 > Note: All entities shipped with Kong are supported by Kong Ingress Controller
 out of the box. This guide applies only if you have a custom entity in your
@@ -22,8 +22,8 @@ guide for details.
 - The feature discussed in this guide apply for DB-less deployments of Kong.
   The feature is not supported for deployments where Kong is used with a
   database or Kong is used in hybrid mode.
-  For these deployments, it is recommended to configure custom entities
-  directly using Kong's Admin API.
+  For these deployments, configure custom entities directly using Kong's Admin
+  API.
 - Custom entities which have a foreign relation with other core entities in Kong
   are not supported. Only entities which can exist by themselves and then
   be referenced via plugin configuration are supported.
@@ -33,7 +33,7 @@ guide for details.
 In this section, we will learn how to create a JSON representation of
 a custom entity.
 
-Suppose you have a custom entity in Kong with the following schema in Kong:
+Suppose you have a custom entity with the following schema in your plugin source:
 
 ```lua 
 {
@@ -62,7 +62,7 @@ Suppose you have a custom entity in Kong with the following schema in Kong:
 }
 ```
 
-An instance of such an entity would like:
+An instance of such an entity would look like:
 
 ```json
 {
@@ -111,9 +111,9 @@ secret/kong-custom-entities created
 ```
 
 Some things to note:
-- The key inside the secret should be `config`. This is not configurable at the
+- The key inside the secret must be `config`. This is not configurable at the
   moment.
-- The secret should be accessible by the Ingress Controller. The recommended
+- The secret must be accessible by the Ingress Controller. The recommended
   practice here is to install the secret in the same namespace in which Kong
   is running.
  
@@ -166,4 +166,3 @@ config:
   - d079a632-ac8d-4a9a-860c-71de82e8fc11
 plugin: xkcd-header
 ```
-

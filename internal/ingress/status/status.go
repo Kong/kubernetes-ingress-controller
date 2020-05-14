@@ -271,8 +271,14 @@ func inSlice(e string, arr []string) bool {
 }
 
 func (s *statusSync) isRunningMultiplePods() bool {
+	selectLabels := map[string]string{}
+	for k, v := range s.pod.Labels {
+		if k != "pod-template-hash" {
+			selectLabels[k] = v
+		}
+	}
 	pods, err := s.CoreClient.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(s.pod.Labels).String(),
+		LabelSelector: labels.SelectorFromSet(selectLabels).String(),
 	})
 	if err != nil {
 		return false

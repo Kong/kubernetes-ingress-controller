@@ -264,6 +264,7 @@ There are a few different ways of accomplishing this:
   where any ingress resource that is not annotated is picked up.
   Therefore with different ingress class then `kong`, you have to use that
   ingress class with every Kong CRD object (plugin, consumer) which you use.
+  You can force the honoring of only `kong` ingress class using the flag `--skip-non-annotated=true`.
 - Namespace based isolation:  
   Kong Ingress Controller supports a deployment option where it will satisfy
   Ingress resources in a specific namespace. With this model, one can deploy

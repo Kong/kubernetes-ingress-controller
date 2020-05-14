@@ -140,7 +140,7 @@ func NewFakeStore(
 
 			KnativeIngress: knativeIngressStore,
 		},
-		isValidIngresClass: annotations.IngressClassValidatorFuncFromObjectMeta("kong"),
+		isValidIngresClass: annotations.IngressClassValidatorFuncFromObjectMeta("kong", false),
 	}
 	return s, nil
 }

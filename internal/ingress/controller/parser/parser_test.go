@@ -2801,6 +2801,33 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 7
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "invalid-path",
+				Namespace: "foo-namespace",
+			},
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
+									{
+										Path: "/foo//bar",
+										Backend: networking.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	tcpIngressList := []*configurationv1beta1.TCPIngress{
 		// 0
@@ -3009,6 +3036,12 @@ func TestParseIngressRules(t *testing.T) {
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
+	})
+	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+			ingressList[7],
+		}, []*configurationv1beta1.TCPIngress{})
+		assert.Empty(parsedInfo.ServiceNameToServices)
 	})
 }
 

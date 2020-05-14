@@ -662,6 +662,12 @@ func (p *Parser) parseIngressRules(
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
+				if strings.Contains(path, "//") {
+					glog.Errorf("ingress rule skipped in Ingress'%v/%v', "+
+						"'%v' is an invalid path", ingress.Namespace,
+						ingress.Name, path)
+					continue
+				}
 				if path == "" {
 					path = "/"
 				}

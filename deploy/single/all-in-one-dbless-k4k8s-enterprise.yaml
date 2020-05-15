@@ -44,15 +44,15 @@ spec:
             secretKeyRef:
               properties:
                 key:
-                  required: true
                   type: string
                 name:
-                  required: true
                   type: string
                 namespace:
-                  required: true
                   type: string
-              required: true
+              required:
+              - name
+              - namespace
+              - key
               type: object
           type: object
         disabled:
@@ -380,12 +380,12 @@ spec:
             secretKeyRef:
               properties:
                 key:
-                  required: true
                   type: string
                 name:
-                  required: true
                   type: string
-              required: true
+              required:
+              - name
+              - key
               type: object
           type: object
         disabled:

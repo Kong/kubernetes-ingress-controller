@@ -226,6 +226,9 @@ func parseFlags() (cliConfig, error) {
 	flagSet := flagSet()
 
 	// glog
+	// The error is being ignored here for unit testing,
+	// this always errors out in unit tests but succeeds in e2e runs.
+	_ = flag.Set("logtostderr", "true")
 
 	flagSet.AddGoFlagSet(flag.CommandLine)
 	if err := flagSet.Parse(os.Args); err != nil {

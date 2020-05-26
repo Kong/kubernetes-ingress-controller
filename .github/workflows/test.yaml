@@ -22,7 +22,7 @@ jobs:
     - name: Setup golangci-lint
       run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.25.0
     - name: Run golangci-lint
-      run: golangci-lint run ./...
+      run: make lint
     - name: Verify Codegen
       run: |
         export GOPATH=$(go env GOPATH)
@@ -46,4 +46,4 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
     - name: Run tests
-      run: make test-all
+      run: make test

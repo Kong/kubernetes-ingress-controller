@@ -358,6 +358,12 @@ username: team-X
 When this resource is created, a corresponding consumer entity will be
 created in Kong.
 
+Consumers' `username` and `custom_id` values must be unique across the Kong
+cluster. While KongConsumers exist in a specific Kubernetes namespace,
+KongConsumers from all namespaces are combined into a single Kong
+configuration, and no KongConsumers with the same `kubernetes.io/ingress.class`
+may share the same `username` or `custom_id` value.
+
 ## KongCredential (Deprecated)
 
 This custom resource can be used to configure a consumer specific

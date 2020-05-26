@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.9.0](#090---20200526)
  - [0.8.1](#081---20200415)
  - [0.8.0](#080---20200325)
  - [0.7.1](#071---20200131)
@@ -19,6 +20,63 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.9.0] - 2020/05/26
+
+#### Breaking change
+
+Health-check behavior of the default manifest has been changed to use
+`status` interface of Kong instead of a simple Nginx server block.
+The change is transparent and doesn't require any additional work.
+[#634](https://github.com/Kong/kubernetes-ingress-controller/pull/634)
+
+### Deprecations
+
+Kong deployments backed by Cassandra are deprecated and will not be supported
+in future. Cassandra deployments for Ingress Controller use cases are rare
+and seldom make sense since the features that Cassandra brings are
+provided by other means in such architectures.
+[#617](https://github.com/Kong/kubernetes-ingress-controller/pull/617)
+
+#### Added
+
+- **Plugin configuration via Kubernetes Secrets**  Configuration of plugins
+  can be stored in Kubernetes Secrets and then referenced in `KongPlugin`
+  and `KongClusterPlugin` resources.
+  [#618](https://github.com/Kong/kubernetes-ingress-controller/pull/618)
+- **mTLS authentication**  The controller can configure CA Certificates
+  in Kong and these can be used by `mtls-auth` plugin in Kong. The plugin
+  is currently enterprise-only.
+  [#616](https://github.com/Kong/kubernetes-ingress-controller/pull/616)
+- **Kong Custom entities in DB-less mode** Custom entities used in
+  custom plugins can now be configured for DB-less deployments of Kong.
+  [#630](https://github.com/Kong/kubernetes-ingress-controller/pull/630)
+- **Host-header manipulation**  Host header of a request destined to a
+  Kubernetes Service can now be manipulated using the `konghq.com/host-header`
+  annotation on the `Service` resource.
+  [#597](https://github.com/Kong/kubernetes-ingress-controller/pull/597)
+- **Method-based routing**  Method based routing can be performed using the
+  Ingress resource. A new annotation `konghq.com/methods` can now be used to
+  match HTTP method in addition to HTTP `host` and `path`. This was
+  previously supported only via `KongIngress` Custom Resource.
+  [#591](https://github.com/Kong/kubernetes-ingress-controller/pull/591)
+- **New configuration options** Following new CLI flags and corresponding
+  environment variables have been added:
+  - `--admission-webhook-cert`, `--admission-webhook-key`
+    and `--kong-admin-ca-cert`. These have been added to ease configuration
+    by enabling users to supply sensitive values using `Secret`
+    references inside `PodSpec`.
+    [#628](https://github.com/Kong/kubernetes-ingress-controller/pull/628)
+  - `--kong-custom-entities-secret` flag has been added to support
+    custom entities in DB-less mode feature.
+
+#### Fixed
+
+- Some errors that were previously ignored are being caught and handled
+  correctly
+  [#635](https://github.com/Kong/kubernetes-ingress-controller/pull/635)
+- Ingress rules with consecutive slashes (`//`) are now ignored
+  [#663](https://github.com/Kong/kubernetes-ingress-controller/pull/663)
 
 ## [0.8.1] - 2020/04/15
 
@@ -695,9 +753,10 @@ Please read the changelog and test in your environment.
 
 ## [v0.0.4] and prior
 
- - The initial versions rapidly were iterated delivering
+ - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[0.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.0...0.7.1

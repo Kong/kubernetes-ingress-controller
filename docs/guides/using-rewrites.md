@@ -30,6 +30,19 @@ Server: kong/1.2.1
 
 This is expected as Kong does not yet know how to proxy the request.
 
+## Create a test Deployment
+
+To test our requests, we create an echo server Deployment, which responds to
+HTTP requests with a summary of the request contents:
+
+```bash
+$ kubectl create namespace echo
+namespace/echo created
+$ kubectl apply -n echo -f https://bit.ly/echo-service
+service/echo created
+deployment.apps/echo created
+```
+
 ## Create a Kubernetes service
 
 First, create a Kubernetes Service:
@@ -40,18 +53,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: my-service
+  namespace: echo
 spec:
   selector:
-    app: MyApp
+    app: echo
   ports:
     - name: http
       protocol: TCP
       port: 80
-      targetPort: 9376
-    - name: https
-      protocol: TCP
-      port: 443
-      targetPort: 9377
+      targetPort: 80
 " | kubectl create -f -
 ```
 
@@ -66,6 +76,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: my-app
+  namespace: echo
 spec:
   rules:
   - host: myapp.example.com
@@ -81,8 +92,8 @@ spec:
 This Ingress will create a Kong route attached to the service we created above.
 It will preserve its path but honor the service's hostname, so this request:
 
-```
-$ curl -svX GET http://myapp.example.com/myapp/foo
+```bash
+$ curl -svX GET http://myapp.example.com/myapp/foo --resolve myapp.example.com:80:$PROXY_IP
 GET /myapp/foo HTTP/1.1
 Host: myapp.example.com
 User-Agent: curl/7.70.0
@@ -97,6 +108,11 @@ User-Agent: curl/7.70.0
 Accept: */*
 ```
 
+We'll use this same cURL command in other examples as well.
+
+Actual output from cURL and the echo server will be more verbose. These
+examples are condensed to focus primarily on the path and Host header.
+
 Note that this default behavior uses `strip_path=false` on the route. This
 differs from Kong's standard default to conform with expected ingress
 controller behavior.
@@ -105,33 +121,33 @@ controller behavior.
 
 There are two options to override the default `Host` header behavior:
 
-- Add the [`konghq.com/preserve-host` annotation][0] to your Ingress, which
-  sends the route/Ingress hostname:
-  ```bash
-  $ kubectl patch ingress my-app -p '{"metadata":{"annotations":{"konghq.com/preserve-host":"true"}}}'
-  ```
-  The request upstream will now look like:
-  ```
-  GET /myapp/foo HTTP/1.1
-  Host: myapp.example.com
-  User-Agent: curl/7.70.0
-  Accept: */*
-  ```
 - Add the [`konghq.com/host-header` annotation][1] to your Service, which sets
   the `Host` header directly:
   ```bash
-  $ kubectl patch service my-service -p '{"metadata":{"annotations":{"konghq.com/host-header":"internal.myapp.example.com"}}}'
+  $ kubectl patch -n echo service my-service -p '{"metadata":{"annotations":{"konghq.com/host-header":"internal.myapp.example.com"}}}'
   ```
-  The request upstream will now look like:
+  The request upstream will now use the header from that annotation:
   ```
   GET /myapp/foo HTTP/1.1
   Host: internal.myapp.example.com
   User-Agent: curl/7.70.0
   Accept: */*
   ```
+- Add the [`konghq.com/preserve-host` annotation][0] to your Ingress, which
+  sends the route/Ingress hostname:
+  ```bash
+  $ kubectl patch -n echo ingress my-app -p '{"metadata":{"annotations":{"konghq.com/preserve-host":"true"}}}'
+  ```
+  The request upstream will now include the hostname from the Ingress rule:
+  ```
+  GET /myapp/foo HTTP/1.1
+  Host: myapp.example.com
+  User-Agent: curl/7.70.0
+  Accept: */*
+  ```
 
 The `preserve-host` annotation takes precedence, so if you add both annotations
-above, the upstream host header would be `myapp.example.com`.
+above, the upstream host header will be `myapp.example.com`.
 
 ## Rewriting the path
 
@@ -141,24 +157,25 @@ There are two options to rewrite the default path handling behavior:
   the path component of the route/Ingress, leaving the remainder of the path at
   the root:
   ```bash
-  $ kubectl patch ingress my-app -p '{"metadata":{"annotations":{"konghq.com/strip-path":"true"}}}'
+  $ kubectl patch -n echo ingress my-app -p '{"metadata":{"annotations":{"konghq.com/strip-path":"true"}}}'
   ```
-  The request upstream will now look like:
+  The request upstream will now only contain the path components not in the
+  Ingress rule:
   ```
   GET /foo HTTP/1.1
-  Host: myapp.example.com
+  Host: 10.16.4.8
   User-Agent: curl/7.70.0
   Accept: */*
   ```
 - Add the [`konghq.com/path` annotation][3] to your Service, which prepends
   that value to the upstream path:
   ```bash
-  $ kubectl patch service my-service -p '{"metadata":{"annotations":{"konghq.com/path":"/api"}}}'
+  $ kubectl patch -n echo service my-service -p '{"metadata":{"annotations":{"konghq.com/path":"/api"}}}'
   ```
-  The request upstream will now look like:
+  The request upstream will now contain a leading `/api`:
   ```
   GET /api/myapp/foo HTTP/1.1
-  Host: myapp.example.com
+  Host: 10.16.4.8
   User-Agent: curl/7.70.0
   Accept: */*
   ```

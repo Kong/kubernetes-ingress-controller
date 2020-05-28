@@ -28,6 +28,8 @@ compatibility](https://docs.konghq.com/latest/db-less-and-declarative-config/#pl
 |  jwt                    |  :white_check_mark:  |  :white_check_mark:  |
 |  key-auth               |  :white_check_mark:  |  :white_check_mark:  |
 |  oauth2                 |  :white_check_mark:  |  :x:                 |
+|  post-function          |  :white_check_mark:  |  :white_check_mark:  |
+|  pre-function           |  :white_check_mark:  |  :white_check_mark:  |
 |  prometheus             |  :white_check_mark:  |  :white_check_mark:  |
 |  proxy-cache            |  :white_check_mark:  |  :white_check_mark:  |
 |  rate-limiting          |  :white_check_mark:  |  :white_check_mark:  |
@@ -63,6 +65,8 @@ There are [two distributions of Kong Enterprise](https://github.com/Kong/kuberne
 |  jwt                             |  :white_check_mark:                        |  :white_check_mark:              |
 |  key-auth                        |  :white_check_mark:                        |  :white_check_mark:              |
 |  oauth2                          |  :white_check_mark:                        |  :x:                             |
+|  post-function                   |  :white_check_mark:                        |  :white_check_mark:              |
+|  pre-function                    |  :white_check_mark:                        |  :white_check_mark:              |
 |  prometheus                      |  :white_check_mark:                        |  :white_check_mark:              |
 |  proxy-cache                     |  :white_check_mark:                        |  :white_check_mark:              |
 |  rate-limiting                   |  :white_check_mark:                        |  :white_check_mark:              |

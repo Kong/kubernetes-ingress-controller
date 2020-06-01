@@ -1,4 +1,4 @@
-# Rewriting paths
+# Rewriting hosts and paths
 This guide demonstrates host and path rewrites using Ingress and Service configuration.
 
 ## Installation
@@ -43,6 +43,12 @@ service/echo created
 deployment.apps/echo created
 ```
 
+After completing the examples in the guide, you can clean up the example
+configuration with `kubectl delete namespace echo`.
+
+For your actual production configuration, replace `echo` with whatever
+namespace you use to run your application.
+
 ## Create a Kubernetes service
 
 First, create a Kubernetes Service:
@@ -52,7 +58,7 @@ echo "
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-service
+  name: echo
   namespace: echo
 spec:
   selector:
@@ -62,11 +68,12 @@ spec:
       protocol: TCP
       port: 80
       targetPort: 80
-" | kubectl create -f -
+" | kubectl apply -f -
 ```
 
-This Service will create a Kong service and upstream that uses the upstream IPs
-(Pod IPs) for its `Host` header and appends request paths starting at `/`.
+When referenced by an Ingress, this Service will create a Kong service and
+upstream that uses the upstream IPs (Pod IPs) for its `Host` header and appends
+request paths starting at `/`.
 
 ## Create an Ingress to expose the service at the path `/myapp` on `example.com`
 
@@ -84,7 +91,7 @@ spec:
       paths:
       - path: /myapp
         backend:
-          serviceName: my-service
+          serviceName: echo
           servicePort: 80
 ' | kubectl create -f -
 ```
@@ -124,7 +131,7 @@ There are two options to override the default `Host` header behavior:
 - Add the [`konghq.com/host-header` annotation][1] to your Service, which sets
   the `Host` header directly:
   ```bash
-  $ kubectl patch -n echo service my-service -p '{"metadata":{"annotations":{"konghq.com/host-header":"internal.myapp.example.com"}}}'
+  $ kubectl patch -n echo service echo -p '{"metadata":{"annotations":{"konghq.com/host-header":"internal.myapp.example.com"}}}'
   ```
   The request upstream will now use the header from that annotation:
   ```
@@ -170,7 +177,7 @@ There are two options to rewrite the default path handling behavior:
 - Add the [`konghq.com/path` annotation][3] to your Service, which prepends
   that value to the upstream path:
   ```bash
-  $ kubectl patch -n echo service my-service -p '{"metadata":{"annotations":{"konghq.com/path":"/api"}}}'
+  $ kubectl patch -n echo service echo -p '{"metadata":{"annotations":{"konghq.com/path":"/api"}}}'
   ```
   The request upstream will now contain a leading `/api`:
   ```

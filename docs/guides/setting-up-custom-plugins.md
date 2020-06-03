@@ -174,5 +174,29 @@ $ helm install kong/kong --values values.yaml
 $ helm install kong/kong --generate-name --set ingressController.installCRDs=false --values values.yaml
 ```
 
+Once you have setup Kong with the custom plugin installed, you can use it
+like any other plugin.
+
+First, create a `KongPlugin` custom resource:
+
+```yaml
+echo "
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: my-custom-plugin
+config:
+  header_value: "my first plugin"
+plugin: myheader
+" | kubectl apply -f -
+```
+
+and then can annotate an Ingress or Service resource to instruct
+Kong on when to execute the plugin:
+
+```yaml
+konghq.com/plugins: my-custom-plugin
+```
+
 Once you have got Kong up and running, configure your
 custom plugin via [KongPlugin resource](using-kongplugin-resource.md).

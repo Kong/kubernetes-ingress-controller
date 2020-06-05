@@ -286,7 +286,7 @@ func main() {
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
-		UpdateCh:           updateChannel,
+		UpdateCh: updateChannel,
 		IsValidIngresClass: annotations.IngressClassValidatorFunc(
 			cliConfig.IngressClass,
 			cliConfig.SkipClasslessIngressV1beta1),

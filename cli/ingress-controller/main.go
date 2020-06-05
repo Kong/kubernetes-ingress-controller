@@ -287,7 +287,9 @@ func main() {
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
 		UpdateCh:           updateChannel,
-		IsValidIngresClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass, cliConfig.SkipClasslessIngressV1beta1),
+		IsValidIngresClass: annotations.IngressClassValidatorFunc(
+			cliConfig.IngressClass,
+			cliConfig.SkipClasslessIngressV1beta1),
 	}
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores

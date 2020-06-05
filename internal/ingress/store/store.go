@@ -82,7 +82,7 @@ type Store struct {
 
 	ingressClass string
 
-	skipEmptyAnnotation bool
+	skipClasslessIngress bool
 
 	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
 }
@@ -106,12 +106,12 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, skipEmptyAnnotation bool) Storer {
+func New(cs CacheStores, ingressClass string, skipClasslessIngress bool) Storer {
 	return Store{
-		stores:              cs,
-		ingressClass:        ingressClass,
-		skipEmptyAnnotation: skipEmptyAnnotation,
-		isValidIngresClass:  annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass, skipEmptyAnnotation),
+		stores:               cs,
+		ingressClass:         ingressClass,
+		skipClasslessIngress: skipClasslessIngress,
+		isValidIngresClass:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass, skipClasslessIngress),
 	}
 }
 

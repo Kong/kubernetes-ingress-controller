@@ -27,10 +27,10 @@ import (
 
 func TestIngressClassValidatorFunc(t *testing.T) {
 	tests := []struct {
-		ingress      string
-		forceIngress bool
-		controller   string
-		isValid      bool
+		ingress              string
+		skipClasslessIngress bool
+		controller           string
+		isValid              bool
 	}{
 		{"", false, "", true},
 		{"", false, "kong", true},
@@ -41,6 +41,7 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		{"", false, "killer", false},
 		{"custom", false, "kong", false},
 		{"custom", true, "kong", false},
+		{"", true, "custom", false},
 	}
 
 	ing := &extensions.Ingress{
@@ -54,7 +55,7 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 	ing.SetAnnotations(data)
 	for _, test := range tests {
 		ing.Annotations[ingressClassKey] = test.ingress
-		f := IngressClassValidatorFunc(test.controller, test.forceIngress)
+		f := IngressClassValidatorFunc(test.controller, test.skipClasslessIngress)
 		b := f(&ing.ObjectMeta)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)

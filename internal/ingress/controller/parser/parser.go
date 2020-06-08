@@ -155,10 +155,19 @@ func (p *Parser) Build() (*KongState, error) {
 	if err != nil {
 		glog.Errorf("error listing knative Ingresses: %v", err)
 	}
-	servicesFromKnative := p.parseKnativeIngressRules(knativeIngresses)
+	servicesFromKnative, secretToSNIsFromKnative := p.parseKnativeIngressRules(knativeIngresses)
 
 	for name, service := range servicesFromKnative {
 		parsedInfo.ServiceNameToServices[name] = service
+	}
+
+	for secret, snis := range secretToSNIsFromKnative {
+		var combinedSNIs []string
+		if snisFromIngress, ok := parsedInfo.SecretNameToSNIs[secret]; ok {
+			combinedSNIs = append(combinedSNIs, snisFromIngress...)
+		}
+		combinedSNIs = append(combinedSNIs, snis...)
+		parsedInfo.SecretNameToSNIs[secret] = combinedSNIs
 	}
 
 	// populate Kubernetes Service
@@ -491,7 +500,19 @@ func processTLSSections(tlsSections []networking.IngressTLS,
 	}
 }
 
-func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
+func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []networking.IngressTLS {
+	var result []networking.IngressTLS
+
+	for _, t := range tls {
+		result = append(result, networking.IngressTLS{
+			Hosts:      t.Hosts,
+			SecretName: t.SecretName,
+		})
+	}
+	return result
+}
+
+func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
 	var result []networking.IngressTLS
 
 	for _, t := range tls {
@@ -504,7 +525,7 @@ func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.Ingress
 }
 
 func (p *Parser) parseKnativeIngressRules(
-	ingressList []*knative.Ingress) map[string]Service {
+	ingressList []*knative.Ingress) (map[string]Service, map[string][]string) {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -512,11 +533,14 @@ func (p *Parser) parseKnativeIngressRules(
 	})
 
 	services := map[string]Service{}
+	secretToSNIs := map[string][]string{}
 
 	for i := 0; i < len(ingressList); i++ {
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
+		processTLSSections(knativeIngressToNetworkingTLS(ingress.Spec.TLS),
+			ingress.Namespace, secretToSNIs)
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
@@ -601,7 +625,7 @@ func (p *Parser) parseKnativeIngressRules(
 		}
 	}
 
-	return services
+	return services, secretToSNIs
 }
 
 func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
@@ -730,7 +754,7 @@ func (p *Parser) parseIngressRules(
 		ingress := *tcpIngressList[i]
 		ingressSpec := ingress.Spec
 
-		processTLSSections(toNetworkingTLS(ingressSpec.TLS),
+		processTLSSections(tcpIngressToNetworkingTLS(ingressSpec.TLS),
 			ingress.Namespace, secretNameToSNIs)
 
 		for i, rule := range ingressSpec.Rules {

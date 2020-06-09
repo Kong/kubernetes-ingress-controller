@@ -27,8 +27,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
-	configClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	pool "gopkg.in/go-playground/pool.v3"

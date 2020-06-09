@@ -17,7 +17,7 @@ fi
 
 /tmp/code-generator/generate-groups.sh \
 all \
-${PACKAGE_NAME}/internal/client/configuration \
-${PACKAGE_NAME}/internal/apis \
+${PACKAGE_NAME}/pkg/client/configuration \
+${PACKAGE_NAME}/pkg/apis \
 "configuration:v1,v1beta1" \
 --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt

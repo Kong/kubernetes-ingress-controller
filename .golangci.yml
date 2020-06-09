@@ -1,7 +1,8 @@
 run:
   timeout: 5m
   skip-dirs:
-  - internal/client
+  - pkg/client
+  - pkg/apis
 linters:
   enable:
   - deadcode

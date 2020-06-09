@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hbagdi/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/stretchr/testify/assert"

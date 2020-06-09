@@ -1,8 +1,8 @@
 package store
 
 import (
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"

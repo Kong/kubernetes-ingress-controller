@@ -56,7 +56,7 @@ metadata:
   name: demo
 spec:
   rules:
-  - host: 34.82.120.8.xip.io
+  - host: 192.0.2.8.xip.io
     http:
       paths:
       - path: /
@@ -67,7 +67,7 @@ spec:
 ingress.extensions/demo created
 ```
 
-We are using `34.82.120.8.xip.io` as our host, you can use any domain name
+We are using `192.0.2.8.xip.io` as our host, you can use any domain name
 of your choice. A domain name is a prerequisite for this guide.
 For demo purpose, we are using [xip.io](http://xip.io)
 service to avoid setting up a DNS record.
@@ -75,7 +75,7 @@ service to avoid setting up a DNS record.
 Test the Ingress rule:
 
 ```bash
-$ curl -i 34.82.120.8.xip.io/status/200
+$ curl -i 192.0.2.8.xip.io/status/200
 HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
 Content-Length: 0
@@ -89,7 +89,7 @@ X-Kong-Proxy-Latency: 1
 Via: kong/1.2.1
 ```
 
-Next, open a browser and browse to `http://34.82.120.8.xip.io`.
+Next, open a browser and browse to `http://192.0.2.8.xip.io`.
 You should see landing page same as httpbin.org.
 
 ## Setup OIDC plugin
@@ -117,7 +117,7 @@ config:
   client_secret:
   - <client-secret>
   redirect_uri:
-  - http://34.82.120.8.xip.io
+  - http://192.0.2.8.xip.io
 plugin: openid-connect
 " | kubectl apply -f -
 kongplugin.configuration.konghq.com/global-rate-limit created

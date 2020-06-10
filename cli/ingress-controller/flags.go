@@ -32,8 +32,10 @@ import (
 )
 
 const (
-	defaultKongAdminURL  = "http://localhost:8001"
-	defaultKongFilterTag = "managed-by-ingress-controller"
+	defaultKongAdminURL             = "http://localhost:8001"
+	defaultKongFilterTag            = "managed-by-ingress-controller"
+	defaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
+	defaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
 )
 
 type cliConfig struct {
@@ -41,16 +43,20 @@ type cliConfig struct {
 	AdmissionWebhookListen   string
 	AdmissionWebhookCertPath string
 	AdmissionWebhookKeyPath  string
+	AdmissionWebhookCert     string
+	AdmissionWebhookKey      string
 
 	// Kong connection details
-	KongAdminURL           string
-	KongWorkspace          string
-	KongAdminConcurrency   int
-	KongAdminFilterTags    []string
-	KongAdminHeaders       []string
-	KongAdminTLSSkipVerify bool
-	KongAdminTLSServerName string
-	KongAdminCACertPath    string
+	KongAdminURL             string
+	KongWorkspace            string
+	KongAdminConcurrency     int
+	KongAdminFilterTags      []string
+	KongAdminHeaders         []string
+	KongAdminTLSSkipVerify   bool
+	KongAdminTLSServerName   string
+	KongAdminCACertPath      string
+	KongAdminCACert          string
+	KongCustomEntitiesSecret string
 
 	// Resource filtering
 	WatchNamespace string
@@ -87,12 +93,16 @@ func flagSet() *pflag.FlagSet {
 	flags.String("admission-webhook-listen", "off",
 		`The address to start admission controller on (ip:port).
 Setting it to 'off' disables the admission controller.`)
-	flags.String("admission-webhook-cert-file", "/admission-webhook/tls.crt",
+	flags.String("admission-webhook-cert-file", defaultAdmissionWebhookCertPath,
 		`Path to the PEM-encoded certificate file for
 TLS handshake`)
-	flags.String("admission-webhook-key-file", "/admission-webhook/tls.key",
+	flags.String("admission-webhook-key-file", defaultAdmissionWebhookKeyPath,
 		`Path to the PEM-encoded private key file for
 TLS handshake`)
+	flags.String("admission-webhook-cert", "",
+		`PEM-encoded certificate for TLS handshake`)
+	flags.String("admission-webhook-key", "",
+		`PEM-encoded private key for TLS handshake`)
 
 	// Kong connection details
 	// deprecated
@@ -155,6 +165,13 @@ Kong's Admin SSL certificate.`)
 		`Path to PEM-encoded CA certificate file to verify
 Kong's Admin SSL certificate.`)
 
+	flags.String("kong-admin-ca-cert", "",
+		`PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
+
+	flags.String("kong-custom-entities-secret", "",
+		`Secret containing custom entities that should be populated in DB-less
+mode of Kong. Takes the form of namespace/name.`)
+
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
@@ -178,7 +195,7 @@ should update the Ingress status IP/hostname.`)
 		`Indicates if the ingress controller should update the Ingress status 
 IP/hostname when the controller is being stopped.`)
 
-	// Rutnime behavior
+	// Runtime behavior
 	flags.Duration("sync-period", 600*time.Second,
 		`Relist and confirm cloud resources this often.`)
 	flags.Float32("sync-rate-limit", 0.3,
@@ -209,6 +226,9 @@ func parseFlags() (cliConfig, error) {
 	flagSet := flagSet()
 
 	// glog
+	// The error is being ignored here for unit testing,
+	// this always errors out in unit tests but succeeds in e2e runs.
+	_ = flag.Set("logtostderr", "true")
 
 	flagSet.AddGoFlagSet(flag.CommandLine)
 	if err := flagSet.Parse(os.Args); err != nil {
@@ -239,6 +259,10 @@ func parseFlags() (cliConfig, error) {
 		viper.GetString("admission-webhook-cert-file")
 	config.AdmissionWebhookKeyPath =
 		viper.GetString("admission-webhook-key-file")
+	config.AdmissionWebhookCert =
+		viper.GetString("admission-webhook-cert")
+	config.AdmissionWebhookKey =
+		viper.GetString("admission-webhook-key")
 
 	// Kong connection details
 	kongAdminURL := defaultKongAdminURL
@@ -285,6 +309,14 @@ func parseFlags() (cliConfig, error) {
 	if kongAdminCACertPath != "" {
 		config.KongAdminCACertPath = kongAdminCACertPath
 	}
+
+	kongAdminCACert := viper.GetString("kong-admin-ca-cert")
+	if kongAdminCACert != "" {
+		config.KongAdminCACert = kongAdminCACert
+	}
+
+	config.KongCustomEntitiesSecret = viper.GetString(
+		"kong-custom-entities-secret")
 
 	// Resource filtering
 	config.WatchNamespace = viper.GetString("watch-namespace")

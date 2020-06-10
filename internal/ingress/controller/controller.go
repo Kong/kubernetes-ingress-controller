@@ -67,6 +67,7 @@ type Kong struct {
 // Configuration contains all the settings required by an Ingress controller
 type Configuration struct {
 	Kong
+	KongCustomEntitiesSecret string
 
 	KubeClient       clientset.Interface
 	KongConfigClient configClientSet.Interface

@@ -39,6 +39,22 @@ spec:
       properties:
         config:
           type: object
+        configFrom:
+          properties:
+            secretKeyRef:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                namespace:
+                  type: string
+              required:
+              - name
+              - namespace
+              - key
+              type: object
+          type: object
         disabled:
           type: boolean
         plugin:
@@ -359,6 +375,19 @@ spec:
       properties:
         config:
           type: object
+        configFrom:
+          properties:
+            secretKeyRef:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+              required:
+              - name
+              - key
+              type: object
+          type: object
         disabled:
           type: boolean
         plugin:
@@ -558,43 +587,6 @@ subjects:
   namespace: kong
 ---
 apiVersion: v1
-data:
-  servers.conf: |
-    # Prometheus metrics server
-    server {
-        server_name kong_prometheus_exporter;
-        listen 0.0.0.0:9542; # can be any other port as well
-        access_log off;
-
-        location /metrics {
-            default_type text/plain;
-            content_by_lua_block {
-                 local prometheus = require "kong.plugins.prometheus.exporter"
-                 prometheus:collect()
-            }
-        }
-
-        location /nginx_status {
-            internal;
-            stub_status;
-        }
-    }
-    # Health check server
-    server {
-        server_name kong_health_check;
-        listen 0.0.0.0:9001; # can be any other port as well
-
-        access_log off;
-        location /health {
-          return 200;
-        }
-    }
-kind: ConfigMap
-metadata:
-  name: kong-server-blocks
-  namespace: kong
----
-apiVersion: v1
 kind: Service
 metadata:
   annotations:
@@ -646,7 +638,7 @@ spec:
     metadata:
       annotations:
         kuma.io/gateway: enabled
-        prometheus.io/port: "9542"
+        prometheus.io/port: "8100"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
@@ -654,20 +646,22 @@ spec:
     spec:
       containers:
       - env:
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_ADMIN_LISTEN
+          value: 127.0.0.1:8444 ssl
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
         - name: KONG_DATABASE
           value: "off"
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "1"
-        - name: KONG_NGINX_HTTP_INCLUDE
-          value: /kong/servers.conf
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_ADMIN_LISTEN
-          value: 127.0.0.1:8444 ssl
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
         image: kong:2.0
         lifecycle:
           preStop:
@@ -679,8 +673,8 @@ spec:
         livenessProbe:
           failureThreshold: 3
           httpGet:
-            path: /health
-            port: 9001
+            path: /status
+            port: 8100
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -694,14 +688,14 @@ spec:
         - containerPort: 8443
           name: proxy-ssl
           protocol: TCP
-        - containerPort: 9542
+        - containerPort: 8100
           name: metrics
           protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /health
-            port: 9001
+            path: /status
+            port: 8100
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -709,9 +703,6 @@ spec:
           timeoutSeconds: 1
         securityContext:
           runAsUser: 1000
-        volumeMounts:
-        - mountPath: /kong
-          name: kong-server-blocks
       - env:
         - name: CONTROLLER_KONG_ADMIN_URL
           value: https://127.0.0.1:8444
@@ -729,7 +720,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.8.1
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -757,7 +748,3 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
       serviceAccountName: kong-serviceaccount
-      volumes:
-      - configMap:
-          name: kong-server-blocks
-        name: kong-server-blocks

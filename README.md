@@ -1,22 +1,16 @@
+[![][kong-logo]][kong-url]
+[![Build Status](https://github.com/kong/kubernetes-ingress-controller/workflows/Test/badge.svg)](https://github.com/kong/kubernetes-ingress-controller/actions?query=branch%3Amaster+event%3Apush)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
+[![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
+
 # Kong for Kubernetes
-
-[![Build Status][badge-travis-image]][badge-travis-url]
-
 Use [Kong][kong] for Kubernetes [Ingress][ingress].  
 Configure [plugins][kong-hub], health checking,
 load balancing and more in Kong
 for Kubernetes Services, all using
 Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
-## Tables of content
-
-- [**Features**](#features)
-- [**Get started**](#get-started)
-- [**Documentation**](#documentation)
-- [**Version support matrix**](#version-support-matrix)
-- [**Master branch builds**](#master-branch-builds)
-- [**Seeking help**](#seeking-help)
-- [**License**](#license)
+[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**Master branch builds**](#master-branch-builds) | [**Seeking help**](#seeking-help)
 
 ## Features
 
@@ -65,24 +59,17 @@ $ helm install kong/kong
 $ helm install kong/kong --generate-name --set ingressController.installCRDs=false
 ```
 
-If you are setting up Kong for Kubernetes Enterprise, please
-follow along [this guide](https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/deployment/k4k8s-enterprise.md).
+Once installed, please follow the [Getting Started guide][getting-started-guide]
+to start using Ingress in your Kubernetes cluster.
 
-Follow the [Getting Started guide][getting-started-guide] to start
-using Ingress in Kubernetes.
+> Note: Kong Enterprise users, please follow along our
+[enterprise guide][k4k8s-enterprise-setup] to setup the enterprise version.
 
 ## Documentation
 
 All documentation around Kong Ingress Controller is present in this
 repository inside the [docs][docs] directory.
 Pull Requests are welcome for additions and corrections.
-
-## Version support matrix
-
-[Version compatibility doc](docs/references/version-compatibility.md)
-details on compatibility between versions of the
-controller and versions of Kong, Kong for Kubernetes Enterprise and
-Kong Enterprise.
 
 ## Master branch builds
 
@@ -111,23 +98,15 @@ Kubernetes Slack server.
 If you've spotted a bug, please open an issue
 on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
-## License
+### Community meetings
 
-```text
-Copyright 2018-2020 Kong Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
+You can join monthly meetings hosted by the maintainers of the project
+to ask questions, provide feedback or just come and say hello.
+The meeting takes place on every second Tuesday of the month
+at 10 am Pacific time.
+Please submit your contact details on the
+[online meetups](https://konghq.com/online-meetups/) page to receive
+meeting invite and Zoom links to join the meeting.
 
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/
@@ -141,3 +120,6 @@ limitations under the License.
 [badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
 [badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
 [bintray-master-builds]: https://bintray.com/kong/kubernetes-ingress-controller/master
+[kong-url]: https://konghq.com/
+[kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
+[k4k8s-enterprise-setup]: https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/deployment/k4k8s-enterprise.md

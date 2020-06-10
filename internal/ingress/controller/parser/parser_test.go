@@ -77,6 +77,63 @@ Gn+T2uCyOP4a1DTUoPyoNJXo
 -----END PRIVATE KEY-----`,
 		},
 	}
+
+	caCert1 = `-----BEGIN CERTIFICATE-----
+MIIEvjCCAqagAwIBAgIJALabx/Nup200MA0GCSqGSIb3DQEBCwUAMBMxETAPBgNV
+BAMMCFlvbG80Mi4xMCAXDTE5MDkxNTE2Mjc1M1oYDzIxMTkwODIyMTYyNzUzWjAT
+MREwDwYDVQQDDAhZb2xvNDIuMTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
+ggIBANIW67Ay0AtTeBY2mORaGet/VPL5jnBRz0zkZ4Jt7fEq3lbxYaJBnFI8wtz3
+bHLtLsxkvOFujEMY7HVd+iTqbJ7hLBtK0AdgXDjf+HMmoWM7x0PkZO+3XSqyRBbI
+YNoEaQvYBNIXrKKJbXIU6higQaXYszeN8r3+RIbcTIlZxy28msivEGfGTrNujQFc
+r/eyf+TLHbRqh0yg4Dy/U/T6fqamGhFrjupRmOMugwF/BHMH2JHhBYkkzuZLgV2u
+7Yh1S5FRlh11am5vWuRSbarnx72hkJ99rUb6szOWnJKKew8RSn3CyhXbS5cb0QRc
+ugRc33p/fMucJ4mtCJ2Om1QQe83G1iV2IBn6XJuCvYlyWH8XU0gkRxWD7ZQsl0bB
+8AFTkVsdzb94OM8Y6tWI5ybS8rwl8b3r3fjyToIWrwK4WDJQuIUx4nUHObDyw+KK
++MmqwpAXQWbNeuAc27FjuJm90yr/163aGuInNY5Wiz6CM8WhFNAi/nkEY2vcxKKx
+irSdSTkbnrmLFAYrThaq0BWTbW2mwkOatzv4R2kZzBUOiSjRLPnbyiPhI8dHLeGs
+wMxiTXwyPi8iQvaIGyN4DPaSEiZ1GbexyYFdP7sJJD8tG8iccbtJYquq3cDaPTf+
+qv5M6R/JuMqtUDheLSpBNK+8vIe5e3MtGFyrKqFXdynJtfHVAgMBAAGjEzARMA8G
+A1UdEwQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggIBAK0BmL5B1fPSMbFy8Hbc
+/ESEunt4HGaRWmZZSa/aOtTjhKyDXLLJZz3C4McugfOf9BvvmAOZU4uYjfHTnNH2
+Z3neBkdTpQuJDvrBPNoCtJns01X/nuqFaTK/Tt9ZjAcVeQmp51RwhyiD7nqOJ/7E
+Hp2rC6gH2ABXeexws4BDoZPoJktS8fzGWdFBCHzf4mCJcb4XkI+7GTYpglR818L3
+dMNJwXeuUsmxxKScBVH6rgbgcEC/6YwepLMTHB9VcH3X5VCfkDIyPYLWmvE0gKV7
+6OU91E2Rs8PzbJ3EuyQpJLxFUQp8ohv5zaNBlnMb76UJOPR6hXfst5V+e7l5Dgwv
+Dh4CeO46exmkEsB+6R3pQR8uOFtubH2snA0S3JA1ji6baP5Y9Wh9bJ5McQUgbAPE
+sCRBFoDLXOj3EgzibohC5WrxN3KIMxlQnxPl3VdQvp4gF899mn0Z9V5dAsGPbxRd
+quE+DwfXkm0Sa6Ylwqrzu2OvSVgbMliF3UnWbNsDD5KcHGIaFxVC1qkwK4cT3pyS
+58i/HAB2+P+O+MltQUDiuw0OSUFDC0IIjkDfxLVffbF+27ef9C5NG81QlwTz7TuN
+zeigcsBKooMJTszxCl6dtxSyWTj7hJWXhy9pXsm1C1QulG6uT4RwCa3m0QZoO7G+
+6Wu6lP/kodPuoNubstIuPdi2
+-----END CERTIFICATE-----`
+	caCert2 = `-----BEGIN CERTIFICATE-----
+MIIEvjCCAqagAwIBAgIJAPf5iqimiR2BMA0GCSqGSIb3DQEBCwUAMBMxETAPBgNV
+BAMMCFlvbG80Mi4yMCAXDTE5MDkxNTE2Mjc1OVoYDzIxMTkwODIyMTYyNzU5WjAT
+MREwDwYDVQQDDAhZb2xvNDIuMjCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
+ggIBANIW67Ay0AtTeBY2mORaGet/VPL5jnBRz0zkZ4Jt7fEq3lbxYaJBnFI8wtz3
+bHLtLsxkvOFujEMY7HVd+iTqbJ7hLBtK0AdgXDjf+HMmoWM7x0PkZO+3XSqyRBbI
+YNoEaQvYBNIXrKKJbXIU6higQaXYszeN8r3+RIbcTIlZxy28msivEGfGTrNujQFc
+r/eyf+TLHbRqh0yg4Dy/U/T6fqamGhFrjupRmOMugwF/BHMH2JHhBYkkzuZLgV2u
+7Yh1S5FRlh11am5vWuRSbarnx72hkJ99rUb6szOWnJKKew8RSn3CyhXbS5cb0QRc
+ugRc33p/fMucJ4mtCJ2Om1QQe83G1iV2IBn6XJuCvYlyWH8XU0gkRxWD7ZQsl0bB
+8AFTkVsdzb94OM8Y6tWI5ybS8rwl8b3r3fjyToIWrwK4WDJQuIUx4nUHObDyw+KK
++MmqwpAXQWbNeuAc27FjuJm90yr/163aGuInNY5Wiz6CM8WhFNAi/nkEY2vcxKKx
+irSdSTkbnrmLFAYrThaq0BWTbW2mwkOatzv4R2kZzBUOiSjRLPnbyiPhI8dHLeGs
+wMxiTXwyPi8iQvaIGyN4DPaSEiZ1GbexyYFdP7sJJD8tG8iccbtJYquq3cDaPTf+
+qv5M6R/JuMqtUDheLSpBNK+8vIe5e3MtGFyrKqFXdynJtfHVAgMBAAGjEzARMA8G
+A1UdEwQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggIBALNx2xaS5nv1QjEqtiCO
+EA/ZTXbs+il6cf6ZyUwFXs7d3OKx6Kk2Nr7wGgM1M5WuTyIGKtZspz9ThzYmsuN/
+UBCSKLw3X7U2fLiHJDipXboU1txasTErUTPJs/Vq4v7PWh8sMLCQH/ha4FAOXR0M
+Uie+VgSJNKoQSj7G1hzU/LZv0KdvJ45mQBCnBXrUrGgeEcRqubbkDKgdBh7dJQzW
+Xgy6rPb6H1aXbsSuRuUVv/xFHJoCdZJmqPH4JTMYRbHNS2km9nHVJzmtL6pQFe32
+24wfpue9geFndOE9bDU9/cqoRYA4Pce4V5qDL0wL9W4uPmyPDkulKNQtAvZnDA9V
+6ccYYthlTBr62UEnw7zZOnSm0q4fB2o82/6bdPwrT7WhbHZQWN7SeqYNWAbYZ1EE
+40f5IpTwZ7E5LaG62qPhKLXame7SPAaqaQ9aCTYxaWR7XSYBsvCBRanjRq0r9Tql
+T1I8lwssIgbA3XubokI+IMkLDEpCQ27niWXOZL5y2M3xyutd6PPjmEEmoHMkOrZL
+etlxzx2CCoUDXKkYW2gZKEozwBZ+eBgUj8WB5g/8jGDAI0qzYnfAgiahjGwlEUtP
+hJiPG/YFADw0m5b/8OMCZ6AXNhxjdweHniDxY2HE734Nwm9mG/7UbkdvhR05tqFh
+G4KCViLH0cXt/TgW1sYB2o9Z
+-----END CERTIFICATE-----`
 )
 
 func TestGlobalPlugin(t *testing.T) {
@@ -132,6 +189,659 @@ func TestGlobalPlugin(t *testing.T) {
 
 		assert.Equal("basic-auth", *state.Plugins[1].Name)
 		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[1].Config)
+	})
+}
+
+func TestSecretConfigurationPlugin(t *testing.T) {
+	jwtPluginConfig := `{"run_on_preflight": false}`  // JSON
+	basicAuthPluginConfig := "hide_credentials: true" // YAML
+	assert := assert.New(t)
+	stock := store.FakeObjects{
+		Services: []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "foo-svc",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+			},
+		},
+		Ingresses: []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "foo-plugin",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"plugins.konghq.com": "bar-plugin",
+					},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.net",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}}
+	t.Run("plugins with secret configuration are processed correctly",
+		func(t *testing.T) {
+			objects := stock
+			objects.KongPlugins = []*configurationv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "global-foo-plugin",
+						Namespace: "default",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					PluginName: "jwt",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					PluginName: "jwt",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
+					},
+				},
+			}
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "global-bar-plugin",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "bar-plugin",
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
+					},
+				},
+			}
+			objects.Secrets = []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						Name:      "conf-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"jwt-config":        []byte(jwtPluginConfig),
+						"basic-auth-config": []byte(basicAuthPluginConfig),
+					},
+				},
+			}
+			store, err := store.NewFakeStore(objects)
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+			assert.Equal(4, len(state.Plugins),
+				"expected four plugins to be rendered")
+
+			sort.SliceStable(state.Plugins, func(i, j int) bool {
+				return strings.Compare(*state.Plugins[i].Name,
+					*state.Plugins[j].Name) > 0
+			})
+			assert.Equal("jwt", *state.Plugins[0].Name)
+			assert.Equal(kong.Configuration{"run_on_preflight": false},
+				state.Plugins[0].Config)
+			assert.Equal("jwt", *state.Plugins[1].Name)
+			assert.Equal(kong.Configuration{"run_on_preflight": false},
+				state.Plugins[1].Config)
+
+			assert.Equal("basic-auth", *state.Plugins[2].Name)
+			assert.Equal(kong.Configuration{"hide_credentials": true},
+				state.Plugins[2].Config)
+			assert.Equal("basic-auth", *state.Plugins[3].Name)
+			assert.Equal(kong.Configuration{"hide_credentials": true},
+				state.Plugins[3].Config)
+		})
+
+	t.Run("plugins with missing secrets or keys are not constructed",
+		func(t *testing.T) {
+			objects := stock
+			objects.KongPlugins = []*configurationv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "global-foo-plugin",
+						Namespace: "default",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					PluginName: "jwt",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					PluginName: "jwt",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
+					},
+				},
+			}
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "global-bar-plugin",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "bar-plugin",
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
+					},
+				},
+			}
+			objects.Secrets = []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						Name:      "conf-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"jwt-config":        []byte(jwtPluginConfig),
+						"basic-auth-config": []byte(basicAuthPluginConfig),
+					},
+				},
+			}
+			store, err := store.NewFakeStore(objects)
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+			assert.Equal(0, len(state.Plugins),
+				"expected no plugins to be rendered")
+		})
+
+	t.Run("plugins with both config and configFrom are not constructed",
+		func(t *testing.T) {
+			objects := stock
+			objects.KongPlugins = []*configurationv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "global-foo-plugin",
+						Namespace: "default",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					PluginName: "jwt",
+					Config:     configurationv1.Configuration{"fake": true},
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					PluginName: "jwt",
+					Config:     configurationv1.Configuration{"fake": true},
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "jwt-config",
+							Secret: "conf-secret",
+						},
+					},
+				},
+			}
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "global-bar-plugin",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					Config:     configurationv1.Configuration{"fake": true},
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "bar-plugin",
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					Config:     configurationv1.Configuration{"fake": true},
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
+					},
+				},
+			}
+			objects.Secrets = []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						Name:      "conf-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"jwt-config":        []byte(jwtPluginConfig),
+						"basic-auth-config": []byte(basicAuthPluginConfig),
+					},
+				},
+			}
+			store, err := store.NewFakeStore(objects)
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+			assert.Equal(0, len(state.Plugins),
+				"expected no plugins to be rendered")
+		})
+
+	t.Run("secretToConfiguration handles valid configuration and "+
+		"discards invalid configuration", func(t *testing.T) {
+		objects := stock
+		jwtPluginConfig := `{"run_on_preflight": false}`  // JSON
+		basicAuthPluginConfig := "hide_credentials: true" // YAML
+		badJwtPluginConfig := "22222"                     // not JSON
+		badBasicAuthPluginConfig := "111111"              // not YAML
+		objects.Secrets = []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"jwt-config":            []byte(jwtPluginConfig),
+					"basic-auth-config":     []byte(basicAuthPluginConfig),
+					"bad-jwt-config":        []byte(badJwtPluginConfig),
+					"bad-basic-auth-config": []byte(badBasicAuthPluginConfig),
+				},
+			},
+		}
+		references := []*configurationv1.SecretValueFromSource{
+			{
+				Secret: "conf-secret",
+				Key:    "jwt-config",
+			},
+			{
+				Secret: "conf-secret",
+				Key:    "basic-auth-config",
+			},
+		}
+		badReferences := []*configurationv1.SecretValueFromSource{
+			{
+				Secret: "conf-secret",
+				Key:    "bad-basic-auth-config",
+			},
+			{
+				Secret: "conf-secret",
+				Key:    "bad-jwt-config",
+			},
+		}
+		store, err := store.NewFakeStore(objects)
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		for _, testcase := range references {
+			config, err := parser.secretToConfiguration(*testcase, "default")
+			assert.NotEmpty(config)
+			assert.Nil(err)
+		}
+		for _, testcase := range badReferences {
+			config, err := parser.secretToConfiguration(*testcase, "default")
+			assert.Empty(config)
+			assert.NotEmpty(err)
+		}
+	})
+	t.Run("plugins with unparsable configuration are not constructed",
+		func(t *testing.T) {
+			jwtPluginConfig := "22222"        // not JSON
+			basicAuthPluginConfig := "111111" // not YAML
+			objects := stock
+			objects.KongPlugins = []*configurationv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "global-foo-plugin",
+						Namespace: "default",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					PluginName: "jwt",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					PluginName: "jwt",
+					ConfigFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
+							Key:    "missing-key",
+							Secret: "conf-secret",
+						},
+					},
+				},
+			}
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "global-bar-plugin",
+						Labels: map[string]string{
+							"global": "true",
+						},
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "bar-plugin",
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "missing-secret",
+							Namespace: "default",
+						},
+					},
+				},
+			}
+			objects.Secrets = []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						Name:      "conf-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"jwt-config":        []byte(jwtPluginConfig),
+						"basic-auth-config": []byte(basicAuthPluginConfig),
+					},
+				},
+			}
+			store, err := store.NewFakeStore(objects)
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+			assert.Equal(0, len(state.Plugins),
+				"expected no plugins to be rendered")
+		})
+}
+
+func TestCACertificate(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("valid CACertificte is processed", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
+					"cert": []byte(caCert1),
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Secrets: secrets,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.CACertificates))
+		assert.Equal(kong.CACertificate{
+			ID:   kong.String("8214a145-a328-4c56-ab72-2973a56d4eae"),
+			Cert: kong.String(caCert1),
+		}, state.CACertificates[0])
+	})
+	t.Run("multiple CACertifictes are processed", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
+					"cert": []byte(caCert1),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
+					"cert": []byte(caCert2),
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Secrets: secrets,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(2, len(state.CACertificates))
+	})
+	t.Run("invalid CACertifictes are ignored", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
+					"cert": []byte(caCert1),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"id": []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
+					// cert is missing
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "baz",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					// id is missing
+					"cert": []byte(caCert2),
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Secrets: secrets,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.CACertificates))
+		assert.Equal(kong.CACertificate{
+			ID:   kong.String("8214a145-a328-4c56-ab72-2973a56d4eae"),
+			Cert: kong.String(caCert1),
+		}, state.CACertificates[0])
 	})
 }
 
@@ -749,6 +1459,162 @@ func TestKongRouteAnnotations(t *testing.T) {
 				RegexPriority: kong.Int(0),
 			}, state.Services[0].Routes[0].Route)
 		})
+	t.Run("regex-priority annotation is correctly processed",
+		func(t *testing.T) {
+			ingresses := []*networking.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"konghq.com/regex-priority": "10",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "example.com",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: networking.IngressBackend{
+													ServiceName: "foo-svc",
+													ServicePort: intstr.FromInt(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			services := []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc",
+						Namespace: "default",
+					},
+				},
+			}
+			store, err := store.NewFakeStore(store.FakeObjects{
+				Ingresses: ingresses,
+				Services:  services,
+			})
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+
+			assert.Equal(1, len(state.Services),
+				"expected one service to be rendered")
+			assert.Equal(kong.Service{
+				Name:           kong.String("default.foo-svc.80"),
+				Host:           kong.String("foo-svc.default.80.svc"),
+				Path:           kong.String("/"),
+				Port:           kong.Int(80),
+				ConnectTimeout: kong.Int(60000),
+				ReadTimeout:    kong.Int(60000),
+				WriteTimeout:   kong.Int(60000),
+				Retries:        kong.Int(5),
+				Protocol:       kong.String("http"),
+			}, state.Services[0].Service)
+
+			assert.Equal(1, len(state.Services[0].Routes),
+				"expected one route to be rendered")
+			assert.Equal(kong.Route{
+				Name:          kong.String("default.bar.00"),
+				StripPath:     kong.Bool(false),
+				RegexPriority: kong.Int(10),
+				Hosts:         kong.StringSlice("example.com"),
+				PreserveHost:  kong.Bool(true),
+				Paths:         kong.StringSlice("/"),
+				Protocols:     kong.StringSlice("http", "https"),
+			}, state.Services[0].Routes[0].Route)
+		})
+	t.Run("non-integer regex-priority annotation is ignored",
+		func(t *testing.T) {
+			ingresses := []*networking.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"konghq.com/regex-priority": "IAmAString",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "example.com",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: networking.IngressBackend{
+													ServiceName: "foo-svc",
+													ServicePort: intstr.FromInt(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			services := []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc",
+						Namespace: "default",
+					},
+				},
+			}
+			store, err := store.NewFakeStore(store.FakeObjects{
+				Ingresses: ingresses,
+				Services:  services,
+			})
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+
+			assert.Equal(1, len(state.Services),
+				"expected one service to be rendered")
+			assert.Equal(kong.Service{
+				Name:           kong.String("default.foo-svc.80"),
+				Host:           kong.String("foo-svc.default.80.svc"),
+				Path:           kong.String("/"),
+				Port:           kong.Int(80),
+				ConnectTimeout: kong.Int(60000),
+				ReadTimeout:    kong.Int(60000),
+				WriteTimeout:   kong.Int(60000),
+				Retries:        kong.Int(5),
+				Protocol:       kong.String("http"),
+			}, state.Services[0].Service)
+
+			assert.Equal(1, len(state.Services[0].Routes),
+				"expected one route to be rendered")
+			assert.Equal(kong.Route{
+				Name:          kong.String("default.bar.00"),
+				StripPath:     kong.Bool(false),
+				RegexPriority: kong.Int(0),
+				Hosts:         kong.StringSlice("example.com"),
+				PreserveHost:  kong.Bool(true),
+				Paths:         kong.StringSlice("/"),
+				Protocols:     kong.StringSlice("http", "https"),
+			}, state.Services[0].Routes[0].Route)
+		})
 }
 
 func TestKnativeIngressAndPlugins(t *testing.T) {
@@ -957,6 +1823,171 @@ func TestKongServiceAnnotations(t *testing.T) {
 			RegexPriority: kong.Int(0),
 		}, state.Services[0].Routes[0].Route)
 	})
+
+	t.Run("host-header annotation is correctly processed", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"configuration.konghq.com/host-header": "example.com",
+					},
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Services:  services,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+		assert.Equal(kong.Service{
+			Name:           kong.String("default.foo-svc.80"),
+			Host:           kong.String("foo-svc.default.80.svc"),
+			Path:           kong.String("/"),
+			Port:           kong.Int(80),
+			ConnectTimeout: kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			WriteTimeout:   kong.Int(60000),
+			Retries:        kong.Int(5),
+			Protocol:       kong.String("http"),
+		}, state.Services[0].Service)
+
+		assert.Equal(1, len(state.Upstreams),
+			"expected one upstream to be rendered")
+		assert.Equal(kong.Upstream{
+			Name:       kong.String("foo-svc.default.80.svc"),
+			HostHeader: kong.String("example.com"),
+		}, state.Upstreams[0].Upstream)
+
+		assert.Equal(1, len(state.Services[0].Routes),
+			"expected one route to be rendered")
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.bar.00"),
+			StripPath:     kong.Bool(false),
+			Hosts:         kong.StringSlice("example.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+			RegexPriority: kong.Int(0),
+		}, state.Services[0].Routes[0].Route)
+	})
+
+	t.Run("methods annotation is correctly processed",
+		func(t *testing.T) {
+			ingresses := []*networking.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"konghq.com/methods": "POST,GET",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "example.com",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: networking.IngressBackend{
+													ServiceName: "foo-svc",
+													ServicePort: intstr.FromInt(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			services := []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc",
+						Namespace: "default",
+					},
+				},
+			}
+			store, err := store.NewFakeStore(store.FakeObjects{
+				Ingresses: ingresses,
+				Services:  services,
+			})
+			assert.Nil(err)
+			parser := New(store)
+			state, err := parser.Build()
+			assert.Nil(err)
+			assert.NotNil(state)
+
+			assert.Equal(1, len(state.Services),
+				"expected one service to be rendered")
+			assert.Equal(kong.Service{
+				Name:           kong.String("default.foo-svc.80"),
+				Host:           kong.String("foo-svc.default.80.svc"),
+				Path:           kong.String("/"),
+				Port:           kong.Int(80),
+				ConnectTimeout: kong.Int(60000),
+				ReadTimeout:    kong.Int(60000),
+				WriteTimeout:   kong.Int(60000),
+				Retries:        kong.Int(5),
+				Protocol:       kong.String("http"),
+			}, state.Services[0].Service)
+
+			assert.Equal(1, len(state.Services[0].Routes),
+				"expected one route to be rendered")
+			assert.Equal(kong.Route{
+				Name:          kong.String("default.bar.00"),
+				StripPath:     kong.Bool(false),
+				RegexPriority: kong.Int(0),
+				Hosts:         kong.StringSlice("example.com"),
+				PreserveHost:  kong.Bool(true),
+				Paths:         kong.StringSlice("/"),
+				Protocols:     kong.StringSlice("http", "https"),
+				Methods:       kong.StringSlice("POST", "GET"),
+			}, state.Services[0].Routes[0].Route)
+		})
 }
 
 func TestDefaultBackend(t *testing.T) {
@@ -1770,6 +2801,33 @@ func TestParseIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 7
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "invalid-path",
+				Namespace: "foo-namespace",
+			},
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
+									{
+										Path: "/foo//bar",
+										Backend: networking.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	tcpIngressList := []*configurationv1beta1.TCPIngress{
 		// 0
@@ -1979,6 +3037,12 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 	})
+	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
+		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+			ingressList[7],
+		}, []*configurationv1beta1.TCPIngress{})
+		assert.Empty(parsedInfo.ServiceNameToServices)
+	})
 }
 
 func TestParseKnativeIngressRules(t *testing.T) {
@@ -2073,19 +3137,79 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 3
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "bar-ns",
+												ServiceName:      "bar-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 20,
+										},
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				TLS: []knative.IngressTLS{
+					{
+						Hosts: []string{
+							"foo.example.com",
+							"foo1.example.com",
+						},
+						SecretName: "foo-secret",
+					},
+					{
+						Hosts: []string{
+							"bar.example.com",
+							"bar1.example.com",
+						},
+						SecretName: "bar-secret",
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{})
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{})
 		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[0],
 		})
 		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[1],
 		})
 		assert.Equal(1, len(parsedInfo))
@@ -2118,9 +3242,21 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		}, svc.Plugins[0])
+
+		assert.Equal(map[string][]string{}, secretToSNIs)
+	})
+	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
+		_, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+			ingressList[3],
+		})
+
+		assert.Equal(map[string][]string{
+			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
+			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
+		}, secretToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[2],
 		})
 		assert.Equal(1, len(parsedInfo))
@@ -2153,6 +3289,8 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		}, svc.Plugins[0])
+
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 }
 
@@ -2563,6 +3701,41 @@ func TestOverrideRoute(t *testing.T) {
 			},
 			configurationv1.KongIngress{
 				Route: &kong.Route{
+					Methods: kong.StringSlice("GET   ", "post"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts:   kong.StringSlice("foo.com", "bar.com"),
+					Methods: kong.StringSlice("GET", "POST"),
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com", "bar.com"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
+					Methods: kong.StringSlice("GET", "-1"),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com", "bar.com"),
+				},
+			},
+		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com", "bar.com"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
 					HTTPSRedirectStatusCode: kong.Int(302),
 				},
 			},
@@ -2806,7 +3979,7 @@ func TestNormalizeProtocols(t *testing.T) {
 	}
 
 	assert.NotPanics(func() {
-		overrideUpstream(nil, nil)
+		overrideUpstream(nil, nil, make(map[string]string))
 	})
 }
 
@@ -2828,7 +4001,7 @@ func TestValidateProtocol(t *testing.T) {
 	}
 
 	assert.NotPanics(func() {
-		overrideUpstream(nil, nil)
+		overrideUpstream(nil, nil, make(map[string]string))
 	})
 }
 func TestOverrideUpstream(t *testing.T) {
@@ -2888,12 +4061,12 @@ func TestOverrideUpstream(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
-		overrideUpstream(&testcase.inUpstream, &testcase.inKongIngresss)
+		overrideUpstream(&testcase.inUpstream, &testcase.inKongIngresss, make(map[string]string))
 		assert.Equal(testcase.inUpstream, testcase.outUpstream)
 	}
 
 	assert.NotPanics(func() {
-		overrideUpstream(nil, nil)
+		overrideUpstream(nil, nil, make(map[string]string))
 	})
 }
 
@@ -4312,6 +5485,130 @@ func Test_overrideRoutePreserveHost(t *testing.T) {
 			overrideRoutePreserveHost(tt.args.route, tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRoutePreserveHost() got = %v, want %v", tt.args.route, tt.want)
+			}
+		})
+	}
+}
+
+func Test_overrideRouteRegexPriority(t *testing.T) {
+	type args struct {
+		route *kong.Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *kong.Route
+	}{
+		{},
+		{
+			name: "basic empty route",
+			args: args{
+				route: &kong.Route{},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "basic sanity",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/regex-priority": "10",
+				},
+			},
+			want: &kong.Route{
+				RegexPriority: kong.Int(10),
+			},
+		},
+		{
+			name: "negative integer",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/regex-priority": "-10",
+				},
+			},
+			want: &kong.Route{
+				RegexPriority: kong.Int(-10),
+			},
+		},
+		{
+			name: "random float value",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/regex-priority": "42.42",
+				},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "random string",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/regex-priority": "foo",
+				},
+			},
+			want: &kong.Route{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			overrideRouteRegexPriority(tt.args.route, tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideRouteRegexPriority() got = %v, want %v", tt.args.route, tt.want)
+			}
+		})
+	}
+}
+
+func Test_overrideRouteMethods(t *testing.T) {
+	type args struct {
+		route *kong.Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *kong.Route
+	}{
+		{},
+		{
+			name: "basic empty route",
+			args: args{
+				route: &kong.Route{},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "basic sanity",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/methods": "POST,GET",
+				},
+			},
+			want: &kong.Route{
+				Methods: kong.StringSlice("POST", "GET"),
+			},
+		},
+		{
+			name: "non-string",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"konghq.com/methods": "-10,GET",
+				},
+			},
+			want: &kong.Route{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			overrideRouteMethods(tt.args.route, tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideRouteMethods() got = %v, want %v", tt.args.route, tt.want)
 			}
 		})
 	}

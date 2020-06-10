@@ -25,6 +25,63 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type TLSPair struct {
+	Key, Cert string
+}
+
+var (
+	tlsPairs = []TLSPair{
+		{
+			Cert: `-----BEGIN CERTIFICATE-----
+MIIC2DCCAcACCQC32eFOsWpKojANBgkqhkiG9w0BAQsFADAuMRcwFQYDVQQDDA5z
+ZWN1cmUtZm9vLWJhcjETMBEGA1UECgwKa29uZ2hxLm9yZzAeFw0xODEyMTgyMTI4
+MDBaFw0xOTEyMTgyMTI4MDBaMC4xFzAVBgNVBAMMDnNlY3VyZS1mb28tYmFyMRMw
+EQYDVQQKDAprb25naHEub3JnMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
+AQEAqhl/HSwV6PbMv+cMFU9X+HuM7QbNNPh39GKa4pkxzFgiAnuuJ4jw9V/bzsEy
+S+ZIyjzo+QKB1LzmgdcX4vkdI22BjxUd9HPHdZxtv3XilbNmSk9UOl2Hh1fORJoS
+7YH+VbvVwiz5lo7qKRepbg/jcKkbs6AUE0YWFygtDLTvhP2qkphQkxZ0m8qroW91
+CWgI73Ar6U2W/YQBRI3+LwtsKo0p2ASDijvqxElQBgBIiyGIr0RZc5pkCJ1eQdDB
+2F6XaMfpeEyBj0MxypNL4S9HHfchOt55J1KOzYnUPkQnSoxp6oEjef4Q/ZCj5BRL
+EGZnTb3tbwzHZCxGtgl9KqO9pQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAKQ5BX
+kkBL+alERL31hsOgWgRiUMw+sPDtRS96ozUlPtVvAg9XFdpY4ldtWkxFcmBnhKzp
+UewjrHkf9rR16NISwUTjlGIwaJu/ACQrY15v+r301Crq2DV+GjiUJFVuT495dp/l
+0LZbt2Sh/uD+r3UNTcJpJ7jb1V0UP7FWXFj8oafsoFSgmxAPjpKQySTC54JK4AYb
+QSnWu1nQLyohnrB9qLZhe2+jOQZnkKuCcWJQ5njvU6SxT3SOKE5XaOZCezEQ6IVL
+U47YCCXsq+7wKWXBhKl4H2Ztk6x3HOC56l0noXWezsMfrou/kjwGuuViGnrjqelS
+WQ7uVeNCUBY+l+qY
+-----END CERTIFICATE-----`,
+			Key: `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCqGX8dLBXo9sy/
+5wwVT1f4e4ztBs00+Hf0YprimTHMWCICe64niPD1X9vOwTJL5kjKPOj5AoHUvOaB
+1xfi+R0jbYGPFR30c8d1nG2/deKVs2ZKT1Q6XYeHV85EmhLtgf5Vu9XCLPmWjuop
+F6luD+NwqRuzoBQTRhYXKC0MtO+E/aqSmFCTFnSbyquhb3UJaAjvcCvpTZb9hAFE
+jf4vC2wqjSnYBIOKO+rESVAGAEiLIYivRFlzmmQInV5B0MHYXpdox+l4TIGPQzHK
+k0vhL0cd9yE63nknUo7NidQ+RCdKjGnqgSN5/hD9kKPkFEsQZmdNve1vDMdkLEa2
+CX0qo72lAgMBAAECggEADxMTYNJ3Xp4Ap0EioQDXGv5YDul7ZiZe+xmCAHLzJtjo
+qq+rT3WjZRuJr1kPzAosiT+8pdTDDMdw5jDZvRO2sV0TDksgzHk2RAYI897OpdWw
+SwWcwU9oo2X0sb+1zbang5GR8BNsSxt/RQUDzu05itJx0gltvgeIDaVR2L5wO6ja
+USa8OVuj/92XtIIve9OtyK9jAzgR6LQOTFrCCEv89/vmy5Bykv4Uz8s8swZmTs3v
+XJmAmruHGuSLMfXk8lBRp/gVyNTi3uMsdph5AJbVKnra5TZLguEozZKbLdNUYk0p
++aAc7rxDcH2sPqa/7DwRvei9dvd5oB3VJlxGVgC8AQKBgQDfznRSSKAD15hoSDzt
+cKNyhLgWAL+MD0jhHKUy3x+Z9OCvf0DVnmru5HfQKq5UfT0t8VTRPGKmOtAMD4cf
+LYjIurvMvpVzQGSJfhtHQuULZTh3dfsM7xivMqSV+9txklMAakM7vGQlOQxhrScM
+21Mp5LWDU6+e2pFCrQPop0IPkQKBgQDCkVE+dou2yFuJx3uytCH1yKPSy9tkdhQH
+dGF12B5dq8MZZozAz5P9YN/COa9WjsNKDqWbEgLEksEQUq4t8SBjHnSV/D3x7rEF
+qgwii0GETYxax6gms8nueIqWZQf+0NbX7Gc5mTqeVb7v3TrhsKr0VNMFRXXQwP2E
+M/pxJq8q1QKBgQC3rH7oXLP+Ez0AMHDYSL3LKULOw/RvpMeh/9lQA6+ysTaIsP3r
+kuSdhCEUVULXEiVYhBug0FcBp3jAvSmem8cLPb0Mjkim2mzoLfeDJ1JEZODPoaLU
+fZEbj4tlj9oLvhOiXpMo/jaOGeCgdPN8aK86zXlt+wtBao0WVFnF4SalEQKBgQC1
+uLfi2SGgs/0a8B/ORoO5ZY3s4c2lRMtsMvyb7iBeaIAuByPLKZUVABe89deXxnsL
+fiaacPX41wBO2IoqCp2vNdC6DP9mKQNZQPtYgCvPAAbo+rVIgH9HpXn7AZ24FyGy
+RfAbUcv3+in9KelGxZTF4zu8HqXtNXMSuOFeMT1FiQKBgF0R+IFDGHhD4nudAQvo
+hncXsgyzK6QUzak6HmFji/CMZ6EU9q6A67JkiEWrYoKqIAKZ2Og8+Eucr/rDdGWc
+kqlmLPBJAJeUsP/9KidBjTE5mIbn/2n089VPMBvnlt2xIcuB6+zrf2NjvlcZEyKS
+Gn+T2uCyOP4a1DTUoPyoNJXo
+-----END PRIVATE KEY-----`,
+		},
+	}
+)
+
 // resetForTesting clears all flag state and sets the usage function as directed.
 // After calling resetForTesting, parse errors in flag handling will not
 // exit the program.
@@ -105,6 +162,8 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		"--admin-tls-server-name", "kong-admin.example.com",
 		"--admin-ca-cert-file", "/path/to/ca-cert",
 
+		"--kong-custom-entities-secret", "foons/foosecretname",
+
 		"--watch-namespace", "foons",
 		"--ingress-class", "kong-internal",
 		"--election-id", "new-election-id",
@@ -139,6 +198,8 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		KongAdminTLSSkipVerify: true,
 		KongAdminTLSServerName: "kong-admin.example.com",
 		KongAdminCACertPath:    "/path/to/ca-cert",
+
+		KongCustomEntitiesSecret: "foons/foosecretname",
 
 		WatchNamespace: "foons",
 		IngressClass:   "kong-internal",
@@ -178,6 +239,8 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		"CONTROLLER_ANONYMOUS_REPORTS":           "false",
 		"CONTROLLER_KONG_ADMIN_CONCURRENCY":      "100",
 		"CONTROLLER_KONG_ADMIN_TOKEN":            "my-secret-token",
+
+		"CONTROLLER_KONG_CUSTOM_ENTITIES_SECRET": "foons/barsecretname",
 	}
 	for k, v := range envs {
 		os.Setenv(k, v)
@@ -199,6 +262,8 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		KongAdminTLSSkipVerify: false,
 		KongAdminTLSServerName: "",
 		KongAdminCACertPath:    "",
+
+		KongCustomEntitiesSecret: "foons/barsecretname",
 
 		WatchNamespace: "",
 		IngressClass:   "kong",
@@ -424,4 +489,42 @@ func TestKongAdminFilterTagEnvVar(t *testing.T) {
 		conf.KongAdminFilterTags)
 
 	assert.Nil(err, "unexpected error parsing default flags")
+}
+
+// test the certificate environment variables
+// these are mutually exclusive with their _FILE partners
+// and aren't tested in the regular override test as such
+func TestEnvironmentCertificates(t *testing.T) {
+	resetForTesting(func() { t.Fatal("bad parse") })
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	assert := assert.New(t)
+
+	envs := map[string]string{
+		"CONTROLLER_ADMISSION_WEBHOOK_LISTEN": ":9001",
+		"CONTROLLER_ADMISSION_WEBHOOK_CERT":   tlsPairs[0].Cert,
+		"CONTROLLER_ADMISSION_WEBHOOK_KEY":    tlsPairs[0].Key,
+		"CONTROLLER_KONG_ADMIN_CA_CERT":       tlsPairs[0].Cert,
+	}
+	for k, v := range envs {
+		os.Setenv(k, v)
+		defer os.Unsetenv(k)
+	}
+
+	conf, err := parseFlags()
+
+	expected := cliConfig{
+		AdmissionWebhookListen:   ":9001",
+		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
+		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
+		AdmissionWebhookCert:     tlsPairs[0].Cert,
+		AdmissionWebhookKey:      tlsPairs[0].Key,
+
+		KongAdminCACert: tlsPairs[0].Cert,
+	}
+	assert.Nil(err, "unexpected error supplying certificates via environment")
+	assert.Equal(expected.AdmissionWebhookCert, conf.AdmissionWebhookCert)
+	assert.Equal(expected.AdmissionWebhookKey, conf.AdmissionWebhookKey)
+	assert.Equal(expected.KongAdminCACert, conf.KongAdminCACert)
 }

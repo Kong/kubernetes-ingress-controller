@@ -3,6 +3,9 @@ package parser
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -11,6 +14,7 @@ import (
 
 	"strconv"
 
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
@@ -88,11 +92,12 @@ type Consumer struct {
 
 // KongState holds the configuration that should be applied to Kong.
 type KongState struct {
-	Services     []Service
-	Upstreams    []Upstream
-	Certificates []Certificate
-	Plugins      []Plugin
-	Consumers    []Consumer
+	Services       []Service
+	Upstreams      []Upstream
+	Certificates   []Certificate
+	CACertificates []kong.CACertificate
+	Plugins        []Plugin
+	Consumers      []Consumer
 }
 
 // Certificate represents the certificate object in Kong.
@@ -126,6 +131,7 @@ var supportedCreds = sets.NewString(
 )
 
 var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
+var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
 // New returns a new parser backed with store.
 func New(store store.Storer) Parser {
@@ -149,10 +155,19 @@ func (p *Parser) Build() (*KongState, error) {
 	if err != nil {
 		glog.Errorf("error listing knative Ingresses: %v", err)
 	}
-	servicesFromKnative := p.parseKnativeIngressRules(knativeIngresses)
+	servicesFromKnative, secretToSNIsFromKnative := p.parseKnativeIngressRules(knativeIngresses)
 
 	for name, service := range servicesFromKnative {
 		parsedInfo.ServiceNameToServices[name] = service
+	}
+
+	for secret, snis := range secretToSNIsFromKnative {
+		var combinedSNIs []string
+		if snisFromIngress, ok := parsedInfo.SecretNameToSNIs[secret]; ok {
+			combinedSNIs = append(combinedSNIs, snisFromIngress...)
+		}
+		combinedSNIs = append(combinedSNIs, snis...)
+		parsedInfo.SecretNameToSNIs[secret] = combinedSNIs
 	}
 
 	// populate Kubernetes Service
@@ -205,7 +220,65 @@ func (p *Parser) Build() (*KongState, error) {
 	// generate Certificates and SNIs
 	state.Certificates = p.getCerts(parsedInfo.SecretNameToSNIs)
 
+	// populate CA certificates in Kong
+	state.CACertificates, err = p.getCACerts()
+	if err != nil {
+		return nil, err
+	}
+
 	return &state, nil
+}
+
+func (p *Parser) getCACerts() ([]kong.CACertificate, error) {
+	caCertSecrets, err := p.store.ListCACerts()
+	if err != nil {
+		return nil, err
+	}
+
+	var caCerts []kong.CACertificate
+	for _, certSecret := range caCertSecrets {
+		secretName := certSecret.Namespace + "/" + certSecret.Name
+
+		idbytes, idExists := certSecret.Data["id"]
+		if !idExists {
+			glog.Errorf("invalid CA certificate in secret '%s':"+
+				" missing 'id' field in data", secretName)
+			continue
+		}
+
+		caCertbytes, certExists := certSecret.Data["cert"]
+		if !certExists {
+			glog.Errorf("invalid CA certificate in secret '%s':"+
+				" missing 'cert' field in data", secretName)
+			continue
+		}
+
+		pemBlock, _ := pem.Decode(caCertbytes)
+		if pemBlock == nil {
+			glog.Errorf("invalid CA certificate in secret '%s':"+
+				" invalid PEM-encoded block", secretName)
+			continue
+		}
+		x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
+		if err != nil {
+			glog.Error("failed to parse certificate" + err.Error())
+			glog.Errorf("invalid CA certificate in secret '%s': %s",
+				secretName, err)
+			continue
+		}
+		if !x509Cert.IsCA {
+			glog.Errorf("invalid CA certificate in secret '%s': "+
+				"certificate is missing the 'CA' basic constraint", secretName)
+			continue
+		}
+
+		caCerts = append(caCerts, kong.CACertificate{
+			ID:   kong.String(string(idbytes)),
+			Cert: kong.String(string(caCertbytes)),
+		})
+	}
+
+	return caCerts, nil
 }
 
 func processCredential(credType string, consumer *Consumer,
@@ -427,7 +500,19 @@ func processTLSSections(tlsSections []networking.IngressTLS,
 	}
 }
 
-func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
+func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []networking.IngressTLS {
+	var result []networking.IngressTLS
+
+	for _, t := range tls {
+		result = append(result, networking.IngressTLS{
+			Hosts:      t.Hosts,
+			SecretName: t.SecretName,
+		})
+	}
+	return result
+}
+
+func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
 	var result []networking.IngressTLS
 
 	for _, t := range tls {
@@ -440,7 +525,7 @@ func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.Ingress
 }
 
 func (p *Parser) parseKnativeIngressRules(
-	ingressList []*knative.Ingress) map[string]Service {
+	ingressList []*knative.Ingress) (map[string]Service, map[string][]string) {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -448,11 +533,14 @@ func (p *Parser) parseKnativeIngressRules(
 	})
 
 	services := map[string]Service{}
+	secretToSNIs := map[string][]string{}
 
 	for i := 0; i < len(ingressList); i++ {
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
+		processTLSSections(knativeIngressToNetworkingTLS(ingress.Spec.TLS),
+			ingress.Namespace, secretToSNIs)
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
@@ -537,7 +625,7 @@ func (p *Parser) parseKnativeIngressRules(
 		}
 	}
 
-	return services
+	return services, secretToSNIs
 }
 
 func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
@@ -598,6 +686,12 @@ func (p *Parser) parseIngressRules(
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
+				if strings.Contains(path, "//") {
+					glog.Errorf("ingress rule skipped in Ingress'%v/%v', "+
+						"'%v' is an invalid path", ingress.Namespace,
+						ingress.Name, path)
+					continue
+				}
 				if path == "" {
 					path = "/"
 				}
@@ -660,7 +754,7 @@ func (p *Parser) parseIngressRules(
 		ingress := *tcpIngressList[i]
 		ingressSpec := ingress.Spec
 
-		processTLSSections(toNetworkingTLS(ingressSpec.TLS),
+		processTLSSections(tcpIngressToNetworkingTLS(ingressSpec.TLS),
 			ingress.Namespace, secretNameToSNIs)
 
 		for i, rule := range ingressSpec.Rules {
@@ -825,8 +919,9 @@ func (p *Parser) fillOverrides(state KongState) {
 	for i := 0; i < len(state.Upstreams); i++ {
 		kongIngress, err := p.getKongIngressForService(
 			state.Upstreams[i].Service.K8sService)
+		anns := state.Upstreams[i].Service.K8sService.Annotations
 		if err == nil {
-			overrideUpstream(&state.Upstreams[i], kongIngress)
+			overrideUpstream(&state.Upstreams[i], kongIngress, anns)
 		} else {
 			glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
 				state.Upstreams[i].Service.Backend.Name, state.Upstreams[i].Service.Namespace))
@@ -923,7 +1018,22 @@ func overrideRouteByKongIngress(route *Route,
 
 	r := kongIngress.Route
 	if len(r.Methods) != 0 {
-		route.Methods = cloneStringPointerSlice(r.Methods...)
+		invalid := false
+		var methods []*string
+		for _, method := range r.Methods {
+			sanitizedMethod := strings.TrimSpace(strings.ToUpper(*method))
+			if validMethods.MatchString(sanitizedMethod) {
+				methods = append(methods, kong.String(sanitizedMethod))
+			} else {
+				// if any method is invalid (not an uppercase alpha string),
+				// discard everything
+				glog.Errorf("invalid method found while processing '%v': %v", route.Route.Name, *method)
+				invalid = true
+			}
+		}
+		if !invalid {
+			route.Methods = methods
+		}
 	}
 	if len(r.Headers) != 0 {
 		route.Headers = r.Headers
@@ -1045,6 +1155,40 @@ func overrideRoutePreserveHost(route *kong.Route, anns map[string]string) {
 	}
 }
 
+func overrideRouteRegexPriority(route *kong.Route, anns map[string]string) {
+	priority := annotations.ExtractRegexPriority(anns)
+	if priority == "" {
+		return
+	}
+	regexPriority, err := strconv.Atoi(priority)
+	if err != nil {
+		return
+	}
+
+	route.RegexPriority = kong.Int(regexPriority)
+}
+
+func overrideRouteMethods(route *kong.Route, anns map[string]string) {
+	annMethods := annotations.ExtractMethods(anns)
+	if len(annMethods) == 0 {
+		return
+	}
+	var methods []*string
+	for _, method := range annMethods {
+		sanitizedMethod := strings.TrimSpace(strings.ToUpper(method))
+		if validMethods.MatchString(sanitizedMethod) {
+			methods = append(methods, kong.String(sanitizedMethod))
+		} else {
+			// if any method is invalid (not an uppercase alpha string),
+			// discard everything
+			glog.Errorf("invalid method found while processing '%v': %v", route.Name, method)
+			return
+		}
+	}
+
+	route.Methods = methods
+}
+
 // overrideRouteByAnnotation sets Route protocols via annotation
 func overrideRouteByAnnotation(route *Route) {
 	anns := route.Ingress.Annotations
@@ -1055,6 +1199,8 @@ func overrideRouteByAnnotation(route *Route) {
 	overrideRouteStripPath(&route.Route, anns)
 	overrideRouteHTTPSRedirectCode(&route.Route, anns)
 	overrideRoutePreserveHost(&route.Route, anns)
+	overrideRouteRegexPriority(&route.Route, anns)
+	overrideRouteMethods(&route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation
@@ -1083,15 +1229,57 @@ func cloneStringPointerSlice(array ...*string) []*string {
 	return res
 }
 
-func overrideUpstream(upstream *Upstream,
-	kongIngress *configurationv1.KongIngress) {
-	if kongIngress == nil || kongIngress.Upstream == nil || upstream == nil {
+func overrideUpstreamHostHeader(upstream *kong.Upstream, anns map[string]string) {
+	if upstream == nil {
 		return
 	}
-	// name is the only field that is set
+	host := annotations.ExtractHostHeader(anns)
+	if host == "" {
+		return
+	}
+	upstream.HostHeader = kong.String(host)
+}
+
+// overrideUpstreamByAnnotation modifies the Kong upstream based on annotations
+// on the Kubernetes service.
+func overrideUpstreamByAnnotation(upstream *kong.Upstream,
+	anns map[string]string) {
+	if upstream == nil {
+		return
+	}
+	overrideUpstreamHostHeader(upstream, anns)
+}
+
+// overrideUpstreamByKongIngress modifies the Kong upstream based on KongIngresses
+// associated with the Kubernetes service.
+func overrideUpstreamByKongIngress(upstream *Upstream,
+	kongIngress *configurationv1.KongIngress) {
+	if upstream == nil {
+		return
+	}
+
+	if kongIngress == nil || kongIngress.Upstream == nil {
+		return
+	}
+
+	// The upstream within the KongIngress has no name.
+	// As this overwrites the entire upstream object, we must restore the
+	// original name after.
 	name := *upstream.Upstream.Name
 	upstream.Upstream = *kongIngress.Upstream.DeepCopy()
 	upstream.Name = &name
+}
+
+// overrideUpstream sets Upstream fields by KongIngress first, then by annotation
+func overrideUpstream(upstream *Upstream,
+	kongIngress *configurationv1.KongIngress,
+	anns map[string]string) {
+	if upstream == nil {
+		return
+	}
+
+	overrideUpstreamByKongIngress(upstream, kongIngress)
+	overrideUpstreamByAnnotation(&upstream.Upstream, anns)
 }
 
 func (p *Parser) getUpstreams(serviceMap map[string]Service) []Upstream {
@@ -1363,8 +1551,13 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
-		res[pluginName] = Plugin{
-			Plugin: kongPluginFromK8SPlugin(k8sPlugin),
+		if plugin, err := p.kongPluginFromK8SPlugin(k8sPlugin); err == nil {
+			res[pluginName] = Plugin{
+				Plugin: plugin,
+			}
+		} else {
+			glog.Errorf("Failed to generate configuration for KongPlugin "+
+				"%v/%v: %v", k8sPlugin.Namespace, pluginName, err)
 		}
 	}
 
@@ -1388,8 +1581,13 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
-		res[pluginName] = Plugin{
-			Plugin: kongPluginFromK8SClusterPlugin(k8sPlugin),
+		if plugin, err := p.kongPluginFromK8SClusterPlugin(k8sPlugin); err == nil {
+			res[pluginName] = Plugin{
+				Plugin: plugin,
+			}
+		} else {
+			glog.Errorf("Failed to generate configuration "+
+				"for KongClusterPlugin %v: %v", pluginName, err)
 		}
 	}
 	for _, plugin := range duplicates {
@@ -1519,11 +1717,7 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 			if clusterPlugin.PluginName == "" {
 				return plugin, errors.Errorf("invalid empty 'plugin' property")
 			}
-			plugin = kongPluginFromK8SClusterPlugin(*clusterPlugin)
-			return plugin, err
-		}
-		// handle other errors
-		if err != nil {
+			plugin, err = p.kongPluginFromK8SClusterPlugin(*clusterPlugin)
 			return plugin, err
 		}
 	}
@@ -1531,8 +1725,45 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	if k8sPlugin.PluginName == "" {
 		return plugin, errors.Errorf("invalid empty 'plugin' property")
 	}
-	plugin = kongPluginFromK8SPlugin(*k8sPlugin)
-	return plugin, nil
+
+	plugin, err = p.kongPluginFromK8SPlugin(*k8sPlugin)
+	return plugin, err
+}
+
+func (p *Parser) secretToConfiguration(
+	reference configurationv1.SecretValueFromSource, namespace string) (
+	configurationv1.Configuration, error) {
+	secret, err := p.store.GetSecret(namespace, reference.Secret)
+	if err != nil {
+		return configurationv1.Configuration{}, errors.Errorf(
+			"error fetching plugin configuration secret '%v/%v': %v",
+			namespace, reference.Secret, err)
+	}
+	secretVal, ok := secret.Data[reference.Key]
+	if !ok {
+		return configurationv1.Configuration{},
+			errors.Errorf("no key '%v' in secret '%v/%v'",
+				reference.Key, namespace, reference.Secret)
+	}
+	var config configurationv1.Configuration
+	if err := json.Unmarshal(secretVal, &config); err != nil {
+		if err := yaml.Unmarshal(secretVal, &config); err != nil {
+			return configurationv1.Configuration{},
+				errors.Errorf("key '%v' in secret '%v/%v' contains neither "+
+					"valid JSON nor valid YAML)",
+					reference.Key, namespace, reference.Secret)
+		}
+	}
+	return config, nil
+}
+
+func (p *Parser) namespacedSecretToConfiguration(
+	reference configurationv1.NamespacedSecretValueFromSource) (
+	configurationv1.Configuration, error) {
+	bareReference := configurationv1.SecretValueFromSource{
+		Secret: reference.Secret,
+		Key:    reference.Key}
+	return p.secretToConfiguration(bareReference, reference.Namespace)
 }
 
 // plugin is a intermediate type to hold plugin related configuration
@@ -1562,26 +1793,69 @@ func toKongPlugin(plugin plugin) kong.Plugin {
 	return result
 }
 
-func kongPluginFromK8SClusterPlugin(k8sPlugin configurationv1.KongClusterPlugin) kong.Plugin {
-	return toKongPlugin(plugin{
+func (p *Parser) kongPluginFromK8SClusterPlugin(
+	k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
+	config := k8sPlugin.Config
+	if k8sPlugin.ConfigFrom.SecretValue !=
+		(configurationv1.NamespacedSecretValueFromSource{}) &&
+		len(k8sPlugin.Config) > 0 {
+		return kong.Plugin{},
+			errors.Errorf("KongClusterPlugin '/%v' has both "+
+				"Config and ConfigFrom set", k8sPlugin.Name)
+	}
+	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.
+		NamespacedSecretValueFromSource{}) {
+		var err error
+		config, err = p.namespacedSecretToConfiguration(
+			k8sPlugin.ConfigFrom.SecretValue)
+		if err != nil {
+			return kong.Plugin{},
+				fmt.Errorf("error parsing config for KongClusterPlugin %v: %w",
+					k8sPlugin.Name, err)
+		}
+	}
+	kongPlugin := toKongPlugin(plugin{
 		Name:   k8sPlugin.PluginName,
-		Config: k8sPlugin.Config,
+		Config: config,
 
 		RunOn:     k8sPlugin.RunOn,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: k8sPlugin.Protocols,
 	})
+	return kongPlugin, nil
 }
 
-func kongPluginFromK8SPlugin(k8sPlugin configurationv1.KongPlugin) kong.Plugin {
-	return toKongPlugin(plugin{
+func (p *Parser) kongPluginFromK8SPlugin(
+	k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
+	config := k8sPlugin.Config
+	if k8sPlugin.ConfigFrom.SecretValue !=
+		(configurationv1.SecretValueFromSource{}) &&
+		len(k8sPlugin.Config) > 0 {
+		return kong.Plugin{},
+			errors.Errorf("KongPlugin '%v/%v' has both "+
+				"Config and ConfigFrom set",
+				k8sPlugin.Namespace, k8sPlugin.Name)
+	}
+	if k8sPlugin.ConfigFrom.SecretValue !=
+		(configurationv1.SecretValueFromSource{}) {
+		var err error
+		config, err = p.secretToConfiguration(
+			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
+		if err != nil {
+			return kong.Plugin{},
+				fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w",
+					k8sPlugin.Name, k8sPlugin.Namespace, err)
+		}
+	}
+	kongPlugin := toKongPlugin(plugin{
 		Name:   k8sPlugin.PluginName,
-		Config: k8sPlugin.Config,
+		Config: config,
 
 		RunOn:     k8sPlugin.RunOn,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: k8sPlugin.Protocols,
 	})
+	return kongPlugin, nil
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.

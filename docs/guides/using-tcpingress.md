@@ -24,9 +24,7 @@ There are two modes avaialble:
 Please follow the [deployment](../deployment) documentation to install
 Kong Ingress Controller on your Kubernetes cluster.
 
-> **Note**: This feature works only when Kong is backed by a database like
-Postgres. If you are running Kong in DB-less or Hybrid mode, this feature
-will not work.
+> **Note**: This feature works with Kong versions 2.0.4 and above.
 
 > **Note**: This feature is available in Controller versions 0.8 and above.
 

@@ -3,9 +3,9 @@ package store
 import (
 	"reflect"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"

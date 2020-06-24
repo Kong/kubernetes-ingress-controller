@@ -1120,6 +1120,11 @@ func overrideRouteProtocols(route *kong.Route, anns map[string]string) {
 }
 
 func overrideRouteHTTPSRedirectCode(route *kong.Route, anns map[string]string) {
+
+	if annotations.HasForceSSLRedirectAnnotation(anns) {
+		route.HTTPSRedirectStatusCode = kong.Int(302)
+	}
+
 	code := annotations.ExtractHTTPSRedirectStatusCode(anns)
 	if code == "" {
 		return

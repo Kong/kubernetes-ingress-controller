@@ -5406,6 +5406,41 @@ func Test_overrideRouteHTTPSRedirectCode(t *testing.T) {
 			},
 			want: &kong.Route{},
 		},
+		{
+			name: "force ssl annotation set to true",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "true",
+				},
+			},
+			want: &kong.Route{
+				HTTPSRedirectStatusCode: kong.Int(302),
+			},
+		},
+		{
+			name: "force ssl annotation set to false",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "false",
+				},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "force ssl annotation set to true and HTTPS redirect code set to 307",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "true",
+					"konghq.com/https-redirect-status-code":    "307",
+				},
+			},
+			want: &kong.Route{
+				HTTPSRedirectStatusCode: kong.Int(307),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

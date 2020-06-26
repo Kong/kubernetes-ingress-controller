@@ -124,7 +124,7 @@ kongplugin.configuration.konghq.com/global-rate-limit created
 ```
 
 The `redirect_uri` parameter must be a URI that matches the Ingress rule we
-created earlier. You must also [add it to your Google OIDC 
+created earlier. You must also [add it to your Google OIDC
 configuration](https://developers.google.com/identity/protocols/oauth2/openid-connect#setredirecturi)
 
 Next, enable the plugin on our Ingress:
@@ -140,7 +140,7 @@ Kong should redirect you to Google to verify your identity.
 Once you identify yourself, you should be able to browse our dummy service
 once again.
 
-This basic configuration permits any user with a valid Google account to access 
+This basic configuration permits any user with a valid Google account to access
 the dummy service.
 For setting up more complicated authentication and authorization flows,
 please read

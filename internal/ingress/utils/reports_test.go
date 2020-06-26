@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +28,10 @@ func TestReporterOnce(t *testing.T) {
 		KongDB:            "off",
 		ID:                "6acb7447-eedf-4815-a193-d714c5108f7b",
 	}
-	reporter := NewReporter(info)
+	reporter := Reporter{
+		Info:   info,
+		Logger: logrus.New(),
+	}
 	assert.Nil(reporter.once())
 	want := "v=kic.version;k8sv=k8s.version;kv=kong.version;db=off;" +
 		"id=6acb7447-eedf-4815-a193-d714c5108f7b;hn=example.local;"
@@ -44,7 +48,10 @@ func TestReporterSendStart(t *testing.T) {
 		KongDB:            "off",
 		ID:                "6acb7447-eedf-4815-a193-d714c5108f7b",
 	}
-	reporter := NewReporter(info)
+	reporter := Reporter{
+		Info:   info,
+		Logger: logrus.New(),
+	}
 	assert.Nil(reporter.once())
 	addr, err := net.ResolveUDPAddr("udp", reportsHost+
 		":"+strconv.Itoa(reportsPort))
@@ -75,7 +82,10 @@ func TestReporterSendPing(t *testing.T) {
 		KongDB:            "off",
 		ID:                "6acb7447-eedf-4815-a193-d714c5108f7b",
 	}
-	reporter := NewReporter(info)
+	reporter := Reporter{
+		Info:   info,
+		Logger: logrus.New(),
+	}
 	assert.Nil(reporter.once())
 	addr, err := net.ResolveUDPAddr("udp", reportsHost+
 		":"+strconv.Itoa(reportsPort))
@@ -106,7 +116,10 @@ func TestReporterRun(t *testing.T) {
 		KongDB:            "off",
 		ID:                "6acb7447-eedf-4815-a193-d714c5108f7b",
 	}
-	reporter := NewReporter(info)
+	reporter := Reporter{
+		Info:   info,
+		Logger: logrus.New(),
+	}
 	assert.Nil(reporter.once())
 	addr, err := net.ResolveUDPAddr("udp", reportsHost+
 		":"+strconv.Itoa(reportsPort))

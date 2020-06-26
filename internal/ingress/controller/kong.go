@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
-	"github.com/golang/glog"
 	"github.com/hbagdi/deck/diff"
 	"github.com/hbagdi/deck/dump"
 	"github.com/hbagdi/deck/file"
@@ -53,7 +52,7 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 		customEntities, err = n.fetchCustomEntities()
 		if err != nil {
 			// failure to fetch custom entities shouldn't block updates
-			glog.Error("failed to fetch custom entities: ", err)
+			n.Logger.Errorf("failed to fetch custom entities: %v", err)
 		}
 	}
 
@@ -65,7 +64,7 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 			return err
 		}
 		if reflect.DeepEqual(n.runningConfigHash, shaSum) {
-			glog.Info("no configuration change, skipping sync to Kong")
+			n.Logger.Info("no configuration change, skipping sync to kong")
 			return nil
 		}
 	}
@@ -78,7 +77,7 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 		return err
 	}
 	n.runningConfigHash = shaSum
-	glog.Info("successfully synced configuration to Kong")
+	n.Logger.Info("successfully synced configuration to kong")
 	return nil
 }
 
@@ -142,7 +141,7 @@ func cleanUpNullsInPluginConfigs(state *file.Content) {
 	}
 }
 
-func renderConfigWithCustomEntities(state *file.Content,
+func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 	customEntitiesJSONBytes []byte) ([]byte, error) {
 
 	var kongCoreConfig []byte
@@ -174,8 +173,7 @@ func renderConfigWithCustomEntities(state *file.Content,
 	err = json.Unmarshal(customEntitiesJSONBytes, &customEntities)
 	if err != nil {
 		// do not error out when custom entities are messed up
-		glog.Error(errors.Wrap(err,
-			"unmarshalling custom entities from secret data"))
+		n.Logger.Errorf("failed to unmarshal custom entities from secret data: %v", err)
 	} else {
 		for k, v := range customEntities {
 			if _, exists := mergeMap[k]; !exists {
@@ -202,7 +200,7 @@ func (n *KongController) fetchCustomEntities() ([]byte, error) {
 	}
 	secret, err := n.store.GetSecret(ns, name)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching custom entities")
+		return nil, errors.Wrap(err, "fetching secret")
 	}
 	config, ok := secret.Data["config"]
 	if !ok {
@@ -221,7 +219,7 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content,
 	// Kong errors out if `null`s are present in `config` of plugins
 	cleanUpNullsInPluginConfigs(state)
 
-	config, err := renderConfigWithCustomEntities(state, customEntities)
+	config, err := n.renderConfigWithCustomEntities(state, customEntities)
 	if err != nil {
 		return errors.Wrap(err, "constructing kong configuration")
 	}
@@ -311,8 +309,7 @@ func (n *KongController) toDeckContent(
 			}
 			err = n.fillPlugin(&plugin)
 			if err != nil {
-				glog.Errorf("error filling in defaults for plugin: %s",
-					*plugin.Name)
+				n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
 			sort.SliceStable(service.Plugins, func(i, j int) bool {
@@ -330,8 +327,7 @@ func (n *KongController) toDeckContent(
 				}
 				err = n.fillPlugin(&plugin)
 				if err != nil {
-					glog.Errorf("error filling in defaults for plugin: %s",
-						*plugin.Name)
+					n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
 				sort.SliceStable(route.Plugins, func(i, j int) bool {
@@ -355,8 +351,7 @@ func (n *KongController) toDeckContent(
 		}
 		err = n.fillPlugin(&plugin)
 		if err != nil {
-			glog.Errorf("error filling in defaults for plugin: %s",
-				*plugin.Name)
+			n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}

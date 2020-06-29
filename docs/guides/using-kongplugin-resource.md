@@ -324,12 +324,16 @@ Now, we will protect our Kubernetes cluster.
 For this, we will be configuring a rate-limiting plugin, which
 will throttle requests coming from the same client.
 
-Let's create the `KongPlugin` resource:
+This must be a cluster-level `KongClusterPlugin` resource, as `KongPlugin`
+resources cannot be applied globally, to preserve Kubernetes RBAC guarantees
+for cross-namepsace configuration.
+
+Let's create the `KongClusterPlugin` resource:
 
 ```bash
 $ echo "
 apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
+kind: KongClusterPlugin
 metadata:
   name: global-rate-limit
   labels:
@@ -340,7 +344,7 @@ config:
   policy: local
 plugin: rate-limiting
 " | kubectl apply -f -
-kongplugin.configuration.konghq.com/global-rate-limit created
+kongclusterplugin.configuration.konghq.com/global-rate-limit created
 ```
 
 With this plugin (please note the `global` label), every request through

@@ -330,28 +330,8 @@ func TestFakeStorePlugins(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KongPlugins: plugins})
 	assert.Nil(err)
 	assert.NotNil(store)
-	plugins, err = store.ListGlobalKongPlugins()
-	assert.Len(plugins, 0)
 
 	plugins = []*configurationv1.KongPlugin{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Labels: map[string]string{
-					"global": "true",
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Labels: map[string]string{
-					"global": "true",
-				},
-			},
-		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "baz",
@@ -362,14 +342,8 @@ func TestFakeStorePlugins(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{KongPlugins: plugins})
 	assert.Nil(err)
 	assert.NotNil(store)
-	plugins, err = store.ListGlobalKongPlugins()
-	assert.Len(plugins, 2)
 
-	plugin, err := store.GetKongPlugin("default", "bar")
-	assert.NotNil(plugin)
-	assert.Nil(err)
-
-	plugin, err = store.GetKongPlugin("default", "does-not-exist")
+	plugin, err := store.GetKongPlugin("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)

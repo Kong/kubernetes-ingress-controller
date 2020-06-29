@@ -1499,10 +1499,6 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 }
 
 func (p *Parser) globalPlugins() ([]Plugin, error) {
-	globalPlugins, err := p.store.ListGlobalKongPlugins()
-	if err != nil {
-		return nil, errors.Wrap(err, "error listing global KongPlugins:")
-	}
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
 	// TODO respect the oldest CRD
@@ -1510,32 +1506,6 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 	// of duplicate plugin definitions, we should respect the oldest one
 	// This is important since if a user comes in to k8s and creates a new
 	// CRD, the user now deleted an older plugin
-
-	for i := 0; i < len(globalPlugins); i++ {
-		k8sPlugin := *globalPlugins[i]
-		pluginName := k8sPlugin.PluginName
-		// empty pluginName skip it
-		if pluginName == "" {
-			glog.Errorf("KongPlugin '%v' does not specify a plugin name",
-				k8sPlugin.Name)
-			continue
-		}
-		if _, ok := res[pluginName]; ok {
-			glog.Error("Multiple KongPlugin definitions found with"+
-				" 'global' annotation for '", pluginName,
-				"', the plugin will not be applied")
-			duplicates = append(duplicates, pluginName)
-			continue
-		}
-		if plugin, err := p.kongPluginFromK8SPlugin(k8sPlugin); err == nil {
-			res[pluginName] = Plugin{
-				Plugin: plugin,
-			}
-		} else {
-			glog.Errorf("Failed to generate configuration for KongPlugin "+
-				"%v/%v: %v", k8sPlugin.Namespace, pluginName, err)
-		}
-	}
 
 	globalClusterPlugins, err := p.store.ListGlobalKongClusterPlugins()
 	if err != nil {

@@ -12,8 +12,8 @@ import (
 // ResourceEventHandler is "ingress.class" aware resource
 // handler.
 type ResourceEventHandler struct {
-	IsValidIngresClass func(object metav1.Object) bool
-	UpdateCh           *channels.RingChannel
+	IsValidIngressClass func(object metav1.Object, allowClassless bool) bool
+	UpdateCh            *channels.RingChannel
 }
 
 // EventType type of event associated with an informer
@@ -43,7 +43,7 @@ func (reh ResourceEventHandler) OnAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if !reh.IsValidIngresClass(object) {
+	if !reh.IsValidIngressClass(object, true) {
 		return
 	}
 	reh.UpdateCh.In() <- Event{
@@ -58,7 +58,7 @@ func (reh ResourceEventHandler) OnDelete(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if !reh.IsValidIngresClass(object) {
+	if !reh.IsValidIngressClass(object, true) {
 		return
 	}
 
@@ -79,8 +79,8 @@ func (reh ResourceEventHandler) OnUpdate(old, cur interface{}) {
 	if err != nil {
 		return
 	}
-	validOld := reh.IsValidIngresClass(oldObj)
-	validCur := reh.IsValidIngresClass(curObj)
+	validOld := reh.IsValidIngressClass(oldObj, true)
+	validCur := reh.IsValidIngressClass(curObj, true)
 
 	if !validCur && !validOld {
 		return

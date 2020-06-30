@@ -53,6 +53,7 @@ func validIngress(ingressAnnotationValue, ingressClass string, allowClassless bo
 	// we have 2 valid combinations
 	// 1 - ingress with default class | blank annotation on ingress
 	// 2 - ingress with specific class | same annotation on ingress
+	// Listers can opt out of (1) by setting allowClassless == false
 	//
 	// and 2 invalid combinations
 	// 3 - ingress with default class | fixed annotation on ingress

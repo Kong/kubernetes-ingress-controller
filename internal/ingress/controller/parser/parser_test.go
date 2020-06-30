@@ -163,6 +163,9 @@ func TestGlobalPlugin(t *testing.T) {
 						Labels: map[string]string{
 							"global": "true",
 						},
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": "kong",
+						},
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
@@ -306,6 +309,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Name: "global-bar-plugin",
 						Labels: map[string]string{
 							"global": "true",
+						},
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": "kong",
 						},
 					},
 					Protocols:  []string{"http"},

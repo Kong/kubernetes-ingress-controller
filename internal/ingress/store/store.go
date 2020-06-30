@@ -160,7 +160,7 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*configurationv1beta1.TCPIngress)
-			if ok && s.isValidIngressClass(&ing.ObjectMeta, true) {
+			if ok && s.isValidIngressClass(&ing.ObjectMeta, false) {
 				ingresses = append(ingresses, ing)
 			}
 		})
@@ -331,7 +331,7 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongClusterPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, true) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, false) {
 				plugins = append(plugins, p)
 			}
 		})

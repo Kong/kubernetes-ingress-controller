@@ -419,9 +419,13 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 				Labels: map[string]string{
 					"global": "true",
 				},
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "kong",
+				},
 			},
 		},
 		{
+			// invalid due to lack of class, not loaded
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 				Labels: map[string]string{
@@ -439,7 +443,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	plugins, err = store.ListGlobalKongClusterPlugins()
-	assert.Len(plugins, 2)
+	assert.Len(plugins, 1)
 
 	plugin, err := store.GetKongClusterPlugin("foo")
 	assert.NotNil(plugin)

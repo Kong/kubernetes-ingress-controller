@@ -92,7 +92,9 @@ var (
 	keyAuthFields   = []string{"key"}
 	basicAuthFields = []string{"username", "password"}
 	hmacAuthFields  = []string{"username", "secret"}
-	jwtAuthFields   = []string{"algorithm", "rsa_public_key", "key", "secret"}
+	// placeholder. jwt-auth required fields vary depending on other fields,
+	// which is more complex than than the VAWH can handle on its own
+	jwtAuthFields = []string{}
 
 	// TODO dynamically fetch these from Kong
 	credTypeToFields = map[string][]string{

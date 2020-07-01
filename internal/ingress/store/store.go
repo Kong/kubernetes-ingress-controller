@@ -66,6 +66,7 @@ type Storer interface {
 	ListIngresses() []*networking.Ingress
 	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
+	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
 	ListKongCredentials() []*configurationv1.KongCredential
@@ -289,6 +290,33 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	}
 
 	return credentials
+}
+
+// ListGlobalKongPlugins returns all KongPlugin resources
+// filtered by the ingress.class annotation and with the
+// label global:"true".
+// Support for these global namespaced KongPlugins was removed in 0.10.0
+// This function remains only to provide warnings to users with old configuration
+func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
+
+	var plugins []*configurationv1.KongPlugin
+	// var globalPlugins []*configurationv1.KongPlugin
+	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
+	if err != nil {
+		return nil, err
+	}
+	err = cache.ListAll(s.stores.Plugin,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			p, ok := ob.(*configurationv1.KongPlugin)
+			if ok && s.isValidIngresClass(&p.ObjectMeta) {
+				plugins = append(plugins, p)
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+	return plugins, nil
 }
 
 // ListGlobalKongClusterPlugins returns all KongClusterPlugin resources

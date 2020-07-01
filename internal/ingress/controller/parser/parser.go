@@ -1499,6 +1499,17 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 }
 
 func (p *Parser) globalPlugins() ([]Plugin, error) {
+	// removed as of 0.10.0
+	// only retrieved now to warn users
+	globalPlugins, err := p.store.ListGlobalKongPlugins()
+	if err != nil {
+		return nil, errors.Wrap(err, "error listing global KongPlugins:")
+	}
+	if len(globalPlugins) > 0 {
+		glog.Warning("global KongPlugins found. These are no longer applied as of and",
+			" must be replaced with KongClusterPlugins.",
+			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
+	}
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
 	// TODO respect the oldest CRD

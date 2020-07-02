@@ -19,6 +19,8 @@ package annotations
 import (
 	"strings"
 
+	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,21 +51,24 @@ const (
 	DefaultIngressClass = "kong"
 )
 
-func validIngress(ingressAnnotationValue, ingressClass string, allowClassless bool) bool {
+func validIngress(ingressAnnotationValue, ingressClass string, allowClassless bool) (bool, error) {
 	// we have 2 valid combinations
 	// 1 - ingress with default class | blank annotation on ingress
 	// 2 - ingress with specific class | same annotation on ingress
-	// Listers can opt out of (1) by setting allowClassless == false
+	// Listers can opt out of (1) by setting allowClassless == false,
+	// in which case we report an error as well.
 	//
 	// and 2 invalid combinations
 	// 3 - ingress with default class | fixed annotation on ingress
 	// 4 - ingress with specific class | different annotation on ingress
 	if ingressAnnotationValue == "" && ingressClass == DefaultIngressClass {
 		if allowClassless {
-			return true
+			return true, nil
+		} else {
+			return false, errors.Errorf("resource requires kubernetes.io/ingress.class annotation")
 		}
 	}
-	return ingressAnnotationValue == ingressClass
+	return ingressAnnotationValue == ingressClass, nil
 }
 
 // IngressClassValidatorFunc returns a function which can validate if an Object
@@ -73,7 +78,15 @@ func IngressClassValidatorFunc(
 
 	return func(obj metav1.Object, allowClassless bool) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		return validIngress(ingress, ingressClass, allowClassless)
+		validity, err := validIngress(ingress, ingressClass, allowClassless)
+		// validity always reports whether the resource has a valid class
+		// we only care about why sometimes, when the resource cannot possibly be valid for
+		// *any* controller, versus resources that may be valid for others
+		if err != nil {
+			glog.Errorf("resource '%s/%s' is invalid: %s", obj.GetNamespace(), obj.GetName(), err)
+			return validity
+		}
+		return validity
 	}
 }
 
@@ -84,7 +97,12 @@ func IngressClassValidatorFuncFromObjectMeta(
 
 	return func(obj *metav1.ObjectMeta, allowClassless bool) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		return validIngress(ingress, ingressClass, allowClassless)
+		validity, err := validIngress(ingress, ingressClass, allowClassless)
+		if err != nil {
+			glog.Errorf("resource '%s/%s' is invalid: %s", obj.GetNamespace(), obj.GetName(), err)
+			return validity
+		}
+		return validity
 	}
 }
 

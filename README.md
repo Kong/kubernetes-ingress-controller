@@ -71,6 +71,11 @@ All documentation around Kong Ingress Controller is present in this
 repository inside the [docs][docs] directory.
 Pull Requests are welcome for additions and corrections.
 
+## Guides and Tutorials
+
+Please browse through [guides][guides] to get started or understand how to configure
+a specific setting with Kong Ingress Controller.
+
 ## Master branch builds
 
 If you would like to use the latest and the greatest version of the controller,
@@ -123,3 +128,4 @@ meeting invite and Zoom links to join the meeting.
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/deployment/k4k8s-enterprise.md
+[guides]: docs/guides/

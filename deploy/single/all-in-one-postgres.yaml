@@ -774,7 +774,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong:1.3
+        image: kong:2.0
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
 ---

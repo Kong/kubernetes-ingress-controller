@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -71,6 +72,14 @@ func validIngress(ingressAnnotationValue, ingressClass string, allowClassless bo
 	return ingressAnnotationValue == ingressClass, nil
 }
 
+func ObjectMetaToObjectKind(obj metav1.Object) string {
+	robj, ok := obj.(runtime.Object)
+	if !ok {
+		return ""
+	}
+	return robj.GetObjectKind().GroupVersionKind().Kind
+}
+
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
@@ -83,7 +92,8 @@ func IngressClassValidatorFunc(
 		// we only care about why sometimes, when the resource cannot possibly be valid for
 		// *any* controller, versus resources that may be valid for others
 		if err != nil {
-			glog.Errorf("resource '%s/%s' is invalid: %s", obj.GetNamespace(), obj.GetName(), err)
+			glog.Errorf("%s resource '%s/%s' is invalid: %s", ObjectMetaToObjectKind(obj),
+				obj.GetNamespace(), obj.GetName(), err)
 			return validity
 		}
 		return validity
@@ -99,7 +109,8 @@ func IngressClassValidatorFuncFromObjectMeta(
 		ingress := obj.GetAnnotations()[ingressClassKey]
 		validity, err := validIngress(ingress, ingressClass, allowClassless)
 		if err != nil {
-			glog.Errorf("resource '%s/%s' is invalid: %s", obj.GetNamespace(), obj.GetName(), err)
+			glog.Errorf("%s resource '%s/%s' is invalid: %s", ObjectMetaToObjectKind(obj),
+				obj.GetNamespace(), obj.GetName(), err)
 			return validity
 		}
 		return validity

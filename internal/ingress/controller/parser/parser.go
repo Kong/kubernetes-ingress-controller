@@ -1086,6 +1086,31 @@ func validateProtocol(protocol string) bool {
 	return match
 }
 
+// useSSLProtocol updates the protocol of the route to either https or grpcs, or https and grpcs
+func useSSLProtocol(route *kong.Route) {
+	var http, grpc bool
+	var prots []*string
+
+	for _, val := range route.Protocols {
+
+		if strings.Contains(*val, "grpc") {
+			grpc = true
+		}
+
+		if strings.Contains(*val, "http") {
+			http = true
+		}
+	}
+
+	if grpc {
+		prots = append(prots, kong.String("grpcs"))
+	}
+	if http {
+		prots = append(prots, kong.String("https"))
+	}
+
+	route.Protocols = prots
+}
 func overrideRouteStripPath(route *kong.Route, anns map[string]string) {
 	if route == nil {
 		return
@@ -1123,6 +1148,7 @@ func overrideRouteHTTPSRedirectCode(route *kong.Route, anns map[string]string) {
 
 	if annotations.HasForceSSLRedirectAnnotation(anns) {
 		route.HTTPSRedirectStatusCode = kong.Int(302)
+		useSSLProtocol(route)
 	}
 
 	code := annotations.ExtractHTTPSRedirectStatusCode(anns)

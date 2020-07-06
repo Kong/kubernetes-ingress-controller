@@ -82,7 +82,7 @@ type Store struct {
 
 	ingressClass string
 
-	isValidIngressClass func(objectMeta *metav1.ObjectMeta, allowClassless bool) bool
+	isValidIngressClass func(objectMeta *metav1.ObjectMeta, classHandling string) bool
 }
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that
@@ -104,11 +104,11 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, allowClassless bool) Storer {
+func New(cs CacheStores, ingressClass string, classHandling string) Storer {
 	return Store{
 		stores:              cs,
 		ingressClass:        ingressClass,
-		isValidIngressClass: annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass, allowClassless),
+		isValidIngressClass: annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass, classHandling),
 	}
 }
 
@@ -144,7 +144,7 @@ func (s Store) ListIngresses() []*networking.Ingress {
 	var ingresses []*networking.Ingress
 	for _, item := range s.stores.Ingress.List() {
 		ing := networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, true) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.ClassLazy) {
 			continue
 		}
 		ingresses = append(ingresses, ing)
@@ -160,7 +160,7 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*configurationv1beta1.TCPIngress)
-			if ok && s.isValidIngressClass(&ing.ObjectMeta, false) {
+			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ClassRequired) {
 				ingresses = append(ingresses, ing)
 			}
 		})
@@ -270,7 +270,7 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.stores.Consumer.List() {
 		c, ok := item.(*configurationv1.KongConsumer)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, true) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.ClassLazy) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -284,7 +284,7 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.stores.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, true) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.ClassLazy) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -307,7 +307,7 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, true) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ClassLazy) {
 				plugins = append(plugins, p)
 			}
 		})
@@ -331,7 +331,7 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongClusterPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, false) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ClassRequired) {
 				plugins = append(plugins, p)
 			}
 		})

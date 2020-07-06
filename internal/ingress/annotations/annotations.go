@@ -47,27 +47,57 @@ const (
 	hostHeaderKey        = "/host-header"
 	methodsKey           = "/methods"
 
+	ClassRequired = "required"
+	ClassIgnored  = "ignored"
+	ClassLazy     = "optional"
+
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
 )
 
-func validIngress(ingressAnnotationValue, ingressClass string, allowClassless bool) (bool, error) {
+func validIngress(ingressAnnotationValue, ingressClass string, classHandling string) (bool, error) {
 	// we have 2 valid combinations
 	// 1 - ingress with default class | blank annotation on ingress
 	// 2 - ingress with specific class | same annotation on ingress
-	// Listers can opt out of (1) by setting allowClassless == false,
+	// Listers can opt out of (1) by setting classHandling == false,
 	// in which case we report an error as well.
 	//
 	// and 2 invalid combinations
 	// 3 - ingress with default class | fixed annotation on ingress
 	// 4 - ingress with specific class | different annotation on ingress
-	if ingressAnnotationValue == "" && ingressClass == DefaultIngressClass {
-		if allowClassless {
+
+	emptyMatch := ingressAnnotationValue == "" && ingressAnnotationValue != ingressClass
+	lazyMatch := ingressAnnotationValue == "" && ingressClass == DefaultIngressClass
+	exactMatch := ingressAnnotationValue == ingressClass
+	if classHandling == ClassRequired {
+		// this MUST have ingress.class, and it must match
+		if exactMatch {
 			return true, nil
-		} else {
+		} else if lazyMatch {
 			return false, errors.Errorf("resource requires kubernetes.io/ingress.class annotation")
 		}
+		return false, nil
+	} else if classHandling == ClassIgnored {
+		// this does not require ingress.class. we watch events if it is empty
+		// do we watch events if it doesn't match? shouldn't happen but might, because legacy
+		if emptyMatch {
+			return true, nil
+		}
+		return false, nil
+	} else if classHandling == ClassLazy {
+		// this can have a class. we'll watch empty class resources if we use the default
+		if exactMatch || lazyMatch {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	if ingressAnnotationValue == "" && ingressClass == DefaultIngressClass {
+		if classHandling == ClassRequired {
+			return false, errors.Errorf("resource requires kubernetes.io/ingress.class annotation")
+		}
+		return true, nil
 	}
 	return ingressAnnotationValue == ingressClass, nil
 }
@@ -83,11 +113,11 @@ func ObjectMetaToObjectKind(obj metav1.Object) string {
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
-	ingressClass string, allowClassless bool) func(obj metav1.Object, allowClassless bool) bool {
+	ingressClass string, classHandling string) func(obj metav1.Object, classHandling string) bool {
 
-	return func(obj metav1.Object, allowClassless bool) bool {
+	return func(obj metav1.Object, classHandling string) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		validity, err := validIngress(ingress, ingressClass, allowClassless)
+		validity, err := validIngress(ingress, ingressClass, classHandling)
 		// validity always reports whether the resource has a valid class
 		// we only care about why sometimes, when the resource cannot possibly be valid for
 		// *any* controller, versus resources that may be valid for others
@@ -103,11 +133,11 @@ func IngressClassValidatorFunc(
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
-	ingressClass string, allowClassless bool) func(obj *metav1.ObjectMeta, allowClassless bool) bool {
+	ingressClass string, classHandling string) func(obj *metav1.ObjectMeta, classHandling string) bool {
 
-	return func(obj *metav1.ObjectMeta, allowClassless bool) bool {
+	return func(obj *metav1.ObjectMeta, classHandling string) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		validity, err := validIngress(ingress, ingressClass, allowClassless)
+		validity, err := validIngress(ingress, ingressClass, classHandling)
 		if err != nil {
 			glog.Errorf("%s resource '%s/%s' is invalid: %s", ObjectMetaToObjectKind(obj),
 				obj.GetNamespace(), obj.GetName(), err)

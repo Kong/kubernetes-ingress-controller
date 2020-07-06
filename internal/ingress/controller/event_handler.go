@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/eapache/channels"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,7 +13,7 @@ import (
 // ResourceEventHandler is "ingress.class" aware resource
 // handler.
 type ResourceEventHandler struct {
-	IsValidIngressClass func(object metav1.Object, allowClassless bool) bool
+	IsValidIngressClass func(object metav1.Object, classHandling string) bool
 	UpdateCh            *channels.RingChannel
 }
 
@@ -48,7 +49,7 @@ func (reh ResourceEventHandler) OnAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if !reh.IsValidIngressClass(object, true) {
+	if !reh.IsValidIngressClass(object, annotations.ClassLazy) {
 		return
 	}
 	reh.UpdateCh.In() <- Event{
@@ -63,7 +64,7 @@ func (reh ResourceEventHandler) OnDelete(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if !reh.IsValidIngressClass(object, true) {
+	if !reh.IsValidIngressClass(object, annotations.ClassLazy) {
 		return
 	}
 
@@ -84,8 +85,8 @@ func (reh ResourceEventHandler) OnUpdate(old, cur interface{}) {
 	if err != nil {
 		return
 	}
-	validOld := reh.IsValidIngressClass(oldObj, true)
-	validCur := reh.IsValidIngressClass(curObj, true)
+	validOld := reh.IsValidIngressClass(oldObj, annotations.ClassLazy)
+	validCur := reh.IsValidIngressClass(curObj, annotations.ClassLazy)
 
 	if !validCur && !validOld {
 		return

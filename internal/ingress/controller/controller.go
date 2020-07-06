@@ -119,6 +119,7 @@ func (n *KongController) syncIngress(interface{}) error {
 	})
 
 	glog.V(2).Infof("syncing Ingress configuration...")
+	// NOTE: runs on everything? no filter before here?
 	state, err := n.parser.Build()
 	if err != nil {
 		return errors.Wrap(err, "error building kong state")

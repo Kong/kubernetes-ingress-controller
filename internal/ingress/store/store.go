@@ -104,11 +104,11 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, classHandling string) Storer {
+func New(cs CacheStores, ingressClass string) Storer {
 	return Store{
 		stores:              cs,
 		ingressClass:        ingressClass,
-		isValidIngressClass: annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass, classHandling),
+		isValidIngressClass: annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 	}
 }
 

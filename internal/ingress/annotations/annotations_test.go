@@ -50,7 +50,7 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 	ing.SetAnnotations(data)
 	for _, test := range tests {
 		ing.Annotations[ingressClassKey] = test.ingress
-		f := IngressClassValidatorFunc(test.controller, LazyClassHandling)
+		f := IngressClassValidatorFunc(test.controller)
 		b := f(&ing.ObjectMeta, LazyClassHandling)
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)

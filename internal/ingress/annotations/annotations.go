@@ -49,7 +49,7 @@ const (
 
 	RequireClassHandling = "required"
 	IgnoreClassHandling  = "ignored"
-	LazyClassHandling     = "optional"
+	LazyClassHandling    = "optional"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -107,7 +107,7 @@ func ObjectMetaToObjectKind(obj metav1.Object) string {
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
-	ingressClass string, classHandling string) func(obj metav1.Object, classHandling string) bool {
+	ingressClass string) func(obj metav1.Object, classHandling string) bool {
 
 	return func(obj metav1.Object, classHandling string) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
@@ -127,7 +127,7 @@ func IngressClassValidatorFunc(
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
-	ingressClass string, classHandling string) func(obj *metav1.ObjectMeta, classHandling string) bool {
+	ingressClass string) func(obj *metav1.ObjectMeta, classHandling string) bool {
 
 	return func(obj *metav1.ObjectMeta, classHandling string) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]

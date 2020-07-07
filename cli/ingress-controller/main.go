@@ -285,7 +285,7 @@ func main() {
 
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
-	reh := controller.ResourceEventHandler{
+	lazyReh := controller.ResourceEventHandler{
 		UpdateCh:            updateChannel,
 		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass, annotations.LazyClassHandling),
 	}
@@ -299,7 +299,7 @@ func main() {
 		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
 	}
 
-	ingInformer.AddEventHandler(reh)
+	ingInformer.AddEventHandler(lazyReh)
 	cacheStores.Ingress = ingInformer.GetStore()
 	informers = append(informers, ingInformer)
 
@@ -311,48 +311,48 @@ func main() {
 	informers = append(informers, endpointsInformer)
 
 	secretsInformer := coreInformerFactory.Core().V1().Secrets().Informer()
-	secretsInformer.AddEventHandler(reh)
+	secretsInformer.AddEventHandler(lazyReh)
 	cacheStores.Secret = secretsInformer.GetStore()
 	informers = append(informers, secretsInformer)
 
 	servicesInformer := coreInformerFactory.Core().V1().Services().Informer()
-	servicesInformer.AddEventHandler(reh)
+	servicesInformer.AddEventHandler(lazyReh)
 	cacheStores.Service = servicesInformer.GetStore()
 	informers = append(informers, servicesInformer)
 
 	tcpIngressInformer := kongInformerFactory.Configuration().V1beta1().TCPIngresses().Informer()
-	tcpIngressInformer.AddEventHandler(reh)
+	tcpIngressInformer.AddEventHandler(lazyReh)
 	cacheStores.TCPIngress = tcpIngressInformer.GetStore()
 	informers = append(informers, tcpIngressInformer)
 
 	kongIngressInformer := kongInformerFactory.Configuration().V1().KongIngresses().Informer()
-	kongIngressInformer.AddEventHandler(reh)
+	kongIngressInformer.AddEventHandler(lazyReh)
 	cacheStores.Configuration = kongIngressInformer.GetStore()
 	informers = append(informers, kongIngressInformer)
 
 	kongPluginInformer := kongInformerFactory.Configuration().V1().KongPlugins().Informer()
-	kongPluginInformer.AddEventHandler(reh)
+	kongPluginInformer.AddEventHandler(lazyReh)
 	cacheStores.Plugin = kongPluginInformer.GetStore()
 	informers = append(informers, kongPluginInformer)
 
 	kongClusterPluginInformer := kongInformerFactory.Configuration().V1().KongClusterPlugins().Informer()
-	kongClusterPluginInformer.AddEventHandler(reh)
+	kongClusterPluginInformer.AddEventHandler(lazyReh)
 	cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
 	informers = append(informers, kongClusterPluginInformer)
 
 	kongConsumerInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()
-	kongConsumerInformer.AddEventHandler(reh)
+	kongConsumerInformer.AddEventHandler(lazyReh)
 	cacheStores.Consumer = kongConsumerInformer.GetStore()
 	informers = append(informers, kongConsumerInformer)
 
 	kongCredentialInformer := kongInformerFactory.Configuration().V1().KongCredentials().Informer()
-	kongCredentialInformer.AddEventHandler(reh)
+	kongCredentialInformer.AddEventHandler(lazyReh)
 	cacheStores.Credential = kongCredentialInformer.GetStore()
 	informers = append(informers, kongCredentialInformer)
 
 	if controllerConfig.EnableKnativeIngressSupport {
 		knativeIngressInformer := knativeInformerFactory.Networking().V1alpha1().Ingresses().Informer()
-		knativeIngressInformer.AddEventHandler(reh)
+		knativeIngressInformer.AddEventHandler(lazyReh)
 		cacheStores.KnativeIngress = knativeIngressInformer.GetStore()
 		informers = append(informers, knativeIngressInformer)
 	}

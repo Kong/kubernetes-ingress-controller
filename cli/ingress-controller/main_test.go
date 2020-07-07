@@ -76,7 +76,7 @@ func TestHandleSigterm(t *testing.T) {
 			KubeClient: kubeClient,
 		},
 		channels.NewRingChannel(1024),
-		store.New(store.CacheStores{}, conf.IngressClass),
+		store.New(store.CacheStores{}, conf.IngressClass, conf.SkipClasslessIngressV1beta1),
 	)
 
 	exitCh := make(chan int, 1)

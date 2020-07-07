@@ -1617,6 +1617,116 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 }
 
+func TestKongSkipClasslessIngress(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("Kong classless ingress evaluated (true)", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "bar",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:            ingresses,
+			Services:             services,
+			SkipClasslessIngress: false,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+	})
+	t.Run("Kong classless ingress evaluated (false)", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "bar",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:            ingresses,
+			Services:             services,
+			SkipClasslessIngress: true,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(0, len(state.Services),
+			"expected zero service to be rendered")
+	})
+}
+
 func TestKnativeIngressAndPlugins(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("knative ingress rule and service-level plugin", func(t *testing.T) {

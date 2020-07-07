@@ -59,9 +59,10 @@ type cliConfig struct {
 	KongCustomEntitiesSecret string
 
 	// Resource filtering
-	WatchNamespace string
-	IngressClass   string
-	ElectionID     string
+	WatchNamespace              string
+	SkipClasslessIngressV1beta1 bool
+	IngressClass                string
+	ElectionID                  string
 
 	// Ingress Status publish resource
 	PublishService         string
@@ -175,6 +176,8 @@ mode of Kong. Takes the form of namespace/name.`)
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
+	flags.Bool("skip-classless-ingress-v1beta1", false,
+		`Skip non annotated Ingresses and Kong CRDs.`)
 	flags.String("ingress-class", annotations.DefaultIngressClass,
 		`Name of the ingress class to route through this controller.`)
 	flags.String("election-id", "ingress-controller-leader",
@@ -320,6 +323,7 @@ func parseFlags() (cliConfig, error) {
 
 	// Resource filtering
 	config.WatchNamespace = viper.GetString("watch-namespace")
+	config.SkipClasslessIngressV1beta1 = viper.GetBool("skip-classless-ingress-v1beta1")
 	config.IngressClass = viper.GetString("ingress-class")
 	config.ElectionID = viper.GetString("election-id")
 

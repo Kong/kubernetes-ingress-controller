@@ -144,7 +144,7 @@ func (s Store) ListIngresses() []*networking.Ingress {
 	var ingresses []*networking.Ingress
 	for _, item := range s.stores.Ingress.List() {
 		ing := networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.ClassLazy) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.LazyClassHandling) {
 			continue
 		}
 		ingresses = append(ingresses, ing)
@@ -160,7 +160,7 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*configurationv1beta1.TCPIngress)
-			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ClassRequired) {
+			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.RequireClassHandling) {
 				ingresses = append(ingresses, ing)
 			}
 		})
@@ -270,7 +270,7 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.stores.Consumer.List() {
 		c, ok := item.(*configurationv1.KongConsumer)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.ClassLazy) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.LazyClassHandling) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -284,7 +284,7 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.stores.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.ClassLazy) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.LazyClassHandling) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -307,7 +307,7 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ClassLazy) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.LazyClassHandling) {
 				plugins = append(plugins, p)
 			}
 		})
@@ -331,7 +331,7 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongClusterPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ClassRequired) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.RequireClassHandling) {
 				plugins = append(plugins, p)
 			}
 		})

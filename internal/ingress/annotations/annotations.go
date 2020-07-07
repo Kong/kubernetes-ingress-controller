@@ -47,9 +47,9 @@ const (
 	hostHeaderKey        = "/host-header"
 	methodsKey           = "/methods"
 
-	ClassRequired = "required"
-	ClassIgnored  = "ignored"
-	ClassLazy     = "optional"
+	RequireClassHandling = "required"
+	IgnoreClassHandling  = "ignored"
+	LazyClassHandling     = "optional"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -70,7 +70,7 @@ func validIngress(ingressAnnotationValue, ingressClass string, classHandling str
 	emptyMatch := ingressAnnotationValue == "" && ingressAnnotationValue != ingressClass
 	lazyMatch := ingressAnnotationValue == "" && ingressClass == DefaultIngressClass
 	exactMatch := ingressAnnotationValue == ingressClass
-	if classHandling == ClassRequired {
+	if classHandling == RequireClassHandling {
 		// this MUST have ingress.class, and it must match
 		if exactMatch {
 			return true, nil
@@ -78,14 +78,14 @@ func validIngress(ingressAnnotationValue, ingressClass string, classHandling str
 			return false, errors.Errorf("resource requires kubernetes.io/ingress.class annotation")
 		}
 		return false, nil
-	} else if classHandling == ClassIgnored {
+	} else if classHandling == IgnoreClassHandling {
 		// this does not require ingress.class. we watch events if it is empty
 		// do we watch events if it doesn't match? shouldn't happen but might, because legacy
 		if emptyMatch {
 			return true, nil
 		}
 		return false, nil
-	} else if classHandling == ClassLazy {
+	} else if classHandling == LazyClassHandling {
 		// this can have a class. we'll watch empty class resources if we use the default
 		if exactMatch || lazyMatch {
 			return true, nil

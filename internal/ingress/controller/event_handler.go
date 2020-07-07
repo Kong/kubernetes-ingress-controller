@@ -49,7 +49,7 @@ func (reh ResourceEventHandler) OnAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if !reh.IsValidIngressClass(object, annotations.ClassLazy) {
+	if !reh.IsValidIngressClass(object, annotations.LazyClassHandling) {
 		return
 	}
 	reh.UpdateCh.In() <- Event{
@@ -64,7 +64,7 @@ func (reh ResourceEventHandler) OnDelete(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if !reh.IsValidIngressClass(object, annotations.ClassLazy) {
+	if !reh.IsValidIngressClass(object, annotations.LazyClassHandling) {
 		return
 	}
 
@@ -85,8 +85,8 @@ func (reh ResourceEventHandler) OnUpdate(old, cur interface{}) {
 	if err != nil {
 		return
 	}
-	validOld := reh.IsValidIngressClass(oldObj, annotations.ClassLazy)
-	validCur := reh.IsValidIngressClass(curObj, annotations.ClassLazy)
+	validOld := reh.IsValidIngressClass(oldObj, annotations.LazyClassHandling)
+	validCur := reh.IsValidIngressClass(curObj, annotations.LazyClassHandling)
 
 	if !validCur && !validOld {
 		return

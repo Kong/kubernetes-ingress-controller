@@ -287,7 +287,7 @@ func main() {
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
 		UpdateCh:            updateChannel,
-		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass, annotations.ClassLazy),
+		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass, annotations.LazyClassHandling),
 	}
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
@@ -366,7 +366,7 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	store := store.New(cacheStores, cliConfig.IngressClass, annotations.ClassLazy)
+	store := store.New(cacheStores, cliConfig.IngressClass, annotations.LazyClassHandling)
 	kong, err := controller.NewKongController(&controllerConfig, updateChannel,
 		store)
 	if err != nil {

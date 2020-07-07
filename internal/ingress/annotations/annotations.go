@@ -93,12 +93,6 @@ func validIngress(ingressAnnotationValue, ingressClass string, classHandling str
 		return false, nil
 	}
 
-	if ingressAnnotationValue == "" && ingressClass == DefaultIngressClass {
-		if classHandling == ClassRequired {
-			return false, errors.Errorf("resource requires kubernetes.io/ingress.class annotation")
-		}
-		return true, nil
-	}
 	return ingressAnnotationValue == ingressClass, nil
 }
 

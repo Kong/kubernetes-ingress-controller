@@ -288,6 +288,17 @@ func main() {
 	lazyReh := controller.ResourceEventHandler{
 		UpdateCh:            updateChannel,
 		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass, annotations.LazyClassHandling),
+		ClassHandling:       annotations.LazyClassHandling,
+	}
+	strictReh := controller.ResourceEventHandler{
+		UpdateCh:            updateChannel,
+		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass, annotations.RequireClassHandling),
+		ClassHandling:       annotations.RequireClassHandling,
+	}
+	allReh := controller.ResourceEventHandler{
+		UpdateCh:            updateChannel,
+		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass, annotations.IgnoreClassHandling),
+		ClassHandling:       annotations.IgnoreClassHandling,
 	}
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
@@ -311,7 +322,7 @@ func main() {
 	informers = append(informers, endpointsInformer)
 
 	secretsInformer := coreInformerFactory.Core().V1().Secrets().Informer()
-	secretsInformer.AddEventHandler(lazyReh)
+	secretsInformer.AddEventHandler(allReh)
 	cacheStores.Secret = secretsInformer.GetStore()
 	informers = append(informers, secretsInformer)
 
@@ -321,7 +332,7 @@ func main() {
 	informers = append(informers, servicesInformer)
 
 	tcpIngressInformer := kongInformerFactory.Configuration().V1beta1().TCPIngresses().Informer()
-	tcpIngressInformer.AddEventHandler(lazyReh)
+	tcpIngressInformer.AddEventHandler(strictReh)
 	cacheStores.TCPIngress = tcpIngressInformer.GetStore()
 	informers = append(informers, tcpIngressInformer)
 
@@ -331,12 +342,12 @@ func main() {
 	informers = append(informers, kongIngressInformer)
 
 	kongPluginInformer := kongInformerFactory.Configuration().V1().KongPlugins().Informer()
-	kongPluginInformer.AddEventHandler(lazyReh)
+	kongPluginInformer.AddEventHandler(allReh)
 	cacheStores.Plugin = kongPluginInformer.GetStore()
 	informers = append(informers, kongPluginInformer)
 
 	kongClusterPluginInformer := kongInformerFactory.Configuration().V1().KongClusterPlugins().Informer()
-	kongClusterPluginInformer.AddEventHandler(lazyReh)
+	kongClusterPluginInformer.AddEventHandler(strictReh)
 	cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
 	informers = append(informers, kongClusterPluginInformer)
 

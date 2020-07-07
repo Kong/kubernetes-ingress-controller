@@ -15,6 +15,7 @@ import (
 type ResourceEventHandler struct {
 	IsValidIngressClass func(object metav1.Object, classHandling string) bool
 	UpdateCh            *channels.RingChannel
+	ClassHandling       string
 }
 
 // EventType type of event associated with an informer
@@ -49,7 +50,7 @@ func (reh ResourceEventHandler) OnAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if !reh.IsValidIngressClass(object, annotations.LazyClassHandling) {
+	if !reh.IsValidIngressClass(object, reh.ClassHandling) {
 		return
 	}
 	reh.UpdateCh.In() <- Event{

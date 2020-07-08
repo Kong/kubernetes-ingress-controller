@@ -326,7 +326,7 @@ will throttle requests coming from the same client.
 
 This must be a cluster-level `KongClusterPlugin` resource, as `KongPlugin`
 resources cannot be applied globally, to preserve Kubernetes RBAC guarantees
-for cross-namepsace configuration.
+for cross-namespace isolation.
 
 Let's create the `KongClusterPlugin` resource:
 

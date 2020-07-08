@@ -298,6 +298,8 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 // ListGlobalKongPlugins returns all KongPlugin resources
 // filtered by the ingress.class annotation and with the
 // label global:"true".
+// Support for these global namespaced KongPlugins was removed in 0.10.0
+// This function remains only to provide warnings to users with old configuration
 func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 
 	var plugins []*configurationv1.KongPlugin

@@ -140,22 +140,6 @@ func TestGlobalPlugin(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("global plugins are processed correctly", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			KongPlugins: []*configurationv1.KongPlugin{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
-					},
-					PluginName: "key-auth",
-					Protocols:  []string{"grpc"},
-					Config: configurationv1.Configuration{
-						"foo": "bar",
-					},
-				},
-			},
 			KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -177,18 +161,15 @@ func TestGlobalPlugin(t *testing.T) {
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
-		assert.Equal(2, len(state.Plugins),
+		assert.Equal(1, len(state.Plugins),
 			"expected one plugin to be rendered")
 
 		sort.SliceStable(state.Plugins, func(i, j int) bool {
 			return strings.Compare(*state.Plugins[i].Name, *state.Plugins[j].Name) > 0
 		})
-		assert.Equal("key-auth", *state.Plugins[0].Name)
-		assert.Equal(1, len(state.Plugins[0].Protocols))
-		assert.Equal(kong.Configuration{"foo": "bar"}, state.Plugins[0].Config)
 
-		assert.Equal("basic-auth", *state.Plugins[1].Name)
-		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[1].Config)
+		assert.Equal("basic-auth", *state.Plugins[0].Name)
+		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[0].Config)
 	})
 }
 
@@ -272,22 +253,6 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "global-foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
-					},
-					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
-							Key:    "jwt-config",
-							Secret: "conf-secret",
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
 						Namespace: "default",
 					},
@@ -352,8 +317,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
-			assert.Equal(4, len(state.Plugins),
-				"expected four plugins to be rendered")
+			assert.Equal(3, len(state.Plugins),
+				"expected three plugins to be rendered")
 
 			sort.SliceStable(state.Plugins, func(i, j int) bool {
 				return strings.Compare(*state.Plugins[i].Name,
@@ -362,16 +327,13 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			assert.Equal("jwt", *state.Plugins[0].Name)
 			assert.Equal(kong.Configuration{"run_on_preflight": false},
 				state.Plugins[0].Config)
-			assert.Equal("jwt", *state.Plugins[1].Name)
-			assert.Equal(kong.Configuration{"run_on_preflight": false},
-				state.Plugins[1].Config)
 
+			assert.Equal("basic-auth", *state.Plugins[1].Name)
+			assert.Equal(kong.Configuration{"hide_credentials": true},
+				state.Plugins[2].Config)
 			assert.Equal("basic-auth", *state.Plugins[2].Name)
 			assert.Equal(kong.Configuration{"hide_credentials": true},
 				state.Plugins[2].Config)
-			assert.Equal("basic-auth", *state.Plugins[3].Name)
-			assert.Equal(kong.Configuration{"hide_credentials": true},
-				state.Plugins[3].Config)
 		})
 
 	t.Run("plugins with missing secrets or keys are not constructed",

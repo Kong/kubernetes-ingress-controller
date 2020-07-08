@@ -3,9 +3,9 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/hbagdi/go-kong/kong"
-	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 )
 
@@ -31,7 +31,7 @@ func NewPluginSchemaStore(client *kong.Client) *PluginSchemaStore {
 // the cache.
 func (p *PluginSchemaStore) Schema(pluginName string) (map[string]interface{}, error) {
 	if pluginName == "" {
-		return nil, errors.New("pluginName can not be empty")
+		return nil, fmt.Errorf("pluginName can not be empty")
 	}
 
 	// lookup in cache

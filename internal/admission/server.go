@@ -2,11 +2,11 @@ package admission
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	admission "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -127,8 +127,7 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 				ok = true
 			}
 		default:
-			return nil, errors.New("unknown operation '" +
-				string(request.Operation) + "'")
+			return nil, fmt.Errorf("unknown operation '%v'", string(request.Operation))
 		}
 
 	case pluginGVResource:
@@ -163,7 +162,7 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 			return nil, err
 		}
 	default:
-		return nil, errors.Errorf("unknown resource type to validate: %s/%s %s",
+		return nil, fmt.Errorf("unknown resource type to validate: %s/%s %s",
 			request.Resource.Group, request.Resource.Version,
 			request.Resource.Resource)
 	}

@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
@@ -364,7 +363,7 @@ func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalan
 
 			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch Ingress %v/%v", ing.Namespace, ing.Name))
+				return nil, fmt.Errorf("failed to fetch Ingress %v/%v: %w", ing.Namespace, ing.Name, err)
 			}
 
 			logger.WithField("ingress_status", status).Debugf("attempting to update ingress status")
@@ -382,7 +381,7 @@ func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalan
 
 			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch Ingress %v/%v", ing.Namespace, ing.Name))
+				return nil, fmt.Errorf("failed to fetch Ingress %v/%v: %w", ing.Namespace, ing.Name, err)
 			}
 
 			logger.WithField("ingress_status", status).Debugf("attempting to update ingress status")
@@ -446,7 +445,7 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch Knative Ingress %v/%v", ing.Namespace, ing.Name))
+			return nil, fmt.Errorf("failed to fetch Knative Ingress %v/%v: %w", ing.Namespace, ing.Name, err)
 		}
 
 		if ingressSliceEqual(status, curIPs) &&
@@ -511,7 +510,7 @@ func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
 
 		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch TCPIngress %v/%v", ing.Namespace, ing.Name))
+			return nil, fmt.Errorf("failed to fetch TCPIngress %v/%v: %w", ing.Namespace, ing.Name, err)
 		}
 
 		logger.WithField("ingress_status", status).Debugf("attempting to update TCPIngress status")

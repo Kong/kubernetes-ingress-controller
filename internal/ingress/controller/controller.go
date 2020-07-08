@@ -35,7 +35,6 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	networking "k8s.io/api/networking/v1beta1"
@@ -123,7 +122,7 @@ func (n *KongController) syncIngress(interface{}) error {
 	n.Logger.Infof("syncing configuration")
 	state, err := n.parser.Build()
 	if err != nil {
-		return errors.Wrap(err, "error building kong state")
+		return fmt.Errorf("error building kong state: %w", err)
 	}
 	err = n.OnUpdate(state)
 	if err != nil {
@@ -378,19 +377,19 @@ func (n *KongController) handleBasicAuthUpdates(event Event) error {
 			Result: &cred,
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a decoder")
+		return fmt.Errorf("failed to create a decoder: %w", err)
 	}
 	err = decoder.Decode(newCred.Config)
 	if err != nil {
-		return errors.Wrapf(err, "error decoding credential '%v/%v'",
-			newCred.Namespace, newCred.Name)
+		return fmt.Errorf("error decoding credential '%v/%v': %w",
+			newCred.Namespace, newCred.Name, err)
 	}
 
 	kongConsumer, err := n.store.GetKongConsumer(newCred.Namespace,
 		newCred.ConsumerRef)
 	if err != nil {
-		return errors.Wrapf(err, "error searching for consumer '%v/%v'",
-			newCred.Namespace, newCred.ConsumerRef)
+		return fmt.Errorf("error searching for consumer '%v/%v': %w",
+			newCred.Namespace, newCred.ConsumerRef, err)
 	}
 	username := kongConsumer.Username
 	client := n.cfg.Kong.Client
@@ -399,13 +398,13 @@ func (n *KongController) handleBasicAuthUpdates(event Event) error {
 	ctx := context.TODO()
 	outdatedCred, err := client.BasicAuths.Get(ctx, &username, cred.Username)
 	if err != nil {
-		return errors.Wrap(err, "fetching basic-auth credential")
+		return fmt.Errorf("fetching basic-auth credential: %w", err)
 	}
 	cred.ID = outdatedCred.ID
 	// update it
 	_, err = client.BasicAuths.Create(ctx, &username, &cred)
 	if err != nil {
-		return errors.Wrap(err, "updating basic-auth credential")
+		return fmt.Errorf("updating basic-auth credential: %w", err)
 	}
 	return nil
 }

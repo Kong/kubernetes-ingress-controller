@@ -1506,7 +1506,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 		return nil, errors.Wrap(err, "error listing global KongPlugins:")
 	}
 	if len(globalPlugins) > 0 {
-		glog.Warning("global KongPlugins found. These are no longer applied as of 0.10.0 and",
+		glog.Warning("global KongPlugins found. These are no longer applied and",
 			" must be replaced with KongClusterPlugins.",
 			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
 	}

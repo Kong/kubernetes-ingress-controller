@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/hbagdi/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -3247,19 +3247,79 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 3
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "bar-ns",
+												ServiceName:      "bar-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 20,
+										},
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				TLS: []knative.IngressTLS{
+					{
+						Hosts: []string{
+							"foo.example.com",
+							"foo1.example.com",
+						},
+						SecretName: "foo-secret",
+					},
+					{
+						Hosts: []string{
+							"bar.example.com",
+							"bar1.example.com",
+						},
+						SecretName: "bar-secret",
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{})
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{})
 		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[0],
 		})
 		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[1],
 		})
 		assert.Equal(1, len(parsedInfo))
@@ -3292,9 +3352,21 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		}, svc.Plugins[0])
+
+		assert.Equal(map[string][]string{}, secretToSNIs)
+	})
+	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
+		_, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+			ingressList[3],
+		})
+
+		assert.Equal(map[string][]string{
+			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
+			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
+		}, secretToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[2],
 		})
 		assert.Equal(1, len(parsedInfo))
@@ -3327,6 +3399,8 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		}, svc.Plugins[0])
+
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 }
 

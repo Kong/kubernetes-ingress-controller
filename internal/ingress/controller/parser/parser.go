@@ -17,11 +17,11 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -155,10 +155,19 @@ func (p *Parser) Build() (*KongState, error) {
 	if err != nil {
 		glog.Errorf("error listing knative Ingresses: %v", err)
 	}
-	servicesFromKnative := p.parseKnativeIngressRules(knativeIngresses)
+	servicesFromKnative, secretToSNIsFromKnative := p.parseKnativeIngressRules(knativeIngresses)
 
 	for name, service := range servicesFromKnative {
 		parsedInfo.ServiceNameToServices[name] = service
+	}
+
+	for secret, snis := range secretToSNIsFromKnative {
+		var combinedSNIs []string
+		if snisFromIngress, ok := parsedInfo.SecretNameToSNIs[secret]; ok {
+			combinedSNIs = append(combinedSNIs, snisFromIngress...)
+		}
+		combinedSNIs = append(combinedSNIs, snis...)
+		parsedInfo.SecretNameToSNIs[secret] = combinedSNIs
 	}
 
 	// populate Kubernetes Service
@@ -491,7 +500,19 @@ func processTLSSections(tlsSections []networking.IngressTLS,
 	}
 }
 
-func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
+func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []networking.IngressTLS {
+	var result []networking.IngressTLS
+
+	for _, t := range tls {
+		result = append(result, networking.IngressTLS{
+			Hosts:      t.Hosts,
+			SecretName: t.SecretName,
+		})
+	}
+	return result
+}
+
+func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
 	var result []networking.IngressTLS
 
 	for _, t := range tls {
@@ -504,7 +525,7 @@ func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.Ingress
 }
 
 func (p *Parser) parseKnativeIngressRules(
-	ingressList []*knative.Ingress) map[string]Service {
+	ingressList []*knative.Ingress) (map[string]Service, map[string][]string) {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -512,11 +533,14 @@ func (p *Parser) parseKnativeIngressRules(
 	})
 
 	services := map[string]Service{}
+	secretToSNIs := map[string][]string{}
 
 	for i := 0; i < len(ingressList); i++ {
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
+		processTLSSections(knativeIngressToNetworkingTLS(ingress.Spec.TLS),
+			ingress.Namespace, secretToSNIs)
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
@@ -601,7 +625,7 @@ func (p *Parser) parseKnativeIngressRules(
 		}
 	}
 
-	return services
+	return services, secretToSNIs
 }
 
 func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
@@ -730,7 +754,7 @@ func (p *Parser) parseIngressRules(
 		ingress := *tcpIngressList[i]
 		ingressSpec := ingress.Spec
 
-		processTLSSections(toNetworkingTLS(ingressSpec.TLS),
+		processTLSSections(tcpIngressToNetworkingTLS(ingressSpec.TLS),
 			ingress.Namespace, secretNameToSNIs)
 
 		for i, rule := range ingressSpec.Rules {
@@ -1197,12 +1221,9 @@ func overrideRoute(route *Route,
 	}
 }
 
-func cloneStringPointerSlice(array ...*string) []*string {
-	var res []*string
-	for _, s := range array {
-		res = append(res, &(*s))
-	}
-	return res
+func cloneStringPointerSlice(array ...*string) (res []*string) {
+	res = append(res, array...)
+	return
 }
 
 func overrideUpstreamHostHeader(upstream *kong.Upstream, anns map[string]string) {
@@ -1596,6 +1617,7 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 	// Ingress with an ExternalName service and no port defined in the service.
 	if len(svc.Spec.Ports) == 0 &&
 		svc.Spec.Type == corev1.ServiceTypeExternalName {
+		// nolint: gosec
 		externalPort, err := strconv.Atoi(backendPort)
 		if err != nil {
 			glog.Warningf("only numeric ports are allowed in"+

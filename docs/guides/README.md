@@ -70,4 +70,6 @@ Kong Ingress controller:
 - [Configuring custom entities in Kong](configuring-custom-entities.md)  
   This guide gives an overview of how to configure custom entities for
   deployments of Kong Ingress Controller running without a database.
+- [Using OpenID-connect plugin](using-oidc-plugin.md)  
+  This guide walks through steps necessary to set up OIDC authentication.
 

@@ -21,6 +21,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var sr uint32
@@ -48,7 +50,7 @@ func mockErrorKeyFn(interface{}) (interface{}, error) {
 }
 
 func TestShutdown(t *testing.T) {
-	q := NewTaskQueue(mockSynFn)
+	q := NewTaskQueue(mockSynFn, logrus.New())
 	stopCh := make(chan struct{})
 	// run queue
 	go q.Run(10*time.Second, stopCh)
@@ -62,7 +64,7 @@ func TestShutdown(t *testing.T) {
 func TestEnqueueSuccess(t *testing.T) {
 	// initialize result
 	atomic.StoreUint32(&sr, 0)
-	q := NewCustomTaskQueue(mockSynFn, mockKeyFn)
+	q := NewCustomTaskQueue(mockSynFn, mockKeyFn, logrus.New())
 	stopCh := make(chan struct{})
 	// run queue
 	go q.Run(5*time.Second, stopCh)
@@ -85,7 +87,7 @@ func TestEnqueueSuccess(t *testing.T) {
 func TestEnqueueFailed(t *testing.T) {
 	// initialize result
 	atomic.StoreUint32(&sr, 0)
-	q := NewCustomTaskQueue(mockSynFn, mockKeyFn)
+	q := NewCustomTaskQueue(mockSynFn, mockKeyFn, logrus.New())
 	stopCh := make(chan struct{})
 	// run queue
 	go q.Run(5*time.Second, stopCh)
@@ -111,7 +113,7 @@ func TestEnqueueFailed(t *testing.T) {
 func TestEnqueueKeyError(t *testing.T) {
 	// initialize result
 	atomic.StoreUint32(&sr, 0)
-	q := NewCustomTaskQueue(mockSynFn, mockErrorKeyFn)
+	q := NewCustomTaskQueue(mockSynFn, mockErrorKeyFn, logrus.New())
 	stopCh := make(chan struct{})
 	// run queue
 	go q.Run(5*time.Second, stopCh)
@@ -135,7 +137,7 @@ func TestEnqueueKeyError(t *testing.T) {
 func TestSkipEnqueue(t *testing.T) {
 	// initialize result
 	atomic.StoreUint32(&sr, 0)
-	q := NewCustomTaskQueue(mockSynFn, mockKeyFn)
+	q := NewCustomTaskQueue(mockSynFn, mockKeyFn, logrus.New())
 	stopCh := make(chan struct{})
 	// mock object whichi will be enqueue
 	mo := mockEnqueueObj{

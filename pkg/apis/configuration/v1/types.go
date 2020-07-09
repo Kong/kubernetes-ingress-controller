@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -272,11 +272,11 @@ func (in *KongCredential) DeepCopyInto(out *KongCredential) {
 		dec := gob.NewDecoder(&buf)
 		err := enc.Encode(in.Config)
 		if err != nil {
-			glog.Errorf("unexpected error copying configuration: %v", err)
+			logrus.Errorf("unexpected error copying configuration: %v", err)
 		}
 		err = dec.Decode(&out.Config)
 		if err != nil {
-			glog.Errorf("unexpected error copying configuration: %v", err)
+			logrus.Errorf("unexpected error copying configuration: %v", err)
 		}
 	}
 }

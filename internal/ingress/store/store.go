@@ -19,10 +19,10 @@ package store
 import (
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -82,7 +82,11 @@ type Store struct {
 
 	ingressClass string
 
+	ingressClassHandling string
+
 	isValidIngressClass func(objectMeta *metav1.ObjectMeta, classHandling string) bool
+
+	logger logrus.FieldLogger
 }
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that
@@ -104,11 +108,19 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, skipClasslessIngress bool) Storer {
+func New(cs CacheStores, ingressClass string, skipClasslessIngress bool, logger logrus.FieldLogger) Storer {
+	var ingressClassHandling string
+	if skipClasslessIngress {
+		ingressClassHandling = annotations.RequireClassHandling
+	} else {
+		ingressClassHandling = annotations.LazyClassHandling
+	}
 	return Store{
-		stores:              cs,
-		ingressClass:        ingressClass,
-		isValidIngressClass: annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		stores:               cs,
+		ingressClass:         ingressClass,
+		ingressClassHandling: ingressClassHandling,
+		isValidIngressClass:  annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		logger:               logger,
 	}
 }
 
@@ -144,7 +156,7 @@ func (s Store) ListIngresses() []*networking.Ingress {
 	var ingresses []*networking.Ingress
 	for _, item := range s.stores.Ingress.List() {
 		ing := networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.LazyClassHandling) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassHandling) {
 			continue
 		}
 		ingresses = append(ingresses, ing)
@@ -270,7 +282,7 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.stores.Consumer.List() {
 		c, ok := item.(*configurationv1.KongConsumer)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.LazyClassHandling) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, s.ingressClassHandling) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -284,7 +296,7 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.stores.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.LazyClassHandling) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, s.ingressClassHandling) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -309,7 +321,7 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.LazyClassHandling) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, s.ingressClassHandling) {
 				plugins = append(plugins, p)
 			}
 		})
@@ -378,22 +390,21 @@ func init() {
 	}
 }
 
-func networkingIngressV1Beta1(obj interface{}) *networking.Ingress {
+func (s Store) networkingIngressV1Beta1(obj interface{}) *networking.Ingress {
 	networkingIngress, okNetworking := obj.(*networking.Ingress)
 	if okNetworking {
 		return networkingIngress
 	}
 	extensionsIngress, okExtension := obj.(*extensions.Ingress)
 	if !okExtension {
-		glog.Errorf("ingress resource can not be casted to extensions.Ingress" +
+		s.logger.Errorf("ingress resource can not be casted to extensions.Ingress" +
 			" or networking.Ingress")
 		return nil
 	}
 	networkingIngress = &networking.Ingress{}
 	err := ingressConversionScheme.Convert(extensionsIngress, networkingIngress, nil)
 	if err != nil {
-		glog.Error("failed to convert extensions.Ingress "+
-			"to networking.Ingress", err)
+		s.logger.Errorf("failed to convert extensions.Ingress to networking.Ingress: %v", err)
 		return nil
 	}
 	return networkingIngress

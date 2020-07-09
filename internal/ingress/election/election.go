@@ -8,8 +8,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/golang/glog"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/sirupsen/logrus"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection"
@@ -29,6 +29,7 @@ type Config struct {
 	Client     clientset.Interface
 	ElectionID string
 	Callbacks  leaderelection.LeaderCallbacks
+	Logger     logrus.FieldLogger
 }
 
 type elector struct {
@@ -48,16 +49,15 @@ func (e elector) Run(ctx context.Context) {
 			if retryCount > 0 {
 				backoff.Next(backoffID, backoff.Clock.Now())
 				delay := backoff.Get(backoffID)
-				glog.Warningf("leader election session %d terminated "+
-					"unexpectedly; waiting %s before proceeding", retryCount+1,
-					delay)
+				e.Logger.WithField("retry-count", retryCount+1).WithField("delay",
+					delay).Warningf("leader election session terminated unexpectedly")
 				select {
 				case <-time.After(delay):
 				case <-ctx.Done():
 					return
 				}
 			}
-			glog.Infof("starting leader election session %d", retryCount+1)
+			e.Logger.WithField("retry-count", retryCount+1).Infof("starting leader election")
 			e.elector.Run(ctx)
 			retryCount++
 		}
@@ -72,7 +72,8 @@ func (e elector) IsLeader() bool {
 func NewElector(config Config) Elector {
 	pod, err := utils.GetPodDetails(config.Client)
 	if err != nil {
-		glog.Fatalf("unexpected error obtaining pod information: %v", err)
+		// XXX remove this fatal log and bubble up the error
+		config.Logger.Fatalf("failed to obtain pod info: %v", err)
 	}
 
 	es := elector{
@@ -109,7 +110,7 @@ func NewElector(config Config) Elector {
 		})
 
 	if err != nil {
-		glog.Fatalf("unexpected error starting leader election: %v", err)
+		es.Logger.Fatalf("failed to start elector: %v", err)
 	}
 
 	es.elector = le

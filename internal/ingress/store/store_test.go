@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	core "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -96,7 +97,10 @@ func Test_networkingIngressV1Beta1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := networkingIngressV1Beta1(tt.args.obj); !reflect.DeepEqual(got, tt.want) {
+			s := Store{
+				logger: logrus.New(),
+			}
+			if got := s.networkingIngressV1Beta1(tt.args.obj); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("networkingIngressV1Beta1() = %v, want %v", got, tt.want)
 			}
 		})

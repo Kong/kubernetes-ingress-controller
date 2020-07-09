@@ -1,0 +1,7 @@
+# Set GitHub rendering as per https://stackoverflow.com/a/33831598
+# Reference: https://editorconfig.org/
+
+[*.go]
+end_of_line = lf
+indent_style = tab
+indent_size = 2

@@ -214,8 +214,6 @@ github.com/hashicorp/go-memdb v1.1.2 h1:/xeGrWlD1+X26mLdgLDKzQHPsMG8Z3u7N/S1M7/G
 github.com/hashicorp/go-memdb v1.1.2/go.mod h1:LWQ8R70vPrS4OEY9k28D2z8/Zzyu34NVzeRibGAzHO0=
 github.com/hashicorp/go-memdb v1.2.0 h1:nF9fNAZZJ16ttLenacrsVX3Y8GPD+Be9cc1TUWIbvGY=
 github.com/hashicorp/go-memdb v1.2.0/go.mod h1:7vWdFrpS3/w/8LMPBDKg4CERFHoMVysv3uW8DtdxfhI=
-github.com/hashicorp/go-memdb v1.2.1 h1:wI9btDjYUOJJHTCnRlAG/TkRyD/ij7meJMrLK9X31Cc=
-github.com/hashicorp/go-memdb v1.2.1/go.mod h1:OSvLJ662Jim8hMM+gWGyhktyWk2xPCnWMc7DWIqtkGA=
 github.com/hashicorp/go-uuid v1.0.0 h1:RS8zrF7PhGwyNPOtxSClXXj9HA8feRnJzgnI1RJCSnM=
 github.com/hashicorp/go-uuid v1.0.0/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-uuid v1.0.1 h1:fv1ep09latC32wFoVwnqcnKJGnMSdBanPczbHAYm1BE=

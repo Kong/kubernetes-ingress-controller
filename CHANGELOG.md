@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [0.9.1](#091---20200608)
  - [0.9.0](#090---20200526)
  - [0.8.1](#081---20200415)
  - [0.8.0](#080---20200325)
@@ -20,6 +21,13 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [0.9.1] - 2020/06/08
+
+#### Fixed
+
+- Parse TLS section of Knative Ingress resources
+  [#721](https://github.com/Kong/kubernetes-ingress-controller/pull/721)
 
 ## [0.9.0] - 2020/05/26
 
@@ -756,6 +764,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[0.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.1...0.8.0

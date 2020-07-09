@@ -27,16 +27,21 @@ import (
 
 func TestIngressClassValidatorFunc(t *testing.T) {
 	tests := []struct {
-		ingress    string
-		controller string
-		isValid    bool
+		ingress              string
+		skipClasslessIngress bool
+		controller           string
+		isValid              bool
 	}{
-		{"", "", true},
-		{"", "kong", true},
-		{"kong", "kong", true},
-		{"custom", "custom", true},
-		{"", "killer", false},
-		{"custom", "kong", false},
+		{"", false, "", true},
+		{"", false, "kong", true},
+		{"", true, "kong", false},
+		{"kong", false, "kong", true},
+		{"kong", true, "kong", true},
+		{"custom", false, "custom", true},
+		{"", false, "killer", false},
+		{"custom", false, "kong", false},
+		{"custom", true, "kong", false},
+		{"", true, "custom", false},
 	}
 
 	ing := &extensions.Ingress{

@@ -16,6 +16,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hbagdi/deck v1.1.0
 	github.com/hbagdi/go-kong v0.11.0
+	github.com/lithammer/dedent v1.1.0
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
 	github.com/mitchellh/mapstructure v1.2.2
 	github.com/openzipkin/zipkin-go v0.2.2 // indirect

@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/hbagdi/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -140,22 +140,6 @@ func TestGlobalPlugin(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("global plugins are processed correctly", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			KongPlugins: []*configurationv1.KongPlugin{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
-					},
-					PluginName: "key-auth",
-					Protocols:  []string{"grpc"},
-					Config: configurationv1.Configuration{
-						"foo": "bar",
-					},
-				},
-			},
 			KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -180,18 +164,15 @@ func TestGlobalPlugin(t *testing.T) {
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
-		assert.Equal(2, len(state.Plugins),
+		assert.Equal(1, len(state.Plugins),
 			"expected one plugin to be rendered")
 
 		sort.SliceStable(state.Plugins, func(i, j int) bool {
 			return strings.Compare(*state.Plugins[i].Name, *state.Plugins[j].Name) > 0
 		})
-		assert.Equal("key-auth", *state.Plugins[0].Name)
-		assert.Equal(1, len(state.Plugins[0].Protocols))
-		assert.Equal(kong.Configuration{"foo": "bar"}, state.Plugins[0].Config)
 
-		assert.Equal("basic-auth", *state.Plugins[1].Name)
-		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[1].Config)
+		assert.Equal("basic-auth", *state.Plugins[0].Name)
+		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[0].Config)
 	})
 }
 
@@ -275,22 +256,6 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "global-foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
-					},
-					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
-							Key:    "jwt-config",
-							Secret: "conf-secret",
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
 						Namespace: "default",
 					},
@@ -358,8 +323,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
-			assert.Equal(4, len(state.Plugins),
-				"expected four plugins to be rendered")
+			assert.Equal(3, len(state.Plugins),
+				"expected three plugins to be rendered")
 
 			sort.SliceStable(state.Plugins, func(i, j int) bool {
 				return strings.Compare(*state.Plugins[i].Name,
@@ -368,16 +333,13 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			assert.Equal("jwt", *state.Plugins[0].Name)
 			assert.Equal(kong.Configuration{"run_on_preflight": false},
 				state.Plugins[0].Config)
-			assert.Equal("jwt", *state.Plugins[1].Name)
-			assert.Equal(kong.Configuration{"run_on_preflight": false},
-				state.Plugins[1].Config)
 
+			assert.Equal("basic-auth", *state.Plugins[1].Name)
+			assert.Equal(kong.Configuration{"hide_credentials": true},
+				state.Plugins[2].Config)
 			assert.Equal("basic-auth", *state.Plugins[2].Name)
 			assert.Equal(kong.Configuration{"hide_credentials": true},
 				state.Plugins[2].Config)
-			assert.Equal("basic-auth", *state.Plugins[3].Name)
-			assert.Equal(kong.Configuration{"hide_credentials": true},
-				state.Plugins[3].Config)
 		})
 
 	t.Run("plugins with missing secrets or keys are not constructed",
@@ -1621,6 +1583,116 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Protocols:     kong.StringSlice("http", "https"),
 			}, state.Services[0].Routes[0].Route)
 		})
+}
+
+func TestKongSkipClasslessIngress(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("Kong classless ingress evaluated (true)", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "bar",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:            ingresses,
+			Services:             services,
+			SkipClasslessIngress: false,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+	})
+	t.Run("Kong classless ingress evaluated (false)", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "bar",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:            ingresses,
+			Services:             services,
+			SkipClasslessIngress: true,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(0, len(state.Services),
+			"expected zero service to be rendered")
+	})
 }
 
 func TestKnativeIngressAndPlugins(t *testing.T) {
@@ -3143,19 +3215,79 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 3
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "bar-ns",
+												ServiceName:      "bar-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 20,
+										},
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				TLS: []knative.IngressTLS{
+					{
+						Hosts: []string{
+							"foo.example.com",
+							"foo1.example.com",
+						},
+						SecretName: "foo-secret",
+					},
+					{
+						Hosts: []string{
+							"bar.example.com",
+							"bar1.example.com",
+						},
+						SecretName: "bar-secret",
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{})
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{})
 		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[0],
 		})
 		assert.Equal(map[string]Service{}, parsedInfo)
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[1],
 		})
 		assert.Equal(1, len(parsedInfo))
@@ -3188,9 +3320,21 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		}, svc.Plugins[0])
+
+		assert.Equal(map[string][]string{}, secretToSNIs)
+	})
+	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
+		_, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+			ingressList[3],
+		})
+
+		assert.Equal(map[string][]string{
+			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
+			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
+		}, secretToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[2],
 		})
 		assert.Equal(1, len(parsedInfo))
@@ -3223,6 +3367,8 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		}, svc.Plugins[0])
+
+		assert.Equal(map[string][]string{}, secretToSNIs)
 	})
 }
 

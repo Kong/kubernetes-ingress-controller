@@ -3,9 +3,9 @@ package store
 import (
 	"reflect"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
@@ -26,16 +26,17 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	Ingresses          []*networking.Ingress
-	TCPIngresses       []*configurationv1beta1.TCPIngress
-	Services           []*apiv1.Service
-	Endpoints          []*apiv1.Endpoints
-	Secrets            []*apiv1.Secret
-	KongPlugins        []*configurationv1.KongPlugin
-	KongClusterPlugins []*configurationv1.KongClusterPlugin
-	KongIngresses      []*configurationv1.KongIngress
-	KongConsumers      []*configurationv1.KongConsumer
-	KongCredentials    []*configurationv1.KongCredential
+	Ingresses            []*networking.Ingress
+	TCPIngresses         []*configurationv1beta1.TCPIngress
+	Services             []*apiv1.Service
+	Endpoints            []*apiv1.Endpoints
+	Secrets              []*apiv1.Secret
+	KongPlugins          []*configurationv1.KongPlugin
+	KongClusterPlugins   []*configurationv1.KongClusterPlugin
+	KongIngresses        []*configurationv1.KongIngress
+	KongConsumers        []*configurationv1.KongConsumer
+	KongCredentials      []*configurationv1.KongCredential
+	SkipClasslessIngress bool
 
 	KnativeIngresses []*knative.Ingress
 }

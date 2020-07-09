@@ -646,22 +646,24 @@ spec:
     spec:
       containers:
       - env:
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        - name: KONG_ADMIN_LISTEN
-          value: 127.0.0.1:8444 ssl
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
-        - name: KONG_DATABASE
-          value: "off"
-        - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 127.0.0.1:8444 ssl
+        - name: KONG_DATABASE
+          value: "off"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "1"
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
         image: kong:2.0
         lifecycle:
           preStop:
@@ -718,7 +720,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.9.0
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

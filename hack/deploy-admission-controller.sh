@@ -1,5 +1,10 @@
 #!/bin/bash
 
+BASE64_OPTIONS=""
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  BASE64_OPTIONS="-w 0"
+fi
+
 # create a self-signed certificate
 openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 365  \
   -nodes -subj "/CN=kong-validation-webhook.kong.svc"
@@ -18,7 +23,7 @@ webhooks:
 - name: validations.kong.konghq.com
   failurePolicy: Fail
   sideEffects: None
-  admissionReviewVersions: [\"v1beta1\"]
+  admissionReviewVersions: [\"v1beta1\", \"v1\"]
   rules:
   - apiGroups:
     - configuration.konghq.com
@@ -43,5 +48,5 @@ webhooks:
     service:
       namespace: kong
       name: kong-validation-webhook
-    caBundle: $(cat tls.crt  | base64 -w 0) " | kubectl apply -f -
+    caBundle: $(cat tls.crt  | base64 ${BASE64_OPTIONS}) " | kubectl apply -f -
 

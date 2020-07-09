@@ -20,9 +20,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -104,7 +104,7 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string) Storer {
+func New(cs CacheStores, ingressClass string, skipClasslessIngress bool) Storer {
 	return Store{
 		stores:              cs,
 		ingressClass:        ingressClass,
@@ -295,6 +295,8 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 // ListGlobalKongPlugins returns all KongPlugin resources
 // filtered by the ingress.class annotation and with the
 // label global:"true".
+// Support for these global namespaced KongPlugins was removed in 0.10.0
+// This function remains only to provide warnings to users with old configuration
 func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 
 	var plugins []*configurationv1.KongPlugin

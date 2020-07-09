@@ -17,11 +17,11 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -155,10 +155,19 @@ func (p *Parser) Build() (*KongState, error) {
 	if err != nil {
 		glog.Errorf("error listing knative Ingresses: %v", err)
 	}
-	servicesFromKnative := p.parseKnativeIngressRules(knativeIngresses)
+	servicesFromKnative, secretToSNIsFromKnative := p.parseKnativeIngressRules(knativeIngresses)
 
 	for name, service := range servicesFromKnative {
 		parsedInfo.ServiceNameToServices[name] = service
+	}
+
+	for secret, snis := range secretToSNIsFromKnative {
+		var combinedSNIs []string
+		if snisFromIngress, ok := parsedInfo.SecretNameToSNIs[secret]; ok {
+			combinedSNIs = append(combinedSNIs, snisFromIngress...)
+		}
+		combinedSNIs = append(combinedSNIs, snis...)
+		parsedInfo.SecretNameToSNIs[secret] = combinedSNIs
 	}
 
 	// populate Kubernetes Service
@@ -491,7 +500,19 @@ func processTLSSections(tlsSections []networking.IngressTLS,
 	}
 }
 
-func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
+func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []networking.IngressTLS {
+	var result []networking.IngressTLS
+
+	for _, t := range tls {
+		result = append(result, networking.IngressTLS{
+			Hosts:      t.Hosts,
+			SecretName: t.SecretName,
+		})
+	}
+	return result
+}
+
+func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.IngressTLS {
 	var result []networking.IngressTLS
 
 	for _, t := range tls {
@@ -504,7 +525,7 @@ func toNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networking.Ingress
 }
 
 func (p *Parser) parseKnativeIngressRules(
-	ingressList []*knative.Ingress) map[string]Service {
+	ingressList []*knative.Ingress) (map[string]Service, map[string][]string) {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -512,11 +533,14 @@ func (p *Parser) parseKnativeIngressRules(
 	})
 
 	services := map[string]Service{}
+	secretToSNIs := map[string][]string{}
 
 	for i := 0; i < len(ingressList); i++ {
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
+		processTLSSections(knativeIngressToNetworkingTLS(ingress.Spec.TLS),
+			ingress.Namespace, secretToSNIs)
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
@@ -601,7 +625,7 @@ func (p *Parser) parseKnativeIngressRules(
 		}
 	}
 
-	return services
+	return services, secretToSNIs
 }
 
 func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
@@ -730,7 +754,7 @@ func (p *Parser) parseIngressRules(
 		ingress := *tcpIngressList[i]
 		ingressSpec := ingress.Spec
 
-		processTLSSections(toNetworkingTLS(ingressSpec.TLS),
+		processTLSSections(tcpIngressToNetworkingTLS(ingressSpec.TLS),
 			ingress.Namespace, secretNameToSNIs)
 
 		for i, rule := range ingressSpec.Rules {
@@ -1197,12 +1221,9 @@ func overrideRoute(route *Route,
 	}
 }
 
-func cloneStringPointerSlice(array ...*string) []*string {
-	var res []*string
-	for _, s := range array {
-		res = append(res, &(*s))
-	}
-	return res
+func cloneStringPointerSlice(array ...*string) (res []*string) {
+	res = append(res, array...)
+	return
 }
 
 func overrideUpstreamHostHeader(upstream *kong.Upstream, anns map[string]string) {
@@ -1499,9 +1520,16 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 }
 
 func (p *Parser) globalPlugins() ([]Plugin, error) {
+	// removed as of 0.10.0
+	// only retrieved now to warn users
 	globalPlugins, err := p.store.ListGlobalKongPlugins()
 	if err != nil {
 		return nil, errors.Wrap(err, "error listing global KongPlugins:")
+	}
+	if len(globalPlugins) > 0 {
+		glog.Warning("global KongPlugins found. These are no longer applied and",
+			" must be replaced with KongClusterPlugins.",
+			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
 	}
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
@@ -1510,32 +1538,6 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 	// of duplicate plugin definitions, we should respect the oldest one
 	// This is important since if a user comes in to k8s and creates a new
 	// CRD, the user now deleted an older plugin
-
-	for i := 0; i < len(globalPlugins); i++ {
-		k8sPlugin := *globalPlugins[i]
-		pluginName := k8sPlugin.PluginName
-		// empty pluginName skip it
-		if pluginName == "" {
-			glog.Errorf("KongPlugin '%v' does not specify a plugin name",
-				k8sPlugin.Name)
-			continue
-		}
-		if _, ok := res[pluginName]; ok {
-			glog.Error("Multiple KongPlugin definitions found with"+
-				" 'global' annotation for '", pluginName,
-				"', the plugin will not be applied")
-			duplicates = append(duplicates, pluginName)
-			continue
-		}
-		if plugin, err := p.kongPluginFromK8SPlugin(k8sPlugin); err == nil {
-			res[pluginName] = Plugin{
-				Plugin: plugin,
-			}
-		} else {
-			glog.Errorf("Failed to generate configuration for KongPlugin "+
-				"%v/%v: %v", k8sPlugin.Namespace, pluginName, err)
-		}
-	}
 
 	globalClusterPlugins, err := p.store.ListGlobalKongClusterPlugins()
 	if err != nil {
@@ -1596,6 +1598,7 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 	// Ingress with an ExternalName service and no port defined in the service.
 	if len(svc.Spec.Ports) == 0 &&
 		svc.Spec.Type == corev1.ServiceTypeExternalName {
+		// nolint: gosec
 		externalPort, err := strconv.Atoi(backendPort)
 		if err != nil {
 			glog.Warningf("only numeric ports are allowed in"+

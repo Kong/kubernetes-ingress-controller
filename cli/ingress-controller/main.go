@@ -39,12 +39,12 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
-	configclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
-	configinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
+	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -300,6 +300,7 @@ func main() {
 		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass),
 		ClassHandling:       annotations.IgnoreClassHandling,
 	}
+
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
 
@@ -310,7 +311,20 @@ func main() {
 		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
 	}
 
-	ingInformer.AddEventHandler(lazyReh)
+	// per user preference, we default to either:
+	var baseReh controller.ResourceEventHandler
+	if cliConfig.SkipClasslessIngressV1beta1 {
+		// skip classless resources, even if using the default ingress.class
+		// only load resources with our ingress.class and their dependencies
+		baseReh = strictReh
+	} else {
+		// ingest classless resources, if and only if using the default class, either:
+		// load resources with no ingress.class or ingress.class == "kong" and their dependencies
+		// only load resources with our (custom, ingress.class != "kong") ingress.class and their dependencies
+		baseReh = lazyReh
+	}
+
+	ingInformer.AddEventHandler(baseReh)
 	cacheStores.Ingress = ingInformer.GetStore()
 	informers = append(informers, ingInformer)
 
@@ -327,7 +341,7 @@ func main() {
 	informers = append(informers, secretsInformer)
 
 	servicesInformer := coreInformerFactory.Core().V1().Services().Informer()
-	servicesInformer.AddEventHandler(lazyReh)
+	servicesInformer.AddEventHandler(baseReh)
 	cacheStores.Service = servicesInformer.GetStore()
 	informers = append(informers, servicesInformer)
 
@@ -337,7 +351,7 @@ func main() {
 	informers = append(informers, tcpIngressInformer)
 
 	kongIngressInformer := kongInformerFactory.Configuration().V1().KongIngresses().Informer()
-	kongIngressInformer.AddEventHandler(lazyReh)
+	kongIngressInformer.AddEventHandler(baseReh)
 	cacheStores.Configuration = kongIngressInformer.GetStore()
 	informers = append(informers, kongIngressInformer)
 
@@ -352,18 +366,18 @@ func main() {
 	informers = append(informers, kongClusterPluginInformer)
 
 	kongConsumerInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()
-	kongConsumerInformer.AddEventHandler(lazyReh)
+	kongConsumerInformer.AddEventHandler(baseReh)
 	cacheStores.Consumer = kongConsumerInformer.GetStore()
 	informers = append(informers, kongConsumerInformer)
 
 	kongCredentialInformer := kongInformerFactory.Configuration().V1().KongCredentials().Informer()
-	kongCredentialInformer.AddEventHandler(lazyReh)
+	kongCredentialInformer.AddEventHandler(baseReh)
 	cacheStores.Credential = kongCredentialInformer.GetStore()
 	informers = append(informers, kongCredentialInformer)
 
 	if controllerConfig.EnableKnativeIngressSupport {
 		knativeIngressInformer := knativeInformerFactory.Networking().V1alpha1().Ingresses().Informer()
-		knativeIngressInformer.AddEventHandler(lazyReh)
+		knativeIngressInformer.AddEventHandler(baseReh)
 		cacheStores.KnativeIngress = knativeIngressInformer.GetStore()
 		informers = append(informers, knativeIngressInformer)
 	}
@@ -377,7 +391,7 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	store := store.New(cacheStores, cliConfig.IngressClass)
+	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.SkipClasslessIngressV1beta1)
 	kong, err := controller.NewKongController(&controllerConfig, updateChannel,
 		store)
 	if err != nil {

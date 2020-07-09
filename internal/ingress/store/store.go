@@ -155,7 +155,7 @@ func (s Store) ListIngresses() []*networking.Ingress {
 	// filter ingress rules
 	var ingresses []*networking.Ingress
 	for _, item := range s.stores.Ingress.List() {
-		ing := networkingIngressV1Beta1(item)
+		ing := s.networkingIngressV1Beta1(item)
 		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassHandling) {
 			continue
 		}

@@ -19,8 +19,8 @@ package annotations
 import (
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -47,9 +47,12 @@ const (
 	hostHeaderKey        = "/host-header"
 	methodsKey           = "/methods"
 
+	// RequireClassHandling indicates that ingress.class must be present and match
 	RequireClassHandling = "required"
-	IgnoreClassHandling  = "ignored"
-	LazyClassHandling    = "optional"
+	// IgnoreClassHandling indicates that ingress.class is not required and is ignored
+	IgnoreClassHandling = "ignored"
+	// LazyClassHandling indicates that ingress.class can be empty if using the default class
+	LazyClassHandling = "optional"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -96,7 +99,7 @@ func validIngress(ingressAnnotationValue, ingressClass string, classHandling str
 	return ingressAnnotationValue == ingressClass, nil
 }
 
-func ObjectMetaToObjectKind(obj metav1.Object) string {
+func objectMetaToObjectKind(obj metav1.Object) string {
 	robj, ok := obj.(runtime.Object)
 	if !ok {
 		return ""
@@ -116,7 +119,7 @@ func IngressClassValidatorFunc(
 		// we only care about why sometimes, when the resource cannot possibly be valid for
 		// *any* controller, versus resources that may be valid for others
 		if err != nil {
-			glog.Errorf("%s resource '%s/%s' is invalid: %s", ObjectMetaToObjectKind(obj),
+			logrus.Errorf("%s resource '%s/%s' is invalid: %s", objectMetaToObjectKind(obj),
 				obj.GetNamespace(), obj.GetName(), err)
 			return validity
 		}
@@ -133,7 +136,7 @@ func IngressClassValidatorFuncFromObjectMeta(
 		ingress := obj.GetAnnotations()[ingressClassKey]
 		validity, err := validIngress(ingress, ingressClass, classHandling)
 		if err != nil {
-			glog.Errorf("%s resource '%s/%s' is invalid: %s", ObjectMetaToObjectKind(obj),
+			logrus.Errorf("%s resource '%s/%s' is invalid: %s", objectMetaToObjectKind(obj),
 				obj.GetNamespace(), obj.GetName(), err)
 			return validity
 		}

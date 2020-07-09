@@ -10,6 +10,7 @@ require (
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.0
+	github.com/google/go-containerregistry v0.0.0-20200131185320-aec8da010de2 // indirect
 	github.com/hashicorp/go-memdb v1.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hbagdi/deck v1.1.0
@@ -35,7 +36,5 @@ require (
 	k8s.io/client-go v0.17.4
 	k8s.io/klog v1.0.0
 	knative.dev/pkg v0.0.0-20200205160431-4ec5e09f716b
-	""
-	github.com/sirupsen/logrus v1.4.2
 	knative.dev/serving v0.12.1
 )

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -282,7 +283,7 @@ func buildStatusSync() statusSync {
 				"lable_sig": "foo_pod",
 			},
 		},
-		syncQueue: task.NewTaskQueue(fakeSynFn),
+		syncQueue: task.NewTaskQueue(fakeSynFn, logrus.New()),
 		Config: Config{
 			CoreClient:     buildSimpleClientSet(),
 			PublishService: apiv1.NamespaceDefault + "/" + "foo",
@@ -301,9 +302,10 @@ func TestStatusActions(t *testing.T) {
 		IngressLister:          buildIngressLister(),
 		UpdateStatusOnShutdown: true,
 		UseNetworkingV1beta1:   true,
+		Logger:                 logrus.New(),
 	}
 	// create object
-	fkSync := NewStatusSyncer(c)
+	fkSync, err := NewStatusSyncer(c)
 	if fkSync == nil {
 		t.Fatalf("expected a valid Sync")
 	}
@@ -315,7 +317,7 @@ func TestStatusActions(t *testing.T) {
 	//  wait for the election
 	time.Sleep(100 * time.Millisecond)
 	// execute sync
-	err := fk.sync("just-test")
+	err = fk.sync("just-test")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

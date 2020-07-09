@@ -10,6 +10,7 @@ import (
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/lithammer/dedent"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	admission "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -44,6 +45,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	res := httptest.NewRecorder()
 	server := Server{
 		Validator: KongFakeValidator{},
+		Logger:    logrus.New(),
 	}
 	handler := http.HandlerFunc(server.ServeHTTP)
 
@@ -312,7 +314,10 @@ func TestValidationWebhook(t *testing.T) {
 				// arrange
 				assert := assert.New(t)
 				res := httptest.NewRecorder()
-				server := Server{Validator: tt.validator}
+				server := Server{
+					Validator: tt.validator,
+					Logger:    logrus.New(),
+				}
 				handler := http.HandlerFunc(server.ServeHTTP)
 
 				// act

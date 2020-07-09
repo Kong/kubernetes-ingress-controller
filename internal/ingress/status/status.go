@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
@@ -81,6 +81,8 @@ type Config struct {
 	IngressLister ingressLister
 
 	UseNetworkingV1beta1 bool
+
+	Logger logrus.FieldLogger
 }
 
 // statusSync keeps the status IP in each Ingress rule updated executing a periodic check
@@ -99,6 +101,8 @@ type statusSync struct {
 	// in the Ingress rules
 	syncQueue *task.Queue
 	callbacks leaderelection.LeaderCallbacks
+
+	Logger logrus.FieldLogger
 }
 
 // Run starts the loop to keep the status in sync.
@@ -118,39 +122,41 @@ func (s statusSync) Shutdown(isLeader bool) {
 	if !isLeader {
 		return
 	}
+	logger := s.Logger.WithField("context", "shutdown")
 
 	if !s.UpdateStatusOnShutdown {
-		glog.Warningf("skipping update of status of Ingress rules")
+		logger.WithField("UpdateStatusOnShutDown",
+			s.UpdateStatusOnShutdown).Infof("update of ingress status skipped")
 		return
 	}
 
 	// Remove our IP address from all Ingress "status" subresources that mention it.
-	glog.Infof("updating status of Ingress rules (remove)")
+	s.Logger.Infof("updating status of Ingress rules (remove)")
 
 	addrs, err := s.runningAddresses()
 	if err != nil {
-		glog.Errorf("error obtaining IP addresses of running ingress controllers: %v", err)
+		logger.Errorf("failed to fetch IP addresses of running ingress controllers: %v", err)
 		return
 	}
 
 	if len(addrs) > 1 {
 		// Leave the job to the next leader.
-		glog.Infof("leaving status update for next leader (%d other candidates)", len(addrs)-1)
+		logger.Infof("leaving status update for next leader (%d other candidates)", len(addrs)-1)
 		return
 	}
 
 	if s.isRunningMultiplePods() {
-		glog.V(2).Infof("skipping Ingress status update (multiple pods running; another one will be elected as leader)")
+		logger.Infof("skipping Ingress status update (multiple pods running; another one will be elected as leader)")
 		return
 	}
 
-	glog.Infof("removing address from Ingress status (%v)", addrs)
+	logger.Infof("removing address from Ingress status (%v)", addrs)
 	s.updateStatus([]apiv1.LoadBalancerIngress{})
 }
 
 func (s *statusSync) sync(key interface{}) error {
 	if s.syncQueue.IsShuttingDown() {
-		glog.V(2).Infof("skipping Ingress status update (shutting down in progress)")
+		s.Logger.Debugf("shutdown in progress, skipping ingress status update")
 		return nil
 	}
 
@@ -168,21 +174,23 @@ func (s statusSync) keyfunc(input interface{}) (interface{}, error) {
 }
 
 // NewStatusSyncer returns a new Sync instance
-func NewStatusSyncer(config Config) Sync {
+func NewStatusSyncer(config Config) (Sync, error) {
 	pod, err := utils.GetPodDetails(config.CoreClient)
 	if err != nil {
-		glog.Fatalf("unexpected error obtaining pod information: %v", err)
+		return nil, fmt.Errorf("failed to fetch pod information: %v", err)
 	}
 
 	st := statusSync{
 		pod:    pod,
 		Config: config,
+		Logger: config.Logger,
 	}
-	st.syncQueue = task.NewCustomTaskQueue(st.sync, st.keyfunc)
+	st.syncQueue = task.NewCustomTaskQueue(st.sync, st.keyfunc,
+		config.Logger.WithField("component", "status-queue"))
 
 	st.callbacks = leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
-			glog.V(2).Infof("I am the new status update leader")
+			st.Logger.Infof("started leading")
 			if st.Config.OnStartedLeading != nil {
 				st.Config.OnStartedLeading()
 			}
@@ -193,18 +201,18 @@ func NewStatusSyncer(config Config) Sync {
 				return false, nil
 			}, ctx.Done())
 			if err != nil {
-				glog.Errorf("status syncer: polling: %v", err)
+				st.Logger.Errorf("polling failed :%v", err)
 			}
 		},
 		OnStoppedLeading: func() {
-			glog.V(2).Infof("I am not status update leader anymore")
+			st.Logger.Infof("stopped leading")
 		},
 		OnNewLeader: func(identity string) {
-			glog.Infof("new leader elected: %v", identity)
+			st.Logger.WithField("leader", identity).Infof("leadership changed")
 		},
 	}
 
-	return st
+	return st, nil
 }
 
 // runningAddresses returns a list of IP addresses and/or FQDN where the
@@ -304,11 +312,11 @@ func (s *statusSync) updateStatus(newIngressPoint []apiv1.LoadBalancerIngress) {
 	ings := s.IngressLister.ListIngresses()
 	tcpIngresses, err := s.IngressLister.ListTCPIngresses()
 	if err != nil {
-		glog.Errorf("error listing TPCIngresses for status update: %v", err)
+		s.Logger.Errorf("failed to list TPCIngresses: %v", err)
 	}
 	knativeIngresses, err := s.IngressLister.ListKnativeIngresses()
 	if err != nil {
-		glog.Errorf("error listing Knative Ingress for status update: %v", err)
+		s.Logger.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 
 	p := pool.NewLimited(10)
@@ -337,13 +345,17 @@ func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalan
 			return nil, nil
 		}
 
+		logger := s.Logger.WithFields(logrus.Fields{
+			"ingress_namespace": ing.Namespace,
+			"ingress_name":      ing.Name,
+		})
 		sort.SliceStable(status, lessLoadBalancerIngress(status))
 
 		curIPs := ing.Status.LoadBalancer.Ingress
 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
 
 		if ingressSliceEqual(status, curIPs) {
-			glog.V(3).Infof("skipping update of Ingress %v/%v (no change)", ing.Namespace, ing.Name)
+			logger.Debugf("no change in status, update skipped")
 			return true, nil
 		}
 
@@ -352,28 +364,35 @@ func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalan
 
 			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching Ingress %v/%v", ing.Namespace, ing.Name))
+				return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch Ingress %v/%v", ing.Namespace, ing.Name))
 			}
 
-			glog.Infof("updating Ingress %v/%v status to %v", currIng.Namespace, currIng.Name, status)
+			logger.WithField("ingress_status", status).Debugf("attempting to update ingress status")
 			currIng.Status.LoadBalancer.Ingress = status
 			_, err = ingClient.UpdateStatus(currIng)
 			if err != nil {
-				glog.Warningf("error updating ingress rule: %v", err)
+				// TODO return this error?
+				logger.Errorf("failed to update ingress status: %v", err)
+			} else {
+				logger.WithField("ingress_status", status).Debugf("successfully updated ingress status")
 			}
+
 		} else {
 			ingClient := client.ExtensionsV1beta1().Ingresses(ing.Namespace)
 
 			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching Ingress %v/%v", ing.Namespace, ing.Name))
+				return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch Ingress %v/%v", ing.Namespace, ing.Name))
 			}
 
-			glog.Infof("updating Ingress %v/%v status to %v", currIng.Namespace, currIng.Name, status)
+			logger.WithField("ingress_status", status).Debugf("attempting to update ingress status")
 			currIng.Status.LoadBalancer.Ingress = status
 			_, err = ingClient.UpdateStatus(currIng)
 			if err != nil {
-				glog.Warningf("error updating ingress rule: %v", err)
+				// TODO return this error?
+				logger.Errorf("failed to update ingress status: %v", err)
+			} else {
+				logger.WithField("ingress_status", status).Debugf("successfully updated ingress status")
 			}
 		}
 		return true, nil
@@ -415,6 +434,10 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 			return nil, nil
 		}
 
+		logger := s.Logger.WithFields(logrus.Fields{
+			"ingress_namespace": ing.Namespace,
+			"ingress_name":      ing.Name,
+		})
 		sort.SliceStable(status, lessLoadBalancerIngress(status))
 		curIPs := toCoreLBStatus(ing.Status.PublicLoadBalancer)
 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
@@ -423,16 +446,16 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching Knative %v/%v", ing.Namespace, ing.Name))
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch Knative Ingress %v/%v", ing.Namespace, ing.Name))
 		}
 
 		if ingressSliceEqual(status, curIPs) &&
 			currIng.Status.ObservedGeneration == currIng.GetObjectMeta().GetGeneration() {
-			glog.Errorf("skipping update of Knative %v/%v (no change)", ing.Namespace, ing.Name)
+			logger.Debugf("no change in status, update skipped")
 			return true, nil
 		}
 
-		glog.Infof("updating Knative %v/%v status to %v", currIng.Namespace, currIng.Name, status)
+		logger.WithField("ingress_status", status).Debugf("attempting to update Knative Ingress status")
 		lbStatus := toKnativeLBStatus(status)
 
 		// TODO: handle the case when s.PublishService is empty
@@ -454,7 +477,9 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 		_, err = ingClient.UpdateStatus(currIng)
 		if err != nil {
-			glog.Warningf("error updating status of KnativeIngress: %v", err)
+			logger.Errorf("failed to update ingress status: %v", err)
+		} else {
+			logger.WithField("ingress_status", status).Debugf("successfully updated ingress status")
 		}
 		return true, nil
 	}
@@ -468,13 +493,17 @@ func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
 			return nil, nil
 		}
 
+		logger := s.Logger.WithFields(logrus.Fields{
+			"ingress_namespace": ing.Namespace,
+			"ingress_name":      ing.Name,
+		})
 		sort.SliceStable(status, lessLoadBalancerIngress(status))
 
 		curIPs := ing.Status.LoadBalancer.Ingress
 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
 
 		if ingressSliceEqual(status, curIPs) {
-			glog.V(3).Infof("skipping update of TCPIngress %v/%v (no change)", ing.Namespace, ing.Name)
+			logger.Debugf("no change in status, update skipped")
 			return true, nil
 		}
 
@@ -482,14 +511,16 @@ func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
 
 		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("unexpected error searching TCPIngress %v/%v", ing.Namespace, ing.Name))
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch TCPIngress %v/%v", ing.Namespace, ing.Name))
 		}
 
-		glog.Infof("updating TCPIngress %v/%v status to %v", currIng.Namespace, currIng.Name, status)
+		logger.WithField("ingress_status", status).Debugf("attempting to update TCPIngress status")
 		currIng.Status.LoadBalancer.Ingress = status
 		_, err = ingClient.UpdateStatus(currIng)
 		if err != nil {
-			glog.Warningf("error updating status of TCPIngress: %v", err)
+			logger.Errorf("failed to update TCPIngress status: %v", err)
+		} else {
+			logger.WithField("ingress_status", status).Debugf("successfully updated TCPIngress status")
 		}
 		return true, nil
 	}

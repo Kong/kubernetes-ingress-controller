@@ -25,6 +25,7 @@ import (
 	"github.com/eapache/channels"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
+	"github.com/sirupsen/logrus"
 )
 
 func TestCreateApiserverClient(t *testing.T) {
@@ -32,7 +33,7 @@ func TestCreateApiserverClient(t *testing.T) {
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
-	_, kubeClient, err := createApiserverClient("", kubeConfigFile)
+	_, kubeClient, err := createApiserverClient("", kubeConfigFile, logrus.New())
 	if err != nil {
 		t.Fatalf("unexpected error creating api server client: %v", err)
 	}
@@ -40,7 +41,7 @@ func TestCreateApiserverClient(t *testing.T) {
 		t.Fatalf("expected a kubernetes client but none returned")
 	}
 
-	_, _, err = createApiserverClient("", "")
+	_, _, err = createApiserverClient("", "", logrus.New())
 	if err == nil {
 		t.Fatalf("expected an error creating api server client without an api server URL or kubeconfig file")
 	}
@@ -51,7 +52,7 @@ func TestHandleSigterm(t *testing.T) {
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
-	_, kubeClient, err := createApiserverClient("", kubeConfigFile)
+	_, kubeClient, err := createApiserverClient("", kubeConfigFile, logrus.New())
 	if err != nil {
 		t.Fatalf("unexpected error creating api server client: %v", err)
 	}
@@ -76,11 +77,11 @@ func TestHandleSigterm(t *testing.T) {
 			KubeClient: kubeClient,
 		},
 		channels.NewRingChannel(1024),
-		store.New(store.CacheStores{}, conf.IngressClass, conf.SkipClasslessIngressV1beta1),
+		store.New(store.CacheStores{}, conf.IngressClass, conf.SkipClasslessIngressV1beta1, logrus.New()),
 	)
 
 	exitCh := make(chan int, 1)
-	go handleSigterm(kong, make(chan struct{}), exitCh)
+	go handleSigterm(kong, make(chan struct{}), exitCh, logrus.New())
 
 	t.Logf("sending SIGTERM to process PID %v", syscall.Getpid())
 	if err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM); err != nil {

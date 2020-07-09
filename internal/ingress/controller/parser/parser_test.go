@@ -292,6 +292,26 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
+						Name: "global-broken-bar-plugin",
+						Labels: map[string]string{
+							"global": "true",
+						},
+						Annotations: map[string]string{
+							// explicitly none, this should not get rendered
+						},
+					},
+					Protocols:  []string{"http"},
+					PluginName: "basic-auth",
+					ConfigFrom: configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "basic-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
 					Protocols:  []string{"http"},

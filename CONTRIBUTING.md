@@ -75,8 +75,8 @@ go run -tags gcp ./cli/ingress-controller/ \
 ## Building
 
 Build is performed via Makefile. Depending on your
-requirements you can build a raw server binary, a local container image,
-or push an image to a remote repository.
+requirements you can build a raw server binary
+or a local container image.
 
 ### Build a raw server binary
 
@@ -87,7 +87,7 @@ $ make build
 ### Build a local container image
 
 ```console
-$ TAG=DEV make docker-build
+$ TAG=DEV make container
 ```
 
 Note: this will use the Docker daemon
@@ -102,13 +102,7 @@ eval $(minikube docker-env)
 
 This will allow you to publish images to
 Minikube VM, allowing you to reference them
-in your Deployment specs.
-
-### Push the container image to a remote repository
-
-```console
-$ TAG=DEV REGISTRY=$USER/kong-ingress-controller make docker-push
-```
+in your Deployment specs.`
 
 ## Deploying
 

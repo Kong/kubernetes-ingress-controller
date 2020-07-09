@@ -16,8 +16,8 @@ Prometheus to collect metrics from Kong Ingress Controller.
 You’ll need a few things before we can start:
 
 - **Kubernetes cluster**: You can use Minikube or a GKE cluster for the
-  purpose of this tutorial. We are running a GKE Kubernetes cluster v1.12.x.
-- **Helm**: We will be using [Helm](https://helm.sh/)
+  purpose of this tutorial. We are running a GKE Kubernetes cluster v1.18.x.
+- **Helm**: We will be using [Helm](https://helm.sh/) v3.x.x
   to install all of our components.
   Tiller should be installed on your k8s cluster and
   Helm CLI should be available on your workstation.
@@ -42,7 +42,7 @@ We’ll install both Prometheus and Grafana in a dedicated `monitoring` namespac
 To install Prometheus, execute the following:
 
 ```bash
-$ helm install --name prometheus stable/prometheus --namespace monitoring --values https://bit.ly/2RgzDtg --version 11.0.3
+$ helm install prometheus stable/prometheus --namespace monitoring --create-namespace --values https://bit.ly/2RgzDtg --version 11.5.0
 ```
 
 ### Grafana
@@ -51,8 +51,6 @@ Grafana is installed with the following values for its Helm chart
 (see comments for explanation):
 
 ```yaml
-persistence:
-  enabled: true  # enable persistence using Persistent Volumes
 datasources:
  datasources.yaml:
    apiVersion: 1
@@ -87,7 +85,7 @@ dashboards:
 To install Grafana, execute the following:
 
 ```bash
-$ helm install stable/grafana --name grafana --namespace monitoring --values http://bit.ly/2FuFVfV --version 5.0.8
+$ helm install grafana stable/grafana --namespace monitoring --values https://bit.ly/2YllNrj --version 5.3.0
 ```
 
 ## Install Kong
@@ -103,7 +101,7 @@ $ helm repo update
 $ helm install kong/kong --namespace kong --name mykong --version 1.3.1 --values https://bit.ly/2UAv0ZE
 
 # helm 3
-$ helm install kong/kong --namespace kong --name mykong --version 1.3.1 --values https://bit.ly/2UAv0ZE --set ingressController.installCRDs=false
+$ helm install kong kong/kong --namespace kong --create-namespace --set ingressController.installCRDs=false --values https://bit.ly/kongvalues541 --version 1.7.0
 ```
 
 ### Enable Prometheus plugin in Kong
@@ -140,12 +138,12 @@ kubectl --namespace monitoring  port-forward $POD_NAME 9090 &
 
 # You can access Prometheus in your browser at localhost:9090
 
-POD_NAME=$(kubectl get pods --namespace monitoring -l "app.kubernetes.io/instance=grafana" -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods --namespace monitoring -l "app.kubernetes.io/name=grafana" -o jsonpath="{.items[0].metadata.name}")
 kubectl --namespace monitoring port-forward $POD_NAME 3000 &
 
 # You can access Grafana in your browser at localhost:3000
 
-POD_NAME=$(kubectl get pods --namespace kong -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods --namespace kong -l "app.kubernetes.io/instance=kong" -o jsonpath="{.items[0].metadata.name}")
 kubectl --namespace kong port-forward $POD_NAME 8000 &
 
 # Kong proxy port is now your localhost 8000 port
@@ -182,7 +180,7 @@ We will set up three services: billing, invoice, and comments.
 Execute the following to spin these services up:
 
 ```bash
-kubectl apply -f https://gist.githubusercontent.com/hbagdi/2d8ef66fe22cb99e1514f410f992268d/raw/a03d789b70c46ccd0b99d9f1ed838dc21419fc33/multiple-services.yaml
+kubectl apply -f https://bit.ly/2Z9LmuM
 ```
 
 ### Install Ingress for the Services
@@ -194,13 +192,20 @@ This will configure Kong to proxy traffic destined for these services correctly.
 Execute the following:
 
 ```bash
-echo '
-apiVersion: extensions/v1beta1
+echo "apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  name: strip-path
+route:
+  strip_path: true
+" | kubectl apply -f -
+ 
+echo "apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: sample-ingresses
   annotations:
-    konghq.com/strip-path: "true"
+    configuration.konghq.com: strip-path
+  name: sample-ingresses
 spec:
   rules:
   - http:
@@ -216,8 +221,7 @@ spec:
      - path: /invoice
        backend:
          serviceName: invoice
-         servicePort: 80
-' | kubectl apply -f -
+         servicePort: 80" | kubectl apply -f -
 ```
 
 ## Let’s Create Some Traffic

@@ -102,7 +102,7 @@ eval $(minikube docker-env)
 
 This will allow you to publish images to
 Minikube VM, allowing you to reference them
-in your Deployment specs.`
+in your Deployment specs.
 
 ## Deploying
 

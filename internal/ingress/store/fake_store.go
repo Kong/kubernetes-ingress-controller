@@ -124,7 +124,12 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-
+	var ingressClassHandling string
+	if objects.SkipClasslessIngress {
+		ingressClassHandling = annotations.RequireClassHandling
+	} else {
+		ingressClassHandling = annotations.LazyClassHandling
+	}
 	s = Store{
 		stores: CacheStores{
 			Ingress:    ingressStore,
@@ -142,7 +147,7 @@ func NewFakeStore(
 			KnativeIngress: knativeIngressStore,
 		},
 		isValidIngressClass:  annotations.IngressClassValidatorFuncFromObjectMeta("kong"),
-		ingressClassHandling: annotations.LazyClassHandling,
+		ingressClassHandling: ingressClassHandling,
 	}
 	return s, nil
 }

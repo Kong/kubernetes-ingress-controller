@@ -197,7 +197,7 @@ func main() {
 	}
 
 	// fix: https://github.com/Kong/kubernetes-ingress-controller/issues/761
-	root := make(map[string]interface{})
+	var root map[string]interface{}
 	retry := 0
 	for {
 		root, err = kongClient.Root(context.Background())

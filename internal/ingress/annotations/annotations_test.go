@@ -56,7 +56,13 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 	for _, test := range tests {
 		ing.Annotations[ingressClassKey] = test.ingress
 		f := IngressClassValidatorFunc(test.controller)
-		b := f(&ing.ObjectMeta, LazyClassHandling)
+		var b bool
+		if test.skipClasslessIngress {
+			b = f(&ing.ObjectMeta, RequireClassHandling)
+		} else {
+			b = f(&ing.ObjectMeta, LazyClassHandling)
+		}
+
 		if b != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
 		}

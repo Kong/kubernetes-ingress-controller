@@ -196,9 +196,22 @@ func main() {
 		glog.Fatalf("Error creating Kong Rest client: %v", err)
 	}
 
-	root, err := kongClient.Root(context.Background())
-	if err != nil {
-		glog.Fatalf("%v", err)
+	// fix: https://github.com/Kong/kubernetes-ingress-controller/issues/761
+	root := make(map[string]interface{})
+	retry := 0
+	for {
+		root, err = kongClient.Root(context.Background())
+		if err != nil {
+			if retry > 5 {
+				glog.Fatalf("%v", err)
+			} else {
+				retry++
+				time.Sleep(time.Second * 5)
+				glog.Infof("retry %d to get kong admin api: %v", retry, err)
+				continue
+			}
+		}
+		break
 	}
 	v, err := getSemVerVer(root["version"].(string))
 	if err != nil {

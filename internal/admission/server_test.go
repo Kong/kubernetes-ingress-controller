@@ -2,6 +2,7 @@ package admission
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +10,6 @@ import (
 
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/lithammer/dedent"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	admission "k8s.io/api/admission/v1"

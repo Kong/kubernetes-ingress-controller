@@ -8,7 +8,6 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/hbagdi/go-kong/kong"
-	"github.com/pkg/errors"
 )
 
 func getSemVerVer(v string) (semver.Version, error) {
@@ -40,11 +39,11 @@ func ensureWorkspace(client *kong.Client, workspace string) error {
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			if err := createWorkspace(client, workspace); err != nil {
-				return errors.Wrapf(err, "creating workspace '%v'", workspace)
+				return fmt.Errorf("creating workspace '%v': %w", workspace, err)
 			}
 			return nil
 		}
-		return errors.Wrapf(err, "looking up workspace '%v'", workspace)
+		return fmt.Errorf("looking up workspace '%v': %w", workspace, err)
 	}
 	return nil
 }

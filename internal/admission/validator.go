@@ -2,11 +2,11 @@ package admission
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/hbagdi/go-kong/kong"
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -41,7 +41,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 			return true, "", nil
 		}
 		validator.Logger.Errorf("failed to fetch consumer from kong: %v", err)
-		return false, "", errors.Wrap(err, "fetching consumer from Kong")
+		return false, "", fmt.Errorf("fetching consumer from Kong: %w", err)
 	}
 	if c != nil {
 		return false, "consumer already exists", nil

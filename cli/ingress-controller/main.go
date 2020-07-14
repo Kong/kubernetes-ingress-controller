@@ -57,6 +57,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/flowcontrol"
 	knativeclient "knative.dev/serving/pkg/client/clientset/versioned"
 	knativeinformer "knative.dev/serving/pkg/client/informers/externalversions"
 )
@@ -196,18 +197,21 @@ func main() {
 		glog.Fatalf("Error creating Kong Rest client: %v", err)
 	}
 
-	// fix: https://github.com/Kong/kubernetes-ingress-controller/issues/761
 	var root map[string]interface{}
-	retry := 0
+	backoff := flowcontrol.NewBackOff(1*time.Second, 15*time.Second)
+	const backoffID = "kong-admin-api"
+	retryCount := 0
 	for {
 		root, err = kongClient.Root(context.Background())
 		if err != nil {
-			if retry > 5 {
+			if retryCount > 5 {
 				glog.Fatalf("%v", err)
 			} else {
-				retry++
-				time.Sleep(time.Second * 5)
-				glog.Infof("retry %d to get kong admin api: %v", retry, err)
+				backoff.Next(backoffID, backoff.Clock.Now())
+				delay := backoff.Get(backoffID)
+				time.Sleep(delay)
+				retryCount++
+				glog.Infof("retry %d to get kong admin api: %v", retryCount, err)
 				continue
 			}
 		}

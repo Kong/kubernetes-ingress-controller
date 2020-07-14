@@ -250,13 +250,13 @@ func main() {
 		root, err = kongClient.Root(context.Background())
 		if err != nil {
 			if retryCount > 5 {
-				glog.Fatalf("failed to fetch metadata from kong: %v", err)
+				klog.Fatalf("failed to fetch metadata from kong: %v", err)
 			} else {
 				backoff.Next(backoffID, backoff.Clock.Now())
 				delay := backoff.Get(backoffID)
 				time.Sleep(delay)
 				retryCount++
-				glog.Infof("retry %d to fetch metadata from kong: %v", retryCount, err)
+				klog.Infof("retry %d to fetch metadata from kong: %v", retryCount, err)
 				continue
 			}
 		}

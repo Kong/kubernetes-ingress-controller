@@ -2,12 +2,12 @@ package admission
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/hbagdi/go-kong/kong"
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -22,6 +22,7 @@ type KongValidator interface {
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
 	Client *kong.Client
+	Logger logrus.FieldLogger
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
@@ -39,9 +40,8 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		if kong.IsNotFoundErr(err) {
 			return true, "", nil
 		}
-		glog.Errorf("admission controller: "+
-			"error getting consumer from Kong: %v", err)
-		return false, "", errors.Wrap(err, "fetching consumer from Kong")
+		validator.Logger.Errorf("failed to fetch consumer from kong: %v", err)
+		return false, "", fmt.Errorf("fetching consumer from Kong: %w", err)
 	}
 	if c != nil {
 		return false, "consumer already exists", nil

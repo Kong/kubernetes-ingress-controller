@@ -25,12 +25,12 @@ spec:
       containers:
       - name: proxy
         image: kong:2.0
-        securityContext:
-          runAsUser: 1000
         env:
           # servers
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
         - name: KONG_ADMIN_LISTEN
           value: 127.0.0.1:8444 ssl
         - name: KONG_STATUS_LISTEN

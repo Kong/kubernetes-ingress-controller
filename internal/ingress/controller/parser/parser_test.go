@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -140,22 +141,6 @@ func TestGlobalPlugin(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("global plugins are processed correctly", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			KongPlugins: []*configurationv1.KongPlugin{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
-					},
-					PluginName: "key-auth",
-					Protocols:  []string{"grpc"},
-					Config: configurationv1.Configuration{
-						"foo": "bar",
-					},
-				},
-			},
 			KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -173,22 +158,19 @@ func TestGlobalPlugin(t *testing.T) {
 			},
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
-		assert.Equal(2, len(state.Plugins),
+		assert.Equal(1, len(state.Plugins),
 			"expected one plugin to be rendered")
 
 		sort.SliceStable(state.Plugins, func(i, j int) bool {
 			return strings.Compare(*state.Plugins[i].Name, *state.Plugins[j].Name) > 0
 		})
-		assert.Equal("key-auth", *state.Plugins[0].Name)
-		assert.Equal(1, len(state.Plugins[0].Protocols))
-		assert.Equal(kong.Configuration{"foo": "bar"}, state.Plugins[0].Config)
 
-		assert.Equal("basic-auth", *state.Plugins[1].Name)
-		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[1].Config)
+		assert.Equal("basic-auth", *state.Plugins[0].Name)
+		assert.Equal(kong.Configuration{"foo1": "bar1"}, state.Plugins[0].Config)
 	})
 }
 
@@ -272,22 +254,6 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "global-foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
-					},
-					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
-							Key:    "jwt-config",
-							Secret: "conf-secret",
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
 						Namespace: "default",
 					},
@@ -348,12 +314,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
-			assert.Equal(4, len(state.Plugins),
-				"expected four plugins to be rendered")
+			assert.Equal(3, len(state.Plugins),
+				"expected three plugins to be rendered")
 
 			sort.SliceStable(state.Plugins, func(i, j int) bool {
 				return strings.Compare(*state.Plugins[i].Name,
@@ -362,16 +328,13 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			assert.Equal("jwt", *state.Plugins[0].Name)
 			assert.Equal(kong.Configuration{"run_on_preflight": false},
 				state.Plugins[0].Config)
-			assert.Equal("jwt", *state.Plugins[1].Name)
-			assert.Equal(kong.Configuration{"run_on_preflight": false},
-				state.Plugins[1].Config)
 
+			assert.Equal("basic-auth", *state.Plugins[1].Name)
+			assert.Equal(kong.Configuration{"hide_credentials": true},
+				state.Plugins[2].Config)
 			assert.Equal("basic-auth", *state.Plugins[2].Name)
 			assert.Equal(kong.Configuration{"hide_credentials": true},
 				state.Plugins[2].Config)
-			assert.Equal("basic-auth", *state.Plugins[3].Name)
-			assert.Equal(kong.Configuration{"hide_credentials": true},
-				state.Plugins[3].Config)
 		})
 
 	t.Run("plugins with missing secrets or keys are not constructed",
@@ -456,7 +419,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -550,7 +513,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -602,7 +565,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		}
 		store, err := store.NewFakeStore(objects)
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -701,7 +664,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -733,7 +696,7 @@ func TestCACertificate(t *testing.T) {
 			Secrets: secrets,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -778,7 +741,7 @@ func TestCACertificate(t *testing.T) {
 			Secrets: secrets,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -832,7 +795,7 @@ func TestCACertificate(t *testing.T) {
 			Secrets: secrets,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -913,7 +876,7 @@ func TestServiceClientCertificate(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -978,7 +941,7 @@ func TestServiceClientCertificate(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -1038,7 +1001,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -1115,7 +1078,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -1193,7 +1156,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -1272,7 +1235,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -1350,7 +1313,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -1428,7 +1391,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -1506,7 +1469,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -1584,7 +1547,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -1615,6 +1578,116 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Protocols:     kong.StringSlice("http", "https"),
 			}, state.Services[0].Routes[0].Route)
 		})
+}
+
+func TestKongSkipClasslessIngress(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("Kong classless ingress evaluated (true)", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "bar",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:            ingresses,
+			Services:             services,
+			SkipClasslessIngress: false,
+		})
+		assert.Nil(err)
+		parser := New(store, logrus.New())
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services),
+			"expected one service to be rendered")
+	})
+	t.Run("Kong classless ingress evaluated (false)", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "bar",
+					Namespace:   "default",
+					Annotations: map[string]string{},
+				},
+				Spec: networking.IngressSpec{
+					Rules: []networking.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networking.IngressRuleValue{
+								HTTP: &networking.HTTPIngressRuleValue{
+									Paths: []networking.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networking.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses:            ingresses,
+			Services:             services,
+			SkipClasslessIngress: true,
+		})
+		assert.Nil(err)
+		parser := New(store, logrus.New())
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(0, len(state.Services),
+			"expected zero service to be rendered")
+	})
 }
 
 func TestKnativeIngressAndPlugins(t *testing.T) {
@@ -1686,7 +1759,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 			KongPlugins:      plugins,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -1792,7 +1865,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -1870,7 +1943,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -1956,7 +2029,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store)
+			parser := New(store, logrus.New())
 			state, err := parser.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -2021,7 +2094,7 @@ func TestDefaultBackend(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2087,7 +2160,7 @@ func TestDefaultBackend(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2150,7 +2223,7 @@ func TestParserSecret(t *testing.T) {
 			Secrets:   secrets,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2226,7 +2299,7 @@ func TestParserSecret(t *testing.T) {
 			Secrets:   secrets,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2305,7 +2378,7 @@ func TestParserSecret(t *testing.T) {
 			Secrets:   secrets,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2383,7 +2456,7 @@ func TestPluginAnnotations(t *testing.T) {
 			KongPlugins: plugins,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2480,7 +2553,7 @@ func TestPluginAnnotations(t *testing.T) {
 			KongClusterPlugins: clusterPlugins,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2550,7 +2623,7 @@ func TestPluginAnnotations(t *testing.T) {
 			KongClusterPlugins: clusterPlugins,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2596,7 +2669,7 @@ func TestPluginAnnotations(t *testing.T) {
 			Ingresses: ingresses,
 		})
 		assert.Nil(err)
-		parser := New(store)
+		parser := New(store, logrus.New())
 		state, err := parser.Build()
 		assert.Nil(err)
 		assert.NotNil(state)
@@ -2607,7 +2680,9 @@ func TestPluginAnnotations(t *testing.T) {
 
 func TestParseIngressRules(t *testing.T) {
 	assert := assert.New(t)
-	p := Parser{}
+	p := Parser{
+		Logger: logrus.New(),
+	}
 	ingressList := []*networking.Ingress{
 		// 0
 		{
@@ -3836,12 +3911,16 @@ func TestOverrideRoute(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
-		overrideRoute(&testcase.inRoute, &testcase.inKongIngresss)
+		p := Parser{
+			Logger: logrus.New(),
+		}
+		p.overrideRoute(&testcase.inRoute, &testcase.inKongIngresss)
 		assert.Equal(testcase.inRoute, testcase.outRoute)
 	}
 
 	assert.NotPanics(func() {
-		overrideRoute(nil, nil)
+		var p Parser
+		p.overrideRoute(nil, nil)
 	})
 }
 
@@ -3873,7 +3952,8 @@ func TestOverrideRoutePriority(t *testing.T) {
 		},
 		Ingress: netIngress,
 	}
-	overrideRoute(&route, &kongIngress)
+	var p Parser
+	p.overrideRoute(&route, &kongIngress)
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
 	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
 }
@@ -3891,10 +3971,11 @@ func TestOverrideRouteByKongIngress(t *testing.T) {
 		},
 	}
 
-	overrideRouteByKongIngress(&route, &kongIngress)
+	var p Parser
+	p.overrideRouteByKongIngress(&route, &kongIngress)
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
 	assert.NotPanics(func() {
-		overrideRoute(nil, nil)
+		p.overrideRoute(nil, nil)
 	})
 }
 func TestOverrideRouteByAnnotation(t *testing.T) {
@@ -3920,12 +4001,13 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		},
 		Ingress: netIngress,
 	}
-	overrideRouteByAnnotation(&route)
+	var p Parser
+	p.overrideRouteByAnnotation(&route)
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
 	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
 
 	assert.NotPanics(func() {
-		overrideRoute(nil, nil)
+		p.overrideRoute(nil, nil)
 	})
 }
 
@@ -4441,7 +4523,10 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(testCase.svc, testCase.port, testCase.proto, testCase.fn)
+			p := Parser{
+				Logger: logrus.New(),
+			}
+			result := p.getEndpoints(testCase.svc, testCase.port, testCase.proto, testCase.fn)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
 			}
@@ -4674,7 +4759,8 @@ func Test_processCredential(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := processCredential(tt.args.credType, tt.args.consumer,
+			var p Parser
+			if err := p.processCredential(tt.args.credType, tt.args.consumer,
 				tt.args.credConfig); (err != nil) != tt.wantErr {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)
@@ -5606,7 +5692,10 @@ func Test_overrideRouteMethods(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			overrideRouteMethods(tt.args.route, tt.args.anns)
+			p := Parser{
+				Logger: logrus.New(),
+			}
+			p.overrideRouteMethods(tt.args.route, tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteMethods() got = %v, want %v", tt.args.route, tt.want)
 			}

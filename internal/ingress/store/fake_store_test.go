@@ -1,17 +1,17 @@
 package store
 
 import (
+	"errors"
+	"testing"
+
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
-
-	"testing"
 )
 
 func Test_keyFunc(t *testing.T) {
@@ -330,28 +330,8 @@ func TestFakeStorePlugins(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KongPlugins: plugins})
 	assert.Nil(err)
 	assert.NotNil(store)
-	plugins, err = store.ListGlobalKongPlugins()
-	assert.Len(plugins, 0)
 
 	plugins = []*configurationv1.KongPlugin{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Labels: map[string]string{
-					"global": "true",
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Labels: map[string]string{
-					"global": "true",
-				},
-			},
-		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "baz",
@@ -363,13 +343,9 @@ func TestFakeStorePlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	plugins, err = store.ListGlobalKongPlugins()
-	assert.Len(plugins, 2)
+	assert.Len(plugins, 0)
 
-	plugin, err := store.GetKongPlugin("default", "bar")
-	assert.NotNil(plugin)
-	assert.Nil(err)
-
-	plugin, err = store.GetKongPlugin("default", "does-not-exist")
+	plugin, err := store.GetKongPlugin("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)

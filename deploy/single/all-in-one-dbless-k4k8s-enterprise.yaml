@@ -651,22 +651,24 @@ spec:
             secretKeyRef:
               key: license
               name: kong-enterprise-license
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        - name: KONG_ADMIN_LISTEN
-          value: 127.0.0.1:8444 ssl
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
-        - name: KONG_DATABASE
-          value: "off"
-        - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 127.0.0.1:8444 ssl
+        - name: KONG_DATABASE
+          value: "off"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "1"
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
         image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:2.0.4.1-alpine
         lifecycle:
           preStop:
@@ -706,8 +708,6 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
-        securityContext:
-          runAsUser: 1000
       - env:
         - name: CONTROLLER_KONG_ADMIN_URL
           value: https://127.0.0.1:8444

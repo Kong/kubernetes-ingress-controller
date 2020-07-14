@@ -2,13 +2,13 @@ package admission
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
-	"github.com/golang/glog"
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/pkg/errors"
-	admission "k8s.io/api/admission/v1beta1"
+	"github.com/sirupsen/logrus"
+	admission "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,45 +26,47 @@ type Server struct {
 	// Validator validates the entities that the k8s API-server asks
 	// it the server to validate.
 	Validator KongValidator
+
+	Logger logrus.FieldLogger
 }
 
 // ServeHTTP parses AdmissionReview requests and responds back
 // with the validation result of the entity.
 func (a Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
-		glog.Error("admission webhook: received request with empty body")
+		a.Logger.Error("received request with empty body")
 		http.Error(w, "admission review object is missing",
 			http.StatusBadRequest)
 		return
 	}
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		glog.Error("admission webhook: reading request", err)
+		a.Logger.Errorf("failed to read request from client: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	review := admission.AdmissionReview{}
 	if err := json.Unmarshal(data, &review); err != nil {
-		glog.Error("admission webhook: parsing AdmissionReview", err)
+		a.Logger.Errorf("failed to parse AdmissionReview object: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	response, err := a.handleValidation(*review.Request)
 	if err != nil {
-		glog.Error("admission webhook: handling webhook", err)
+		a.Logger.Errorf("failed to run validation: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	review.Response = response
 	data, err = json.Marshal(review)
 	if err != nil {
-		glog.Error("admission webhook: marshaling response", err)
+		a.Logger.Errorf("failed to marshal response: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(data)
 	if err != nil {
-		glog.Error("admission webhook: writing response", err)
+		a.Logger.Errorf("failed to write response: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -125,8 +127,7 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 				ok = true
 			}
 		default:
-			return nil, errors.New("unknown operation '" +
-				string(request.Operation) + "'")
+			return nil, fmt.Errorf("unknown operation '%v'", string(request.Operation))
 		}
 
 	case pluginGVResource:
@@ -161,7 +162,7 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 			return nil, err
 		}
 	default:
-		return nil, errors.Errorf("unknown resource type to validate: %s/%s %s",
+		return nil, fmt.Errorf("unknown resource type to validate: %s/%s %s",
 			request.Resource.Group, request.Resource.Version,
 			request.Resource.Resource)
 	}

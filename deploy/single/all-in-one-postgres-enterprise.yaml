@@ -697,34 +697,36 @@ spec:
             secretKeyRef:
               key: license
               name: kong-enterprise-license
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
         - name: KONG_ADMIN_API_URI
           value: set-me
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
         - name: KONG_ADMIN_GUI_AUTH
           value: basic-auth
-        - name: KONG_ENFORCE_RBAC
-          value: "on"
         - name: KONG_ADMIN_GUI_SESSION_CONF
           value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
         - name: KONG_ADMIN_LISTEN
           value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
         - name: KONG_DATABASE
           value: postgres
+        - name: KONG_ENFORCE_RBAC
+          value: "on"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "1"
         - name: KONG_PG_HOST
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
-        - name: KONG_ADMIN_ACCESS_LOG
-          value: /dev/stdout
-        - name: KONG_ADMIN_ERROR_LOG
-          value: /dev/stderr
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
         image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:1.5.0.2-alpine
         lifecycle:
           preStop:
@@ -770,8 +772,6 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
-        securityContext:
-          runAsUser: 1000
       - env:
         - name: CONTROLLER_KONG_ADMIN_TOKEN
           valueFrom:

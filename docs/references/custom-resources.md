@@ -37,10 +37,6 @@ kind: KongPlugin
 metadata:
   name: <object name>
   namespace: <object namespace>
-  labels:
-    global: "true"   # optional, if set, then the plugin will be executed
-                     # for every request that Kong proxies
-                     # please note the quotes around true
 disabled: <boolean>  # optionally disable the plugin in Kong
 config:              # configuration for the plugin
     key: value
@@ -66,9 +62,6 @@ plugin: <name-of-plugin> # like key-auth, rate-limiting etc
   or `configFrom` may be used in a KongPlugin, not both at once.
 - `plugin` field determines the name of the plugin in Kong.
   This field was introduced in Kong Ingress Controller 0.2.0.
-- Setting a label `global` to `"true"` will result in the plugin being
-  applied globally in Kong, meaning it will be executed for every
-  request that is proxied via Kong.
 
 **Please note:** validation of the configuration fields is left to the user
 by default. It is advised to setup and use the admission validating controller
@@ -174,9 +167,9 @@ type: Opaque
 
 ## KongClusterPlugin
 
-A `KongClusterPlugin` is same as `KongPlugin` resource. The only difference
-being that it is a Kubernetes cluster-level resource instead of a
-namespaced resource.
+A `KongClusterPlugin` is same as `KongPlugin` resource. The only differences
+are that it is a Kubernetes cluster-level resource instead of a namespaced
+resource, and can be applied as a global plugin using labels.
 
 Please consult the [KongPlugin](#kongplugin) section for details.
 
@@ -189,6 +182,10 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: request-id
+  labels:
+    global: "true"   # optional, if set, then the plugin will be executed
+                     # for every request that Kong proxies
+                     # please note the quotes around true
 config:
   header_name: my-request-id
 configFrom:
@@ -200,6 +197,9 @@ plugin: correlation-id
 ```
 
 As with KongPlugin, only one of `config` or `configFrom` can be used.
+
+Setting the label `global` to `"true"` will apply the plugin globally in Kong,
+meaning it will be executed for every request that is proxied via Kong.
 
 ## KongIngress
 

@@ -10,17 +10,17 @@ require (
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-containerregistry v0.0.0-20200131185320-aec8da010de2 // indirect
 	github.com/hashicorp/go-memdb v1.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hbagdi/deck v1.1.0
 	github.com/hbagdi/go-kong v0.11.0
+	github.com/lithammer/dedent v1.1.0
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
 	github.com/mitchellh/mapstructure v1.2.2
 	github.com/openzipkin/zipkin-go v0.2.2 // indirect
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.0.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2
 	github.com/stretchr/testify v1.4.0
@@ -33,6 +33,7 @@ require (
 	k8s.io/api v0.17.4
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v0.17.4
+	k8s.io/klog v1.0.0
 	knative.dev/pkg v0.0.0-20200205160431-4ec5e09f716b
 	knative.dev/serving v0.12.1
 )

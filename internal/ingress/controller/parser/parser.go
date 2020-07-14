@@ -1109,6 +1109,10 @@ func useSSLProtocol(route *kong.Route) {
 		prots = append(prots, kong.String("https"))
 	}
 
+	if !grpc && !http {
+		prots = append(prots, kong.String("https"))
+	}
+
 	route.Protocols = prots
 }
 func overrideRouteStripPath(route *kong.Route, anns map[string]string) {

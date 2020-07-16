@@ -6,13 +6,13 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
 	"sort"
-	"strings"
-
 	"strconv"
+	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/hbagdi/go-kong/kong"
@@ -22,7 +22,6 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -293,7 +292,7 @@ func (p *Parser) processCredential(credType string, consumer *Consumer,
 		var cred kong.KeyAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
-			return errors.Wrap(err, "failed to decode key-auth credential")
+			return fmt.Errorf("failed to decode key-auth credential: %w", err)
 
 		}
 		consumer.KeyAuths = append(consumer.KeyAuths, &cred)
@@ -301,21 +300,21 @@ func (p *Parser) processCredential(credType string, consumer *Consumer,
 		var cred kong.BasicAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
-			return errors.Wrap(err, "failed to decode basic-auth credential")
+			return fmt.Errorf("failed to decode basic-auth credential: %w", err)
 		}
 		consumer.BasicAuths = append(consumer.BasicAuths, &cred)
 	case "hmac-auth", "hmacauth_credential":
 		var cred kong.HMACAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
-			return errors.Wrap(err, "failed to decode hmac-auth credential")
+			return fmt.Errorf("failed to decode hmac-auth credential: %w", err)
 		}
 		consumer.HMACAuths = append(consumer.HMACAuths, &cred)
 	case "oauth2":
 		var cred kong.Oauth2Credential
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
-			return errors.Wrap(err, "failed to decode oauth2 credential")
+			return fmt.Errorf("failed to decode oauth2 credential: %w", err)
 		}
 		consumer.Oauth2Creds = append(consumer.Oauth2Creds, &cred)
 	case "jwt", "jwt_secret":
@@ -342,7 +341,7 @@ func (p *Parser) processCredential(credType string, consumer *Consumer,
 		}
 		consumer.ACLGroups = append(consumer.ACLGroups, &cred)
 	default:
-		return errors.Errorf("invalid credential type: '%v'", credType)
+		return fmt.Errorf("invalid credential type: '%v'", credType)
 	}
 	return nil
 }
@@ -354,11 +353,11 @@ func decodeCredential(credConfig interface{},
 			Result: credStructPointer,
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a decoder")
+		return fmt.Errorf("failed to create a decoder: %w", err)
 	}
 	err = decoder.Decode(credConfig)
 	if err != nil {
-		return errors.Wrapf(err, "failed to decode credential")
+		return fmt.Errorf("failed to decode credential: %w", err)
 	}
 	return nil
 }
@@ -1558,7 +1557,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 	// only retrieved now to warn users
 	globalPlugins, err := p.store.ListGlobalKongPlugins()
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing global KongPlugins:")
+		return nil, fmt.Errorf("error listing global KongPlugins: %w", err)
 	}
 	if len(globalPlugins) > 0 {
 		p.Logger.Warning("global KongPlugins found. These are no longer applied and",
@@ -1575,7 +1574,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 
 	globalClusterPlugins, err := p.store.ListGlobalKongClusterPlugins()
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing global KongClusterPlugins")
+		return nil, fmt.Errorf("error listing global KongClusterPlugins: %w", err)
 	}
 	for i := 0; i < len(globalClusterPlugins); i++ {
 		k8sPlugin := *globalClusterPlugins[i]
@@ -1731,7 +1730,7 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 				return plugin, err
 			}
 			if clusterPlugin.PluginName == "" {
-				return plugin, errors.Errorf("invalid empty 'plugin' property")
+				return plugin, fmt.Errorf("invalid empty 'plugin' property")
 			}
 			plugin, err = p.kongPluginFromK8SClusterPlugin(*clusterPlugin)
 			return plugin, err
@@ -1739,7 +1738,7 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 	}
 	// ignore plugins with no name
 	if k8sPlugin.PluginName == "" {
-		return plugin, errors.Errorf("invalid empty 'plugin' property")
+		return plugin, fmt.Errorf("invalid empty 'plugin' property")
 	}
 
 	plugin, err = p.kongPluginFromK8SPlugin(*k8sPlugin)
@@ -1751,21 +1750,21 @@ func (p *Parser) secretToConfiguration(
 	configurationv1.Configuration, error) {
 	secret, err := p.store.GetSecret(namespace, reference.Secret)
 	if err != nil {
-		return configurationv1.Configuration{}, errors.Errorf(
+		return configurationv1.Configuration{}, fmt.Errorf(
 			"error fetching plugin configuration secret '%v/%v': %v",
 			namespace, reference.Secret, err)
 	}
 	secretVal, ok := secret.Data[reference.Key]
 	if !ok {
 		return configurationv1.Configuration{},
-			errors.Errorf("no key '%v' in secret '%v/%v'",
+			fmt.Errorf("no key '%v' in secret '%v/%v'",
 				reference.Key, namespace, reference.Secret)
 	}
 	var config configurationv1.Configuration
 	if err := json.Unmarshal(secretVal, &config); err != nil {
 		if err := yaml.Unmarshal(secretVal, &config); err != nil {
 			return configurationv1.Configuration{},
-				errors.Errorf("key '%v' in secret '%v/%v' contains neither "+
+				fmt.Errorf("key '%v' in secret '%v/%v' contains neither "+
 					"valid JSON nor valid YAML)",
 					reference.Key, namespace, reference.Secret)
 		}
@@ -1816,7 +1815,7 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(
 		(configurationv1.NamespacedSecretValueFromSource{}) &&
 		len(k8sPlugin.Config) > 0 {
 		return kong.Plugin{},
-			errors.Errorf("KongClusterPlugin '/%v' has both "+
+			fmt.Errorf("KongClusterPlugin '/%v' has both "+
 				"Config and ConfigFrom set", k8sPlugin.Name)
 	}
 	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.
@@ -1848,7 +1847,7 @@ func (p *Parser) kongPluginFromK8SPlugin(
 		(configurationv1.SecretValueFromSource{}) &&
 		len(k8sPlugin.Config) > 0 {
 		return kong.Plugin{},
-			errors.Errorf("KongPlugin '%v/%v' has both "+
+			fmt.Errorf("KongPlugin '%v/%v' has both "+
 				"Config and ConfigFrom set",
 				k8sPlugin.Namespace, k8sPlugin.Name)
 	}

@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"sort"
@@ -36,7 +37,6 @@ import (
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
-	"github.com/pkg/errors"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
@@ -88,8 +88,7 @@ func generateSHA(targetContent *file.Content,
 
 	jsonConfig, err := json.Marshal(targetContent)
 	if err != nil {
-		return nil, errors.Wrap(err,
-			"marshaling Kong declarative configuration to JSON")
+		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
 	}
 	buffer.Write(jsonConfig)
 
@@ -149,7 +148,7 @@ func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 
 	kongCoreConfig, err = json.Marshal(state)
 	if err != nil {
-		return nil, errors.Wrap(err, "marshaling kong config into json")
+		return nil, fmt.Errorf("marshaling kong config into json: %w", err)
 	}
 
 	// fast path
@@ -165,8 +164,7 @@ func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 	// unmarshal core config into the merge map
 	err = json.Unmarshal(kongCoreConfig, &mergeMap)
 	if err != nil {
-		return nil, errors.Wrap(err,
-			"unmarshalling kong config into map[string]interface{}")
+		return nil, fmt.Errorf("unmarshalling kong config into map[string]interface{}: %w", err)
 	}
 
 	// unmarshal custom entities config into the merge map
@@ -185,8 +183,7 @@ func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 	// construct the final configuration
 	result, err = json.Marshal(mergeMap)
 	if err != nil {
-		err = errors.Wrap(err,
-			"marshaling final config into JSON")
+		err = fmt.Errorf("marshaling final config into JSON: %w", err)
 		return nil, err
 	}
 
@@ -196,15 +193,15 @@ func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 func (n *KongController) fetchCustomEntities() ([]byte, error) {
 	ns, name, err := utils.ParseNameNS(n.cfg.KongCustomEntitiesSecret)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing kong custom entities secret")
+		return nil, fmt.Errorf("parsing kong custom entities secret: %w", err)
 	}
 	secret, err := n.store.GetSecret(ns, name)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching secret")
+		return nil, fmt.Errorf("fetching secret: %w", err)
 	}
 	config, ok := secret.Data["config"]
 	if !ok {
-		return nil, errors.Errorf("'config' key not found in "+
+		return nil, fmt.Errorf("'config' key not found in "+
 			"custom entities secret '%v'", n.cfg.KongCustomEntitiesSecret)
 	}
 	return config, nil
@@ -221,13 +218,13 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content,
 
 	config, err := n.renderConfigWithCustomEntities(state, customEntities)
 	if err != nil {
-		return errors.Wrap(err, "constructing kong configuration")
+		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", n.cfg.Kong.URL+"/config",
 		bytes.NewReader(config))
 	if err != nil {
-		return errors.Wrap(err, "creating new HTTP request for /config")
+		return fmt.Errorf("creating new HTTP request for /config: %w", err)
 	}
 	req.Header.Add("content-type", "application/json")
 
@@ -238,7 +235,7 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content,
 
 	_, err = client.Do(context.TODO(), req, nil)
 	if err != nil {
-		return errors.Wrap(err, "posting new config to /config")
+		return fmt.Errorf("posting new config to /config: %w", err)
 	}
 
 	return err
@@ -252,7 +249,7 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 		SelectorTags: n.getIngressControllerTags(),
 	})
 	if err != nil {
-		return errors.Wrap(err, "loading configuration from kong")
+		return fmt.Errorf("loading configuration from kong: %w", err)
 	}
 	currentState, err := state.Get(rawState)
 	if err != nil {
@@ -274,7 +271,7 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 
 	syncer, err := diff.NewSyncer(currentState, targetState)
 	if err != nil {
-		return errors.Wrap(err, "creating a new syncer")
+		return fmt.Errorf("creating a new syncer: %w", err)
 	}
 	syncer.SilenceWarnings = true
 	//client.SetDebugMode(true)
@@ -493,23 +490,21 @@ func (n *KongController) fillUpstream(upstream *kong.Upstream) {
 
 func (n *KongController) fillPlugin(plugin *file.FPlugin) error {
 	if plugin == nil {
-		return errors.New("plugin is nil")
+		return fmt.Errorf("plugin is nil")
 	}
 	if plugin.Name == nil || *plugin.Name == "" {
-		return errors.New("plugin doesn't have a name")
+		return fmt.Errorf("plugin doesn't have a name")
 	}
 	schema, err := n.PluginSchemaStore.Schema(*plugin.Name)
 	if err != nil {
-		return errors.Wrapf(err, "error retrieveing schema for plugin %s",
-			*plugin.Name)
+		return fmt.Errorf("error retrieveing schema for plugin %s: %w", *plugin.Name, err)
 	}
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)
 	}
 	newConfig, err := fill(schema, plugin.Config)
 	if err != nil {
-		return errors.Wrapf(err, "error filling in default for plugin %s",
-			*plugin.Name)
+		return fmt.Errorf("error filling in default for plugin %s: %w", *plugin.Name, err)
 	}
 	plugin.Config = newConfig
 	if plugin.RunOn == nil {

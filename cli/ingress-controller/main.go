@@ -249,18 +249,17 @@ func main() {
 	for {
 		root, err = kongClient.Root(context.Background())
 		if err != nil {
-			if retryCount > 5 {
-				klog.Fatalf("failed to fetch metadata from kong: %v", err)
-			} else {
-				backoff.Next(backoffID, backoff.Clock.Now())
-				delay := backoff.Get(backoffID)
-				time.Sleep(delay)
-				retryCount++
-				klog.Infof("retry %d to fetch metadata from kong: %v", retryCount, err)
-				continue
-			}
+			break
 		}
-		break
+		if retryCount > 5 {
+			log.Fatalf("failed to fetch metadata from kong: %v", err)
+		}
+		backoff.Next(backoffID, backoff.Clock.Now())
+		delay := backoff.Get(backoffID)
+		time.Sleep(delay)
+		retryCount++
+		log.Infof("retry %d to fetch metadata from kong: %v", retryCount, err)
+		continue
 	}
 	v, err := getSemVerVer(root["version"].(string))
 	if err != nil {

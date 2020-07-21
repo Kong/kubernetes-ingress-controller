@@ -42,7 +42,7 @@ configuration:
 
 - An [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
   resource in Kubernetes defines a set of rules for proxying
-  traffic. These rules corresponds to the concept or Route in Kong.
+  traffic. These rules corresponds to the concept of Route in Kong.
 - A [Service](https://kubernetes.io/docs/concepts/services-networking/service/)
   inside Kubernetes is a way to abstract an application that is
   running on a set of pods.

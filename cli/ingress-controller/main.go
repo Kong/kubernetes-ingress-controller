@@ -248,7 +248,7 @@ func main() {
 	retryCount := 0
 	for {
 		root, err = kongClient.Root(context.Background())
-		if err != nil {
+		if err == nil {
 			break
 		}
 		if retryCount > 5 {

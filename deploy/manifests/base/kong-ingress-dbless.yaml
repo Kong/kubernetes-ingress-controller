@@ -24,7 +24,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       containers:
       - name: proxy
-        image: kong:2.0
+        image: kong:2.1
         securityContext:
           runAsUser: 1000
         env:

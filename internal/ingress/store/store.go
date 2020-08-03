@@ -296,7 +296,7 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.stores.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, s.ingressClassHandling) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IgnoreClassHandling) {
 			credentials = append(credentials, c)
 		}
 	}

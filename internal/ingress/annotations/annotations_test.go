@@ -550,6 +550,43 @@ func TestExtractHTTPSRedirectStatusCode(t *testing.T) {
 	}
 }
 
+func TestHasForceSSLRedirectAnnotation(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "basic sanity",
+			args: args{
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "true",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "garbage value",
+			args: args{
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "xyz",
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasForceSSLRedirectAnnotation(tt.args.anns); got != tt.want {
+				t.Errorf("HasForceSSLRedirectAnnotation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestExtractPreserveHost(t *testing.T) {
 	type args struct {
 		anns map[string]string

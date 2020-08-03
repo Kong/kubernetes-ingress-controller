@@ -58,6 +58,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/klog"
 	knativeclient "knative.dev/serving/pkg/client/clientset/versioned"
 	knativeinformer "knative.dev/serving/pkg/client/informers/externalversions"
@@ -241,9 +242,24 @@ func main() {
 		log.Fatalf("failed to create kong client: %v", err)
 	}
 
-	root, err := kongClient.Root(context.Background())
-	if err != nil {
-		log.Fatalf("failed to fetch metadata from kong: %v", err)
+	var root map[string]interface{}
+	backoff := flowcontrol.NewBackOff(1*time.Second, 15*time.Second)
+	const backoffID = "kong-admin-api"
+	retryCount := 0
+	for {
+		root, err = kongClient.Root(context.Background())
+		if err == nil {
+			break
+		}
+		if retryCount > 5 {
+			log.Fatalf("failed to fetch metadata from kong: %v", err)
+		}
+		backoff.Next(backoffID, backoff.Clock.Now())
+		delay := backoff.Get(backoffID)
+		time.Sleep(delay)
+		retryCount++
+		log.Infof("retry %d to fetch metadata from kong: %v", retryCount, err)
+		continue
 	}
 	v, err := getSemVerVer(root["version"].(string))
 	if err != nil {

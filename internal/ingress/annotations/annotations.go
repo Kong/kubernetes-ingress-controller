@@ -229,6 +229,12 @@ func ExtractHTTPSRedirectStatusCode(anns map[string]string) string {
 	return valueFromAnnotation(httpsRedirectCodeKey, anns)
 }
 
+// HasForceSSLRedirectAnnotation returns true if the annotation
+// ingress.kubernetes.io/force-ssl-redirect is set to "true" in anns.
+func HasForceSSLRedirectAnnotation(anns map[string]string) bool {
+	return anns["ingress.kubernetes.io/force-ssl-redirect"] == "true"
+}
+
 // ExtractPreserveHost extracts the preserve-host annotation value.
 func ExtractPreserveHost(anns map[string]string) string {
 	return valueFromAnnotation(preserveHostKey, anns)

@@ -4112,6 +4112,61 @@ func TestValidateProtocol(t *testing.T) {
 		overrideUpstream(nil, nil, make(map[string]string))
 	})
 }
+func TestUseSSLProtocol(t *testing.T) {
+	assert := assert.New(t)
+	testTable := []struct {
+		inRoute  kong.Route
+		outRoute kong.Route
+	}{
+		{
+			kong.Route{
+				Protocols: kong.StringSlice("grpc", "grpcs"),
+			},
+			kong.Route{
+				Protocols: kong.StringSlice("grpcs"),
+			},
+		},
+		{
+			kong.Route{
+				Protocols: kong.StringSlice("http", "https"),
+			},
+			kong.Route{
+				Protocols: kong.StringSlice("https"),
+			},
+		},
+		{
+			kong.Route{
+				Protocols: kong.StringSlice("grpcs", "https"),
+			},
+
+			kong.Route{
+				Protocols: kong.StringSlice("grpcs", "https"),
+			},
+		},
+		{
+			kong.Route{
+				Protocols: kong.StringSlice("grpc", "http"),
+			},
+			kong.Route{
+				Protocols: kong.StringSlice("grpcs", "https"),
+			},
+		},
+		{
+			kong.Route{
+				Protocols: []*string{},
+			},
+			kong.Route{
+				Protocols: kong.StringSlice("https"),
+			},
+		},
+	}
+
+	for _, testcase := range testTable {
+		useSSLProtocol(&testcase.inRoute)
+		assert.Equal(testcase.inRoute.Protocols, testcase.outRoute.Protocols)
+	}
+}
+
 func TestOverrideUpstream(t *testing.T) {
 	assert := assert.New(t)
 
@@ -5517,6 +5572,59 @@ func Test_overrideRouteHTTPSRedirectCode(t *testing.T) {
 				},
 			},
 			want: &kong.Route{},
+		},
+		{
+			name: "force ssl annotation set to true and protocols is not set",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "true",
+				},
+			},
+			want: &kong.Route{
+				HTTPSRedirectStatusCode: kong.Int(302),
+				Protocols:               []*string{kong.String("https")},
+			},
+		},
+		{
+			name: "force ssl annotation set to true and protocol is set to grpc",
+			args: args{
+				route: &kong.Route{
+					Protocols: []*string{kong.String("grpc")},
+				},
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "true",
+					"konghq.com/protocols":                     "grpc",
+				},
+			},
+			want: &kong.Route{
+				HTTPSRedirectStatusCode: kong.Int(302),
+				Protocols:               []*string{kong.String("grpcs")},
+			},
+		},
+		{
+			name: "force ssl annotation set to false",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "false",
+				},
+			},
+			want: &kong.Route{},
+		},
+		{
+			name: "force ssl annotation set to true and HTTPS redirect code set to 307",
+			args: args{
+				route: &kong.Route{},
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "true",
+					"konghq.com/https-redirect-status-code":    "307",
+				},
+			},
+			want: &kong.Route{
+				HTTPSRedirectStatusCode: kong.Int(307),
+				Protocols:               []*string{kong.String("https")},
+			},
 		},
 	}
 	for _, tt := range tests {

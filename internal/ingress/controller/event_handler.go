@@ -4,9 +4,7 @@ import (
 	"reflect"
 
 	"github.com/eapache/channels"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -46,13 +44,6 @@ type Event struct {
 // could try and duck-type Secrets to see if they look like a plugin secret
 // OnAdd is invoked whenever a resource is added.
 func (reh ResourceEventHandler) OnAdd(obj interface{}) {
-	object, err := meta.Accessor(obj)
-	if err != nil {
-		return
-	}
-	if !reh.IsValidIngressClass(object, reh.ClassHandling) {
-		return
-	}
 	reh.UpdateCh.In() <- Event{
 		Type: CreateEvent,
 		Obj:  obj,
@@ -61,14 +52,6 @@ func (reh ResourceEventHandler) OnAdd(obj interface{}) {
 
 // OnDelete is invoked whenever a resource is deleted.
 func (reh ResourceEventHandler) OnDelete(obj interface{}) {
-	object, err := meta.Accessor(obj)
-	if err != nil {
-		return
-	}
-	if !reh.IsValidIngressClass(object, annotations.LazyClassHandling) {
-		return
-	}
-
 	reh.UpdateCh.In() <- Event{
 		Type: DeleteEvent,
 		Obj:  obj,
@@ -78,21 +61,6 @@ func (reh ResourceEventHandler) OnDelete(obj interface{}) {
 // OnUpdate is invoked whenever a resource is changed. old holds
 // the previous resource and cur is the updated resource.
 func (reh ResourceEventHandler) OnUpdate(old, cur interface{}) {
-	oldObj, err := meta.Accessor(old)
-	if err != nil {
-		return
-	}
-	curObj, err := meta.Accessor(cur)
-	if err != nil {
-		return
-	}
-	validOld := reh.IsValidIngressClass(oldObj, annotations.LazyClassHandling)
-	validCur := reh.IsValidIngressClass(curObj, annotations.LazyClassHandling)
-
-	if !validCur && !validOld {
-		return
-	}
-
 	reh.UpdateCh.In() <- Event{
 		Type: UpdateEvent,
 		Obj:  cur,

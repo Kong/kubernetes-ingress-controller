@@ -5,15 +5,12 @@ import (
 
 	"github.com/eapache/channels"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ResourceEventHandler is "ingress.class" aware resource
 // handler.
 type ResourceEventHandler struct {
-	IsValidIngressClass func(object metav1.Object, classHandling string) bool
-	UpdateCh            *channels.RingChannel
-	ClassHandling       string
+	UpdateCh *channels.RingChannel
 }
 
 // EventType type of event associated with an informer

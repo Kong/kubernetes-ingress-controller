@@ -38,7 +38,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hbagdi/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
@@ -347,19 +346,13 @@ func main() {
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
 	lazyReh := controller.ResourceEventHandler{
-		UpdateCh:            updateChannel,
-		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass),
-		ClassHandling:       annotations.LazyClassHandling,
+		UpdateCh: updateChannel,
 	}
 	strictReh := controller.ResourceEventHandler{
-		UpdateCh:            updateChannel,
-		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass),
-		ClassHandling:       annotations.RequireClassHandling,
+		UpdateCh: updateChannel,
 	}
 	allReh := controller.ResourceEventHandler{
-		UpdateCh:            updateChannel,
-		IsValidIngressClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass),
-		ClassHandling:       annotations.IgnoreClassHandling,
+		UpdateCh: updateChannel,
 	}
 
 	var informers []cache.SharedIndexInformer

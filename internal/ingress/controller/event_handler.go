@@ -34,12 +34,6 @@ type Event struct {
 	Old  interface{}
 }
 
-// NOTE: the magic happens here, but it doesnt have to,
-// could use fieldSelector
-// We can create different IsValidIngressClass functions, prob with a more generic name
-// to just fetch everything always, or use some different criteria
-// could try and duck-type Secrets to see if they look like a plugin secret
-// OnAdd is invoked whenever a resource is added.
 func (reh ResourceEventHandler) OnAdd(obj interface{}) {
 	reh.UpdateCh.In() <- Event{
 		Type: CreateEvent,

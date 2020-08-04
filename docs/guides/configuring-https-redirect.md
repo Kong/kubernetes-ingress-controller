@@ -96,7 +96,7 @@ metadata:
     name: https-only
 route:
   protocols:
-  - https
+  - http
   https_redirect_status_code: 302
         " | kubectl apply -f -
 kongingress.configuration.konghq.com/https-only created

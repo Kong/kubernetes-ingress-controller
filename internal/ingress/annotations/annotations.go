@@ -17,9 +17,9 @@ limitations under the License.
 package annotations
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -78,7 +78,7 @@ func validIngress(ingressAnnotationValue, ingressClass string, classHandling str
 		if exactMatch {
 			return true, nil
 		} else if lazyMatch {
-			return false, errors.Errorf("resource requires kubernetes.io/ingress.class annotation")
+			return false, fmt.Errorf("resource requires kubernetes.io/ingress.class annotation")
 		}
 		return false, nil
 	} else if classHandling == IgnoreClassHandling {

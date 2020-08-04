@@ -345,13 +345,7 @@ func main() {
 
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
-	lazyReh := controller.ResourceEventHandler{
-		UpdateCh: updateChannel,
-	}
-	strictReh := controller.ResourceEventHandler{
-		UpdateCh: updateChannel,
-	}
-	allReh := controller.ResourceEventHandler{
+	reh := controller.ResourceEventHandler{
 		UpdateCh: updateChannel,
 	}
 
@@ -365,20 +359,7 @@ func main() {
 		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
 	}
 
-	// per user preference, we default to either:
-	var baseReh controller.ResourceEventHandler
-	if cliConfig.SkipClasslessIngressV1beta1 {
-		// skip classless resources, even if using the default ingress.class
-		// only load resources with our ingress.class and their dependencies
-		baseReh = strictReh
-	} else {
-		// ingest classless resources, if and only if using the default class, either:
-		// load resources with no ingress.class or ingress.class == "kong" and their dependencies
-		// only load resources with our (custom, ingress.class != "kong") ingress.class and their dependencies
-		baseReh = lazyReh
-	}
-
-	ingInformer.AddEventHandler(baseReh)
+	ingInformer.AddEventHandler(reh)
 	cacheStores.Ingress = ingInformer.GetStore()
 	informers = append(informers, ingInformer)
 
@@ -390,48 +371,48 @@ func main() {
 	informers = append(informers, endpointsInformer)
 
 	secretsInformer := coreInformerFactory.Core().V1().Secrets().Informer()
-	secretsInformer.AddEventHandler(allReh)
+	secretsInformer.AddEventHandler(reh)
 	cacheStores.Secret = secretsInformer.GetStore()
 	informers = append(informers, secretsInformer)
 
 	servicesInformer := coreInformerFactory.Core().V1().Services().Informer()
-	servicesInformer.AddEventHandler(baseReh)
+	servicesInformer.AddEventHandler(reh)
 	cacheStores.Service = servicesInformer.GetStore()
 	informers = append(informers, servicesInformer)
 
 	tcpIngressInformer := kongInformerFactory.Configuration().V1beta1().TCPIngresses().Informer()
-	tcpIngressInformer.AddEventHandler(strictReh)
+	tcpIngressInformer.AddEventHandler(reh)
 	cacheStores.TCPIngress = tcpIngressInformer.GetStore()
 	informers = append(informers, tcpIngressInformer)
 
 	kongIngressInformer := kongInformerFactory.Configuration().V1().KongIngresses().Informer()
-	kongIngressInformer.AddEventHandler(baseReh)
+	kongIngressInformer.AddEventHandler(reh)
 	cacheStores.Configuration = kongIngressInformer.GetStore()
 	informers = append(informers, kongIngressInformer)
 
 	kongPluginInformer := kongInformerFactory.Configuration().V1().KongPlugins().Informer()
-	kongPluginInformer.AddEventHandler(allReh)
+	kongPluginInformer.AddEventHandler(reh)
 	cacheStores.Plugin = kongPluginInformer.GetStore()
 	informers = append(informers, kongPluginInformer)
 
 	kongClusterPluginInformer := kongInformerFactory.Configuration().V1().KongClusterPlugins().Informer()
-	kongClusterPluginInformer.AddEventHandler(strictReh)
+	kongClusterPluginInformer.AddEventHandler(reh)
 	cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
 	informers = append(informers, kongClusterPluginInformer)
 
 	kongConsumerInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()
-	kongConsumerInformer.AddEventHandler(baseReh)
+	kongConsumerInformer.AddEventHandler(reh)
 	cacheStores.Consumer = kongConsumerInformer.GetStore()
 	informers = append(informers, kongConsumerInformer)
 
 	kongCredentialInformer := kongInformerFactory.Configuration().V1().KongCredentials().Informer()
-	kongCredentialInformer.AddEventHandler(baseReh)
+	kongCredentialInformer.AddEventHandler(reh)
 	cacheStores.Credential = kongCredentialInformer.GetStore()
 	informers = append(informers, kongCredentialInformer)
 
 	if controllerConfig.EnableKnativeIngressSupport {
 		knativeIngressInformer := knativeInformerFactory.Networking().V1alpha1().Ingresses().Informer()
-		knativeIngressInformer.AddEventHandler(baseReh)
+		knativeIngressInformer.AddEventHandler(reh)
 		cacheStores.KnativeIngress = knativeIngressInformer.GetStore()
 		informers = append(informers, knativeIngressInformer)
 	}

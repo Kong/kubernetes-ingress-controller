@@ -13,8 +13,8 @@ require (
 	github.com/google/go-containerregistry v0.0.0-20200131185320-aec8da010de2 // indirect
 	github.com/hashicorp/go-memdb v1.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hbagdi/deck v1.1.0
-	github.com/hbagdi/go-kong v0.11.0
+	github.com/kong/deck v1.2.1
+	github.com/kong/go-kong v0.13.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
 	github.com/mitchellh/mapstructure v1.2.2

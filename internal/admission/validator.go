@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"

@@ -21,7 +21,7 @@ limitations under the License.
 package v1
 
 import (
-	kong "github.com/hbagdi/go-kong/kong"
+	kong "github.com/kong/go-kong/kong"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 

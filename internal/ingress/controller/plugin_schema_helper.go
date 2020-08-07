@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/tidwall/gjson"
 )
 

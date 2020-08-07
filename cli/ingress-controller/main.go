@@ -36,7 +36,7 @@ import (
 	"github.com/eapache/channels"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"

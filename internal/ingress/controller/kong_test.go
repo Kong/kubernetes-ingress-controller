@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hbagdi/deck/file"
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/deck/file"
+	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 )
 

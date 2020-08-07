@@ -28,6 +28,10 @@ lint:
 build:
 	CGO_ENABLED=0 go build -o kong-ingress-controller ./cli/ingress-controller
 
+.PHONY: verify-manifests
+verify-manifests:
+	./hack/verify-manifests.sh
+
 .PHONY: verify-codegen
 verify-codegen:
 	./hack/verify-codegen.sh

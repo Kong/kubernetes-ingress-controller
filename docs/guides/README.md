@@ -4,6 +4,7 @@ Follow one of the guides to learn more about how to use
 Kong Ingress controller:
 
 - [Getting started](getting-started.md) with Kong Ingress Controller
+- [Getting started using Istio](getting-started-istio.md) with Kong Ingress Controller and Istio
 - [Using KongPlugin resource](using-kongplugin-resource.md)  
   This guide walks through setting up plugins in Kong using a declarative
   approach.

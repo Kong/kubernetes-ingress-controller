@@ -8,11 +8,12 @@ In this guide, you will:
 * See the performance metrics of the sample application, provided by Istio.
 
 ### Prerequisites
+For this guide, you will need:
 
-* A Kubernetes v1.15-1.18 cluster which can pull container images from public registries. Examples:
-    * A managed Kubernetes cluster (AWS EKS, Google Cloud GKE, Azure AKS),
-    * Minikube,
-    * `microk8s` with the `dns` addon enabled,
+* A Kubernetes v1.15 (or newer) cluster which can pull container images from public registries. For example, you can use:
+    * A managed Kubernetes cluster (AWS EKS, Google Cloud GKE, Azure AKS).
+    * Minikube.
+    * `microk8s` with the `dns` addon enabled.
 * `kubectl` with admin access to the cluster.
 
 ### Download Istio

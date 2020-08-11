@@ -1,4 +1,4 @@
-name: 'master mirrors this branch'
+name: 'sync master with main'
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'main'
 
 jobs:
-  reattach-master:
+  push-master:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository

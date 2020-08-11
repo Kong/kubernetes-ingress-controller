@@ -1,11 +1,11 @@
 ## Running Kong Ingress Controller with Istio
 
-By following this guide, you will:
-* install Istio v1.6.7 and Kong in your cluster,
-* deploy an example Istio-enabled application (_bookinfo_),
-* deploy an `Ingress` customized with a `KongPlugin` for the example application,
-* make several requests to the sample application via Kong and Istio,
-* see the performance metrics of the sample application, provided by Istio.
+In this guide, you will:
+* Install Istio v1.6.7 and Kong in your cluster.
+* Deploy an example Istio-enabled application (_bookinfo_).
+* Deploy an `Ingress` customized with a `KongPlugin` for the example application.
+* Make several requests to the sample application via Kong and Istio.
+* See the performance metrics of the sample application, provided by Istio.
 
 ### Prerequisites
 
@@ -17,7 +17,7 @@ By following this guide, you will:
 
 ### Download Istio
 
-Download the Istio bundle at version 1.6.7.
+Download the Istio bundle at version 1.6.7:
 
 ```console
 $ curl -L https://istio.io/downloadIstio | env ISTIO_VERSION=1.6.7 sh -
@@ -32,7 +32,7 @@ Istio has been successfully downloaded into the istio-1.6.7 folder on your syste
 
 ### Install Istio Operator
 
-Invoke `istioctl` to deploy the Istio Operator to the Kubernetes cluster.
+Invoke `istioctl` to deploy the Istio Operator to the Kubernetes cluster:
 
 ```console
 $ ./istio-1.6.7/bin/istioctl operator init
@@ -43,7 +43,7 @@ Using operator Deployment image: docker.io/istio/operator:1.6.7
 
 ### Deploy Istio using Operator
 
-Deploy Istio using Istio Operator.
+Deploy Istio using Istio Operator:
 
 ```console
 $ kubectl create namespace istio-system
@@ -97,7 +97,7 @@ _Optional:_ Run `kubectl describe pod -n kong-istio -l app.kubernetes.io/instanc
 
 ### Deploy bookinfo in an Istio-enabled namespace
 
-Deploy the sample _bookinfo_ app from the Istio bundle.
+Deploy the sample _bookinfo_ app from the Istio bundle:
 
 ```console
 $ kubectl create namespace my-istio-app
@@ -115,7 +115,7 @@ $ kubectl wait --for=condition=Available deployment productpage -n my-istio-app 
 ### Deploy ingress
 
 Define a `KongPlugin` rate-limiting access to 100 requests per minute. Define an `Ingress` telling Kong to proxy traffic
-to a service belonging to the sample application.
+to a service belonging to the sample application:
 
 ```console
 $ kubectl apply -f - <<EOF
@@ -171,7 +171,7 @@ key combination, e.g. `<Ctrl-R>` or `<Command-R>`), you should obtain a `Kong Er
 
 ### See the connection graph in Kiali
 
-Connect to Kiali (the Istio) dashboard:
+Connect to Kiali (the Istio dashboard):
 
 ```console
 $ # Keep the command below running in the background

@@ -1,0 +1,19 @@
+name: 'master mirrors this branch'
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  reattach-master:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Push HEAD to master
+      # Deliberately not force-pushing: designed to fail if this would mean rewriting history
+      run: |
+        git push origin HEAD:master

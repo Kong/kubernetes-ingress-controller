@@ -148,7 +148,7 @@ $ helm install kong/kong \
 
 # Helm 3
 $ helm install kong/kong --generate-name
-    --name demo --namespace kong \
+    --namespace kong \
     --values https://l.yolo42.com/k4k8s-enterprise-helm-values \
      --set ingressController.installCRDs=false
 ```

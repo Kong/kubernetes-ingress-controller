@@ -112,6 +112,8 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
+
 	color.Output = ioutil.Discard
 	rand.Seed(time.Now().UnixNano())
 
@@ -247,7 +249,7 @@ func main() {
 	const backoffID = "kong-admin-api"
 	retryCount := 0
 	for {
-		root, err = kongClient.Root(context.Background())
+		root, err = rootWithTimeout(ctx, kongClient)
 		if err == nil {
 			break
 		}
@@ -287,7 +289,7 @@ func main() {
 
 	req, _ := http.NewRequest("GET",
 		cliConfig.KongAdminURL+"/tags", nil)
-	res, err := kongClient.Do(context.Background(), req, nil)
+	res, err := kongClient.Do(ctx, req, nil)
 	if err == nil && res.StatusCode == 200 {
 		controllerConfig.Kong.HasTagSupport = true
 	}
@@ -617,6 +619,12 @@ func createApiserverClient(apiserverHost string, kubeConfig string,
 	}).Infof("version of kubernetes api-server: %v.%v", v.Major, v.Minor)
 
 	return cfg, client, nil
+}
+
+func rootWithTimeout(ctx context.Context, kc *kong.Client) (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	return kc.Root(ctx)
 }
 
 const (

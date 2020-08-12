@@ -17,6 +17,7 @@ limitations under the License.
 package annotations
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -73,7 +74,9 @@ func validIngress(ingressAnnotationValue, ingressClass string, handling ClassHan
 		// what it says on the tin
 		if ingressAnnotationValue == ingressClass {
 			return true, nil
-		} // probably want to warn on empty
+		} else if ingressAnnotationValue == "" {
+			return false, fmt.Errorf("oh no")
+		}
 	default:
 		panic("invalid ingress class handling option received")
 	}

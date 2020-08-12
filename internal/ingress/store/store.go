@@ -124,15 +124,15 @@ func New(cs CacheStores, ingressClass string, skipClasslessIngress bool, logger 
 	}
 	foo := kongConsumerClassHandling
 	if foo == 0 {
-		panic("why")
+		logrus.Errorf("ohno")
 	} else {
-		foo = 4
+		logrus.Errorf("wat")
 	}
 	return Store{
 		stores:                    cs,
 		ingressClass:              ingressClass,
 		ingressClassHandling:      ingressClassHandling,
-		kongConsumerClassHandling: kongConsumerClassHandling,
+		kongConsumerClassHandling: 18,
 		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		logger:                    logger,
 	}

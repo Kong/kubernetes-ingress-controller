@@ -82,9 +82,10 @@ type Store struct {
 
 	ingressClass string
 
-	ingressClassHandling string
+	ingressClassHandling      annotations.ClassHandling
+	kongConsumerClassHandling annotations.ClassHandling
 
-	isValidIngressClass func(objectMeta *metav1.ObjectMeta, classHandling string) bool
+	isValidIngressClass func(objectMeta *metav1.ObjectMeta, handling annotations.ClassHandling) bool
 
 	logger logrus.FieldLogger
 }
@@ -109,18 +110,31 @@ type CacheStores struct {
 
 // New creates a new object store to be used in the ingress controller
 func New(cs CacheStores, ingressClass string, skipClasslessIngress bool, logger logrus.FieldLogger) Storer {
-	var ingressClassHandling string
+	var ingressClassHandling annotations.ClassHandling
+	var kongConsumerClassHandling annotations.ClassHandling
 	if skipClasslessIngress {
-		ingressClassHandling = annotations.RequireClassHandling
+		ingressClassHandling = annotations.ExactClassMatch
+		// TODO this is a placeholder; it should retrieve this from a new KongConsumer flag
+		// for now, since it's the same type, just copy the ingressClassHandling
+		kongConsumerClassHandling = annotations.ExactClassMatch
 	} else {
-		ingressClassHandling = annotations.LazyClassHandling
+		ingressClassHandling = annotations.ExactOrEmptyClassMatch
+		// ditto
+		kongConsumerClassHandling = annotations.ExactOrEmptyClassMatch
+	}
+	foo := kongConsumerClassHandling
+	if foo == 0 {
+		panic("why")
+	} else {
+		foo = 4
 	}
 	return Store{
-		stores:               cs,
-		ingressClass:         ingressClass,
-		ingressClassHandling: ingressClassHandling,
-		isValidIngressClass:  annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
-		logger:               logger,
+		stores:                    cs,
+		ingressClass:              ingressClass,
+		ingressClassHandling:      ingressClassHandling,
+		kongConsumerClassHandling: kongConsumerClassHandling,
+		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		logger:                    logger,
 	}
 }
 
@@ -172,7 +186,7 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*configurationv1beta1.TCPIngress)
-			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.RequireClassHandling) {
+			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
 				ingresses = append(ingresses, ing)
 			}
 		})
@@ -282,7 +296,7 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.stores.Consumer.List() {
 		c, ok := item.(*configurationv1.KongConsumer)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, s.ingressClassHandling) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, s.kongConsumerClassHandling) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -296,7 +310,9 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.stores.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IgnoreClassHandling) {
+		// TODO arguably we can just remove the second clause, as this always returns true
+		// ListCACerts is like this already
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IgnoreClassMatch) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -321,6 +337,8 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
+			// TODO this isn't in spec, but we're just getting rid of global KongPlugins, correct?
+			// should be possible to just delete this function
 			if ok && s.isValidIngressClass(&p.ObjectMeta, s.ingressClassHandling) {
 				plugins = append(plugins, p)
 			}
@@ -345,7 +363,7 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongClusterPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.RequireClassHandling) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ExactClassMatch) {
 				plugins = append(plugins, p)
 			}
 		})

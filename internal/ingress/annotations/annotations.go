@@ -17,13 +17,14 @@ limitations under the License.
 package annotations
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
+
+type ClassHandling int
 
 const (
 	ingressClassKey = "kubernetes.io/ingress.class"
@@ -47,56 +48,38 @@ const (
 	hostHeaderKey        = "/host-header"
 	methodsKey           = "/methods"
 
-	// RequireClassHandling indicates that ingress.class must be present and match
-	RequireClassHandling = "required"
-	// IgnoreClassHandling indicates that ingress.class is not required and is ignored
-	IgnoreClassHandling = "ignored"
-	// LazyClassHandling indicates that ingress.class can be empty if using the default class
-	LazyClassHandling = "optional"
-
+	IgnoreClassMatch       ClassHandling = iota
+	ExactOrEmptyClassMatch ClassHandling = iota
+	ExactClassMatch        ClassHandling = iota
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
 )
 
-func validIngress(ingressAnnotationValue, ingressClass string, classHandling string) (bool, error) {
-	// we have 2 valid combinations
-	// 1 - ingress with default class | blank annotation on ingress
-	// 2 - ingress with specific class | same annotation on ingress
-	// Listers can opt out of (1) by setting classHandling == false,
-	// in which case we report an error as well.
-	//
-	// and 2 invalid combinations
-	// 3 - ingress with default class | fixed annotation on ingress
-	// 4 - ingress with specific class | different annotation on ingress
-
-	emptyMatch := ingressAnnotationValue == "" && ingressAnnotationValue != ingressClass
-	lazyMatch := ingressAnnotationValue == "" && ingressClass == DefaultIngressClass
-	exactMatch := ingressAnnotationValue == ingressClass
-	if classHandling == RequireClassHandling {
-		// this MUST have ingress.class, and it must match
-		if exactMatch {
+func validIngress(ingressAnnotationValue, ingressClass string, handling ClassHandling) (bool, error) {
+	switch handling {
+	case IgnoreClassMatch:
+		// class is not considered at all. any value, even a mismatch, is valid.
+		// may want to consider warning on mismatches, since while valid, they probably indicate a conflict with user
+		// intent, and probably should be something users clear for good config hygiene
+		return true, nil
+	case ExactOrEmptyClassMatch:
+		// aka lazy. exact match desired, but empty permitted
+		if ingressAnnotationValue == "" || ingressAnnotationValue == ingressClass {
 			return true, nil
-		} else if lazyMatch {
-			return false, fmt.Errorf("resource requires kubernetes.io/ingress.class annotation")
-		}
-		return false, nil
-	} else if classHandling == IgnoreClassHandling {
-		// this does not require ingress.class. we watch events if it is empty
-		// do we watch events if it doesn't match? shouldn't happen but might, because legacy
-		if emptyMatch {
+		} // no alternative case, since everything else should be a mismatch
+		// would only report mismatches at a high debug level if at all
+	case ExactClassMatch:
+		// what it says on the tin
+		if ingressAnnotationValue == ingressClass {
 			return true, nil
-		}
-		return false, nil
-	} else if classHandling == LazyClassHandling {
-		// this can have a class. we'll watch empty class resources if we use the default
-		if exactMatch || lazyMatch {
-			return true, nil
-		}
-		return false, nil
+		} // probably want to warn on empty
+	default:
+		panic("invalid ingress class handling option received")
 	}
 
-	return ingressAnnotationValue == ingressClass, nil
+	// no match with our chosen match behavior, so ignore this resource
+	return false, nil
 }
 
 func objectMetaToObjectKind(obj metav1.Object) string {
@@ -110,11 +93,11 @@ func objectMetaToObjectKind(obj metav1.Object) string {
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
-	ingressClass string) func(obj metav1.Object, classHandling string) bool {
+	ingressClass string) func(obj metav1.Object, handling ClassHandling) bool {
 
-	return func(obj metav1.Object, classHandling string) bool {
+	return func(obj metav1.Object, handling ClassHandling) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		validity, err := validIngress(ingress, ingressClass, classHandling)
+		validity, err := validIngress(ingress, ingressClass, handling)
 		// validity always reports whether the resource has a valid class
 		// we only care about why sometimes, when the resource cannot possibly be valid for
 		// *any* controller, versus resources that may be valid for others
@@ -130,11 +113,11 @@ func IngressClassValidatorFunc(
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
-	ingressClass string) func(obj *metav1.ObjectMeta, classHandling string) bool {
+	ingressClass string) func(obj *metav1.ObjectMeta, handling ClassHandling) bool {
 
-	return func(obj *metav1.ObjectMeta, classHandling string) bool {
+	return func(obj *metav1.ObjectMeta, handling ClassHandling) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		validity, err := validIngress(ingress, ingressClass, classHandling)
+		validity, err := validIngress(ingress, ingressClass, handling)
 		if err != nil {
 			logrus.Errorf("%s resource '%s/%s' is invalid: %s", objectMetaToObjectKind(obj),
 				obj.GetNamespace(), obj.GetName(), err)

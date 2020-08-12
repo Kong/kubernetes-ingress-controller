@@ -124,11 +124,11 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	var ingressClassHandling string
+	var ingressClassHandling annotations.ClassHandling
 	if objects.SkipClasslessIngress {
-		ingressClassHandling = annotations.RequireClassHandling
+		ingressClassHandling = annotations.ExactClassMatch
 	} else {
-		ingressClassHandling = annotations.LazyClassHandling
+		ingressClassHandling = annotations.ExactOrEmptyClassMatch
 	}
 	s = Store{
 		stores: CacheStores{

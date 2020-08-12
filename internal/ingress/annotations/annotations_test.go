@@ -38,7 +38,7 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		{"kong", false, "kong", true},
 		{"kong", true, "kong", true},
 		{"custom", false, "custom", true},
-		{"", false, "killer", false},
+		{"", false, "killer", true},
 		{"custom", false, "kong", false},
 		{"custom", true, "kong", false},
 		{"", true, "custom", false},
@@ -58,9 +58,9 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		f := IngressClassValidatorFunc(test.controller)
 		var b bool
 		if test.skipClasslessIngress {
-			b = f(&ing.ObjectMeta, RequireClassHandling)
+			b = f(&ing.ObjectMeta, ExactClassMatch)
 		} else {
-			b = f(&ing.ObjectMeta, LazyClassHandling)
+			b = f(&ing.ObjectMeta, ExactOrEmptyClassMatch)
 		}
 
 		if b != test.isValid {

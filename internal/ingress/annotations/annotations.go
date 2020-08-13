@@ -17,12 +17,9 @@ limitations under the License.
 package annotations
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 type ClassHandling int
@@ -57,40 +54,31 @@ const (
 	DefaultIngressClass = "kong"
 )
 
-func validIngress(ingressAnnotationValue, ingressClass string, handling ClassHandling) (bool, error) {
+func validIngress(ingressAnnotationValue, ingressClass string, handling ClassHandling) bool {
 	switch handling {
 	case IgnoreClassMatch:
 		// class is not considered at all. any value, even a mismatch, is valid.
 		// may want to consider warning on mismatches, since while valid, they probably indicate a conflict with user
 		// intent, and probably should be something users clear for good config hygiene
-		return true, nil
+		return true
 	case ExactOrEmptyClassMatch:
 		// aka lazy. exact match desired, but empty permitted
 		if ingressAnnotationValue == "" || ingressAnnotationValue == ingressClass {
-			return true, nil
+			return true
 		} // no alternative case, since everything else should be a mismatch
 		// would only report mismatches at a high debug level if at all
 	case ExactClassMatch:
 		// what it says on the tin
+		// this may be another place we want to return a warning, since an empty-class resource will never be valid
 		if ingressAnnotationValue == ingressClass {
-			return true, nil
-		} else if ingressAnnotationValue == "" {
-			return false, fmt.Errorf("oh no")
+			return true
 		}
 	default:
 		panic("invalid ingress class handling option received")
 	}
 
 	// no match with our chosen match behavior, so ignore this resource
-	return false, nil
-}
-
-func objectMetaToObjectKind(obj metav1.Object) string {
-	robj, ok := obj.(runtime.Object)
-	if !ok {
-		return ""
-	}
-	return robj.GetObjectKind().GroupVersionKind().Kind
+	return false
 }
 
 // IngressClassValidatorFunc returns a function which can validate if an Object
@@ -100,16 +88,7 @@ func IngressClassValidatorFunc(
 
 	return func(obj metav1.Object, handling ClassHandling) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		validity, err := validIngress(ingress, ingressClass, handling)
-		// validity always reports whether the resource has a valid class
-		// we only care about why sometimes, when the resource cannot possibly be valid for
-		// *any* controller, versus resources that may be valid for others
-		if err != nil {
-			logrus.Errorf("%s resource '%s/%s' is invalid: %s", objectMetaToObjectKind(obj),
-				obj.GetNamespace(), obj.GetName(), err)
-			return validity
-		}
-		return validity
+		return validIngress(ingress, ingressClass, handling)
 	}
 }
 
@@ -120,13 +99,7 @@ func IngressClassValidatorFuncFromObjectMeta(
 
 	return func(obj *metav1.ObjectMeta, handling ClassHandling) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		validity, err := validIngress(ingress, ingressClass, handling)
-		if err != nil {
-			logrus.Errorf("%s resource '%s/%s' is invalid: %s", objectMetaToObjectKind(obj),
-				obj.GetNamespace(), obj.GetName(), err)
-			return validity
-		}
-		return validity
+		return validIngress(ingress, ingressClass, handling)
 	}
 }
 

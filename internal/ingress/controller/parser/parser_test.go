@@ -3270,6 +3270,40 @@ func TestParseKnativeIngressRules(t *testing.T) {
 				},
 			},
 		},
+		// 4
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.default.svc.cluster.local"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{})
@@ -3355,6 +3389,43 @@ func TestParseKnativeIngressRules(t *testing.T) {
 			PreserveHost:  kong.Bool(true),
 			Protocols:     kong.StringSlice("http", "https"),
 			Hosts:         kong.StringSlice("my-func.example.com"),
+		}, svc.Routes[0].Route)
+		assert.Equal(kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"add": map[string]interface{}{
+					"headers": []string{"foo:bar"},
+				},
+			},
+		}, svc.Plugins[0])
+
+		assert.Equal(map[string][]string{}, secretToSNIs)
+	})
+	t.Run("knative cluster local service supports short names", func(t *testing.T) {
+		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+			ingressList[4],
+		})
+		assert.Equal(1, len(parsedInfo))
+		svc := parsedInfo["foo-ns.foo-svc.42"]
+		assert.Equal(kong.Service{
+			Name:           kong.String("foo-ns.foo-svc.42"),
+			Port:           kong.Int(80),
+			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Path:           kong.String("/"),
+			Protocol:       kong.String("http"),
+			WriteTimeout:   kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			ConnectTimeout: kong.Int(60000),
+			Retries:        kong.Int(5),
+		}, svc.Service)
+		assert.Equal(kong.Route{
+			Name:          kong.String("foo-namespace.foo.00"),
+			RegexPriority: kong.Int(0),
+			StripPath:     kong.Bool(false),
+			Paths:         kong.StringSlice("/"),
+			PreserveHost:  kong.Bool(true),
+			Protocols:     kong.StringSlice("http", "https"),
+			Hosts:         kong.StringSlice("my-func.default.svc.cluster.local", "my-func.default", "my-func.default.svc"),
 		}, svc.Routes[0].Route)
 		assert.Equal(kong.Plugin{
 			Name: kong.String("request-transformer"),

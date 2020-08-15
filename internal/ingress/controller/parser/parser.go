@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/pkg/network"
 	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
 )
 
@@ -549,10 +550,10 @@ func (p *Parser) parseKnativeIngressRules(
 		processTLSSections(knativeIngressToNetworkingTLS(ingress.Spec.TLS),
 			ingress.Namespace, secretToSNIs)
 		for i, rule := range ingressSpec.Rules {
-			hosts := rule.Hosts
 			if rule.HTTP == nil {
 				continue
 			}
+			hosts := explandClusterLocal(rule.Hosts)
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
@@ -633,6 +634,21 @@ func (p *Parser) parseKnativeIngressRules(
 	}
 
 	return services, secretToSNIs
+}
+
+// explandClusterLocal expands cluster local domains to support short domains.
+// e.g. hello.default.svc.cluster.local expands hello.default.svc.cluster.local, hello.default.svc and hello.default
+func explandClusterLocal(hosts []string) []string {
+	var expand []string
+	localDomainSuffix := ".svc." + network.GetClusterDomainName()
+	for _, host := range hosts {
+		expand = append(expand, host)
+		if strings.HasSuffix(host, localDomainSuffix) {
+			expand = append(expand, strings.TrimSuffix(host, localDomainSuffix))
+			expand = append(expand, strings.TrimSuffix(host, "."+network.GetClusterDomainName()))
+		}
+	}
+	return expand
 }
 
 func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {

@@ -109,15 +109,21 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, skipClasslessIngress bool, logger logrus.FieldLogger) Storer {
-	var ingressClassMatching annotations.ClassMatching
+func New(cs CacheStores, ingressClass string, processClasslessIngress bool, processClasslessKongConsumer bool,
+	logger logrus.FieldLogger) Storer {
+	var ingressClassHandling annotations.ClassHandling
 	// TODO this is a placeholder for the eventual consumer flag
 	// for now it hard-codes the default
-	kongConsumerClassMatching := annotations.ExactOrEmptyClassMatch
-	if skipClasslessIngress {
-		ingressClassMatching = annotations.ExactClassMatch
+	kongConsumerClassHandling := annotations.ExactOrEmptyClassMatch
+	if processClasslessIngress {
+		ingressClassHandling = annotations.ExactOrEmptyClassMatch
 	} else {
-		ingressClassMatching = annotations.ExactOrEmptyClassMatch
+		ingressClassHandling = annotations.ExactClassMatch
+	}
+	if processClasslessKongConsumer {
+		kongConsumerClassHandling = annotations.ExactOrEmptyClassMatch
+	} else {
+		kongConsumerClassHandling = annotations.ExactClassMatch
 	}
 	return Store{
 		stores:                    cs,

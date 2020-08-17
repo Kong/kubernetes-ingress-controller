@@ -94,6 +94,9 @@ func TestFakeStoreIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "kong",
+				},
 			},
 			Spec: networking.IngressSpec{
 				Rules: []networking.IngressRule{
@@ -320,6 +323,9 @@ func TestFakeStoreConsumer(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "kong",
+				},
 			},
 		},
 	}

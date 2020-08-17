@@ -197,7 +197,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"plugins.konghq.com": "foo-plugin",
+						"plugins.konghq.com":          "foo-plugin",
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Spec: networking.IngressSpec{
@@ -226,7 +227,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Name:      "bar",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"plugins.konghq.com": "bar-plugin",
+						"plugins.konghq.com":          "bar-plugin",
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Spec: networking.IngressSpec{
@@ -842,6 +844,9 @@ func TestServiceClientCertificate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
@@ -921,6 +926,9 @@ func TestServiceClientCertificate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
@@ -989,6 +997,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 					Namespace: "default",
 					Annotations: map[string]string{
 						"configuration.konghq.com/strip-path": "trUe",
+						"kubernetes.io/ingress.class":         "kong",
 					},
 				},
 				Spec: networking.IngressSpec{
@@ -1065,6 +1074,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 					Name:      "bar",
 					Namespace: "default",
 					Annotations: map[string]string{
+						"kubernetes.io/ingress.class":         "kong",
 						"configuration.konghq.com/strip-path": "false",
 					},
 				},
@@ -1143,6 +1153,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 						Name:      "bar",
 						Namespace: "default",
 						Annotations: map[string]string{
+							"kubernetes.io/ingress.class":           "kong",
 							"konghq.com/https-redirect-status-code": "301",
 						},
 					},
@@ -1222,6 +1233,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 						Name:      "bar",
 						Namespace: "default",
 						Annotations: map[string]string{
+							"kubernetes.io/ingress.class":           "kong",
 							"konghq.com/https-redirect-status-code": "whoops",
 						},
 					},
@@ -1300,7 +1312,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 						Name:      "bar",
 						Namespace: "default",
 						Annotations: map[string]string{
-							"konghq.com/preserve-host": "faLsE",
+							"konghq.com/preserve-host":    "faLsE",
+							"kubernetes.io/ingress.class": "kong",
 						},
 					},
 					Spec: networking.IngressSpec{
@@ -1378,7 +1391,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 						Name:      "bar",
 						Namespace: "default",
 						Annotations: map[string]string{
-							"konghq.com/preserve-host": "wiggle wiggle wiggle",
+							"kubernetes.io/ingress.class": "kong",
+							"konghq.com/preserve-host":    "wiggle wiggle wiggle",
 						},
 					},
 					Spec: networking.IngressSpec{
@@ -1456,7 +1470,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 						Name:      "bar",
 						Namespace: "default",
 						Annotations: map[string]string{
-							"konghq.com/regex-priority": "10",
+							"konghq.com/regex-priority":   "10",
+							"kubernetes.io/ingress.class": "kong",
 						},
 					},
 					Spec: networking.IngressSpec{
@@ -1534,7 +1549,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 						Name:      "bar",
 						Namespace: "default",
 						Annotations: map[string]string{
-							"konghq.com/regex-priority": "IAmAString",
+							"konghq.com/regex-priority":   "IAmAString",
+							"kubernetes.io/ingress.class": "kong",
 						},
 					},
 					Spec: networking.IngressSpec{
@@ -1606,15 +1622,17 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 }
 
-func TestKongSkipClasslessIngress(t *testing.T) {
+func TestKongProcessClasslessIngress(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("Kong classless ingress evaluated (true)", func(t *testing.T) {
 		ingresses := []*networking.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "bar",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+					Name:      "bar",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
@@ -1648,9 +1666,9 @@ func TestKongSkipClasslessIngress(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses:            ingresses,
-			Services:             services,
-			SkipClasslessIngress: false,
+			Ingresses:               ingresses,
+			Services:                services,
+			ProcessClasslessIngress: true,
 		})
 		assert.Nil(err)
 		parser := New(store, logrus.New())
@@ -1665,9 +1683,8 @@ func TestKongSkipClasslessIngress(t *testing.T) {
 		ingresses := []*networking.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "bar",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+					Name:      "bar",
+					Namespace: "default",
 				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
@@ -1701,9 +1718,9 @@ func TestKongSkipClasslessIngress(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses:            ingresses,
-			Services:             services,
-			SkipClasslessIngress: true,
+			Ingresses:               ingresses,
+			Services:                services,
+			ProcessClasslessIngress: false,
 		})
 		assert.Nil(err)
 		parser := New(store, logrus.New())
@@ -1851,6 +1868,9 @@ func TestKongServiceAnnotations(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
@@ -1929,6 +1949,9 @@ func TestKongServiceAnnotations(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
@@ -2016,7 +2039,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 						Name:      "bar",
 						Namespace: "default",
 						Annotations: map[string]string{
-							"konghq.com/methods": "POST,GET",
+							"konghq.com/methods":          "POST,GET",
+							"kubernetes.io/ingress.class": "kong",
 						},
 					},
 					Spec: networking.IngressSpec{
@@ -2097,6 +2121,9 @@ func TestDefaultBackend(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ing-with-default-backend",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					Backend: &networking.IngressBackend{
@@ -2140,6 +2167,9 @@ func TestDefaultBackend(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
@@ -2206,6 +2236,9 @@ func TestParserSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					TLS: []networking.IngressTLS{
@@ -2262,6 +2295,9 @@ func TestParserSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					TLS: []networking.IngressTLS{
@@ -2276,6 +2312,9 @@ func TestParserSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: "ns1",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					TLS: []networking.IngressTLS{
@@ -2351,6 +2390,9 @@ func TestParserSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Spec: networking.IngressSpec{
 					TLS: []networking.IngressTLS{
@@ -2431,7 +2473,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"plugins.konghq.com": "foo-plugin",
+						"plugins.konghq.com":          "foo-plugin",
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Spec: networking.IngressSpec{
@@ -2520,7 +2563,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"plugins.konghq.com": "foo-plugin",
+						"plugins.konghq.com":          "foo-plugin",
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Spec: networking.IngressSpec{
@@ -2604,7 +2648,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"plugins.konghq.com": "foo-plugin",
+						"plugins.konghq.com":          "foo-plugin",
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Spec: networking.IngressSpec{
@@ -2665,7 +2710,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"plugins.konghq.com": "does-not-exist",
+						"plugins.konghq.com":          "does-not-exist",
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Spec: networking.IngressSpec{
@@ -2715,6 +2761,9 @@ func TestParseIngressRules(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "kong",
+				},
 			},
 			Spec: networking.IngressSpec{
 				Rules: []networking.IngressRule{

@@ -25,6 +25,12 @@ import (
 type ClassHandling int
 
 const (
+	IgnoreClassMatch       ClassHandling = iota
+	ExactOrEmptyClassMatch ClassHandling = iota
+	ExactClassMatch        ClassHandling = iota
+)
+
+const (
 	ingressClassKey = "kubernetes.io/ingress.class"
 
 	deprecatedAnnotationPrefix = "configuration.konghq.com"
@@ -46,9 +52,6 @@ const (
 	hostHeaderKey        = "/host-header"
 	methodsKey           = "/methods"
 
-	IgnoreClassMatch       ClassHandling = iota
-	ExactOrEmptyClassMatch ClassHandling = iota
-	ExactClassMatch        ClassHandling = iota
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"

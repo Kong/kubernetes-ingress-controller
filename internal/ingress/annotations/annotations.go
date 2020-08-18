@@ -60,22 +60,15 @@ const (
 func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMatching) bool {
 	switch handling {
 	case IgnoreClassMatch:
-		// class is not considered at all. any value, even a mismatch, is valid.
-		// may want to consider warning on mismatches, since while valid, they probably indicate a conflict with user
-		// intent, and probably should be something users clear for good config hygiene
+		// class is not considered at all. any value, even a mismatch, is valid
 		return true
 	case ExactOrEmptyClassMatch:
 		// aka lazy. exact match desired, but empty permitted
-		if ingressAnnotationValue == "" || ingressAnnotationValue == ingressClass {
-			return true
-		} // no alternative case, since everything else should be a mismatch
-		// would only report mismatches at a high debug level if at all
+		return ingressAnnotationValue == "" || ingressAnnotationValue == ingressClass
 	case ExactClassMatch:
 		// what it says on the tin
 		// this may be another place we want to return a warning, since an empty-class resource will never be valid
-		if ingressAnnotationValue == ingressClass {
-			return true
-		}
+		return ingressAnnotationValue == ingressClass
 	default:
 		panic("invalid ingress class handling option received")
 	}

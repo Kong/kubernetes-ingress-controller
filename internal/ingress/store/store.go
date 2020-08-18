@@ -82,10 +82,10 @@ type Store struct {
 
 	ingressClass string
 
-	ingressClassHandling      annotations.ClassHandling
-	kongConsumerClassHandling annotations.ClassHandling
+	ingressClassMatching      annotations.ClassMatching
+	kongConsumerClassMatching annotations.ClassMatching
 
-	isValidIngressClass func(objectMeta *metav1.ObjectMeta, handling annotations.ClassHandling) bool
+	isValidIngressClass func(objectMeta *metav1.ObjectMeta, handling annotations.ClassMatching) bool
 
 	logger logrus.FieldLogger
 }
@@ -110,20 +110,20 @@ type CacheStores struct {
 
 // New creates a new object store to be used in the ingress controller
 func New(cs CacheStores, ingressClass string, skipClasslessIngress bool, logger logrus.FieldLogger) Storer {
-	var ingressClassHandling annotations.ClassHandling
+	var ingressClassMatching annotations.ClassMatching
 	// TODO this is a placeholder for the eventual consumer flag
 	// for now it hard-codes the default
-	kongConsumerClassHandling := annotations.ExactOrEmptyClassMatch
+	kongConsumerClassMatching := annotations.ExactOrEmptyClassMatch
 	if skipClasslessIngress {
-		ingressClassHandling = annotations.ExactClassMatch
+		ingressClassMatching = annotations.ExactClassMatch
 	} else {
-		ingressClassHandling = annotations.ExactOrEmptyClassMatch
+		ingressClassMatching = annotations.ExactOrEmptyClassMatch
 	}
 	return Store{
 		stores:                    cs,
 		ingressClass:              ingressClass,
-		ingressClassHandling:      ingressClassHandling,
-		kongConsumerClassHandling: kongConsumerClassHandling,
+		ingressClassMatching:      ingressClassMatching,
+		kongConsumerClassMatching: kongConsumerClassMatching,
 		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		logger:                    logger,
 	}
@@ -161,7 +161,7 @@ func (s Store) ListIngresses() []*networking.Ingress {
 	var ingresses []*networking.Ingress
 	for _, item := range s.stores.Ingress.List() {
 		ing := s.networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassHandling) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassMatching) {
 			continue
 		}
 		ingresses = append(ingresses, ing)
@@ -287,7 +287,7 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.stores.Consumer.List() {
 		c, ok := item.(*configurationv1.KongConsumer)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, s.kongConsumerClassHandling) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, s.kongConsumerClassMatching) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -330,7 +330,7 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 			p, ok := ob.(*configurationv1.KongPlugin)
 			// TODO this isn't in spec, but we're just getting rid of global KongPlugins, correct?
 			// should be possible to just delete this function
-			if ok && s.isValidIngressClass(&p.ObjectMeta, s.ingressClassHandling) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, s.ingressClassMatching) {
 				plugins = append(plugins, p)
 			}
 		})

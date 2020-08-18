@@ -124,15 +124,15 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	var ingressClassHandling annotations.ClassHandling
+	var ingressClassMatching annotations.ClassMatching
 	if objects.SkipClasslessIngress {
-		ingressClassHandling = annotations.ExactClassMatch
+		ingressClassMatching = annotations.ExactClassMatch
 	} else {
-		ingressClassHandling = annotations.ExactOrEmptyClassMatch
+		ingressClassMatching = annotations.ExactOrEmptyClassMatch
 	}
 	// TODO this is a placeholder for the eventual consumer flag
 	// for now it hard-codes the default
-	kongConsumerClassHandling := annotations.ExactOrEmptyClassMatch
+	kongConsumerClassMatching := annotations.ExactOrEmptyClassMatch
 	s = Store{
 		stores: CacheStores{
 			Ingress:    ingressStore,
@@ -150,8 +150,8 @@ func NewFakeStore(
 			KnativeIngress: knativeIngressStore,
 		},
 		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta("kong"),
-		ingressClassHandling:      ingressClassHandling,
-		kongConsumerClassHandling: kongConsumerClassHandling,
+		ingressClassMatching:      ingressClassMatching,
+		kongConsumerClassMatching: kongConsumerClassMatching,
 	}
 	return s, nil
 }

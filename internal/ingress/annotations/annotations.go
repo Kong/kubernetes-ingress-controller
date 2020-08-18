@@ -22,12 +22,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ClassHandling int
+type ClassMatching int
 
 const (
-	IgnoreClassMatch       ClassHandling = iota
-	ExactOrEmptyClassMatch ClassHandling = iota
-	ExactClassMatch        ClassHandling = iota
+	IgnoreClassMatch       ClassMatching = iota
+	ExactOrEmptyClassMatch ClassMatching = iota
+	ExactClassMatch        ClassMatching = iota
 )
 
 const (
@@ -57,7 +57,7 @@ const (
 	DefaultIngressClass = "kong"
 )
 
-func validIngress(ingressAnnotationValue, ingressClass string, handling ClassHandling) bool {
+func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMatching) bool {
 	switch handling {
 	case IgnoreClassMatch:
 		// class is not considered at all. any value, even a mismatch, is valid.
@@ -87,9 +87,9 @@ func validIngress(ingressAnnotationValue, ingressClass string, handling ClassHan
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
-	ingressClass string) func(obj metav1.Object, handling ClassHandling) bool {
+	ingressClass string) func(obj metav1.Object, handling ClassMatching) bool {
 
-	return func(obj metav1.Object, handling ClassHandling) bool {
+	return func(obj metav1.Object, handling ClassMatching) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
 		return validIngress(ingress, ingressClass, handling)
 	}
@@ -98,9 +98,9 @@ func IngressClassValidatorFunc(
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
-	ingressClass string) func(obj *metav1.ObjectMeta, handling ClassHandling) bool {
+	ingressClass string) func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
 
-	return func(obj *metav1.ObjectMeta, handling ClassHandling) bool {
+	return func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
 		return validIngress(ingress, ingressClass, handling)
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -57,6 +58,8 @@ func TestParseNameNS(t *testing.T) {
 }
 
 func TestGetNodeIP(t *testing.T) {
+	ctx := context.Background()
+
 	fKNodes := []struct {
 		cs *testclient.Clientset
 		n  string
@@ -163,7 +166,7 @@ func TestGetNodeIP(t *testing.T) {
 	}
 
 	for _, fk := range fKNodes {
-		address := GetNodeIPOrName(fk.cs, fk.n)
+		address := GetNodeIPOrName(ctx, fk.cs, fk.n)
 		if address != fk.ea {
 			t.Errorf("expected %s, but returned %s", fk.ea, address)
 		}
@@ -171,10 +174,11 @@ func TestGetNodeIP(t *testing.T) {
 }
 
 func TestGetPodDetails(t *testing.T) {
+	ctx := context.Background()
 	// POD_NAME & POD_NAMESPACE not exist
 	os.Setenv("POD_NAME", "")
 	os.Setenv("POD_NAMESPACE", "")
-	_, err1 := GetPodDetails(testclient.NewSimpleClientset())
+	_, err1 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err1 == nil {
 		t.Errorf("expected an error but returned nil")
 	}
@@ -182,7 +186,7 @@ func TestGetPodDetails(t *testing.T) {
 	// POD_NAME not exist
 	os.Setenv("POD_NAME", "")
 	os.Setenv("POD_NAMESPACE", apiv1.NamespaceDefault)
-	_, err2 := GetPodDetails(testclient.NewSimpleClientset())
+	_, err2 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err2 == nil {
 		t.Errorf("expected an error but returned nil")
 	}
@@ -190,7 +194,7 @@ func TestGetPodDetails(t *testing.T) {
 	// POD_NAMESPACE not exist
 	os.Setenv("POD_NAME", "testpod")
 	os.Setenv("POD_NAMESPACE", "")
-	_, err3 := GetPodDetails(testclient.NewSimpleClientset())
+	_, err3 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err3 == nil {
 		t.Errorf("expected an error but returned nil")
 	}
@@ -198,7 +202,7 @@ func TestGetPodDetails(t *testing.T) {
 	// POD not exist
 	os.Setenv("POD_NAME", "testpod")
 	os.Setenv("POD_NAMESPACE", apiv1.NamespaceDefault)
-	_, err4 := GetPodDetails(testclient.NewSimpleClientset())
+	_, err4 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err4 == nil {
 		t.Errorf("expected an error but returned nil")
 	}
@@ -229,7 +233,7 @@ func TestGetPodDetails(t *testing.T) {
 			},
 		}}})
 
-	epi, err5 := GetPodDetails(fkClient)
+	epi, err5 := GetPodDetails(ctx, fkClient)
 	if err5 != nil {
 		t.Errorf("expected a PodInfo but returned error")
 		return

@@ -19,6 +19,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	time "time"
 
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
@@ -61,13 +62,13 @@ func NewFilteredTCPIngressInformer(client versioned.Interface, namespace string,
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigurationV1beta1().TCPIngresses(namespace).List(options)
+				return client.ConfigurationV1beta1().TCPIngresses(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigurationV1beta1().TCPIngresses(namespace).Watch(options)
+				return client.ConfigurationV1beta1().TCPIngresses(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&configurationv1beta1.TCPIngress{},

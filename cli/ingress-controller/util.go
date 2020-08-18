@@ -30,15 +30,15 @@ func getSemVerVer(v string) (semver.Version, error) {
 	return semver.Make(v)
 }
 
-func ensureWorkspace(client *kong.Client, workspace string) error {
+func ensureWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
 	req, err := client.NewRequest("GET", "/workspaces/"+workspace, nil, nil)
 	if err != nil {
 		return err
 	}
-	_, err = client.Do(context.TODO(), req, nil)
+	_, err = client.Do(ctx, req, nil)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
-			if err := createWorkspace(client, workspace); err != nil {
+			if err := createWorkspace(ctx, client, workspace); err != nil {
 				return fmt.Errorf("creating workspace '%v': %w", workspace, err)
 			}
 			return nil
@@ -48,12 +48,12 @@ func ensureWorkspace(client *kong.Client, workspace string) error {
 	return nil
 }
 
-func createWorkspace(client *kong.Client, workspace string) error {
+func createWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
 	body := map[string]string{"name": workspace}
 	req, err := client.NewRequest("POST", "/workspaces", nil, body)
 	if err != nil {
 		return err
 	}
-	_, err = client.Do(context.TODO(), req, nil)
+	_, err = client.Do(ctx, req, nil)
 	return err
 }

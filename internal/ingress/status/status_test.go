@@ -17,6 +17,7 @@ limitations under the License.
 package status
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -27,7 +28,7 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
-	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
@@ -293,6 +294,7 @@ func buildStatusSync() statusSync {
 }
 
 func TestStatusActions(t *testing.T) {
+	ctx := context.Background()
 	// make sure election can be created
 	os.Setenv("POD_NAME", "foo1")
 	os.Setenv("POD_NAMESPACE", apiv1.NamespaceDefault)
@@ -305,7 +307,7 @@ func TestStatusActions(t *testing.T) {
 		Logger:                 logrus.New(),
 	}
 	// create object
-	fkSync, err := NewStatusSyncer(c)
+	fkSync, err := NewStatusSyncer(ctx, c)
 	if fkSync == nil {
 		t.Fatalf("expected a valid Sync")
 	}
@@ -326,7 +328,7 @@ func TestStatusActions(t *testing.T) {
 		IP: "11.0.0.2",
 	}}
 	fooIngress1, err1 := fk.CoreClient.NetworkingV1beta1().Ingresses(
-		apiv1.NamespaceDefault).Get("foo_ingress_1", metav1.GetOptions{})
+		apiv1.NamespaceDefault).Get(ctx, "foo_ingress_1", metav1.GetOptions{})
 	if err1 != nil {
 		t.Fatalf("unexpected error")
 	}
@@ -342,7 +344,7 @@ func TestStatusActions(t *testing.T) {
 	// ingress should be empty
 	newIPs2 := []apiv1.LoadBalancerIngress{}
 	fooIngress2, err2 := fk.CoreClient.NetworkingV1beta1().Ingresses(
-		apiv1.NamespaceDefault).Get("foo_ingress_1", metav1.GetOptions{})
+		apiv1.NamespaceDefault).Get(ctx, "foo_ingress_1", metav1.GetOptions{})
 	if err2 != nil {
 		t.Fatalf("unexpected error")
 	}
@@ -352,7 +354,7 @@ func TestStatusActions(t *testing.T) {
 	}
 
 	oic, err := fk.CoreClient.NetworkingV1beta1().Ingresses(
-		metav1.NamespaceDefault).Get("foo_ingress_different_class", metav1.GetOptions{})
+		metav1.NamespaceDefault).Get(ctx, "foo_ingress_different_class", metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}
@@ -380,9 +382,10 @@ func TestKeyfunc(t *testing.T) {
 }
 
 func TestRunningAddresessWithPublishService(t *testing.T) {
+	ctx := context.Background()
 	fk := buildStatusSync()
 
-	r, _ := fk.runningAddresses()
+	r, _ := fk.runningAddresses(ctx)
 	if r == nil {
 		t.Fatalf("returned nil but expected valid []string")
 	}
@@ -393,10 +396,11 @@ func TestRunningAddresessWithPublishService(t *testing.T) {
 }
 
 func TestRunningAddresessWithPods(t *testing.T) {
+	ctx := context.Background()
 	fk := buildStatusSync()
 	fk.PublishService = apiv1.NamespaceDefault + "/" + "foo"
 
-	r, err := fk.runningAddresses()
+	r, err := fk.runningAddresses(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -414,11 +418,12 @@ func TestRunningAddresessWithPods(t *testing.T) {
 }
 
 func TestRunningAddresessWithPublishStatusAddress(t *testing.T) {
+	ctx := context.Background()
 	fk := buildStatusSync()
 	fk.PublishService = ""
 	fk.PublishStatusAddress = "127.0.0.1"
 
-	r, _ := fk.runningAddresses()
+	r, _ := fk.runningAddresses(ctx)
 	if r == nil {
 		t.Fatalf("returned nil but expected valid []string")
 	}

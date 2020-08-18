@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -37,14 +38,14 @@ type KongCredentialsGetter interface {
 
 // KongCredentialInterface has methods to work with KongCredential resources.
 type KongCredentialInterface interface {
-	Create(*v1.KongCredential) (*v1.KongCredential, error)
-	Update(*v1.KongCredential) (*v1.KongCredential, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.KongCredential, error)
-	List(opts metav1.ListOptions) (*v1.KongCredentialList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.KongCredential, err error)
+	Create(ctx context.Context, kongCredential *v1.KongCredential, opts metav1.CreateOptions) (*v1.KongCredential, error)
+	Update(ctx context.Context, kongCredential *v1.KongCredential, opts metav1.UpdateOptions) (*v1.KongCredential, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.KongCredential, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.KongCredentialList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongCredential, err error)
 	KongCredentialExpansion
 }
 
@@ -63,20 +64,20 @@ func newKongCredentials(c *ConfigurationV1Client, namespace string) *kongCredent
 }
 
 // Get takes name of the kongCredential, and returns the corresponding kongCredential object, and an error if there is any.
-func (c *kongCredentials) Get(name string, options metav1.GetOptions) (result *v1.KongCredential, err error) {
+func (c *kongCredentials) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.KongCredential, err error) {
 	result = &v1.KongCredential{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("kongcredentials").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of KongCredentials that match those selectors.
-func (c *kongCredentials) List(opts metav1.ListOptions) (result *v1.KongCredentialList, err error) {
+func (c *kongCredentials) List(ctx context.Context, opts metav1.ListOptions) (result *v1.KongCredentialList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -87,13 +88,13 @@ func (c *kongCredentials) List(opts metav1.ListOptions) (result *v1.KongCredenti
 		Resource("kongcredentials").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested kongCredentials.
-func (c *kongCredentials) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *kongCredentials) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -104,71 +105,74 @@ func (c *kongCredentials) Watch(opts metav1.ListOptions) (watch.Interface, error
 		Resource("kongcredentials").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a kongCredential and creates it.  Returns the server's representation of the kongCredential, and an error, if there is any.
-func (c *kongCredentials) Create(kongCredential *v1.KongCredential) (result *v1.KongCredential, err error) {
+func (c *kongCredentials) Create(ctx context.Context, kongCredential *v1.KongCredential, opts metav1.CreateOptions) (result *v1.KongCredential, err error) {
 	result = &v1.KongCredential{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("kongcredentials").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongCredential).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a kongCredential and updates it. Returns the server's representation of the kongCredential, and an error, if there is any.
-func (c *kongCredentials) Update(kongCredential *v1.KongCredential) (result *v1.KongCredential, err error) {
+func (c *kongCredentials) Update(ctx context.Context, kongCredential *v1.KongCredential, opts metav1.UpdateOptions) (result *v1.KongCredential, err error) {
 	result = &v1.KongCredential{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("kongcredentials").
 		Name(kongCredential.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongCredential).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the kongCredential and deletes it. Returns an error if one occurs.
-func (c *kongCredentials) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *kongCredentials) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongcredentials").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *kongCredentials) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *kongCredentials) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("kongcredentials").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched kongCredential.
-func (c *kongCredentials) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.KongCredential, err error) {
+func (c *kongCredentials) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongCredential, err error) {
 	result = &v1.KongCredential{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("kongcredentials").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

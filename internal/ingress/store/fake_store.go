@@ -9,7 +9,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
-	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
 func keyFunc(obj interface{}) (string, error) {

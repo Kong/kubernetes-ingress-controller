@@ -26,8 +26,10 @@ import (
 )
 
 // KongCredentialLister helps list KongCredentials.
+// All objects returned here must be treated as read-only.
 type KongCredentialLister interface {
 	// List lists all KongCredentials in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.KongCredential, err error)
 	// KongCredentials returns an object that can list and get KongCredentials.
 	KongCredentials(namespace string) KongCredentialNamespaceLister
@@ -58,10 +60,13 @@ func (s *kongCredentialLister) KongCredentials(namespace string) KongCredentialN
 }
 
 // KongCredentialNamespaceLister helps list and get KongCredentials.
+// All objects returned here must be treated as read-only.
 type KongCredentialNamespaceLister interface {
 	// List lists all KongCredentials in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.KongCredential, err error)
 	// Get retrieves the KongCredential from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.KongCredential, error)
 	KongCredentialNamespaceListerExpansion
 }

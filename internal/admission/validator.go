@@ -13,7 +13,7 @@ import (
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
-	ValidateConsumer(consumer configuration.KongConsumer) (bool, string, error)
+	ValidateConsumer(ctx context.Context, consumer configuration.KongConsumer) (bool, string, error)
 	ValidatePlugin(consumer configuration.KongPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
@@ -30,12 +30,12 @@ type KongHTTPValidator struct {
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if the consumer is valid or not and string
 // holds a message if the entity is not valid.
-func (validator KongHTTPValidator) ValidateConsumer(
+func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 	consumer configuration.KongConsumer) (bool, string, error) {
 	if consumer.Username == "" {
 		return false, "username cannot be empty", nil
 	}
-	c, err := validator.Client.Consumers.Get(context.TODO(), &consumer.Username)
+	c, err := validator.Client.Consumers.Get(ctx, &consumer.Username)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			return true, "", nil

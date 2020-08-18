@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var kongpluginsResource = schema.GroupVersionResource{Group: "configuration.kong
 var kongpluginsKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongPlugin"}
 
 // Get takes name of the kongPlugin, and returns the corresponding kongPlugin object, and an error if there is any.
-func (c *FakeKongPlugins) Get(name string, options v1.GetOptions) (result *configurationv1.KongPlugin, err error) {
+func (c *FakeKongPlugins) Get(ctx context.Context, name string, options v1.GetOptions) (result *configurationv1.KongPlugin, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(kongpluginsResource, c.ns, name), &configurationv1.KongPlugin{})
 
@@ -50,7 +52,7 @@ func (c *FakeKongPlugins) Get(name string, options v1.GetOptions) (result *confi
 }
 
 // List takes label and field selectors, and returns the list of KongPlugins that match those selectors.
-func (c *FakeKongPlugins) List(opts v1.ListOptions) (result *configurationv1.KongPluginList, err error) {
+func (c *FakeKongPlugins) List(ctx context.Context, opts v1.ListOptions) (result *configurationv1.KongPluginList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(kongpluginsResource, kongpluginsKind, c.ns, opts), &configurationv1.KongPluginList{})
 
@@ -72,14 +74,14 @@ func (c *FakeKongPlugins) List(opts v1.ListOptions) (result *configurationv1.Kon
 }
 
 // Watch returns a watch.Interface that watches the requested kongPlugins.
-func (c *FakeKongPlugins) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeKongPlugins) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(kongpluginsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a kongPlugin and creates it.  Returns the server's representation of the kongPlugin, and an error, if there is any.
-func (c *FakeKongPlugins) Create(kongPlugin *configurationv1.KongPlugin) (result *configurationv1.KongPlugin, err error) {
+func (c *FakeKongPlugins) Create(ctx context.Context, kongPlugin *configurationv1.KongPlugin, opts v1.CreateOptions) (result *configurationv1.KongPlugin, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(kongpluginsResource, c.ns, kongPlugin), &configurationv1.KongPlugin{})
 
@@ -90,7 +92,7 @@ func (c *FakeKongPlugins) Create(kongPlugin *configurationv1.KongPlugin) (result
 }
 
 // Update takes the representation of a kongPlugin and updates it. Returns the server's representation of the kongPlugin, and an error, if there is any.
-func (c *FakeKongPlugins) Update(kongPlugin *configurationv1.KongPlugin) (result *configurationv1.KongPlugin, err error) {
+func (c *FakeKongPlugins) Update(ctx context.Context, kongPlugin *configurationv1.KongPlugin, opts v1.UpdateOptions) (result *configurationv1.KongPlugin, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(kongpluginsResource, c.ns, kongPlugin), &configurationv1.KongPlugin{})
 
@@ -101,7 +103,7 @@ func (c *FakeKongPlugins) Update(kongPlugin *configurationv1.KongPlugin) (result
 }
 
 // Delete takes name of the kongPlugin and deletes it. Returns an error if one occurs.
-func (c *FakeKongPlugins) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeKongPlugins) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(kongpluginsResource, c.ns, name), &configurationv1.KongPlugin{})
 
@@ -109,15 +111,15 @@ func (c *FakeKongPlugins) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeKongPlugins) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongpluginsResource, c.ns, listOptions)
+func (c *FakeKongPlugins) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(kongpluginsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &configurationv1.KongPluginList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched kongPlugin.
-func (c *FakeKongPlugins) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configurationv1.KongPlugin, err error) {
+func (c *FakeKongPlugins) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *configurationv1.KongPlugin, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(kongpluginsResource, c.ns, name, pt, data, subresources...), &configurationv1.KongPlugin{})
 

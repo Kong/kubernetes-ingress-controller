@@ -72,9 +72,6 @@ func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMat
 	default:
 		panic("invalid ingress class handling option received")
 	}
-
-	// no match with our chosen match behavior, so ignore this resource
-	return false
 }
 
 // IngressClassValidatorFunc returns a function which can validate if an Object

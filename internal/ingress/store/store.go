@@ -301,8 +301,6 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.stores.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		// TODO arguably we can just remove the second clause, as this always returns true
-		// ListCACerts is like this already
 		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IgnoreClassMatch) {
 			credentials = append(credentials, c)
 		}
@@ -328,8 +326,6 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
-			// TODO this isn't in spec, but we're just getting rid of global KongPlugins, correct?
-			// should be possible to just delete this function
 			if ok && s.isValidIngressClass(&p.ObjectMeta, s.ingressClassMatching) {
 				plugins = append(plugins, p)
 			}

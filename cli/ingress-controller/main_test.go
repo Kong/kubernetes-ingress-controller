@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"syscall"
@@ -48,6 +49,7 @@ func TestCreateApiserverClient(t *testing.T) {
 }
 
 func TestHandleSigterm(t *testing.T) {
+	ctx := context.Background()
 	t.Skip("Skipping TestHandleSigterm.")
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
@@ -73,6 +75,7 @@ func TestHandleSigterm(t *testing.T) {
 	}
 
 	kong, err := controller.NewKongController(
+		ctx,
 		&controller.Configuration{
 			KubeClient: kubeClient,
 		},

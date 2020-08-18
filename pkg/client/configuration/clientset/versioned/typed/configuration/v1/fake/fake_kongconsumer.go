@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var kongconsumersResource = schema.GroupVersionResource{Group: "configuration.ko
 var kongconsumersKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongConsumer"}
 
 // Get takes name of the kongConsumer, and returns the corresponding kongConsumer object, and an error if there is any.
-func (c *FakeKongConsumers) Get(name string, options v1.GetOptions) (result *configurationv1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Get(ctx context.Context, name string, options v1.GetOptions) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(kongconsumersResource, c.ns, name), &configurationv1.KongConsumer{})
 
@@ -50,7 +52,7 @@ func (c *FakeKongConsumers) Get(name string, options v1.GetOptions) (result *con
 }
 
 // List takes label and field selectors, and returns the list of KongConsumers that match those selectors.
-func (c *FakeKongConsumers) List(opts v1.ListOptions) (result *configurationv1.KongConsumerList, err error) {
+func (c *FakeKongConsumers) List(ctx context.Context, opts v1.ListOptions) (result *configurationv1.KongConsumerList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(kongconsumersResource, kongconsumersKind, c.ns, opts), &configurationv1.KongConsumerList{})
 
@@ -72,14 +74,14 @@ func (c *FakeKongConsumers) List(opts v1.ListOptions) (result *configurationv1.K
 }
 
 // Watch returns a watch.Interface that watches the requested kongConsumers.
-func (c *FakeKongConsumers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeKongConsumers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(kongconsumersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a kongConsumer and creates it.  Returns the server's representation of the kongConsumer, and an error, if there is any.
-func (c *FakeKongConsumers) Create(kongConsumer *configurationv1.KongConsumer) (result *configurationv1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Create(ctx context.Context, kongConsumer *configurationv1.KongConsumer, opts v1.CreateOptions) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(kongconsumersResource, c.ns, kongConsumer), &configurationv1.KongConsumer{})
 
@@ -90,7 +92,7 @@ func (c *FakeKongConsumers) Create(kongConsumer *configurationv1.KongConsumer) (
 }
 
 // Update takes the representation of a kongConsumer and updates it. Returns the server's representation of the kongConsumer, and an error, if there is any.
-func (c *FakeKongConsumers) Update(kongConsumer *configurationv1.KongConsumer) (result *configurationv1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Update(ctx context.Context, kongConsumer *configurationv1.KongConsumer, opts v1.UpdateOptions) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(kongconsumersResource, c.ns, kongConsumer), &configurationv1.KongConsumer{})
 
@@ -101,7 +103,7 @@ func (c *FakeKongConsumers) Update(kongConsumer *configurationv1.KongConsumer) (
 }
 
 // Delete takes name of the kongConsumer and deletes it. Returns an error if one occurs.
-func (c *FakeKongConsumers) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeKongConsumers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(kongconsumersResource, c.ns, name), &configurationv1.KongConsumer{})
 
@@ -109,15 +111,15 @@ func (c *FakeKongConsumers) Delete(name string, options *v1.DeleteOptions) error
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeKongConsumers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongconsumersResource, c.ns, listOptions)
+func (c *FakeKongConsumers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(kongconsumersResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &configurationv1.KongConsumerList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched kongConsumer.
-func (c *FakeKongConsumers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configurationv1.KongConsumer, err error) {
+func (c *FakeKongConsumers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *configurationv1.KongConsumer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(kongconsumersResource, c.ns, name, pt, data, subresources...), &configurationv1.KongConsumer{})
 

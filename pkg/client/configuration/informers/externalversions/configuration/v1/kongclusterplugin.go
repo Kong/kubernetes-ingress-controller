@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -60,13 +61,13 @@ func NewFilteredKongClusterPluginInformer(client versioned.Interface, resyncPeri
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigurationV1().KongClusterPlugins().List(options)
+				return client.ConfigurationV1().KongClusterPlugins().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigurationV1().KongClusterPlugins().Watch(options)
+				return client.ConfigurationV1().KongClusterPlugins().Watch(context.TODO(), options)
 			},
 		},
 		&configurationv1.KongClusterPlugin{},

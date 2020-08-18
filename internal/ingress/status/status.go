@@ -38,10 +38,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	knativeClientSet "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeApis "knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
-	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
-	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
 )
 
 const (
@@ -117,6 +117,7 @@ func (s statusSync) Callbacks() leaderelection.LeaderCallbacks {
 // When this instance is the leader it will remove its current IP address if no other instances are
 // running.
 func (s statusSync) Shutdown(isLeader bool) {
+	ctx := context.Background()
 	go s.syncQueue.Shutdown()
 	if !isLeader {
 		return
@@ -132,7 +133,7 @@ func (s statusSync) Shutdown(isLeader bool) {
 	// Remove our IP address from all Ingress "status" subresources that mention it.
 	s.Logger.Infof("updating status of Ingress rules (remove)")
 
-	addrs, err := s.runningAddresses()
+	addrs, err := s.runningAddresses(ctx)
 	if err != nil {
 		logger.Errorf("failed to fetch IP addresses of running ingress controllers: %v", err)
 		return
@@ -144,26 +145,27 @@ func (s statusSync) Shutdown(isLeader bool) {
 		return
 	}
 
-	if s.isRunningMultiplePods() {
+	if s.isRunningMultiplePods(ctx) {
 		logger.Infof("skipping Ingress status update (multiple pods running; another one will be elected as leader)")
 		return
 	}
 
 	logger.Infof("removing address from Ingress status (%v)", addrs)
-	s.updateStatus([]apiv1.LoadBalancerIngress{})
+	s.updateStatus(ctx, []apiv1.LoadBalancerIngress{})
 }
 
 func (s *statusSync) sync(key interface{}) error {
+	ctx := context.Background()
 	if s.syncQueue.IsShuttingDown() {
 		s.Logger.Debugf("shutdown in progress, skipping ingress status update")
 		return nil
 	}
 
-	addrs, err := s.runningAddresses()
+	addrs, err := s.runningAddresses(ctx)
 	if err != nil {
 		return err
 	}
-	s.updateStatus(sliceToStatus(addrs))
+	s.updateStatus(ctx, sliceToStatus(addrs))
 
 	return nil
 }
@@ -173,8 +175,8 @@ func (s statusSync) keyfunc(input interface{}) (interface{}, error) {
 }
 
 // NewStatusSyncer returns a new Sync instance
-func NewStatusSyncer(config Config) (Sync, error) {
-	pod, err := utils.GetPodDetails(config.CoreClient)
+func NewStatusSyncer(ctx context.Context, config Config) (Sync, error) {
+	pod, err := utils.GetPodDetails(ctx, config.CoreClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch pod information: %v", err)
 	}
@@ -216,7 +218,7 @@ func NewStatusSyncer(config Config) (Sync, error) {
 
 // runningAddresses returns a list of IP addresses and/or FQDN where the
 // ingress controller is currently running
-func (s *statusSync) runningAddresses() ([]string, error) {
+func (s *statusSync) runningAddresses(ctx context.Context) ([]string, error) {
 	addrs := []string{}
 
 	if s.PublishStatusAddress != "" {
@@ -225,7 +227,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 	}
 
 	ns, name, _ := utils.ParseNameNS(s.PublishService)
-	svc, err := s.CoreClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+	svc, err := s.CoreClient.CoreV1().Services(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +246,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 		return addrs, nil
 	default:
 		// get information about all the pods running the ingress controller
-		pods, err := s.CoreClient.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
+		pods, err := s.CoreClient.CoreV1().Pods(s.pod.Namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: labels.SelectorFromSet(s.pod.Labels).String(),
 		})
 		if err != nil {
@@ -257,7 +259,7 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 				continue
 			}
 
-			name := utils.GetNodeIPOrName(s.CoreClient, pod.Spec.NodeName)
+			name := utils.GetNodeIPOrName(ctx, s.CoreClient, pod.Spec.NodeName)
 			if !inSlice(name, addrs) {
 				addrs = append(addrs, name)
 			}
@@ -277,8 +279,8 @@ func inSlice(e string, arr []string) bool {
 	return false
 }
 
-func (s *statusSync) isRunningMultiplePods() bool {
-	pods, err := s.CoreClient.CoreV1().Pods(s.pod.Namespace).List(metav1.ListOptions{
+func (s *statusSync) isRunningMultiplePods(ctx context.Context) bool {
+	pods, err := s.CoreClient.CoreV1().Pods(s.pod.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(s.pod.Labels).String(),
 	})
 	if err != nil {
@@ -307,7 +309,7 @@ func sliceToStatus(endpoints []string) []apiv1.LoadBalancerIngress {
 }
 
 // updateStatus changes the status information of Ingress rules
-func (s *statusSync) updateStatus(newIngressPoint []apiv1.LoadBalancerIngress) {
+func (s *statusSync) updateStatus(ctx context.Context, newIngressPoint []apiv1.LoadBalancerIngress) {
 	ings := s.IngressLister.ListIngresses()
 	tcpIngresses, err := s.IngressLister.ListTCPIngresses()
 	if err != nil {
@@ -324,20 +326,20 @@ func (s *statusSync) updateStatus(newIngressPoint []apiv1.LoadBalancerIngress) {
 	batch := p.Batch()
 
 	for _, ing := range ings {
-		batch.Queue(s.runUpdate(ing, newIngressPoint, s.CoreClient))
+		batch.Queue(s.runUpdate(ctx, ing, newIngressPoint, s.CoreClient))
 	}
 	for _, ing := range tcpIngresses {
-		batch.Queue(s.runUpdateTCPIngress(ing, newIngressPoint, s.KongConfigClient))
+		batch.Queue(s.runUpdateTCPIngress(ctx, ing, newIngressPoint, s.KongConfigClient))
 	}
 	for _, ing := range knativeIngresses {
-		batch.Queue(s.runUpdateKnativeIngress(ing, newIngressPoint, s.KnativeClient))
+		batch.Queue(s.runUpdateKnativeIngress(ctx, ing, newIngressPoint, s.KnativeClient))
 	}
 
 	batch.QueueComplete()
 	batch.WaitAll()
 }
 
-func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalancerIngress,
+func (s *statusSync) runUpdate(ctx context.Context, ing *networking.Ingress, status []apiv1.LoadBalancerIngress,
 	client clientset.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {
@@ -361,14 +363,14 @@ func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalan
 		if s.UseNetworkingV1beta1 {
 			ingClient := client.NetworkingV1beta1().Ingresses(ing.Namespace)
 
-			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
+			currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("failed to fetch Ingress %v/%v: %w", ing.Namespace, ing.Name, err)
 			}
 
 			logger.WithField("ingress_status", status).Debugf("attempting to update ingress status")
 			currIng.Status.LoadBalancer.Ingress = status
-			_, err = ingClient.UpdateStatus(currIng)
+			_, err = ingClient.UpdateStatus(ctx, currIng, metav1.UpdateOptions{})
 			if err != nil {
 				// TODO return this error?
 				logger.Errorf("failed to update ingress status: %v", err)
@@ -379,14 +381,14 @@ func (s *statusSync) runUpdate(ing *networking.Ingress, status []apiv1.LoadBalan
 		} else {
 			ingClient := client.ExtensionsV1beta1().Ingresses(ing.Namespace)
 
-			currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
+			currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("failed to fetch Ingress %v/%v: %w", ing.Namespace, ing.Name, err)
 			}
 
 			logger.WithField("ingress_status", status).Debugf("attempting to update ingress status")
 			currIng.Status.LoadBalancer.Ingress = status
-			_, err = ingClient.UpdateStatus(currIng)
+			_, err = ingClient.UpdateStatus(ctx, currIng, metav1.UpdateOptions{})
 			if err != nil {
 				// TODO return this error?
 				logger.Errorf("failed to update ingress status: %v", err)
@@ -425,7 +427,8 @@ func toKnativeLBStatus(coreLBStatus []apiv1.LoadBalancerIngress) []knative.LoadB
 
 var ingressCondSet = knativeApis.NewLivingConditionSet()
 
-func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
+func (s *statusSync) runUpdateKnativeIngress(ctx context.Context,
+	ing *knative.Ingress,
 	status []apiv1.LoadBalancerIngress,
 	client knativeClientSet.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
@@ -443,7 +446,7 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 
 		ingClient := client.NetworkingV1alpha1().Ingresses(ing.Namespace)
 
-		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
+		currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch Knative Ingress %v/%v: %w", ing.Namespace, ing.Name, err)
 		}
@@ -474,7 +477,7 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
 		currIng.Status.ObservedGeneration = currIng.GetObjectMeta().GetGeneration()
 
-		_, err = ingClient.UpdateStatus(currIng)
+		_, err = ingClient.UpdateStatus(ctx, currIng, metav1.UpdateOptions{})
 		if err != nil {
 			logger.Errorf("failed to update ingress status: %v", err)
 		} else {
@@ -484,7 +487,8 @@ func (s *statusSync) runUpdateKnativeIngress(ing *knative.Ingress,
 	}
 }
 
-func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
+func (s *statusSync) runUpdateTCPIngress(ctx context.Context,
+	ing *configurationv1beta1.TCPIngress,
 	status []apiv1.LoadBalancerIngress,
 	client configClientSet.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
@@ -508,14 +512,14 @@ func (s *statusSync) runUpdateTCPIngress(ing *configurationv1beta1.TCPIngress,
 
 		ingClient := client.ConfigurationV1beta1().TCPIngresses(ing.Namespace)
 
-		currIng, err := ingClient.Get(ing.Name, metav1.GetOptions{})
+		currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch TCPIngress %v/%v: %w", ing.Namespace, ing.Name, err)
 		}
 
 		logger.WithField("ingress_status", status).Debugf("attempting to update TCPIngress status")
 		currIng.Status.LoadBalancer.Ingress = status
-		_, err = ingClient.UpdateStatus(currIng)
+		_, err = ingClient.UpdateStatus(ctx, currIng, metav1.UpdateOptions{})
 		if err != nil {
 			logger.Errorf("failed to update TCPIngress status: %v", err)
 		} else {

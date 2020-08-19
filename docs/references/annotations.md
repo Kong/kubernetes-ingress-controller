@@ -279,7 +279,7 @@ uppercase alpha ASCII string is accepted, though most users will use only
 Sample usage:
 
 ```yaml
-konghq.com/regex-priority: "GET,POST"
+konghq.com/methods: "GET,POST"
 ```
 
 ### `konghq.com/override`

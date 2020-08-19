@@ -125,17 +125,17 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	var ingressClassHandling annotations.ClassHandling
-	var kongConsumerClassHandling annotations.ClassHandling
+	var ingressClassMatching annotations.ClassMatching
+	var kongConsumerClassMatching annotations.ClassMatching
 	if objects.ProcessClasslessIngress {
-		ingressClassHandling = annotations.ExactOrEmptyClassMatch
+		ingressClassMatching = annotations.ExactOrEmptyClassMatch
 	} else {
-		ingressClassHandling = annotations.ExactClassMatch
+		ingressClassMatching = annotations.ExactClassMatch
 	}
 	if objects.ProcessClasslessKongConsumer {
-		kongConsumerClassHandling = annotations.ExactOrEmptyClassMatch
+		kongConsumerClassMatching = annotations.ExactOrEmptyClassMatch
 	} else {
-		kongConsumerClassHandling = annotations.ExactClassMatch
+		kongConsumerClassMatching = annotations.ExactClassMatch
 	}
 	s = Store{
 		stores: CacheStores{

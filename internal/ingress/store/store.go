@@ -112,9 +112,7 @@ type CacheStores struct {
 func New(cs CacheStores, ingressClass string, processClasslessIngress bool, processClasslessKongConsumer bool,
 	logger logrus.FieldLogger) Storer {
 	var ingressClassMatching annotations.ClassMatching
-	// TODO this is a placeholder for the eventual consumer flag
-	// for now it hard-codes the default
-	kongConsumerClassMatching := annotations.ExactOrEmptyClassMatch
+	var kongConsumerClassMatching annotations.ClassMatching
 	if processClasslessIngress {
 		ingressClassMatching = annotations.ExactOrEmptyClassMatch
 	} else {

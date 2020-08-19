@@ -27,10 +27,10 @@ import (
 
 func TestIngressClassValidatorFunc(t *testing.T) {
 	tests := []struct {
-		ingress              string
-		skipClasslessIngress bool
-		controller           string
-		isValid              bool
+		ingress              string // the class set on the Ingress resource
+		skipClasslessIngress bool   // the "user" classless ingress flag value
+		controller           string // the class set on the controller
+		isValid              bool   // the expected verdict
 	}{
 		{"", false, "", true},
 		{"", false, "kong", true},

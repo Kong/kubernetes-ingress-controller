@@ -33,15 +33,22 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		isValid              bool   // the expected verdict
 	}{
 		{"", false, "", true},
-		{"", false, "kong", true},
-		{"", true, "kong", false},
-		{"kong", false, "kong", true},
-		{"kong", true, "kong", true},
+		{"", false, DefaultIngressClass, true},
+		{"", true, DefaultIngressClass, false},
+		{DefaultIngressClass, false, DefaultIngressClass, true},
+		{DefaultIngressClass, true, DefaultIngressClass, true},
 		{"custom", false, "custom", true},
 		{"", false, "killer", true},
-		{"custom", false, "kong", false},
-		{"custom", true, "kong", false},
+		{"custom", false, DefaultIngressClass, false},
+		{"custom", true, DefaultIngressClass, false},
 		{"", true, "custom", false},
+		{"", false, "kozel", true},
+		{"", true, "kozel", false},
+		{"kozel", false, "kozel", true},
+		{"kozel", true, "kozel", true},
+		{"", false, "killer", true},
+		{"custom", false, "kozel", false},
+		{"custom", true, "kozel", false},
 	}
 
 	ing := &extensions.Ingress{

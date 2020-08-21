@@ -8,6 +8,7 @@
 - [**Kubernetes resource class**](#kubernetes-resource-class)
 - [**When to use custom classes**](#when-to-use-custom-classes)
 - [**Legacy behavior**](#legacy-behavior)
+- [**Examples**](#examples)
 
 ## Introduction
 
@@ -114,6 +115,66 @@ resources, which is allowed (but not recommended) for either the default or
 custom classess. Resources referenced by another resource are always loaded and
 updated correctly regardless of which class you set on the controller; you do
 not need to add class annotations to these resources when using a custom class.
+
+## Examples
+
+Typical configurations will include a mix of resources that have class
+information and resources that are referenced by them. For example, consider
+the following configuration for authenticating a request, using a KongConsumer,
+credential Secret, Ingress, and KongPlugin (a Service is implied, but not
+shown):
+
+```
+kind: KongConsumer
+metadata:
+  name: dyadya-styopa
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+username: styopa
+credentials:
+- styopa-key
+
+---
+
+kind: Secret
+apiVersion: v1
+stringData:
+  key: bylkogdatomoryakom
+  kongCredType: key-auth
+metadata:
+  name: styopa-key
+
+---
+
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: ktonezhnaet
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+    konghq.com/plugins: "key-auth-example"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /vsemznakom
+        backend:
+          serviceName: httpbin
+          servicePort: 80
+
+---
+
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: key-auth-example
+plugin: key-auth
+```
+
+The KongConsumer and Ingress resources both have class annotations, as they are
+resources that the controller uses as a basis for building Kong configuration.
+The Secret and KongPlugin _do not_ have class annotations, as they are
+referenced by other resources that do.
 
 [class-annotation]: ../references/annotations.md#kubernetesioingressclass
 [knative-class]: ../guides/using-kong-with-knative.md#ingress-class

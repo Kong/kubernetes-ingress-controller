@@ -712,6 +712,9 @@ func TestCACertificate(t *testing.T) {
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
 					},
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
@@ -744,6 +747,9 @@ func TestCACertificate(t *testing.T) {
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
 					},
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
@@ -756,6 +762,9 @@ func TestCACertificate(t *testing.T) {
 					Namespace: "non-default",
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
+					},
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Data: map[string][]byte{
@@ -785,6 +794,9 @@ func TestCACertificate(t *testing.T) {
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
 					},
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
@@ -798,6 +810,9 @@ func TestCACertificate(t *testing.T) {
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
 					},
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
+					},
 				},
 				Data: map[string][]byte{
 					"id": []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
@@ -810,6 +825,9 @@ func TestCACertificate(t *testing.T) {
 					Namespace: "non-default",
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
+					},
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": "kong",
 					},
 				},
 				Data: map[string][]byte{

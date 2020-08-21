@@ -377,7 +377,7 @@ func (s Store) ListCACerts() ([]*apiv1.Secret, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*apiv1.Secret)
-			if ok {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ExactClassMatch) {
 				secrets = append(secrets, p)
 			}
 		})

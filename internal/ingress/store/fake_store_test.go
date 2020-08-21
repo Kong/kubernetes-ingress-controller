@@ -535,6 +535,9 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 				Labels: map[string]string{
 					"konghq.com/ca-cert": "true",
 				},
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "kong",
+				},
 			},
 		},
 		{
@@ -543,6 +546,9 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 				Namespace: "default",
 				Labels: map[string]string{
 					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": "kong",
 				},
 			},
 		},

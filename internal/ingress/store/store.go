@@ -194,10 +194,6 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 
 func (s Store) validKnativeIngressClass(objectMeta *metav1.ObjectMeta) bool {
 	ingressAnnotationValue := objectMeta.GetAnnotations()[knativeIngressClassKey]
-	if ingressAnnotationValue == "" &&
-		s.ingressClass == annotations.DefaultIngressClass {
-		return true
-	}
 	return ingressAnnotationValue == s.ingressClass
 }
 
@@ -211,6 +207,9 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	err := cache.ListAll(s.stores.KnativeIngress, labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*knative.Ingress)
+			// this is implemented directly in store as s.isValidIngressClass only checks the value of the
+			// kubernetes.io/ingress.class annotation (annotations.ingressClassKey), not
+			// networking.knative.dev/ingress.class (knativeIngressClassKey)
 			if ok && s.validKnativeIngressClass(&ing.ObjectMeta) {
 				ingresses = append(ingresses, ing)
 			}

@@ -7,6 +7,7 @@
   - [Custom Resources](#custom-resources)
   - [Deployment methods](#deployment-methods)
   - [High-availability and scaling](#high-availability-and-scaling)
+  - [Resource classes](#resource-classes)
   - [Security](#security)
 - [Guides and Tutorials](#guides-and-tutorials)
 - [Configuration reference](#configuration-reference)
@@ -47,6 +48,12 @@ The Kong Ingress Controller is designed to scale with your traffic
 and infrastructure.
 Please refer to [this document](concepts/ha-and-scaling.md) to understand
 failures scenarios, recovery methods, as well as scaling considerations.
+
+### Resource classes
+
+[Resource classes](concepts/resource-classes.md) filter which resources the
+controller loads. They ensure that Kong Ingress Controller instances do not
+load configuration intended for other instances or other ingress controllers.
 
 ### Security
 

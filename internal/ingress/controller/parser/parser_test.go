@@ -1666,9 +1666,8 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses:               ingresses,
-			Services:                services,
-			ProcessClasslessIngress: true,
+			Ingresses: ingresses,
+			Services:  services,
 		})
 		assert.Nil(err)
 		parser := New(store, logrus.New())
@@ -1718,9 +1717,8 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses:               ingresses,
-			Services:                services,
-			ProcessClasslessIngress: false,
+			Ingresses: ingresses,
+			Services:  services,
 		})
 		assert.Nil(err)
 		parser := New(store, logrus.New())

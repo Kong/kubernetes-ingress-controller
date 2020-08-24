@@ -27,28 +27,28 @@ import (
 
 func TestIngressClassValidatorFunc(t *testing.T) {
 	tests := []struct {
-		ingress              string // the class set on the Ingress resource
-		skipClasslessIngress bool   // the "user" classless ingress flag value
-		controller           string // the class set on the controller
-		isValid              bool   // the expected verdict
+		ingress       string        // the class set on the Ingress resource
+		classMatching ClassMatching // the "user" classless ingress flag value, translated to its match strategy
+		controller    string        // the class set on the controller
+		isValid       bool          // the expected verdict
 	}{
-		{"", false, "", true},
-		{"", false, DefaultIngressClass, true},
-		{"", true, DefaultIngressClass, false},
-		{DefaultIngressClass, false, DefaultIngressClass, true},
-		{DefaultIngressClass, true, DefaultIngressClass, true},
-		{"custom", false, "custom", true},
-		{"", false, "killer", true},
-		{"custom", false, DefaultIngressClass, false},
-		{"custom", true, DefaultIngressClass, false},
-		{"", true, "custom", false},
-		{"", false, "kozel", true},
-		{"", true, "kozel", false},
-		{"kozel", false, "kozel", true},
-		{"kozel", true, "kozel", true},
-		{"", false, "killer", true},
-		{"custom", false, "kozel", false},
-		{"custom", true, "kozel", false},
+		{"", ExactOrEmptyClassMatch, "", true},
+		{"", ExactOrEmptyClassMatch, DefaultIngressClass, true},
+		{"", ExactClassMatch, DefaultIngressClass, false},
+		{DefaultIngressClass, ExactOrEmptyClassMatch, DefaultIngressClass, true},
+		{DefaultIngressClass, ExactClassMatch, DefaultIngressClass, true},
+		{"custom", ExactOrEmptyClassMatch, "custom", true},
+		{"", ExactOrEmptyClassMatch, "killer", true},
+		{"custom", ExactOrEmptyClassMatch, DefaultIngressClass, false},
+		{"custom", ExactClassMatch, DefaultIngressClass, false},
+		{"", ExactOrEmptyClassMatch, "custom", true},
+		{"", ExactOrEmptyClassMatch, "kozel", true},
+		{"", ExactClassMatch, "kozel", false},
+		{"kozel", ExactOrEmptyClassMatch, "kozel", true},
+		{"kozel", ExactClassMatch, "kozel", true},
+		{"", ExactOrEmptyClassMatch, "killer", true},
+		{"custom", ExactOrEmptyClassMatch, "kozel", false},
+		{"custom", ExactClassMatch, "kozel", false},
 	}
 
 	ing := &extensions.Ingress{
@@ -63,15 +63,10 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 	for _, test := range tests {
 		ing.Annotations[ingressClassKey] = test.ingress
 		f := IngressClassValidatorFunc(test.controller)
-		var b bool
-		if test.skipClasslessIngress {
-			b = f(&ing.ObjectMeta, ExactClassMatch)
-		} else {
-			b = f(&ing.ObjectMeta, ExactOrEmptyClassMatch)
-		}
 
-		if b != test.isValid {
-			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
+		result := f(&ing.ObjectMeta, test.classMatching)
+		if result != test.isValid {
+			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, result)
 		}
 	}
 }

@@ -73,6 +73,10 @@ The below diagram shows how the `KongPlugin` resource can be linked to an
 
 ## KongClusterPlugin
 
+_This resource requires the `kubernetes.io/ingress.class` annotation. Its value
+must match the value of the controller's `--ingress-class` argument, which is
+"kong" by default._
+
 KongClusterPlugin resource is exactly same as KongPlugin, except that it is a
 Kubernetes cluster-level resources instead of being a namespaced resource.
 This can help when the configuration of the plugin needs to be centralized
@@ -87,11 +91,19 @@ KongClusterPlugin with the same name.
 
 ## KongConsumer
 
+_This resource requires the `kubernetes.io/ingress.class` annotation. Its value
+must match the value of the controller's `--ingress-class` argument, which is
+"kong" by default._
+
 This custom resource configures `Consumers` in Kong.
 Every `KongConsumer` resource in Kubernetes directly translates to a
 [Consumer][kong-consumer] object in Kong.
 
 ## TCPIngress
+
+_This resource requires the `kubernetes.io/ingress.class` annotation. Its value
+must match the value of the controller's `--ingress-class` argument, which is
+"kong" by default._
 
 This Custom Resource is used for exposing non-HTTP
 and non-GRPC services running inside Kubernetes to

@@ -8,7 +8,7 @@ Following annotations are supported on Ingress resources:
 
 | Annotation name | Description |
 |-----------------|-------------|
-| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy |
+| REQUIRED [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy |
 | [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for specific Ingress. |
 | [`konghq.com/protocols`](#konghqcomprotocols) | Set protocols to handle for each Ingress resource. |
 | [`konghq.com/preserve-host`](#konghqcompreserve-host) | Pass the `host` header as is to the upstream service. |
@@ -20,6 +20,16 @@ Following annotations are supported on Ingress resources:
 | DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
 | DEPRECATED [`configuration.konghq.com`](#configurationkonghqcom) | Please use [`konghq.com/override`](#konghqcomoverride) |
 | DEPRECATED [`configuration.konghq.com/protocols`](#configurationkonghqcomprotocols) | Please use [`konghq.com/protocols`](#konghqcomprotocols) |
+
+`kubernetes.io/ingress.class` is normally required, and its value should match
+the value of the `--ingress-class` controller argument ("kong" by default).
+
+Passing `--process-classless-ingress-v1beta1=true` removes that requirement:
+when enabled, the controller will process Ingresses with no
+`kubernetes.io/ingress.class` annotation. Recommended best practice is to set
+the annotation and leave this flag disabled; the flag is primarily intended for
+older configurations, as controller versions prior to 0.10 processed classless
+Ingress resources by default.
 
 ## Service resource
 
@@ -45,9 +55,19 @@ Following annotaitons are supported on KongConsumer resources:
 
 | Annotation name | Description |
 |-----------------|-------------|
-| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the KongConsumers that a controller should satisfy |
+| REQUIRED [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the KongConsumers that a controller should satisfy |
 | [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for a specific consumer |
 | DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
+
+`kubernetes.io/ingress.class` is normally required, and its value should match
+the value of the `--ingress-class` controller argument ("kong" by default).
+
+Passing `process-classless-kong-consumer` removes that requirement:
+when enabled, the controller will process KongConsumers with no
+`kubernetes.io/ingress.class` annotation. Recommended best practice is to set
+the annotation and leave this flag disabled; the flag is primarily intended for
+older configurations, as controller versions prior to 0.10 processed classless
+KongConsumer resources by default.
 
 ## Annotations
 
@@ -90,9 +110,19 @@ metadata:
 will target Kong Ingress controller, forcing the GCE controller
 to ignore it.
 
-> Deploying multiple ingress controller and not specifying the
-annotation will cause both controllers fighting to satisfy the Ingress
-and will lead to unknown behaviour.
+Ingress, KongConsumer, TCPIngress, KongClusterPlugin, and Secret resources with
+the `ca-cert` label _require_ this annotation by default. You can optionally
+allow Ingress or KongConsumer resources with no class annotation (by setting
+the `--process-classless-ingress-v1beta1` or
+`--process-classless-kong-consumer` flags, respectively), though recommended
+best practice is to leave these flags disabled: the flags are primarily
+intended for compatibility with configuration created before this requirement
+was introduced in controller 0.10.
+
+If you allow classless resources, you must take care when using multiple
+controller instances in a single cluster: only one controller instance should
+enable these flags to avoid different controller instances fighting over
+classless resources, which will result in unexpected and unknown behavior.
 
 The ingress class used by Kong Ingress Controller to filter Ingress
 resources can be changed using the `CONTROLLER_INGRESS_CLASS`

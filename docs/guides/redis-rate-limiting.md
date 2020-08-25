@@ -102,6 +102,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: global-rate-limit
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: \"true\"
 config:
@@ -187,6 +189,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: global-rate-limit
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: \"true\"
 config:

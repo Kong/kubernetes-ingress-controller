@@ -183,6 +183,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: request-id
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: "true"   # optional, if set, then the plugin will be executed
                      # for every request that Kong proxies

@@ -148,6 +148,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: add-response-header
+  annotations:
+    kubernetes.io/ingress.class: kong
 config:
   add:
     headers:
@@ -230,6 +232,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: add-response-header
+  annotations:
+    kubernetes.io/ingress.class: kong
 config:
   add:
     headers:

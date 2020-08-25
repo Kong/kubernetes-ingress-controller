@@ -116,6 +116,8 @@ $ echo 'apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: prometheus
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: "true"
 plugin: prometheus

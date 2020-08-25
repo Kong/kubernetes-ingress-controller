@@ -313,6 +313,8 @@ kind: TCPIngress
 metadata:
   name: <object name>
   namespace: <object namespace>
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: <SNI, optional>

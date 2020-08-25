@@ -57,6 +57,8 @@ $ echo "apiVersion: v1
 kind: Secret
 metadata:
   name: my-ca-cert
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     konghq.com/ca-cert: 'true'
 type: Opaque

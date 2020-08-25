@@ -342,6 +342,8 @@ kind: KongConsumer
 metadata:
   name: <object name>
   namespace: <object namespace>
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: <user name>
 custom_id: <custom ID>
 ```
@@ -353,6 +355,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: consumer-team-x
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: team-X
 ```
 

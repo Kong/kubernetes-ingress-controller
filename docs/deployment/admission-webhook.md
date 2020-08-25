@@ -142,6 +142,8 @@ $ echo "apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: harry
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: harry" | kubectl apply -f -
 kongconsumer.configuration.konghq.com/harry created
 ```
@@ -153,6 +155,8 @@ $ echo "apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: harry2
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: harry" | kubectl apply -f -
 Error from server: error when creating "STDIN": admission webhook "validations.kong.konghq.com" denied the request: consumer already exists
 ```

@@ -154,6 +154,8 @@ $ echo "apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: harry
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: harry" | kubectl apply -f -
 kongconsumer.configuration.konghq.com/harry created
 ```
@@ -187,6 +189,8 @@ $ echo "apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: harry
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: harry
 credentials:
 - harry-apikey" | kubectl apply -f -

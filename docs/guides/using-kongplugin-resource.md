@@ -415,6 +415,7 @@ kind: KongConsumer
 metadata:
   name: harry
   annotations:
+    kubernetes.io/ingress.class: kong
     konghq.com/plugins: harry-rate-limit
 username: harry
 credentials:

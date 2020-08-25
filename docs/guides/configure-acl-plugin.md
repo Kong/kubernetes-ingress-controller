@@ -238,6 +238,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: admin
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: admin
 " | kubectl apply -f -
 
@@ -246,6 +248,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: plain-user
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: plain-user
 " | kubectl apply -f -
 ```
@@ -303,6 +307,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: admin
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: admin
 credentials:
   - app-admin-jwt
@@ -313,6 +319,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: plain-user
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: plain-user
 credentials:
   - app-user-jwt
@@ -540,6 +548,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: admin
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: admin
 credentials:
   - app-admin-jwt
@@ -551,6 +561,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: plain-user
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: plain-user
 credentials:
   - app-user-jwt

@@ -84,6 +84,8 @@ kind: Ingress
 metadata:
   name: my-app
   namespace: echo
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: myapp.example.com

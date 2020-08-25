@@ -119,6 +119,7 @@ metadata:
   name: demo-example-com
   annotations:
     plugins.konghq.com: request-id
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: example.com

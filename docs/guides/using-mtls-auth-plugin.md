@@ -147,6 +147,7 @@ metadata:
   name: demo
   annotations:
     konghq.com/plugins: mtls-auth
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

@@ -54,6 +54,7 @@ metadata:
   name: demo-get
   annotations:
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -71,6 +72,7 @@ metadata:
   name: demo-post
   annotations:
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -161,6 +163,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -179,6 +182,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -567,6 +571,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt,plain-user-acl
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -585,6 +590,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt,admin-acl
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

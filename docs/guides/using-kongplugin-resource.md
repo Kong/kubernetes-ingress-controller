@@ -64,6 +64,7 @@ metadata:
   name: demo
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -130,6 +131,7 @@ metadata:
   name: demo-2
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

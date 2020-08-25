@@ -110,10 +110,16 @@ metadata:
 will target Kong Ingress controller, forcing the GCE controller
 to ignore it.
 
-Ingress, KongConsumer, TCPIngress, KongClusterPlugin, and Secret resources with
-the `ca-cert` label _require_ this annotation by default. You can optionally
-allow Ingress or KongConsumer resources with no class annotation (by setting
-the `--process-classless-ingress-v1beta1` or
+The following resources _require_ this annotation by default:
+
+- Ingress
+- KongConsumer
+- TCPIngress
+- KongClusterPlugin
+- Secret resources with the `ca-cert` label 
+
+You can optionally allow Ingress or KongConsumer resources with no class
+annotation (by setting the `--process-classless-ingress-v1beta1` or
 `--process-classless-kong-consumer` flags, respectively), though recommended
 best practice is to leave these flags disabled: the flags are primarily
 intended for compatibility with configuration created before this requirement

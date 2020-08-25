@@ -184,7 +184,7 @@ kind: KongClusterPlugin
 metadata:
   name: request-id
   annotations:
-    kubernetes.io/ingress.class: kong
+    kubernetes.io/ingress.class: <controller ingress class, "kong" by default>
   labels:
     global: "true"   # optional, if set, then the plugin will be executed
                      # for every request that Kong proxies
@@ -316,7 +316,7 @@ metadata:
   name: <object name>
   namespace: <object namespace>
   annotations:
-    kubernetes.io/ingress.class: kong
+    kubernetes.io/ingress.class: <controller ingress class, "kong" by default>
 spec:
   rules:
   - host: <SNI, optional>
@@ -347,7 +347,7 @@ metadata:
   name: <object name>
   namespace: <object namespace>
   annotations:
-    kubernetes.io/ingress.class: kong
+    kubernetes.io/ingress.class: <controller ingress class, "kong" by default>
 username: <user name>
 custom_id: <custom ID>
 ```

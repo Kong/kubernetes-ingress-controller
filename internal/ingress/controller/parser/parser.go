@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"

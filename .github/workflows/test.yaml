@@ -27,6 +27,13 @@ jobs:
       run: |
         export GOPATH=$(go env GOPATH)
         make verify-codegen
+    - name: Setup kustomize
+      uses: imranismail/setup-kustomize@v1
+      with:
+        kustomize-version: "3.1.0"
+    - name: Verify manifest consistency
+      run: |
+        make verify-manifests
   test:
     runs-on: ubuntu-latest
     steps:

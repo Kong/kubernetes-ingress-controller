@@ -228,10 +228,6 @@ github.com/hashicorp/golang-lru v0.5.4 h1:YDjusn29QI/Das2iO9M0BHnIbxPeyuCHsjMW+l
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/hbagdi/deck v1.1.0 h1:ENowLEij9SFuqE4DnN9SpxbYhYPpzeDtDXsNm0QiuBc=
-github.com/hbagdi/deck v1.1.0/go.mod h1:cdGkRZdBjqhijpMdzhZzvCIrGiwFn3AyNaWBUa1V6OM=
-github.com/hbagdi/go-kong v0.11.0 h1:yWhxXQ4Zsglx4vy1I+2NbXkabq3m23e/XXgwZ2CNjAM=
-github.com/hbagdi/go-kong v0.11.0/go.mod h1:qEtSDLbiWs8n2NzpRsNE46Z8LsWpGj2ELrMmIESYIyc=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/imdario/mergo v0.3.5/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
@@ -258,6 +254,10 @@ github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88/go.mod h1:3w7q
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
+github.com/kong/deck v1.2.1 h1:984TiN/Diz0K1Z1CnD/EAG9n4sdnYmF2XSBuN+0w9jc=
+github.com/kong/deck v1.2.1/go.mod h1:bQ3rKdw35e8oThRXhOMq6IgIFyDe39YQdiEgCp9qJWU=
+github.com/kong/go-kong v0.13.0 h1:r1eTq3lc6fjHAiWWv4Dv1b8e35hER+g6vlNLMFkfcRQ=
+github.com/kong/go-kong v0.13.0/go.mod h1:oF4kdI9l/a8ndDW2ayJA0yhDBpO8Qt2aLiJEv10hqnQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2 h1:DB17ag19krx9CFsz4o3enTrPXyIXCl+2iCXH/aMAp9s=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 )
 
 func getSemVerVer(v string) (semver.Version, error) {

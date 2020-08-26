@@ -1,6 +1,7 @@
 package admission
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -51,7 +52,7 @@ func (a Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	response, err := a.handleValidation(*review.Request)
+	response, err := a.handleValidation(r.Context(), *review.Request)
 	if err != nil {
 		a.Logger.Errorf("failed to run validation: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -87,7 +88,7 @@ var (
 		Resource: "secrets"}
 )
 
-func (a Server) handleValidation(request admission.AdmissionRequest) (
+func (a Server) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
 	*admission.AdmissionResponse, error) {
 	var response admission.AdmissionResponse
 
@@ -106,7 +107,7 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 		}
 		switch request.Operation {
 		case admission.Create:
-			ok, message, err = a.Validator.ValidateConsumer(consumer)
+			ok, message, err = a.Validator.ValidateConsumer(ctx, consumer)
 			if err != nil {
 				return nil, err
 			}
@@ -119,7 +120,7 @@ func (a Server) handleValidation(request admission.AdmissionRequest) (
 			}
 			// validate only if the username is being changed
 			if consumer.Username != oldConsumer.Username {
-				ok, message, err = a.Validator.ValidateConsumer(consumer)
+				ok, message, err = a.Validator.ValidateConsumer(ctx, consumer)
 				if err != nil {
 					return nil, err
 				}

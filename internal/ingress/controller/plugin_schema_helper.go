@@ -29,7 +29,7 @@ func NewPluginSchemaStore(client *kong.Client) *PluginSchemaStore {
 // Schema retrives schema of a plugin.
 // A cache is used to save the responses and subsequent queries are served from
 // the cache.
-func (p *PluginSchemaStore) Schema(pluginName string) (map[string]interface{}, error) {
+func (p *PluginSchemaStore) Schema(ctx context.Context, pluginName string) (map[string]interface{}, error) {
 	if pluginName == "" {
 		return nil, fmt.Errorf("pluginName can not be empty")
 	}
@@ -46,7 +46,7 @@ func (p *PluginSchemaStore) Schema(pluginName string) (map[string]interface{}, e
 		return nil, err
 	}
 	schema := make(map[string]interface{})
-	_, err = p.client.Do(context.TODO(), req, &schema)
+	_, err = p.client.Do(ctx, req, &schema)
 	if err != nil {
 		return nil, err
 	}

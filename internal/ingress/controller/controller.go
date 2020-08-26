@@ -43,7 +43,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
-	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
+	knativeClientSet "knative.dev/networking/pkg/client/clientset/versioned"
 )
 
 // Kong Represents a Kong client and connection information
@@ -98,6 +98,7 @@ type Configuration struct {
 // then sends the content to the backend (OnUpdate) receiving the populated
 // template as response reloading the backend if is required.
 func (n *KongController) syncIngress(interface{}) error {
+	ctx := context.Background()
 	n.syncRateLimiter.Accept()
 
 	if n.syncQueue.IsShuttingDown() {
@@ -124,7 +125,7 @@ func (n *KongController) syncIngress(interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error building kong state: %w", err)
 	}
-	err = n.OnUpdate(state)
+	err = n.OnUpdate(ctx, state)
 	if err != nil {
 		n.Logger.Errorf("failed to update kong configuration: %v", err)
 		return err
@@ -136,7 +137,8 @@ func (n *KongController) syncIngress(interface{}) error {
 // NewKongController creates a new NGINX Ingress controller.
 // If the environment variable NGINX_BINARY exists it will be used
 // as source for nginx commands
-func NewKongController(config *Configuration,
+func NewKongController(ctx context.Context,
+	config *Configuration,
 	updateCh *channels.RingChannel,
 	store store.Storer) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
@@ -180,7 +182,7 @@ func NewKongController(config *Configuration,
 
 	if config.UpdateStatus {
 		var err error
-		n.syncStatus, err = status.NewStatusSyncer(status.Config{
+		n.syncStatus, err = status.NewStatusSyncer(ctx, status.Config{
 			CoreClient:             config.KubeClient,
 			KongConfigClient:       config.KongConfigClient,
 			KnativeClient:          config.KnativeClient,
@@ -204,7 +206,7 @@ func NewKongController(config *Configuration,
 		n.Logger.Warnf("ingress status updates is disabled, flag --update-status=false was specified")
 	}
 
-	n.elector = election.NewElector(electionConfig)
+	n.elector = election.NewElector(ctx, electionConfig)
 
 	return n, nil
 }
@@ -291,7 +293,7 @@ func (n *KongController) Start() {
 				// This function is called outside the task queue because event
 				// information is currently shielded from the sync function.
 				// Sync function syncs everything, no matter what the event is
-				err := n.handleBasicAuthUpdates(evt)
+				err := n.handleBasicAuthUpdates(ctx, evt)
 				if err != nil {
 					n.Logger.Errorf("failed to update basic-auth credentials: %v", err)
 				}
@@ -338,7 +340,7 @@ func (n *KongController) Stop() error {
 // Due to this reason, one can't perform a 'diff' with them.
 // This function filters for basic-auth password changes and applies them
 // to Kong as they happen.
-func (n *KongController) handleBasicAuthUpdates(event Event) error {
+func (n *KongController) handleBasicAuthUpdates(ctx context.Context, event Event) error {
 	if !n.elector.IsLeader() {
 		return nil
 	}
@@ -395,7 +397,6 @@ func (n *KongController) handleBasicAuthUpdates(event Event) error {
 	client := n.cfg.Kong.Client
 
 	// find the ID of the cred from Kong
-	ctx := context.TODO()
 	outdatedCred, err := client.BasicAuths.Get(ctx, &username, cred.Username)
 	if err != nil {
 		return fmt.Errorf("fetching basic-auth credential: %w", err)

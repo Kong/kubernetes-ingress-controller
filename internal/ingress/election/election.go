@@ -69,8 +69,8 @@ func (e elector) IsLeader() bool {
 }
 
 // NewElector returns an instance of Elector based on config.
-func NewElector(config Config) Elector {
-	pod, err := utils.GetPodDetails(config.Client)
+func NewElector(ctx context.Context, config Config) Elector {
+	pod, err := utils.GetPodDetails(ctx, config.Client)
 	if err != nil {
 		// XXX remove this fatal log and bubble up the error
 		config.Logger.Fatalf("failed to obtain pod info: %v", err)

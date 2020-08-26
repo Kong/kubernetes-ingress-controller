@@ -42,8 +42,8 @@ import (
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
-func (n *KongController) OnUpdate(state *parser.KongState) error {
-	targetContent := n.toDeckContent(state)
+func (n *KongController) OnUpdate(ctx context.Context, state *parser.KongState) error {
+	targetContent := n.toDeckContent(ctx, state)
 
 	var customEntities []byte
 	var err error
@@ -69,7 +69,7 @@ func (n *KongController) OnUpdate(state *parser.KongState) error {
 		}
 	}
 	if n.cfg.InMemory {
-		err = n.onUpdateInMemoryMode(targetContent, customEntities)
+		err = n.onUpdateInMemoryMode(ctx, targetContent, customEntities)
 	} else {
 		err = n.onUpdateDBMode(targetContent)
 	}
@@ -207,7 +207,8 @@ func (n *KongController) fetchCustomEntities() ([]byte, error) {
 	return config, nil
 }
 
-func (n *KongController) onUpdateInMemoryMode(state *file.Content,
+func (n *KongController) onUpdateInMemoryMode(ctx context.Context,
+	state *file.Content,
 	customEntities []byte) error {
 	client := n.cfg.Kong.Client
 
@@ -233,7 +234,7 @@ func (n *KongController) onUpdateInMemoryMode(state *file.Content,
 
 	req.URL.RawQuery = queryString.Encode()
 
-	_, err = client.Do(context.TODO(), req, nil)
+	_, err = client.Do(ctx, req, nil)
 	if err != nil {
 		return fmt.Errorf("posting new config to /config: %w", err)
 	}
@@ -293,6 +294,7 @@ func (n *KongController) getIngressControllerTags() []string {
 }
 
 func (n *KongController) toDeckContent(
+	ctx context.Context,
 	k8sState *parser.KongState) *file.Content {
 	var content file.Content
 	content.FormatVersion = "1.1"
@@ -304,7 +306,7 @@ func (n *KongController) toDeckContent(
 			plugin := file.FPlugin{
 				Plugin: *p.DeepCopy(),
 			}
-			err = n.fillPlugin(&plugin)
+			err = n.fillPlugin(ctx, &plugin)
 			if err != nil {
 				n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 			}
@@ -322,7 +324,7 @@ func (n *KongController) toDeckContent(
 				plugin := file.FPlugin{
 					Plugin: *p.DeepCopy(),
 				}
-				err = n.fillPlugin(&plugin)
+				err = n.fillPlugin(ctx, &plugin)
 				if err != nil {
 					n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 				}
@@ -346,7 +348,7 @@ func (n *KongController) toDeckContent(
 		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}
-		err = n.fillPlugin(&plugin)
+		err = n.fillPlugin(ctx, &plugin)
 		if err != nil {
 			n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 		}
@@ -488,14 +490,14 @@ func (n *KongController) fillUpstream(upstream *kong.Upstream) {
 	}
 }
 
-func (n *KongController) fillPlugin(plugin *file.FPlugin) error {
+func (n *KongController) fillPlugin(ctx context.Context, plugin *file.FPlugin) error {
 	if plugin == nil {
 		return fmt.Errorf("plugin is nil")
 	}
 	if plugin.Name == nil || *plugin.Name == "" {
 		return fmt.Errorf("plugin doesn't have a name")
 	}
-	schema, err := n.PluginSchemaStore.Schema(*plugin.Name)
+	schema, err := n.PluginSchemaStore.Schema(ctx, *plugin.Name)
 	if err != nil {
 		return fmt.Errorf("error retrieveing schema for plugin %s: %w", *plugin.Name, err)
 	}

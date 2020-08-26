@@ -2,6 +2,7 @@ package admission
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,7 +26,7 @@ type KongFakeValidator struct {
 	Error   error
 }
 
-func (v KongFakeValidator) ValidateConsumer(
+func (v KongFakeValidator) ValidateConsumer(_ context.Context,
 	consumer configuration.KongConsumer) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }

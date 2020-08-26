@@ -26,10 +26,13 @@ import (
 )
 
 // KongClusterPluginLister helps list KongClusterPlugins.
+// All objects returned here must be treated as read-only.
 type KongClusterPluginLister interface {
 	// List lists all KongClusterPlugins in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.KongClusterPlugin, err error)
 	// Get retrieves the KongClusterPlugin from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.KongClusterPlugin, error)
 	KongClusterPluginListerExpansion
 }

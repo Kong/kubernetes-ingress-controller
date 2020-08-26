@@ -8,6 +8,7 @@ import (
 	core "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -49,6 +50,10 @@ func Test_networkingIngressV1Beta1(t *testing.T) {
 			name: "correctly transformers from extensions to networking group",
 			args: args{
 				obj: &extensions.Ingress{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "extensions/v1beta1",
+						Kind:       "Ingress",
+					},
 					Spec: extensions.IngressSpec{
 						Rules: []extensions.IngressRule{
 							{
@@ -69,9 +74,18 @@ func Test_networkingIngressV1Beta1(t *testing.T) {
 							},
 						},
 					},
+					Status: extensions.IngressStatus{
+						LoadBalancer: core.LoadBalancerStatus{
+							Ingress: []core.LoadBalancerIngress{{IP: "1.2.3.4"}},
+						},
+					},
 				},
 			},
 			want: &networking.Ingress{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "networking.k8s.io/v1beta1",
+					Kind:       "Ingress",
+				},
 				Spec: networking.IngressSpec{
 					Rules: []networking.IngressRule{
 						{
@@ -90,6 +104,11 @@ func Test_networkingIngressV1Beta1(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+				Status: networking.IngressStatus{
+					LoadBalancer: core.LoadBalancerStatus{
+						Ingress: []core.LoadBalancerIngress{{IP: "1.2.3.4"}},
 					},
 				},
 			},

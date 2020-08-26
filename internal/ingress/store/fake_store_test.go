@@ -11,7 +11,7 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
 func Test_keyFunc(t *testing.T) {

@@ -26,8 +26,10 @@ import (
 )
 
 // KongPluginLister helps list KongPlugins.
+// All objects returned here must be treated as read-only.
 type KongPluginLister interface {
 	// List lists all KongPlugins in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.KongPlugin, err error)
 	// KongPlugins returns an object that can list and get KongPlugins.
 	KongPlugins(namespace string) KongPluginNamespaceLister
@@ -58,10 +60,13 @@ func (s *kongPluginLister) KongPlugins(namespace string) KongPluginNamespaceList
 }
 
 // KongPluginNamespaceLister helps list and get KongPlugins.
+// All objects returned here must be treated as read-only.
 type KongPluginNamespaceLister interface {
 	// List lists all KongPlugins in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.KongPlugin, err error)
 	// Get retrieves the KongPlugin from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.KongPlugin, error)
 	KongPluginNamespaceListerExpansion
 }

@@ -26,17 +26,16 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	Ingresses            []*networking.Ingress
-	TCPIngresses         []*configurationv1beta1.TCPIngress
-	Services             []*apiv1.Service
-	Endpoints            []*apiv1.Endpoints
-	Secrets              []*apiv1.Secret
-	KongPlugins          []*configurationv1.KongPlugin
-	KongClusterPlugins   []*configurationv1.KongClusterPlugin
-	KongIngresses        []*configurationv1.KongIngress
-	KongConsumers        []*configurationv1.KongConsumer
-	KongCredentials      []*configurationv1.KongCredential
-	SkipClasslessIngress bool
+	Ingresses          []*networking.Ingress
+	TCPIngresses       []*configurationv1beta1.TCPIngress
+	Services           []*apiv1.Service
+	Endpoints          []*apiv1.Endpoints
+	Secrets            []*apiv1.Secret
+	KongPlugins        []*configurationv1.KongPlugin
+	KongClusterPlugins []*configurationv1.KongClusterPlugin
+	KongIngresses      []*configurationv1.KongIngress
+	KongConsumers      []*configurationv1.KongConsumer
+	KongCredentials    []*configurationv1.KongCredential
 
 	KnativeIngresses []*knative.Ingress
 }
@@ -124,7 +123,6 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-
 	s = Store{
 		stores: CacheStores{
 			Ingress:    ingressStore,
@@ -141,7 +139,9 @@ func NewFakeStore(
 
 			KnativeIngress: knativeIngressStore,
 		},
-		isValidIngresClass: annotations.IngressClassValidatorFuncFromObjectMeta("kong", objects.SkipClasslessIngress),
+		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta("kong"),
+		ingressClassMatching:      annotations.ExactClassMatch,
+		kongConsumerClassMatching: annotations.ExactClassMatch,
 	}
 	return s, nil
 }

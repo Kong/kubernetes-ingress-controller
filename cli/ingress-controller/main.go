@@ -38,7 +38,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
@@ -350,10 +349,8 @@ func main() {
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
 		UpdateCh: updateChannel,
-		IsValidIngresClass: annotations.IngressClassValidatorFunc(
-			cliConfig.IngressClass,
-			cliConfig.SkipClasslessIngressV1beta1),
 	}
+
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
 
@@ -431,9 +428,10 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.SkipClasslessIngressV1beta1,
-		log.WithField("component", "store"))
-	kong, err := controller.NewKongController(ctx, &controllerConfig, updateChannel, store)
+	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.ProcessClasslessIngressV1beta1,
+		cliConfig.ProcessClasslessKongConsumer, log.WithField("component", "store"))
+	kong, err := controller.NewKongController(ctx, &controllerConfig, updateChannel,
+		store)
 	if err != nil {
 		log.Fatalf("failed to create a controller: %v", err)
 	}

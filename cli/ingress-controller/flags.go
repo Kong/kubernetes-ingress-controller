@@ -58,10 +58,11 @@ type cliConfig struct {
 	KongCustomEntitiesSecret string
 
 	// Resource filtering
-	WatchNamespace              string
-	SkipClasslessIngressV1beta1 bool
-	IngressClass                string
-	ElectionID                  string
+	WatchNamespace                 string
+	ProcessClasslessIngressV1beta1 bool
+	ProcessClasslessKongConsumer   bool
+	IngressClass                   string
+	ElectionID                     string
 
 	// Ingress Status publish resource
 	PublishService         string
@@ -325,7 +326,8 @@ func parseFlags() (cliConfig, error) {
 
 	// Resource filtering
 	config.WatchNamespace = viper.GetString("watch-namespace")
-	config.SkipClasslessIngressV1beta1 = viper.GetBool("skip-classless-ingress-v1beta1")
+	config.ProcessClasslessIngressV1beta1 = viper.GetBool("process-classless-ingress-v1beta1")
+	config.ProcessClasslessKongConsumer = viper.GetBool("process-classless-kong-consumer")
 	config.IngressClass = viper.GetString("ingress-class")
 	config.ElectionID = viper.GetString("election-id")
 

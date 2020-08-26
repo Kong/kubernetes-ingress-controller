@@ -22,6 +22,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ClassMatching int
+
+const (
+	IgnoreClassMatch       ClassMatching = iota
+	ExactOrEmptyClassMatch ClassMatching = iota
+	ExactClassMatch        ClassMatching = iota
+)
+
 const (
 	ingressClassKey = "kubernetes.io/ingress.class"
 
@@ -49,39 +57,42 @@ const (
 	DefaultIngressClass = "kong"
 )
 
-func validIngress(ingressAnnotationValue, ingressClass string, skipClasslessIngress bool) bool {
-	// we have 2 valid combinations
-	// 1 - ingress with default class | blank annotation on ingress
-	// 2 - ingress with specific class | same annotation on ingress
-	//
-	// and 2 invalid combinations
-	// 3 - ingress with default class | fixed annotation on ingress
-	// 4 - ingress with specific class | different annotation on ingress
-	if ingressAnnotationValue == "" && !skipClasslessIngress && ingressClass == DefaultIngressClass {
+func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMatching) bool {
+	switch handling {
+	case IgnoreClassMatch:
+		// class is not considered at all. any value, even a mismatch, is valid
 		return true
+	case ExactOrEmptyClassMatch:
+		// aka lazy. exact match desired, but empty permitted
+		return ingressAnnotationValue == "" || ingressAnnotationValue == ingressClass
+	case ExactClassMatch:
+		// what it says on the tin
+		// this may be another place we want to return a warning, since an empty-class resource will never be valid
+		return ingressAnnotationValue == ingressClass
+	default:
+		panic("invalid ingress class handling option received")
 	}
-	return ingressAnnotationValue == ingressClass
 }
 
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
-	ingressClass string, skipClasslessIngress bool) func(obj metav1.Object) bool {
+	ingressClass string) func(obj metav1.Object, handling ClassMatching) bool {
 
-	return func(obj metav1.Object) bool {
+	return func(obj metav1.Object, handling ClassMatching) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		return validIngress(ingress, ingressClass, skipClasslessIngress)
+		return validIngress(ingress, ingressClass, handling)
 	}
 }
 
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
-	ingressClass string, skipClasslessIngress bool) func(obj *metav1.ObjectMeta) bool {
+	ingressClass string) func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
 
-	return func(obj *metav1.ObjectMeta) bool {
+	return func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
 		ingress := obj.GetAnnotations()[ingressClassKey]
-		return validIngress(ingress, ingressClass, skipClasslessIngress)
+		return validIngress(ingress, ingressClass, handling)
 	}
 }
 

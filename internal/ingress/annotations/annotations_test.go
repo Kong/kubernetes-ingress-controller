@@ -27,21 +27,27 @@ import (
 
 func TestIngressClassValidatorFunc(t *testing.T) {
 	tests := []struct {
-		ingress              string
-		skipClasslessIngress bool
-		controller           string
-		isValid              bool
+		ingress       string        // the class set on the Ingress resource
+		classMatching ClassMatching // the "user" classless ingress flag value, translated to its match strategy
+		controller    string        // the class set on the controller
+		isValid       bool          // the expected verdict
 	}{
-		{"", false, "", true},
-		{"", false, "kong", true},
-		{"", true, "kong", false},
-		{"kong", false, "kong", true},
-		{"kong", true, "kong", true},
-		{"custom", false, "custom", true},
-		{"", false, "killer", false},
-		{"custom", false, "kong", false},
-		{"custom", true, "kong", false},
-		{"", true, "custom", false},
+		{"", ExactOrEmptyClassMatch, "", true},
+		{"", ExactOrEmptyClassMatch, DefaultIngressClass, true},
+		{"", ExactClassMatch, DefaultIngressClass, false},
+		{DefaultIngressClass, ExactOrEmptyClassMatch, DefaultIngressClass, true},
+		{DefaultIngressClass, ExactClassMatch, DefaultIngressClass, true},
+		{"custom", ExactOrEmptyClassMatch, "custom", true},
+		{"", ExactOrEmptyClassMatch, "killer", true},
+		{"custom", ExactOrEmptyClassMatch, DefaultIngressClass, false},
+		{"custom", ExactClassMatch, DefaultIngressClass, false},
+		{"", ExactOrEmptyClassMatch, "custom", true},
+		{"", ExactClassMatch, "kozel", false},
+		{"kozel", ExactOrEmptyClassMatch, "kozel", true},
+		{"kozel", ExactClassMatch, "kozel", true},
+		{"", ExactOrEmptyClassMatch, "killer", true},
+		{"custom", ExactOrEmptyClassMatch, "kozel", false},
+		{"custom", ExactClassMatch, "kozel", false},
 	}
 
 	ing := &extensions.Ingress{
@@ -55,10 +61,11 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 	ing.SetAnnotations(data)
 	for _, test := range tests {
 		ing.Annotations[ingressClassKey] = test.ingress
-		f := IngressClassValidatorFunc(test.controller, test.skipClasslessIngress)
-		b := f(&ing.ObjectMeta)
-		if b != test.isValid {
-			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
+		f := IngressClassValidatorFunc(test.controller)
+
+		result := f(&ing.ObjectMeta, test.classMatching)
+		if result != test.isValid {
+			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, result)
 		}
 	}
 }

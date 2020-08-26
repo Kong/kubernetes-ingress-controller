@@ -83,9 +83,10 @@ type Store struct {
 
 	ingressClass string
 
-	skipClasslessIngress bool
+	ingressClassMatching      annotations.ClassMatching
+	kongConsumerClassMatching annotations.ClassMatching
 
-	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
+	isValidIngressClass func(objectMeta *metav1.ObjectMeta, handling annotations.ClassMatching) bool
 
 	logger logrus.FieldLogger
 }
@@ -109,13 +110,27 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, skipClasslessIngress bool, logger logrus.FieldLogger) Storer {
+func New(cs CacheStores, ingressClass string, processClasslessIngress bool, processClasslessKongConsumer bool,
+	logger logrus.FieldLogger) Storer {
+	var ingressClassMatching annotations.ClassMatching
+	var kongConsumerClassMatching annotations.ClassMatching
+	if processClasslessIngress {
+		ingressClassMatching = annotations.ExactOrEmptyClassMatch
+	} else {
+		ingressClassMatching = annotations.ExactClassMatch
+	}
+	if processClasslessKongConsumer {
+		kongConsumerClassMatching = annotations.ExactOrEmptyClassMatch
+	} else {
+		kongConsumerClassMatching = annotations.ExactClassMatch
+	}
 	return Store{
-		stores:               cs,
-		ingressClass:         ingressClass,
-		skipClasslessIngress: skipClasslessIngress,
-		isValidIngresClass:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass, skipClasslessIngress),
-		logger:               logger,
+		stores:                    cs,
+		ingressClass:              ingressClass,
+		ingressClassMatching:      ingressClassMatching,
+		kongConsumerClassMatching: kongConsumerClassMatching,
+		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		logger:                    logger,
 	}
 }
 
@@ -151,7 +166,7 @@ func (s Store) ListIngresses() []*networkingv1beta1.Ingress {
 	var ingresses []*networkingv1beta1.Ingress
 	for _, item := range s.stores.Ingress.List() {
 		ing := s.networkingIngressV1Beta1(item)
-		if !s.isValidIngresClass(&ing.ObjectMeta) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassMatching) {
 			continue
 		}
 		ingresses = append(ingresses, ing)
@@ -167,7 +182,7 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*configurationv1beta1.TCPIngress)
-			if ok && s.isValidIngresClass(&ing.ObjectMeta) {
+			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
 				ingresses = append(ingresses, ing)
 			}
 		})
@@ -277,7 +292,7 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 	var consumers []*configurationv1.KongConsumer
 	for _, item := range s.stores.Consumer.List() {
 		c, ok := item.(*configurationv1.KongConsumer)
-		if ok && s.isValidIngresClass(&c.ObjectMeta) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, s.kongConsumerClassMatching) {
 			consumers = append(consumers, c)
 		}
 	}
@@ -291,7 +306,7 @@ func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
 	var credentials []*configurationv1.KongCredential
 	for _, item := range s.stores.Credential.List() {
 		c, ok := item.(*configurationv1.KongCredential)
-		if ok && s.isValidIngresClass(&c.ObjectMeta) {
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IgnoreClassMatch) {
 			credentials = append(credentials, c)
 		}
 	}
@@ -316,7 +331,7 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongPlugin)
-			if ok && s.isValidIngresClass(&p.ObjectMeta) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, s.ingressClassMatching) {
 				plugins = append(plugins, p)
 			}
 		})
@@ -340,7 +355,7 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
 			p, ok := ob.(*configurationv1.KongClusterPlugin)
-			if ok && s.isValidIngresClass(&p.ObjectMeta) {
+			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ExactClassMatch) {
 				plugins = append(plugins, p)
 			}
 		})

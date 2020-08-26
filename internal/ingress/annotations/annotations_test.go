@@ -42,7 +42,6 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		{"custom", ExactOrEmptyClassMatch, DefaultIngressClass, false},
 		{"custom", ExactClassMatch, DefaultIngressClass, false},
 		{"", ExactOrEmptyClassMatch, "custom", true},
-		{"", ExactOrEmptyClassMatch, "kozel", true},
 		{"", ExactClassMatch, "kozel", false},
 		{"kozel", ExactOrEmptyClassMatch, "kozel", true},
 		{"kozel", ExactClassMatch, "kozel", true},

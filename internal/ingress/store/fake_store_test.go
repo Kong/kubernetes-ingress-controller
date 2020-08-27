@@ -235,6 +235,37 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+				},
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "idontgetprocessedbecauseihavenoclassannotation",
+				Namespace: "default",
 			},
 			Spec: knative.IngressSpec{
 				Rules: []knative.IngressRule{

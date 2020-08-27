@@ -1758,6 +1758,9 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "knative-ingress",
 					Namespace: "foo-ns",
+					Annotations: map[string]string{
+						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+					},
 				},
 				Spec: knative.IngressSpec{
 					Rules: []knative.IngressRule{
@@ -1794,7 +1797,8 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "foo-svc",
 					Namespace: "foo-ns",
 					Annotations: map[string]string{
-						"plugins.konghq.com": "knative-key-auth",
+						"plugins.konghq.com":                   "knative-key-auth",
+						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
 					},
 				},
 			},

@@ -64,7 +64,7 @@ Once this resource is created, the resource needs to be associated with an
 `Ingress`, `Service`, or `KongConsumer` resource in Kubernetes.
 For more details, please read the reference documentation on `KongPlugin`.
 
-The below diagram shows how the `KongPlugin` resource can be linked to an
+The below diagram shows how you can link `KongPlugin` resource to an
 `Ingress`, `Service`, or `KongConsumer`:
 
 |  |  |

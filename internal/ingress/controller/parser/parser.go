@@ -142,20 +142,16 @@ func Build(log logrus.FieldLogger, s store.Storer) (*KongState, error) {
 
 	// populate CA certificates in Kong
 	var err error
-	result.CACertificates, err = getCACerts(log, s)
-	if err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
-func getCACerts(log logrus.FieldLogger, s store.Storer) ([]kong.CACertificate, error) {
 	caCertSecrets, err := s.ListCACerts()
 	if err != nil {
 		return nil, err
 	}
+	result.CACertificates = toCACerts(log, caCertSecrets)
 
+	return &result, nil
+}
+
+func toCACerts(log logrus.FieldLogger, caCertSecrets []*corev1.Secret) []kong.CACertificate {
 	var caCerts []kong.CACertificate
 	for _, certSecret := range caCertSecrets {
 		secretName := certSecret.Namespace + "/" + certSecret.Name
@@ -197,7 +193,7 @@ func getCACerts(log logrus.FieldLogger, s store.Storer) ([]kong.CACertificate, e
 		})
 	}
 
-	return caCerts, nil
+	return caCerts
 }
 
 func fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, state *KongState) {

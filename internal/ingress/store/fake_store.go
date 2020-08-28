@@ -139,8 +139,8 @@ func NewFakeStore(
 
 			KnativeIngress: knativeIngressStore,
 		},
-		ingressClass:              "kong",
-		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta("kong"),
+		ingressClass:              annotations.DefaultIngressClass,
+		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
 		ingressClassMatching:      annotations.ExactClassMatch,
 		kongConsumerClassMatching: annotations.ExactClassMatch,
 	}

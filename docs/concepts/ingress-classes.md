@@ -1,30 +1,30 @@
-# Kong Ingress Controller and resource class
+# Kong Ingress Controller and ingress class
 
 
 ## Table of Contents
 
 - [**Introduction**](#introduction)
-- [**Configuring the controller class**](#configuring-the-controller-class)
-- [**Kubernetes resource class**](#kubernetes-resource-class)
-- [**When to use custom classes**](#when-to-use-custom-classes)
+- [**Configuring the controller class**](#configuring-the-controller-ingress-class)
+- [**Loading resources by class**](#loading-resouces-by-class)
+- [**When to use a custom class**](#when-to-use-a-custom-class)
 - [**Legacy behavior**](#legacy-behavior)
 - [**Examples**](#examples)
 
 ## Introduction
 
-The Kong Ingress Controller uses resource classes to filter Kubernetes Ingress
+The Kong Ingress Controller uses ingress classes to filter Kubernetes Ingress
 objects and other resources before converting them into Kong configuration.
 This allows it to coexist with other ingress controllers and/or other
 deployments of the Kong Ingress Controller in the same cluster: a Kong Ingress
 Controller will only process configuration marked for its use.
 
-## Configuring the controller class
+## Configuring the controller ingress class
 
 The `--ingress-class` flag (or `CONTROLLER_INGRESS_CLASS` environment variable)
-specify the resource class expected by the Kong Ingress Controller. By default,
+specify the ingress class expected by the Kong Ingress Controller. By default,
 it expects the `kong` class.
 
-## Kubernetes resource class
+## Loading resources by class
 
 The Kong Ingress Controller translates a variety of Kubernetes resources into
 Kong configuration. Broadly speaking, we can separate these resources into two
@@ -40,10 +40,10 @@ an authentication plugin credential is _not_ translated directly: it is only
 translated into Kong configuration if a KongConsumer resource references it.
 
 Because they create Kong configuration indenpendent of any other resources,
-directly-translated resources require a class, and their class must match the
-class configured for the controller. Referenced resources do not require a
-class, but must be referenced by a directly-translated resource matches the
-controller.
+directly-translated resources require an ingress class, and their class must
+match the class configured for the controller. Referenced resources do not
+require a class, but must be referenced by a directly-translated resource
+matches the controller.
 
 ### Adding class information to resources
 
@@ -80,7 +80,7 @@ These flags do not _ignore_ `ingress.class` annotations: they allow resources
 with no such annotation, but will not allow resource that have a non-matching
 `ingress.class` annotation.
 
-## When to use custom classes
+## When to use a custom class
 
 Using the default `kong` class is fine for simpler deployments, where only one
 Kong Ingress Controller instance is running in a cluster. Changing the class is

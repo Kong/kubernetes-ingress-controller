@@ -49,9 +49,9 @@ and infrastructure.
 Please refer to [this document](concepts/ha-and-scaling.md) to understand
 failures scenarios, recovery methods, as well as scaling considerations.
 
-### Resource classes
+### Ingress classes
 
-[Resource classes](concepts/resource-classes.md) filter which resources the
+[Ingress classes](concepts/ingress-classes.md) filter which resources the
 controller loads. They ensure that Kong Ingress Controller instances do not
 load configuration intended for other instances or other ingress controllers.
 

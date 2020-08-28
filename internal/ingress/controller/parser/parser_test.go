@@ -3074,7 +3074,7 @@ func TestParseIngressRules(t *testing.T) {
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{})
-		assert.Equal(&parsedIngressRules{
+		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
@@ -3082,7 +3082,7 @@ func TestParseIngressRules(t *testing.T) {
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
 		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[0]})
-		assert.Equal(&parsedIngressRules{
+		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
@@ -3368,23 +3368,23 @@ func TestParseKnativeIngressRules(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{})
-		assert.Equal(map[string]Service{}, parsedInfo)
-		assert.Equal(map[string][]string{}, secretToSNIs)
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{})
+		assert.Equal(map[string]Service{}, parsedInfo.ServiceNameToServices)
+		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[0],
 		})
-		assert.Equal(map[string]Service{}, parsedInfo)
-		assert.Equal(map[string][]string{}, secretToSNIs)
+		assert.Equal(map[string]Service{}, parsedInfo.ServiceNameToServices)
+		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[1],
 		})
-		assert.Equal(1, len(parsedInfo))
-		svc := parsedInfo["foo-ns.foo-svc.42"]
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
 			Name:           kong.String("foo-ns.foo-svc.42"),
 			Port:           kong.Int(80),
@@ -3414,24 +3414,24 @@ func TestParseKnativeIngressRules(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(map[string][]string{}, secretToSNIs)
+		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
-		_, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[3],
 		})
 
 		assert.Equal(map[string][]string{
 			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
 			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
-		}, secretToSNIs)
+		}, parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := p.parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[2],
 		})
-		assert.Equal(1, len(parsedInfo))
-		svc := parsedInfo["foo-ns.foo-svc.42"]
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
 			Name:           kong.String("foo-ns.foo-svc.42"),
 			Port:           kong.Int(80),
@@ -3461,7 +3461,7 @@ func TestParseKnativeIngressRules(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(map[string][]string{}, secretToSNIs)
+		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
 	})
 }
 

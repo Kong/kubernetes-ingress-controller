@@ -116,9 +116,30 @@ type Parser struct {
 	Logger logrus.FieldLogger
 }
 
-type parsedIngressRules struct {
+type ingressRules struct {
 	SecretNameToSNIs      map[string][]string
 	ServiceNameToServices map[string]Service
+}
+
+func newIngressRules() ingressRules {
+	return ingressRules{
+		SecretNameToSNIs:      make(map[string][]string),
+		ServiceNameToServices: make(map[string]Service),
+	}
+}
+
+func mergeIngressRules(objs ...*ingressRules) ingressRules {
+	result := newIngressRules()
+
+	for _, obj := range objs {
+		for k, v := range obj.SecretNameToSNIs {
+			result.SecretNameToSNIs[k] = append(result.SecretNameToSNIs[k], v...)
+		}
+		for k, v := range obj.ServiceNameToServices {
+			result.ServiceNameToServices[k] = v
+		}
+	}
+	return result
 }
 
 var supportedCreds = sets.NewString(
@@ -142,36 +163,24 @@ func New(store store.Storer, logger logrus.FieldLogger) Parser {
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
 func (p *Parser) Build() (*KongState, error) {
-	var state KongState
 	ings := p.store.ListIngresses()
 	tcpIngresses, err := p.store.ListTCPIngresses()
 	if err != nil {
 		p.Logger.Errorf("failed to list TCPIngresses: %v", err)
 	}
 	// parse ingress rules
-	parsedInfo := p.parseIngressRules(ings, tcpIngresses)
+	parsedIngress := p.parseIngressRules(ings, tcpIngresses)
 
 	knativeIngresses, err := p.store.ListKnativeIngresses()
 	if err != nil {
 		p.Logger.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-	servicesFromKnative, secretToSNIsFromKnative := p.parseKnativeIngressRules(knativeIngresses)
+	parsedKnative := p.parseKnativeIngressRules(knativeIngresses)
 
-	for name, service := range servicesFromKnative {
-		parsedInfo.ServiceNameToServices[name] = service
-	}
-
-	for secret, snis := range secretToSNIsFromKnative {
-		var combinedSNIs []string
-		if snisFromIngress, ok := parsedInfo.SecretNameToSNIs[secret]; ok {
-			combinedSNIs = append(combinedSNIs, snisFromIngress...)
-		}
-		combinedSNIs = append(combinedSNIs, snis...)
-		parsedInfo.SecretNameToSNIs[secret] = combinedSNIs
-	}
+	parsedAll := mergeIngressRules(&parsedIngress, &parsedKnative)
 
 	// populate Kubernetes Service
-	for key, service := range parsedInfo.ServiceNameToServices {
+	for key, service := range parsedAll.ServiceNameToServices {
 		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.Name)
 		if err != nil {
 			p.Logger.WithFields(logrus.Fields{
@@ -189,8 +198,8 @@ func (p *Parser) Build() (*KongState, error) {
 				secretName)
 			secretKey := service.K8sService.Namespace + "/" + secretName
 			// ensure that the cert is loaded into Kong
-			if _, ok := parsedInfo.SecretNameToSNIs[secretKey]; !ok {
-				parsedInfo.SecretNameToSNIs[secretKey] = []string{}
+			if _, ok := parsedAll.SecretNameToSNIs[secretKey]; !ok {
+				parsedAll.SecretNameToSNIs[secretKey] = []string{}
 			}
 			if err == nil {
 				service.ClientCertificate = &kong.Certificate{
@@ -203,16 +212,17 @@ func (p *Parser) Build() (*KongState, error) {
 				}).Errorf("failed to fetch secret: %v", err)
 			}
 		}
-		parsedInfo.ServiceNameToServices[key] = service
+		parsedAll.ServiceNameToServices[key] = service
 	}
 
+	var state KongState
 	// add the routes and services to the state
-	for _, service := range parsedInfo.ServiceNameToServices {
+	for _, service := range parsedAll.ServiceNameToServices {
 		state.Services = append(state.Services, service)
 	}
 
 	// generate Upstreams and Targets from service defs
-	state.Upstreams = p.getUpstreams(parsedInfo.ServiceNameToServices)
+	state.Upstreams = p.getUpstreams(parsedAll.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
 	p.fillOverrides(state)
@@ -224,7 +234,7 @@ func (p *Parser) Build() (*KongState, error) {
 	state.Plugins = p.fillPlugins(state)
 
 	// generate Certificates and SNIs
-	state.Certificates = p.getCerts(parsedInfo.SecretNameToSNIs)
+	state.Certificates = p.getCerts(parsedAll.SecretNameToSNIs)
 
 	// populate CA certificates in Kong
 	state.CACertificates, err = p.getCACerts()
@@ -532,7 +542,7 @@ func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networki
 }
 
 func (p *Parser) parseKnativeIngressRules(
-	ingressList []*knative.Ingress) (map[string]Service, map[string][]string) {
+	ingressList []*knative.Ingress) ingressRules {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -632,7 +642,10 @@ func (p *Parser) parseKnativeIngressRules(
 		}
 	}
 
-	return services, secretToSNIs
+	return ingressRules{
+		ServiceNameToServices: services,
+		SecretNameToSNIs:      secretToSNIs,
+	}
 }
 
 func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
@@ -655,7 +668,7 @@ func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBac
 
 func (p *Parser) parseIngressRules(
 	ingressList []*networking.Ingress,
-	tcpIngressList []*configurationv1beta1.TCPIngress) *parsedIngressRules {
+	tcpIngressList []*configurationv1beta1.TCPIngress) ingressRules {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -888,7 +901,7 @@ func (p *Parser) parseIngressRules(
 		serviceNameToServices[serviceName] = service
 	}
 
-	return &parsedIngressRules{
+	return ingressRules{
 		SecretNameToSNIs:      secretNameToSNIs,
 		ServiceNameToServices: serviceNameToServices,
 	}

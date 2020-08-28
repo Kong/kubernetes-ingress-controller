@@ -109,13 +109,6 @@ type Plugin struct {
 	kong.Plugin
 }
 
-// Parser parses Kubernetes CRDs and Ingress rules and generates a
-// Kong configuration.
-type Parser struct {
-	store  store.Storer
-	Logger logrus.FieldLogger
-}
-
 type ingressRules struct {
 	SecretNameToSNIs      map[string][]string
 	ServiceNameToServices map[string]Service
@@ -154,36 +147,12 @@ var supportedCreds = sets.NewString(
 var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
 var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
-// New returns a new parser backed with store.
-func New(store store.Storer, logger logrus.FieldLogger) Parser {
-	return Parser{store: store, Logger: logger}
-}
-
-// Build creates a Kong configuration from Ingress and Custom resources
-// defined in Kuberentes.
-// It throws an error if there is an error returned from client-go.
-func (p *Parser) Build() (*KongState, error) {
-	ings := p.store.ListIngresses()
-	tcpIngresses, err := p.store.ListTCPIngresses()
-	if err != nil {
-		p.Logger.Errorf("failed to list TCPIngresses: %v", err)
-	}
-	// parse ingress rules
-	parsedIngress := p.parseIngressRules(ings, tcpIngresses)
-
-	knativeIngresses, err := p.store.ListKnativeIngresses()
-	if err != nil {
-		p.Logger.Errorf("failed to list Knative Ingresses: %v", err)
-	}
-	parsedKnative := p.parseKnativeIngressRules(knativeIngresses)
-
-	parsedAll := mergeIngressRules(&parsedIngress, &parsedKnative)
-
+func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer) {
 	// populate Kubernetes Service
-	for key, service := range parsedAll.ServiceNameToServices {
-		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.Name)
+	for key, service := range ir.ServiceNameToServices {
+		k8sSvc, err := s.GetService(service.Namespace, service.Backend.Name)
 		if err != nil {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"service_name":      service.Backend.Name,
 				"service_namespace": service.Namespace,
 			}).Errorf("failed to fetch service: %v", err)
@@ -194,59 +163,85 @@ func (p *Parser) Build() (*KongState, error) {
 		secretName := annotations.ExtractClientCertificate(
 			service.K8sService.GetAnnotations())
 		if secretName != "" {
-			secret, err := p.store.GetSecret(service.K8sService.Namespace,
+			secret, err := s.GetSecret(service.K8sService.Namespace,
 				secretName)
 			secretKey := service.K8sService.Namespace + "/" + secretName
 			// ensure that the cert is loaded into Kong
-			if _, ok := parsedAll.SecretNameToSNIs[secretKey]; !ok {
-				parsedAll.SecretNameToSNIs[secretKey] = []string{}
+			if _, ok := ir.SecretNameToSNIs[secretKey]; !ok {
+				ir.SecretNameToSNIs[secretKey] = []string{}
 			}
 			if err == nil {
 				service.ClientCertificate = &kong.Certificate{
 					ID: kong.String(string(secret.UID)),
 				}
 			} else {
-				p.Logger.WithFields(logrus.Fields{
+				log.WithFields(logrus.Fields{
 					"secret_name":      secretName,
 					"secret_namespace": service.K8sService.Namespace,
 				}).Errorf("failed to fetch secret: %v", err)
 			}
 		}
-		parsedAll.ServiceNameToServices[key] = service
+		ir.ServiceNameToServices[key] = service
 	}
+}
 
-	var state KongState
+func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
+	ings := s.ListIngresses()
+	tcpIngresses, err := s.ListTCPIngresses()
+	if err != nil {
+		log.Errorf("failed to list TCPIngresses: %v", err)
+	}
+	parsedIngress := parseIngressRules(log, ings, tcpIngresses)
+
+	knativeIngresses, err := s.ListKnativeIngresses()
+	if err != nil {
+		log.Errorf("failed to list Knative Ingresses: %v", err)
+	}
+	parsedKnative := parseKnativeIngressRules(knativeIngresses)
+
+	return mergeIngressRules(&parsedIngress, &parsedKnative)
+}
+
+// Build creates a Kong configuration from Ingress and Custom resources
+// defined in Kuberentes.
+// It throws an error if there is an error returned from client-go.
+func Build(log logrus.FieldLogger, s store.Storer) (*KongState, error) {
+	parsedAll := parseAll(log, s)
+	parsedAll.populateServices(log, s)
+
+	var result KongState
 	// add the routes and services to the state
 	for _, service := range parsedAll.ServiceNameToServices {
-		state.Services = append(state.Services, service)
+		result.Services = append(result.Services, service)
 	}
 
 	// generate Upstreams and Targets from service defs
-	state.Upstreams = p.getUpstreams(parsedAll.ServiceNameToServices)
+	result.Upstreams = getUpstreams(log, s, parsedAll.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
-	p.fillOverrides(state)
+	fillOverrides(log, s, result)
 
 	// generate consumers and credentials
-	p.fillConsumersAndCredentials(&state)
+	fillConsumersAndCredentials(log, s, &result)
 
 	// process annotation plugins
-	state.Plugins = p.fillPlugins(state)
+	result.Plugins = fillPlugins(log, s, result)
 
 	// generate Certificates and SNIs
-	state.Certificates = p.getCerts(parsedAll.SecretNameToSNIs)
+	result.Certificates = getCerts(log, s, parsedAll.SecretNameToSNIs)
 
 	// populate CA certificates in Kong
-	state.CACertificates, err = p.getCACerts()
+	var err error
+	result.CACertificates, err = getCACerts(log, s)
 	if err != nil {
 		return nil, err
 	}
 
-	return &state, nil
+	return &result, nil
 }
 
-func (p *Parser) getCACerts() ([]kong.CACertificate, error) {
-	caCertSecrets, err := p.store.ListCACerts()
+func getCACerts(log logrus.FieldLogger, s store.Storer) ([]kong.CACertificate, error) {
+	caCertSecrets, err := s.ListCACerts()
 	if err != nil {
 		return nil, err
 	}
@@ -256,33 +251,33 @@ func (p *Parser) getCACerts() ([]kong.CACertificate, error) {
 		secretName := certSecret.Namespace + "/" + certSecret.Name
 
 		idbytes, idExists := certSecret.Data["id"]
-		logger := p.Logger.WithFields(logrus.Fields{
+		log = log.WithFields(logrus.Fields{
 			"secret_name":      secretName,
 			"secret_namespace": certSecret.Namespace,
 		})
 		if !idExists {
-			logger.Errorf("invalid CA certificate: missing 'id' field in data")
+			log.Errorf("invalid CA certificate: missing 'id' field in data")
 			continue
 		}
 
 		caCertbytes, certExists := certSecret.Data["cert"]
 		if !certExists {
-			logger.Errorf("invalid CA certificate: missing 'cert' field in data")
+			log.Errorf("invalid CA certificate: missing 'cert' field in data")
 			continue
 		}
 
 		pemBlock, _ := pem.Decode(caCertbytes)
 		if pemBlock == nil {
-			logger.Errorf("invalid CA certificate: invalid PEM block")
+			log.Errorf("invalid CA certificate: invalid PEM block")
 			continue
 		}
 		x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
 		if err != nil {
-			logger.Errorf("invalid CA certificate: failed to parse certificate: %v", err)
+			log.Errorf("invalid CA certificate: failed to parse certificate: %v", err)
 			continue
 		}
 		if !x509Cert.IsCA {
-			logger.Errorf("invalid CA certificate: certificate is missing the 'CA' basic constraint: %v", err)
+			log.Errorf("invalid CA certificate: certificate is missing the 'CA' basic constraint: %v", err)
 			continue
 		}
 
@@ -295,7 +290,7 @@ func (p *Parser) getCACerts() ([]kong.CACertificate, error) {
 	return caCerts, nil
 }
 
-func (p *Parser) processCredential(credType string, consumer *Consumer,
+func processCredential(log logrus.FieldLogger, credType string, consumer *Consumer,
 	credConfig interface{}) error {
 	switch credType {
 	case "key-auth", "keyauth_credential":
@@ -331,7 +326,7 @@ func (p *Parser) processCredential(credType string, consumer *Consumer,
 		var cred kong.JWTAuth
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
-			p.Logger.Errorf("failed to process JWT credential: %v", err)
+			log.Errorf("failed to process JWT credential: %v", err)
 		}
 		// This is treated specially because only this
 		// field might be omitted by user under the expectation
@@ -347,7 +342,7 @@ func (p *Parser) processCredential(credType string, consumer *Consumer,
 		var cred kong.ACLGroup
 		err := decodeCredential(credConfig, &cred)
 		if err != nil {
-			p.Logger.Errorf("failed to process ACL group: %v", err)
+			log.Errorf("failed to process ACL group: %v", err)
 		}
 		consumer.ACLGroups = append(consumer.ACLGroups, &cred)
 	default:
@@ -372,11 +367,11 @@ func decodeCredential(credConfig interface{},
 	return nil
 }
 
-func (p *Parser) fillConsumersAndCredentials(state *KongState) {
+func fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, state *KongState) {
 	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
-	for _, consumer := range p.store.ListKongConsumers() {
+	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
 		if consumer.Username == "" && consumer.CustomID == "" {
 			continue
@@ -389,18 +384,18 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) {
 		}
 		c.k8sKongConsumer = *consumer
 
-		logger := p.Logger.WithFields(logrus.Fields{
+		log = log.WithFields(logrus.Fields{
 			"kongconsumer_name":      consumer.Name,
 			"kongconsumer_namespace": consumer.Namespace,
 		})
 		for _, cred := range consumer.Credentials {
-			logger = logger.WithFields(logrus.Fields{
+			log = log.WithFields(logrus.Fields{
 				"secret_name":      cred,
 				"secret_namespace": consumer.Namespace,
 			})
-			secret, err := p.store.GetSecret(consumer.Namespace, cred)
+			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
-				logger.Errorf("failed to fetch secret: %v", err)
+				log.Errorf("failed to fetch secret: %v", err)
 				continue
 			}
 			credConfig := map[string]interface{}{}
@@ -415,19 +410,19 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) {
 			}
 			credType, ok := credConfig["kongCredType"].(string)
 			if !ok {
-				logger.Errorf("failed to provision credential: invalid credType: %v", credType)
+				log.Errorf("failed to provision credential: invalid credType: %v", credType)
 			}
 			if !supportedCreds.Has(credType) {
-				logger.Errorf("failed to provision credential: invalid credType: %v", credType)
+				log.Errorf("failed to provision credential: invalid credType: %v", credType)
 				continue
 			}
 			if len(credConfig) <= 1 { // 1 key of credType itself
-				logger.Errorf("failed to provision credential: empty secret")
+				log.Errorf("failed to provision credential: empty secret")
 				continue
 			}
-			err = p.processCredential(credType, &c, credConfig)
+			err = processCredential(log, credType, &c, credConfig)
 			if err != nil {
-				logger.Errorf("failed to provision credential: %v", err)
+				log.Errorf("failed to provision credential: %v", err)
 				continue
 			}
 		}
@@ -436,14 +431,14 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) {
 	}
 
 	// legacy attach credentials
-	credentials := p.store.ListKongCredentials()
+	credentials := s.ListKongCredentials()
 	if len(credentials) > 0 {
-		p.Logger.Warnf("deprecated KongCredential resource in use; " +
+		log.Warnf("deprecated KongCredential resource in use; " +
 			"please use secret-based credentials, " +
 			"KongCredential resource will be removed in future")
 	}
 	for _, credential := range credentials {
-		logger := p.Logger.WithFields(logrus.Fields{
+		log = log.WithFields(logrus.Fields{
 			"kongcredential_name":      credential.Name,
 			"kongcredential_namespace": credential.Namespace,
 			"consumerRef":              credential.ConsumerRef,
@@ -454,20 +449,20 @@ func (p *Parser) fillConsumersAndCredentials(state *KongState) {
 			continue
 		}
 		if credential.Type == "" {
-			logger.Errorf("invalid KongCredential: no Type provided")
+			log.Errorf("invalid KongCredential: no Type provided")
 			continue
 		}
 		if !supportedCreds.Has(credential.Type) {
-			logger.Errorf("invalid KongCredential: invalid Type provided")
+			log.Errorf("invalid KongCredential: invalid Type provided")
 			continue
 		}
 		if credential.Config == nil {
-			logger.Errorf("invalid KongCredential: empty config")
+			log.Errorf("invalid KongCredential: empty config")
 			continue
 		}
-		err := p.processCredential(credential.Type, &consumer, credential.Config)
+		err := processCredential(log, credential.Type, &consumer, credential.Config)
 		if err != nil {
-			logger.Errorf("failed to provision credential: %v", err)
+			log.Errorf("failed to provision credential: %v", err)
 			continue
 		}
 		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = consumer
@@ -541,7 +536,7 @@ func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networki
 	return result
 }
 
-func (p *Parser) parseKnativeIngressRules(
+func parseKnativeIngressRules(
 	ingressList []*knative.Ingress) ingressRules {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
@@ -666,7 +661,8 @@ func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBac
 	return res
 }
 
-func (p *Parser) parseIngressRules(
+func parseIngressRules(
+	log logrus.FieldLogger,
 	ingressList []*networking.Ingress,
 	tcpIngressList []*configurationv1beta1.TCPIngress) ingressRules {
 
@@ -689,7 +685,7 @@ func (p *Parser) parseIngressRules(
 	for i := 0; i < len(ingressList); i++ {
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
-		logger := p.Logger.WithFields(logrus.Fields{
+		log = log.WithFields(logrus.Fields{
 			"ingress_namespace": ingress.Namespace,
 			"ingress_name":      ingress.Name,
 		})
@@ -710,7 +706,7 @@ func (p *Parser) parseIngressRules(
 				path := rule.Path
 
 				if strings.Contains(path, "//") {
-					logger.Errorf("rule skipped: invalid path: '%v'", path)
+					log.Errorf("rule skipped: invalid path: '%v'", path)
 					continue
 				}
 				if path == "" {
@@ -775,7 +771,7 @@ func (p *Parser) parseIngressRules(
 		ingress := *tcpIngressList[i]
 		ingressSpec := ingress.Spec
 
-		logger := p.Logger.WithFields(logrus.Fields{
+		log = log.WithFields(logrus.Fields{
 			"tcpingress_namespace": ingress.Namespace,
 			"tcpingress_name":      ingress.Name,
 		})
@@ -786,7 +782,7 @@ func (p *Parser) parseIngressRules(
 		for i, rule := range ingressSpec.Rules {
 
 			if rule.Port <= 0 {
-				logger.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
+				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
 				continue
 			}
 			r := Route{
@@ -815,11 +811,11 @@ func (p *Parser) parseIngressRules(
 				r.SNIs = kong.StringSlice(host)
 			}
 			if rule.Backend.ServiceName == "" {
-				logger.Errorf("invalid TCPIngress: empty serviceName")
+				log.Errorf("invalid TCPIngress: empty serviceName")
 				continue
 			}
 			if rule.Backend.ServicePort <= 0 {
-				logger.Errorf("invalid TCPIngress: invalid servicePort: %v", rule.Backend.ServicePort)
+				log.Errorf("invalid TCPIngress: invalid servicePort: %v", rule.Backend.ServicePort)
 				continue
 			}
 
@@ -907,14 +903,13 @@ func (p *Parser) parseIngressRules(
 	}
 }
 
-func (p *Parser) fillOverrides(state KongState) {
+func fillOverrides(log logrus.FieldLogger, s store.Storer, state KongState) {
 	for i := 0; i < len(state.Services); i++ {
 		// Services
 		anns := state.Services[i].K8sService.Annotations
-		kongIngress, err := p.getKongIngressForService(
-			state.Services[i].K8sService)
+		kongIngress, err := getKongIngressForService(s, state.Services[i].K8sService)
 		if err != nil {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"service_name":      state.Services[i].K8sService.Name,
 				"service_namespace": state.Services[i].K8sService.Namespace,
 			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
@@ -926,36 +921,36 @@ func (p *Parser) fillOverrides(state KongState) {
 			var kongIngress *configurationv1.KongIngress
 			var err error
 			if state.Services[i].Routes[j].IsTCP {
-				kongIngress, err = p.getKongIngressFromTCPIngress(
+				kongIngress, err = getKongIngressFromTCPIngress(s,
 					&state.Services[i].Routes[j].TCPIngress)
 				if err != nil {
-					p.Logger.WithFields(logrus.Fields{
+					log.WithFields(logrus.Fields{
 						"tcpingress_name":      state.Services[i].Routes[j].TCPIngress.Name,
 						"tcpingress_namespace": state.Services[i].Routes[j].TCPIngress.Namespace,
 					}).Errorf("failed to fetch KongIngress resource for Ingress: %v", err)
 				}
 			} else {
-				kongIngress, err = p.getKongIngressFromIngress(
+				kongIngress, err = getKongIngressFromIngress(s,
 					&state.Services[i].Routes[j].Ingress)
 				if err != nil {
-					p.Logger.WithFields(logrus.Fields{
+					log.WithFields(logrus.Fields{
 						"ingress_name":      state.Services[i].Routes[j].Ingress.Name,
 						"ingress_namespace": state.Services[i].Routes[j].Ingress.Namespace,
 					}).Errorf("failed to fetch KongIngress resource for Ingress: %v", err)
 				}
 			}
 
-			p.overrideRoute(&state.Services[i].Routes[j], kongIngress)
+			overrideRoute(log, &state.Services[i].Routes[j], kongIngress)
 		}
 	}
 
 	// Upstreams
 	for i := 0; i < len(state.Upstreams); i++ {
-		kongIngress, err := p.getKongIngressForService(
+		kongIngress, err := getKongIngressForService(s,
 			state.Upstreams[i].Service.K8sService)
 		anns := state.Upstreams[i].Service.K8sService.Annotations
 		if err != nil {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"service_name":      state.Upstreams[i].Service.K8sService.Name,
 				"service_namespace": state.Upstreams[i].Service.K8sService.Namespace,
 			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
@@ -1046,8 +1041,8 @@ func overrideService(service *Service,
 }
 
 // overrideRouteByKongIngress sets Route fields by KongIngress
-func (p *Parser) overrideRouteByKongIngress(route *Route,
-	kongIngress *configurationv1.KongIngress) {
+func overrideRouteByKongIngress(log logrus.FieldLogger,
+	route *Route, kongIngress *configurationv1.KongIngress) {
 	if kongIngress == nil || kongIngress.Route == nil {
 		return
 	}
@@ -1063,7 +1058,7 @@ func (p *Parser) overrideRouteByKongIngress(route *Route,
 			} else {
 				// if any method is invalid (not an uppercase alpha string),
 				// discard everything
-				p.Logger.WithFields(logrus.Fields{
+				log.WithFields(logrus.Fields{
 					"ingress_namespace": route.Ingress.Namespace,
 					"ingress_name":      route.Ingress.Name,
 				}).Errorf("ingress contains invalid method: '%v'", *method)
@@ -1242,7 +1237,7 @@ func overrideRouteRegexPriority(route *kong.Route, anns map[string]string) {
 	route.RegexPriority = kong.Int(regexPriority)
 }
 
-func (p *Parser) overrideRouteMethods(route *kong.Route, anns map[string]string) {
+func overrideRouteMethods(log logrus.FieldLogger, route *kong.Route, anns map[string]string) {
 	annMethods := annotations.ExtractMethods(anns)
 	if len(annMethods) == 0 {
 		return
@@ -1255,7 +1250,7 @@ func (p *Parser) overrideRouteMethods(route *kong.Route, anns map[string]string)
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
-			p.Logger.WithField("kongroute", route.Name).Errorf("invalid method: %v", method)
+			log.WithField("kongroute", route.Name).Errorf("invalid method: %v", method)
 			return
 		}
 	}
@@ -1264,7 +1259,7 @@ func (p *Parser) overrideRouteMethods(route *kong.Route, anns map[string]string)
 }
 
 // overrideRouteByAnnotation sets Route protocols via annotation
-func (p *Parser) overrideRouteByAnnotation(route *Route) {
+func overrideRouteByAnnotation(log logrus.FieldLogger, route *Route) {
 	anns := route.Ingress.Annotations
 	if route.IsTCP {
 		anns = route.TCPIngress.Annotations
@@ -1274,17 +1269,17 @@ func (p *Parser) overrideRouteByAnnotation(route *Route) {
 	overrideRouteHTTPSRedirectCode(&route.Route, anns)
 	overrideRoutePreserveHost(&route.Route, anns)
 	overrideRouteRegexPriority(&route.Route, anns)
-	p.overrideRouteMethods(&route.Route, anns)
+	overrideRouteMethods(log, &route.Route, anns)
 }
 
 // overrideRoute sets Route fields by KongIngress first, then by annotation
-func (p *Parser) overrideRoute(route *Route,
+func overrideRoute(log logrus.FieldLogger, route *Route,
 	kongIngress *configurationv1.KongIngress) {
 	if route == nil {
 		return
 	}
-	p.overrideRouteByKongIngress(route, kongIngress)
-	p.overrideRouteByAnnotation(route)
+	overrideRouteByKongIngress(log, route, kongIngress)
+	overrideRouteByAnnotation(log, route)
 	normalizeProtocols(route)
 	for _, val := range route.Protocols {
 		if *val == "grpc" || *val == "grpcs" {
@@ -1353,7 +1348,7 @@ func overrideUpstream(upstream *Upstream,
 	overrideUpstreamByAnnotation(&upstream.Upstream, anns)
 }
 
-func (p *Parser) getUpstreams(serviceMap map[string]Service) []Upstream {
+func getUpstreams(log logrus.FieldLogger, s store.Storer, serviceMap map[string]Service) []Upstream {
 	var upstreams []Upstream
 	for _, service := range serviceMap {
 		upstreamName := service.Backend.Name + "." + service.Namespace + "." + service.Backend.Port.String() + ".svc"
@@ -1363,7 +1358,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]Service) []Upstream {
 			},
 			Service: service,
 		}
-		targets := p.getServiceEndpoints(service.K8sService,
+		targets := getServiceEndpoints(log, s, service.K8sService,
 			service.Backend.Port.String())
 		upstream.Targets = targets
 		upstreams = append(upstreams, upstream)
@@ -1392,7 +1387,7 @@ func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
 	return cert, key, nil
 }
 
-func (p *Parser) getCerts(secretsToSNIs map[string][]string) []Certificate {
+func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][]string) []Certificate {
 	snisAdded := make(map[string]bool)
 	// map of cert public key + private key to certificate
 	type certWrapper struct {
@@ -1403,9 +1398,9 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) []Certificate {
 
 	for secretKey, SNIs := range secretsToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
-		secret, err := p.store.GetSecret(namespaceName[0], namespaceName[1])
+		secret, err := s.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"secret_name":      namespaceName[1],
 				"secret_namespace": namespaceName[0],
 			}).Logger.Errorf("failed to fetch secret: %v", err)
@@ -1413,7 +1408,7 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) []Certificate {
 		}
 		cert, key, err := getCertFromSecret(secret)
 		if err != nil {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"secret_name":      namespaceName[1],
 				"secret_namespace": namespaceName[0],
 			}).Logger.Errorf("failed to construct certificate from secret: %v", err)
@@ -1558,16 +1553,16 @@ func getCombinations(relations foreignRelations) []rel {
 	return cartesianProduct
 }
 
-func (p *Parser) fillPlugins(state KongState) []Plugin {
+func fillPlugins(log logrus.FieldLogger, s store.Storer, state KongState) []Plugin {
 	var plugins []Plugin
 	pluginRels := getPluginRelations(state)
 
 	for pluginIdentifier, relations := range pluginRels {
 		identifier := strings.Split(pluginIdentifier, ":")
 		namespace, kongPluginName := identifier[0], identifier[1]
-		plugin, err := p.getPlugin(namespace, kongPluginName)
+		plugin, err := getPlugin(s, namespace, kongPluginName)
 		if err != nil {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"kongplugin_name":      kongPluginName,
 				"kongplugin_namespace": namespace,
 			}).Logger.Errorf("failed to fetch KongPlugin: %v", err)
@@ -1591,24 +1586,24 @@ func (p *Parser) fillPlugins(state KongState) []Plugin {
 		}
 	}
 
-	globalPlugins, err := p.globalPlugins()
+	globalPlugins, err := globalPlugins(log, s)
 	if err != nil {
-		p.Logger.Errorf("failed to fetch global plugins: %v", err)
+		log.Errorf("failed to fetch global plugins: %v", err)
 	}
 	plugins = append(plugins, globalPlugins...)
 
 	return plugins
 }
 
-func (p *Parser) globalPlugins() ([]Plugin, error) {
+func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 	// removed as of 0.10.0
 	// only retrieved now to warn users
-	globalPlugins, err := p.store.ListGlobalKongPlugins()
+	globalPlugins, err := s.ListGlobalKongPlugins()
 	if err != nil {
 		return nil, fmt.Errorf("error listing global KongPlugins: %w", err)
 	}
 	if len(globalPlugins) > 0 {
-		p.Logger.Warning("global KongPlugins found. These are no longer applied and",
+		log.Warning("global KongPlugins found. These are no longer applied and",
 			" must be replaced with KongClusterPlugins.",
 			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
 	}
@@ -1620,7 +1615,7 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 	// This is important since if a user comes in to k8s and creates a new
 	// CRD, the user now deleted an older plugin
 
-	globalClusterPlugins, err := p.store.ListGlobalKongClusterPlugins()
+	globalClusterPlugins, err := s.ListGlobalKongClusterPlugins()
 	if err != nil {
 		return nil, fmt.Errorf("error listing global KongClusterPlugins: %w", err)
 	}
@@ -1629,24 +1624,24 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 		pluginName := k8sPlugin.PluginName
 		// empty pluginName skip it
 		if pluginName == "" {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"kongclusterplugin_name": k8sPlugin.Name,
 			}).Errorf("invalid KongClusterPlugin: empty plugin property")
 			continue
 		}
 		if _, ok := res[pluginName]; ok {
-			p.Logger.Error("multiple KongPlugin definitions found with"+
+			log.Error("multiple KongPlugin definitions found with"+
 				" 'global' label for '", pluginName,
 				"', the plugin will not be applied")
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
-		if plugin, err := p.kongPluginFromK8SClusterPlugin(k8sPlugin); err == nil {
+		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
 			res[pluginName] = Plugin{
 				Plugin: plugin,
 			}
 		} else {
-			p.Logger.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"kongclusterplugin_name": k8sPlugin.Name,
 			}).Errorf("failed to generate configuration from KongClusterPlugin: %v ", err)
 		}
@@ -1661,13 +1656,13 @@ func (p *Parser) globalPlugins() ([]Plugin, error) {
 	return plugins, nil
 }
 
-func (p *Parser) getServiceEndpoints(svc corev1.Service,
+func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service,
 	backendPort string) []Target {
 	var targets []Target
 	var endpoints []utils.Endpoint
 	var servicePort corev1.ServicePort
 
-	logger := p.Logger.WithFields(logrus.Fields{
+	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
 		"service_namespace": svc.Namespace,
 	})
@@ -1688,7 +1683,7 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 		// nolint: gosec
 		externalPort, err := strconv.Atoi(backendPort)
 		if err != nil {
-			logger.Warningf("invalid ExternalName Service (only numeric ports allowed): %v", backendPort)
+			log.Warningf("invalid ExternalName Service (only numeric ports allowed): %v", backendPort)
 			return targets
 		}
 
@@ -1699,10 +1694,10 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 		}
 	}
 
-	endpoints = p.getEndpoints(&svc, &servicePort,
-		corev1.ProtocolTCP, p.store.GetEndpointsForService)
+	endpoints = getEndpoints(log, &svc, &servicePort,
+		corev1.ProtocolTCP, s.GetEndpointsForService)
 	if len(endpoints) == 0 {
-		logger.Warningf("no active endpionts")
+		log.Warningf("no active endpionts")
 	}
 	for _, endpoint := range endpoints {
 		target := Target{
@@ -1715,27 +1710,27 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 	return targets
 }
 
-func (p *Parser) getKongIngressForService(service corev1.Service) (
+func getKongIngressForService(s store.Storer, service corev1.Service) (
 	*configurationv1.KongIngress, error) {
 	confName := annotations.ExtractConfigurationName(service.Annotations)
 	if confName == "" {
 		return nil, nil
 	}
-	return p.store.GetKongIngress(service.Namespace, confName)
+	return s.GetKongIngress(service.Namespace, confName)
 }
 
-func (p *Parser) getKongIngressFromIngressAnnotations(namespace, name string,
+func getKongIngressFromIngressAnnotations(s store.Storer, namespace, name string,
 	anns map[string]string) (
 	*configurationv1.KongIngress, error) {
 	confName := annotations.ExtractConfigurationName(anns)
 	if confName != "" {
-		ki, err := p.store.GetKongIngress(namespace, confName)
+		ki, err := s.GetKongIngress(namespace, confName)
 		if err == nil {
 			return ki, nil
 		}
 	}
 
-	ki, err := p.store.GetKongIngress(namespace, name)
+	ki, err := s.GetKongIngress(namespace, name)
 	if err == nil {
 		return ki, nil
 	}
@@ -1745,30 +1740,30 @@ func (p *Parser) getKongIngressFromIngressAnnotations(namespace, name string,
 // getKongIngressFromIngress checks if the Ingress
 // contains an annotation for configuration
 // or if exists a KongIngress object with the same name than the Ingress
-func (p *Parser) getKongIngressFromIngress(ing *networking.Ingress) (
+func getKongIngressFromIngress(s store.Storer, ing *networking.Ingress) (
 	*configurationv1.KongIngress, error) {
-	return p.getKongIngressFromIngressAnnotations(ing.Namespace,
+	return getKongIngressFromIngressAnnotations(s, ing.Namespace,
 		ing.Name, ing.Annotations)
 }
 
 // getKongIngressFromTCPIngress checks if the TCPIngress contains an
 // annotation for configuration
 // or if exists a KongIngress object with the same name than the Ingress
-func (p *Parser) getKongIngressFromTCPIngress(ing *configurationv1beta1.TCPIngress) (
+func getKongIngressFromTCPIngress(s store.Storer, ing *configurationv1beta1.TCPIngress) (
 	*configurationv1.KongIngress, error) {
-	return p.getKongIngressFromIngressAnnotations(ing.Namespace,
+	return getKongIngressFromIngressAnnotations(s, ing.Namespace,
 		ing.Name, ing.Annotations)
 }
 
 // getPlugin constructs a plugins from a KongPlugin resource.
-func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
+func getPlugin(s store.Storer, namespace, name string) (kong.Plugin, error) {
 	var plugin kong.Plugin
-	k8sPlugin, err := p.store.GetKongPlugin(namespace, name)
+	k8sPlugin, err := s.GetKongPlugin(namespace, name)
 	if err != nil {
 		// if no namespaced plugin definition, then
 		// search for cluster level-plugin definition
 		if errors.As(err, &store.ErrNotFound{}) {
-			clusterPlugin, err := p.store.GetKongClusterPlugin(name)
+			clusterPlugin, err := s.GetKongClusterPlugin(name)
 			// not found
 			if errors.As(err, &store.ErrNotFound{}) {
 				return plugin, errors.New(
@@ -1780,7 +1775,7 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 			if clusterPlugin.PluginName == "" {
 				return plugin, fmt.Errorf("invalid empty 'plugin' property")
 			}
-			plugin, err = p.kongPluginFromK8SClusterPlugin(*clusterPlugin)
+			plugin, err = kongPluginFromK8SClusterPlugin(s, *clusterPlugin)
 			return plugin, err
 		}
 	}
@@ -1789,14 +1784,15 @@ func (p *Parser) getPlugin(namespace, name string) (kong.Plugin, error) {
 		return plugin, fmt.Errorf("invalid empty 'plugin' property")
 	}
 
-	plugin, err = p.kongPluginFromK8SPlugin(*k8sPlugin)
+	plugin, err = kongPluginFromK8SPlugin(s, *k8sPlugin)
 	return plugin, err
 }
 
-func (p *Parser) secretToConfiguration(
+func secretToConfiguration(
+	s store.Storer,
 	reference configurationv1.SecretValueFromSource, namespace string) (
 	configurationv1.Configuration, error) {
-	secret, err := p.store.GetSecret(namespace, reference.Secret)
+	secret, err := s.GetSecret(namespace, reference.Secret)
 	if err != nil {
 		return configurationv1.Configuration{}, fmt.Errorf(
 			"error fetching plugin configuration secret '%v/%v': %v",
@@ -1820,13 +1816,14 @@ func (p *Parser) secretToConfiguration(
 	return config, nil
 }
 
-func (p *Parser) namespacedSecretToConfiguration(
+func namespacedSecretToConfiguration(
+	s store.Storer,
 	reference configurationv1.NamespacedSecretValueFromSource) (
 	configurationv1.Configuration, error) {
 	bareReference := configurationv1.SecretValueFromSource{
 		Secret: reference.Secret,
 		Key:    reference.Key}
-	return p.secretToConfiguration(bareReference, reference.Namespace)
+	return secretToConfiguration(s, bareReference, reference.Namespace)
 }
 
 // plugin is a intermediate type to hold plugin related configuration
@@ -1856,7 +1853,8 @@ func toKongPlugin(plugin plugin) kong.Plugin {
 	return result
 }
 
-func (p *Parser) kongPluginFromK8SClusterPlugin(
+func kongPluginFromK8SClusterPlugin(
+	s store.Storer,
 	k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
 	config := k8sPlugin.Config
 	if k8sPlugin.ConfigFrom.SecretValue !=
@@ -1869,7 +1867,8 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(
 	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.
 		NamespacedSecretValueFromSource{}) {
 		var err error
-		config, err = p.namespacedSecretToConfiguration(
+		config, err = namespacedSecretToConfiguration(
+			s,
 			k8sPlugin.ConfigFrom.SecretValue)
 		if err != nil {
 			return kong.Plugin{},
@@ -1888,7 +1887,8 @@ func (p *Parser) kongPluginFromK8SClusterPlugin(
 	return kongPlugin, nil
 }
 
-func (p *Parser) kongPluginFromK8SPlugin(
+func kongPluginFromK8SPlugin(
+	s store.Storer,
 	k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
 	config := k8sPlugin.Config
 	if k8sPlugin.ConfigFrom.SecretValue !=
@@ -1902,7 +1902,7 @@ func (p *Parser) kongPluginFromK8SPlugin(
 	if k8sPlugin.ConfigFrom.SecretValue !=
 		(configurationv1.SecretValueFromSource{}) {
 		var err error
-		config, err = p.secretToConfiguration(
+		config, err = secretToConfiguration(s,
 			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return kong.Plugin{},
@@ -1922,7 +1922,8 @@ func (p *Parser) kongPluginFromK8SPlugin(
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
-func (p *Parser) getEndpoints(
+func getEndpoints(
+	log logrus.FieldLogger,
 	s *corev1.Service,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
@@ -1935,7 +1936,7 @@ func (p *Parser) getEndpoints(
 		return upsServers
 	}
 
-	logger := p.Logger.WithFields(logrus.Fields{
+	log = log.WithFields(logrus.Fields{
 		"service_name":      s.Name,
 		"service_namespace": s.Namespace,
 		"service_port":      port.String(),
@@ -1948,12 +1949,12 @@ func (p *Parser) getEndpoints(
 
 	// ExternalName services
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
-		logger.Debug("found service of type=ExternalName")
+		log.Debug("found service of type=ExternalName")
 
 		targetPort := port.TargetPort.IntValue()
 		// check for invalid port value
 		if targetPort <= 0 {
-			logger.Errorf("invalid service: invalid port: %v", targetPort)
+			log.Errorf("invalid service: invalid port: %v", targetPort)
 			return upsServers
 		}
 
@@ -1970,10 +1971,10 @@ func (p *Parser) getEndpoints(
 
 	}
 
-	logger.Debugf("fetching endpoints")
+	log.Debugf("fetching endpoints")
 	ep, err := getEndpoints(s.Namespace, s.Name)
 	if err != nil {
-		logger.Errorf("failed to fetch endpoints: %v", err)
+		log.Errorf("failed to fetch endpoints: %v", err)
 		return upsServers
 	}
 
@@ -2013,6 +2014,6 @@ func (p *Parser) getEndpoints(
 		}
 	}
 
-	logger.Debugf("found endpoints: %v", upsServers)
+	log.Debugf("found endpoints: %v", upsServers)
 	return upsServers
 }

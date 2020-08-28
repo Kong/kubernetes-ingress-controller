@@ -121,7 +121,7 @@ func (n *KongController) syncIngress(interface{}) error {
 	})
 
 	n.Logger.Infof("syncing configuration")
-	state, err := n.parser.Build()
+	state, err := parser.Build(n.Logger.WithField("component", "store"), n.store)
 	if err != nil {
 		return fmt.Errorf("error building kong state: %w", err)
 	}
@@ -160,7 +160,6 @@ func NewKongController(ctx context.Context,
 	}
 
 	n.store = store
-	n.parser = parser.New(n.store, n.Logger.WithField("component", "store"))
 	n.syncQueue = task.NewTaskQueue(n.syncIngress,
 		config.Logger.WithField("component", "sync-queue"))
 
@@ -239,8 +238,6 @@ type KongController struct {
 	isShuttingDown uint32
 
 	store store.Storer
-
-	parser parser.Parser
 
 	PluginSchemaStore PluginSchemaStore
 

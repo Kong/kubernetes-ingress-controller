@@ -73,16 +73,6 @@ type Target struct {
 	kong.Target
 }
 
-// KongState holds the configuration that should be applied to Kong.
-type KongState struct {
-	Services       []Service
-	Upstreams      []Upstream
-	Certificates   []Certificate
-	CACertificates []kong.CACertificate
-	Plugins        []Plugin
-	Consumers      []Consumer
-}
-
 // Certificate represents the certificate object in Kong.
 type Certificate struct {
 	kong.Certificate
@@ -139,13 +129,13 @@ func Build(log logrus.FieldLogger, s store.Storer) (*KongState, error) {
 	result.Upstreams = getUpstreams(log, s, parsedAll.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
-	fillOverrides(log, s, result)
+	result.fillOverrides(log, s)
 
 	// generate consumers and credentials
-	fillConsumersAndCredentials(log, s, &result)
+	result.fillConsumersAndCredentials(log, s)
 
 	// process annotation plugins
-	result.Plugins = fillPlugins(log, s, result)
+	result.Plugins = buildPlugins(log, s, getPluginRelations(result))
 
 	// generate Certificates and SNIs
 	result.Certificates = getCerts(log, s, parsedAll.SecretNameToSNIs)
@@ -746,63 +736,6 @@ func parseIngressRules(
 	}
 }
 
-func fillOverrides(log logrus.FieldLogger, s store.Storer, state KongState) {
-	for i := 0; i < len(state.Services); i++ {
-		// Services
-		anns := state.Services[i].K8sService.Annotations
-		kongIngress, err := getKongIngressForService(s, state.Services[i].K8sService)
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      state.Services[i].K8sService.Name,
-				"service_namespace": state.Services[i].K8sService.Namespace,
-			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
-		}
-		overrideService(&state.Services[i], kongIngress, anns)
-
-		// Routes
-		for j := 0; j < len(state.Services[i].Routes); j++ {
-			var kongIngress *configurationv1.KongIngress
-			var err error
-			if state.Services[i].Routes[j].IsTCP {
-				kongIngress, err = getKongIngressFromTCPIngress(s,
-					&state.Services[i].Routes[j].TCPIngress)
-				if err != nil {
-					log.WithFields(logrus.Fields{
-						"tcpingress_name":      state.Services[i].Routes[j].TCPIngress.Name,
-						"tcpingress_namespace": state.Services[i].Routes[j].TCPIngress.Namespace,
-					}).Errorf("failed to fetch KongIngress resource for Ingress: %v", err)
-				}
-			} else {
-				kongIngress, err = getKongIngressFromIngress(s,
-					&state.Services[i].Routes[j].Ingress)
-				if err != nil {
-					log.WithFields(logrus.Fields{
-						"ingress_name":      state.Services[i].Routes[j].Ingress.Name,
-						"ingress_namespace": state.Services[i].Routes[j].Ingress.Namespace,
-					}).Errorf("failed to fetch KongIngress resource for Ingress: %v", err)
-				}
-			}
-
-			overrideRoute(log, &state.Services[i].Routes[j], kongIngress)
-		}
-	}
-
-	// Upstreams
-	for i := 0; i < len(state.Upstreams); i++ {
-		kongIngress, err := getKongIngressForService(s,
-			state.Upstreams[i].Service.K8sService)
-		anns := state.Upstreams[i].Service.K8sService.Annotations
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      state.Upstreams[i].Service.K8sService.Name,
-				"service_namespace": state.Upstreams[i].Service.K8sService.Namespace,
-			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
-			continue
-		}
-		overrideUpstream(&state.Upstreams[i], kongIngress, anns)
-	}
-}
-
 // overrideServiceByKongIngress sets Service fields by KongIngress
 func overrideServiceByKongIngress(service *Service,
 	kongIngress *configurationv1.KongIngress) {
@@ -1293,65 +1226,6 @@ type foreignRelations struct {
 	Consumer, Route, Service []string
 }
 
-func getPluginRelations(state KongState) map[string]foreignRelations {
-	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
-	pluginRels := map[string]foreignRelations{}
-	addConsumerRelation := func(namespace, pluginName, identifier string) {
-		pluginKey := namespace + ":" + pluginName
-		relations, ok := pluginRels[pluginKey]
-		if !ok {
-			relations = foreignRelations{}
-		}
-		relations.Consumer = append(relations.Consumer, identifier)
-		pluginRels[pluginKey] = relations
-	}
-	addRouteRelation := func(namespace, pluginName, identifier string) {
-		pluginKey := namespace + ":" + pluginName
-		relations, ok := pluginRels[pluginKey]
-		if !ok {
-			relations = foreignRelations{}
-		}
-		relations.Route = append(relations.Route, identifier)
-		pluginRels[pluginKey] = relations
-	}
-	addServiceRelation := func(namespace, pluginName, identifier string) {
-		pluginKey := namespace + ":" + pluginName
-		relations, ok := pluginRels[pluginKey]
-		if !ok {
-			relations = foreignRelations{}
-		}
-		relations.Service = append(relations.Service, identifier)
-		pluginRels[pluginKey] = relations
-	}
-
-	for i := range state.Services {
-		// service
-		svc := state.Services[i].K8sService
-		pluginList := annotations.ExtractKongPluginsFromAnnotations(
-			svc.GetAnnotations())
-		for _, pluginName := range pluginList {
-			addServiceRelation(svc.Namespace, pluginName,
-				*state.Services[i].Name)
-		}
-		// route
-		for j := range state.Services[i].Routes {
-			ingress := state.Services[i].Routes[j].Ingress
-			pluginList := annotations.ExtractKongPluginsFromAnnotations(ingress.GetAnnotations())
-			for _, pluginName := range pluginList {
-				addRouteRelation(ingress.Namespace, pluginName, *state.Services[i].Routes[j].Name)
-			}
-		}
-	}
-	// consumer
-	for _, c := range state.Consumers {
-		pluginList := annotations.ExtractKongPluginsFromAnnotations(c.k8sKongConsumer.GetAnnotations())
-		for _, pluginName := range pluginList {
-			addConsumerRelation(c.k8sKongConsumer.Namespace, pluginName, *c.Username)
-		}
-	}
-	return pluginRels
-}
-
 type rel struct {
 	Consumer, Route, Service string
 }
@@ -1396,9 +1270,8 @@ func getCombinations(relations foreignRelations) []rel {
 	return cartesianProduct
 }
 
-func fillPlugins(log logrus.FieldLogger, s store.Storer, state KongState) []Plugin {
+func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]foreignRelations) []Plugin {
 	var plugins []Plugin
-	pluginRels := getPluginRelations(state)
 
 	for pluginIdentifier, relations := range pluginRels {
 		identifier := strings.Split(pluginIdentifier, ":")

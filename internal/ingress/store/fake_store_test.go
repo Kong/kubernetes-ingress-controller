@@ -264,7 +264,7 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "idontgetprocessedbecauseihavenoclassannotation",
+				Name:      "i-dont-get-processed-because-i-have-no-class-annotation",
 				Namespace: "default",
 			},
 			Spec: knative.IngressSpec{

@@ -60,7 +60,7 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 	data := map[string]string{}
 	ing.SetAnnotations(data)
 	for _, test := range tests {
-		ing.Annotations[ingressClassKey] = test.ingress
+		ing.Annotations[IngressClassKey] = test.ingress
 		f := IngressClassValidatorFunc(test.controller)
 
 		result := f(&ing.ObjectMeta, test.classMatching)
@@ -190,7 +190,7 @@ func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 			name: "legacy annotation",
 			args: args{
 				anns: map[string]string{
-					"plugins.konghq.com": "kp-rl, kp-cors",
+					DeprecatedPluginsKey: "kp-rl, kp-cors",
 				},
 			},
 			want: []string{"kp-rl", "kp-cors"},
@@ -208,7 +208,7 @@ func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 			name: "annotation prioriy",
 			args: args{
 				anns: map[string]string{
-					"plugins.konghq.com": "a,b",
+					DeprecatedPluginsKey: "a,b",
 					"konghq.com/plugins": "kp-rl, kp-cors",
 				},
 			},

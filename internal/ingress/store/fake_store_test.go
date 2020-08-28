@@ -96,7 +96,7 @@ func TestFakeStoreIngress(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 			Spec: networking.IngressSpec{
@@ -125,7 +125,7 @@ func TestFakeStoreIngress(t *testing.T) {
 				Name:      "bar",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "not-kong",
+					annotations.IngressClassKey: "not-kong",
 				},
 			},
 			Spec: networking.IngressSpec{
@@ -165,7 +165,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 			Spec: configurationv1beta1.IngressSpec{
@@ -203,7 +203,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 				Name:      "bar",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "not-kong",
+					annotations.IngressClassKey: "not-kong",
 				},
 			},
 			Spec: configurationv1beta1.IngressSpec{
@@ -356,7 +356,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},
@@ -434,7 +434,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 					"global": "true",
 				},
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},
@@ -568,7 +568,7 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 					"konghq.com/ca-cert": "true",
 				},
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},
@@ -580,7 +580,7 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 					"konghq.com/ca-cert": "true",
 				},
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},

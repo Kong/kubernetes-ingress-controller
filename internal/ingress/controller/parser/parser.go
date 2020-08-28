@@ -21,7 +21,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -72,21 +71,6 @@ type Upstream struct {
 // Target is a wrapper around Target object in Kong.
 type Target struct {
 	kong.Target
-}
-
-// Consumer holds a Kong consumer and its plugins and credentials.
-type Consumer struct {
-	kong.Consumer
-	Plugins    []kong.Plugin
-	KeyAuths   []*kong.KeyAuth
-	HMACAuths  []*kong.HMACAuth
-	JWTAuths   []*kong.JWTAuth
-	BasicAuths []*kong.BasicAuth
-	ACLGroups  []*kong.ACLGroup
-
-	Oauth2Creds []*kong.Oauth2Credential
-
-	k8sKongConsumer configurationv1.KongConsumer
 }
 
 // KongState holds the configuration that should be applied to Kong.
@@ -226,83 +210,6 @@ func getCACerts(log logrus.FieldLogger, s store.Storer) ([]kong.CACertificate, e
 	return caCerts, nil
 }
 
-func processCredential(log logrus.FieldLogger, credType string, consumer *Consumer,
-	credConfig interface{}) error {
-	switch credType {
-	case "key-auth", "keyauth_credential":
-		var cred kong.KeyAuth
-		err := decodeCredential(credConfig, &cred)
-		if err != nil {
-			return fmt.Errorf("failed to decode key-auth credential: %w", err)
-
-		}
-		consumer.KeyAuths = append(consumer.KeyAuths, &cred)
-	case "basic-auth", "basicauth_credential":
-		var cred kong.BasicAuth
-		err := decodeCredential(credConfig, &cred)
-		if err != nil {
-			return fmt.Errorf("failed to decode basic-auth credential: %w", err)
-		}
-		consumer.BasicAuths = append(consumer.BasicAuths, &cred)
-	case "hmac-auth", "hmacauth_credential":
-		var cred kong.HMACAuth
-		err := decodeCredential(credConfig, &cred)
-		if err != nil {
-			return fmt.Errorf("failed to decode hmac-auth credential: %w", err)
-		}
-		consumer.HMACAuths = append(consumer.HMACAuths, &cred)
-	case "oauth2":
-		var cred kong.Oauth2Credential
-		err := decodeCredential(credConfig, &cred)
-		if err != nil {
-			return fmt.Errorf("failed to decode oauth2 credential: %w", err)
-		}
-		consumer.Oauth2Creds = append(consumer.Oauth2Creds, &cred)
-	case "jwt", "jwt_secret":
-		var cred kong.JWTAuth
-		err := decodeCredential(credConfig, &cred)
-		if err != nil {
-			log.Errorf("failed to process JWT credential: %v", err)
-		}
-		// This is treated specially because only this
-		// field might be omitted by user under the expectation
-		// that Kong will insert the default.
-		// If we don't set it, decK will detect a diff and PUT this
-		// credential everytime it performs a sync operation, which
-		// leads to unnecessary cache invalidations in Kong.
-		if cred.Algorithm == nil || *cred.Algorithm == "" {
-			cred.Algorithm = kong.String("HS256")
-		}
-		consumer.JWTAuths = append(consumer.JWTAuths, &cred)
-	case "acl":
-		var cred kong.ACLGroup
-		err := decodeCredential(credConfig, &cred)
-		if err != nil {
-			log.Errorf("failed to process ACL group: %v", err)
-		}
-		consumer.ACLGroups = append(consumer.ACLGroups, &cred)
-	default:
-		return fmt.Errorf("invalid credential type: '%v'", credType)
-	}
-	return nil
-}
-
-func decodeCredential(credConfig interface{},
-	credStructPointer interface{}) error {
-	decoder, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{TagName: "json",
-			Result: credStructPointer,
-		})
-	if err != nil {
-		return fmt.Errorf("failed to create a decoder: %w", err)
-	}
-	err = decoder.Decode(credConfig)
-	if err != nil {
-		return fmt.Errorf("failed to decode credential: %w", err)
-	}
-	return nil
-}
-
 func fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, state *KongState) {
 	consumerIndex := make(map[string]Consumer)
 
@@ -356,7 +263,7 @@ func fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, state *
 				log.Errorf("failed to provision credential: empty secret")
 				continue
 			}
-			err = processCredential(log, credType, &c, credConfig)
+			err = c.setCredential(log, credType, credConfig)
 			if err != nil {
 				log.Errorf("failed to provision credential: %v", err)
 				continue
@@ -396,7 +303,7 @@ func fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, state *
 			log.Errorf("invalid KongCredential: empty config")
 			continue
 		}
-		err := processCredential(log, credential.Type, &consumer, credential.Config)
+		err := consumer.setCredential(log, credential.Type, credential.Config)
 		if err != nil {
 			log.Errorf("failed to provision credential: %v", err)
 			continue

@@ -73,9 +73,7 @@ The below diagram shows how the `KongPlugin` resource can be linked to an
 
 ## KongClusterPlugin
 
-_This resource requires the `kubernetes.io/ingress.class` annotation. Its value
-must match the value of the controller's `--ingress-class` argument, which is
-"kong" by default._
+_This resource requires the [`kubernetes.io/ingress.class` annotation](../README.md#resource-classes)._
 
 KongClusterPlugin resource is exactly same as KongPlugin, except that it is a
 Kubernetes cluster-level resources instead of being a namespaced resource.

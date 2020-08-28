@@ -3332,14 +3332,14 @@ func TestParseKnativeIngressRules(t *testing.T) {
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{})
 		assert.Equal(map[string]Service{}, parsedInfo.ServiceNameToServices)
-		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
 		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[0],
 		})
 		assert.Equal(map[string]Service{}, parsedInfo.ServiceNameToServices)
-		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
 		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
@@ -3376,17 +3376,17 @@ func TestParseKnativeIngressRules(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
 		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[3],
 		})
 
-		assert.Equal(map[string][]string{
+		assert.Equal(SecretNameToSNIs(map[string][]string{
 			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
 			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
-		}, parsedInfo.SecretNameToSNIs)
+		}), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
 		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
@@ -3423,7 +3423,7 @@ func TestParseKnativeIngressRules(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(map[string][]string{}, parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 }
 
@@ -4827,78 +4827,6 @@ func Test_getCombinations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getCombinations(tt.args.relations); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getCombinations() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_processTLSSections(t *testing.T) {
-	type args struct {
-		tlsSections []networking.IngressTLS
-		namespace   string
-	}
-	tests := []struct {
-		name string
-		args args
-		want map[string][]string
-	}{
-		{
-			args: args{
-				tlsSections: []networking.IngressTLS{
-					{
-						Hosts: []string{
-							"1.example.com",
-							"2.example.com",
-						},
-						SecretName: "sooper-secret",
-					},
-					{
-						Hosts: []string{
-							"3.example.com",
-							"4.example.com",
-						},
-						SecretName: "sooper-secret2",
-					},
-				},
-				namespace: "foo",
-			},
-			want: map[string][]string{
-				"foo/sooper-secret":  {"1.example.com", "2.example.com"},
-				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
-			},
-		},
-		{
-			args: args{
-				tlsSections: []networking.IngressTLS{
-					{
-						Hosts: []string{
-							"1.example.com",
-						},
-						SecretName: "sooper-secret",
-					},
-					{
-						Hosts: []string{
-							"3.example.com",
-							"1.example.com",
-							"4.example.com",
-						},
-						SecretName: "sooper-secret2",
-					},
-				},
-				namespace: "foo",
-			},
-			want: map[string][]string{
-				"foo/sooper-secret":  {"1.example.com"},
-				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := map[string][]string{}
-			processTLSSections(tt.args.tlsSections, tt.args.namespace, got)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("processTLSSections() = %v, want %v", got, tt.want)
 			}
 		})
 	}

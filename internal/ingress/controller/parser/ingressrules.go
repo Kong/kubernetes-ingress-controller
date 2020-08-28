@@ -5,16 +5,17 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/sirupsen/logrus"
+	networking "k8s.io/api/networking/v1beta1"
 )
 
 type ingressRules struct {
-	SecretNameToSNIs      map[string][]string
+	SecretNameToSNIs      SecretNameToSNIs
 	ServiceNameToServices map[string]Service
 }
 
 func newIngressRules() ingressRules {
 	return ingressRules{
-		SecretNameToSNIs:      make(map[string][]string),
+		SecretNameToSNIs:      newSecretNameToSNIs(),
 		ServiceNameToServices: make(map[string]Service),
 	}
 }
@@ -69,4 +70,44 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer)
 		}
 		ir.ServiceNameToServices[key] = service
 	}
+}
+
+type SecretNameToSNIs map[string][]string
+
+func newSecretNameToSNIs() SecretNameToSNIs {
+	return SecretNameToSNIs(map[string][]string{})
+}
+
+func (m SecretNameToSNIs) addFromIngressTLS(tlsSections []networking.IngressTLS, namespace string) {
+	for _, tls := range tlsSections {
+		if len(tls.Hosts) == 0 {
+			continue
+		}
+		if tls.SecretName == "" {
+			continue
+		}
+		hosts := tls.Hosts
+		secretName := namespace + "/" + tls.SecretName
+		hosts = m.filterHosts(hosts)
+		if m[secretName] != nil {
+			hosts = append(hosts, m[secretName]...)
+		}
+		m[secretName] = hosts
+	}
+}
+
+func (m SecretNameToSNIs) filterHosts(hosts []string) []string {
+	hostsToAdd := []string{}
+	seenHosts := map[string]bool{}
+	for _, hosts := range m {
+		for _, host := range hosts {
+			seenHosts[host] = true
+		}
+	}
+	for _, host := range hosts {
+		if !seenHosts[host] {
+			hostsToAdd = append(hostsToAdd, host)
+		}
+	}
+	return hostsToAdd
 }

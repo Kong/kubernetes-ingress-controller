@@ -307,44 +307,6 @@ func fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, state *
 	}
 }
 
-func filterHosts(secretNameToSNIs map[string][]string, hosts []string) []string {
-	hostsToAdd := []string{}
-	seenHosts := map[string]bool{}
-	for _, hosts := range secretNameToSNIs {
-		for _, host := range hosts {
-			seenHosts[host] = true
-		}
-	}
-	for _, host := range hosts {
-		if !seenHosts[host] {
-			hostsToAdd = append(hostsToAdd, host)
-		}
-	}
-	return hostsToAdd
-}
-
-func processTLSSections(tlsSections []networking.IngressTLS,
-	namespace string, secretNameToSNIs map[string][]string) {
-	// TODO: optmize: collect all TLS sections and process at the same
-	// time to avoid regenerating the seen map; or use a seen map in the
-	// parser struct itself.
-	for _, tls := range tlsSections {
-		if len(tls.Hosts) == 0 {
-			continue
-		}
-		if tls.SecretName == "" {
-			continue
-		}
-		hosts := tls.Hosts
-		secretName := namespace + "/" + tls.SecretName
-		hosts = filterHosts(secretNameToSNIs, hosts)
-		if secretNameToSNIs[secretName] != nil {
-			hosts = append(hosts, secretNameToSNIs[secretName]...)
-		}
-		secretNameToSNIs[secretName] = hosts
-	}
-}
-
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []networking.IngressTLS {
 	var result []networking.IngressTLS
 
@@ -378,14 +340,13 @@ func parseKnativeIngressRules(
 	})
 
 	services := map[string]Service{}
-	secretToSNIs := map[string][]string{}
+	secretToSNIs := newSecretNameToSNIs()
 
 	for i := 0; i < len(ingressList); i++ {
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
-		processTLSSections(knativeIngressToNetworkingTLS(ingress.Spec.TLS),
-			ingress.Namespace, secretToSNIs)
+		secretToSNIs.addFromIngressTLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
@@ -512,7 +473,7 @@ func parseIngressRules(
 	// generate the following:
 	// Services and Routes
 	var allDefaultBackends []networking.Ingress
-	secretNameToSNIs := make(map[string][]string)
+	secretNameToSNIs := newSecretNameToSNIs()
 	serviceNameToServices := make(map[string]Service)
 
 	for i := 0; i < len(ingressList); i++ {
@@ -528,7 +489,7 @@ func parseIngressRules(
 
 		}
 
-		processTLSSections(ingressSpec.TLS, ingress.Namespace, secretNameToSNIs)
+		secretNameToSNIs.addFromIngressTLS(ingressSpec.TLS, ingress.Namespace)
 
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
@@ -609,8 +570,7 @@ func parseIngressRules(
 			"tcpingress_name":      ingress.Name,
 		})
 
-		processTLSSections(tcpIngressToNetworkingTLS(ingressSpec.TLS),
-			ingress.Namespace, secretNameToSNIs)
+		secretNameToSNIs.addFromIngressTLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
 		for i, rule := range ingressSpec.Rules {
 

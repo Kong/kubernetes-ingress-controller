@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	networking "k8s.io/api/networking/v1beta1"
 )
 
 func TestMergeIngressRules(t *testing.T) {
@@ -65,6 +66,76 @@ func TestMergeIngressRules(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotOutput := mergeIngressRules(tt.inputs...)
 			assert.Equal(t, &gotOutput, tt.wantOutput)
+		})
+	}
+}
+
+func Test_addFromIngressTLS(t *testing.T) {
+	type args struct {
+		tlsSections []networking.IngressTLS
+		namespace   string
+	}
+	tests := []struct {
+		name string
+		args args
+		want SecretNameToSNIs
+	}{
+		{
+			args: args{
+				tlsSections: []networking.IngressTLS{
+					{
+						Hosts: []string{
+							"1.example.com",
+							"2.example.com",
+						},
+						SecretName: "sooper-secret",
+					},
+					{
+						Hosts: []string{
+							"3.example.com",
+							"4.example.com",
+						},
+						SecretName: "sooper-secret2",
+					},
+				},
+				namespace: "foo",
+			},
+			want: SecretNameToSNIs{
+				"foo/sooper-secret":  {"1.example.com", "2.example.com"},
+				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
+			},
+		},
+		{
+			args: args{
+				tlsSections: []networking.IngressTLS{
+					{
+						Hosts: []string{
+							"1.example.com",
+						},
+						SecretName: "sooper-secret",
+					},
+					{
+						Hosts: []string{
+							"3.example.com",
+							"1.example.com",
+							"4.example.com",
+						},
+						SecretName: "sooper-secret2",
+					},
+				},
+				namespace: "foo",
+			},
+			want: SecretNameToSNIs{
+				"foo/sooper-secret":  {"1.example.com"},
+				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newSecretNameToSNIs()
+			m.addFromIngressTLS(tt.args.tlsSections, tt.args.namespace)
+			assert.Equal(t, m, tt.want)
 		})
 	}
 }

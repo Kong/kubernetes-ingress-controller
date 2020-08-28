@@ -56,7 +56,7 @@ to indicate their class. There are several exceptions:
   You can optionally [override this on a per-Service basis][knative-override]
   by adding a `networking.knative.dev/ingress.class` annotation to the Service.
 
-### Allowing resources without a class
+### Enabling support for classless resources
 
 Specifying a class is optional for some resources. Although specifying a class
 is recommended, you can instruct the controller to process resources without a

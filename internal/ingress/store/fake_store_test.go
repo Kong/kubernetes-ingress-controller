@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
@@ -95,7 +96,7 @@ func TestFakeStoreIngress(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "kong",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 			Spec: networking.IngressSpec{
@@ -124,7 +125,7 @@ func TestFakeStoreIngress(t *testing.T) {
 				Name:      "bar",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "not-kong",
+					annotations.IngressClassKey: "not-kong",
 				},
 			},
 			Spec: networking.IngressSpec{
@@ -164,7 +165,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "kong",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 			Spec: configurationv1beta1.IngressSpec{
@@ -202,7 +203,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 				Name:      "bar",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "not-kong",
+					annotations.IngressClassKey: "not-kong",
 				},
 			},
 			Spec: configurationv1beta1.IngressSpec{
@@ -233,6 +234,37 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+				},
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "i-dont-get-processed-because-i-have-no-class-annotation",
 				Namespace: "default",
 			},
 			Spec: knative.IngressSpec{
@@ -324,7 +356,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "kong",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},
@@ -402,7 +434,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 					"global": "true",
 				},
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "kong",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},
@@ -535,6 +567,9 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 				Labels: map[string]string{
 					"konghq.com/ca-cert": "true",
 				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 		},
 		{
@@ -543,6 +578,9 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 				Namespace: "default",
 				Labels: map[string]string{
 					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},

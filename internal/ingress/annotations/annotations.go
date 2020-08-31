@@ -31,12 +31,12 @@ const (
 )
 
 const (
-	ingressClassKey = "kubernetes.io/ingress.class"
+	IngressClassKey = "kubernetes.io/ingress.class"
 
 	deprecatedAnnotationPrefix = "configuration.konghq.com"
 	annotationPrefix           = "konghq.com"
 
-	deprecatedPluginsKey       = "plugins.konghq.com"
+	DeprecatedPluginsKey       = "plugins.konghq.com"
 	deprecatedConfigurationKey = deprecatedAnnotationPrefix
 
 	configurationKey     = "/override"
@@ -80,7 +80,7 @@ func IngressClassValidatorFunc(
 	ingressClass string) func(obj metav1.Object, handling ClassMatching) bool {
 
 	return func(obj metav1.Object, handling ClassMatching) bool {
-		ingress := obj.GetAnnotations()[ingressClassKey]
+		ingress := obj.GetAnnotations()[IngressClassKey]
 		return validIngress(ingress, ingressClass, handling)
 	}
 }
@@ -91,7 +91,7 @@ func IngressClassValidatorFuncFromObjectMeta(
 	ingressClass string) func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
 
 	return func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
-		ingress := obj.GetAnnotations()[ingressClassKey]
+		ingress := obj.GetAnnotations()[IngressClassKey]
 		return validIngress(ingress, ingressClass, handling)
 	}
 }
@@ -114,7 +114,7 @@ func pluginsFromAnnotations(anns map[string]string) (string, bool) {
 	if exists {
 		return value, exists
 	}
-	value, exists = anns[deprecatedPluginsKey]
+	value, exists = anns[DeprecatedPluginsKey]
 	return value, exists
 }
 

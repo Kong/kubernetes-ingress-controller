@@ -35,7 +35,7 @@ categories:
   directly translated into Kong configuration.
 
 For example, an Ingress is translated directly into a Kong route, and a
-KongConsumer is translated directly into a Kong consumer. A Secret containing
+KongConsumer is translated directly into a [Kong consumer](https://docs.konghq.com/latest/admin-api/#consumer-object). A Secret containing
 an authentication plugin credential is _not_ translated directly: it is only
 translated into Kong configuration if a KongConsumer resource references it.
 
@@ -43,11 +43,11 @@ Because they create Kong configuration indenpendent of any other resources,
 directly-translated resources require an ingress class, and their class must
 match the class configured for the controller. Referenced resources do not
 require a class, but must be referenced by a directly-translated resource
-matches the controller.
+that matches the controller.
 
 ### Adding class information to resources
 
-Most resources use a [kubernetes.io/ingress-class annoration][class-annotation]
+Most resources use a [kubernetes.io/ingress-class annotation][class-annotation]
 to indicate their class. There are several exceptions:
 
 - v1 Ingress resources have a dedicated `class` field.
@@ -68,7 +68,7 @@ class annotation using flags:
   KongConsumer resources with no class annotation.
 
 These flags are primarily intended for compatibility with older configuration
-(older versions of the Kong Ingress Controller had less strict class
+(Kong Ingress Controller before 0.10 had less strict class
 requirements, and it was common to omit class annotations). If you are creating
 new configuration and do not have older configuration without class
 annotations, recommended best practice is to add class information to Ingress
@@ -112,7 +112,7 @@ custom classes:
 
 In versions 0.10.0+ you must instruct the controller to load classless
 resources, which is allowed (but not recommended) for either the default or
-custom classess. Resources referenced by another resource are always loaded and
+custom classes. Resources referenced by another resource are always loaded and
 updated correctly regardless of which class you set on the controller; you do
 not need to add class annotations to these resources when using a custom class.
 
@@ -124,7 +124,7 @@ the following configuration for authenticating a request, using a KongConsumer,
 credential Secret, Ingress, and KongPlugin (a Service is implied, but not
 shown):
 
-```
+```yaml
 kind: KongConsumer
 metadata:
   name: dyadya-styopa

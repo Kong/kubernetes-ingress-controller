@@ -86,12 +86,14 @@ Using the default `kong` class is fine for simpler deployments, where only one
 Kong Ingress Controller instance is running in a cluster. Changing the class is
 typical when:
 
-- You install multiple Kong environments in one cluster to handle different
-  types of ingress traffic, e.g. when using separate Kong instances to handle
-  traffic on internal and external load balancers, or deploying different types
-  of non-production environments in a single test cluster.
-- You install multiple controller instances that create configuration in
-  different Kong workspaces (using the `--kong-workspace` flag).
+- You install multiple Kong environments in one Kubernetes cluster to handle
+  different types of ingress traffic, e.g. when using separate Kong instances
+  to handle traffic on internal and external load balancers, or deploying
+  different types of non-production environments in a single test cluster.
+- You install multiple controller instances alongside a single Kong cluster to
+  separate configuration into different Kong workspaces (using the
+  `--kong-workspace` flag) or to restrict which Kubernetes namespaces any one
+  controller instance has access to.
 
 ## Legacy behavior
 

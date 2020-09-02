@@ -1,4 +1,4 @@
-package parser
+package consumer
 
 import (
 	"fmt"
@@ -21,10 +21,10 @@ type Consumer struct {
 
 	Oauth2Creds []*kong.Oauth2Credential
 
-	k8sKongConsumer configurationv1.KongConsumer
+	K8sKongConsumer configurationv1.KongConsumer
 }
 
-func (c *Consumer) setCredential(log logrus.FieldLogger, credType string, credConfig interface{}) error {
+func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credConfig interface{}) error {
 	switch credType {
 	case "key-auth", "keyauth_credential":
 		var cred kong.KeyAuth

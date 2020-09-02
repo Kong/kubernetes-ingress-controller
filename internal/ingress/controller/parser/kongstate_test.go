@@ -6,6 +6,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/consumer"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -29,12 +30,12 @@ func Test_getPluginRelations(t *testing.T) {
 			name: "single consumer annotation",
 			args: args{
 				state: KongState{
-					Consumers: []Consumer{
+					Consumers: []consumer.Consumer{
 						{
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),
 							},
-							k8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: configurationv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
@@ -164,12 +165,12 @@ func Test_getPluginRelations(t *testing.T) {
 			name: "multiple consumers, routes and services",
 			args: args{
 				state: KongState{
-					Consumers: []Consumer{
+					Consumers: []consumer.Consumer{
 						{
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),
 							},
-							k8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: configurationv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
@@ -182,7 +183,7 @@ func Test_getPluginRelations(t *testing.T) {
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),
 							},
-							k8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: configurationv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns2",
 									Annotations: map[string]string{
@@ -195,7 +196,7 @@ func Test_getPluginRelations(t *testing.T) {
 							Consumer: kong.Consumer{
 								Username: kong.String("bar-consumer"),
 							},
-							k8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: configurationv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{

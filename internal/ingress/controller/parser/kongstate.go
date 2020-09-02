@@ -5,6 +5,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/consumer"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/sirupsen/logrus"
@@ -17,36 +18,36 @@ type KongState struct {
 	Certificates   []Certificate
 	CACertificates []kong.CACertificate
 	Plugins        []Plugin
-	Consumers      []Consumer
+	Consumers      []consumer.Consumer
 }
 
 func (ks *KongState) fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
-	consumerIndex := make(map[string]Consumer)
+	consumerIndex := make(map[string]consumer.Consumer)
 
 	// build consumer index
-	for _, consumer := range s.ListKongConsumers() {
-		var c Consumer
-		if consumer.Username == "" && consumer.CustomID == "" {
+	for _, kConsumer := range s.ListKongConsumers() {
+		var c consumer.Consumer
+		if kConsumer.Username == "" && kConsumer.CustomID == "" {
 			continue
 		}
-		if consumer.Username != "" {
-			c.Username = kong.String(consumer.Username)
+		if kConsumer.Username != "" {
+			c.Username = kong.String(kConsumer.Username)
 		}
-		if consumer.CustomID != "" {
-			c.CustomID = kong.String(consumer.CustomID)
+		if kConsumer.CustomID != "" {
+			c.CustomID = kong.String(kConsumer.CustomID)
 		}
-		c.k8sKongConsumer = *consumer
+		c.K8sKongConsumer = *kConsumer
 
 		log = log.WithFields(logrus.Fields{
-			"kongconsumer_name":      consumer.Name,
-			"kongconsumer_namespace": consumer.Namespace,
+			"kongconsumer_name":      kConsumer.Name,
+			"kongconsumer_namespace": kConsumer.Namespace,
 		})
-		for _, cred := range consumer.Credentials {
+		for _, cred := range kConsumer.Credentials {
 			log = log.WithFields(logrus.Fields{
 				"secret_name":      cred,
-				"secret_namespace": consumer.Namespace,
+				"secret_namespace": kConsumer.Namespace,
 			})
-			secret, err := s.GetSecret(consumer.Namespace, cred)
+			secret, err := s.GetSecret(kConsumer.Namespace, cred)
 			if err != nil {
 				log.Errorf("failed to fetch secret: %v", err)
 				continue
@@ -73,14 +74,14 @@ func (ks *KongState) fillConsumersAndCredentials(log logrus.FieldLogger, s store
 				log.Errorf("failed to provision credential: empty secret")
 				continue
 			}
-			err = c.setCredential(log, credType, credConfig)
+			err = c.SetCredential(log, credType, credConfig)
 			if err != nil {
 				log.Errorf("failed to provision credential: %v", err)
 				continue
 			}
 		}
 
-		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
+		consumerIndex[kConsumer.Namespace+"/"+kConsumer.Name] = c
 	}
 
 	// legacy attach credentials
@@ -96,7 +97,7 @@ func (ks *KongState) fillConsumersAndCredentials(log logrus.FieldLogger, s store
 			"kongcredential_namespace": credential.Namespace,
 			"consumerRef":              credential.ConsumerRef,
 		})
-		consumer, ok := consumerIndex[credential.Namespace+"/"+
+		cons, ok := consumerIndex[credential.Namespace+"/"+
 			credential.ConsumerRef]
 		if !ok {
 			continue
@@ -113,12 +114,12 @@ func (ks *KongState) fillConsumersAndCredentials(log logrus.FieldLogger, s store
 			log.Errorf("invalid KongCredential: empty config")
 			continue
 		}
-		err := consumer.setCredential(log, credential.Type, credential.Config)
+		err := cons.SetCredential(log, credential.Type, credential.Config)
 		if err != nil {
 			log.Errorf("failed to provision credential: %v", err)
 			continue
 		}
-		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = consumer
+		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = cons
 	}
 
 	// populate the consumer in the state
@@ -235,9 +236,9 @@ func getPluginRelations(state KongState) map[string]foreignRelations {
 	}
 	// consumer
 	for _, c := range state.Consumers {
-		pluginList := annotations.ExtractKongPluginsFromAnnotations(c.k8sKongConsumer.GetAnnotations())
+		pluginList := annotations.ExtractKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
 		for _, pluginName := range pluginList {
-			addConsumerRelation(c.k8sKongConsumer.Namespace, pluginName, *c.Username)
+			addConsumerRelation(c.K8sKongConsumer.Namespace, pluginName, *c.Username)
 		}
 	}
 	return pluginRels

@@ -62,7 +62,7 @@ Following annotaitons are supported on KongConsumer resources:
 `kubernetes.io/ingress.class` is normally required, and its value should match
 the value of the `--ingress-class` controller argument ("kong" by default).
 
-Passing `process-classless-kong-consumer` removes that requirement:
+Setting the `--process-classless-kong-consumer` controller flag removes that requirement:
 when enabled, the controller will process KongConsumers with no
 `kubernetes.io/ingress.class` annotation. Recommended best practice is to set
 the annotation and leave this flag disabled; the flag is primarily intended for

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConsumer_setCredential(t *testing.T) {
+func TestConsumer_SetCredential(t *testing.T) {
 	type args struct {
 		credType   string
 		consumer   *Consumer
@@ -233,7 +233,7 @@ func TestConsumer_setCredential(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.args.consumer.setCredential(logrus.New(), tt.args.credType,
+			if err := tt.args.consumer.SetCredential(logrus.New(), tt.args.credType,
 				tt.args.credConfig); (err != nil) != tt.wantErr {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)

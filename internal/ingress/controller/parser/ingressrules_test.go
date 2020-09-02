@@ -3,6 +3,7 @@ package parser
 import (
 	"testing"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/stretchr/testify/assert"
 	networking "k8s.io/api/networking/v1beta1"
 )
@@ -17,7 +18,7 @@ func TestMergeIngressRules(t *testing.T) {
 			name: "empty list",
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      map[string][]string{},
-				ServiceNameToServices: map[string]Service{},
+				ServiceNameToServices: map[string]kongstate.Service{},
 			},
 		},
 		{
@@ -27,7 +28,7 @@ func TestMergeIngressRules(t *testing.T) {
 			},
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      map[string][]string{},
-				ServiceNameToServices: map[string]Service{},
+				ServiceNameToServices: map[string]kongstate.Service{},
 			},
 		},
 		{
@@ -35,12 +36,12 @@ func TestMergeIngressRules(t *testing.T) {
 			inputs: []*ingressRules{
 				{
 					SecretNameToSNIs:      map[string][]string{"a": {"b", "c"}, "d": {"e", "f"}},
-					ServiceNameToServices: map[string]Service{"1": {Namespace: "potato"}},
+					ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}},
 				},
 			},
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      map[string][]string{"a": {"b", "c"}, "d": {"e", "f"}},
-				ServiceNameToServices: map[string]Service{"1": {Namespace: "potato"}},
+				ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}},
 			},
 		},
 		{
@@ -48,18 +49,18 @@ func TestMergeIngressRules(t *testing.T) {
 			inputs: []*ingressRules{
 				{
 					SecretNameToSNIs:      map[string][]string{"a": {"b", "c"}, "d": {"e", "f"}},
-					ServiceNameToServices: map[string]Service{"1": {Namespace: "potato"}},
+					ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}},
 				},
 				{
 					SecretNameToSNIs: map[string][]string{"g": {"h"}},
 				},
 				{
-					ServiceNameToServices: map[string]Service{"2": {Namespace: "carrot"}},
+					ServiceNameToServices: map[string]kongstate.Service{"2": {Namespace: "carrot"}},
 				},
 			},
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      map[string][]string{"a": {"b", "c"}, "d": {"e", "f"}, "g": {"h"}},
-				ServiceNameToServices: map[string]Service{"1": {Namespace: "potato"}, "2": {Namespace: "carrot"}},
+				ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}, "2": {Namespace: "carrot"}},
 			},
 		},
 	} {

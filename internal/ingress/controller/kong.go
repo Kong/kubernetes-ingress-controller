@@ -35,14 +35,14 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
-func (n *KongController) OnUpdate(ctx context.Context, state *parser.KongState) error {
+func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongState) error {
 	targetContent := n.toDeckContent(ctx, state)
 
 	var customEntities []byte
@@ -295,7 +295,7 @@ func (n *KongController) getIngressControllerTags() []string {
 
 func (n *KongController) toDeckContent(
 	ctx context.Context,
-	k8sState *parser.KongState) *file.Content {
+	k8sState *kongstate.KongState) *file.Content {
 	var content file.Content
 	content.FormatVersion = "1.1"
 	var err error

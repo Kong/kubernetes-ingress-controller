@@ -1,4 +1,4 @@
-package parser
+package kongstate
 
 import (
 	"reflect"
@@ -7,6 +7,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/consumer"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -20,11 +21,11 @@ func Test_getPluginRelations(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want map[string]foreignRelations
+		want map[string]util.ForeignRelations
 	}{
 		{
 			name: "empty state",
-			want: map[string]foreignRelations{},
+			want: map[string]util.ForeignRelations{},
 		},
 		{
 			name: "single consumer annotation",
@@ -47,7 +48,7 @@ func Test_getPluginRelations(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]foreignRelations{
+			want: map[string]util.ForeignRelations{
 				"ns1:foo": {Consumer: []string{"foo-consumer"}},
 				"ns1:bar": {Consumer: []string{"foo-consumer"}},
 			},
@@ -73,7 +74,7 @@ func Test_getPluginRelations(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]foreignRelations{
+			want: map[string]util.ForeignRelations{
 				"ns1:foo": {Service: []string{"foo-service"}},
 				"ns1:bar": {Service: []string{"foo-service"}},
 			},
@@ -107,7 +108,7 @@ func Test_getPluginRelations(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]foreignRelations{
+			want: map[string]util.ForeignRelations{
 				"ns2:foo": {Route: []string{"foo-route"}},
 				"ns2:bar": {Route: []string{"foo-route"}},
 			},
@@ -155,7 +156,7 @@ func Test_getPluginRelations(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]foreignRelations{
+			want: map[string]util.ForeignRelations{
 				"ns2:foo": {Route: []string{"foo-route"}},
 				"ns2:bar": {Route: []string{"foo-route", "bar-route"}},
 				"ns2:baz": {Route: []string{"bar-route"}},
@@ -253,7 +254,7 @@ func Test_getPluginRelations(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]foreignRelations{
+			want: map[string]util.ForeignRelations{
 				"ns1:foo":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
 				"ns1:bar":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
 				"ns1:foobar": {Consumer: []string{"bar-consumer"}},
@@ -265,7 +266,7 @@ func Test_getPluginRelations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getPluginRelations(tt.args.state); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.args.state.getPluginRelations(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getPluginRelations() = %v, want %v", got, tt.want)
 			}
 		})

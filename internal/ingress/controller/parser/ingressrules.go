@@ -3,6 +3,7 @@ package parser
 import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/sirupsen/logrus"
 	networking "k8s.io/api/networking/v1beta1"
@@ -10,13 +11,13 @@ import (
 
 type ingressRules struct {
 	SecretNameToSNIs      SecretNameToSNIs
-	ServiceNameToServices map[string]Service
+	ServiceNameToServices map[string]kongstate.Service
 }
 
 func newIngressRules() ingressRules {
 	return ingressRules{
 		SecretNameToSNIs:      newSecretNameToSNIs(),
-		ServiceNameToServices: make(map[string]Service),
+		ServiceNameToServices: make(map[string]kongstate.Service),
 	}
 }
 

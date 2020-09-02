@@ -1,14 +1,17 @@
-package parser
+package kongstate
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/consumer"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -21,7 +24,7 @@ type KongState struct {
 	Consumers      []consumer.Consumer
 }
 
-func (ks *KongState) fillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
+func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
 	consumerIndex := make(map[string]consumer.Consumer)
 
 	// build consumer index
@@ -128,7 +131,7 @@ func (ks *KongState) fillConsumersAndCredentials(log logrus.FieldLogger, s store
 	}
 }
 
-func (ks *KongState) fillOverrides(log logrus.FieldLogger, s store.Storer) {
+func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
 		anns := ks.Services[i].K8sService.Annotations
@@ -139,7 +142,7 @@ func (ks *KongState) fillOverrides(log logrus.FieldLogger, s store.Storer) {
 				"service_namespace": ks.Services[i].K8sService.Namespace,
 			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
 		}
-		overrideService(&ks.Services[i], kongIngress, anns)
+		ks.Services[i].override(kongIngress, anns)
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
@@ -165,7 +168,7 @@ func (ks *KongState) fillOverrides(log logrus.FieldLogger, s store.Storer) {
 				}
 			}
 
-			overrideRoute(log, &ks.Services[i].Routes[j], kongIngress)
+			ks.Services[i].Routes[j].override(log, kongIngress)
 		}
 	}
 
@@ -181,18 +184,18 @@ func (ks *KongState) fillOverrides(log logrus.FieldLogger, s store.Storer) {
 			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
 			continue
 		}
-		overrideUpstream(&ks.Upstreams[i], kongIngress, anns)
+		ks.Upstreams[i].override(kongIngress, anns)
 	}
 }
 
-func getPluginRelations(state KongState) map[string]foreignRelations {
+func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
-	pluginRels := map[string]foreignRelations{}
+	pluginRels := map[string]util.ForeignRelations{}
 	addConsumerRelation := func(namespace, pluginName, identifier string) {
 		pluginKey := namespace + ":" + pluginName
 		relations, ok := pluginRels[pluginKey]
 		if !ok {
-			relations = foreignRelations{}
+			relations = util.ForeignRelations{}
 		}
 		relations.Consumer = append(relations.Consumer, identifier)
 		pluginRels[pluginKey] = relations
@@ -201,7 +204,7 @@ func getPluginRelations(state KongState) map[string]foreignRelations {
 		pluginKey := namespace + ":" + pluginName
 		relations, ok := pluginRels[pluginKey]
 		if !ok {
-			relations = foreignRelations{}
+			relations = util.ForeignRelations{}
 		}
 		relations.Route = append(relations.Route, identifier)
 		pluginRels[pluginKey] = relations
@@ -210,32 +213,32 @@ func getPluginRelations(state KongState) map[string]foreignRelations {
 		pluginKey := namespace + ":" + pluginName
 		relations, ok := pluginRels[pluginKey]
 		if !ok {
-			relations = foreignRelations{}
+			relations = util.ForeignRelations{}
 		}
 		relations.Service = append(relations.Service, identifier)
 		pluginRels[pluginKey] = relations
 	}
 
-	for i := range state.Services {
+	for i := range ks.Services {
 		// service
-		svc := state.Services[i].K8sService
+		svc := ks.Services[i].K8sService
 		pluginList := annotations.ExtractKongPluginsFromAnnotations(
 			svc.GetAnnotations())
 		for _, pluginName := range pluginList {
 			addServiceRelation(svc.Namespace, pluginName,
-				*state.Services[i].Name)
+				*ks.Services[i].Name)
 		}
 		// route
-		for j := range state.Services[i].Routes {
-			ingress := state.Services[i].Routes[j].Ingress
+		for j := range ks.Services[i].Routes {
+			ingress := ks.Services[i].Routes[j].Ingress
 			pluginList := annotations.ExtractKongPluginsFromAnnotations(ingress.GetAnnotations())
 			for _, pluginName := range pluginList {
-				addRouteRelation(ingress.Namespace, pluginName, *state.Services[i].Routes[j].Name)
+				addRouteRelation(ingress.Namespace, pluginName, *ks.Services[i].Routes[j].Name)
 			}
 		}
 	}
 	// consumer
-	for _, c := range state.Consumers {
+	for _, c := range ks.Consumers {
 		pluginList := annotations.ExtractKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
 		for _, pluginName := range pluginList {
 			addConsumerRelation(c.K8sKongConsumer.Namespace, pluginName, *c.Username)
@@ -243,3 +246,118 @@ func getPluginRelations(state KongState) map[string]foreignRelations {
 	}
 	return pluginRels
 }
+
+func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]util.ForeignRelations) []Plugin {
+	var plugins []Plugin
+
+	for pluginIdentifier, relations := range pluginRels {
+		identifier := strings.Split(pluginIdentifier, ":")
+		namespace, kongPluginName := identifier[0], identifier[1]
+		plugin, err := getPlugin(s, namespace, kongPluginName)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"kongplugin_name":      kongPluginName,
+				"kongplugin_namespace": namespace,
+			}).Logger.Errorf("failed to fetch KongPlugin: %v", err)
+			continue
+		}
+
+		for _, rel := range relations.GetCombinations() {
+			plugin := *plugin.DeepCopy()
+			// ID is populated because that is read by decK and in_memory
+			// translator too
+			if rel.Service != "" {
+				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
+			}
+			if rel.Route != "" {
+				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
+			}
+			if rel.Consumer != "" {
+				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
+			}
+			plugins = append(plugins, Plugin{plugin})
+		}
+	}
+
+	globalPlugins, err := globalPlugins(log, s)
+	if err != nil {
+		log.Errorf("failed to fetch global plugins: %v", err)
+	}
+	plugins = append(plugins, globalPlugins...)
+
+	return plugins
+}
+
+func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
+	// removed as of 0.10.0
+	// only retrieved now to warn users
+	globalPlugins, err := s.ListGlobalKongPlugins()
+	if err != nil {
+		return nil, fmt.Errorf("error listing global KongPlugins: %w", err)
+	}
+	if len(globalPlugins) > 0 {
+		log.Warning("global KongPlugins found. These are no longer applied and",
+			" must be replaced with KongClusterPlugins.",
+			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
+	}
+	res := make(map[string]Plugin)
+	var duplicates []string // keep track of duplicate
+	// TODO respect the oldest CRD
+	// Current behavior is to skip creating the plugin but in case
+	// of duplicate plugin definitions, we should respect the oldest one
+	// This is important since if a user comes in to k8s and creates a new
+	// CRD, the user now deleted an older plugin
+
+	globalClusterPlugins, err := s.ListGlobalKongClusterPlugins()
+	if err != nil {
+		return nil, fmt.Errorf("error listing global KongClusterPlugins: %w", err)
+	}
+	for i := 0; i < len(globalClusterPlugins); i++ {
+		k8sPlugin := *globalClusterPlugins[i]
+		pluginName := k8sPlugin.PluginName
+		// empty pluginName skip it
+		if pluginName == "" {
+			log.WithFields(logrus.Fields{
+				"kongclusterplugin_name": k8sPlugin.Name,
+			}).Errorf("invalid KongClusterPlugin: empty plugin property")
+			continue
+		}
+		if _, ok := res[pluginName]; ok {
+			log.Error("multiple KongPlugin definitions found with"+
+				" 'global' label for '", pluginName,
+				"', the plugin will not be applied")
+			duplicates = append(duplicates, pluginName)
+			continue
+		}
+		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
+			res[pluginName] = Plugin{
+				Plugin: plugin,
+			}
+		} else {
+			log.WithFields(logrus.Fields{
+				"kongclusterplugin_name": k8sPlugin.Name,
+			}).Errorf("failed to generate configuration from KongClusterPlugin: %v ", err)
+		}
+	}
+	for _, plugin := range duplicates {
+		delete(res, plugin)
+	}
+	var plugins []Plugin
+	for _, p := range res {
+		plugins = append(plugins, p)
+	}
+	return plugins, nil
+}
+
+func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
+	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
+}
+
+var supportedCreds = sets.NewString(
+	"acl",
+	"basic-auth",
+	"hmac-auth",
+	"jwt",
+	"key-auth",
+	"oauth2",
+)

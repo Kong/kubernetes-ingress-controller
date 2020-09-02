@@ -27,7 +27,7 @@ the value of the `--ingress-class` controller argument ("kong" by default).
 Setting the `--process-classless-ingress-v1beta1` controller flag removes that requirement:
 when enabled, the controller will process Ingresses with no
 `kubernetes.io/ingress.class` annotation. Recommended best practice is to set
-the annotation and leave this flag disabled; the flag is primarily intended for
+the annotation and leave this flag disabled; the flag is intended for
 older configurations, as controller versions prior to 0.10 processed classless
 Ingress resources by default.
 

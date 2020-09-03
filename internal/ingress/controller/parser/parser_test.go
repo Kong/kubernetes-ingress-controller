@@ -10,6 +10,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -162,8 +163,7 @@ func TestGlobalPlugin(t *testing.T) {
 			},
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -343,8 +343,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 			assert.Equal(3, len(state.Plugins),
@@ -448,8 +447,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -542,8 +540,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -594,17 +591,16 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		}
 		store, err := store.NewFakeStore(objects)
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		for _, testcase := range references {
-			config, err := parser.secretToConfiguration(*testcase, "default")
+			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
 			assert.NotEmpty(config)
 			assert.Nil(err)
 		}
 		for _, testcase := range badReferences {
-			config, err := parser.secretToConfiguration(*testcase, "default")
+			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
 			assert.Empty(config)
 			assert.NotEmpty(err)
 		}
@@ -693,8 +689,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -728,8 +723,7 @@ func TestCACertificate(t *testing.T) {
 			Secrets: secrets,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -779,8 +773,7 @@ func TestCACertificate(t *testing.T) {
 			Secrets: secrets,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -842,8 +835,7 @@ func TestCACertificate(t *testing.T) {
 			Secrets: secrets,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -926,8 +918,7 @@ func TestServiceClientCertificate(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -994,8 +985,7 @@ func TestServiceClientCertificate(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -1055,8 +1045,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -1133,8 +1122,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -1212,8 +1200,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 
@@ -1292,8 +1279,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 
@@ -1371,8 +1357,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 
@@ -1450,8 +1435,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 
@@ -1529,8 +1513,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 
@@ -1608,8 +1591,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 
@@ -1689,8 +1671,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -1740,8 +1721,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -1823,8 +1803,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 			KongPlugins:      plugins,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -1932,8 +1911,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -2013,8 +1991,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 
@@ -2100,8 +2077,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 				Services:  services,
 			})
 			assert.Nil(err)
-			parser := New(store, logrus.New())
-			state, err := parser.Build()
+			state, err := Build(logrus.New(), store)
 			assert.Nil(err)
 			assert.NotNil(state)
 
@@ -2168,8 +2144,7 @@ func TestDefaultBackend(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Services),
@@ -2237,8 +2212,7 @@ func TestDefaultBackend(t *testing.T) {
 			Services:  services,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -2303,8 +2277,7 @@ func TestParserSecret(t *testing.T) {
 			Secrets:   secrets,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -2385,8 +2358,7 @@ func TestParserSecret(t *testing.T) {
 			Secrets:   secrets,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -2396,7 +2368,7 @@ func TestParserSecret(t *testing.T) {
 			return strings.Compare(*state.Certificates[0].SNIs[i],
 				*state.Certificates[0].SNIs[j]) > 0
 		})
-		assert.Equal(Certificate{
+		assert.Equal(kongstate.Certificate{
 			Certificate: kong.Certificate{
 				ID:   kong.String("3e8edeca-7d23-4e02-84c9-437d11b746a6"),
 				Cert: kong.String(tlsPairs[0].Cert),
@@ -2467,8 +2439,7 @@ func TestParserSecret(t *testing.T) {
 			Secrets:   secrets,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -2546,8 +2517,7 @@ func TestPluginAnnotations(t *testing.T) {
 			KongPlugins: plugins,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -2644,8 +2614,7 @@ func TestPluginAnnotations(t *testing.T) {
 			KongClusterPlugins: clusterPlugins,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -2715,8 +2684,7 @@ func TestPluginAnnotations(t *testing.T) {
 			KongClusterPlugins: clusterPlugins,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -2762,8 +2730,7 @@ func TestPluginAnnotations(t *testing.T) {
 			Ingresses: ingresses,
 		})
 		assert.Nil(err)
-		parser := New(store, logrus.New())
-		state, err := parser.Build()
+		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Plugins),
@@ -2773,9 +2740,6 @@ func TestPluginAnnotations(t *testing.T) {
 
 func TestParseIngressRules(t *testing.T) {
 	assert := assert.New(t)
-	p := Parser{
-		Logger: logrus.New(),
-	}
 	ingressList := []*networking.Ingress{
 		// 0
 		{
@@ -3072,23 +3036,23 @@ func TestParseIngressRules(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{})
-		assert.Equal(&parsedIngressRules{
-			ServiceNameToServices: make(map[string]Service),
+		assert.Equal(ingressRules{
+			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[0]})
-		assert.Equal(&parsedIngressRules{
-			ServiceNameToServices: make(map[string]Service),
+		assert.Equal(ingressRules{
+			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{
 			ingressList[0],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -3099,7 +3063,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
 	t.Run("simple TCPIngress rule is parsed", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[1]})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
@@ -3120,7 +3084,7 @@ func TestParseIngressRules(t *testing.T) {
 		}, route.Route)
 	})
 	t.Run("TCPIngress rule with host is parsed", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[2]})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
@@ -3142,7 +3106,7 @@ func TestParseIngressRules(t *testing.T) {
 		}, route.Route)
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{
 			ingressList[0],
 			ingressList[2],
 		}, []*configurationv1beta1.TCPIngress{})
@@ -3158,7 +3122,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal(0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
 	})
 	t.Run("ingress rule with TLS", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{
 			ingressList[1],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
@@ -3166,14 +3130,14 @@ func TestParseIngressRules(t *testing.T) {
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
 	})
 	t.Run("TCPIngress with TLS", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{},
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{},
 			[]*configurationv1beta1.TCPIngress{tcpIngressList[3]})
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{
 			ingressList[3],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -3188,7 +3152,7 @@ func TestParseIngressRules(t *testing.T) {
 		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
 	})
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{
 			ingressList[4],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
@@ -3196,20 +3160,20 @@ func TestParseIngressRules(t *testing.T) {
 	})
 	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
 		assert.NotPanics(func() {
-			p.parseIngressRules([]*networking.Ingress{
+			parseIngressRules(logrus.New(), []*networking.Ingress{
 				ingressList[5],
 			}, []*configurationv1beta1.TCPIngress{})
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{
 			ingressList[6],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 	})
 	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
-		parsedInfo := p.parseIngressRules([]*networking.Ingress{
+		parsedInfo := parseIngressRules(logrus.New(), []*networking.Ingress{
 			ingressList[7],
 		}, []*configurationv1beta1.TCPIngress{})
 		assert.Empty(parsedInfo.ServiceNameToServices)
@@ -3218,7 +3182,6 @@ func TestParseIngressRules(t *testing.T) {
 
 func TestParseKnativeIngressRules(t *testing.T) {
 	assert := assert.New(t)
-	p := Parser{}
 	ingressList := []*knative.Ingress{
 		// 0
 		{
@@ -3368,23 +3331,23 @@ func TestParseKnativeIngressRules(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{})
-		assert.Equal(map[string]Service{}, parsedInfo)
-		assert.Equal(map[string][]string{}, secretToSNIs)
+		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{})
+		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[0],
 		})
-		assert.Equal(map[string]Service{}, parsedInfo)
-		assert.Equal(map[string][]string{}, secretToSNIs)
+		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[1],
 		})
-		assert.Equal(1, len(parsedInfo))
-		svc := parsedInfo["foo-ns.foo-svc.42"]
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
 			Name:           kong.String("foo-ns.foo-svc.42"),
 			Port:           kong.Int(80),
@@ -3414,24 +3377,24 @@ func TestParseKnativeIngressRules(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(map[string][]string{}, secretToSNIs)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
-		_, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[3],
 		})
 
-		assert.Equal(map[string][]string{
+		assert.Equal(SecretNameToSNIs(map[string][]string{
 			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
 			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
-		}, secretToSNIs)
+		}), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo, secretToSNIs := p.parseKnativeIngressRules([]*knative.Ingress{
+		parsedInfo := parseKnativeIngressRules([]*knative.Ingress{
 			ingressList[2],
 		})
-		assert.Equal(1, len(parsedInfo))
-		svc := parsedInfo["foo-ns.foo-svc.42"]
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
 			Name:           kong.String("foo-ns.foo-svc.42"),
 			Port:           kong.Int(80),
@@ -3461,845 +3424,7 @@ func TestParseKnativeIngressRules(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(map[string][]string{}, secretToSNIs)
-	})
-}
-
-func TestOverrideService(t *testing.T) {
-	assert := assert.New(t)
-
-	testTable := []struct {
-		inService      Service
-		inKongIngresss configurationv1.KongIngress
-		outService     Service
-		inAnnotation   map[string]string
-	}{
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Protocol: kong.String("https"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Retries: kong.Int(0),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-					Retries:  kong.Int(0),
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Path: kong.String("/new-path"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/new-path"),
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Retries: kong.Int(1),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-					Retries:  kong.Int(1),
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					ConnectTimeout: kong.Int(100),
-					ReadTimeout:    kong.Int(100),
-					WriteTimeout:   kong.Int(100),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:           kong.String("foo.com"),
-					Port:           kong.Int(80),
-					Name:           kong.String("foo"),
-					Protocol:       kong.String("http"),
-					Path:           kong.String("/"),
-					ConnectTimeout: kong.Int(100),
-					ReadTimeout:    kong.Int(100),
-					WriteTimeout:   kong.Int(100),
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpc"),
-					Path:     nil,
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Protocol: kong.String("grpc"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpc"),
-					Path:     nil,
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     nil,
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpcs"),
-					Path:     nil,
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpcs"),
-					Path:     nil,
-				},
-			},
-			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpc"),
-					Path:     nil,
-				},
-			},
-			map[string]string{"configuration.konghq.com/protocol": "grpc"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpcs"),
-					Path:     nil,
-				},
-			},
-			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			map[string]string{"configuration.konghq.com/protocol": "https"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			configurationv1.KongIngress{
-				Proxy: &kong.Service{},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			map[string]string{"configuration.konghq.com/protocol": "https"},
-		},
-	}
-
-	for _, testcase := range testTable {
-		overrideService(&testcase.inService, &testcase.inKongIngresss, testcase.inAnnotation)
-		assert.Equal(testcase.inService, testcase.outService)
-	}
-
-	assert.NotPanics(func() {
-		overrideService(nil, nil, nil)
-	})
-}
-
-func TestOverrideRoute(t *testing.T) {
-	assert := assert.New(t)
-
-	testTable := []struct {
-		inRoute        Route
-		inKongIngresss configurationv1.KongIngress
-		outRoute       Route
-	}{
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-			configurationv1.KongIngress{},
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Methods: kong.StringSlice("GET", "POST"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:   kong.StringSlice("foo.com", "bar.com"),
-					Methods: kong.StringSlice("GET", "POST"),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Methods: kong.StringSlice("GET   ", "post"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:   kong.StringSlice("foo.com", "bar.com"),
-					Methods: kong.StringSlice("GET", "POST"),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Methods: kong.StringSlice("GET", "-1"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com", "bar.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					HTTPSRedirectStatusCode: kong.Int(302),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:                   kong.StringSlice("foo.com", "bar.com"),
-					HTTPSRedirectStatusCode: kong.Int(302),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts:        kong.StringSlice("foo.com", "bar.com"),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(true),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Protocols:     kong.StringSlice("http"),
-					PreserveHost:  kong.Bool(false),
-					StripPath:     kong.Bool(false),
-					RegexPriority: kong.Int(10),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:         kong.StringSlice("foo.com", "bar.com"),
-					Protocols:     kong.StringSlice("http"),
-					PreserveHost:  kong.Bool(false),
-					StripPath:     kong.Bool(false),
-					RegexPriority: kong.Int(10),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts:     kong.StringSlice("foo.com"),
-					Protocols: kong.StringSlice("http", "https"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Headers: map[string][]string{
-						"foo-header": {"bar-value"},
-					},
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:     kong.StringSlice("foo.com"),
-					Protocols: kong.StringSlice("http", "https"),
-					Headers: map[string][]string{
-						"foo-header": {"bar-value"},
-					},
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:     kong.StringSlice("foo.com"),
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-					StripPath: nil,
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Hosts: kong.StringSlice("foo.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Route: &kong.Route{
-					PathHandling: kong.String("v1"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Hosts:        kong.StringSlice("foo.com"),
-					PathHandling: kong.String("v1"),
-				},
-			},
-		},
-	}
-
-	for _, testcase := range testTable {
-		p := Parser{
-			Logger: logrus.New(),
-		}
-		p.overrideRoute(&testcase.inRoute, &testcase.inKongIngresss)
-		assert.Equal(testcase.inRoute, testcase.outRoute)
-	}
-
-	assert.NotPanics(func() {
-		var p Parser
-		p.overrideRoute(nil, nil)
-	})
-}
-
-func TestOverrideRoutePriority(t *testing.T) {
-	assert := assert.New(t)
-	var route Route
-	route = Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
-	kongIngress := configurationv1.KongIngress{
-		Route: &kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
-
-	netIngress := networking.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"configuration.konghq.com/protocols": "grpc,grpcs",
-			},
-		},
-	}
-
-	route = Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-		Ingress: netIngress,
-	}
-	var p Parser
-	p.overrideRoute(&route, &kongIngress)
-	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
-	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
-}
-
-func TestOverrideRouteByKongIngress(t *testing.T) {
-	assert := assert.New(t)
-	route := Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
-	kongIngress := configurationv1.KongIngress{
-		Route: &kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
-
-	var p Parser
-	p.overrideRouteByKongIngress(&route, &kongIngress)
-	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
-	assert.NotPanics(func() {
-		p.overrideRoute(nil, nil)
-	})
-}
-func TestOverrideRouteByAnnotation(t *testing.T) {
-	assert := assert.New(t)
-	var route Route
-	route = Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
-
-	netIngress := networking.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"configuration.konghq.com/protocols": "grpc,grpcs",
-			},
-		},
-	}
-
-	route = Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-		Ingress: netIngress,
-	}
-	var p Parser
-	p.overrideRouteByAnnotation(&route)
-	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
-	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
-
-	assert.NotPanics(func() {
-		p.overrideRoute(nil, nil)
-	})
-}
-
-func TestNormalizeProtocols(t *testing.T) {
-	assert := assert.New(t)
-	testTable := []struct {
-		inRoute  Route
-		outRoute Route
-	}{
-		{
-			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("http", "https"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("http", "https"),
-				},
-			},
-		},
-		{
-			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "https"),
-				},
-			},
-			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("http", "https"),
-				},
-			},
-		},
-	}
-
-	for _, testcase := range testTable {
-		normalizeProtocols(&testcase.inRoute)
-		assert.Equal(testcase.inRoute.Protocols, testcase.outRoute.Protocols)
-	}
-
-	assert.NotPanics(func() {
-		overrideUpstream(nil, nil, make(map[string]string))
-	})
-}
-
-func TestValidateProtocol(t *testing.T) {
-	assert := assert.New(t)
-	testTable := []struct {
-		input  string
-		result bool
-	}{
-		{"http", true},
-		{"https", true},
-		{"grpc", true},
-		{"grpcs", true},
-		{"grcpsfdsafdsfafdshttp", false},
-	}
-	for _, testcase := range testTable {
-		isMatch := validateProtocol(testcase.input)
-		assert.Equal(isMatch, testcase.result)
-	}
-
-	assert.NotPanics(func() {
-		overrideUpstream(nil, nil, make(map[string]string))
-	})
-}
-func TestUseSSLProtocol(t *testing.T) {
-	assert := assert.New(t)
-	testTable := []struct {
-		inRoute  kong.Route
-		outRoute kong.Route
-	}{
-		{
-			kong.Route{
-				Protocols: kong.StringSlice("grpc", "grpcs"),
-			},
-			kong.Route{
-				Protocols: kong.StringSlice("grpcs"),
-			},
-		},
-		{
-			kong.Route{
-				Protocols: kong.StringSlice("http", "https"),
-			},
-			kong.Route{
-				Protocols: kong.StringSlice("https"),
-			},
-		},
-		{
-			kong.Route{
-				Protocols: kong.StringSlice("grpcs", "https"),
-			},
-
-			kong.Route{
-				Protocols: kong.StringSlice("grpcs", "https"),
-			},
-		},
-		{
-			kong.Route{
-				Protocols: kong.StringSlice("grpc", "http"),
-			},
-			kong.Route{
-				Protocols: kong.StringSlice("grpcs", "https"),
-			},
-		},
-		{
-			kong.Route{
-				Protocols: []*string{},
-			},
-			kong.Route{
-				Protocols: kong.StringSlice("https"),
-			},
-		},
-	}
-
-	for _, testcase := range testTable {
-		useSSLProtocol(&testcase.inRoute)
-		assert.Equal(testcase.inRoute.Protocols, testcase.outRoute.Protocols)
-	}
-}
-
-func TestOverrideUpstream(t *testing.T) {
-	assert := assert.New(t)
-
-	testTable := []struct {
-		inUpstream     Upstream
-		inKongIngresss configurationv1.KongIngress
-		outUpstream    Upstream
-	}{
-		{
-			Upstream{
-				Upstream: kong.Upstream{
-					Name: kong.String("foo.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Upstream: &kong.Upstream{},
-			},
-			Upstream{
-				Upstream: kong.Upstream{
-					Name: kong.String("foo.com"),
-				},
-			},
-		},
-		{
-			Upstream{
-				Upstream: kong.Upstream{
-					Name: kong.String("foo.com"),
-				},
-			},
-			configurationv1.KongIngress{
-				Upstream: &kong.Upstream{
-					Name:               kong.String("wrong.com"),
-					HashOn:             kong.String("HashOn"),
-					HashOnCookie:       kong.String("HashOnCookie"),
-					HashOnCookiePath:   kong.String("HashOnCookiePath"),
-					HashOnHeader:       kong.String("HashOnHeader"),
-					HashFallback:       kong.String("HashFallback"),
-					HashFallbackHeader: kong.String("HashFallbackHeader"),
-					Slots:              kong.Int(42),
-				},
-			},
-			Upstream{
-				Upstream: kong.Upstream{
-					Name:               kong.String("foo.com"),
-					HashOn:             kong.String("HashOn"),
-					HashOnCookie:       kong.String("HashOnCookie"),
-					HashOnCookiePath:   kong.String("HashOnCookiePath"),
-					HashOnHeader:       kong.String("HashOnHeader"),
-					HashFallback:       kong.String("HashFallback"),
-					HashFallbackHeader: kong.String("HashFallbackHeader"),
-					Slots:              kong.Int(42),
-				},
-			},
-		},
-	}
-
-	for _, testcase := range testTable {
-		overrideUpstream(&testcase.inUpstream, &testcase.inKongIngresss, make(map[string]string))
-		assert.Equal(testcase.inUpstream, testcase.outUpstream)
-	}
-
-	assert.NotPanics(func() {
-		overrideUpstream(nil, nil, make(map[string]string))
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 }
 
@@ -4674,1234 +3799,9 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			p := Parser{
-				Logger: logrus.New(),
-			}
-			result := p.getEndpoints(testCase.svc, testCase.port, testCase.proto, testCase.fn)
+			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
-			}
-		})
-	}
-}
-
-func Test_processCredential(t *testing.T) {
-	type args struct {
-		credType   string
-		consumer   *Consumer
-		credConfig interface{}
-	}
-	tests := []struct {
-		name    string
-		args    args
-		result  *Consumer
-		wantErr bool
-	}{
-		{
-			name: "invalid cred type errors",
-			args: args{
-				credType:   "invalid-type",
-				consumer:   &Consumer{},
-				credConfig: nil,
-			},
-			result:  &Consumer{},
-			wantErr: true,
-		},
-		{
-			name: "key-auth",
-			args: args{
-				credType:   "key-auth",
-				consumer:   &Consumer{},
-				credConfig: map[string]string{"key": "foo"},
-			},
-			result: &Consumer{
-				KeyAuths: []*kong.KeyAuth{
-					{
-						Key: kong.String("foo"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "keyauth_credential",
-			args: args{
-				credType:   "keyauth_credential",
-				consumer:   &Consumer{},
-				credConfig: map[string]string{"key": "foo"},
-			},
-			result: &Consumer{
-				KeyAuths: []*kong.KeyAuth{
-					{
-						Key: kong.String("foo"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "basic-auth",
-			args: args{
-				credType: "basic-auth",
-				consumer: &Consumer{},
-				credConfig: map[string]string{
-					"username": "foo",
-					"password": "bar",
-				},
-			},
-			result: &Consumer{
-				BasicAuths: []*kong.BasicAuth{
-					{
-						Username: kong.String("foo"),
-						Password: kong.String("bar"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "basicauth_credential",
-			args: args{
-				credType: "basicauth_credential",
-				consumer: &Consumer{},
-				credConfig: map[string]string{
-					"username": "foo",
-					"password": "bar",
-				},
-			},
-			result: &Consumer{
-				BasicAuths: []*kong.BasicAuth{
-					{
-						Username: kong.String("foo"),
-						Password: kong.String("bar"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "hmac-auth",
-			args: args{
-				credType: "hmac-auth",
-				consumer: &Consumer{},
-				credConfig: map[string]string{
-					"username": "foo",
-					"secret":   "bar",
-				},
-			},
-			result: &Consumer{
-				HMACAuths: []*kong.HMACAuth{
-					{
-						Username: kong.String("foo"),
-						Secret:   kong.String("bar"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "hmacauth_credential",
-			args: args{
-				credType: "hmacauth_credential",
-				consumer: &Consumer{},
-				credConfig: map[string]string{
-					"username": "foo",
-					"secret":   "bar",
-				},
-			},
-			result: &Consumer{
-				HMACAuths: []*kong.HMACAuth{
-					{
-						Username: kong.String("foo"),
-						Secret:   kong.String("bar"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "oauth2",
-			args: args{
-				credType: "oauth2",
-				consumer: &Consumer{},
-				credConfig: map[string]interface{}{
-					"name":          "foo",
-					"client_id":     "bar",
-					"client_secret": "baz",
-					"redirect_uris": []string{"example.com"},
-				},
-			},
-			result: &Consumer{
-				Oauth2Creds: []*kong.Oauth2Credential{
-					{
-						Name:         kong.String("foo"),
-						ClientID:     kong.String("bar"),
-						ClientSecret: kong.String("baz"),
-						RedirectURIs: kong.StringSlice("example.com"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "jwt",
-			args: args{
-				credType: "jwt",
-				consumer: &Consumer{},
-				credConfig: map[string]string{
-					"key":            "foo",
-					"rsa_public_key": "bar",
-					"secret":         "baz",
-				},
-			},
-			result: &Consumer{
-				JWTAuths: []*kong.JWTAuth{
-					{
-						Key:          kong.String("foo"),
-						RSAPublicKey: kong.String("bar"),
-						Secret:       kong.String("baz"),
-						// set by default
-						Algorithm: kong.String("HS256"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "jwt_secret",
-			args: args{
-				credType: "jwt_secret",
-				consumer: &Consumer{},
-				credConfig: map[string]string{
-					"key":            "foo",
-					"rsa_public_key": "bar",
-					"secret":         "baz",
-				},
-			},
-			result: &Consumer{
-				JWTAuths: []*kong.JWTAuth{
-					{
-						Key:          kong.String("foo"),
-						RSAPublicKey: kong.String("bar"),
-						Secret:       kong.String("baz"),
-						// set by default
-						Algorithm: kong.String("HS256"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "acl",
-			args: args{
-				credType:   "acl",
-				consumer:   &Consumer{},
-				credConfig: map[string]string{"group": "group-foo"},
-			},
-			result: &Consumer{
-				ACLGroups: []*kong.ACLGroup{
-					{
-						Group: kong.String("group-foo"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var p Parser
-			if err := p.processCredential(tt.args.credType, tt.args.consumer,
-				tt.args.credConfig); (err != nil) != tt.wantErr {
-				t.Errorf("processCredential() error = %v, wantErr %v",
-					err, tt.wantErr)
-			}
-			assert.Equal(t, tt.result, tt.args.consumer)
-		})
-	}
-}
-
-func Test_getPluginRelations(t *testing.T) {
-	type args struct {
-		state KongState
-	}
-	tests := []struct {
-		name string
-		args args
-		want map[string]foreignRelations
-	}{
-		{
-			name: "empty state",
-			want: map[string]foreignRelations{},
-		},
-		{
-			name: "single consumer annotation",
-			args: args{
-				state: KongState{
-					Consumers: []Consumer{
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("foo-consumer"),
-							},
-							k8sKongConsumer: configurationv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			want: map[string]foreignRelations{
-				"ns1:foo": {Consumer: []string{"foo-consumer"}},
-				"ns1:bar": {Consumer: []string{"foo-consumer"}},
-			},
-		},
-		{
-			name: "single service annotation",
-			args: args{
-				state: KongState{
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							K8sService: corev1.Service{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			want: map[string]foreignRelations{
-				"ns1:foo": {Service: []string{"foo-service"}},
-				"ns1:bar": {Service: []string{"foo-service"}},
-			},
-		},
-		{
-			name: "single Ingress annotation",
-			args: args{
-				state: KongState{
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							Routes: []Route{
-								{
-									Route: kong.Route{
-										Name: kong.String("foo-route"),
-									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "foo,bar",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			want: map[string]foreignRelations{
-				"ns2:foo": {Route: []string{"foo-route"}},
-				"ns2:bar": {Route: []string{"foo-route"}},
-			},
-		},
-		{
-			name: "multiple routes with annotation",
-			args: args{
-				state: KongState{
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							Routes: []Route{
-								{
-									Route: kong.Route{
-										Name: kong.String("foo-route"),
-									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "foo,bar",
-											},
-										},
-									},
-								},
-								{
-									Route: kong.Route{
-										Name: kong.String("bar-route"),
-									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "bar,baz",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			want: map[string]foreignRelations{
-				"ns2:foo": {Route: []string{"foo-route"}},
-				"ns2:bar": {Route: []string{"foo-route", "bar-route"}},
-				"ns2:baz": {Route: []string{"bar-route"}},
-			},
-		},
-		{
-			name: "multiple consumers, routes and services",
-			args: args{
-				state: KongState{
-					Consumers: []Consumer{
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("foo-consumer"),
-							},
-							k8sKongConsumer: configurationv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
-									},
-								},
-							},
-						},
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("foo-consumer"),
-							},
-							k8sKongConsumer: configurationv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns2",
-									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
-									},
-								},
-							},
-						},
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("bar-consumer"),
-							},
-							k8sKongConsumer: configurationv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foobar",
-									},
-								},
-							},
-						},
-					},
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							K8sService: corev1.Service{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
-									},
-								},
-							},
-							Routes: []Route{
-								{
-									Route: kong.Route{
-										Name: kong.String("foo-route"),
-									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "foo,bar",
-											},
-										},
-									},
-								},
-								{
-									Route: kong.Route{
-										Name: kong.String("bar-route"),
-									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "bar,baz",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			want: map[string]foreignRelations{
-				"ns1:foo":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
-				"ns1:bar":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
-				"ns1:foobar": {Consumer: []string{"bar-consumer"}},
-				"ns2:foo":    {Consumer: []string{"foo-consumer"}, Route: []string{"foo-route"}},
-				"ns2:bar":    {Consumer: []string{"foo-consumer"}, Route: []string{"foo-route", "bar-route"}},
-				"ns2:baz":    {Route: []string{"bar-route"}},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := getPluginRelations(tt.args.state); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getPluginRelations() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_getCombinations(t *testing.T) {
-	type args struct {
-		relations foreignRelations
-	}
-	tests := []struct {
-		name string
-		args args
-		want []rel
-	}{
-		{
-			name: "empty",
-			args: args{
-				relations: foreignRelations{},
-			},
-			want: nil,
-		},
-		{
-			name: "plugins on consumer only",
-			args: args{
-				relations: foreignRelations{
-					Consumer: []string{"foo", "bar"},
-				},
-			},
-			want: []rel{
-				{
-					Consumer: "foo",
-				},
-				{
-					Consumer: "bar",
-				},
-			},
-		},
-		{
-			name: "plugins on service only",
-			args: args{
-				relations: foreignRelations{
-					Service: []string{"foo", "bar"},
-				},
-			},
-			want: []rel{
-				{
-					Service: "foo",
-				},
-				{
-					Service: "bar",
-				},
-			},
-		},
-		{
-			name: "plugins on routes only",
-			args: args{
-				relations: foreignRelations{
-					Route: []string{"foo", "bar"},
-				},
-			},
-			want: []rel{
-				{
-					Route: "foo",
-				},
-				{
-					Route: "bar",
-				},
-			},
-		},
-		{
-			name: "plugins on service and routes only",
-			args: args{
-				relations: foreignRelations{
-					Route:   []string{"foo", "bar"},
-					Service: []string{"foo", "bar"},
-				},
-			},
-			want: []rel{
-				{
-					Service: "foo",
-				},
-				{
-					Service: "bar",
-				},
-				{
-					Route: "foo",
-				},
-				{
-					Route: "bar",
-				},
-			},
-		},
-		{
-			name: "plugins on combination of route and consumer",
-			args: args{
-				relations: foreignRelations{
-					Route:    []string{"foo", "bar"},
-					Consumer: []string{"foo", "bar"},
-				},
-			},
-			want: []rel{
-				{
-					Consumer: "foo",
-					Route:    "foo",
-				},
-				{
-					Consumer: "bar",
-					Route:    "foo",
-				},
-				{
-					Consumer: "foo",
-					Route:    "bar",
-				},
-				{
-					Consumer: "bar",
-					Route:    "bar",
-				},
-			},
-		},
-		{
-			name: "plugins on combination of service and consumer",
-			args: args{
-				relations: foreignRelations{
-					Service:  []string{"foo", "bar"},
-					Consumer: []string{"foo", "bar"},
-				},
-			},
-			want: []rel{
-				{
-					Consumer: "foo",
-					Service:  "foo",
-				},
-				{
-					Consumer: "bar",
-					Service:  "foo",
-				},
-				{
-					Consumer: "foo",
-					Service:  "bar",
-				},
-				{
-					Consumer: "bar",
-					Service:  "bar",
-				},
-			},
-		},
-		{
-			name: "plugins on combination of service,route and consumer",
-			args: args{
-				relations: foreignRelations{
-					Consumer: []string{"c1", "c2"},
-					Route:    []string{"r1", "r2"},
-					Service:  []string{"s1", "s2"},
-				},
-			},
-			want: []rel{
-				{
-					Consumer: "c1",
-					Service:  "s1",
-				},
-				{
-					Consumer: "c2",
-					Service:  "s1",
-				},
-				{
-					Consumer: "c1",
-					Service:  "s2",
-				},
-				{
-					Consumer: "c2",
-					Service:  "s2",
-				},
-				{
-					Consumer: "c1",
-					Route:    "r1",
-				},
-				{
-					Consumer: "c2",
-					Route:    "r1",
-				},
-				{
-					Consumer: "c1",
-					Route:    "r2",
-				},
-				{
-					Consumer: "c2",
-					Route:    "r2",
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := getCombinations(tt.args.relations); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getCombinations() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_processTLSSections(t *testing.T) {
-	type args struct {
-		tlsSections []networking.IngressTLS
-		namespace   string
-	}
-	tests := []struct {
-		name string
-		args args
-		want map[string][]string
-	}{
-		{
-			args: args{
-				tlsSections: []networking.IngressTLS{
-					{
-						Hosts: []string{
-							"1.example.com",
-							"2.example.com",
-						},
-						SecretName: "sooper-secret",
-					},
-					{
-						Hosts: []string{
-							"3.example.com",
-							"4.example.com",
-						},
-						SecretName: "sooper-secret2",
-					},
-				},
-				namespace: "foo",
-			},
-			want: map[string][]string{
-				"foo/sooper-secret":  {"1.example.com", "2.example.com"},
-				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
-			},
-		},
-		{
-			args: args{
-				tlsSections: []networking.IngressTLS{
-					{
-						Hosts: []string{
-							"1.example.com",
-						},
-						SecretName: "sooper-secret",
-					},
-					{
-						Hosts: []string{
-							"3.example.com",
-							"1.example.com",
-							"4.example.com",
-						},
-						SecretName: "sooper-secret2",
-					},
-				},
-				namespace: "foo",
-			},
-			want: map[string][]string{
-				"foo/sooper-secret":  {"1.example.com"},
-				"foo/sooper-secret2": {"3.example.com", "4.example.com"},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := map[string][]string{}
-			processTLSSections(tt.args.tlsSections, tt.args.namespace, got)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("processTLSSections() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_overrideRouteStripPath(t *testing.T) {
-	type args struct {
-		route *kong.Route
-		anns  map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want *kong.Route
-	}{
-		{},
-		{
-			name: "basic empty route",
-			args: args{
-				route: &kong.Route{},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "set to false",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "false",
-				},
-			},
-			want: &kong.Route{
-				StripPath: kong.Bool(false),
-			},
-		},
-		{
-			name: "set to true and case insensitive",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "truE",
-				},
-			},
-			want: &kong.Route{
-				StripPath: kong.Bool(true),
-			},
-		},
-		{
-			name: "overrides any other value",
-			args: args{
-				route: &kong.Route{
-					StripPath: kong.Bool(false),
-				},
-				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "truE",
-				},
-			},
-			want: &kong.Route{
-				StripPath: kong.Bool(true),
-			},
-		},
-		{
-			name: "random value",
-			args: args{
-				route: &kong.Route{
-					StripPath: kong.Bool(false),
-				},
-				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "42",
-				},
-			},
-			want: &kong.Route{
-				StripPath: kong.Bool(false),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			overrideRouteStripPath(tt.args.route, tt.args.anns)
-			if !reflect.DeepEqual(tt.args.route, tt.want) {
-				t.Errorf("overrideRouteStripPath() got = %v, want %v", tt.args.route, tt.want)
-			}
-		})
-	}
-}
-
-func Test_overrideServicePath(t *testing.T) {
-	type args struct {
-		service *kong.Service
-		anns    map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want *kong.Service
-	}{
-		{},
-		{
-			name: "basic empty service",
-			args: args{
-				service: &kong.Service{},
-			},
-			want: &kong.Service{},
-		},
-		{
-			name: "set to valid value",
-			args: args{
-				service: &kong.Service{},
-				anns: map[string]string{
-					"configuration.konghq.com/path": "/foo",
-				},
-			},
-			want: &kong.Service{
-				Path: kong.String("/foo"),
-			},
-		},
-		{
-			name: "does not set path if doesn't start with /",
-			args: args{
-				service: &kong.Service{},
-				anns: map[string]string{
-					"configuration.konghq.com/path": "foo",
-				},
-			},
-			want: &kong.Service{},
-		},
-		{
-			name: "overrides any other value",
-			args: args{
-				service: &kong.Service{
-					Path: kong.String("/foo"),
-				},
-				anns: map[string]string{
-					"configuration.konghq.com/path": "/bar",
-				},
-			},
-			want: &kong.Service{
-				Path: kong.String("/bar"),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			overrideServicePath(tt.args.service, tt.args.anns)
-			if !reflect.DeepEqual(tt.args.service, tt.want) {
-				t.Errorf("overrideServicePath() got = %v, want %v", tt.args.service, tt.want)
-			}
-		})
-	}
-}
-
-func Test_overrideRouteHTTPSRedirectCode(t *testing.T) {
-	type args struct {
-		route *kong.Route
-		anns  map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want *kong.Route
-	}{
-		{},
-		{
-			name: "basic empty route",
-			args: args{
-				route: &kong.Route{},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "basic sanity",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/https-redirect-status-code": "301",
-				},
-			},
-			want: &kong.Route{
-				HTTPSRedirectStatusCode: kong.Int(301),
-			},
-		},
-		{
-			name: "random integer value",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/https-redirect-status-code": "42",
-				},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "random string",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/https-redirect-status-code": "foo",
-				},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "force ssl annotation set to true and protocols is not set",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"ingress.kubernetes.io/force-ssl-redirect": "true",
-				},
-			},
-			want: &kong.Route{
-				HTTPSRedirectStatusCode: kong.Int(302),
-				Protocols:               []*string{kong.String("https")},
-			},
-		},
-		{
-			name: "force ssl annotation set to true and protocol is set to grpc",
-			args: args{
-				route: &kong.Route{
-					Protocols: []*string{kong.String("grpc")},
-				},
-				anns: map[string]string{
-					"ingress.kubernetes.io/force-ssl-redirect": "true",
-					"konghq.com/protocols":                     "grpc",
-				},
-			},
-			want: &kong.Route{
-				HTTPSRedirectStatusCode: kong.Int(302),
-				Protocols:               []*string{kong.String("grpcs")},
-			},
-		},
-		{
-			name: "force ssl annotation set to false",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"ingress.kubernetes.io/force-ssl-redirect": "false",
-				},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "force ssl annotation set to true and HTTPS redirect code set to 307",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"ingress.kubernetes.io/force-ssl-redirect": "true",
-					"konghq.com/https-redirect-status-code":    "307",
-				},
-			},
-			want: &kong.Route{
-				HTTPSRedirectStatusCode: kong.Int(307),
-				Protocols:               []*string{kong.String("https")},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			overrideRouteHTTPSRedirectCode(tt.args.route, tt.args.anns)
-			if !reflect.DeepEqual(tt.args.route, tt.want) {
-				t.Errorf("overrideRouteHTTPSRedirectCode() got = %v, want %v", tt.args.route, tt.want)
-			}
-		})
-	}
-}
-
-func Test_overrideRoutePreserveHost(t *testing.T) {
-	type args struct {
-		route *kong.Route
-		anns  map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want *kong.Route
-	}{
-		{},
-		{
-			name: "basic empty route",
-			args: args{
-				route: &kong.Route{},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "basic sanity",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/preserve-host": "true",
-				},
-			},
-			want: &kong.Route{
-				PreserveHost: kong.Bool(true),
-			},
-		},
-		{
-			name: "case insensitive",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/preserve-host": "faLSe",
-				},
-			},
-			want: &kong.Route{
-				PreserveHost: kong.Bool(false),
-			},
-		},
-		{
-			name: "random integer value",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/https-redirect-status-code": "42",
-				},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "random string",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/https-redirect-status-code": "foo",
-				},
-			},
-			want: &kong.Route{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			overrideRoutePreserveHost(tt.args.route, tt.args.anns)
-			if !reflect.DeepEqual(tt.args.route, tt.want) {
-				t.Errorf("overrideRoutePreserveHost() got = %v, want %v", tt.args.route, tt.want)
-			}
-		})
-	}
-}
-
-func Test_overrideRouteRegexPriority(t *testing.T) {
-	type args struct {
-		route *kong.Route
-		anns  map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want *kong.Route
-	}{
-		{},
-		{
-			name: "basic empty route",
-			args: args{
-				route: &kong.Route{},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "basic sanity",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/regex-priority": "10",
-				},
-			},
-			want: &kong.Route{
-				RegexPriority: kong.Int(10),
-			},
-		},
-		{
-			name: "negative integer",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/regex-priority": "-10",
-				},
-			},
-			want: &kong.Route{
-				RegexPriority: kong.Int(-10),
-			},
-		},
-		{
-			name: "random float value",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/regex-priority": "42.42",
-				},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "random string",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/regex-priority": "foo",
-				},
-			},
-			want: &kong.Route{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			overrideRouteRegexPriority(tt.args.route, tt.args.anns)
-			if !reflect.DeepEqual(tt.args.route, tt.want) {
-				t.Errorf("overrideRouteRegexPriority() got = %v, want %v", tt.args.route, tt.want)
-			}
-		})
-	}
-}
-
-func Test_overrideRouteMethods(t *testing.T) {
-	type args struct {
-		route *kong.Route
-		anns  map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want *kong.Route
-	}{
-		{},
-		{
-			name: "basic empty route",
-			args: args{
-				route: &kong.Route{},
-			},
-			want: &kong.Route{},
-		},
-		{
-			name: "basic sanity",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/methods": "POST,GET",
-				},
-			},
-			want: &kong.Route{
-				Methods: kong.StringSlice("POST", "GET"),
-			},
-		},
-		{
-			name: "non-string",
-			args: args{
-				route: &kong.Route{},
-				anns: map[string]string{
-					"konghq.com/methods": "-10,GET",
-				},
-			},
-			want: &kong.Route{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Parser{
-				Logger: logrus.New(),
-			}
-			p.overrideRouteMethods(tt.args.route, tt.args.anns)
-			if !reflect.DeepEqual(tt.args.route, tt.want) {
-				t.Errorf("overrideRouteMethods() got = %v, want %v", tt.args.route, tt.want)
 			}
 		})
 	}

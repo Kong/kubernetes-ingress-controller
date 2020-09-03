@@ -63,6 +63,36 @@ func TestMergeIngressRules(t *testing.T) {
 				ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}, "2": {Namespace: "carrot"}},
 			},
 		},
+		{
+			name: "can merge SNI arrays",
+			inputs: []ingressRules{
+				{
+					SecretNameToSNIs: map[string][]string{"a": {"b", "c"}},
+				},
+				{
+					SecretNameToSNIs: map[string][]string{"a": {"d", "e"}},
+				},
+			},
+			wantOutput: &ingressRules{
+				SecretNameToSNIs:      map[string][]string{"a": {"b", "c", "d", "e"}},
+				ServiceNameToServices: map[string]kongstate.Service{},
+			},
+		},
+		{
+			name: "overwrites services",
+			inputs: []ingressRules{
+				{
+					ServiceNameToServices: map[string]kongstate.Service{"svc-name": {Namespace: "old"}},
+				},
+				{
+					ServiceNameToServices: map[string]kongstate.Service{"svc-name": {Namespace: "new"}},
+				},
+			},
+			wantOutput: &ingressRules{
+				SecretNameToSNIs:      map[string][]string{},
+				ServiceNameToServices: map[string]kongstate.Service{"svc-name": {Namespace: "new"}},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			gotOutput := mergeIngressRules(tt.inputs...)

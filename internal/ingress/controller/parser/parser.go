@@ -39,7 +39,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	}
 	parsedKnative := parseKnativeIngressRules(knativeIngresses)
 
-	return mergeIngressRules(&parsedIngress, &parsedKnative)
+	return mergeIngressRules(parsedIngress, parsedKnative)
 }
 
 // Build creates a Kong configuration from Ingress and Custom resources

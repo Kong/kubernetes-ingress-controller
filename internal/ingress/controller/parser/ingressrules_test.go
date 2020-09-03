@@ -11,7 +11,7 @@ import (
 func TestMergeIngressRules(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
-		inputs     []*ingressRules
+		inputs     []ingressRules
 		wantOutput *ingressRules
 	}{
 		{
@@ -23,7 +23,7 @@ func TestMergeIngressRules(t *testing.T) {
 		},
 		{
 			name: "nil maps",
-			inputs: []*ingressRules{
+			inputs: []ingressRules{
 				{}, {}, {},
 			},
 			wantOutput: &ingressRules{
@@ -33,7 +33,7 @@ func TestMergeIngressRules(t *testing.T) {
 		},
 		{
 			name: "one input",
-			inputs: []*ingressRules{
+			inputs: []ingressRules{
 				{
 					SecretNameToSNIs:      map[string][]string{"a": {"b", "c"}, "d": {"e", "f"}},
 					ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}},
@@ -46,7 +46,7 @@ func TestMergeIngressRules(t *testing.T) {
 		},
 		{
 			name: "three inputs",
-			inputs: []*ingressRules{
+			inputs: []ingressRules{
 				{
 					SecretNameToSNIs:      map[string][]string{"a": {"b", "c"}, "d": {"e", "f"}},
 					ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}},

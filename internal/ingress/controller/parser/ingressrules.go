@@ -21,7 +21,7 @@ func newIngressRules() ingressRules {
 	}
 }
 
-func mergeIngressRules(objs ...*ingressRules) ingressRules {
+func mergeIngressRules(objs ...ingressRules) ingressRules {
 	result := newIngressRules()
 
 	for _, obj := range objs {

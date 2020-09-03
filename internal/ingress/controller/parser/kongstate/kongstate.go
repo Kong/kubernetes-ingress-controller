@@ -6,7 +6,6 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/consumer"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -21,15 +20,15 @@ type KongState struct {
 	Certificates   []Certificate
 	CACertificates []kong.CACertificate
 	Plugins        []Plugin
-	Consumers      []consumer.Consumer
+	Consumers      []Consumer
 }
 
 func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
-	consumerIndex := make(map[string]consumer.Consumer)
+	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
 	for _, kConsumer := range s.ListKongConsumers() {
-		var c consumer.Consumer
+		var c Consumer
 		if kConsumer.Username == "" && kConsumer.CustomID == "" {
 			continue
 		}

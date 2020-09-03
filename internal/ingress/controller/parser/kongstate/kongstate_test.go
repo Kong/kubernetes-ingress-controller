@@ -6,7 +6,6 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/consumer"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +30,7 @@ func Test_getPluginRelations(t *testing.T) {
 			name: "single consumer annotation",
 			args: args{
 				state: KongState{
-					Consumers: []consumer.Consumer{
+					Consumers: []Consumer{
 						{
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),
@@ -166,7 +165,7 @@ func Test_getPluginRelations(t *testing.T) {
 			name: "multiple consumers, routes and services",
 			args: args{
 				state: KongState{
-					Consumers: []consumer.Consumer{
+					Consumers: []Consumer{
 						{
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),

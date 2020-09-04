@@ -12,6 +12,7 @@ import (
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
 func TestFromIngressV1beta1(t *testing.T) {
@@ -459,5 +460,245 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
+	})
+}
+
+func TestFromKnativeIngress(t *testing.T) {
+	assert := assert.New(t)
+	ingressList := []*knative.Ingress{
+		// 0
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{},
+				},
+			},
+		},
+		// 1
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// 2
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "bar-ns",
+												ServiceName:      "bar-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 20,
+										},
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// 3
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "bar-ns",
+												ServiceName:      "bar-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 20,
+										},
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				TLS: []knative.IngressTLS{
+					{
+						Hosts: []string{
+							"foo.example.com",
+							"foo1.example.com",
+						},
+						SecretName: "foo-secret",
+					},
+					{
+						Hosts: []string{
+							"bar.example.com",
+							"bar1.example.com",
+						},
+						SecretName: "bar-secret",
+					},
+				},
+			},
+		},
+	}
+	t.Run("no ingress returns empty info", func(t *testing.T) {
+		parsedInfo := fromKnativeIngress([]*knative.Ingress{})
+		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+	})
+	t.Run("empty ingress returns empty info", func(t *testing.T) {
+		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[0]})
+		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+	})
+	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
+		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[1]})
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
+		assert.Equal(kong.Service{
+			Name:           kong.String("foo-ns.foo-svc.42"),
+			Port:           kong.Int(80),
+			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Path:           kong.String("/"),
+			Protocol:       kong.String("http"),
+			WriteTimeout:   kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			ConnectTimeout: kong.Int(60000),
+			Retries:        kong.Int(5),
+		}, svc.Service)
+		assert.Equal(kong.Route{
+			Name:          kong.String("foo-namespace.foo.00"),
+			RegexPriority: kong.Int(0),
+			StripPath:     kong.Bool(false),
+			Paths:         kong.StringSlice("/"),
+			PreserveHost:  kong.Bool(true),
+			Protocols:     kong.StringSlice("http", "https"),
+			Hosts:         kong.StringSlice("my-func.example.com"),
+		}, svc.Routes[0].Route)
+		assert.Equal(kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"add": map[string]interface{}{
+					"headers": []string{"foo:bar"},
+				},
+			},
+		}, svc.Plugins[0])
+
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+	})
+	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
+		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[3]})
+
+		assert.Equal(SecretNameToSNIs(map[string][]string{
+			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
+			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
+		}), parsedInfo.SecretNameToSNIs)
+	})
+	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
+		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[2]})
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
+		assert.Equal(kong.Service{
+			Name:           kong.String("foo-ns.foo-svc.42"),
+			Port:           kong.Int(80),
+			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Path:           kong.String("/"),
+			Protocol:       kong.String("http"),
+			WriteTimeout:   kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			ConnectTimeout: kong.Int(60000),
+			Retries:        kong.Int(5),
+		}, svc.Service)
+		assert.Equal(kong.Route{
+			Name:          kong.String("foo-namespace.foo.00"),
+			RegexPriority: kong.Int(0),
+			StripPath:     kong.Bool(false),
+			Paths:         kong.StringSlice("/"),
+			PreserveHost:  kong.Bool(true),
+			Protocols:     kong.StringSlice("http", "https"),
+			Hosts:         kong.StringSlice("my-func.example.com"),
+		}, svc.Routes[0].Route)
+		assert.Equal(kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"add": map[string]interface{}{
+					"headers": []string{"foo:bar"},
+				},
+			},
+		}, svc.Plugins[0])
+
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 }

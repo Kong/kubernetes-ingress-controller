@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -39,7 +38,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-	parsedKnative := parseKnativeIngressRules(knativeIngresses)
+	parsedKnative := fromKnativeIngress(knativeIngresses)
 
 	return mergeIngressRules(parsedIngress, parsedTCPIngress, parsedKnative)
 }
@@ -150,130 +149,6 @@ func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networki
 		})
 	}
 	return result
-}
-
-func parseKnativeIngressRules(
-	ingressList []*knative.Ingress) ingressRules {
-
-	sort.SliceStable(ingressList, func(i, j int) bool {
-		return ingressList[i].CreationTimestamp.Before(
-			&ingressList[j].CreationTimestamp)
-	})
-
-	services := map[string]kongstate.Service{}
-	secretToSNIs := newSecretNameToSNIs()
-
-	for i := 0; i < len(ingressList); i++ {
-		ingress := *ingressList[i]
-		ingressSpec := ingress.Spec
-
-		secretToSNIs.addFromIngressTLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
-		for i, rule := range ingressSpec.Rules {
-			hosts := rule.Hosts
-			if rule.HTTP == nil {
-				continue
-			}
-			for j, rule := range rule.HTTP.Paths {
-				path := rule.Path
-
-				if path == "" {
-					path = "/"
-				}
-				r := kongstate.Route{
-					Route: kong.Route{
-						// TODO Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
-						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
-						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(false),
-						PreserveHost:  kong.Bool(true),
-						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(0),
-					},
-				}
-				r.Hosts = kong.StringSlice(hosts...)
-
-				knativeBackend := knativeSelectSplit(rule.Splits)
-				serviceName := knativeBackend.ServiceNamespace + "." +
-					knativeBackend.ServiceName + "." +
-					knativeBackend.ServicePort.String()
-				serviceHost := knativeBackend.ServiceName + "." +
-					knativeBackend.ServiceNamespace + "." +
-					knativeBackend.ServicePort.String() + ".svc"
-				service, ok := services[serviceName]
-				if !ok {
-
-					var headers []string
-					for key, value := range knativeBackend.AppendHeaders {
-						headers = append(headers, key+":"+value)
-					}
-					for key, value := range rule.AppendHeaders {
-						headers = append(headers, key+":"+value)
-					}
-
-					service = kongstate.Service{
-						Service: kong.Service{
-							Name:           kong.String(serviceName),
-							Host:           kong.String(serviceHost),
-							Port:           kong.Int(80),
-							Protocol:       kong.String("http"),
-							Path:           kong.String("/"),
-							ConnectTimeout: kong.Int(60000),
-							ReadTimeout:    kong.Int(60000),
-							WriteTimeout:   kong.Int(60000),
-							Retries:        kong.Int(5),
-						},
-						Namespace: ingress.Namespace,
-						Backend: kongstate.ServiceBackend{
-							Name: knativeBackend.ServiceName,
-							Port: knativeBackend.ServicePort,
-						},
-					}
-					if len(headers) > 0 {
-						service.Plugins = append(service.Plugins, kong.Plugin{
-							Name: kong.String("request-transformer"),
-							Config: kong.Configuration{
-								"add": map[string]interface{}{
-									"headers": headers,
-								},
-							},
-						})
-					}
-				}
-				service.Routes = append(service.Routes, r)
-				services[serviceName] = service
-			}
-		}
-	}
-
-	return ingressRules{
-		ServiceNameToServices: services,
-		SecretNameToSNIs:      secretToSNIs,
-	}
-}
-
-func knativeSelectSplit(splits []knative.IngressBackendSplit) knative.IngressBackendSplit {
-	if len(splits) == 0 {
-		return knative.IngressBackendSplit{}
-	}
-	res := splits[0]
-	maxPercentage := splits[0].Percent
-	if len(splits) == 1 {
-		return res
-	}
-	for i := 1; i < len(splits); i++ {
-		if splits[i].Percent > maxPercentage {
-			res = splits[i]
-			maxPercentage = res.Percent
-		}
-	}
-	return res
 }
 
 func getUpstreams(

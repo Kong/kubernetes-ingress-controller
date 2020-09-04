@@ -9,7 +9,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	corev1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -92,13 +91,11 @@ func Test_getPluginRelations(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("foo-route"),
 									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "foo,bar",
-											},
+									Ingress: util.K8sObjectInfo{
+										Name:      "some-ingress",
+										Namespace: "ns2",
+										Annotations: map[string]string{
+											annotations.DeprecatedPluginsKey: "foo,bar",
 										},
 									},
 								},
@@ -126,13 +123,11 @@ func Test_getPluginRelations(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("foo-route"),
 									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "foo,bar",
-											},
+									Ingress: util.K8sObjectInfo{
+										Name:      "some-ingress",
+										Namespace: "ns2",
+										Annotations: map[string]string{
+											annotations.DeprecatedPluginsKey: "foo,bar",
 										},
 									},
 								},
@@ -140,13 +135,11 @@ func Test_getPluginRelations(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("bar-route"),
 									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "bar,baz",
-											},
+									Ingress: util.K8sObjectInfo{
+										Name:      "some-ingress",
+										Namespace: "ns2",
+										Annotations: map[string]string{
+											annotations.DeprecatedPluginsKey: "bar,baz",
 										},
 									},
 								},
@@ -224,13 +217,11 @@ func Test_getPluginRelations(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("foo-route"),
 									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "foo,bar",
-											},
+									Ingress: util.K8sObjectInfo{
+										Name:      "some-ingress",
+										Namespace: "ns2",
+										Annotations: map[string]string{
+											annotations.DeprecatedPluginsKey: "foo,bar",
 										},
 									},
 								},
@@ -238,13 +229,11 @@ func Test_getPluginRelations(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("bar-route"),
 									},
-									Ingress: networking.Ingress{
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "some-ingress",
-											Namespace: "ns2",
-											Annotations: map[string]string{
-												annotations.DeprecatedPluginsKey: "bar,baz",
-											},
+									Ingress: util.K8sObjectInfo{
+										Name:      "some-ingress",
+										Namespace: "ns2",
+										Annotations: map[string]string{
+											annotations.DeprecatedPluginsKey: "bar,baz",
 										},
 									},
 								},

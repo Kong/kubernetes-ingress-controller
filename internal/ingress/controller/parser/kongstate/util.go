@@ -8,11 +8,10 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
 )
 
 func getKongIngressForService(s store.Storer, service corev1.Service) (
@@ -24,22 +23,9 @@ func getKongIngressForService(s store.Storer, service corev1.Service) (
 	return s.GetKongIngress(service.Namespace, confName)
 }
 
-// getKongIngressFromIngress checks if the Ingress
-// contains an annotation for configuration
-// or if exists a KongIngress object with the same name than the Ingress
-func getKongIngressFromIngress(s store.Storer, ing *networking.Ingress) (
+func getKongIngressFromObjectMeta(s store.Storer, obj *util.K8sObjectInfo) (
 	*configurationv1.KongIngress, error) {
-	return getKongIngressFromIngressAnnotations(s, ing.Namespace,
-		ing.Name, ing.Annotations)
-}
-
-// getKongIngressFromTCPIngress checks if the TCPIngress contains an
-// annotation for configuration
-// or if exists a KongIngress object with the same name than the Ingress
-func getKongIngressFromTCPIngress(s store.Storer, ing *configurationv1beta1.TCPIngress) (
-	*configurationv1.KongIngress, error) {
-	return getKongIngressFromIngressAnnotations(s, ing.Namespace,
-		ing.Name, ing.Annotations)
+	return getKongIngressFromIngressAnnotations(s, obj.Namespace, obj.Name, obj.Annotations)
 }
 
 func getKongIngressFromIngressAnnotations(s store.Storer, namespace, name string,

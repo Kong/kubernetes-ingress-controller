@@ -7,6 +7,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/sirupsen/logrus"
 	networking "k8s.io/api/networking/v1beta1"
@@ -54,7 +55,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networking.Ingres
 					path = "/"
 				}
 				r := kongstate.Route{
-					Ingress: ingress,
+					Ingress: util.FromK8sObject(&ingress),
 					Route: kong.Route{
 						// TODO Figure out a way to name the routes
 						// This is not a stable scheme
@@ -142,7 +143,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networking.Ingres
 			}
 		}
 		r := kongstate.Route{
-			Ingress: ingress,
+			Ingress: util.FromK8sObject(&ingress),
 			Route: kong.Route{
 				Name:          kong.String(ingress.Namespace + "." + ingress.Name),
 				Paths:         kong.StringSlice("/"),
@@ -185,8 +186,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 				continue
 			}
 			r := kongstate.Route{
-				IsTCP:      true,
-				TCPIngress: ingress,
+				Ingress: util.FromK8sObject(&ingress),
 				Route: kong.Route{
 					// TODO Figure out a way to name the routes
 					// This is not a stable scheme

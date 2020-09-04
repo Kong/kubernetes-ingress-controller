@@ -46,6 +46,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -307,13 +308,12 @@ func main() {
 	}
 	controllerConfig.Kong.Client = kongClient
 
-	err = discovery.ServerSupportsVersion(kubeClient.Discovery(), schema.GroupVersion{
-		Group:   "networking.k8s.io",
-		Version: "v1beta1",
-	})
-	if err == nil {
-		controllerConfig.UseNetworkingV1beta1 = true
+	controllerConfig.UseNetworkingV1beta1, err = serverHasGVK(
+		kubeClient, networkingv1beta1.SchemeGroupVersion.String(), "Ingress")
+	if err != nil {
+		log.Fatalf("serverHasGVK failed: %v", err)
 	}
+
 	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient,
 		cliConfig.SyncPeriod,

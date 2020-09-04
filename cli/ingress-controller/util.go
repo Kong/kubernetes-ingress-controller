@@ -8,6 +8,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/kong/go-kong/kong"
+	"k8s.io/client-go/discovery"
 )
 
 func getSemVerVer(v string) (semver.Version, error) {
@@ -56,4 +57,19 @@ func createWorkspace(ctx context.Context, client *kong.Client, workspace string)
 	}
 	_, err = client.Do(ctx, req, nil)
 	return err
+}
+
+// serverHasGVK returns true iff the Kubernetes API server supports the given resource kind at the given group-version.
+func serverHasGVK(client discovery.ServerResourcesInterface, groupVersion, kind string) (bool, error) {
+	list, err := client.ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		return false, err
+	}
+
+	for _, elem := range list.APIResources {
+		if elem.Kind == kind {
+			return true, nil
+		}
+	}
+	return false, nil
 }

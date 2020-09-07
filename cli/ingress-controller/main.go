@@ -308,7 +308,7 @@ func main() {
 	}
 	controllerConfig.Kong.Client = kongClient
 
-	controllerConfig.UseNetworkingV1beta1, err = serverHasGVK(
+	controllerConfig.IngressV1beta1UsesNetworking, err = serverHasGVK(
 		kubeClient, networkingv1beta1.SchemeGroupVersion.String(), "Ingress")
 	if err != nil {
 		log.Fatalf("serverHasGVK failed: %v", err)
@@ -355,7 +355,7 @@ func main() {
 	var cacheStores store.CacheStores
 
 	var ingInformer cache.SharedIndexInformer
-	if controllerConfig.UseNetworkingV1beta1 {
+	if controllerConfig.IngressV1beta1UsesNetworking {
 		ingInformer = coreInformerFactory.Networking().V1beta1().Ingresses().Informer()
 	} else {
 		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()

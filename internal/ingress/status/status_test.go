@@ -299,12 +299,12 @@ func TestStatusActions(t *testing.T) {
 	os.Setenv("POD_NAME", "foo1")
 	os.Setenv("POD_NAMESPACE", apiv1.NamespaceDefault)
 	c := Config{
-		CoreClient:             buildSimpleClientSet(),
-		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
-		IngressLister:          buildIngressLister(),
-		UpdateStatusOnShutdown: true,
-		UseNetworkingV1beta1:   true,
-		Logger:                 logrus.New(),
+		CoreClient:                   buildSimpleClientSet(),
+		PublishService:               apiv1.NamespaceDefault + "/" + "foo",
+		IngressLister:                buildIngressLister(),
+		UpdateStatusOnShutdown:       true,
+		IngressV1beta1UsesNetworking: true,
+		Logger:                       logrus.New(),
 	}
 	// create object
 	fkSync, err := NewStatusSyncer(ctx, c)

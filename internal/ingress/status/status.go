@@ -79,7 +79,7 @@ type Config struct {
 
 	IngressLister ingressLister
 
-	UseNetworkingV1beta1 bool
+	IngressV1beta1UsesNetworking bool
 
 	Logger logrus.FieldLogger
 }
@@ -360,7 +360,7 @@ func (s *statusSync) runUpdate(ctx context.Context, ing *networking.Ingress, sta
 			return true, nil
 		}
 
-		if s.UseNetworkingV1beta1 {
+		if s.IngressV1beta1UsesNetworking {
 			ingClient := client.NetworkingV1beta1().Ingresses(ing.Namespace)
 
 			currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})

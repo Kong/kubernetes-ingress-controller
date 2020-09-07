@@ -191,7 +191,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 			},
 		},
-		Ingresses: []*networking.Ingress{
+		IngressesV1beta1: []*networking.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -912,9 +912,9 @@ func TestServiceClientCertificate(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Secrets:   secrets,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -980,8 +980,8 @@ func TestServiceClientCertificate(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -1040,8 +1040,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -1117,8 +1117,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -1195,8 +1195,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
-				Ingresses: ingresses,
-				Services:  services,
+				IngressesV1beta1: ingresses,
+				Services:         services,
 			})
 			assert.Nil(err)
 			state, err := Build(logrus.New(), store)
@@ -1274,8 +1274,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
-				Ingresses: ingresses,
-				Services:  services,
+				IngressesV1beta1: ingresses,
+				Services:         services,
 			})
 			assert.Nil(err)
 			state, err := Build(logrus.New(), store)
@@ -1352,8 +1352,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
-				Ingresses: ingresses,
-				Services:  services,
+				IngressesV1beta1: ingresses,
+				Services:         services,
 			})
 			assert.Nil(err)
 			state, err := Build(logrus.New(), store)
@@ -1430,8 +1430,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
-				Ingresses: ingresses,
-				Services:  services,
+				IngressesV1beta1: ingresses,
+				Services:         services,
 			})
 			assert.Nil(err)
 			state, err := Build(logrus.New(), store)
@@ -1508,8 +1508,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
-				Ingresses: ingresses,
-				Services:  services,
+				IngressesV1beta1: ingresses,
+				Services:         services,
 			})
 			assert.Nil(err)
 			state, err := Build(logrus.New(), store)
@@ -1586,8 +1586,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
-				Ingresses: ingresses,
-				Services:  services,
+				IngressesV1beta1: ingresses,
+				Services:         services,
 			})
 			assert.Nil(err)
 			state, err := Build(logrus.New(), store)
@@ -1666,8 +1666,8 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -1716,8 +1716,8 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -1906,8 +1906,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -1986,8 +1986,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -2072,8 +2072,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
-				Ingresses: ingresses,
-				Services:  services,
+				IngressesV1beta1: ingresses,
+				Services:         services,
 			})
 			assert.Nil(err)
 			state, err := Build(logrus.New(), store)
@@ -2139,8 +2139,8 @@ func TestDefaultBackend(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -2207,8 +2207,8 @@ func TestDefaultBackend(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Services:  services,
+			IngressesV1beta1: ingresses,
+			Services:         services,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -2272,8 +2272,8 @@ func TestParserSecret(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Secrets:   secrets,
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -2353,8 +2353,8 @@ func TestParserSecret(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Secrets:   secrets,
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -2434,8 +2434,8 @@ func TestParserSecret(t *testing.T) {
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
-			Secrets:   secrets,
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -2511,9 +2511,9 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses:   ingresses,
-			Services:    services,
-			KongPlugins: plugins,
+			IngressesV1beta1: ingresses,
+			Services:         services,
+			KongPlugins:      plugins,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
@@ -2607,7 +2607,7 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses:          ingresses,
+			IngressesV1beta1:   ingresses,
 			Services:           services,
 			KongPlugins:        plugins,
 			KongClusterPlugins: clusterPlugins,
@@ -2678,7 +2678,7 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses:          ingresses,
+			IngressesV1beta1:   ingresses,
 			Services:           services,
 			KongClusterPlugins: clusterPlugins,
 		})
@@ -2726,7 +2726,7 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
-			Ingresses: ingresses,
+			IngressesV1beta1: ingresses,
 		})
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)

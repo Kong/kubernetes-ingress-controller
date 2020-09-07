@@ -32,7 +32,8 @@ import (
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	pool "gopkg.in/go-playground/pool.v3"
 	apiv1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -58,7 +59,8 @@ type Sync interface {
 
 type ingressLister interface {
 	// ListIngresses returns the list of Ingresses
-	ListIngresses() []*networking.Ingress
+	ListIngressesV1beta1() []*networkingv1beta1.Ingress
+	ListIngressesV1() []*networkingv1.Ingress
 	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
 }
@@ -79,7 +81,7 @@ type Config struct {
 
 	IngressLister ingressLister
 
-	IngressV1beta1UsesNetworking bool
+	IngressAPI utils.IngressAPI
 
 	Logger logrus.FieldLogger
 }
@@ -310,7 +312,7 @@ func sliceToStatus(endpoints []string) []apiv1.LoadBalancerIngress {
 
 // updateStatus changes the status information of Ingress rules
 func (s *statusSync) updateStatus(ctx context.Context, newIngressPoint []apiv1.LoadBalancerIngress) {
-	ings := s.IngressLister.ListIngresses()
+	ings := s.IngressLister.ListIngressesV1beta1()
 	tcpIngresses, err := s.IngressLister.ListTCPIngresses()
 	if err != nil {
 		s.Logger.Errorf("failed to list TPCIngresses: %v", err)
@@ -339,7 +341,7 @@ func (s *statusSync) updateStatus(ctx context.Context, newIngressPoint []apiv1.L
 	batch.WaitAll()
 }
 
-func (s *statusSync) runUpdate(ctx context.Context, ing *networking.Ingress, status []apiv1.LoadBalancerIngress,
+func (s *statusSync) runUpdate(ctx context.Context, ing *networkingv1beta1.Ingress, status []apiv1.LoadBalancerIngress,
 	client clientset.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {
@@ -360,7 +362,8 @@ func (s *statusSync) runUpdate(ctx context.Context, ing *networking.Ingress, sta
 			return true, nil
 		}
 
-		if s.IngressV1beta1UsesNetworking {
+		switch s.IngressAPI {
+		case utils.NetworkingV1beta1:
 			ingClient := client.NetworkingV1beta1().Ingresses(ing.Namespace)
 
 			currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
@@ -378,7 +381,7 @@ func (s *statusSync) runUpdate(ctx context.Context, ing *networking.Ingress, sta
 				logger.WithField("ingress_status", status).Debugf("successfully updated ingress status")
 			}
 
-		} else {
+		case utils.ExtensionsV1beta1:
 			ingClient := client.ExtensionsV1beta1().Ingresses(ing.Namespace)
 
 			currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
@@ -395,8 +398,12 @@ func (s *statusSync) runUpdate(ctx context.Context, ing *networking.Ingress, sta
 			} else {
 				logger.WithField("ingress_status", status).Debugf("successfully updated ingress status")
 			}
+
+		default:
+			return nil, fmt.Errorf("unknown IngressAPI: %v", s.IngressAPI)
 		}
 		return true, nil
+
 	}
 }
 

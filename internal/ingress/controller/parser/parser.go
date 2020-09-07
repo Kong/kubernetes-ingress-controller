@@ -25,7 +25,7 @@ import (
 )
 
 func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
-	ings := s.ListIngresses()
+	ings := s.ListIngressesV1beta1()
 	parsedIngress := fromIngressV1beta1(log, ings)
 
 	tcpIngresses, err := s.ListTCPIngresses()

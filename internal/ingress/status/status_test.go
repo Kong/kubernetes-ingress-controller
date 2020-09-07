@@ -25,7 +25,8 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -172,7 +173,7 @@ func buildSimpleClientSet() *testclient.Clientset {
 					SelfLink:  "/api/v1/namespaces/default/endpoints/ingress-controller-leader",
 				},
 			}}},
-		&networking.IngressList{Items: buildExtensionsIngresses()},
+		&networkingv1beta1.IngressList{Items: buildExtensionsIngresses()},
 	)
 }
 
@@ -180,14 +181,14 @@ func fakeSynFn(interface{}) error {
 	return nil
 }
 
-func buildExtensionsIngresses() []networking.Ingress {
-	return []networking.Ingress{
+func buildExtensionsIngresses() []networkingv1beta1.Ingress {
+	return []networkingv1beta1.Ingress{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo_ingress_1",
 				Namespace: apiv1.NamespaceDefault,
 			},
-			Status: networking.IngressStatus{
+			Status: networkingv1beta1.IngressStatus{
 				LoadBalancer: apiv1.LoadBalancerStatus{
 					Ingress: []apiv1.LoadBalancerIngress{
 						{
@@ -206,7 +207,7 @@ func buildExtensionsIngresses() []networking.Ingress {
 					"kubernetes.io/ingress.class": "no-nginx",
 				},
 			},
-			Status: networking.IngressStatus{
+			Status: networkingv1beta1.IngressStatus{
 				LoadBalancer: apiv1.LoadBalancerStatus{
 					Ingress: []apiv1.LoadBalancerIngress{
 						{
@@ -222,7 +223,7 @@ func buildExtensionsIngresses() []networking.Ingress {
 				Name:      "foo_ingress_2",
 				Namespace: apiv1.NamespaceDefault,
 			},
-			Status: networking.IngressStatus{
+			Status: networkingv1beta1.IngressStatus{
 				LoadBalancer: apiv1.LoadBalancerStatus{
 					Ingress: []apiv1.LoadBalancerIngress{},
 				},
@@ -234,20 +235,20 @@ func buildExtensionsIngresses() []networking.Ingress {
 type testIngressLister struct {
 }
 
-func (til *testIngressLister) ListIngresses() []*networking.Ingress {
-	var ingresses []*networking.Ingress
-	ingresses = append(ingresses, &networking.Ingress{
+func (til *testIngressLister) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
+	var ingresses []*networkingv1beta1.Ingress
+	ingresses = append(ingresses, &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo_ingress_non_01",
 			Namespace: apiv1.NamespaceDefault,
 		}})
 
-	ingresses = append(ingresses, &networking.Ingress{
+	ingresses = append(ingresses, &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo_ingress_1",
 			Namespace: apiv1.NamespaceDefault,
 		},
-		Status: networking.IngressStatus{
+		Status: networkingv1beta1.IngressStatus{
 			LoadBalancer: apiv1.LoadBalancerStatus{
 				Ingress: buildLoadBalancerIngressByIP(),
 			},
@@ -257,18 +258,16 @@ func (til *testIngressLister) ListIngresses() []*networking.Ingress {
 	return ingresses
 }
 
-func (til *testIngressLister) ListTCPIngresses() (
-	[]*configurationv1beta1.TCPIngress, error) {
-	var ingresses []*configurationv1beta1.TCPIngress
-
-	return ingresses, nil
+func (til *testIngressLister) ListIngressesV1() []*networkingv1.Ingress {
+	return nil
 }
 
-func (til *testIngressLister) ListKnativeIngresses() (
-	[]*knative.Ingress, error) {
-	var ingresses []*knative.Ingress
+func (til *testIngressLister) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
+	return nil, nil
+}
 
-	return ingresses, nil
+func (til *testIngressLister) ListKnativeIngresses() ([]*knative.Ingress, error) {
+	return nil, nil
 }
 
 func buildIngressLister() ingressLister {
@@ -289,6 +288,7 @@ func buildStatusSync() statusSync {
 			CoreClient:     buildSimpleClientSet(),
 			PublishService: apiv1.NamespaceDefault + "/" + "foo",
 			IngressLister:  buildIngressLister(),
+			IngressAPI:     utils.ExtensionsV1beta1,
 		},
 	}
 }
@@ -299,12 +299,12 @@ func TestStatusActions(t *testing.T) {
 	os.Setenv("POD_NAME", "foo1")
 	os.Setenv("POD_NAMESPACE", apiv1.NamespaceDefault)
 	c := Config{
-		CoreClient:                   buildSimpleClientSet(),
-		PublishService:               apiv1.NamespaceDefault + "/" + "foo",
-		IngressLister:                buildIngressLister(),
-		UpdateStatusOnShutdown:       true,
-		IngressV1beta1UsesNetworking: true,
-		Logger:                       logrus.New(),
+		CoreClient:             buildSimpleClientSet(),
+		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
+		IngressLister:          buildIngressLister(),
+		UpdateStatusOnShutdown: true,
+		IngressAPI:             utils.NetworkingV1beta1,
+		Logger:                 logrus.New(),
 	}
 	// create object
 	fkSync, err := NewStatusSyncer(ctx, c)

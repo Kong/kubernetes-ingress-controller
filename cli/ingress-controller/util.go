@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/blang/semver"
 	"github.com/kong/go-kong/kong"
-	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/tools/cache"
 )
 
 func getSemVerVer(v string) (semver.Version, error) {
@@ -59,17 +60,6 @@ func createWorkspace(ctx context.Context, client *kong.Client, workspace string)
 	return err
 }
 
-// serverHasGVK returns true iff the Kubernetes API server supports the given resource kind at the given group-version.
-func serverHasGVK(client discovery.ServerResourcesInterface, groupVersion, kind string) (bool, error) {
-	list, err := client.ServerResourcesForGroupVersion(groupVersion)
-	if err != nil {
-		return false, err
-	}
-
-	for _, elem := range list.APIResources {
-		if elem.Kind == kind {
-			return true, nil
-		}
-	}
-	return false, nil
+func newEmptyStore() cache.Store {
+	return cache.NewStore(func(interface{}) (string, error) { return "", errors.New("this store cannot add elements") })
 }

@@ -356,7 +356,7 @@ func main() {
 	}
 	controllerConfig.IngressAPI, err = utils.NegotiateResourceAPI(kubeClient, "Ingress", preferredIngressAPIs)
 	if err != nil {
-		log.Fatalf("NegotiateIngressAPI failed: %v", err)
+		log.Fatalf("NegotiateIngressAPI failed: %v, tried: %+v", err, preferredIngressAPIs)
 	}
 	log.Infof("chosen Ingress API version: %v", controllerConfig.IngressAPI)
 

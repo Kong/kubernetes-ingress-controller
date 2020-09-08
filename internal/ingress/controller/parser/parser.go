@@ -1354,7 +1354,7 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) []Certificate {
 				CreationTimestamp: secret.CreationTimestamp,
 			}
 		} else {
-			if kongCert.CreationTimestamp.After(secret.CreationTimestamp.Time) {
+			if kongCert.CreationTimestamp.After(secret.CreationTimestamp.Time) || (kongCert.CreationTimestamp.Unix() == secret.CreationTimestamp.Unix() && *kongCert.cert.ID > string(secret.UID)) {
 				kongCert.cert.ID = kong.String(string(secret.UID))
 				kongCert.CreationTimestamp = secret.CreationTimestamp
 			}
@@ -1366,6 +1366,9 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) []Certificate {
 				kongCert.cert.SNIs = append(kongCert.cert.SNIs, kong.String(sni))
 			}
 		}
+		sort.Slice(kongCert.cert.SNIs, func(i, j int) bool {
+			return *kongCert.cert.SNIs[i] > *kongCert.cert.SNIs[j]
+		})
 		certs[cert+key] = kongCert
 	}
 	var res []Certificate

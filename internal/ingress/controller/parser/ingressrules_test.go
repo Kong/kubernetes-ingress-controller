@@ -101,7 +101,7 @@ func TestMergeIngressRules(t *testing.T) {
 	}
 }
 
-func Test_addFromIngressTLS(t *testing.T) {
+func Test_addFromIngressV1beta1TLS(t *testing.T) {
 	type args struct {
 		tlsSections []networking.IngressTLS
 		namespace   string
@@ -165,7 +165,7 @@ func Test_addFromIngressTLS(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := newSecretNameToSNIs()
-			m.addFromIngressTLS(tt.args.tlsSections, tt.args.namespace)
+			m.addFromIngressV1beta1TLS(tt.args.tlsSections, tt.args.namespace)
 			assert.Equal(t, m, tt.want)
 		})
 	}

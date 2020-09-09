@@ -37,7 +37,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networking.Ingres
 
 		}
 
-		result.SecretNameToSNIs.addFromIngressTLS(ingressSpec.TLS, ingress.Namespace)
+		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
 
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
@@ -177,7 +177,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			"tcpingress_name":      ingress.Name,
 		})
 
-		result.SecretNameToSNIs.addFromIngressTLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
+		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
 		for i, rule := range ingressSpec.Rules {
 
@@ -265,7 +265,7 @@ func fromKnativeIngress(ingressList []*knative.Ingress) ingressRules {
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
-		secretToSNIs.addFromIngressTLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
+		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {

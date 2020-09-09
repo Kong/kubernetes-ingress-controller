@@ -79,7 +79,7 @@ func newSecretNameToSNIs() SecretNameToSNIs {
 	return SecretNameToSNIs(map[string][]string{})
 }
 
-func (m SecretNameToSNIs) addFromIngressTLS(tlsSections []networking.IngressTLS, namespace string) {
+func (m SecretNameToSNIs) addFromIngressV1beta1TLS(tlsSections []networking.IngressTLS, namespace string) {
 	for _, tls := range tlsSections {
 		if len(tls.Hosts) == 0 {
 			continue

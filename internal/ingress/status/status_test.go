@@ -28,6 +28,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	testclient "k8s.io/client-go/kubernetes/fake"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
@@ -56,8 +57,8 @@ func buildLoadBalancerIngressByIP() []apiv1.LoadBalancerIngress {
 	}
 }
 
-func buildSimpleClientSet() *testclient.Clientset {
-	return testclient.NewSimpleClientset(
+func buildSimpleClientSet(extraObjects ...runtime.Object) *testclient.Clientset {
+	objects := []runtime.Object{
 		&apiv1.PodList{Items: []apiv1.Pod{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -173,8 +174,9 @@ func buildSimpleClientSet() *testclient.Clientset {
 					SelfLink:  "/api/v1/namespaces/default/endpoints/ingress-controller-leader",
 				},
 			}}},
-		&networkingv1beta1.IngressList{Items: buildExtensionsIngresses()},
-	)
+	}
+
+	return testclient.NewSimpleClientset(append(objects, extraObjects...)...)
 }
 
 func fakeSynFn(interface{}) error {
@@ -285,7 +287,7 @@ func buildStatusSync() statusSync {
 		},
 		syncQueue: task.NewTaskQueue(fakeSynFn, logrus.New()),
 		Config: Config{
-			CoreClient:     buildSimpleClientSet(),
+			CoreClient:     buildSimpleClientSet(&networkingv1beta1.IngressList{Items: buildExtensionsIngresses()}),
 			PublishService: apiv1.NamespaceDefault + "/" + "foo",
 			IngressLister:  buildIngressLister(),
 			IngressAPI:     utils.ExtensionsV1beta1,
@@ -293,13 +295,13 @@ func buildStatusSync() statusSync {
 	}
 }
 
-func TestStatusActions(t *testing.T) {
+func TestStatusActionsV1beta1(t *testing.T) {
 	ctx := context.Background()
 	// make sure election can be created
 	os.Setenv("POD_NAME", "foo1")
 	os.Setenv("POD_NAMESPACE", apiv1.NamespaceDefault)
 	c := Config{
-		CoreClient:             buildSimpleClientSet(),
+		CoreClient:             buildSimpleClientSet(&networkingv1beta1.IngressList{Items: buildExtensionsIngresses()}),
 		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
 		IngressLister:          buildIngressLister(),
 		UpdateStatusOnShutdown: true,

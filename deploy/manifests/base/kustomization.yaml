@@ -1,7 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 resources:
-- namespace.yaml
-- custom-types.yaml
-- rbac.yaml
-- service.yaml
-- validation-service.yaml
-- kong-ingress-dbless.yaml
+  - namespace.yaml
+  - custom-types.yaml
+  - rbac.yaml
+  - validation-service.yaml

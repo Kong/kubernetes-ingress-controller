@@ -27,29 +27,9 @@ spec:
         image: kong:2.1
         securityContext:
           runAsUser: 1000
-        env:
-          # servers
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        - name: KONG_ADMIN_LISTEN
-          value: 127.0.0.1:8444 ssl
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
-          # DB
-        - name: KONG_DATABASE
-          value: "off"
-          # runtime tweaks
-        - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
-          # logging
-        - name: KONG_ADMIN_ACCESS_LOG
-          value: /dev/stdout
-        - name: KONG_ADMIN_ERROR_LOG
-          value: /dev/stderr
-        # - name: KONG_PROXY_ACCESS_LOG
-        # - value: /dev/stdout
-        - name: KONG_PROXY_ERROR_LOG
-          value: /dev/stderr
+        envFrom:
+          - secretRef:
+              name: kong-settings
         lifecycle:
           preStop:
             exec:

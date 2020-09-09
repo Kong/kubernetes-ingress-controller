@@ -1,0 +1,36 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    metadata:
+      name: kong-migrations
+    spec:
+      imagePullSecrets:
+        - name: kong-enterprise-edition-docker
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          envFrom:
+            - secretRef:
+                name: kong-settings
+          command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+        - name: kong-migrations
+          image: kong:2.1
+          env:
+            - name: KONG_LICENSE_DATA
+              valueFrom:
+                secretKeyRef:
+                  name: kong-enterprise-license
+                  key: license
+          envFrom:
+            - secretRef:
+                name: kong-settings
+            - secretRef:
+                name: kong-settings-cp
+          command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
+      restartPolicy: OnFailure

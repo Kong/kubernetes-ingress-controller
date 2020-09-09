@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ./../kong-dbless
+patchesStrategicMerge:
+  - kong-enterprise-k8s.yaml
+
+images:
+- name: kong
+  newName: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s
+  newTag: 2.0.4.2-alpine
+
+secretGenerator:
+  - name: kong-enterprise-license
+    namespace: kong
+    files:
+      - license=secrets/license.json
+  - name: kong-enterprise-edition-docker
+    namespace: kong
+    files:
+      - .dockerconfigjson=secrets/.dockerconfigjson
+    type: kubernetes.io/dockerconfigjson

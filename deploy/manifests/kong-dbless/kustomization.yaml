@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../base
+  - kong-ingress-dbless.yaml
+  - service.yaml
+
+secretGenerator:
+  - name: kong-settings
+    namespace: kong
+    envs:
+      - kong.env

@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: ingress-kong-cp
+  name: ingress-kong-cp
+  namespace: kong
+spec:
+  template:
+    spec:
+      initContainers:
+        - command:
+            - /bin/sh
+            - -c
+            - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
+              sleep 2;  done;
+          env:
+            - name: KONG_LICENSE_DATA
+              valueFrom:
+                secretKeyRef:
+                  key: license
+                  name: kong-enterprise-license
+          envFrom:
+            - secretRef:
+                name: kong-settings
+            - secretRef:
+                name: kong-settings-cp
+          image: kong
+          name: wait-for-migrations
+          volumeMounts:
+            - mountPath: /etc/secrets/kong-cluster-cert
+              name: kong-cluster-cert
+      containers:
+        - name: proxy
+          ports:
+            - containerPort: 8005
+              name: hybrid-data
+              protocol: TCP
+            - containerPort: 8006
+              name: hybrid-tel
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /etc/secrets/kong-cluster-cert
+              name: kong-cluster-cert
+      volumes:
+        - name: kong-cluster-cert
+          secret:
+            secretName: kong-cluster-cert
+
+
+

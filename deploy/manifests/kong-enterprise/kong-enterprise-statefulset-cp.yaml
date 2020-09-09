@@ -1,0 +1,155 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: ingress-kong-cp
+  name: ingress-kong-cp
+  namespace: kong
+spec:
+  serviceName: kong-admin
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingress-kong-cp
+  template:
+    metadata:
+      annotations:
+        kuma.io/gateway: enabled
+        prometheus.io/port: "8100"
+        prometheus.io/scrape: "true"
+        traffic.sidecar.istio.io/includeInboundPorts: ""
+      labels:
+        app: ingress-kong-cp
+    spec:
+      imagePullSecrets:
+        - name: kong-enterprise-edition-docker
+      initContainers:
+        - command:
+            - /bin/sh
+            - -c
+            - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
+              sleep 2;  done;
+          env:
+            - name: KONG_LICENSE_DATA
+              valueFrom:
+                secretKeyRef:
+                  key: license
+                  name: kong-enterprise-license
+          envFrom:
+            - secretRef:
+                name: kong-settings
+            - secretRef:
+                name: kong-settings-cp
+          image: kong
+          name: wait-for-migrations
+      serviceAccountName: kong-serviceaccount
+      containers:
+        - envFrom:
+            - secretRef:
+                name: kong-settings
+            - secretRef:
+                name: kong-settings-cp
+          env:
+            - name: KONG_LICENSE_DATA
+              valueFrom:
+                secretKeyRef:
+                  key: license
+                  name: kong-enterprise-license
+          image: kong
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - kong quit
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /status
+              port: 8100
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: proxy
+          ports:
+            - containerPort: 8001
+              name: admin
+              protocol: TCP
+            - containerPort: 8002
+              name: manager
+              protocol: TCP
+            - containerPort: 8000
+              name: proxy
+              protocol: TCP
+            - containerPort: 8443
+              name: proxy-ssl
+              protocol: TCP
+            - containerPort: 8100
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /status
+              port: 8100
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          securityContext:
+            runAsUser: 1000
+        - env:
+            - name: CONTROLLER_KONG_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kong-settings
+                  key: KONG_PASSWORD
+            - name: CONTROLLER_KONG_ADMIN_URL
+              value: https://127.0.0.1:8444
+            - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
+              value: "true"
+            - name: CONTROLLER_PUBLISH_SERVICE
+              value: kong/kong-proxy
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+          image:  ingress-controller
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: ingress-controller
+          ports:
+            - containerPort: 8080
+              name: webhook
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+

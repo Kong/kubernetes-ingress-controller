@@ -1,9 +1,0 @@
-resources:
-- ./../postgres
-- enterprise-resources.yaml
-patchesStrategicMerge:
-- kong-enterprise.yaml
-images:
-- name: kong
-  newName: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition
-  newTag: 1.5.0.2-alpine

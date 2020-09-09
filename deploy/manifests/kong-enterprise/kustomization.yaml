@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../base
+  - ../postgres
+  - kong-enterprise-services.yaml
+  - kong-enterprise-statefulset-cp.yaml
+  - kong-enterprise-deployment-dp.yaml
+  - kong-enterprise-migrations.yaml
+
+patchesStrategicMerge:
+  - validation-service.yaml
+
+images:
+  - name: kong
+    newName: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition
+    newTag: 2.1.3.1-alpine
+  - name: ingress-controller
+    newName: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller
+    newTag: 0.9.1
+
+secretGenerator:
+  - name: kong-settings
+    namespace: kong
+    envs:
+      - kong-common.env
+  - name: kong-settings-cp
+    namespace: kong
+    envs:
+      - kong-cp.env
+  - name: kong-settings-dp
+    namespace: kong
+    envs:
+      - kong-dp.env
+  - name: kong-enterprise-license
+    namespace: kong
+    files:
+      - license=secrets/license.json
+  - name: kong-enterprise-edition-docker
+    namespace: kong
+    files:
+      - .dockerconfigjson=secrets/.dockerconfigjson
+    type: kubernetes.io/dockerconfigjson

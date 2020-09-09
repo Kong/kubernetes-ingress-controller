@@ -1,8 +1,0 @@
-resources:
-- ./../base
-patchesStrategicMerge:
-- kong-enterprise-k8s.yaml
-images:
-- name: kong
-  newName: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s
-  newTag: 2.0.4.2-alpine

@@ -13,17 +13,6 @@ spec:
         - "/bin/sh"
         - "-c"
         - "while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi; sleep 2;  done;"
-        env:
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
-      containers:
-      - name: proxy
-        env:
-        - name: KONG_DATABASE
-          value: "postgres"
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
+        envFrom:
+          - secretRef:
+              name: kong-settings

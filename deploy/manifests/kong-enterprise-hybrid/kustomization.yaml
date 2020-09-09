@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../enterprise
+  - kong-enterprise-hybrid-services.yaml
+
+patchesStrategicMerge:
+  - kong-enterprise-statefulset-cp.yaml
+  - kong-enterprise-deployment-dp.yaml
+  - kong-enterprise-migrations.yaml
+
+secretGenerator:
+  - name: kong-cluster-cert
+    namespace: kong
+    type: kubernetes.io/tls
+    files:
+      - tls.crt=cluster-tls/cluster.crt
+      - tls.key=cluster-tls/cluster.key
+  - name: kong-settings-cp
+    namespace: kong
+    behavior: merge
+    envs:
+      - kong-cp.env
+  - name: kong-settings-dp
+    namespace: kong
+    behavior: merge
+    envs:
+      - kong-dp.env

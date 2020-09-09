@@ -312,37 +312,41 @@ func sliceToStatus(endpoints []string) []apiv1.LoadBalancerIngress {
 
 // updateStatus changes the status information of Ingress rules
 func (s *statusSync) updateStatus(ctx context.Context, newIngressPoint []apiv1.LoadBalancerIngress) {
-	ings := s.IngressLister.ListIngressesV1beta1()
-	tcpIngresses, err := s.IngressLister.ListTCPIngresses()
-	if err != nil {
-		s.Logger.Errorf("failed to list TPCIngresses: %v", err)
-	}
-	knativeIngresses, err := s.IngressLister.ListKnativeIngresses()
-	if err != nil {
-		s.Logger.Errorf("failed to list Knative Ingresses: %v", err)
-	}
-
 	p := pool.NewLimited(10)
 	defer p.Close()
 
 	batch := p.Batch()
 
-	for _, ing := range ings {
+	for _, ing := range s.IngressLister.ListIngressesV1beta1() {
 		batch.Queue(s.runUpdateIngressV1beta1(ctx, ing, newIngressPoint, s.CoreClient))
 	}
-	for _, ing := range tcpIngresses {
-		batch.Queue(s.runUpdateTCPIngress(ctx, ing, newIngressPoint, s.KongConfigClient))
+
+	for _, ing := range s.IngressLister.ListIngressesV1() {
+		batch.Queue(s.runUpdateIngressV1(ctx, ing, newIngressPoint, s.CoreClient))
 	}
-	for _, ing := range knativeIngresses {
-		batch.Queue(s.runUpdateKnativeIngress(ctx, ing, newIngressPoint, s.KnativeClient))
+
+	if tcpIngresses, err := s.IngressLister.ListTCPIngresses(); err != nil {
+		s.Logger.Errorf("failed to list TPCIngresses: %v", err)
+	} else {
+		for _, ing := range tcpIngresses {
+			batch.Queue(s.runUpdateTCPIngress(ctx, ing, newIngressPoint, s.KongConfigClient))
+		}
+	}
+
+	if knativeIngresses, err := s.IngressLister.ListKnativeIngresses(); err != nil {
+		s.Logger.Errorf("failed to list Knative Ingresses: %v", err)
+	} else {
+		for _, ing := range knativeIngresses {
+			batch.Queue(s.runUpdateKnativeIngress(ctx, ing, newIngressPoint, s.KnativeClient))
+		}
 	}
 
 	batch.QueueComplete()
 	batch.WaitAll()
 }
 
-func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkingv1beta1.Ingress, status []apiv1.LoadBalancerIngress,
-	client clientset.Interface) pool.WorkFunc {
+func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkingv1beta1.Ingress,
+	status []apiv1.LoadBalancerIngress, client clientset.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {
 			return nil, nil
@@ -352,7 +356,7 @@ func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkin
 			"ingress_namespace": ing.Namespace,
 			"ingress_name":      ing.Name,
 		})
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		sort.SliceStable(status, lessLoadBalancerIngress(status)) // BUG: data race - see issue #829
 
 		curIPs := ing.Status.LoadBalancer.Ingress
 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
@@ -363,6 +367,14 @@ func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkin
 		}
 
 		switch s.IngressAPI {
+		case utils.NetworkingV1:
+			// I expect this case to never happen, because if s.IngressAPI == NetworkingV1, then I expect Store to have only
+			// v1 ingresses (and no v1beta1 ingresses). If Store happens to have a v1beta1 Ingress nonetheless, I'm choosing
+			// not to drop it, but to log a warning and talk networking.k8s.io/v1beta1 (as opposed to extensions/v1beta1)
+			// because a v1-supporting Kubernetes API is more likely to support the former than the latter.
+			logger.Warnf("statusSync got an unexpected v1beta1 Ingress when it expected v1")
+			fallthrough
+
 		case utils.NetworkingV1beta1:
 			ingClient := client.NetworkingV1beta1().Ingresses(ing.Namespace)
 
@@ -402,6 +414,49 @@ func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkin
 		default:
 			return nil, fmt.Errorf("unknown IngressAPI: %v", s.IngressAPI)
 		}
+		return true, nil
+
+	}
+}
+
+func (s *statusSync) runUpdateIngressV1(ctx context.Context, ing *networkingv1.Ingress,
+	status []apiv1.LoadBalancerIngress, client clientset.Interface) pool.WorkFunc {
+	return func(wu pool.WorkUnit) (interface{}, error) {
+		if wu.IsCancelled() {
+			return nil, nil
+		}
+
+		logger := s.Logger.WithFields(logrus.Fields{
+			"ingress_namespace": ing.Namespace,
+			"ingress_name":      ing.Name,
+		})
+		sort.SliceStable(status, lessLoadBalancerIngress(status)) // BUG: data race - see issue #829
+
+		curIPs := ing.Status.LoadBalancer.Ingress
+		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
+
+		if ingressSliceEqual(status, curIPs) {
+			logger.Debugf("no change in status, update skipped")
+			return true, nil
+		}
+
+		ingClient := client.NetworkingV1().Ingresses(ing.Namespace)
+
+		currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch Ingress %v/%v: %w", ing.Namespace, ing.Name, err)
+		}
+
+		logger.WithField("ingress_status", status).Debugf("attempting to update ingress status")
+		currIng.Status.LoadBalancer.Ingress = status
+		_, err = ingClient.UpdateStatus(ctx, currIng, metav1.UpdateOptions{})
+		if err != nil {
+			// TODO return this error?
+			logger.Errorf("failed to update ingress status: %v", err)
+		} else {
+			logger.WithField("ingress_status", status).Debugf("successfully updated ingress status")
+		}
+
 		return true, nil
 
 	}
@@ -447,7 +502,7 @@ func (s *statusSync) runUpdateKnativeIngress(ctx context.Context,
 			"ingress_namespace": ing.Namespace,
 			"ingress_name":      ing.Name,
 		})
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		sort.SliceStable(status, lessLoadBalancerIngress(status)) // BUG: data race - see issue #829
 		curIPs := toCoreLBStatus(ing.Status.PublicLoadBalancer)
 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
 
@@ -507,7 +562,7 @@ func (s *statusSync) runUpdateTCPIngress(ctx context.Context,
 			"ingress_namespace": ing.Namespace,
 			"ingress_name":      ing.Name,
 		})
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		sort.SliceStable(status, lessLoadBalancerIngress(status)) // BUG: data race - see issue #829
 
 		curIPs := ing.Status.LoadBalancer.Ingress
 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))

@@ -328,7 +328,7 @@ func (s *statusSync) updateStatus(ctx context.Context, newIngressPoint []apiv1.L
 	batch := p.Batch()
 
 	for _, ing := range ings {
-		batch.Queue(s.runUpdate(ctx, ing, newIngressPoint, s.CoreClient))
+		batch.Queue(s.runUpdateIngressV1beta1(ctx, ing, newIngressPoint, s.CoreClient))
 	}
 	for _, ing := range tcpIngresses {
 		batch.Queue(s.runUpdateTCPIngress(ctx, ing, newIngressPoint, s.KongConfigClient))
@@ -341,7 +341,7 @@ func (s *statusSync) updateStatus(ctx context.Context, newIngressPoint []apiv1.L
 	batch.WaitAll()
 }
 
-func (s *statusSync) runUpdate(ctx context.Context, ing *networkingv1beta1.Ingress, status []apiv1.LoadBalancerIngress,
+func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkingv1beta1.Ingress, status []apiv1.LoadBalancerIngress,
 	client clientset.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {

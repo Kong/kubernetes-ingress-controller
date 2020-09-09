@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../kong-enterprise-k8s
+
+patchesStrategicMerge:
+  - service.yaml
+
+secretGenerator:
+  - name: kong-settings
+    namespace: kong
+    behavior: merge
+    envs:
+      - kong.env
+  - name: kong-enterprise-license
+    namespace: kong
+    behavior: replace
+    files:
+      - license=secrets/license.json
+  - name: kong-enterprise-edition-docker
+    namespace: kong
+    behavior: replace
+    files:
+      - .dockerconfigjson=secrets/.dockerconfigjson
+    type: kubernetes.io/dockerconfigjson

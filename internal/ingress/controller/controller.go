@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -111,14 +110,6 @@ func (n *KongController) syncIngress(interface{}) error {
 		n.Logger.Debugf("node is a follower, skipping update")
 		return nil
 	}
-
-	// Sort ingress rules using the ResourceVersion field
-	ings := n.store.ListIngresses()
-	sort.SliceStable(ings, func(i, j int) bool {
-		ir := ings[i].ResourceVersion
-		jr := ings[j].ResourceVersion
-		return ir < jr
-	})
 
 	n.Logger.Infof("syncing configuration")
 	state, err := parser.Build(n.Logger.WithField("component", "store"), n.store)

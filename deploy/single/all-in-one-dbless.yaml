@@ -34,6 +34,8 @@ spec:
     shortNames:
     - kcp
   scope: Cluster
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -101,6 +103,8 @@ spec:
     shortNames:
     - kc
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -137,6 +141,8 @@ spec:
     kind: KongCredential
     plural: kongcredentials
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -161,6 +167,8 @@ spec:
     shortNames:
     - ki
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -370,6 +378,8 @@ spec:
     shortNames:
     - kp
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:

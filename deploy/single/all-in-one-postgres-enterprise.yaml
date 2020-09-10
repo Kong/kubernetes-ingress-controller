@@ -34,6 +34,8 @@ spec:
     shortNames:
     - kcp
   scope: Cluster
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -101,6 +103,8 @@ spec:
     shortNames:
     - kc
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -137,6 +141,8 @@ spec:
     kind: KongCredential
     plural: kongcredentials
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -161,6 +167,8 @@ spec:
     shortNames:
     - ki
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -370,6 +378,8 @@ spec:
     shortNames:
     - kp
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -692,6 +702,28 @@ spec:
     spec:
       containers:
       - env:
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_PORT_MAPS
+          value: 80:8000, 443:8443
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
+        - name: KONG_DATABASE
+          value: postgres
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "1"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
         - name: KONG_LICENSE_DATA
           valueFrom:
             secretKeyRef:
@@ -705,28 +737,6 @@ spec:
           value: "on"
         - name: KONG_ADMIN_GUI_SESSION_CONF
           value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        - name: KONG_PORT_MAPS
-          value: 80:8000, 443:8443
-        - name: KONG_ADMIN_LISTEN
-          value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
-        - name: KONG_DATABASE
-          value: postgres
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
-        - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
-        - name: KONG_ADMIN_ACCESS_LOG
-          value: /dev/stdout
-        - name: KONG_ADMIN_ERROR_LOG
-          value: /dev/stderr
-        - name: KONG_PROXY_ERROR_LOG
-          value: /dev/stderr
         image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:1.5.0.2-alpine
         lifecycle:
           preStop:
@@ -747,12 +757,6 @@ spec:
           timeoutSeconds: 1
         name: proxy
         ports:
-        - containerPort: 8001
-          name: admin
-          protocol: TCP
-        - containerPort: 8002
-          name: manager
-          protocol: TCP
         - containerPort: 8000
           name: proxy
           protocol: TCP
@@ -761,6 +765,12 @@ spec:
           protocol: TCP
         - containerPort: 8100
           name: metrics
+          protocol: TCP
+        - containerPort: 8001
+          name: admin
+          protocol: TCP
+        - containerPort: 8002
+          name: manager
           protocol: TCP
         readinessProbe:
           failureThreshold: 3
@@ -773,11 +783,6 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
       - env:
-        - name: CONTROLLER_KONG_ADMIN_TOKEN
-          valueFrom:
-            secretKeyRef:
-              key: password
-              name: kong-enterprise-superuser-password
         - name: CONTROLLER_KONG_ADMIN_URL
           value: https://127.0.0.1:8444
         - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
@@ -794,6 +799,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        - name: CONTROLLER_KONG_ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: kong-enterprise-superuser-password
         image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.10.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -827,18 +837,17 @@ spec:
       - command:
         - /bin/sh
         - -c
-        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
-          sleep 2;  done;
+        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi; sleep 2;  done;
         env:
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
         - name: KONG_LICENSE_DATA
           valueFrom:
             secretKeyRef:
               key: license
               name: kong-enterprise-license
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
         image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:1.5.0.2-alpine
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
@@ -904,6 +913,12 @@ spec:
         - -c
         - kong migrations bootstrap
         env:
+        - name: KONG_PG_PASSWORD
+          value: kong
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
         - name: KONG_LICENSE_DATA
           valueFrom:
             secretKeyRef:
@@ -914,12 +929,6 @@ spec:
             secretKeyRef:
               key: password
               name: kong-enterprise-superuser-password
-        - name: KONG_PG_PASSWORD
-          value: kong
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
         image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:1.5.0.2-alpine
         name: kong-migrations
       imagePullSecrets:
@@ -928,8 +937,7 @@ spec:
       - command:
         - /bin/sh
         - -c
-        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db';
-          sleep 1; done
+        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done
         env:
         - name: KONG_PG_HOST
           value: postgres

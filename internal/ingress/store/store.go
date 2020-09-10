@@ -174,7 +174,8 @@ func (s Store) ListIngressesV1() []*networkingv1.Ingress {
 			s.logger.Warnf("listIngressesV1: dropping object of unexpected type: %#v", item)
 			continue
 		}
-		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassMatching) { // TODO
+		// TODO: Implement ingress class matching that uses the IngressV1 field (#590).
+		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassMatching) {
 			continue
 		}
 		ingresses = append(ingresses, ing)

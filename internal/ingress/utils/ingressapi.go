@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -50,7 +49,7 @@ func NegotiateResourceAPI(client discovery.ServerResourcesInterface, kind string
 ) (IngressAPI, error) {
 	for _, candidate := range allowedVersions {
 		if ok, err := serverHasGVK(client, candidate.String(), kind); err != nil {
-			return OtherAPI, errors.Wrapf(err, "serverHasGVK(%v): ", candidate)
+			return OtherAPI, err
 		} else if ok {
 			return candidate, nil
 		}

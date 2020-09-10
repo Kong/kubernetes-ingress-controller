@@ -2,7 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ./../kong-dbless
+  - ../kong-dbless
+
 patchesStrategicMerge:
   - kong-enterprise-k8s.yaml
 
@@ -16,7 +17,7 @@ secretGenerator:
     namespace: kong
     files:
       - license=secrets/license.json
-  - name: kong-enterprise-edition-docker
+  - name: kong-enterprise-k8s-docker
     namespace: kong
     files:
       - .dockerconfigjson=secrets/.dockerconfigjson

@@ -8,17 +8,12 @@ patchesStrategicMerge:
   - service.yaml
 
 secretGenerator:
-  - name: kong-settings
-    namespace: kong
-    behavior: merge
-    envs:
-      - kong.env
   - name: kong-enterprise-license
     namespace: kong
     behavior: replace
     files:
       - license=secrets/license.json
-  - name: kong-enterprise-edition-docker
+  - name: kong-enterprise-k8s-docker
     namespace: kong
     behavior: replace
     files:

@@ -5,7 +5,6 @@ resources:
   - ../kong-dbless
   - ../postgres
   - migration.yaml
-  - postgres.yaml
 
 patchesStrategicMerge:
   - kong-ingress-postgres.yaml

@@ -72,6 +72,8 @@ spec:
             - grpcs
             - tcp
             - tls
+  subresources:
+    status: {}
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -150,6 +152,8 @@ spec:
             - grpcs
             - tcp
             - tls
+  subresources:
+    status: {}
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -185,6 +189,8 @@ spec:
           type: array
           items:
             type: string
+  subresources:
+    status: {}
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -221,6 +227,8 @@ spec:
           type: string
         type:
           type: string
+  subresources:
+    status: {}
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -382,6 +390,8 @@ spec:
                   properties:
                     healthy: *healthy
                     unhealthy: *unhealthy
+  subresources:
+    status: {}
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -448,6 +458,8 @@ spec:
                         type: integer
         status:
           type: object
+  subresources:
+    status: {}
 status:
   acceptedNames:
     kind: ""

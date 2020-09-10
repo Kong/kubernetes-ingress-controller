@@ -10,7 +10,6 @@ import (
 )
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KongIngress is a top-level type. A client is created for it.
@@ -38,7 +37,6 @@ type KongIngressList struct {
 
 // +genclient
 // +genclient:nonNamespaced
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KongClusterPlugin is a top-level type. A client is created for it.
@@ -83,7 +81,6 @@ type KongClusterPluginList struct {
 }
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KongPlugin is a top-level type. A client is created for it.
@@ -194,7 +191,6 @@ func (in *Configuration) DeepCopyInto(out *Configuration) {
 }
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KongConsumer is a top-level type. A client is created for it.
@@ -228,7 +224,6 @@ type KongConsumerList struct {
 }
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KongCredential is a top-level type. A client is created for it.

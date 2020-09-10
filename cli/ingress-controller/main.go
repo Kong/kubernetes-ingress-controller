@@ -345,13 +345,13 @@ func main() {
 	}
 
 	var preferredIngressAPIs []utils.IngressAPI
-	if cliConfig.AllowIngressNetworkingV1 {
+	if !cliConfig.DisableIngressNetworkingV1 {
 		preferredIngressAPIs = append(preferredIngressAPIs, utils.NetworkingV1)
 	}
-	if cliConfig.AllowIngressNetworkingV1beta1 {
+	if !cliConfig.DisableIngressNetworkingV1beta1 {
 		preferredIngressAPIs = append(preferredIngressAPIs, utils.NetworkingV1beta1)
 	}
-	if cliConfig.AllowIngressExtensionsV1beta1 {
+	if !cliConfig.DisableIngressExtensionsV1beta1 {
 		preferredIngressAPIs = append(preferredIngressAPIs, utils.ExtensionsV1beta1)
 	}
 	controllerConfig.IngressAPI, err = utils.NegotiateResourceAPI(kubeClient, "Ingress", preferredIngressAPIs)

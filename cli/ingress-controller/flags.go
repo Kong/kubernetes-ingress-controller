@@ -84,9 +84,9 @@ type cliConfig struct {
 	KubeConfigFilePath string
 
 	// Allowed Ingress resource versions
-	AllowIngressExtensionsV1beta1 bool
-	AllowIngressNetworkingV1beta1 bool
-	AllowIngressNetworkingV1      bool
+	DisableIngressExtensionsV1beta1 bool
+	DisableIngressNetworkingV1beta1 bool
+	DisableIngressNetworkingV1      bool
 
 	// Performance
 	EnableProfiling bool
@@ -232,14 +232,14 @@ Kubernetes cluster and local discovery is attempted.`)
 		"authorization and master location information.")
 
 	// Allowed Ingress resource versions
-	flags.Bool("allow-ingress-extensionsv1beta1", true,
-		`If disabled, the ingress controller won't try extensions/v1beta1 when negotiating the newest supported
+	flags.Bool("disable-ingress-extensionsv1beta1", false,
+		`If set, the ingress controller won't try extensions/v1beta1 when negotiating the newest supported
 Ingress API with Kubernetes.`)
-	flags.Bool("allow-ingress-networkingv1beta1", true,
-		`If disabled, the ingress controller won't try networking.k8s.io/v1beta1 when negotiating the newest supported
+	flags.Bool("disable-ingress-networkingv1beta1", false,
+		`If set, the ingress controller won't try networking.k8s.io/v1beta1 when negotiating the newest supported
 Ingress API with Kubernetes.`)
-	flags.Bool("allow-ingress-networkingv1", false,
-		`If disabled, the ingress controller won't try networking/v1 when negotiating the newest supported
+	flags.Bool("disable-ingress-networkingv1", false,
+		`If set, the ingress controller won't try networking/v1 when negotiating the newest supported
 Ingress API with Kubernetes.`)
 
 	// Misc
@@ -366,10 +366,10 @@ func parseFlags() (cliConfig, error) {
 	config.APIServerHost = viper.GetString("apiserver-host")
 	config.KubeConfigFilePath = viper.GetString("kubeconfig")
 
-	// Allowed Ingress resource versions
-	config.AllowIngressExtensionsV1beta1 = viper.GetBool("allow-ingress-extensionsv1beta1")
-	config.AllowIngressNetworkingV1beta1 = viper.GetBool("allow-ingress-networkingv1beta1")
-	config.AllowIngressNetworkingV1 = viper.GetBool("allow-ingress-networkingv1")
+	// Disabled Ingress resource versions
+	config.DisableIngressExtensionsV1beta1 = viper.GetBool("disable-ingress-extensionsv1beta1")
+	config.DisableIngressNetworkingV1beta1 = viper.GetBool("disable-ingress-networkingv1beta1")
+	config.DisableIngressNetworkingV1 = viper.GetBool("disable-ingress-networkingv1")
 
 	// Misc
 	config.EnableProfiling = viper.GetBool("profiling")

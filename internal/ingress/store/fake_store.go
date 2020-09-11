@@ -7,7 +7,8 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
@@ -26,7 +27,8 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	Ingresses          []*networking.Ingress
+	IngressesV1beta1   []*networkingv1beta1.Ingress
+	IngressesV1        []*networkingv1.Ingress
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	Services           []*apiv1.Service
 	Endpoints          []*apiv1.Endpoints
@@ -45,9 +47,16 @@ func NewFakeStore(
 	objects FakeObjects) (Storer, error) {
 	var s Storer
 
-	ingressStore := cache.NewStore(keyFunc)
-	for _, ingress := range objects.Ingresses {
-		err := ingressStore.Add(ingress)
+	ingressV1beta1Store := cache.NewStore(keyFunc)
+	for _, ingress := range objects.IngressesV1beta1 {
+		err := ingressV1beta1Store.Add(ingress)
+		if err != nil {
+			return nil, err
+		}
+	}
+	ingressV1Store := cache.NewStore(keyFunc)
+	for _, ingress := range objects.IngressesV1 {
+		err := ingressV1Store.Add(ingress)
 		if err != nil {
 			return nil, err
 		}
@@ -125,11 +134,12 @@ func NewFakeStore(
 	}
 	s = Store{
 		stores: CacheStores{
-			Ingress:    ingressStore,
-			TCPIngress: tcpIngressStore,
-			Service:    serviceStore,
-			Endpoint:   endpointStore,
-			Secret:     secretsStore,
+			IngressV1beta1: ingressV1beta1Store,
+			IngressV1:      ingressV1Store,
+			TCPIngress:     tcpIngressStore,
+			Service:        serviceStore,
+			Endpoint:       endpointStore,
+			Secret:         secretsStore,
 
 			Plugin:        kongPluginsStore,
 			ClusterPlugin: kongClusterPluginsStore,

@@ -31,6 +31,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	"github.com/mitchellh/mapstructure"
@@ -87,7 +88,8 @@ type Configuration struct {
 	UpdateStatusOnShutdown bool
 	ElectionID             string
 
-	UseNetworkingV1beta1        bool
+	IngressAPI utils.IngressAPI
+
 	EnableKnativeIngressSupport bool
 
 	Logger logrus.FieldLogger
@@ -180,7 +182,7 @@ func NewKongController(ctx context.Context,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
-			UseNetworkingV1beta1:   config.UseNetworkingV1beta1,
+			IngressAPI:             config.IngressAPI,
 			OnStartedLeading: func() {
 				// force a sync
 				n.syncQueue.Enqueue(&networking.Ingress{})

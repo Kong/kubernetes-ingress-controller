@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/blang/semver"
 	"github.com/kong/go-kong/kong"
+	"k8s.io/client-go/tools/cache"
 )
 
 func getSemVerVer(v string) (semver.Version, error) {
@@ -56,4 +58,8 @@ func createWorkspace(ctx context.Context, client *kong.Client, workspace string)
 	}
 	_, err = client.Do(ctx, req, nil)
 	return err
+}
+
+func newEmptyStore() cache.Store {
+	return cache.NewStore(func(interface{}) (string, error) { return "", errors.New("this store cannot add elements") })
 }

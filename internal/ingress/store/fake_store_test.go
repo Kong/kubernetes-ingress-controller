@@ -9,7 +9,8 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -57,7 +58,7 @@ func Test_keyFunc(t *testing.T) {
 		{
 			want: "default/foo",
 			args: args{
-				obj: networking.Ingress{
+				obj: networkingv1beta1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
 						Namespace: "default",
@@ -87,10 +88,10 @@ func TestFakeStoreEmpty(t *testing.T) {
 	assert.NotNil(store)
 }
 
-func TestFakeStoreIngress(t *testing.T) {
+func TestFakeStoreIngressV1beta1(t *testing.T) {
 	assert := assert.New(t)
 
-	ingresses := []*networking.Ingress{
+	ingresses := []*networkingv1beta1.Ingress{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
@@ -99,16 +100,16 @@ func TestFakeStoreIngress(t *testing.T) {
 					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
-			Spec: networking.IngressSpec{
-				Rules: []networking.IngressRule{
+			Spec: networkingv1beta1.IngressSpec{
+				Rules: []networkingv1beta1.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: networking.IngressRuleValue{
-							HTTP: &networking.HTTPIngressRuleValue{
-								Paths: []networking.HTTPIngressPath{
+						IngressRuleValue: networkingv1beta1.IngressRuleValue{
+							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+								Paths: []networkingv1beta1.HTTPIngressPath{
 									{
 										Path: "/",
-										Backend: networking.IngressBackend{
+										Backend: networkingv1beta1.IngressBackend{
 											ServiceName: "foo-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -128,16 +129,16 @@ func TestFakeStoreIngress(t *testing.T) {
 					annotations.IngressClassKey: "not-kong",
 				},
 			},
-			Spec: networking.IngressSpec{
-				Rules: []networking.IngressRule{
+			Spec: networkingv1beta1.IngressSpec{
+				Rules: []networkingv1beta1.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: networking.IngressRuleValue{
-							HTTP: &networking.HTTPIngressRuleValue{
-								Paths: []networking.HTTPIngressPath{
+						IngressRuleValue: networkingv1beta1.IngressRuleValue{
+							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+								Paths: []networkingv1beta1.HTTPIngressPath{
 									{
 										Path: "/bar",
-										Backend: networking.IngressBackend{
+										Backend: networkingv1beta1.IngressBackend{
 											ServiceName: "bar-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -150,10 +151,91 @@ func TestFakeStoreIngress(t *testing.T) {
 			},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{Ingresses: ingresses})
+	store, err := NewFakeStore(FakeObjects{IngressesV1beta1: ingresses})
 	assert.Nil(err)
 	assert.NotNil(store)
-	assert.Len(store.ListIngresses(), 1)
+	assert.Len(store.ListIngressesV1beta1(), 1)
+	assert.Len(store.ListIngressesV1(), 0)
+}
+
+func TestFakeStoreIngressV1(t *testing.T) {
+	assert := assert.New(t)
+
+	ingresses := []*networkingv1.Ingress{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{
+													Name:   "http",
+													Number: 80,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: "not-kong",
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/bar",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "bar-svc",
+												Port: networkingv1.ServiceBackendPort{
+													Name:   "http",
+													Number: 80,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{IngressesV1: ingresses})
+	assert.Nil(err)
+	assert.NotNil(store)
+	assert.Len(store.ListIngressesV1(), 1)
+	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 
 func TestFakeStoreListTCPIngress(t *testing.T) {

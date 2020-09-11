@@ -9,9 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/sirupsen/logrus"
-	networking "k8s.io/api/networking/v1beta1"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -19,12 +17,7 @@ import (
 type Route struct {
 	kong.Route
 
-	// Ingress object associated with this route
-	Ingress networking.Ingress
-	// TCPIngress object associated with this route
-	TCPIngress configurationv1beta1.TCPIngress
-	// Is this route coming from TCPIngress or networking.Ingress?
-	IsTCP   bool
+	Ingress util.K8sObjectInfo
 	Plugins []kong.Plugin
 }
 
@@ -193,16 +186,12 @@ func (r *Route) overrideMethods(log logrus.FieldLogger, anns map[string]string) 
 
 // overrideByAnnotation sets Route protocols via annotation
 func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
-	anns := r.Ingress.Annotations
-	if r.IsTCP {
-		anns = r.TCPIngress.Annotations
-	}
-	r.overrideProtocols(anns)
-	r.overrideStripPath(anns)
-	r.overrideHTTPSRedirectCode(anns)
-	r.overridePreserveHost(anns)
-	r.overrideRegexPriority(anns)
-	r.overrideMethods(log, anns)
+	r.overrideProtocols(r.Ingress.Annotations)
+	r.overrideStripPath(r.Ingress.Annotations)
+	r.overrideHTTPSRedirectCode(r.Ingress.Annotations)
+	r.overridePreserveHost(r.Ingress.Annotations)
+	r.overrideRegexPriority(r.Ingress.Annotations)
+	r.overrideMethods(log, r.Ingress.Annotations)
 }
 
 // override sets Route fields by KongIngress first, then by annotation

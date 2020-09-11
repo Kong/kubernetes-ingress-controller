@@ -5,11 +5,10 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	networking "k8s.io/api/networking/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestOverrideRoute(t *testing.T) {
@@ -218,11 +217,9 @@ func TestOverrideRoutePriority(t *testing.T) {
 		},
 	}
 
-	netIngress := networking.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"configuration.konghq.com/protocols": "grpc,grpcs",
-			},
+	ingMeta := util.K8sObjectInfo{
+		Annotations: map[string]string{
+			"configuration.konghq.com/protocols": "grpc,grpcs",
 		},
 	}
 
@@ -230,7 +227,7 @@ func TestOverrideRoutePriority(t *testing.T) {
 		Route: kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
-		Ingress: netIngress,
+		Ingress: ingMeta,
 	}
 	route.override(logrus.New(), &kongIngress)
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
@@ -266,11 +263,9 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		},
 	}
 
-	netIngress := networking.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"configuration.konghq.com/protocols": "grpc,grpcs",
-			},
+	ingMeta := util.K8sObjectInfo{
+		Annotations: map[string]string{
+			"configuration.konghq.com/protocols": "grpc,grpcs",
 		},
 	}
 
@@ -278,7 +273,7 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		Route: kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
-		Ingress: netIngress,
+		Ingress: ingMeta,
 	}
 	route.overrideByAnnotation(logrus.New())
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))

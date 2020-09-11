@@ -83,6 +83,11 @@ type cliConfig struct {
 	APIServerHost      string
 	KubeConfigFilePath string
 
+	// Allowed Ingress resource versions
+	DisableIngressExtensionsV1beta1 bool
+	DisableIngressNetworkingV1beta1 bool
+	DisableIngressNetworkingV1      bool
+
 	// Performance
 	EnableProfiling bool
 
@@ -226,6 +231,17 @@ Kubernetes cluster and local discovery is attempted.`)
 	flags.String("kubeconfig", "", "Path to kubeconfig file with "+
 		"authorization and master location information.")
 
+	// Allowed Ingress resource versions
+	flags.Bool("disable-ingress-extensionsv1beta1", false,
+		`If set, the ingress controller won't try extensions/v1beta1 when negotiating the newest supported
+Ingress API with Kubernetes.`)
+	flags.Bool("disable-ingress-networkingv1beta1", false,
+		`If set, the ingress controller won't try networking.k8s.io/v1beta1 when negotiating the newest supported
+Ingress API with Kubernetes.`)
+	flags.Bool("disable-ingress-networkingv1", false,
+		`If set, the ingress controller won't try networking/v1 when negotiating the newest supported
+Ingress API with Kubernetes.`)
+
 	// Misc
 	flags.Bool("profiling", true, `Enable profiling via web interface host:port/debug/pprof/`)
 	flags.Bool("version", false,
@@ -349,6 +365,11 @@ func parseFlags() (cliConfig, error) {
 	// k8s connection details
 	config.APIServerHost = viper.GetString("apiserver-host")
 	config.KubeConfigFilePath = viper.GetString("kubeconfig")
+
+	// Disabled Ingress resource versions
+	config.DisableIngressExtensionsV1beta1 = viper.GetBool("disable-ingress-extensionsv1beta1")
+	config.DisableIngressNetworkingV1beta1 = viper.GetBool("disable-ingress-networkingv1beta1")
+	config.DisableIngressNetworkingV1 = viper.GetBool("disable-ingress-networkingv1")
 
 	// Misc
 	config.EnableProfiling = viper.GetBool("profiling")

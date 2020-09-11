@@ -307,13 +307,6 @@ func main() {
 	}
 	controllerConfig.Kong.Client = kongClient
 
-	err = discovery.ServerSupportsVersion(kubeClient.Discovery(), schema.GroupVersion{
-		Group:   "networking.k8s.io",
-		Version: "v1beta1",
-	})
-	if err == nil {
-		controllerConfig.UseNetworkingV1beta1 = true
-	}
 	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient,
 		cliConfig.SyncPeriod,
@@ -351,18 +344,41 @@ func main() {
 		UpdateCh: updateChannel,
 	}
 
+	var preferredIngressAPIs []utils.IngressAPI
+	if !cliConfig.DisableIngressNetworkingV1 {
+		preferredIngressAPIs = append(preferredIngressAPIs, utils.NetworkingV1)
+	}
+	if !cliConfig.DisableIngressNetworkingV1beta1 {
+		preferredIngressAPIs = append(preferredIngressAPIs, utils.NetworkingV1beta1)
+	}
+	if !cliConfig.DisableIngressExtensionsV1beta1 {
+		preferredIngressAPIs = append(preferredIngressAPIs, utils.ExtensionsV1beta1)
+	}
+	controllerConfig.IngressAPI, err = utils.NegotiateResourceAPI(kubeClient, "Ingress", preferredIngressAPIs)
+	if err != nil {
+		log.Fatalf("NegotiateIngressAPI failed: %v, tried: %+v", err, preferredIngressAPIs)
+	}
+	log.Infof("chosen Ingress API version: %v", controllerConfig.IngressAPI)
+
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
 
 	var ingInformer cache.SharedIndexInformer
-	if controllerConfig.UseNetworkingV1beta1 {
+	switch controllerConfig.IngressAPI {
+	case utils.NetworkingV1:
+		ingInformer = coreInformerFactory.Networking().V1().Ingresses().Informer()
+		cacheStores.IngressV1 = ingInformer.GetStore()
+		cacheStores.IngressV1beta1 = newEmptyStore()
+	case utils.NetworkingV1beta1:
 		ingInformer = coreInformerFactory.Networking().V1beta1().Ingresses().Informer()
-	} else {
+		cacheStores.IngressV1 = newEmptyStore()
+		cacheStores.IngressV1beta1 = ingInformer.GetStore()
+	case utils.ExtensionsV1beta1:
 		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
+		cacheStores.IngressV1 = newEmptyStore()
+		cacheStores.IngressV1beta1 = ingInformer.GetStore()
 	}
-
 	ingInformer.AddEventHandler(reh)
-	cacheStores.Ingress = ingInformer.GetStore()
 	informers = append(informers, ingInformer)
 
 	endpointsInformer := coreInformerFactory.Core().V1().Endpoints().Informer()

@@ -147,24 +147,12 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
 			var kongIngress *configurationv1.KongIngress
 			var err error
-			if ks.Services[i].Routes[j].IsTCP {
-				kongIngress, err = getKongIngressFromTCPIngress(s,
-					&ks.Services[i].Routes[j].TCPIngress)
-				if err != nil {
-					log.WithFields(logrus.Fields{
-						"tcpingress_name":      ks.Services[i].Routes[j].TCPIngress.Name,
-						"tcpingress_namespace": ks.Services[i].Routes[j].TCPIngress.Namespace,
-					}).Errorf("failed to fetch KongIngress resource for Ingress: %v", err)
-				}
-			} else {
-				kongIngress, err = getKongIngressFromIngress(s,
-					&ks.Services[i].Routes[j].Ingress)
-				if err != nil {
-					log.WithFields(logrus.Fields{
-						"ingress_name":      ks.Services[i].Routes[j].Ingress.Name,
-						"ingress_namespace": ks.Services[i].Routes[j].Ingress.Namespace,
-					}).Errorf("failed to fetch KongIngress resource for Ingress: %v", err)
-				}
+			kongIngress, err = getKongIngressFromObjectMeta(s, &ks.Services[i].Routes[j].Ingress)
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"resource_name":      ks.Services[i].Routes[j].Ingress.Name,
+					"resource_namespace": ks.Services[i].Routes[j].Ingress.Namespace,
+				}).Errorf("failed to fetch KongIngress resource: %v", err)
 			}
 
 			ks.Services[i].Routes[j].override(log, kongIngress)
@@ -230,7 +218,7 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 		// route
 		for j := range ks.Services[i].Routes {
 			ingress := ks.Services[i].Routes[j].Ingress
-			pluginList := annotations.ExtractKongPluginsFromAnnotations(ingress.GetAnnotations())
+			pluginList := annotations.ExtractKongPluginsFromAnnotations(ingress.Annotations)
 			for _, pluginName := range pluginList {
 				addRouteRelation(ingress.Namespace, pluginName, *ks.Services[i].Routes[j].Name)
 			}

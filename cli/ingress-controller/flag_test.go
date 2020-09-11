@@ -182,6 +182,10 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		"--apiserver-host", "kube-apiserver.internal",
 		"--kubeconfig", "/path/to/kubeconfig",
 
+		"--disable-ingress-extensionsv1beta1",
+		"--disable-ingress-networkingv1beta1",
+		"--disable-ingress-networkingv1",
+
 		"--log-format", "json",
 
 		"--profiling=false",
@@ -221,6 +225,10 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		APIServerHost:      "kube-apiserver.internal",
 		KubeConfigFilePath: "/path/to/kubeconfig",
 
+		DisableIngressNetworkingV1:      true,
+		DisableIngressNetworkingV1beta1: true,
+		DisableIngressExtensionsV1beta1: true,
+
 		LogLevel:  "info",
 		LogFormat: "json",
 
@@ -251,6 +259,10 @@ func TestOverrideViaEnvVars(t *testing.T) {
 		"CONTROLLER_LOG_LEVEL": "panic",
 
 		"CONTROLLER_KONG_CUSTOM_ENTITIES_SECRET": "foons/barsecretname",
+
+		"CONTROLLER_DISABLE_INGRESS_EXTENSIONSV1BETA1": "true",
+		"CONTROLLER_DISABLE_INGRESS_NETWORKINGV1BETA1": "true",
+		"CONTROLLER_DISABLE_INGRESS_NETWORKINGV1":      "true",
 	}
 	for k, v := range envs {
 		os.Setenv(k, v)
@@ -289,6 +301,10 @@ func TestOverrideViaEnvVars(t *testing.T) {
 
 		APIServerHost:      "",
 		KubeConfigFilePath: "",
+
+		DisableIngressNetworkingV1:      true,
+		DisableIngressNetworkingV1beta1: true,
+		DisableIngressExtensionsV1beta1: true,
 
 		LogLevel:  "panic",
 		LogFormat: "text",

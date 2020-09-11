@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -66,7 +67,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
+						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:         kong.StringSlice(path),
 						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
@@ -180,25 +181,23 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 
 		if ingressSpec.DefaultBackend != nil {
 			allDefaultBackends = append(allDefaultBackends, ingress)
-
 		}
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
 
 		for i, rule := range ingressSpec.Rules {
-			host := rule.Host
 			if rule.HTTP == nil {
 				continue
 			}
-			for j, rule := range rule.HTTP.Paths {
-				if strings.Contains(rule.Path, "//") {
-					log.Errorf("rule skipped: invalid path: '%v'", rule.Path)
+			for j, rulePath := range rule.HTTP.Paths {
+				if strings.Contains(rulePath.Path, "//") {
+					log.Errorf("rule skipped: invalid path: '%v'", rulePath.Path)
 					continue
 				}
 
 				pathType := networkingv1.PathTypeImplementationSpecific
-				if rule.PathType != nil {
-					pathType = *rule.PathType
+				if rulePath.PathType != nil {
+					pathType = *rulePath.PathType
 				}
 
 				r := kongstate.Route{
@@ -212,28 +211,27 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
-						Paths:         pathsFromK8s(rule.Path, pathType),
+						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:         pathsFromK8s(rulePath.Path, pathType),
 						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
 						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(priorityForPath(rule.Path, pathType)),
+						RegexPriority: kong.Int(priorityForPath(rulePath.Path, pathType)),
 					},
 				}
-				if host != "" {
-					r.Hosts = kong.StringSlice(host)
+				if rule.Host != "" {
+					r.Hosts = kong.StringSlice(rule.Host)
 				}
 
-				serviceName := ingress.Namespace + "." +
-					rule.Backend.Service.Name + "." + strconv.Itoa(int(rule.Backend.Service.Port.Number))
+				serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rulePath.Backend.Service.Name,
+					rulePath.Backend.Service.Port.Number)
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
 					service = kongstate.Service{
 						Service: kong.Service{
 							Name: kong.String(serviceName),
-							Host: kong.String(rule.Backend.Service.Name +
-								"." + ingress.Namespace + "." +
-								strconv.Itoa(int(rule.Backend.Service.Port.Number)) + ".svc"),
+							Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", rulePath.Backend.Service.Name, ingress.Namespace,
+								rulePath.Backend.Service.Port.Number)),
 							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
@@ -244,8 +242,8 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						},
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
-							Name: rule.Backend.Service.Name,
-							Port: intstr.FromInt(int(rule.Backend.Service.Port.Number)),
+							Name: rulePath.Backend.Service.Name,
+							Port: intstr.FromInt(int(rulePath.Backend.Service.Port.Number)),
 						},
 					}
 				}
@@ -263,17 +261,15 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 	if len(allDefaultBackends) > 0 {
 		ingress := allDefaultBackends[0]
 		defaultBackend := allDefaultBackends[0].Spec.DefaultBackend
-		serviceName := allDefaultBackends[0].Namespace + "." +
-			defaultBackend.Service.Name + "." +
-			strconv.Itoa(int(defaultBackend.Service.Port.Number))
+		serviceName := fmt.Sprintf("%s.%s.%d", allDefaultBackends[0].Namespace, defaultBackend.Service.Name,
+			defaultBackend.Service.Port.Number)
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
 			service = kongstate.Service{
 				Service: kong.Service{
 					Name: kong.String(serviceName),
-					Host: kong.String(defaultBackend.Service.Name + "." +
-						ingress.Namespace + "." +
-						strconv.Itoa(int(defaultBackend.Service.Port.Number)) + ".svc"),
+					Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", defaultBackend.Service.Name, ingress.Namespace,
+						defaultBackend.Service.Port.Number)),
 					Port:           kong.Int(80),
 					Protocol:       kong.String("http"),
 					ConnectTimeout: kong.Int(60000),
@@ -364,17 +360,14 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 				continue
 			}
 
-			serviceName := ingress.Namespace + "." +
-				rule.Backend.ServiceName + "." +
-				strconv.Itoa(rule.Backend.ServicePort)
+			serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
 			service, ok := result.ServiceNameToServices[serviceName]
 			if !ok {
 				service = kongstate.Service{
 					Service: kong.Service{
 						Name: kong.String(serviceName),
-						Host: kong.String(rule.Backend.ServiceName +
-							"." + ingress.Namespace + "." +
-							strconv.Itoa(rule.Backend.ServicePort) + ".svc"),
+						Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", rule.Backend.ServiceName, ingress.Namespace,
+							rule.Backend.ServicePort)),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("tcp"),
 						ConnectTimeout: kong.Int(60000),
@@ -433,7 +426,7 @@ func fromKnativeIngress(ingressList []*knative.Ingress) ingressRules {
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + strconv.Itoa(j)),
+						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:         kong.StringSlice(path),
 						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
@@ -444,12 +437,10 @@ func fromKnativeIngress(ingressList []*knative.Ingress) ingressRules {
 				r.Hosts = kong.StringSlice(hosts...)
 
 				knativeBackend := knativeSelectSplit(rule.Splits)
-				serviceName := knativeBackend.ServiceNamespace + "." +
-					knativeBackend.ServiceName + "." +
-					knativeBackend.ServicePort.String()
-				serviceHost := knativeBackend.ServiceName + "." +
-					knativeBackend.ServiceNamespace + "." +
-					knativeBackend.ServicePort.String() + ".svc"
+				serviceName := fmt.Sprintf("%s.%s.%s", knativeBackend.ServiceNamespace, knativeBackend.ServiceName,
+					knativeBackend.ServicePort.String())
+				serviceHost := fmt.Sprintf("%s.%s.%s.svc", knativeBackend.ServiceName, knativeBackend.ServiceNamespace,
+					knativeBackend.ServicePort.String())
 				service, ok := services[serviceName]
 				if !ok {
 

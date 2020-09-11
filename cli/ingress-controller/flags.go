@@ -59,7 +59,8 @@ type cliConfig struct {
 
 	// Resource filtering
 	WatchNamespace                 string
-	ProcessClasslessIngressV1beta1 bool
+	ProcessClasslessIngressV1Beta1 bool
+	ProcessClasslessIngressV1      bool
 	ProcessClasslessKongConsumer   bool
 	IngressClass                   string
 	ElectionID                     string
@@ -342,7 +343,8 @@ func parseFlags() (cliConfig, error) {
 
 	// Resource filtering
 	config.WatchNamespace = viper.GetString("watch-namespace")
-	config.ProcessClasslessIngressV1beta1 = viper.GetBool("process-classless-ingress-v1beta1")
+	config.ProcessClasslessIngressV1Beta1 = viper.GetBool("process-classless-ingress-v1beta1")
+	config.ProcessClasslessIngressV1 = viper.GetBool("process-classless-ingress-v1")
 	config.ProcessClasslessKongConsumer = viper.GetBool("process-classless-kong-consumer")
 	config.IngressClass = viper.GetString("ingress-class")
 	config.ElectionID = viper.GetString("election-id")

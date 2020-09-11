@@ -444,8 +444,8 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.ProcessClasslessIngressV1beta1,
-		cliConfig.ProcessClasslessKongConsumer, log.WithField("component", "store"))
+	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.ProcessClasslessIngressV1Beta1,
+		cliConfig.ProcessClasslessIngressV1, cliConfig.ProcessClasslessKongConsumer, log.WithField("component", "store"))
 	kong, err := controller.NewKongController(ctx, &controllerConfig, updateChannel,
 		store)
 	if err != nil {

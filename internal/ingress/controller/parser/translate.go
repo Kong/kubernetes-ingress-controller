@@ -26,8 +26,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 			&ingressList[j].CreationTimestamp)
 	})
 
-	for i := 0; i < len(ingressList); i++ {
-		ingress := *ingressList[i]
+	for _, ingress := range ingressList {
 		ingressSpec := ingress.Spec
 		log = log.WithFields(logrus.Fields{
 			"ingress_namespace": ingress.Namespace,
@@ -35,8 +34,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 		})
 
 		if ingressSpec.Backend != nil {
-			allDefaultBackends = append(allDefaultBackends, ingress)
-
+			allDefaultBackends = append(allDefaultBackends, *ingress)
 		}
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
@@ -57,7 +55,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 					path = "/"
 				}
 				r := kongstate.Route{
-					Ingress: util.FromK8sObject(&ingress),
+					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
 						// TODO (#834) Figure out a way to name the routes
 						// This is not a stable scheme
@@ -171,8 +169,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 			&ingressList[j].CreationTimestamp)
 	})
 
-	for i := 0; i < len(ingressList); i++ {
-		ingress := *ingressList[i]
+	for _, ingress := range ingressList {
 		ingressSpec := ingress.Spec
 		log = log.WithFields(logrus.Fields{
 			"ingress_namespace": ingress.Namespace,
@@ -180,7 +177,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 		})
 
 		if ingressSpec.DefaultBackend != nil {
-			allDefaultBackends = append(allDefaultBackends, ingress)
+			allDefaultBackends = append(allDefaultBackends, *ingress)
 		}
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
@@ -201,7 +198,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				}
 
 				r := kongstate.Route{
-					Ingress: util.FromK8sObject(&ingress),
+					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
 						// TODO (#834) Figure out a way to name the routes
 						// This is not a stable scheme
@@ -310,8 +307,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			&tcpIngressList[j].CreationTimestamp)
 	})
 
-	for i := 0; i < len(tcpIngressList); i++ {
-		ingress := *tcpIngressList[i]
+	for _, ingress := range tcpIngressList {
 		ingressSpec := ingress.Spec
 
 		log = log.WithFields(logrus.Fields{
@@ -328,7 +324,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 				continue
 			}
 			r := kongstate.Route{
-				Ingress: util.FromK8sObject(&ingress),
+				Ingress: util.FromK8sObject(ingress),
 				Route: kong.Route{
 					// TODO (#834) Figure out a way to name the routes
 					// This is not a stable scheme
@@ -400,8 +396,7 @@ func fromKnativeIngress(ingressList []*knative.Ingress) ingressRules {
 	services := map[string]kongstate.Service{}
 	secretToSNIs := newSecretNameToSNIs()
 
-	for i := 0; i < len(ingressList); i++ {
-		ingress := *ingressList[i]
+	for _, ingress := range ingressList {
 		ingressSpec := ingress.Spec
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)

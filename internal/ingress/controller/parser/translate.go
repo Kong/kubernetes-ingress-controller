@@ -58,7 +58,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(&ingress),
 					Route: kong.Route{
-						// TODO Figure out a way to name the routes
+						// TODO (#834) Figure out a way to name the routes
 						// This is not a stable scheme
 						// 1. If a user adds a route in the middle,
 						// due to a shift, all the following routes will
@@ -204,7 +204,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(&ingress),
 					Route: kong.Route{
-						// TODO Figure out a way to name the routes
+						// TODO (#834) Figure out a way to name the routes
 						// This is not a stable scheme
 						// 1. If a user adds a route in the middle,
 						// due to a shift, all the following routes will
@@ -334,7 +334,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			r := kongstate.Route{
 				Ingress: util.FromK8sObject(&ingress),
 				Route: kong.Route{
-					// TODO Figure out a way to name the routes
+					// TODO (#834) Figure out a way to name the routes
 					// This is not a stable scheme
 					// 1. If a user adds a route in the middle,
 					// due to a shift, all the following routes will
@@ -425,7 +425,7 @@ func fromKnativeIngress(ingressList []*knative.Ingress) ingressRules {
 				}
 				r := kongstate.Route{
 					Route: kong.Route{
-						// TODO Figure out a way to name the routes
+						// TODO (#834) Figure out a way to name the routes
 						// This is not a stable scheme
 						// 1. If a user adds a route in the middle,
 						// due to a shift, all the following routes will

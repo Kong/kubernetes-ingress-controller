@@ -219,7 +219,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
 						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(priorityForPath(rulePath.Path, pathType)),
+						RegexPriority: kong.Int(priorityForPath[pathType]),
 					},
 				}
 				if rule.Host != "" {
@@ -542,14 +542,8 @@ func pathsFromK8s(path string, pathType networkingv1.PathType) ([]*string, error
 	return nil, fmt.Errorf("unknown pathType %v", pathType)
 }
 
-func priorityForPath(path string, pathType networkingv1.PathType) int {
-	switch pathType {
-	case networkingv1.PathTypeExact:
-		return 300
-	case networkingv1.PathTypePrefix:
-		// Expect Kong to prefer the longest prefix route if multiple routes of equal priority match.
-		return 200
-	default:
-		return 100
-	}
+var priorityForPath = map[networkingv1.PathType]int{
+	networkingv1.PathTypeExact:                  300,
+	networkingv1.PathTypePrefix:                 200,
+	networkingv1.PathTypeImplementationSpecific: 100,
 }

@@ -155,16 +155,14 @@ func getUpstreams(
 	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
 	var upstreams []kongstate.Upstream
 	for _, service := range serviceMap {
-		upstreamName := service.Backend.Name + "." + service.Namespace + "." + service.Backend.Port.String() + ".svc"
 		upstream := kongstate.Upstream{
 			Upstream: kong.Upstream{
-				Name: kong.String(upstreamName),
+				Name: kong.String(
+					fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.String())),
 			},
 			Service: service,
+			Targets: getServiceEndpoints(log, s, service.K8sService, service.Backend.Port.String()),
 		}
-		targets := getServiceEndpoints(log, s, service.K8sService,
-			service.Backend.Port.String())
-		upstream.Targets = targets
 		upstreams = append(upstreams, upstream)
 	}
 	return upstreams

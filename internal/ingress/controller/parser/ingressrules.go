@@ -81,21 +81,12 @@ func newSecretNameToSNIs() SecretNameToSNIs {
 }
 
 func (m SecretNameToSNIs) addFromIngressV1beta1TLS(tlsSections []networkingv1beta1.IngressTLS, namespace string) {
-	for _, tls := range tlsSections {
-		if len(tls.Hosts) == 0 {
-			continue
-		}
-		if tls.SecretName == "" {
-			continue
-		}
-		hosts := tls.Hosts
-		secretName := namespace + "/" + tls.SecretName
-		hosts = m.filterHosts(hosts)
-		if m[secretName] != nil {
-			hosts = append(hosts, m[secretName]...)
-		}
-		m[secretName] = hosts
+	// Assume that v1beta1 and v1 tlsSections have identical semantics and field-wise content.
+	var v1 []networkingv1.IngressTLS
+	for _, item := range tlsSections {
+		v1 = append(v1, networkingv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
 	}
+	m.addFromIngressV1TLS(v1, namespace)
 }
 
 func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []networkingv1.IngressTLS, namespace string) {

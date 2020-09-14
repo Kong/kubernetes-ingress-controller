@@ -386,7 +386,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 	return result
 }
 
-func fromKnativeIngress(ingressList []*knative.Ingress) ingressRules {
+func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) ingressRules {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -397,9 +397,15 @@ func fromKnativeIngress(ingressList []*knative.Ingress) ingressRules {
 	secretToSNIs := newSecretNameToSNIs()
 
 	for _, ingress := range ingressList {
+		log = log.WithFields(logrus.Fields{
+			"knativeingress_namespace": ingress.Namespace,
+			"knativeingress_name":      ingress.Name,
+		})
+
 		ingressSpec := ingress.Spec
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
+
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {

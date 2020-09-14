@@ -38,7 +38,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-	parsedKnative := fromKnativeIngress(knativeIngresses)
+	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
 	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedKnative)
 }

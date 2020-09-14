@@ -944,17 +944,17 @@ func TestFromKnativeIngress(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress([]*knative.Ingress{})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{})
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[0]})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[0]})
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[1]})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[1]})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
@@ -989,7 +989,7 @@ func TestFromKnativeIngress(t *testing.T) {
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[3]})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[3]})
 
 		assert.Equal(SecretNameToSNIs(map[string][]string{
 			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
@@ -997,7 +997,7 @@ func TestFromKnativeIngress(t *testing.T) {
 		}), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress([]*knative.Ingress{ingressList[2]})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[2]})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{

@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
@@ -98,7 +99,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
 							Name: rule.Backend.ServiceName,
-							Port: kongstate.PortDefFromIntStr(rule.Backend.ServicePort),
+							Port: PortDefFromIntStr(rule.Backend.ServicePort),
 						},
 					}
 				}
@@ -137,7 +138,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				Namespace: ingress.Namespace,
 				Backend: kongstate.ServiceBackend{
 					Name: defaultBackend.ServiceName,
-					Port: kongstate.PortDefFromIntStr(defaultBackend.ServicePort),
+					Port: PortDefFromIntStr(defaultBackend.ServicePort),
 				},
 			}
 		}
@@ -225,6 +226,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 					r.Hosts = kong.StringSlice(rule.Host)
 				}
 
+				port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
 				serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rulePath.Backend.Service.Name,
 					rulePath.Backend.Service.Port.Number)
 				service, ok := result.ServiceNameToServices[serviceName]
@@ -232,8 +234,8 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 					service = kongstate.Service{
 						Service: kong.Service{
 							Name: kong.String(serviceName),
-							Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", rulePath.Backend.Service.Name, ingress.Namespace,
-								rulePath.Backend.Service.Port.Number)),
+							Host: kong.String(fmt.Sprintf("%s.%s.%s.svc", rulePath.Backend.Service.Name, ingress.Namespace,
+								port.CanonicalString())),
 							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
@@ -245,7 +247,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
 							Name: rulePath.Backend.Service.Name,
-							Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: rulePath.Backend.Service.Port.Number},
+							Port: port,
 						},
 					}
 				}
@@ -263,8 +265,9 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 	if len(allDefaultBackends) > 0 {
 		ingress := allDefaultBackends[0]
 		defaultBackend := allDefaultBackends[0].Spec.DefaultBackend
-		serviceName := fmt.Sprintf("%s.%s.%d", allDefaultBackends[0].Namespace, defaultBackend.Service.Name,
-			defaultBackend.Service.Port.Number)
+		port := PortDefFromServiceBackendPort(&defaultBackend.Service.Port)
+		serviceName := fmt.Sprintf("%s.%s.%s", allDefaultBackends[0].Namespace, defaultBackend.Service.Name,
+			port.CanonicalString())
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
 			service = kongstate.Service{
@@ -282,7 +285,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				Namespace: ingress.Namespace,
 				Backend: kongstate.ServiceBackend{
 					Name: defaultBackend.Service.Name,
-					Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: defaultBackend.Service.Port.Number},
+					Port: PortDefFromServiceBackendPort(&defaultBackend.Service.Port),
 				},
 			}
 		}
@@ -473,7 +476,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
 							Name: knativeBackend.ServiceName,
-							Port: kongstate.PortDefFromIntStr(knativeBackend.ServicePort),
+							Port: PortDefFromIntStr(knativeBackend.ServicePort),
 						},
 					}
 					if len(headers) > 0 {
@@ -545,4 +548,22 @@ var priorityForPath = map[networkingv1.PathType]int{
 	networkingv1.PathTypeExact:                  300,
 	networkingv1.PathTypePrefix:                 200,
 	networkingv1.PathTypeImplementationSpecific: 100,
+}
+
+func PortDefFromServiceBackendPort(sbp *networkingv1.ServiceBackendPort) kongstate.PortDef {
+	switch {
+	case sbp.Name != "":
+		return kongstate.PortDef{Mode: kongstate.PortModeByName, Name: sbp.Name}
+	case sbp.Number != 0:
+		return kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: sbp.Number}
+	default:
+		return kongstate.PortDef{Mode: kongstate.PortModeImplicit}
+	}
+}
+
+func PortDefFromIntStr(is intstr.IntOrString) kongstate.PortDef {
+	if is.Type == intstr.String {
+		return kongstate.PortDef{Mode: kongstate.PortModeByName, Name: is.StrVal}
+	}
+	return kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: is.IntVal}
 }

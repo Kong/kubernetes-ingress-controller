@@ -287,13 +287,15 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 	return res
 }
 
-func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service, servicePort *corev1.ServicePort) []kongstate.Target {
+func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service,
+	servicePort *corev1.ServicePort) []kongstate.Target {
 	var targets []kongstate.Target
 	var endpoints []utils.Endpoint
 
 	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
 		"service_namespace": svc.Namespace,
+		"service_port":      servicePort,
 	})
 
 	endpoints = getEndpoints(log, &svc, servicePort, corev1.ProtocolTCP, s.GetEndpointsForService)

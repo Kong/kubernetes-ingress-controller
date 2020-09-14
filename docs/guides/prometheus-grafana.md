@@ -116,6 +116,8 @@ $ echo 'apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: prometheus
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: "true"
 plugin: prometheus
@@ -201,6 +203,7 @@ metadata:
   name: sample-ingresses
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

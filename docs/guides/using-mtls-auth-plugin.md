@@ -42,11 +42,14 @@ This is expected as Kong does not yet know how to proxy the request.
 CA certificates in Kong are provisioned by create a `Secret` resource in
 Kubernetes.
 
-The secret resource should have a few properties:
-- It should have the `konghq.com/ca-cert: "true"` label.
-- It should have a `cert` data property which contains a valid CA certificate
+The secret resource must have a few properties:
+- It must have the `konghq.com/ca-cert: "true"` label.
+- It must have a `cert` data property which contains a valid CA certificate
   in PEM format.
-- It should have an `id` data property which contains a random UUID.
+- It must have an `id` data property which contains a random UUID.
+- It must have a `kubernetes.io/ingress.class` annotation whose value matches
+  the value of the controller's `--ingress-class` argument. By default, that
+  value is "kong".
 
 Note that a self-signed CA certificate is being used for the purpose of this
 guide. You should use your own CA certificate that is backed by
@@ -57,6 +60,8 @@ $ echo "apiVersion: v1
 kind: Secret
 metadata:
   name: my-ca-cert
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     konghq.com/ca-cert: 'true'
 type: Opaque
@@ -147,6 +152,7 @@ metadata:
   name: demo
   annotations:
     konghq.com/plugins: mtls-auth
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

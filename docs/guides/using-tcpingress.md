@@ -141,6 +141,8 @@ $ echo "apiVersion: configuration.konghq.com/v1beta1
 kind: TCPIngress
 metadata:
   name: echo-plaintext
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - port: 9000
@@ -194,6 +196,8 @@ $ echo "apiVersion: configuration.konghq.com/v1beta1
 kind: TCPIngress
 metadata:
   name: echo-tls
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: example.com

@@ -124,6 +124,8 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: demo-yolo42-com
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: demo.yolo42.com
@@ -190,6 +192,7 @@ metadata:
   annotations:
     kubernetes.io/tls-acme: "true"
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.class: kong
 spec:
   tls:
   - secretName: demo-yolo42-com

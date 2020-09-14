@@ -119,6 +119,7 @@ metadata:
   name: demo-example-com
   annotations:
     plugins.konghq.com: request-id
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: example.com
@@ -182,6 +183,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: request-id
+  annotations:
+    kubernetes.io/ingress.class: <controller ingress class, "kong" by default>
   labels:
     global: "true"   # optional, if set, then the plugin will be executed
                      # for every request that Kong proxies
@@ -312,6 +315,8 @@ kind: TCPIngress
 metadata:
   name: <object name>
   namespace: <object namespace>
+  annotations:
+    kubernetes.io/ingress.class: <controller ingress class, "kong" by default>
 spec:
   rules:
   - host: <SNI, optional>
@@ -341,6 +346,8 @@ kind: KongConsumer
 metadata:
   name: <object name>
   namespace: <object namespace>
+  annotations:
+    kubernetes.io/ingress.class: <controller ingress class, "kong" by default>
 username: <user name>
 custom_id: <custom ID>
 ```
@@ -352,6 +359,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: consumer-team-x
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: team-X
 ```
 

@@ -54,6 +54,8 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: demo
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: 192.0.2.8.xip.io

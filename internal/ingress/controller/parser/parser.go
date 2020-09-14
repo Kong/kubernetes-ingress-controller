@@ -25,8 +25,8 @@ import (
 )
 
 func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
-	ings := s.ListIngressesV1beta1()
-	parsedIngress := fromIngressV1beta1(log, ings)
+	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
+	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
 
 	tcpIngresses, err := s.ListTCPIngresses()
 	if err != nil {
@@ -38,9 +38,9 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-	parsedKnative := fromKnativeIngress(knativeIngresses)
+	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
-	return mergeIngressRules(parsedIngress, parsedTCPIngress, parsedKnative)
+	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedKnative)
 }
 
 // Build creates a Kong configuration from Ingress and Custom resources

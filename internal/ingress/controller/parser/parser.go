@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -151,17 +150,57 @@ func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networki
 	return result
 }
 
+// findPort finds a port matching the specified definition in a Kubernetes Service.
+func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServicePort, error) {
+	switch wantPort.Mode {
+	case kongstate.PortModeByNumber:
+		for _, port := range svc.Spec.Ports {
+			if port.Port == wantPort.Number {
+				return &port, nil
+			}
+		}
+
+	case kongstate.PortModeByName:
+		for _, port := range svc.Spec.Ports {
+			if port.Name == wantPort.Name {
+				return &port, nil
+			}
+			if port.TargetPort.Type == intstr.String && port.TargetPort.String() == wantPort.Name {
+				return &port, nil
+			}
+		}
+
+	case kongstate.PortModeImplicit:
+		if len(svc.Spec.Ports) != 1 {
+			return nil, fmt.Errorf("in implicit mode, service must have exactly 1 port, has %d", len(svc.Spec.Ports))
+		}
+		return &svc.Spec.Ports[0], nil
+
+	default:
+		return nil, fmt.Errorf("unknown mode %v", wantPort.Mode)
+	}
+
+	return nil, fmt.Errorf("no suitable port found")
+}
+
 func getUpstreams(
 	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
 	var upstreams []kongstate.Upstream
 	for _, service := range serviceMap {
+
+		var targets []kongstate.Target
+		port, err := findPort(&service.K8sService, service.Backend.Port)
+		if err == nil {
+			targets = getServiceEndpoints(log, s, service.K8sService, port)
+		}
+
 		upstream := kongstate.Upstream{
 			Upstream: kong.Upstream{
 				Name: kong.String(
-					fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.String())),
+					fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())),
 			},
 			Service: service,
-			Targets: getServiceEndpoints(log, s, service.K8sService, service.Backend.Port.String()),
+			Targets: targets,
 		}
 		upstreams = append(upstreams, upstream)
 	}
@@ -248,46 +287,16 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 	return res
 }
 
-func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service,
-	backendPort string) []kongstate.Target {
+func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service, servicePort *corev1.ServicePort) []kongstate.Target {
 	var targets []kongstate.Target
 	var endpoints []utils.Endpoint
-	var servicePort corev1.ServicePort
 
 	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
 		"service_namespace": svc.Namespace,
 	})
 
-	for _, port := range svc.Spec.Ports {
-		// targetPort could be a string, use the name or the port (int)
-		if strconv.Itoa(int(port.Port)) == backendPort ||
-			port.TargetPort.String() == backendPort ||
-			port.Name == backendPort {
-			servicePort = port
-			break
-		}
-	}
-
-	// Ingress with an ExternalName service and no port defined in the service.
-	if len(svc.Spec.Ports) == 0 &&
-		svc.Spec.Type == corev1.ServiceTypeExternalName {
-		// nolint: gosec
-		externalPort, err := strconv.Atoi(backendPort)
-		if err != nil {
-			log.Warningf("invalid ExternalName Service (only numeric ports allowed): %v", backendPort)
-			return targets
-		}
-
-		servicePort = corev1.ServicePort{
-			Protocol:   "TCP",
-			Port:       int32(externalPort),
-			TargetPort: intstr.FromString(backendPort),
-		}
-	}
-
-	endpoints = getEndpoints(log, &svc, &servicePort,
-		corev1.ProtocolTCP, s.GetEndpointsForService)
+	endpoints = getEndpoints(log, &svc, servicePort, corev1.ProtocolTCP, s.GetEndpointsForService)
 	if len(endpoints) == 0 {
 		log.Warningf("no active endpionts")
 	}

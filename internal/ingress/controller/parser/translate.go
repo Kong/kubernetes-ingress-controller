@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
@@ -99,7 +98,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
 							Name: rule.Backend.ServiceName,
-							Port: rule.Backend.ServicePort,
+							Port: kongstate.PortDefFromIntStr(rule.Backend.ServicePort),
 						},
 					}
 				}
@@ -138,7 +137,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				Namespace: ingress.Namespace,
 				Backend: kongstate.ServiceBackend{
 					Name: defaultBackend.ServiceName,
-					Port: defaultBackend.ServicePort,
+					Port: kongstate.PortDefFromIntStr(defaultBackend.ServicePort),
 				},
 			}
 		}
@@ -246,7 +245,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
 							Name: rulePath.Backend.Service.Name,
-							Port: intstr.FromInt(int(rulePath.Backend.Service.Port.Number)),
+							Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: rulePath.Backend.Service.Port.Number},
 						},
 					}
 				}
@@ -283,7 +282,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				Namespace: ingress.Namespace,
 				Backend: kongstate.ServiceBackend{
 					Name: defaultBackend.Service.Name,
-					Port: intstr.FromInt(int(defaultBackend.Service.Port.Number)),
+					Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: defaultBackend.Service.Port.Number},
 				},
 			}
 		}
@@ -380,7 +379,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 					Namespace: ingress.Namespace,
 					Backend: kongstate.ServiceBackend{
 						Name: rule.Backend.ServiceName,
-						Port: intstr.FromInt(rule.Backend.ServicePort),
+						Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
 					},
 				}
 			}
@@ -474,7 +473,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
 							Name: knativeBackend.ServiceName,
-							Port: knativeBackend.ServicePort,
+							Port: kongstate.PortDefFromIntStr(knativeBackend.ServicePort),
 						},
 					}
 					if len(headers) > 0 {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type PortMode int
@@ -28,12 +27,7 @@ type PortDef struct {
 	Number int32
 }
 
-func PortDefFromIntStr(is intstr.IntOrString) PortDef {
-	if is.Type == intstr.String {
-		return PortDef{Mode: PortModeByName, Name: is.StrVal}
-	}
-	return PortDef{Mode: PortModeByNumber, Number: is.IntVal}
-}
+const ImplicitPort = "implicitPort"
 
 func (p *PortDef) CanonicalString() string {
 	switch p.Mode {
@@ -42,7 +36,7 @@ func (p *PortDef) CanonicalString() string {
 	case PortModeByName:
 		return p.Name
 	}
-	return "implicitPort"
+	return ImplicitPort
 }
 
 type ServiceBackend struct {

@@ -1085,15 +1085,18 @@ func TestPathsFromK8s(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			{
-				gotPrefix := pathsFromK8s(tt.path, networkingv1.PathTypePrefix)
+				gotPrefix, gotErr := pathsFromK8s(tt.path, networkingv1.PathTypePrefix)
+				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantPrefix, gotPrefix, "prefix match")
 			}
 			{
-				gotExact := pathsFromK8s(tt.path, networkingv1.PathTypeExact)
+				gotExact, gotErr := pathsFromK8s(tt.path, networkingv1.PathTypeExact)
+				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantExact, gotExact, "exact match")
 			}
 			{
-				gotImplSpec := pathsFromK8s(tt.path, networkingv1.PathTypeImplementationSpecific)
+				gotImplSpec, gotErr := pathsFromK8s(tt.path, networkingv1.PathTypeImplementationSpecific)
+				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantImplSpec, gotImplSpec, "implementation specific match")
 			}
 		})

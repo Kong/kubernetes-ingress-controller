@@ -96,11 +96,11 @@ There are [two distributions of Kong Enterprise](https://github.com/Kong/kuberne
 |  openid-connect                  |  :white_check_mark:                        |  :white_check_mark:              |
 |  proxy-cache-advanced            |  :white_check_mark:                        |  :white_check_mark:              |
 |  rate-limiting-advanced          |  :white_check_mark:                        |  :white_check_mark:              |
-|  request-transformer-advanced    |  :white_check_mark:                        |  :x:<sup>3</sup>                 |
+|  request-transformer-advanced    |  :white_check_mark:                        |  :x:<sup>2</sup>                 |
 |  request-validator               |  :white_check_mark:                        |  :white_check_mark:              |
 |  response-transformer-advanced   |  :white_check_mark:                        |  :white_check_mark:              |
 |  route-transformer-advanced      |  :white_check_mark:                        |  :x:                             |
-|  statsd-advanced                 |  :white_check_mark:                        |  :x:<sup>4</sup>                 |
+|  statsd-advanced                 |  :white_check_mark:                        |  :x:<sup>3</sup>                 |
 |  vault-auth                      |  :white_check_mark:                        |  :white_check_mark:              |
 
 <sup>1</sup> Only used with Dev Portal

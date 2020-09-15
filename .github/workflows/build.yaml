@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches:
-      - 'master'
+      - 'main'
       - 'next'
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
     - name: Build and push
-      run: ./.ci/build-master.sh
+      run: ./.ci/build-main.sh
       env:
         BINTRAY_KEY: ${{  secrets.BINTRAY_KEY }}
         BINTRAY_USER: ${{  secrets.BINTRAY_USER }}

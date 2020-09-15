@@ -2312,6 +2312,94 @@ func TestParserSecret(t *testing.T) {
 		assert.Equal(1, len(state.Certificates),
 			"SNIs are de-duplicated")
 	})
+	t.Run("Same secret from different namespace", func(t *testing.T) {
+		ingresses := []*networking.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				Spec: networking.IngressSpec{
+					TLS: []networking.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "ns1",
+				},
+				Spec: networking.IngressSpec{
+					TLS: []networking.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"bar.com"},
+						},
+					},
+				},
+			},
+		}
+
+		t1, _ := time.Parse(time.RFC3339, "2006-01-02T15:05:05Z")
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       "3e8edeca-7d23-4e02-84c9-437d11b746a6",
+					Name:      "secret1",
+					Namespace: "default",
+					CreationTimestamp: metav1.Time{
+						Time: t1,
+					},
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       "fc28a22c-41e1-4cd6-9099-fd7756ffe58e",
+					Name:      "secret1",
+					Namespace: "ns1",
+					CreationTimestamp: metav1.Time{
+						Time: t1,
+					},
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			Ingresses: ingresses,
+			Secrets:   secrets,
+		})
+		assert.Nil(err)
+		parser := New(store)
+		state, err := parser.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Certificates),
+			"certificates are de-duplicated")
+
+		sort.SliceStable(state.Certificates[0].SNIs, func(i, j int) bool {
+			return strings.Compare(*state.Certificates[0].SNIs[i],
+				*state.Certificates[0].SNIs[j]) > 0
+		})
+		assert.Equal(Certificate{
+			Certificate: kong.Certificate{
+				ID:   kong.String("3e8edeca-7d23-4e02-84c9-437d11b746a6"),
+				Cert: kong.String(tlsPairs[0].Cert),
+				Key:  kong.String(tlsPairs[0].Key),
+				SNIs: kong.StringSlice("foo.com", "bar.com"),
+			},
+		}, state.Certificates[0])
+	})
 }
 
 func TestPluginAnnotations(t *testing.T) {

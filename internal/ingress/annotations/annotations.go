@@ -103,7 +103,11 @@ func IngressClassValidatorFuncFromV1Ingress(
 
 	return func(ingress *networkingv1.Ingress, handling ClassMatching) bool {
 		class := ingress.Spec.IngressClassName
-		return validIngress(*class, ingressClass, handling)
+		className := ""
+		if class != nil {
+			className = *class
+		}
+		return validIngress(className, ingressClass, handling)
 	}
 }
 

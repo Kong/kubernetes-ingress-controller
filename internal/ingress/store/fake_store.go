@@ -151,6 +151,7 @@ func NewFakeStore(
 		},
 		ingressClass:                annotations.DefaultIngressClass,
 		isValidIngressClass:         annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
+		isValidIngressV1Class:       annotations.IngressClassValidatorFuncFromV1Ingress(annotations.DefaultIngressClass),
 		ingressV1Beta1ClassMatching: annotations.ExactClassMatch,
 		ingressV1ClassMatching:      annotations.ExactClassMatch,
 		kongConsumerClassMatching:   annotations.ExactClassMatch,

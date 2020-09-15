@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [0.10.0](#0100---someday)
+ - [0.10.0](#0100---20200915)
  - [0.9.1](#091---20200608)
  - [0.9.0](#090---20200526)
  - [0.8.1](#081---20200415)
@@ -23,7 +23,7 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [0.10.0] - someday
+## [0.10.0] - 2020/09/15
 
 #### Breaking changes
 
@@ -55,7 +55,8 @@
 
 - Added support for [Ingress
   v1](https://github.com/kubernetes/enhancements/tree/master/keps/sig-network/1453-ingress-api#summary-of-the-proposed-changes).
-  [#TBD](https://github.com/Kong/kubernetes-ingress-controller/pull/TBD).
+  [#832](https://github.com/Kong/kubernetes-ingress-controller/pull/832).
+  [#843](https://github.com/Kong/kubernetes-ingress-controller/pull/843).
 - Added support for the port mapping functionality in Kong versions 2.1 and
   newer in example manifests. This feature [improves Kong's functionality when
   behind a load balancer that uses different ports than Kong's proxy

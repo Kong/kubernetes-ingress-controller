@@ -85,10 +85,12 @@ type Store struct {
 
 	ingressClass string
 
-	ingressClassMatching      annotations.ClassMatching
-	kongConsumerClassMatching annotations.ClassMatching
+	ingressV1Beta1ClassMatching annotations.ClassMatching
+	ingressV1ClassMatching      annotations.ClassMatching
+	kongConsumerClassMatching   annotations.ClassMatching
 
-	isValidIngressClass func(objectMeta *metav1.ObjectMeta, handling annotations.ClassMatching) bool
+	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, handling annotations.ClassMatching) bool
+	isValidIngressV1Class func(ingress *networkingv1.Ingress, handling annotations.ClassMatching) bool
 
 	logger logrus.FieldLogger
 }
@@ -114,14 +116,20 @@ type CacheStores struct {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, processClasslessIngress bool, processClasslessKongConsumer bool,
-	logger logrus.FieldLogger) Storer {
-	var ingressClassMatching annotations.ClassMatching
+func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
+	processClasslessKongConsumer bool, logger logrus.FieldLogger) Storer {
+	var ingressV1Beta1ClassMatching annotations.ClassMatching
+	var ingressV1ClassMatching annotations.ClassMatching
 	var kongConsumerClassMatching annotations.ClassMatching
-	if processClasslessIngress {
-		ingressClassMatching = annotations.ExactOrEmptyClassMatch
+	if processClasslessIngressV1Beta1 {
+		ingressV1Beta1ClassMatching = annotations.ExactOrEmptyClassMatch
 	} else {
-		ingressClassMatching = annotations.ExactClassMatch
+		ingressV1Beta1ClassMatching = annotations.ExactClassMatch
+	}
+	if processClasslessIngressV1 {
+		ingressV1ClassMatching = annotations.ExactOrEmptyClassMatch
+	} else {
+		ingressV1ClassMatching = annotations.ExactClassMatch
 	}
 	if processClasslessKongConsumer {
 		kongConsumerClassMatching = annotations.ExactOrEmptyClassMatch
@@ -129,12 +137,14 @@ func New(cs CacheStores, ingressClass string, processClasslessIngress bool, proc
 		kongConsumerClassMatching = annotations.ExactClassMatch
 	}
 	return Store{
-		stores:                    cs,
-		ingressClass:              ingressClass,
-		ingressClassMatching:      ingressClassMatching,
-		kongConsumerClassMatching: kongConsumerClassMatching,
-		isValidIngressClass:       annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
-		logger:                    logger,
+		stores:                      cs,
+		ingressClass:                ingressClass,
+		ingressV1Beta1ClassMatching: ingressV1Beta1ClassMatching,
+		ingressV1ClassMatching:      ingressV1ClassMatching,
+		kongConsumerClassMatching:   kongConsumerClassMatching,
+		isValidIngressClass:         annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		isValidIngressV1Class:       annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
+		logger:                      logger,
 	}
 }
 
@@ -174,9 +184,14 @@ func (s Store) ListIngressesV1() []*networkingv1.Ingress {
 			s.logger.Warnf("listIngressesV1: dropping object of unexpected type: %#v", item)
 			continue
 		}
-		// TODO: Implement ingress class matching that uses the IngressV1 field (#590).
-		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassMatching) {
-			continue
+		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
+			if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressV1ClassMatching) {
+				continue
+			}
+		} else {
+			if !s.isValidIngressV1Class(ing, s.ingressV1ClassMatching) {
+				continue
+			}
 		}
 		ingresses = append(ingresses, ing)
 	}
@@ -190,7 +205,7 @@ func (s Store) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
 	var ingresses []*networkingv1beta1.Ingress
 	for _, item := range s.stores.IngressV1beta1.List() {
 		ing := s.networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressClassMatching) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressV1Beta1ClassMatching) {
 			continue
 		}
 		ingresses = append(ingresses, ing)

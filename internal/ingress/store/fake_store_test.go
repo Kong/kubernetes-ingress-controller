@@ -161,6 +161,7 @@ func TestFakeStoreIngressV1beta1(t *testing.T) {
 func TestFakeStoreIngressV1(t *testing.T) {
 	assert := assert.New(t)
 
+	defaultClass := annotations.DefaultIngressClass
 	ingresses := []*networkingv1.Ingress{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -230,11 +231,34 @@ func TestFakeStoreIngressV1(t *testing.T) {
 				},
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: "skip-me-im-not-default",
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules:            []networkingv1.IngressRule{},
+				IngressClassName: &defaultClass,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules:            []networkingv1.IngressRule{},
+				IngressClassName: &defaultClass,
+			},
+		},
 	}
 	store, err := NewFakeStore(FakeObjects{IngressesV1: ingresses})
 	assert.Nil(err)
 	assert.NotNil(store)
-	assert.Len(store.ListIngressesV1(), 1)
+	assert.Len(store.ListIngressesV1(), 2)
 	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 

@@ -22,6 +22,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,15 +58,42 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		},
 	}
 
+	ingv1 := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: "default",
+			Annotations: map[string]string{
+				IngressClassKey: DefaultIngressClass,
+			},
+		},
+		Spec: networkingv1.IngressSpec{
+			IngressClassName: nil,
+		},
+	}
+
 	data := map[string]string{}
 	ing.SetAnnotations(data)
 	for _, test := range tests {
 		ing.Annotations[IngressClassKey] = test.ingress
+		ingv1.Spec.IngressClassName = &test.ingress
+		// TODO: unclear if we truly use IngressClassValidatorFunc anymore
+		// IngressClassValidatorFuncFromObjectMeta appears to effectively supersede it, and is what we use in store
+		// IngressClassValidatorFunc appears to be a test-only relic at this point
 		f := IngressClassValidatorFunc(test.controller)
+		fmeta := IngressClassValidatorFuncFromObjectMeta(test.controller)
+		fv1 := IngressClassValidatorFuncFromV1Ingress(test.controller)
 
 		result := f(&ing.ObjectMeta, test.classMatching)
 		if result != test.isValid {
 			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, result)
+		}
+		resultMeta := fmeta(&ing.ObjectMeta, test.classMatching)
+		if resultMeta != test.isValid {
+			t.Errorf("meta test %v - expected %v but %v was returned", test, test.isValid, resultMeta)
+		}
+		resultV1 := fv1(ingv1, test.classMatching)
+		if resultV1 != test.isValid {
+			t.Errorf("v1 test %v - expected %v but %v was returned", test, test.isValid, resultV1)
 		}
 	}
 }

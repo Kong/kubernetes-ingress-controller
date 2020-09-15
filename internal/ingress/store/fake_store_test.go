@@ -1,17 +1,19 @@
 package store
 
 import (
+	"errors"
+	"testing"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	knative "knative.dev/serving/pkg/apis/networking/v1alpha1"
-
-	"testing"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
 func Test_keyFunc(t *testing.T) {
@@ -56,7 +58,7 @@ func Test_keyFunc(t *testing.T) {
 		{
 			want: "default/foo",
 			args: args{
-				obj: networking.Ingress{
+				obj: networkingv1beta1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
 						Namespace: "default",
@@ -86,25 +88,28 @@ func TestFakeStoreEmpty(t *testing.T) {
 	assert.NotNil(store)
 }
 
-func TestFakeStoreIngress(t *testing.T) {
+func TestFakeStoreIngressV1beta1(t *testing.T) {
 	assert := assert.New(t)
 
-	ingresses := []*networking.Ingress{
+	ingresses := []*networkingv1beta1.Ingress{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
-			Spec: networking.IngressSpec{
-				Rules: []networking.IngressRule{
+			Spec: networkingv1beta1.IngressSpec{
+				Rules: []networkingv1beta1.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: networking.IngressRuleValue{
-							HTTP: &networking.HTTPIngressRuleValue{
-								Paths: []networking.HTTPIngressPath{
+						IngressRuleValue: networkingv1beta1.IngressRuleValue{
+							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+								Paths: []networkingv1beta1.HTTPIngressPath{
 									{
 										Path: "/",
-										Backend: networking.IngressBackend{
+										Backend: networkingv1beta1.IngressBackend{
 											ServiceName: "foo-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -121,19 +126,19 @@ func TestFakeStoreIngress(t *testing.T) {
 				Name:      "bar",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "not-kong",
+					annotations.IngressClassKey: "not-kong",
 				},
 			},
-			Spec: networking.IngressSpec{
-				Rules: []networking.IngressRule{
+			Spec: networkingv1beta1.IngressSpec{
+				Rules: []networkingv1beta1.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: networking.IngressRuleValue{
-							HTTP: &networking.HTTPIngressRuleValue{
-								Paths: []networking.HTTPIngressPath{
+						IngressRuleValue: networkingv1beta1.IngressRuleValue{
+							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+								Paths: []networkingv1beta1.HTTPIngressPath{
 									{
 										Path: "/bar",
-										Backend: networking.IngressBackend{
+										Backend: networkingv1beta1.IngressBackend{
 											ServiceName: "bar-svc",
 											ServicePort: intstr.FromInt(80),
 										},
@@ -146,10 +151,115 @@ func TestFakeStoreIngress(t *testing.T) {
 			},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{Ingresses: ingresses})
+	store, err := NewFakeStore(FakeObjects{IngressesV1beta1: ingresses})
 	assert.Nil(err)
 	assert.NotNil(store)
-	assert.Len(store.ListIngresses(), 1)
+	assert.Len(store.ListIngressesV1beta1(), 1)
+	assert.Len(store.ListIngressesV1(), 0)
+}
+
+func TestFakeStoreIngressV1(t *testing.T) {
+	assert := assert.New(t)
+
+	defaultClass := annotations.DefaultIngressClass
+	ingresses := []*networkingv1.Ingress{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{
+													Name:   "http",
+													Number: 80,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: "not-kong",
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/bar",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "bar-svc",
+												Port: networkingv1.ServiceBackendPort{
+													Name:   "http",
+													Number: 80,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: "skip-me-im-not-default",
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules:            []networkingv1.IngressRule{},
+				IngressClassName: &defaultClass,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules:            []networkingv1.IngressRule{},
+				IngressClassName: &defaultClass,
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{IngressesV1: ingresses})
+	assert.Nil(err)
+	assert.NotNil(store)
+	assert.Len(store.ListIngressesV1(), 2)
+	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 
 func TestFakeStoreListTCPIngress(t *testing.T) {
@@ -159,6 +269,27 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: configurationv1beta1.IngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 9000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+		{
+			// this TCPIngress should *not* be loaded, as it lacks a class
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "baz",
 				Namespace: "default",
 			},
 			Spec: configurationv1beta1.IngressSpec{
@@ -178,7 +309,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 				Name:      "bar",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": "not-kong",
+					annotations.IngressClassKey: "not-kong",
 				},
 			},
 			Spec: configurationv1beta1.IngressSpec{
@@ -209,6 +340,37 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+				},
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/",
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "i-dont-get-processed-because-i-have-no-class-annotation",
 				Namespace: "default",
 			},
 			Spec: knative.IngressSpec{
@@ -299,6 +461,9 @@ func TestFakeStoreConsumer(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 		},
 	}
@@ -330,28 +495,8 @@ func TestFakeStorePlugins(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KongPlugins: plugins})
 	assert.Nil(err)
 	assert.NotNil(store)
-	plugins, err = store.ListGlobalKongPlugins()
-	assert.Len(plugins, 0)
 
 	plugins = []*configurationv1.KongPlugin{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Labels: map[string]string{
-					"global": "true",
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Labels: map[string]string{
-					"global": "true",
-				},
-			},
-		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "baz",
@@ -363,13 +508,9 @@ func TestFakeStorePlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	plugins, err = store.ListGlobalKongPlugins()
-	assert.Len(plugins, 2)
+	assert.Len(plugins, 0)
 
-	plugin, err := store.GetKongPlugin("default", "bar")
-	assert.NotNil(plugin)
-	assert.Nil(err)
-
-	plugin, err = store.GetKongPlugin("default", "does-not-exist")
+	plugin, err := store.GetKongPlugin("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)
@@ -398,9 +539,13 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 				Labels: map[string]string{
 					"global": "true",
 				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 		},
 		{
+			// invalid due to lack of class, not loaded
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 				Labels: map[string]string{
@@ -418,7 +563,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	plugins, err = store.ListGlobalKongClusterPlugins()
-	assert.Len(plugins, 2)
+	assert.Len(plugins, 1)
 
 	plugin, err := store.GetKongClusterPlugin("foo")
 	assert.NotNil(plugin)
@@ -528,6 +673,9 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 				Labels: map[string]string{
 					"konghq.com/ca-cert": "true",
 				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 		},
 		{
@@ -536,6 +684,9 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 				Namespace: "default",
 				Labels: map[string]string{
 					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
 		},

@@ -26,8 +26,10 @@ import (
 )
 
 // KongIngressLister helps list KongIngresses.
+// All objects returned here must be treated as read-only.
 type KongIngressLister interface {
 	// List lists all KongIngresses in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.KongIngress, err error)
 	// KongIngresses returns an object that can list and get KongIngresses.
 	KongIngresses(namespace string) KongIngressNamespaceLister
@@ -58,10 +60,13 @@ func (s *kongIngressLister) KongIngresses(namespace string) KongIngressNamespace
 }
 
 // KongIngressNamespaceLister helps list and get KongIngresses.
+// All objects returned here must be treated as read-only.
 type KongIngressNamespaceLister interface {
 	// List lists all KongIngresses in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.KongIngress, err error)
 	// Get retrieves the KongIngress from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.KongIngress, error)
 	KongIngressNamespaceListerExpansion
 }

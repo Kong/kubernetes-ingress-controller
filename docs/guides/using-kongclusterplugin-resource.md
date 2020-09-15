@@ -69,6 +69,7 @@ metadata:
   namespace: httpbin
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -86,6 +87,8 @@ kind: Ingress
 metadata:
   name: echo-app
   namespace: echo
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -145,6 +148,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: add-response-header
+  annotations:
+    kubernetes.io/ingress.class: kong
 config:
   add:
     headers:
@@ -227,6 +232,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
   name: add-response-header
+  annotations:
+    kubernetes.io/ingress.class: kong
 config:
   add:
     headers:

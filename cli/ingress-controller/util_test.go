@@ -1,6 +1,8 @@
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestFixVersion(t *testing.T) {
 	validVersions := map[string]string{

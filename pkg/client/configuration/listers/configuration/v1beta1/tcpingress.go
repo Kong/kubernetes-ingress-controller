@@ -26,8 +26,10 @@ import (
 )
 
 // TCPIngressLister helps list TCPIngresses.
+// All objects returned here must be treated as read-only.
 type TCPIngressLister interface {
 	// List lists all TCPIngresses in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.TCPIngress, err error)
 	// TCPIngresses returns an object that can list and get TCPIngresses.
 	TCPIngresses(namespace string) TCPIngressNamespaceLister
@@ -58,10 +60,13 @@ func (s *tCPIngressLister) TCPIngresses(namespace string) TCPIngressNamespaceLis
 }
 
 // TCPIngressNamespaceLister helps list and get TCPIngresses.
+// All objects returned here must be treated as read-only.
 type TCPIngressNamespaceLister interface {
 	// List lists all TCPIngresses in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.TCPIngress, err error)
 	// Get retrieves the TCPIngress from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.TCPIngress, error)
 	TCPIngressNamespaceListerExpansion
 }

@@ -1,5 +1,5 @@
 REGISTRY?=kong-docker-kubernetes-ingress-controller.bintray.io
-TAG?=0.9.1
+TAG?=0.10.0
 REPO_INFO=$(shell git config --get remote.origin.url)
 IMGNAME?=kong-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
@@ -27,6 +27,10 @@ lint:
 .PHONY: build
 build:
 	CGO_ENABLED=0 go build -o kong-ingress-controller ./cli/ingress-controller
+
+.PHONY: verify-manifests
+verify-manifests:
+	./hack/verify-manifests.sh
 
 .PHONY: verify-codegen
 verify-codegen:

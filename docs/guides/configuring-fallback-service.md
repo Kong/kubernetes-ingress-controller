@@ -56,6 +56,7 @@ metadata:
   name: demo
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -104,6 +105,8 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: fallback
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   backend:
     serviceName: fallback-svc

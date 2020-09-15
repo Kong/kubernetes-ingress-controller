@@ -19,24 +19,23 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/blang/semver"
 	"github.com/eapache/channels"
-	"github.com/golang/glog"
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	networking "k8s.io/api/networking/v1beta1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -44,7 +43,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
-	knativeClientSet "knative.dev/serving/pkg/client/clientset/versioned"
+	knativeClientSet "knative.dev/networking/pkg/client/clientset/versioned"
 )
 
 // Kong Represents a Kong client and connection information
@@ -89,14 +88,18 @@ type Configuration struct {
 	UpdateStatusOnShutdown bool
 	ElectionID             string
 
-	UseNetworkingV1beta1        bool
+	IngressAPI utils.IngressAPI
+
 	EnableKnativeIngressSupport bool
+
+	Logger logrus.FieldLogger
 }
 
 // sync collects all the pieces required to assemble the configuration file and
 // then sends the content to the backend (OnUpdate) receiving the populated
 // template as response reloading the backend if is required.
 func (n *KongController) syncIngress(interface{}) error {
+	ctx := context.Background()
 	n.syncRateLimiter.Accept()
 
 	if n.syncQueue.IsShuttingDown() {
@@ -106,26 +109,18 @@ func (n *KongController) syncIngress(interface{}) error {
 	// If in-memory mode, each Kong instance runs with its own controller
 	if !n.cfg.Kong.InMemory &&
 		!n.elector.IsLeader() {
-		glog.V(2).Infof("skipping synchronization of configuration because I am not the leader.")
+		n.Logger.Debugf("node is a follower, skipping update")
 		return nil
 	}
 
-	// Sort ingress rules using the ResourceVersion field
-	ings := n.store.ListIngresses()
-	sort.SliceStable(ings, func(i, j int) bool {
-		ir := ings[i].ResourceVersion
-		jr := ings[j].ResourceVersion
-		return ir < jr
-	})
-
-	glog.V(2).Infof("syncing Ingress configuration...")
-	state, err := n.parser.Build()
+	n.Logger.Infof("syncing configuration")
+	state, err := parser.Build(n.Logger.WithField("component", "store"), n.store)
 	if err != nil {
-		return errors.Wrap(err, "error building kong state")
+		return fmt.Errorf("error building kong state: %w", err)
 	}
-	err = n.OnUpdate(state)
+	err = n.OnUpdate(ctx, state)
 	if err != nil {
-		glog.Errorf("unexpected failure updating Kong configuration: \n%v", err)
+		n.Logger.Errorf("failed to update kong configuration: %v", err)
 		return err
 	}
 
@@ -135,7 +130,8 @@ func (n *KongController) syncIngress(interface{}) error {
 // NewKongController creates a new NGINX Ingress controller.
 // If the environment variable NGINX_BINARY exists it will be used
 // as source for nginx commands
-func NewKongController(config *Configuration,
+func NewKongController(ctx context.Context,
+	config *Configuration,
 	updateCh *channels.RingChannel,
 	store store.Storer) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
@@ -152,11 +148,13 @@ func NewKongController(config *Configuration,
 
 		stopLock:          &sync.Mutex{},
 		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client),
+
+		Logger: config.Logger,
 	}
 
 	n.store = store
-	n.parser = parser.New(n.store)
-	n.syncQueue = task.NewTaskQueue(n.syncIngress)
+	n.syncQueue = task.NewTaskQueue(n.syncIngress,
+		config.Logger.WithField("component", "sync-queue"))
 
 	electionID := config.ElectionID + "-" + config.IngressClass
 
@@ -171,10 +169,12 @@ func NewKongController(config *Configuration,
 			OnNewLeader: func(identity string) {
 			},
 		},
+		Logger: config.Logger.WithField("component", "elector"),
 	}
 
 	if config.UpdateStatus {
-		n.syncStatus = status.NewStatusSyncer(status.Config{
+		var err error
+		n.syncStatus, err = status.NewStatusSyncer(ctx, status.Config{
 			CoreClient:             config.KubeClient,
 			KongConfigClient:       config.KongConfigClient,
 			KnativeClient:          config.KnativeClient,
@@ -182,18 +182,23 @@ func NewKongController(config *Configuration,
 			PublishStatusAddress:   config.PublishStatusAddress,
 			IngressLister:          n.store,
 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
-			UseNetworkingV1beta1:   config.UseNetworkingV1beta1,
+			IngressAPI:             config.IngressAPI,
 			OnStartedLeading: func() {
 				// force a sync
 				n.syncQueue.Enqueue(&networking.Ingress{})
 			},
+			Logger: n.Logger.WithField("component", "status-syncer"),
 		})
+		if err != nil {
+			return nil, fmt.Errorf("initializing status syncer: %v", err)
+		}
 		electionConfig.Callbacks = n.syncStatus.Callbacks()
 	} else {
-		glog.Warning("Update of ingress status is disabled (flag --update-status=false was specified)")
+
+		n.Logger.Warnf("ingress status updates is disabled, flag --update-status=false was specified")
 	}
 
-	n.elector = election.NewElector(electionConfig)
+	n.elector = election.NewElector(ctx, electionConfig)
 
 	return n, nil
 }
@@ -227,15 +232,15 @@ type KongController struct {
 
 	store store.Storer
 
-	parser parser.Parser
-
 	PluginSchemaStore PluginSchemaStore
+
+	Logger logrus.FieldLogger
 }
 
 // Start starts a new NGINX master process running in foreground, blocking until the next call to
 // Stop.
 func (n *KongController) Start() {
-	glog.Infof("starting Ingress controller")
+	n.Logger.Debugf("startin up controller")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -272,18 +277,18 @@ func (n *KongController) Start() {
 				return
 			}
 			if evt, ok := event.(Event); ok {
-				glog.V(3).Infof("Event %v received - object %v", evt.Type, evt.Obj)
+				n.Logger.WithField("event_type", evt.Type).Debugf("event received")
 				n.syncQueue.Enqueue(evt.Obj)
 				// TODO retry for ephermal error conditions
 				// This function is called outside the task queue because event
 				// information is currently shielded from the sync function.
 				// Sync function syncs everything, no matter what the event is
-				err := n.handleBasicAuthUpdates(evt)
+				err := n.handleBasicAuthUpdates(ctx, evt)
 				if err != nil {
-					glog.Errorf("error handling basic-auth update: %v", err)
+					n.Logger.Errorf("failed to update basic-auth credentials: %v", err)
 				}
 			} else {
-				glog.Warningf("unexpected event type received: %T", event)
+				n.Logger.WithField("event_type", evt.Type).Errorf("invalid event received")
 			}
 		case <-n.stopCh:
 			return
@@ -307,13 +312,13 @@ func (n *KongController) Stop() error {
 		// Finish writing to any Ingress objects before giving up leadership.
 		n.syncStatus.Shutdown(n.elector.IsLeader())
 	}
-	glog.Infof("shutting down controller queues")
+	n.Logger.Infof("shutting down controller queues")
 	n.syncQueue.Shutdown()
 	// Closing the stop channel will cause us to give up leadership.
 	close(n.stopCh)
-	glog.Infof("awaiting completion of shutdown procedures")
+	n.Logger.Infof("awaiting completion of shutdown procedures")
 	if err := n.backgroundGroup.Wait(); err != nil {
-		glog.Errorf("background controller task failed: %v", err)
+		n.Logger.Errorf("background controller task failed: %v", err)
 	}
 
 	return nil
@@ -325,7 +330,7 @@ func (n *KongController) Stop() error {
 // Due to this reason, one can't perform a 'diff' with them.
 // This function filters for basic-auth password changes and applies them
 // to Kong as they happen.
-func (n *KongController) handleBasicAuthUpdates(event Event) error {
+func (n *KongController) handleBasicAuthUpdates(ctx context.Context, event Event) error {
 	if !n.elector.IsLeader() {
 		return nil
 	}
@@ -364,34 +369,33 @@ func (n *KongController) handleBasicAuthUpdates(event Event) error {
 			Result: &cred,
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a decoder")
+		return fmt.Errorf("failed to create a decoder: %w", err)
 	}
 	err = decoder.Decode(newCred.Config)
 	if err != nil {
-		return errors.Wrapf(err, "error decoding credential '%v/%v'",
-			newCred.Namespace, newCred.Name)
+		return fmt.Errorf("error decoding credential '%v/%v': %w",
+			newCred.Namespace, newCred.Name, err)
 	}
 
 	kongConsumer, err := n.store.GetKongConsumer(newCred.Namespace,
 		newCred.ConsumerRef)
 	if err != nil {
-		return errors.Wrapf(err, "error searching for consumer '%v/%v'",
-			newCred.Namespace, newCred.ConsumerRef)
+		return fmt.Errorf("error searching for consumer '%v/%v': %w",
+			newCred.Namespace, newCred.ConsumerRef, err)
 	}
 	username := kongConsumer.Username
 	client := n.cfg.Kong.Client
 
 	// find the ID of the cred from Kong
-	ctx := context.TODO()
 	outdatedCred, err := client.BasicAuths.Get(ctx, &username, cred.Username)
 	if err != nil {
-		return errors.Wrap(err, "fetching basic-auth credential")
+		return fmt.Errorf("fetching basic-auth credential: %w", err)
 	}
 	cred.ID = outdatedCred.ID
 	// update it
 	_, err = client.BasicAuths.Create(ctx, &username, &cred)
 	if err != nil {
-		return errors.Wrap(err, "updating basic-auth credential")
+		return fmt.Errorf("updating basic-auth credential: %w", err)
 	}
 	return nil
 }

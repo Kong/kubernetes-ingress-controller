@@ -22,21 +22,33 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestIngressClassValidatorFunc(t *testing.T) {
 	tests := []struct {
-		ingress    string
-		controller string
-		isValid    bool
+		ingress       string        // the class set on the Ingress resource
+		classMatching ClassMatching // the "user" classless ingress flag value, translated to its match strategy
+		controller    string        // the class set on the controller
+		isValid       bool          // the expected verdict
 	}{
-		{"", "", true},
-		{"", "kong", true},
-		{"kong", "kong", true},
-		{"custom", "custom", true},
-		{"", "killer", false},
-		{"custom", "kong", false},
+		{"", ExactOrEmptyClassMatch, "", true},
+		{"", ExactOrEmptyClassMatch, DefaultIngressClass, true},
+		{"", ExactClassMatch, DefaultIngressClass, false},
+		{DefaultIngressClass, ExactOrEmptyClassMatch, DefaultIngressClass, true},
+		{DefaultIngressClass, ExactClassMatch, DefaultIngressClass, true},
+		{"custom", ExactOrEmptyClassMatch, "custom", true},
+		{"", ExactOrEmptyClassMatch, "killer", true},
+		{"custom", ExactOrEmptyClassMatch, DefaultIngressClass, false},
+		{"custom", ExactClassMatch, DefaultIngressClass, false},
+		{"", ExactOrEmptyClassMatch, "custom", true},
+		{"", ExactClassMatch, "kozel", false},
+		{"kozel", ExactOrEmptyClassMatch, "kozel", true},
+		{"kozel", ExactClassMatch, "kozel", true},
+		{"", ExactOrEmptyClassMatch, "killer", true},
+		{"custom", ExactOrEmptyClassMatch, "kozel", false},
+		{"custom", ExactClassMatch, "kozel", false},
 	}
 
 	ing := &extensions.Ingress{
@@ -46,14 +58,42 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		},
 	}
 
+	ingv1 := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: "default",
+			Annotations: map[string]string{
+				IngressClassKey: DefaultIngressClass,
+			},
+		},
+		Spec: networkingv1.IngressSpec{
+			IngressClassName: nil,
+		},
+	}
+
 	data := map[string]string{}
 	ing.SetAnnotations(data)
 	for _, test := range tests {
-		ing.Annotations[ingressClassKey] = test.ingress
+		ing.Annotations[IngressClassKey] = test.ingress
+		ingv1.Spec.IngressClassName = &test.ingress
+		// TODO: unclear if we truly use IngressClassValidatorFunc anymore
+		// IngressClassValidatorFuncFromObjectMeta appears to effectively supersede it, and is what we use in store
+		// IngressClassValidatorFunc appears to be a test-only relic at this point
 		f := IngressClassValidatorFunc(test.controller)
-		b := f(&ing.ObjectMeta)
-		if b != test.isValid {
-			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, b)
+		fmeta := IngressClassValidatorFuncFromObjectMeta(test.controller)
+		fv1 := IngressClassValidatorFuncFromV1Ingress(test.controller)
+
+		result := f(&ing.ObjectMeta, test.classMatching)
+		if result != test.isValid {
+			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, result)
+		}
+		resultMeta := fmeta(&ing.ObjectMeta, test.classMatching)
+		if resultMeta != test.isValid {
+			t.Errorf("meta test %v - expected %v but %v was returned", test, test.isValid, resultMeta)
+		}
+		resultV1 := fv1(ingv1, test.classMatching)
+		if resultV1 != test.isValid {
+			t.Errorf("v1 test %v - expected %v but %v was returned", test, test.isValid, resultV1)
 		}
 	}
 }
@@ -178,7 +218,7 @@ func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 			name: "legacy annotation",
 			args: args{
 				anns: map[string]string{
-					"plugins.konghq.com": "kp-rl, kp-cors",
+					DeprecatedPluginsKey: "kp-rl, kp-cors",
 				},
 			},
 			want: []string{"kp-rl", "kp-cors"},
@@ -196,7 +236,7 @@ func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 			name: "annotation prioriy",
 			args: args{
 				anns: map[string]string{
-					"plugins.konghq.com": "a,b",
+					DeprecatedPluginsKey: "a,b",
 					"konghq.com/plugins": "kp-rl, kp-cors",
 				},
 			},
@@ -534,6 +574,43 @@ func TestExtractHTTPSRedirectStatusCode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ExtractHTTPSRedirectStatusCode(tt.args.anns); got != tt.want {
 				t.Errorf("ExtractHTTPSRedirectStatusCode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHasForceSSLRedirectAnnotation(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "basic sanity",
+			args: args{
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "true",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "garbage value",
+			args: args{
+				anns: map[string]string{
+					"ingress.kubernetes.io/force-ssl-redirect": "xyz",
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasForceSSLRedirectAnnotation(tt.args.anns); got != tt.want {
+				t.Errorf("HasForceSSLRedirectAnnotation() = %v, want %v", got, tt.want)
 			}
 		})
 	}

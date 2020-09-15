@@ -7,7 +7,7 @@ webhooks:
 - name: validations.kong.konghq.com
   failurePolicy: Fail
   sideEffects: None
-  admissionReviewVersions: ["v1beta1"]
+  admissionReviewVersions: ["v1beta1", "v1"]
   rules:
   - apiGroups:
     - configuration.konghq.com

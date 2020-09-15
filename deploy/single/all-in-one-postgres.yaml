@@ -662,6 +662,8 @@ spec:
       - env:
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_PORT_MAPS
+          value: 80:8000, 443:8443
         - name: KONG_ADMIN_LISTEN
           value: 127.0.0.1:8444 ssl
         - name: KONG_STATUS_LISTEN
@@ -719,8 +721,6 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
-        securityContext:
-          runAsUser: 1000
       - env:
         - name: CONTROLLER_KONG_ADMIN_URL
           value: https://127.0.0.1:8444
@@ -738,7 +738,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.9.1
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.10.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

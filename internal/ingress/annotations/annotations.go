@@ -19,16 +19,26 @@ package annotations
 import (
 	"strings"
 
+	networkingv1 "k8s.io/api/networking/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ClassMatching int
+
 const (
-	ingressClassKey = "kubernetes.io/ingress.class"
+	IgnoreClassMatch       ClassMatching = iota
+	ExactOrEmptyClassMatch ClassMatching = iota
+	ExactClassMatch        ClassMatching = iota
+)
+
+const (
+	IngressClassKey = "kubernetes.io/ingress.class"
 
 	deprecatedAnnotationPrefix = "configuration.konghq.com"
 	annotationPrefix           = "konghq.com"
 
-	deprecatedPluginsKey       = "plugins.konghq.com"
+	DeprecatedPluginsKey       = "plugins.konghq.com"
 	deprecatedConfigurationKey = deprecatedAnnotationPrefix
 
 	configurationKey     = "/override"
@@ -49,39 +59,55 @@ const (
 	DefaultIngressClass = "kong"
 )
 
-func validIngress(ingressAnnotationValue, ingressClass string) bool {
-	// we have 2 valid combinations
-	// 1 - ingress with default class | blank annotation on ingress
-	// 2 - ingress with specific class | same annotation on ingress
-	//
-	// and 2 invalid combinations
-	// 3 - ingress with default class | fixed annotation on ingress
-	// 4 - ingress with specific class | different annotation on ingress
-	if ingressAnnotationValue == "" && ingressClass == DefaultIngressClass {
+func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMatching) bool {
+	switch handling {
+	case IgnoreClassMatch:
+		// class is not considered at all. any value, even a mismatch, is valid
 		return true
+	case ExactOrEmptyClassMatch:
+		// aka lazy. exact match desired, but empty permitted
+		return ingressAnnotationValue == "" || ingressAnnotationValue == ingressClass
+	case ExactClassMatch:
+		// what it says on the tin
+		// this may be another place we want to return a warning, since an empty-class resource will never be valid
+		return ingressAnnotationValue == ingressClass
+	default:
+		panic("invalid ingress class handling option received")
 	}
-	return ingressAnnotationValue == ingressClass
 }
 
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
 func IngressClassValidatorFunc(
-	ingressClass string) func(obj metav1.Object) bool {
+	ingressClass string) func(obj metav1.Object, handling ClassMatching) bool {
 
-	return func(obj metav1.Object) bool {
-		ingress := obj.GetAnnotations()[ingressClassKey]
-		return validIngress(ingress, ingressClass)
+	return func(obj metav1.Object, handling ClassMatching) bool {
+		ingress := obj.GetAnnotations()[IngressClassKey]
+		return validIngress(ingress, ingressClass, handling)
 	}
 }
 
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
-	ingressClass string) func(obj *metav1.ObjectMeta) bool {
+	ingressClass string) func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
 
-	return func(obj *metav1.ObjectMeta) bool {
-		ingress := obj.GetAnnotations()[ingressClassKey]
-		return validIngress(ingress, ingressClass)
+	return func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
+		ingress := obj.GetAnnotations()[IngressClassKey]
+		return validIngress(ingress, ingressClass, handling)
+	}
+}
+
+func IngressClassValidatorFuncFromV1Ingress(
+	ingressClass string) func(ingress *networkingv1.Ingress, handling ClassMatching) bool {
+
+	return func(ingress *networkingv1.Ingress, handling ClassMatching) bool {
+		class := ingress.Spec.IngressClassName
+		className := ""
+		if class != nil {
+			className = *class
+		}
+		return validIngress(className, ingressClass, handling)
 	}
 }
 
@@ -103,7 +129,7 @@ func pluginsFromAnnotations(anns map[string]string) (string, bool) {
 	if exists {
 		return value, exists
 	}
-	value, exists = anns[deprecatedPluginsKey]
+	value, exists = anns[DeprecatedPluginsKey]
 	return value, exists
 }
 
@@ -168,6 +194,12 @@ func ExtractPath(anns map[string]string) string {
 // code annotation value.
 func ExtractHTTPSRedirectStatusCode(anns map[string]string) string {
 	return valueFromAnnotation(httpsRedirectCodeKey, anns)
+}
+
+// HasForceSSLRedirectAnnotation returns true if the annotation
+// ingress.kubernetes.io/force-ssl-redirect is set to "true" in anns.
+func HasForceSSLRedirectAnnotation(anns map[string]string) bool {
+	return anns["ingress.kubernetes.io/force-ssl-redirect"] == "true"
 }
 
 // ExtractPreserveHost extracts the preserve-host annotation value.

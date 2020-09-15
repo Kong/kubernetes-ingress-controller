@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -46,6 +46,8 @@ type Queue struct {
 	fn func(obj interface{}) (interface{}, error)
 
 	lastSync int64
+
+	Logger logrus.FieldLogger
 }
 
 // Element represents one item of the queue
@@ -61,17 +63,18 @@ func (t *Queue) Run(period time.Duration, stopCh <-chan struct{}) {
 
 // Enqueue enqueues ns/name of the given api object in the task queue.
 func (t *Queue) Enqueue(obj interface{}) {
-	if t.IsShuttingDown() {
-		glog.Errorf("queue has been shutdown, failed to enqueue: %v", obj)
-		return
-	}
-
 	ts := time.Now().UnixNano()
 	key, err := t.fn(obj)
 	if err != nil {
-		glog.Errorf("%v", err)
+		t.Logger.Errorf("fetching key for object failed: %v", err)
 		return
 	}
+
+	if t.IsShuttingDown() {
+		t.Logger.Errorf("failed to enqueue: queue shutdown %v", key)
+		return
+	}
+
 	t.queue.Add(Element{
 		Key:       key,
 		Timestamp: ts,
@@ -101,15 +104,16 @@ func (t *Queue) worker() {
 
 		item := key.(Element)
 		if t.lastSync > item.Timestamp {
-			glog.V(3).Infof("skipping %v sync (%v > %v)", item.Key, t.lastSync, item.Timestamp)
+			t.Logger.Debugf("skipping sync for '%v': timestamp too old (%v > %v)", item.Key, t.lastSync, item.Timestamp)
 			t.queue.Forget(key)
 			t.queue.Done(key)
 			continue
 		}
 
-		glog.V(3).Infof("syncing %v", item.Key)
+		t.Logger.Debugf("syncing item '%v'", item.Key)
 		if err := t.sync(key); err != nil {
-			glog.Warningf("requeuing %v, err %v", item.Key, err)
+			t.Logger.Errorf("failed to sync: %v", err)
+			t.Logger.Warningf("requeuing sync for '%v'", item.Key)
 			t.queue.AddRateLimited(Element{
 				Key:       item.Key,
 				Timestamp: time.Now().UnixNano(),
@@ -146,17 +150,19 @@ func (t *Queue) IsShuttingDown() bool {
 
 // NewTaskQueue creates a new task queue with the given sync function.
 // The sync function is called for every element inserted into the queue.
-func NewTaskQueue(syncFn func(interface{}) error) *Queue {
-	return NewCustomTaskQueue(syncFn, nil)
+func NewTaskQueue(syncFn func(interface{}) error, logger logrus.FieldLogger) *Queue {
+	return NewCustomTaskQueue(syncFn, nil, logger)
 }
 
 // NewCustomTaskQueue ...
-func NewCustomTaskQueue(syncFn func(interface{}) error, fn func(interface{}) (interface{}, error)) *Queue {
+func NewCustomTaskQueue(syncFn func(interface{}) error,
+	fn func(interface{}) (interface{}, error), logger logrus.FieldLogger) *Queue {
 	q := &Queue{
 		queue:      workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 		sync:       syncFn,
 		workerDone: make(chan bool),
 		fn:         fn,
+		Logger:     logger,
 	}
 
 	if fn == nil {

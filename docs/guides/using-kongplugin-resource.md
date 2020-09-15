@@ -64,6 +64,7 @@ metadata:
   name: demo
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -130,6 +131,7 @@ metadata:
   name: demo-2
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -324,14 +326,20 @@ Now, we will protect our Kubernetes cluster.
 For this, we will be configuring a rate-limiting plugin, which
 will throttle requests coming from the same client.
 
-Let's create the `KongPlugin` resource:
+This must be a cluster-level `KongClusterPlugin` resource, as `KongPlugin`
+resources cannot be applied globally, to preserve Kubernetes RBAC guarantees
+for cross-namespace isolation.
+
+Let's create the `KongClusterPlugin` resource:
 
 ```bash
 $ echo "
 apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
+kind: KongClusterPlugin
 metadata:
   name: global-rate-limit
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: \"true\"
 config:
@@ -340,7 +348,7 @@ config:
   policy: local
 plugin: rate-limiting
 " | kubectl apply -f -
-kongplugin.configuration.konghq.com/global-rate-limit created
+kongclusterplugin.configuration.konghq.com/global-rate-limit created
 ```
 
 With this plugin (please note the `global` label), every request through
@@ -409,6 +417,7 @@ kind: KongConsumer
 metadata:
   name: harry
   annotations:
+    kubernetes.io/ingress.class: kong
     konghq.com/plugins: harry-rate-limit
 username: harry
 credentials:

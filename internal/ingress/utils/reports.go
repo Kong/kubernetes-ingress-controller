@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -31,26 +31,22 @@ type Info struct {
 // Reporter sends anonymous reports of runtime properties and
 // errors in Kong.
 type Reporter struct {
-	info Info
+	Info Info
 
 	serializedInfo string
 	conn           *net.UDPConn
-}
 
-// NewReporter creates a reporter based on the info provided.
-// Use the Run() method to start reporting.
-func NewReporter(info Info) Reporter {
-	return Reporter{info: info}
+	Logger logrus.FieldLogger
 }
 
 func (r *Reporter) once() error {
 	var serializedInfo string
-	serializedInfo = serializedInfo + "v=" + r.info.KICVersion + ";"
-	serializedInfo = serializedInfo + "k8sv=" + r.info.KubernetesVersion + ";"
-	serializedInfo = serializedInfo + "kv=" + r.info.KongVersion + ";"
-	serializedInfo = serializedInfo + "db=" + r.info.KongDB + ";"
-	serializedInfo = serializedInfo + "id=" + r.info.ID + ";"
-	serializedInfo = serializedInfo + "hn=" + r.info.Hostname + ";"
+	serializedInfo = serializedInfo + "v=" + r.Info.KICVersion + ";"
+	serializedInfo = serializedInfo + "k8sv=" + r.Info.KubernetesVersion + ";"
+	serializedInfo = serializedInfo + "kv=" + r.Info.KongVersion + ";"
+	serializedInfo = serializedInfo + "db=" + r.Info.KongDB + ";"
+	serializedInfo = serializedInfo + "id=" + r.Info.ID + ";"
+	serializedInfo = serializedInfo + "hn=" + r.Info.Hostname + ";"
 	r.serializedInfo = serializedInfo
 
 	addr, err := net.ResolveUDPAddr("udp", reportsHost+":"+
@@ -70,7 +66,7 @@ func (r *Reporter) once() error {
 func (r Reporter) Run(done <-chan struct{}) {
 	err := r.once()
 	if err != nil {
-		glog.Errorf("error initializing reports: %s", err)
+		r.Logger.Errorf("failed to initialize reporter: %s", err)
 		return
 	}
 	defer r.conn.Close()
@@ -104,6 +100,6 @@ func (r Reporter) send(signal string, uptime int) {
 		strconv.Itoa(uptime) + ";" + r.serializedInfo
 	_, err := r.conn.Write([]byte(message))
 	if err != nil {
-		glog.Errorf("error sending report: %s", err)
+		r.Logger.Errorf("failed to send report: %s", err)
 	}
 }

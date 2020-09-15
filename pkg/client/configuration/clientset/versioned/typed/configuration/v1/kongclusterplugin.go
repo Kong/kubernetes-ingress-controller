@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -37,14 +38,14 @@ type KongClusterPluginsGetter interface {
 
 // KongClusterPluginInterface has methods to work with KongClusterPlugin resources.
 type KongClusterPluginInterface interface {
-	Create(*v1.KongClusterPlugin) (*v1.KongClusterPlugin, error)
-	Update(*v1.KongClusterPlugin) (*v1.KongClusterPlugin, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.KongClusterPlugin, error)
-	List(opts metav1.ListOptions) (*v1.KongClusterPluginList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.KongClusterPlugin, err error)
+	Create(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.CreateOptions) (*v1.KongClusterPlugin, error)
+	Update(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.UpdateOptions) (*v1.KongClusterPlugin, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.KongClusterPlugin, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.KongClusterPluginList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongClusterPlugin, err error)
 	KongClusterPluginExpansion
 }
 
@@ -61,19 +62,19 @@ func newKongClusterPlugins(c *ConfigurationV1Client) *kongClusterPlugins {
 }
 
 // Get takes name of the kongClusterPlugin, and returns the corresponding kongClusterPlugin object, and an error if there is any.
-func (c *kongClusterPlugins) Get(name string, options metav1.GetOptions) (result *v1.KongClusterPlugin, err error) {
+func (c *kongClusterPlugins) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Get().
 		Resource("kongclusterplugins").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of KongClusterPlugins that match those selectors.
-func (c *kongClusterPlugins) List(opts metav1.ListOptions) (result *v1.KongClusterPluginList, err error) {
+func (c *kongClusterPlugins) List(ctx context.Context, opts metav1.ListOptions) (result *v1.KongClusterPluginList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -83,13 +84,13 @@ func (c *kongClusterPlugins) List(opts metav1.ListOptions) (result *v1.KongClust
 		Resource("kongclusterplugins").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested kongClusterPlugins.
-func (c *kongClusterPlugins) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *kongClusterPlugins) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -99,66 +100,69 @@ func (c *kongClusterPlugins) Watch(opts metav1.ListOptions) (watch.Interface, er
 		Resource("kongclusterplugins").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a kongClusterPlugin and creates it.  Returns the server's representation of the kongClusterPlugin, and an error, if there is any.
-func (c *kongClusterPlugins) Create(kongClusterPlugin *v1.KongClusterPlugin) (result *v1.KongClusterPlugin, err error) {
+func (c *kongClusterPlugins) Create(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.CreateOptions) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Post().
 		Resource("kongclusterplugins").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongClusterPlugin).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a kongClusterPlugin and updates it. Returns the server's representation of the kongClusterPlugin, and an error, if there is any.
-func (c *kongClusterPlugins) Update(kongClusterPlugin *v1.KongClusterPlugin) (result *v1.KongClusterPlugin, err error) {
+func (c *kongClusterPlugins) Update(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.UpdateOptions) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Put().
 		Resource("kongclusterplugins").
 		Name(kongClusterPlugin.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongClusterPlugin).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the kongClusterPlugin and deletes it. Returns an error if one occurs.
-func (c *kongClusterPlugins) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *kongClusterPlugins) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("kongclusterplugins").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *kongClusterPlugins) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *kongClusterPlugins) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("kongclusterplugins").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched kongClusterPlugin.
-func (c *kongClusterPlugins) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.KongClusterPlugin, err error) {
+func (c *kongClusterPlugins) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Patch(pt).
 		Resource("kongclusterplugins").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

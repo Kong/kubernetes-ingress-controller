@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
@@ -59,9 +58,12 @@ type cliConfig struct {
 	KongCustomEntitiesSecret string
 
 	// Resource filtering
-	WatchNamespace string
-	IngressClass   string
-	ElectionID     string
+	WatchNamespace                 string
+	ProcessClasslessIngressV1Beta1 bool
+	ProcessClasslessIngressV1      bool
+	ProcessClasslessKongConsumer   bool
+	IngressClass                   string
+	ElectionID                     string
 
 	// Ingress Status publish resource
 	PublishService         string
@@ -74,9 +76,18 @@ type cliConfig struct {
 	SyncRateLimit     float32
 	EnableReverseSync bool
 
+	// Logging
+	LogLevel  string
+	LogFormat string
+
 	// k8s connection details
 	APIServerHost      string
 	KubeConfigFilePath string
+
+	// Allowed Ingress resource versions
+	DisableIngressExtensionsV1beta1 bool
+	DisableIngressNetworkingV1beta1 bool
+	DisableIngressNetworkingV1      bool
 
 	// Performance
 	EnableProfiling bool
@@ -175,6 +186,8 @@ mode of Kong. Takes the form of namespace/name.`)
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
+	flags.Bool("skip-classless-ingress-v1beta1", false,
+		`Skip non annotated Ingresses and Kong CRDs.`)
 	flags.String("ingress-class", annotations.DefaultIngressClass,
 		`Name of the ingress class to route through this controller.`)
 	flags.String("election-id", "ingress-controller-leader",
@@ -202,6 +215,14 @@ IP/hostname when the controller is being stopped.`)
 		`Define the sync frequency upper limit`)
 	flag.Bool("enable-reverse-sync", false, `Enable reverse checks from Kong to Kubernetes`)
 
+	// Logging
+	flags.String("log-level", "info",
+		`Level of logging for the controller. Allowed values are 
+trace, debug, info, warn, error, fatal and panic.`)
+	flags.String("log-format", "text",
+		`Format of logs of the controller. Allowed values are 
+text and json.`)
+
 	// k8s connection details
 	flags.String("apiserver-host", "",
 		`The address of the Kubernetes Apiserver to connect to in the format of 
@@ -210,6 +231,17 @@ If not specified, the assumption is that the binary runs inside a
 Kubernetes cluster and local discovery is attempted.`)
 	flags.String("kubeconfig", "", "Path to kubeconfig file with "+
 		"authorization and master location information.")
+
+	// Allowed Ingress resource versions
+	flags.Bool("disable-ingress-extensionsv1beta1", false,
+		`If set, the ingress controller won't try extensions/v1beta1 when negotiating the newest supported
+Ingress API with Kubernetes.`)
+	flags.Bool("disable-ingress-networkingv1beta1", false,
+		`If set, the ingress controller won't try networking.k8s.io/v1beta1 when negotiating the newest supported
+Ingress API with Kubernetes.`)
+	flags.Bool("disable-ingress-networkingv1", false,
+		`If set, the ingress controller won't try networking/v1 when negotiating the newest supported
+Ingress API with Kubernetes.`)
 
 	// Misc
 	flags.Bool("profiling", true, `Enable profiling via web interface host:port/debug/pprof/`)
@@ -224,11 +256,6 @@ Kubernetes cluster and local discovery is attempted.`)
 func parseFlags() (cliConfig, error) {
 
 	flagSet := flagSet()
-
-	// glog
-	// The error is being ignored here for unit testing,
-	// this always errors out in unit tests but succeeds in e2e runs.
-	_ = flag.Set("logtostderr", "true")
 
 	flagSet.AddGoFlagSet(flag.CommandLine)
 	if err := flagSet.Parse(os.Args); err != nil {
@@ -246,10 +273,6 @@ func parseFlags() (cliConfig, error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	if err := viper.BindPFlags(flagSet); err != nil {
 		return cliConfig{}, err
-	}
-
-	for key, value := range viper.AllSettings() {
-		glog.V(2).Infof("FLAG: --%s=%q", key, value)
 	}
 
 	var config cliConfig
@@ -320,6 +343,9 @@ func parseFlags() (cliConfig, error) {
 
 	// Resource filtering
 	config.WatchNamespace = viper.GetString("watch-namespace")
+	config.ProcessClasslessIngressV1Beta1 = viper.GetBool("process-classless-ingress-v1beta1")
+	config.ProcessClasslessIngressV1 = viper.GetBool("process-classless-ingress-v1")
+	config.ProcessClasslessKongConsumer = viper.GetBool("process-classless-kong-consumer")
 	config.IngressClass = viper.GetString("ingress-class")
 	config.ElectionID = viper.GetString("election-id")
 
@@ -334,9 +360,18 @@ func parseFlags() (cliConfig, error) {
 	config.SyncRateLimit = (float32)(viper.GetFloat64("sync-rate-limit"))
 	config.EnableReverseSync = viper.GetBool("enable-reverse-sync")
 
+	// Logging
+	config.LogLevel = viper.GetString("log-level")
+	config.LogFormat = viper.GetString("log-format")
+
 	// k8s connection details
 	config.APIServerHost = viper.GetString("apiserver-host")
 	config.KubeConfigFilePath = viper.GetString("kubeconfig")
+
+	// Disabled Ingress resource versions
+	config.DisableIngressExtensionsV1beta1 = viper.GetBool("disable-ingress-extensionsv1beta1")
+	config.DisableIngressNetworkingV1beta1 = viper.GetBool("disable-ingress-networkingv1beta1")
+	config.DisableIngressNetworkingV1 = viper.GetBool("disable-ingress-networkingv1")
 
 	// Misc
 	config.EnableProfiling = viper.GetBool("profiling")

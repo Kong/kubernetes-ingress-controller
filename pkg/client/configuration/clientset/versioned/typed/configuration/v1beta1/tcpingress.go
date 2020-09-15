@@ -19,6 +19,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	"time"
 
 	v1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
@@ -37,15 +38,15 @@ type TCPIngressesGetter interface {
 
 // TCPIngressInterface has methods to work with TCPIngress resources.
 type TCPIngressInterface interface {
-	Create(*v1beta1.TCPIngress) (*v1beta1.TCPIngress, error)
-	Update(*v1beta1.TCPIngress) (*v1beta1.TCPIngress, error)
-	UpdateStatus(*v1beta1.TCPIngress) (*v1beta1.TCPIngress, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1beta1.TCPIngress, error)
-	List(opts v1.ListOptions) (*v1beta1.TCPIngressList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.TCPIngress, err error)
+	Create(ctx context.Context, tCPIngress *v1beta1.TCPIngress, opts v1.CreateOptions) (*v1beta1.TCPIngress, error)
+	Update(ctx context.Context, tCPIngress *v1beta1.TCPIngress, opts v1.UpdateOptions) (*v1beta1.TCPIngress, error)
+	UpdateStatus(ctx context.Context, tCPIngress *v1beta1.TCPIngress, opts v1.UpdateOptions) (*v1beta1.TCPIngress, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.TCPIngress, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.TCPIngressList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.TCPIngress, err error)
 	TCPIngressExpansion
 }
 
@@ -64,20 +65,20 @@ func newTCPIngresses(c *ConfigurationV1beta1Client, namespace string) *tCPIngres
 }
 
 // Get takes name of the tCPIngress, and returns the corresponding tCPIngress object, and an error if there is any.
-func (c *tCPIngresses) Get(name string, options v1.GetOptions) (result *v1beta1.TCPIngress, err error) {
+func (c *tCPIngresses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.TCPIngress, err error) {
 	result = &v1beta1.TCPIngress{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("tcpingresses").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of TCPIngresses that match those selectors.
-func (c *tCPIngresses) List(opts v1.ListOptions) (result *v1beta1.TCPIngressList, err error) {
+func (c *tCPIngresses) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.TCPIngressList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *tCPIngresses) List(opts v1.ListOptions) (result *v1beta1.TCPIngressList
 		Resource("tcpingresses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested tCPIngresses.
-func (c *tCPIngresses) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *tCPIngresses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *tCPIngresses) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("tcpingresses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a tCPIngress and creates it.  Returns the server's representation of the tCPIngress, and an error, if there is any.
-func (c *tCPIngresses) Create(tCPIngress *v1beta1.TCPIngress) (result *v1beta1.TCPIngress, err error) {
+func (c *tCPIngresses) Create(ctx context.Context, tCPIngress *v1beta1.TCPIngress, opts v1.CreateOptions) (result *v1beta1.TCPIngress, err error) {
 	result = &v1beta1.TCPIngress{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("tcpingresses").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(tCPIngress).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a tCPIngress and updates it. Returns the server's representation of the tCPIngress, and an error, if there is any.
-func (c *tCPIngresses) Update(tCPIngress *v1beta1.TCPIngress) (result *v1beta1.TCPIngress, err error) {
+func (c *tCPIngresses) Update(ctx context.Context, tCPIngress *v1beta1.TCPIngress, opts v1.UpdateOptions) (result *v1beta1.TCPIngress, err error) {
 	result = &v1beta1.TCPIngress{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("tcpingresses").
 		Name(tCPIngress.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(tCPIngress).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *tCPIngresses) UpdateStatus(tCPIngress *v1beta1.TCPIngress) (result *v1beta1.TCPIngress, err error) {
+func (c *tCPIngresses) UpdateStatus(ctx context.Context, tCPIngress *v1beta1.TCPIngress, opts v1.UpdateOptions) (result *v1beta1.TCPIngress, err error) {
 	result = &v1beta1.TCPIngress{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("tcpingresses").
 		Name(tCPIngress.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(tCPIngress).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the tCPIngress and deletes it. Returns an error if one occurs.
-func (c *tCPIngresses) Delete(name string, options *v1.DeleteOptions) error {
+func (c *tCPIngresses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("tcpingresses").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *tCPIngresses) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *tCPIngresses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("tcpingresses").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched tCPIngress.
-func (c *tCPIngresses) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.TCPIngress, err error) {
+func (c *tCPIngresses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.TCPIngress, err error) {
 	result = &v1beta1.TCPIngress{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("tcpingresses").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

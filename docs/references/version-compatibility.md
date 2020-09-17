@@ -50,3 +50,15 @@ other enterprise functionality, built on top of the Open-Source Kong Gateway.
 | Kong Enterprise 1.3.x    | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                |
 | Kong Enterprise 1.5.x    | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Kong Enterprise 2.1.x    | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: |
+
+## Kubernetes
+
+| Kong Ingress Controller  | 0.9.x              | 0.10.x             |
+|--------------------------|:------------------:|:------------------:|
+| Kubernetes 1.13          | :x:                | :x:                |
+| Kubernetes 1.14          | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.15          | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.16          | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.17          | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.18          | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.19          | :white_check_mark: | :white_check_mark: |

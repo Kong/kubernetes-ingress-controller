@@ -24,3 +24,4 @@ spec:
               name: kong-settings
         command: [ "/bin/sh", "-c", "kong migrations bootstrap" ]
       restartPolicy: OnFailure
+

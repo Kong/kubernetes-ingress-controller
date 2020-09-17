@@ -63,3 +63,4 @@ spec:
   selector:
     app: ingress-kong-cp
   type: NodePort
+

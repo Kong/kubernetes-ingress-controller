@@ -22,8 +22,6 @@ type KongClusterPluginExpansion interface{}
 
 type KongConsumerExpansion interface{}
 
-type KongCredentialExpansion interface{}
-
 type KongIngressExpansion interface{}
 
 type KongPluginExpansion interface{}

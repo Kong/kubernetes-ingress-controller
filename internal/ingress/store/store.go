@@ -72,7 +72,6 @@ type Storer interface {
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
-	ListKongCredentials() []*configurationv1.KongCredential
 	ListCACerts() ([]*apiv1.Secret, error)
 }
 
@@ -109,7 +108,6 @@ type CacheStores struct {
 	Plugin        cache.Store
 	ClusterPlugin cache.Store
 	Consumer      cache.Store
-	Credential    cache.Store
 	Configuration cache.Store
 
 	KnativeIngress cache.Store
@@ -336,20 +334,6 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 	}
 
 	return consumers
-}
-
-// ListKongCredentials returns all KongCredential filtered by the ingress.class
-// annotation.
-func (s Store) ListKongCredentials() []*configurationv1.KongCredential {
-	var credentials []*configurationv1.KongCredential
-	for _, item := range s.stores.Credential.List() {
-		c, ok := item.(*configurationv1.KongCredential)
-		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IgnoreClassMatch) {
-			credentials = append(credentials, c)
-		}
-	}
-
-	return credentials
 }
 
 // ListGlobalKongPlugins returns all KongPlugin resources

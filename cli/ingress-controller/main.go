@@ -423,11 +423,6 @@ func main() {
 	cacheStores.Consumer = kongConsumerInformer.GetStore()
 	informers = append(informers, kongConsumerInformer)
 
-	kongCredentialInformer := kongInformerFactory.Configuration().V1().KongCredentials().Informer()
-	kongCredentialInformer.AddEventHandler(reh)
-	cacheStores.Credential = kongCredentialInformer.GetStore()
-	informers = append(informers, kongCredentialInformer)
-
 	if controllerConfig.EnableKnativeIngressSupport {
 		knativeIngressInformer := knativeInformerFactory.Networking().V1alpha1().Ingresses().Informer()
 		knativeIngressInformer.AddEventHandler(reh)

@@ -58,8 +58,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongClusterPlugins().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("kongconsumers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongConsumers().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("kongcredentials"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongCredentials().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("kongingresses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1().KongIngresses().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("kongplugins"):

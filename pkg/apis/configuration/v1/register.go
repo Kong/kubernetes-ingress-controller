@@ -33,8 +33,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&KongPluginList{},
 		&KongConsumer{},
 		&KongConsumerList{},
-		&KongCredential{},
-		&KongCredentialList{},
 		&KongClusterPlugin{},
 		&KongClusterPluginList{},
 	)

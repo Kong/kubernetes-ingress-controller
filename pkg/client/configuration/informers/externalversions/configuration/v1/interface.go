@@ -28,8 +28,6 @@ type Interface interface {
 	KongClusterPlugins() KongClusterPluginInformer
 	// KongConsumers returns a KongConsumerInformer.
 	KongConsumers() KongConsumerInformer
-	// KongCredentials returns a KongCredentialInformer.
-	KongCredentials() KongCredentialInformer
 	// KongIngresses returns a KongIngressInformer.
 	KongIngresses() KongIngressInformer
 	// KongPlugins returns a KongPluginInformer.
@@ -55,11 +53,6 @@ func (v *version) KongClusterPlugins() KongClusterPluginInformer {
 // KongConsumers returns a KongConsumerInformer.
 func (v *version) KongConsumers() KongConsumerInformer {
 	return &kongConsumerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// KongCredentials returns a KongCredentialInformer.
-func (v *version) KongCredentials() KongCredentialInformer {
-	return &kongCredentialInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // KongIngresses returns a KongIngressInformer.

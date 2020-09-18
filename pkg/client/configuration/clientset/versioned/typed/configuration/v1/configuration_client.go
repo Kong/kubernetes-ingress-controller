@@ -28,7 +28,6 @@ type ConfigurationV1Interface interface {
 	RESTClient() rest.Interface
 	KongClusterPluginsGetter
 	KongConsumersGetter
-	KongCredentialsGetter
 	KongIngressesGetter
 	KongPluginsGetter
 }
@@ -44,10 +43,6 @@ func (c *ConfigurationV1Client) KongClusterPlugins() KongClusterPluginInterface 
 
 func (c *ConfigurationV1Client) KongConsumers(namespace string) KongConsumerInterface {
 	return newKongConsumers(c, namespace)
-}
-
-func (c *ConfigurationV1Client) KongCredentials(namespace string) KongCredentialInterface {
-	return newKongCredentials(c, namespace)
 }
 
 func (c *ConfigurationV1Client) KongIngresses(namespace string) KongIngressInterface {

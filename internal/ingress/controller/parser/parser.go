@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -275,18 +276,16 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 				kongCert.CreationTimestamp = secret.CreationTimestamp
 			}
 		}
+
 		for _, sni := range SNIs {
 			if !snisAdded[sni] {
 				snisAdded[sni] = true
 				kongCert.cert.SNIs = append(kongCert.cert.SNIs, kong.String(sni))
 			}
 		}
-		for _, sni := range SNIs {
-			if !snisAdded[sni] {
-				snisAdded[sni] = true
-				kongCert.cert.SNIs = append(kongCert.cert.SNIs, kong.String(sni))
-			}
-		}
+		sort.Slice(kongCert.cert.SNIs, func(i, j int) bool {
+			return *kongCert.cert.SNIs[i] > *kongCert.cert.SNIs[j]
+		})
 		certs[cert+key] = kongCert
 	}
 	var res []kongstate.Certificate

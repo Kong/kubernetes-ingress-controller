@@ -2451,6 +2451,9 @@ func TestParserSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
 					TLS: []networkingv1beta1.IngressTLS{
@@ -2465,6 +2468,9 @@ func TestParserSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
 					TLS: []networkingv1beta1.IngressTLS{
@@ -2512,23 +2518,25 @@ func TestParserSecret(t *testing.T) {
 			IngressesV1beta1: ingresses,
 			Secrets:          secrets,
 		})
-
 		assert.Nil(err)
 		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)
-
+		assert.Equal(1, len(state.Certificates),
+			"certificates are de-duplicated")
+		//
 		sort.SliceStable(state.Certificates[0].SNIs, func(i, j int) bool {
 			return strings.Compare(*state.Certificates[0].SNIs[i],
 				*state.Certificates[0].SNIs[j]) > 0
 		})
-		assert.Equal(
-			kong.Certificate{
+		assert.Equal(kongstate.Certificate{
+			Certificate: kong.Certificate{
 				ID:   kong.String("3e8edeca-7d23-4e02-84c9-437d11b746a6"),
 				Cert: kong.String(tlsPairs[0].Cert),
 				Key:  kong.String(tlsPairs[0].Key),
 				SNIs: kong.StringSlice("foo.com", "bar.com"),
-			}, state.Certificates[0])
+			},
+		}, state.Certificates[0])
 	})
 }
 

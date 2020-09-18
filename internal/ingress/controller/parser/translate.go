@@ -37,7 +37,24 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 			allDefaultBackends = append(allDefaultBackends, *ingress)
 		}
 
+		// this essentially iterates over the same content twice. we need to collect SNI information for two different
+		// purposes: result.SecretNameToSNIs collects Secret->SNI hostname info across ALL Ingresses, routeSNIs
+		// collects hostnames for a single Ingress only. This is necessary to support cert+SNI objects, which are
+		// decoupled from any one route, and route SNI match info, which is tied to a specific route. We determine this
+		// based on the actual rule hostname, but need to check that the hostname is available, in the edge case where
+		// someone has created an Ingress whose rule hostname set is a proper superset of the Ingress's TLS hostname
+		// set, ignoring some complications introduced by wildcards. maybe.
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
+		//var routeSNIs []*string
+		hasSNI := false
+		for i := range ingressSpec.TLS {
+			if len(ingressSpec.TLS[i].Hosts) > 0 {
+				hasSNI = true
+			}
+			//	for _, hostname := range ingressSpec.TLS[i].Hosts {
+			//		routeSNIs = append(routeSNIs, &hostname)
+			//	}
+		}
 
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
@@ -74,7 +91,28 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 					},
 				}
 				if host != "" {
-					r.Hosts = kong.StringSlice(host)
+					hosts := kong.StringSlice(host)
+					r.Hosts = hosts
+					// TODO maybe. this forcibly adds SNI match criteria for the TLS hostnames in an Ingress rule
+					// to the Kong route. That criteria arguably should exist for any Ingress rules with a hostname,
+					// and adding it automatically is useful for the current common (only?) use of this criteria in the
+					// Kong proxy, indicating when the proxy should request an mTLS client cert. It may create issues
+					// if users require a different SNI match criteria (unlikely) or support clients without SNI
+					// support (less common over time, but still a reality in regions with a large number of older
+					// devices with EOL OSes). A vendor-specific override can address either case, though may need to
+					// consider future changes to SNI matching in the Kong proxy core. Wildcard hostnames present a
+					// challenge, because you might reasonably want to add them (and the Ingress spec doesn't care
+					// about SNI, so it allows them by virtue of allowing wildcard hostnames), but the proxy doesn't
+					// let you configure them.
+					if hasSNI {
+						var snis []*string
+						for _, hostname := range hosts {
+							if !strings.Contains(*hostname, "*") {
+								snis = append(snis, hostname)
+							}
+						}
+						r.SNIs = snis
+					}
 				}
 
 				serviceName := ingress.Namespace + "." +

@@ -121,43 +121,6 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: kongcredentials.configuration.konghq.com
-spec:
-  additionalPrinterColumns:
-  - JSONPath: .type
-    description: Type of credential
-    name: Credential-type
-    type: string
-  - JSONPath: .metadata.creationTimestamp
-    description: Age
-    name: Age
-    type: date
-  - JSONPath: .consumerRef
-    description: Owner of the credential
-    name: Consumer-Ref
-    type: string
-  group: configuration.konghq.com
-  names:
-    kind: KongCredential
-    plural: kongcredentials
-  scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      properties:
-        consumerRef:
-          type: string
-        type:
-          type: string
-      required:
-      - consumerRef
-      - type
-  version: v1
----
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
   name: kongingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com

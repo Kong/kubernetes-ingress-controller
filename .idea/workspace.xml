@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a424d229-9779-49db-b7c1-dfa6fab860e0" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/internal/ingress/controller/parser/parser.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/ingress/controller/parser/parser.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/ingress/controller/parser/parser_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/ingress/controller/parser/parser_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

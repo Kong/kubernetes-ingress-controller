@@ -25,10 +25,6 @@ Following table describes all the flags that are available:
 
 |  Flag | Type | Default | Description |
 |-------|------|---------|-------------|
-| --admin-ca-cert-file                 |`string`   | none                            | DEPRECATED, use `--kong-admin-ca-cert-file`|
-| --admin-header                       |`string`   | none                            | DEPRECATED, use `--kong-admin-header`|
-| --admin-tls-server-name              |`string`   | none                            | DEPRECATED, use `--kong-admin-tls-server-name`|
-| --admin-tls-skip-verify              |`boolean`  | none                            | DEPRECATED, use `--kong-admin-tls-skip-verify`|
 | --admission-webhook-cert-file        |`string`   | `/admission-webhook/tls.crt`    | Path to the PEM-encoded certificate file for TLS handshake.|
 | --admission-webhook-key-file         |`string`   | `/admission-webhook/tls.key`    | Path to the PEM-encoded private key file for TLS handshake.|
 | --admission-webhook-cert             |`string`   | none                            | PEM-encoded certificate string for TLS handshake.|
@@ -48,7 +44,6 @@ Following table describes all the flags that are available:
 | --kong-admin-tls-server-name         |`string`   | none                            | SNI name to use to verify the certificate presented by Kong in TLS.|
 | --kong-admin-tls-skip-verify         |`boolean`  | `false`                         | Disable verification of TLS certificate of Kong's Admin endpoint.|
 | --kong-admin-url                     |`string`   | `http://localhost:8001`         | The address of the Kong Admin URL to connect to in the format of `protocol://address:port`.|
-| --kong-url                           |`string`   | none                            | DEPRECATED, use `--kong-admin-url` |
 | --kong-workspace                     |`string`   | `default`                       | Workspace in Kong Enterprise to be configured.|
 | --kong-custom-entities-secret        |`string`   | none                            | Secret containing custom entities to be populated in DB-less mode, takes the form `namespace/name`.|
 | --enable-reverse-sync                |`bool`     | `false`                         | Enable reverse checks from Kong to Kubernetes. Use this option only if a human has edit access to Kong's Admin API. |

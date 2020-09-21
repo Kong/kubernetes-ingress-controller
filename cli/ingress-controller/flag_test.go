@@ -155,15 +155,15 @@ func TestOverrideViaCLIFlags(t *testing.T) {
 		"--admission-webhook-cert-file", "/cert-file",
 		"--admission-webhook-key-file", "/key-file",
 
-		"--kong-url", "https://kong.example.com",
+		"--kong-admin-url", "https://kong.example.com",
 		"--kong-admin-concurrency", "1",
 		"--kong-workspace", "yolo",
 		"--kong-admin-filter-tag", "foo-tag",
-		"--admin-header", "foo:bar",
+		"--kong-admin-header", "foo:bar",
 		"--kong-admin-token", "my-token",
-		"--admin-tls-skip-verify",
-		"--admin-tls-server-name", "kong-admin.example.com",
-		"--admin-ca-cert-file", "/path/to/ca-cert",
+		"--kong-admin-tls-skip-verify",
+		"--kong-admin-tls-server-name", "kong-admin.example.com",
+		"--kong-admin-ca-cert-file", "/path/to/ca-cert",
 
 		"--kong-custom-entities-secret", "foons/foosecretname",
 
@@ -313,129 +313,6 @@ func TestOverrideViaEnvVars(t *testing.T) {
 
 		ShowVersion:      false,
 		AnonymousReports: false,
-	}
-	assert.Equal(expectedConf, conf)
-	assert.Nil(err, "unexpected error parsing default flags")
-}
-
-func TestDeprecatedFlags(t *testing.T) {
-	resetForTesting(func() { t.Fatal("bad parse") })
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-
-	assert := assert.New(t)
-
-	os.Args = []string{
-		"cmd",
-		"--kong-url", "https://kong.example.com",
-		"--kong-workspace", "yolo",
-		"--admin-header", "foo:bar",
-		"--admin-tls-skip-verify",
-		"--admin-tls-server-name", "kong-admin.example.com",
-		"--admin-ca-cert-file", "/path/to/ca-cert",
-	}
-	conf, err := parseFlags()
-
-	expectedConf := cliConfig{
-		KongAdminURL:           "https://kong.example.com",
-		KongWorkspace:          "yolo",
-		KongAdminConcurrency:   10,
-		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
-		KongAdminHeaders:       []string{"foo:bar"},
-		KongAdminTLSSkipVerify: true,
-		KongAdminTLSServerName: "kong-admin.example.com",
-		KongAdminCACertPath:    "/path/to/ca-cert",
-
-		AdmissionWebhookListen:   "off",
-		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
-		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
-
-		WatchNamespace: "",
-		IngressClass:   "kong",
-		ElectionID:     "ingress-controller-leader",
-
-		PublishService:         "",
-		PublishStatusAddress:   "",
-		UpdateStatus:           true,
-		UpdateStatusOnShutdown: true,
-
-		SyncPeriod:    600 * time.Second,
-		SyncRateLimit: 0.3,
-
-		APIServerHost:      "",
-		KubeConfigFilePath: "",
-
-		LogLevel:  "info",
-		LogFormat: "text",
-
-		EnableProfiling: true,
-
-		ShowVersion:      false,
-		AnonymousReports: true,
-	}
-	assert.Equal(expectedConf, conf)
-	assert.Nil(err, "unexpected error parsing default flags")
-}
-
-func TestDeprecatedFlagPrecedences(t *testing.T) {
-	resetForTesting(func() { t.Fatal("bad parse") })
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-
-	assert := assert.New(t)
-
-	os.Args = []string{
-		"cmd",
-		"--kong-url", "https://kong.example.com",
-		"--kong-admin-url", "http://kong.yolo42.com",
-		"--kong-workspace", "yolo",
-		"--admin-header", "foo:bar",
-		"--kong-admin-header", "fuu:baz",
-		"--kong-admin-tls-skip-verify",
-		"--admin-tls-server-name", "kong-admin.example.com",
-		"--kong-admin-tls-server-name", "kong-admin-new.example.com",
-		"--admin-ca-cert-file", "/path/to/ca-cert",
-		"--kong-admin-ca-cert-file", "/path/to/new/ca-cert",
-		"--admission-webhook-listen", ":8080",
-	}
-	conf, err := parseFlags()
-
-	expectedConf := cliConfig{
-		KongAdminURL:           "http://kong.yolo42.com",
-		KongWorkspace:          "yolo",
-		KongAdminConcurrency:   10,
-		KongAdminFilterTags:    []string{"managed-by-ingress-controller"},
-		KongAdminHeaders:       []string{"fuu:baz"},
-		KongAdminTLSSkipVerify: true,
-		KongAdminTLSServerName: "kong-admin-new.example.com",
-		KongAdminCACertPath:    "/path/to/new/ca-cert",
-
-		AdmissionWebhookListen:   ":8080",
-		AdmissionWebhookCertPath: "/admission-webhook/tls.crt",
-		AdmissionWebhookKeyPath:  "/admission-webhook/tls.key",
-
-		WatchNamespace: "",
-		IngressClass:   "kong",
-		ElectionID:     "ingress-controller-leader",
-
-		PublishService:         "",
-		PublishStatusAddress:   "",
-		UpdateStatus:           true,
-		UpdateStatusOnShutdown: true,
-
-		SyncPeriod:    600 * time.Second,
-		SyncRateLimit: 0.3,
-
-		APIServerHost:      "",
-		KubeConfigFilePath: "",
-
-		LogLevel:  "info",
-		LogFormat: "text",
-
-		EnableProfiling: true,
-
-		ShowVersion:      false,
-		AnonymousReports: true,
 	}
 	assert.Equal(expectedConf, conf)
 	assert.Nil(err, "unexpected error parsing default flags")

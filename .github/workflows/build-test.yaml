@@ -1,0 +1,114 @@
+name: Test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.15'
+
+    - name: Cache Go modules
+      uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go
+
+    - name: 'Check out the repo'
+      uses: actions/checkout@v2
+
+    - name: 'make container'
+      run: |
+        make REGISTRY=local IMGNAME=kong-ingress-controller TAG=ci container
+
+    - run: docker save local/kong-ingress-controller:ci > image.tar
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: image
+        path: image.tar
+
+  push-public:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
+
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: image
+
+    - name: 'Arrange: Push the Kong Operator image to the public registry'
+      env:
+        BINTRAY_KEY: ${{  secrets.BINTRAY_KEY }}
+        BINTRAY_USER: ${{  secrets.BINTRAY_USER }}
+      run: |
+        set -e
+
+        REPO="kong-docker-kubernetes-ingress-controller.bintray.io"
+        REF="$(git rev-parse --short HEAD)"
+
+        DOCKER_TAG="$REPO/master:$REF"
+        docker load < image.tar
+        docker tag local/kong-ingress-controller:ci "$DOCKER_TAG"
+        echo "${BINTRAY_KEY}" | docker login -u "${BINTRAY_USER}" ${REPO} --password-stdin
+        docker push "$DOCKER_TAG"
+
+  test-k8s:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Arrange: Check out the repo'
+      uses: actions/checkout@v2
+
+    # TODO: Duplicate script present in kong-operator.
+    - name: 'Arrange: Set up microk8s'
+      run: |
+        sudo snap install microk8s --channel 1.18/stable --classic
+        for addon in dns rbac registry
+        do
+          sudo microk8s enable $addon
+        done
+        mkdir -p ~/.kube
+        sudo chown $USER -R ~/.kube
+        sudo curl -L https://storage.googleapis.com/kubernetes-release/release/v1.18.4/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
+        sudo microk8s.config > ~/.kube/config
+        kubectl wait --for=condition=Available deploy -n container-registry registry --timeout=120s
+
+    - uses: actions/download-artifact@v2
+      with:
+        name: image
+
+    - name: 'Arrange: Push the image to the local registry'
+      run: |
+        docker load < image.tar
+        docker tag local/kong-ingress-controller:ci localhost:32000/kong-ingress-controller:ci
+        docker push localhost:32000/kong-ingress-controller:ci
+
+    - name: 'Arrange: Set up KIC'
+      run: |
+        MANIFEST="$(sed 's!^\( *image: \)kong-docker-kubernetes-ingress-controller.*$!\1localhost:32000/kong-ingress-controller:ci!' ./deploy/single/all-in-one-dbless.yaml)"
+
+        echo "$MANIFEST" | kubectl apply -f -
+
+        kubectl wait --for=condition=Available deploy -n kong ingress-kong --timeout=120s
+
+    - name: 'Print debugging information'
+      if: ${{ always() }}
+      run: |
+        set -x
+
+        for ns in default kong kube-system container-registry; do
+          kubectl describe all -n "$ns"
+
+          for podName in $(kubectl get pod -n "$ns" -o name); do
+            for containerName in $(kubectl get "$podName" -n "$ns" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'); do
+              kubectl logs "$podName" -n "$ns" -c "$containerName"
+            done
+          done
+        done

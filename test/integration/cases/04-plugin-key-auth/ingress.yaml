@@ -1,0 +1,43 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: my-auth-plugin
+plugin: key-auth
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: my-auth-plugin
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: echo
+            port:
+              number: 8080
+        path: /baz
+        pathType: Prefix
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: someuser
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: someuser
+credentials:
+- someuser-apikey
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: someuser-apikey
+data:
+  key: bXktc29vcGVyLXNlY3JldC1rZXk=
+  kongCredType: a2V5LWF1dGg=
+

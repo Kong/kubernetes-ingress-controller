@@ -260,13 +260,7 @@ func parseFlags() (cliConfig, error) {
 		viper.GetString("admission-webhook-key")
 
 	// Kong connection details
-	kongAdminURL := defaultKongAdminURL
-	flagURL := viper.GetString("kong-admin-url")
-	if flagURL != defaultKongAdminURL {
-		kongAdminURL = flagURL
-	}
-	config.KongAdminURL = kongAdminURL
-
+	config.KongAdminURL = viper.GetString("kong-admin-url")
 	config.KongWorkspace = viper.GetString("kong-workspace")
 	config.KongAdminConcurrency = viper.GetInt("kong-admin-concurrency")
 	config.KongAdminFilterTags = viper.GetStringSlice("kong-admin-filter-tag")
@@ -285,10 +279,7 @@ func parseFlags() (cliConfig, error) {
 
 	config.KongAdminCACertPath = viper.GetString("kong-admin-ca-cert-file")
 
-	kongAdminCACert := viper.GetString("kong-admin-ca-cert")
-	if kongAdminCACert != "" {
-		config.KongAdminCACert = kongAdminCACert
-	}
+	config.KongAdminCACert = viper.GetString("kong-admin-ca-cert")
 
 	config.KongCustomEntitiesSecret = viper.GetString(
 		"kong-custom-entities-secret")

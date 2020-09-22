@@ -186,8 +186,12 @@ mode of Kong. Takes the form of namespace/name.`)
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
-	flags.Bool("skip-classless-ingress-v1beta1", false,
-		`Skip non annotated Ingresses and Kong CRDs.`)
+	flags.Bool("process-classless-ingress-v1beta1", false,
+		`Process v1beta1 Ingress resources with no class annotation.`)
+	flags.Bool("process-classless-ingress-v1", false,
+		`Process v1 Ingress resources with no class annotation.`)
+	flags.Bool("process-classless-kong-consumer", false,
+		`Process KongConsumer resources with no class annotation.`)
 	flags.String("ingress-class", annotations.DefaultIngressClass,
 		`Name of the ingress class to route through this controller.`)
 	flags.String("election-id", "ingress-controller-leader",

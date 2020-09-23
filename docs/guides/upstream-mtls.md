@@ -85,7 +85,7 @@ server that it talks to.
 
 To configure a different client certificate for each service or only for a
 subset of services, you can do so using the
-[`configuration.konghq.com/client-cert`](../references/annotations.md#configurationkonghqcom/client-cert)
+[`konghq.com/client-cert`](../references/annotations.md#configurationkonghqcom/client-cert)
 annotation.
 
 To use the annotation, you first need to create a TLS secret with the 
@@ -96,7 +96,7 @@ Service to which Kong should authenticate itself.
 Once the secret is in place, add the follow annotation on the service:
 
 ```
-configuration.konghq.com/client-cert: <name-of-secret>
+konghq.com/client-cert: <name-of-secret>
 ```
 
 Kong will then use the TLS key-pair to authenticate itself against that service.

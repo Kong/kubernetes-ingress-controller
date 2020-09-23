@@ -17,9 +17,6 @@ Following annotations are supported on Ingress resources:
 | [`konghq.com/regex-priority`](#konghqcomregex-priority) | Set the route's regex priority. |
 | [`konghq.com/methods`](#konghqcommethods) | Set methods matched by this Ingress. |
 | [`konghq.com/override`](#konghqcomoverride) | Control other routing attributes via `KongIngress` resource. |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
-| DEPRECATED [`configuration.konghq.com`](#configurationkonghqcom) | Please use [`konghq.com/override`](#konghqcomoverride) |
-| DEPRECATED [`configuration.konghq.com/protocols`](#configurationkonghqcomprotocols) | Please use [`konghq.com/protocols`](#konghqcomprotocols) |
 
 `kubernetes.io/ingress.class` is normally required, and its value should match
 the value of the `--ingress-class` controller argument ("kong" by default).
@@ -44,10 +41,6 @@ Following annotations are supported on Service resources:
 | [`konghq.com/host-header`](#konghqcomhost-header) | Set the value sent in the `Host` header when proxying requests upstream |
 | [`konghq.com/override`](#konghqcomoverride) | Fine grained routing and load-balancing |
 | [`ingress.kubernetes.io/service-upstream`](#ingresskubernetesioservice-upstream) | Offload load-balancing to kube-proxy or sidecar |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
-| DEPRECATED [`configuration.konghq.com`](#configurationkonghqcom) | Please use [`konghq.com/override`](#konghqcomoverride) |
-| DEPRECATED [`configuration.konghq.com/protocol`](#configurationkonghqcomprotocol) | Please use [`konghq.com/protocol`](#konghqcomprotocol) |
-| DEPRECATED [`configuration.konghq.com/client-cert`](#configurationkonghqcomclient-cert) | Please use [`konghq.com/client-cert`](#konghqcomclient-cert) |
 
 ## KongConsumer resource
 
@@ -57,7 +50,6 @@ Following annotaitons are supported on KongConsumer resources:
 |-----------------|-------------|
 | REQUIRED [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the KongConsumers that a controller should satisfy |
 | [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for a specific consumer |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
 
 `kubernetes.io/ingress.class` is normally required, and its value should match
 the value of the `--ingress-class` controller argument ("kong" by default).
@@ -430,33 +422,3 @@ annotations:
 ```
 
 You need Kong Ingress Controller >= 0.6 for this annotation.
-
-### `plugins.konghq.com`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/plugins`](#konghqcomplugins).
-
-### `configuration.konghq.com`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/override`](#konghqcomoverride).
-
-### `configuration.konghq.com/protocol`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/protocol`](#konghqcomprotocol).
-
-### `configuration.konghq.com/protocols`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/protocols`](#konghqcomprotocols).
-
-### `configuration.konghq.com/client-cert`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/client-cert`](#konghqcomclient-cert).

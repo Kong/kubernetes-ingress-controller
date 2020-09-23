@@ -115,29 +115,10 @@ func TestExtractPath(t *testing.T) {
 			name: "non-empty",
 			args: args{
 				anns: map[string]string{
-					"configuration.konghq.com/path": "/foo",
-				},
-			},
-			want: "/foo",
-		},
-		{
-			name: "non-empty new group",
-			args: args{
-				anns: map[string]string{
 					"konghq.com/path": "/foo",
 				},
 			},
 			want: "/foo",
-		},
-		{
-			name: "group preference",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/path": "/foo",
-					"konghq.com/path":               "/bar",
-				},
-			},
-			want: "/bar",
 		},
 	}
 	for _, tt := range tests {
@@ -165,32 +146,11 @@ func Test_valueFromAnnotation(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "legacy group lookup",
-			args: args{
-				key: "/protocol",
-				anns: map[string]string{
-					"configuration.konghq.com/protocol": "https",
-				},
-			},
-			want: "https",
-		},
-		{
-			name: "new group lookup",
+			name: "non-empty",
 			args: args{
 				key: "/protocol",
 				anns: map[string]string{
 					"konghq.com/protocol": "https",
-				},
-			},
-			want: "https",
-		},
-		{
-			name: "new annotation takes precedence over deprecated one",
-			args: args{
-				key: "/protocol",
-				anns: map[string]string{
-					"konghq.com/protocol":               "https",
-					"configuration.konghq.com/protocol": "grpc",
 				},
 			},
 			want: "https",
@@ -215,28 +175,9 @@ func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "legacy annotation",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
-					DeprecatedPluginsKey: "kp-rl, kp-cors",
-				},
-			},
-			want: []string{"kp-rl", "kp-cors"},
-		},
-		{
-			name: "new annotation",
-			args: args{
-				anns: map[string]string{
-					"konghq.com/plugins": "kp-rl, kp-cors",
-				},
-			},
-			want: []string{"kp-rl", "kp-cors"},
-		},
-		{
-			name: "annotation prioriy",
-			args: args{
-				anns: map[string]string{
-					DeprecatedPluginsKey: "a,b",
 					"konghq.com/plugins": "kp-rl, kp-cors",
 				},
 			},
@@ -262,29 +203,10 @@ func TestExtractConfigurationName(t *testing.T) {
 		want string
 	}{
 		{
-			name: "legacy annotation",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com": "foo",
-				},
-			},
-			want: "foo",
-		},
-		{
-			name: "new annotation",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/override": "foo",
-				},
-			},
-			want: "foo",
-		},
-		{
-			name: "annotation prioriy",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com": "bar",
-					"konghq.com/override":      "foo",
 				},
 			},
 			want: "foo",
@@ -309,29 +231,10 @@ func TestExtractProtocolName(t *testing.T) {
 		want string
 	}{
 		{
-			name: "legacy annotation",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/protocol": "foo",
-				},
-			},
-			want: "foo",
-		},
-		{
-			name: "new annotation",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/protocol": "foo",
-				},
-			},
-			want: "foo",
-		},
-		{
-			name: "annotation prioriy",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/protocol": "bar",
-					"konghq.com/protocol":               "foo",
 				},
 			},
 			want: "foo",
@@ -356,32 +259,13 @@ func TestExtractProtocolNames(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "legacy annotation",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/protocols": "foo,bar",
-				},
-			},
-			want: []string{"foo", "bar"},
-		},
-		{
-			name: "new annotation",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/protocols": "foo,bar",
 				},
 			},
 			want: []string{"foo", "bar"},
-		},
-		{
-			name: "annotation prioriy",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/protocols": "bar,foo",
-					"konghq.com/protocols":               "foo,baz",
-				},
-			},
-			want: []string{"foo", "baz"},
 		},
 	}
 	for _, tt := range tests {
@@ -403,29 +287,10 @@ func TestExtractClientCertificate(t *testing.T) {
 		want string
 	}{
 		{
-			name: "legacy annotation",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/client-cert": "foo",
-				},
-			},
-			want: "foo",
-		},
-		{
-			name: "new annotation",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/client-cert": "foo",
-				},
-			},
-			want: "foo",
-		},
-		{
-			name: "annotation prioriy",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/client-cert": "bar",
-					"konghq.com/client-cert":               "foo",
 				},
 			},
 			want: "foo",
@@ -494,26 +359,7 @@ func TestExtractStripPath(t *testing.T) {
 			name: "non-empty",
 			args: args{
 				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "false",
-				},
-			},
-			want: "false",
-		},
-		{
-			name: "non-empty new group",
-			args: args{
-				anns: map[string]string{
 					"konghq.com/strip-path": "true",
-				},
-			},
-			want: "true",
-		},
-		{
-			name: "group preference",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "false",
-					"konghq.com/strip-path":               "true",
 				},
 			},
 			want: "true",
@@ -545,26 +391,7 @@ func TestExtractHTTPSRedirectStatusCode(t *testing.T) {
 			name: "non-empty",
 			args: args{
 				anns: map[string]string{
-					"configuration.konghq.com/https-redirect-status-code": "301",
-				},
-			},
-			want: "301",
-		},
-		{
-			name: "non-empty new group",
-			args: args{
-				anns: map[string]string{
 					"konghq.com/https-redirect-status-code": "302",
-				},
-			},
-			want: "302",
-		},
-		{
-			name: "group preference",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/https-redirect-status-code": "301",
-					"konghq.com/https-redirect-status-code":               "302",
 				},
 			},
 			want: "302",
@@ -662,29 +489,10 @@ func TestExtractRegexPriority(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "non-empty old group",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/regex-priority": "5",
-				},
-			},
-			want: "5",
-		},
-		{
-			name: "non-empty new group",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/regex-priority": "10",
-				},
-			},
-			want: "10",
-		},
-		{
-			name: "group preference",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/regex-priority": "5",
-					"konghq.com/regex-priority":               "10",
 				},
 			},
 			want: "10",
@@ -713,29 +521,10 @@ func TestExtractHostHeader(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "non-empty old group",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/host-header": "example.com",
-				},
-			},
-			want: "example.com",
-		},
-		{
-			name: "non-empty new group",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/host-header": "example.net",
-				},
-			},
-			want: "example.net",
-		},
-		{
-			name: "group preference",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/host-header": "example.com",
-					"konghq.com/host-header":               "example.net",
 				},
 			},
 			want: "example.net",
@@ -764,32 +553,13 @@ func TestExtractMethods(t *testing.T) {
 			want: []string{},
 		},
 		{
-			name: "legacy annotation",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/methods": "POST,GET",
-				},
-			},
-			want: []string{"POST", "GET"},
-		},
-		{
-			name: "new annotation",
+			name: "non-empty",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/methods": "POST,GET",
 				},
 			},
 			want: []string{"POST", "GET"},
-		},
-		{
-			name: "annotation priority",
-			args: args{
-				anns: map[string]string{
-					"configuration.konghq.com/methods": "GET,POST",
-					"konghq.com/methods":               "POST,PUT",
-				},
-			},
-			want: []string{"POST", "PUT"},
 		},
 	}
 	for _, tt := range tests {

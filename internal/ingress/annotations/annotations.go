@@ -35,24 +35,20 @@ const (
 const (
 	IngressClassKey = "kubernetes.io/ingress.class"
 
-	deprecatedAnnotationPrefix = "configuration.konghq.com"
-	annotationPrefix           = "konghq.com"
+	AnnotationPrefix = "konghq.com"
 
-	DeprecatedPluginsKey       = "plugins.konghq.com"
-	deprecatedConfigurationKey = deprecatedAnnotationPrefix
-
-	configurationKey     = "/override"
-	pluginsKey           = "/plugins"
-	protocolKey          = "/protocol"
-	protocolsKey         = "/protocols"
-	clientCertKey        = "/client-cert"
-	stripPathKey         = "/strip-path"
-	pathKey              = "/path"
-	httpsRedirectCodeKey = "/https-redirect-status-code"
-	preserveHostKey      = "/preserve-host"
-	regexPriorityKey     = "/regex-priority"
-	hostHeaderKey        = "/host-header"
-	methodsKey           = "/methods"
+	ConfigurationKey     = "/override"
+	PluginsKey           = "/plugins"
+	ProtocolKey          = "/protocol"
+	ProtocolsKey         = "/protocols"
+	ClientCertKey        = "/client-cert"
+	StripPathKey         = "/strip-path"
+	PathKey              = "/path"
+	HTTPSRedirectCodeKey = "/https-redirect-status-code"
+	PreserveHostKey      = "/preserve-host"
+	RegexPriorityKey     = "/regex-priority"
+	HostHeaderKey        = "/host-header"
+	MethodsKey           = "/methods"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -111,35 +107,22 @@ func IngressClassValidatorFuncFromV1Ingress(
 	}
 }
 
-// valueFromAnnotation returns the value of an annotation with key.
-// key is without the annotation prefix of configuration.konghq.com or
-// konghq.com.
-// It first looks up key under the konghq.com group and if one doesn't
-// exist then it looks up the configuration.konghq.com  annotation group.
+// valueFromAnnotation returns the value of an annotation with key konghq.com.
 func valueFromAnnotation(key string, anns map[string]string) string {
-	value, exists := anns[annotationPrefix+key]
-	if exists {
-		return value
-	}
-	return anns[deprecatedAnnotationPrefix+key]
+	return anns[AnnotationPrefix+key]
 }
 
-func pluginsFromAnnotations(anns map[string]string) (string, bool) {
-	value, exists := anns[annotationPrefix+pluginsKey]
-	if exists {
-		return value, exists
-	}
-	value, exists = anns[DeprecatedPluginsKey]
-	return value, exists
+func pluginsFromAnnotations(anns map[string]string) string {
+	return valueFromAnnotation(PluginsKey, anns)
 }
 
 // ExtractKongPluginsFromAnnotations extracts information about Kong
-// Plugins configured using plugins.konghq.com annotation.
+// Plugins configured using konghq.com/plugins annotation.
 // This returns a list of KongPlugin resource names that should be applied.
 func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 	var kongPluginCRs []string
-	v, ok := pluginsFromAnnotations(anns)
-	if !ok {
+	v := pluginsFromAnnotations(anns)
+	if v == "" {
 		return kongPluginCRs
 	}
 	for _, kongPlugin := range strings.Split(v, ",") {
@@ -154,46 +137,42 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 // ExtractConfigurationName extracts the name of the KongIngress object that holds
 // information about the configuration to use in Routes, Services and Upstreams
 func ExtractConfigurationName(anns map[string]string) string {
-	value, exists := anns[annotationPrefix+configurationKey]
-	if exists {
-		return value
-	}
-	return anns[deprecatedConfigurationKey]
+	return valueFromAnnotation(ConfigurationKey, anns)
 }
 
 // ExtractProtocolName extracts the protocol supplied in the annotation
 func ExtractProtocolName(anns map[string]string) string {
-	return valueFromAnnotation(protocolKey, anns)
+	return valueFromAnnotation(ProtocolKey, anns)
 }
 
 // ExtractProtocolNames extracts the protocols supplied in the annotation
 func ExtractProtocolNames(anns map[string]string) []string {
-	val := valueFromAnnotation(protocolsKey, anns)
+	val := valueFromAnnotation(ProtocolsKey, anns)
 	return strings.Split(val, ",")
 }
 
 // ExtractClientCertificate extracts the secret name containing the
 // client-certificate to use.
 func ExtractClientCertificate(anns map[string]string) string {
-	return valueFromAnnotation(clientCertKey, anns)
+	return valueFromAnnotation(ClientCertKey, anns)
 }
 
 // ExtractStripPath extracts the strip-path annotations containing the
 // the boolean string "true" or "false".
 func ExtractStripPath(anns map[string]string) string {
-	return valueFromAnnotation(stripPathKey, anns)
+	return valueFromAnnotation(StripPathKey, anns)
 }
 
 // ExtractPath extracts the path annotations containing the
 // HTTP path.
 func ExtractPath(anns map[string]string) string {
-	return valueFromAnnotation(pathKey, anns)
+	return valueFromAnnotation(PathKey, anns)
 }
 
 // ExtractHTTPSRedirectStatusCode extracts the https redirect status
 // code annotation value.
 func ExtractHTTPSRedirectStatusCode(anns map[string]string) string {
-	return valueFromAnnotation(httpsRedirectCodeKey, anns)
+	return valueFromAnnotation(HTTPSRedirectCodeKey, anns)
 }
 
 // HasForceSSLRedirectAnnotation returns true if the annotation
@@ -204,7 +183,7 @@ func HasForceSSLRedirectAnnotation(anns map[string]string) bool {
 
 // ExtractPreserveHost extracts the preserve-host annotation value.
 func ExtractPreserveHost(anns map[string]string) string {
-	return valueFromAnnotation(preserveHostKey, anns)
+	return valueFromAnnotation(PreserveHostKey, anns)
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation
@@ -215,17 +194,17 @@ func HasServiceUpstreamAnnotation(anns map[string]string) bool {
 
 // ExtractRegexPriority extracts the host-header annotation value.
 func ExtractRegexPriority(anns map[string]string) string {
-	return valueFromAnnotation(regexPriorityKey, anns)
+	return valueFromAnnotation(RegexPriorityKey, anns)
 }
 
 // ExtractHostHeader extracts the regex-priority annotation value.
 func ExtractHostHeader(anns map[string]string) string {
-	return valueFromAnnotation(hostHeaderKey, anns)
+	return valueFromAnnotation(HostHeaderKey, anns)
 }
 
 // ExtractMethods extracts the methods annotation value.
 func ExtractMethods(anns map[string]string) []string {
-	val := valueFromAnnotation(methodsKey, anns)
+	val := valueFromAnnotation(MethodsKey, anns)
 	if val == "" {
 		return []string{}
 	}

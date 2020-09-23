@@ -198,8 +198,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						annotations.DeprecatedPluginsKey: "foo-plugin",
-						annotations.IngressClassKey:      annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
@@ -228,8 +228,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Name:      "bar",
 					Namespace: "default",
 					Annotations: map[string]string{
-						annotations.DeprecatedPluginsKey: "bar-plugin",
-						annotations.IngressClassKey:      annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.PluginsKey: "bar-plugin",
+						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
@@ -907,7 +907,7 @@ func TestServiceClientCertificate(t *testing.T) {
 					Name:      "foo-svc",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"configuration.konghq.com/client-cert": "secret1",
+						"konghq.com/client-cert": "secret1",
 					},
 				},
 			},
@@ -975,7 +975,7 @@ func TestServiceClientCertificate(t *testing.T) {
 					Name:      "foo-svc",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"configuration.konghq.com/client-cert": "secret1",
+						"konghq.com/client-cert": "secret1",
 					},
 				},
 			},
@@ -1005,8 +1005,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 					Name:      "bar",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"configuration.konghq.com/strip-path": "trUe",
-						annotations.IngressClassKey:           "kong",
+						"konghq.com/strip-path":     "trUe",
+						annotations.IngressClassKey: "kong",
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
@@ -1082,8 +1082,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 					Name:      "bar",
 					Namespace: "default",
 					Annotations: map[string]string{
-						annotations.IngressClassKey:           "kong",
-						"configuration.konghq.com/strip-path": "false",
+						annotations.IngressClassKey: "kong",
+						"konghq.com/strip-path":     "false",
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
@@ -1777,8 +1777,8 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "foo-svc",
 					Namespace: "foo-ns",
 					Annotations: map[string]string{
-						annotations.DeprecatedPluginsKey:       "knative-key-auth",
-						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.PluginsKey: "knative-key-auth",
+						"networking.knative.dev/ingress.class":                annotations.DefaultIngressClass,
 					},
 				},
 			},
@@ -1901,7 +1901,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 					Name:      "foo-svc",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"configuration.konghq.com/path": "/baz",
+						"konghq.com/path": "/baz",
 					},
 				},
 			},
@@ -1981,7 +1981,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 					Name:      "foo-svc",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"configuration.konghq.com/host-header": "example.com",
+						"konghq.com/host-header": "example.com",
 					},
 				},
 			},
@@ -2202,7 +2202,7 @@ func TestDefaultBackend(t *testing.T) {
 					Name:      "foo-svc",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"configuration.konghq.com/client-cert": "secret1",
+						"konghq.com/client-cert": "secret1",
 					},
 				},
 			},
@@ -2465,8 +2465,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						annotations.DeprecatedPluginsKey: "foo-plugin",
-						annotations.IngressClassKey:      annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
@@ -2554,8 +2554,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						annotations.DeprecatedPluginsKey: "foo-plugin",
-						annotations.IngressClassKey:      annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
@@ -2638,8 +2638,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						annotations.DeprecatedPluginsKey: "foo-plugin",
-						annotations.IngressClassKey:      annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{
@@ -2699,8 +2699,8 @@ func TestPluginAnnotations(t *testing.T) {
 					Name:      "foo",
 					Namespace: "default",
 					Annotations: map[string]string{
-						annotations.DeprecatedPluginsKey: "does-not-exist",
-						annotations.IngressClassKey:      annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.PluginsKey: "does-not-exist",
+						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
 				Spec: networkingv1beta1.IngressSpec{

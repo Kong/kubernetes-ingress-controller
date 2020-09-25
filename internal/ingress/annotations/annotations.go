@@ -107,13 +107,8 @@ func IngressClassValidatorFuncFromV1Ingress(
 	}
 }
 
-// valueFromAnnotation returns the value of an annotation with key konghq.com.
-func valueFromAnnotation(key string, anns map[string]string) string {
-	return anns[AnnotationPrefix+key]
-}
-
 func pluginsFromAnnotations(anns map[string]string) string {
-	return valueFromAnnotation(PluginsKey, anns)
+	return anns[AnnotationPrefix+PluginsKey]
 }
 
 // ExtractKongPluginsFromAnnotations extracts information about Kong
@@ -137,42 +132,42 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 // ExtractConfigurationName extracts the name of the KongIngress object that holds
 // information about the configuration to use in Routes, Services and Upstreams
 func ExtractConfigurationName(anns map[string]string) string {
-	return valueFromAnnotation(ConfigurationKey, anns)
+	return anns[AnnotationPrefix+ConfigurationKey]
 }
 
 // ExtractProtocolName extracts the protocol supplied in the annotation
 func ExtractProtocolName(anns map[string]string) string {
-	return valueFromAnnotation(ProtocolKey, anns)
+	return anns[AnnotationPrefix+ProtocolKey]
 }
 
 // ExtractProtocolNames extracts the protocols supplied in the annotation
 func ExtractProtocolNames(anns map[string]string) []string {
-	val := valueFromAnnotation(ProtocolsKey, anns)
+	val := anns[AnnotationPrefix+ProtocolsKey]
 	return strings.Split(val, ",")
 }
 
 // ExtractClientCertificate extracts the secret name containing the
 // client-certificate to use.
 func ExtractClientCertificate(anns map[string]string) string {
-	return valueFromAnnotation(ClientCertKey, anns)
+	return anns[AnnotationPrefix+ClientCertKey]
 }
 
 // ExtractStripPath extracts the strip-path annotations containing the
 // the boolean string "true" or "false".
 func ExtractStripPath(anns map[string]string) string {
-	return valueFromAnnotation(StripPathKey, anns)
+	return anns[AnnotationPrefix+StripPathKey]
 }
 
 // ExtractPath extracts the path annotations containing the
 // HTTP path.
 func ExtractPath(anns map[string]string) string {
-	return valueFromAnnotation(PathKey, anns)
+	return anns[AnnotationPrefix+PathKey]
 }
 
 // ExtractHTTPSRedirectStatusCode extracts the https redirect status
 // code annotation value.
 func ExtractHTTPSRedirectStatusCode(anns map[string]string) string {
-	return valueFromAnnotation(HTTPSRedirectCodeKey, anns)
+	return anns[AnnotationPrefix+HTTPSRedirectCodeKey]
 }
 
 // HasForceSSLRedirectAnnotation returns true if the annotation
@@ -183,7 +178,7 @@ func HasForceSSLRedirectAnnotation(anns map[string]string) bool {
 
 // ExtractPreserveHost extracts the preserve-host annotation value.
 func ExtractPreserveHost(anns map[string]string) string {
-	return valueFromAnnotation(PreserveHostKey, anns)
+	return anns[AnnotationPrefix+PreserveHostKey]
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation
@@ -194,17 +189,17 @@ func HasServiceUpstreamAnnotation(anns map[string]string) bool {
 
 // ExtractRegexPriority extracts the host-header annotation value.
 func ExtractRegexPriority(anns map[string]string) string {
-	return valueFromAnnotation(RegexPriorityKey, anns)
+	return anns[AnnotationPrefix+RegexPriorityKey]
 }
 
 // ExtractHostHeader extracts the regex-priority annotation value.
 func ExtractHostHeader(anns map[string]string) string {
-	return valueFromAnnotation(HostHeaderKey, anns)
+	return anns[AnnotationPrefix+HostHeaderKey]
 }
 
 // ExtractMethods extracts the methods annotation value.
 func ExtractMethods(anns map[string]string) []string {
-	val := valueFromAnnotation(MethodsKey, anns)
+	val := anns[AnnotationPrefix+MethodsKey]
 	if val == "" {
 		return []string{}
 	}

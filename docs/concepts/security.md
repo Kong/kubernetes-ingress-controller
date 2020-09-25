@@ -49,7 +49,7 @@ security.
 The Controller comes with support for injecting arbitrary HTTP headers
 in the requests it makes to Kong's Admin API, which can be used to inject
 authentication credentials.
-The headers can be specified using the CLI flag `--admin-header` in the Ingress
+The headers can be specified using the CLI flag `--kong-admin-header` in the Ingress
 Controller.
 
 The Ingress Controller will support mutual-TLS-based authentication on Kong's Admin
@@ -61,5 +61,5 @@ Kong Enterprise comes with support for authentication and authorization on
 Kong's Admin API.
 
 Once an RBAC token is provisioned, Kong Ingress Controller can use the RBAC
-token to authenticate against Kong Enterprise. Use the `--admin-header` CLI
+token to authenticate against Kong Enterprise. Use the `--kong-admin-header` CLI
 flag to pass the RBAC token the Ingress Controller.

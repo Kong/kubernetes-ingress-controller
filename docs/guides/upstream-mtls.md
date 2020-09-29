@@ -85,7 +85,7 @@ server that it talks to.
 
 To configure a different client certificate for each service or only for a
 subset of services, you can do so using the
-[`konghq.com/client-cert`](../references/annotations.md#configurationkonghqcom/client-cert)
+[`konghq.com/client-cert`](../references/annotations.md#konghqcom/client-cert)
 annotation.
 
 To use the annotation, you first need to create a TLS secret with the 

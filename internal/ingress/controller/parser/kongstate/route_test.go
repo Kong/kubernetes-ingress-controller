@@ -219,7 +219,7 @@ func TestOverrideRoutePriority(t *testing.T) {
 
 	ingMeta := util.K8sObjectInfo{
 		Annotations: map[string]string{
-			"configuration.konghq.com/protocols": "grpc,grpcs",
+			"konghq.com/protocols": "grpc,grpcs",
 		},
 	}
 
@@ -265,7 +265,7 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 
 	ingMeta := util.K8sObjectInfo{
 		Annotations: map[string]string{
-			"configuration.konghq.com/protocols": "grpc,grpcs",
+			"konghq.com/protocols": "grpc,grpcs",
 		},
 	}
 
@@ -429,7 +429,7 @@ func Test_overrideRouteStripPath(t *testing.T) {
 				route: Route{
 					Route: kong.Route{}},
 				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "false",
+					"konghq.com/strip-path": "false",
 				},
 			},
 			want: kong.Route{
@@ -443,7 +443,7 @@ func Test_overrideRouteStripPath(t *testing.T) {
 					Route: kong.Route{},
 				},
 				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "truE",
+					"konghq.com/strip-path": "truE",
 				},
 			},
 			want: kong.Route{
@@ -459,7 +459,7 @@ func Test_overrideRouteStripPath(t *testing.T) {
 					},
 				},
 				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "truE",
+					"konghq.com/strip-path": "truE",
 				},
 			},
 			want: kong.Route{
@@ -475,7 +475,7 @@ func Test_overrideRouteStripPath(t *testing.T) {
 					},
 				},
 				anns: map[string]string{
-					"configuration.konghq.com/strip-path": "42",
+					"konghq.com/strip-path": "42",
 				},
 			},
 			want: kong.Route{

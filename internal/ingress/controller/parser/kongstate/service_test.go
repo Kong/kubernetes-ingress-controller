@@ -255,7 +255,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
+			map[string]string{"konghq.com/protocol": "grpcs"},
 		},
 		{
 			Service{
@@ -281,7 +281,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			map[string]string{"configuration.konghq.com/protocol": "grpc"},
+			map[string]string{"konghq.com/protocol": "grpc"},
 		},
 		{
 			Service{
@@ -305,7 +305,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     nil,
 				},
 			},
-			map[string]string{"configuration.konghq.com/protocol": "grpcs"},
+			map[string]string{"konghq.com/protocol": "grpcs"},
 		},
 		{
 			Service{
@@ -331,7 +331,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			map[string]string{"configuration.konghq.com/protocol": "https"},
+			map[string]string{"konghq.com/protocol": "https"},
 		},
 		{
 			Service{
@@ -355,7 +355,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			map[string]string{"configuration.konghq.com/protocol": "https"},
+			map[string]string{"konghq.com/protocol": "https"},
 		},
 	}
 
@@ -386,7 +386,7 @@ func Test_overrideServicePath(t *testing.T) {
 			name: "set to valid value",
 			args: args{
 				anns: map[string]string{
-					"configuration.konghq.com/path": "/foo",
+					"konghq.com/path": "/foo",
 				},
 			},
 			want: Service{
@@ -399,7 +399,7 @@ func Test_overrideServicePath(t *testing.T) {
 			name: "does not set path if doesn't start with /",
 			args: args{
 				anns: map[string]string{
-					"configuration.konghq.com/path": "foo",
+					"konghq.com/path": "foo",
 				},
 			},
 			want: Service{},
@@ -413,7 +413,7 @@ func Test_overrideServicePath(t *testing.T) {
 					},
 				},
 				anns: map[string]string{
-					"configuration.konghq.com/path": "/bar",
+					"konghq.com/path": "/bar",
 				},
 			},
 			want: Service{

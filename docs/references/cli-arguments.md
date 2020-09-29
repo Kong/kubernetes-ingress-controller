@@ -33,6 +33,9 @@ Following table describes all the flags that are available:
 | --alsologtostderr                    |`boolean`  | `false`                         | Logs are written to standard error as well as to files.|
 | --anonymous-reports                  |`string`   | `true`                          | Send anonymized usage data to help improve Kong.|
 | --apiserver-host                     |`string`   | none                            | The address of the Kubernetes Apiserver to connect to in the format of protocol://address:port, e.g., "http://localhost:8080. If not specified, the assumption is that the binary runs inside a Kubernetes cluster and local discovery is attempted.|
+| --disable-ingress-extensionsv1beta1  |`boolean`  | `false`                         | Disable processing Ingress resources with apiVersion `extensions/v1beta1`.|
+| --disable-ingress-networkingv1beta1  |`boolean`  | `false`                         | Disable processing Ingress resources with apiVersion `networking/v1beta1`.|
+| --disable-ingress-networkingv1       |`boolean`  | `false`                         | Disable processing Ingress resources with apiVersion `networking/v1`.|
 | --election-id                        |`string`   | `ingress-controller-leader`     | The name of ConfigMap (in the same namespace) to use to facilitate leader-election between multiple instances of the controller.|
 | --ingress-class                      |`string`   | `kong`                          | Ingress class name to use to filter Ingress and custom resources when multiple Ingress Controllers are running in the same Kubernetes cluster.|
 | --kong-admin-ca-cert-file            |`string`   | none                            | Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.|
@@ -54,6 +57,9 @@ Following table describes all the flags that are available:
 | --profiling                          |`boolean`  | `true`                          | Enable profiling via web interface `host:port/debug/pprof/`. |
 | --publish-service                    |`string`   | none                            | The namespaces and name of the Kubernetes Service fronting Kong Ingress Controller in the form of namespace/name. The controller will set the status of the Ingress resouces to match the endpoints of this service. In reference deployments, this is kong/kong-proxy.|
 | --publish-status-address             |`string`   | none                            | User customized address to be set in the status of ingress resources. The controller will set the endpoint records on the ingress using this address.|
+| --process-classless-ingress-v1beta1  |`boolean`  | `false`                         | Toggles whether the controller processes `extensions/v1beta1` and `networking/v1beta1` Ingress resources that have no `kubernetes.io/ingress.class` annotation.|
+| --process-classless-ingress-v1       |`boolean`  | `false`                         | Toggles whether the controller processes  `networking/v1` Ingress resources that have no `kubernetes.io/ingress.class` annotation or class field.|
+| --process-classless-kong-consumer    |`boolean`  | `false`                         | Toggles whether the controller processes KongConsumer resources that have no `kubernetes.io/ingress.class` annotation.|
 | --stderrthreshold                    |`string`   | `2`                             | logs at or above this threshold go to stderr.|
 | --sync-period                        |`duration` | `10m`                           | Relist and confirm cloud resources this often.|
 | --sync-rate-limit                    |`float32`  | `0.3`                           | Define the sync frequency upper limit. |

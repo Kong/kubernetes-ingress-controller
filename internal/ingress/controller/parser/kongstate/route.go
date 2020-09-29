@@ -23,6 +23,10 @@ type Route struct {
 
 var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
+// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
+// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change
+var validSNIs = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
+
 // normalizeProtocols prevents users from mismatching grpc/http
 func (r *Route) normalizeProtocols() {
 	protocols := r.Protocols
@@ -184,6 +188,30 @@ func (r *Route) overrideMethods(log logrus.FieldLogger, anns map[string]string) 
 	r.Methods = methods
 }
 
+func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
+	var annSNIs []string
+	var exists bool
+	annSNIs, exists = annotations.ExtractSNIs(anns)
+	// this is not a length check because we specifically want to provide a means
+	// to set "no SNI criteria", by providing the annotation with an empty string value
+	if !exists {
+		return
+	}
+	var snis []*string
+	for _, sni := range annSNIs {
+		sanitizedSNI := strings.TrimSpace(sni)
+		if validSNIs.MatchString(sanitizedSNI) {
+			snis = append(snis, kong.String(sanitizedSNI))
+		} else {
+			// SNI is not a valid hostname
+			log.WithField("kongroute", r.Name).Errorf("invalid SNI: %v", sni)
+			return
+		}
+	}
+
+	r.SNIs = snis
+}
+
 // overrideByAnnotation sets Route protocols via annotation
 func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideProtocols(r.Ingress.Annotations)
@@ -192,6 +220,7 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overridePreserveHost(r.Ingress.Annotations)
 	r.overrideRegexPriority(r.Ingress.Annotations)
 	r.overrideMethods(log, r.Ingress.Annotations)
+	r.overrideSNIs(log, r.Ingress.Annotations)
 }
 
 // override sets Route fields by KongIngress first, then by annotation
@@ -259,5 +288,19 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 	}
 	if ir.PathHandling != nil {
 		r.PathHandling = kong.String(*ir.PathHandling)
+	}
+	if len(ir.SNIs) != 0 {
+		var snis []*string
+		for _, sni := range ir.SNIs {
+			sanitizedSNI := strings.TrimSpace(*sni)
+			if validSNIs.MatchString(sanitizedSNI) {
+				snis = append(snis, kong.String(sanitizedSNI))
+			} else {
+				// SNI is not a valid hostname
+				log.WithField("kongroute", ir.Name).Errorf("invalid SNI: %v", sni)
+				return
+			}
+		}
+		r.SNIs = snis
 	}
 }

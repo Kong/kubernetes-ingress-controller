@@ -49,6 +49,7 @@ const (
 	RegexPriorityKey     = "/regex-priority"
 	HostHeaderKey        = "/host-header"
 	MethodsKey           = "/methods"
+	SNIKey               = "/snis"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -204,4 +205,13 @@ func ExtractMethods(anns map[string]string) []string {
 		return []string{}
 	}
 	return strings.Split(val, ",")
+}
+
+// ExtractSNI extracts the route SNI match criteria annotation value.
+func ExtractSNIs(anns map[string]string) ([]string, bool) {
+	val, exists := anns[AnnotationPrefix+SNIKey]
+	if val == "" {
+		return []string{}, exists
+	}
+	return strings.Split(val, ","), exists
 }

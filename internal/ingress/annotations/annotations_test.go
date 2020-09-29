@@ -535,3 +535,36 @@ func TestExtractMethods(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractSNIs(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "empty",
+			want: []string{},
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": "hrodna.kong.example,katowice.kong.example",
+				},
+			},
+			want: []string{"hrodna.kong.example", "katowice.kong.example"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []string
+			if got, _ = ExtractSNIs(tt.args.anns); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExtractSNIs() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

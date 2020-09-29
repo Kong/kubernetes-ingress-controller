@@ -63,7 +63,7 @@ NAME         TYPE           CLUSTER-IP      EXTERNAL-IP                         
 kong-proxy   LoadBalancer   10.63.250.199   example.eu-west-1.elb.amazonaws.com   80:31929/TCP,443:31408/TCP   57d
 ```
 
-Create an environment variable to hold the IP address:
+Create an environment variable to hold the ELB hostname:
 
 ```bash
 $ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" service -n kong kong-proxy)

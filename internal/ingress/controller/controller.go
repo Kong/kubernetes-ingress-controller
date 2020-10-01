@@ -125,9 +125,7 @@ func (n *KongController) syncIngress(interface{}) error {
 	return nil
 }
 
-// NewKongController creates a new NGINX Ingress controller.
-// If the environment variable NGINX_BINARY exists it will be used
-// as source for nginx commands
+// NewKongController creates a new Ingress controller.
 func NewKongController(ctx context.Context,
 	config *Configuration,
 	updateCh *channels.RingChannel,
@@ -235,7 +233,7 @@ type KongController struct {
 	Logger logrus.FieldLogger
 }
 
-// Start starts a new NGINX master process running in foreground, blocking until the next call to
+// Start starts a new master process running in foreground, blocking until the next call to
 // Stop.
 func (n *KongController) Start() {
 	n.Logger.Debugf("startin up controller")
@@ -286,7 +284,7 @@ func (n *KongController) Start() {
 	}
 }
 
-// Stop stops the NGINX master process gracefully.
+// Stop stops the master process gracefully.
 func (n *KongController) Stop() error {
 	atomic.StoreUint32(&n.isShuttingDown, 1)
 

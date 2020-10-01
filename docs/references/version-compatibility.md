@@ -53,12 +53,12 @@ other enterprise functionality, built on top of the Open-Source Kong Gateway.
 
 ## Kubernetes
 
-| Kong Ingress Controller  | 0.9.x              | 0.10.x             |
-|--------------------------|:------------------:|:------------------:|
-| Kubernetes 1.13          | :x:                | :x:                |
-| Kubernetes 1.14          | :white_check_mark: | :white_check_mark: |
-| Kubernetes 1.15          | :white_check_mark: | :white_check_mark: |
-| Kubernetes 1.16          | :white_check_mark: | :white_check_mark: |
-| Kubernetes 1.17          | :white_check_mark: | :white_check_mark: |
-| Kubernetes 1.18          | :white_check_mark: | :white_check_mark: |
-| Kubernetes 1.19          | :white_check_mark: | :white_check_mark: |
+| Kong Ingress Controller  | 0.9.x              | 0.10.x             | 1.0.x              |
+|--------------------------|:------------------:|:------------------:|:------------------:|
+| Kubernetes 1.13          | :x:                | :x:                | :x:                |
+| Kubernetes 1.14          | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.15          | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.16          | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.17          | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.18          | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kubernetes 1.19          | :white_check_mark: | :white_check_mark: | :white_check_mark: |

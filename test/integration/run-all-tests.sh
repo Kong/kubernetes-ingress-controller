@@ -7,6 +7,19 @@ echo ">>> Obtaining Kong proxy IP..."
 PROXY_IP=$(kubectl get service --namespace kong kong-proxy -o jsonpath={.spec.clusterIP})
 echo ">>> Kong proxy IP is '$PROXY_IP'."
 
+echo ">>> Setting up example services..."
+setup_example_services() (
+	set -ex
+
+	kubectl apply -f https://bit.ly/sample-echo-service
+	kubectl apply -f https://bit.ly/sample-httpbin-service
+
+	kubectl wait --for=condition=Available deploy echo --timeout=120s
+	kubectl wait --for=condition=Available deploy httpbin --timeout=120s
+)
+
+setup_example_services || { echo ">>> ERROR: Failed to set up example services."; exit 1; }
+
 let TESTS_PASSED=0 TESTS_FAILED=0
 for CASE_PATH in "$CASES_DIR"/*
 do

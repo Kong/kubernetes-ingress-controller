@@ -69,15 +69,16 @@ jobs:
     # TODO: Duplicate script present in kong-operator.
     - name: 'Arrange: Set up microk8s'
       run: |
-        sudo snap install microk8s --channel 1.18/stable --classic
+        sudo snap install microk8s --channel 1.19/stable --classic
         for addon in dns rbac registry
         do
           sudo microk8s enable $addon
         done
         mkdir -p ~/.kube
         sudo chown $USER -R ~/.kube
-        sudo curl -L https://storage.googleapis.com/kubernetes-release/release/v1.18.4/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
+        sudo curl -L https://storage.googleapis.com/kubernetes-release/release/v1.19.2/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
         sudo microk8s.config > ~/.kube/config
+        sudo microk8s.start
         kubectl wait --for=condition=Available deploy -n container-registry registry --timeout=120s
 
     - uses: actions/download-artifact@v2
@@ -97,6 +98,10 @@ jobs:
         echo "$MANIFEST" | kubectl apply -f -
 
         kubectl wait --for=condition=Available deploy -n kong ingress-kong --timeout=120s
+
+    - name: 'Test: Run integration tests'
+      run: |
+        ./test/integration/run-all-tests.sh
 
     - name: 'Print debugging information'
       if: ${{ always() }}

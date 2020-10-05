@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [1.0.0-rc.1](#0100rc1---20201002)
+ - [1.0.0](#100---20201005)
  - [0.10.0](#0100---20200915)
  - [0.9.1](#091---20200608)
  - [0.9.0](#090---20200526)
@@ -24,7 +24,7 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [1.0.0-rc.1] - 2020/10/02
+## [1.0.0] - 2020/10/05
 
 #### Breaking changes
 
@@ -904,6 +904,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[1.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.10.0...1.0.0
 [0.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.9.1...0.10.0
 [0.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.1...0.9.0

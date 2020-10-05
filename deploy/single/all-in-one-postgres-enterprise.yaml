@@ -767,7 +767,7 @@ spec:
             secretKeyRef:
               key: password
               name: kong-enterprise-superuser-password
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.0.0-rc.1
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.0.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

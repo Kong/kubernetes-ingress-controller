@@ -27,7 +27,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/blang/semver"
 	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
@@ -458,35 +457,18 @@ func pluginString(plugin file.FPlugin) string {
 	return result
 }
 
-var (
-	kong110version = semver.MustParse("1.1.0")
-	kong120version = semver.MustParse("1.2.0")
-	kong130version = semver.MustParse("1.3.0")
-	kong200version = semver.MustParse("2.0.0")
-
-	kongEnterprise036version = semver.MustParse("0.36.0")
-)
-
 func (n *KongController) fillRoute(route *kong.Route) {
-	if n.cfg.Kong.Version.GTE(kong120version) ||
-		(n.cfg.Kong.Enterprise &&
-			n.cfg.Kong.Version.GTE(kongEnterprise036version)) {
-		if route.HTTPSRedirectStatusCode == nil {
-			route.HTTPSRedirectStatusCode = kong.Int(426)
-		}
+	if route.HTTPSRedirectStatusCode == nil {
+		route.HTTPSRedirectStatusCode = kong.Int(426)
 	}
-	if n.cfg.Kong.Version.GTE(kong200version) {
-		if route.PathHandling == nil {
-			route.PathHandling = kong.String("v0")
-		}
+	if route.PathHandling == nil {
+		route.PathHandling = kong.String("v0")
 	}
 }
 
 func (n *KongController) fillUpstream(upstream *kong.Upstream) {
-	if n.cfg.Kong.Version.GTE(kong130version) {
-		if upstream.Algorithm == nil {
-			upstream.Algorithm = kong.String("round-robin")
-		}
+	if upstream.Algorithm == nil {
+		upstream.Algorithm = kong.String("round-robin")
 	}
 }
 
@@ -515,14 +497,10 @@ func (n *KongController) fillPlugin(ctx context.Context, plugin *file.FPlugin) e
 	if plugin.Enabled == nil {
 		plugin.Enabled = kong.Bool(true)
 	}
-	if n.cfg.Kong.Version.GTE(kong110version) {
-		if len(plugin.Protocols) == 0 {
-			// TODO read this from the schema endpoint
-			plugin.Protocols = kong.StringSlice("http", "https")
-		}
+	if len(plugin.Protocols) == 0 {
+		// TODO read this from the schema endpoint
+		plugin.Protocols = kong.StringSlice("http", "https")
 	}
-	if n.cfg.Kong.Version.GTE(kong200version) {
-		plugin.RunOn = nil
-	}
+	plugin.RunOn = nil
 	return nil
 }

@@ -30,14 +30,6 @@ type KongConsumerListerExpansion interface{}
 // KongConsumerNamespaceLister.
 type KongConsumerNamespaceListerExpansion interface{}
 
-// KongCredentialListerExpansion allows custom methods to be added to
-// KongCredentialLister.
-type KongCredentialListerExpansion interface{}
-
-// KongCredentialNamespaceListerExpansion allows custom methods to be added to
-// KongCredentialNamespaceLister.
-type KongCredentialNamespaceListerExpansion interface{}
-
 // KongIngressListerExpansion allows custom methods to be added to
 // KongIngressLister.
 type KongIngressListerExpansion interface{}

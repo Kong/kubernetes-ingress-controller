@@ -26,5 +26,7 @@ then
   echo "${DIFFROOT} up to date."
 else
   echo "${DIFFROOT} is out of date. Please run hack/build-single-manifests.sh"
+  echo "Diff output:"
+  git --no-pager diff "${DIFFROOT}"
   exit 1
 fi

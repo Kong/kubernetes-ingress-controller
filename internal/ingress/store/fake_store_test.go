@@ -575,30 +575,6 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert.Nil(plugin)
 }
 
-func TestFakeStoreCredentials(t *testing.T) {
-	assert := assert.New(t)
-
-	credentials := []*configurationv1.KongCredential{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "baz",
-				Namespace: "default",
-			},
-		},
-	}
-	store, err := NewFakeStore(FakeObjects{KongCredentials: credentials})
-	assert.Nil(err)
-	assert.NotNil(store)
-	credentials = store.ListKongCredentials()
-	assert.Len(credentials, 2)
-}
-
 func TestFakeStoreSecret(t *testing.T) {
 	assert := assert.New(t)
 

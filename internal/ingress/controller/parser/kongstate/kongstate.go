@@ -86,44 +86,6 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 		consumerIndex[kConsumer.Namespace+"/"+kConsumer.Name] = c
 	}
 
-	// legacy attach credentials
-	credentials := s.ListKongCredentials()
-	if len(credentials) > 0 {
-		log.Warnf("deprecated KongCredential resource in use; " +
-			"please use secret-based credentials, " +
-			"KongCredential resource will be removed in future")
-	}
-	for _, credential := range credentials {
-		log = log.WithFields(logrus.Fields{
-			"kongcredential_name":      credential.Name,
-			"kongcredential_namespace": credential.Namespace,
-			"consumerRef":              credential.ConsumerRef,
-		})
-		cons, ok := consumerIndex[credential.Namespace+"/"+
-			credential.ConsumerRef]
-		if !ok {
-			continue
-		}
-		if credential.Type == "" {
-			log.Errorf("invalid KongCredential: no Type provided")
-			continue
-		}
-		if !supportedCreds.Has(credential.Type) {
-			log.Errorf("invalid KongCredential: invalid Type provided")
-			continue
-		}
-		if credential.Config == nil {
-			log.Errorf("invalid KongCredential: empty config")
-			continue
-		}
-		err := cons.SetCredential(log, credential.Type, credential.Config)
-		if err != nil {
-			log.Errorf("failed to provision credential: %v", err)
-			continue
-		}
-		consumerIndex[credential.Namespace+"/"+credential.ConsumerRef] = cons
-	}
-
 	// populate the consumer in the state
 	for _, c := range consumerIndex {
 		ks.Consumers = append(ks.Consumers, c)

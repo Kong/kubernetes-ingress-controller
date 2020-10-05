@@ -116,12 +116,6 @@ TLS handshake`)
 		`PEM-encoded private key for TLS handshake`)
 
 	// Kong connection details
-	// deprecated
-	flags.String("kong-url", "",
-		`DEPRECATED, use --kong-admin-url
-The address of the Kong Admin URL to connect to in the
-format of protocol://address:port`)
-	// new
 	flags.String("kong-admin-url", defaultKongAdminURL,
 		`The address of the Kong Admin URL to connect to in the
 format of protocol://address:port`)
@@ -136,12 +130,6 @@ format of protocol://address:port`)
 		`The tag used to manage and filter entities in Kong
 This flag can be specified multiple times to specify multiple tags.`)
 
-	// deprecated
-	flags.StringSlice("admin-header", nil,
-		`DEPRECATED, use --kong-admin-header
-add a header (key:value) to every Admin API call,
-this flag can be used multiple times to specify multiple headers`)
-	// new
 	flags.StringSlice("kong-admin-header", nil,
 		`add a header (key:value) to every Admin API call,
 this flag can be used multiple times to specify multiple headers`)
@@ -150,28 +138,12 @@ this flag can be used multiple times to specify multiple headers`)
 		`Sets the value of the 'kong-admin-token' header; useful for
 authentication/authorization for Kong Enterprise environments`)
 
-	// deprecated
-	flags.Bool("admin-tls-skip-verify", false,
-		`DEPRECATED, use --kong-admin-tls-skip-verify
-Disable verification of TLS certificate of Kong's Admin endpoint.`)
-	// new
 	flags.Bool("kong-admin-tls-skip-verify", false,
 		"Disable verification of TLS certificate of Kong's Admin endpoint.")
 
-	// deprecated
-	flags.String("admin-tls-server-name", "",
-		`DEPRECATED, use --kong-admin-tls-server-name
-SNI name to use to verify the certificate presented by Kong in TLS.`)
-	// new
 	flags.String("kong-admin-tls-server-name", "",
 		"SNI name to use to verify the certificate presented by Kong in TLS.")
 
-	// deprecated
-	flags.String("admin-ca-cert-file", "",
-		`DEPRECATED, use --kong-admin-ca-cert-file
-Path to PEM-encoded CA certificate file to verify
-Kong's Admin SSL certificate.`)
-	// new
 	flags.String("kong-admin-ca-cert-file", "",
 		`Path to PEM-encoded CA certificate file to verify
 Kong's Admin SSL certificate.`)
@@ -186,8 +158,12 @@ mode of Kong. Takes the form of namespace/name.`)
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
-	flags.Bool("skip-classless-ingress-v1beta1", false,
-		`Skip non annotated Ingresses and Kong CRDs.`)
+	flags.Bool("process-classless-ingress-v1beta1", false,
+		`Process v1beta1 Ingress resources with no class annotation.`)
+	flags.Bool("process-classless-ingress-v1", false,
+		`Process v1 Ingress resources with no class annotation.`)
+	flags.Bool("process-classless-kong-consumer", false,
+		`Process KongConsumer resources with no class annotation.`)
 	flags.String("ingress-class", annotations.DefaultIngressClass,
 		`Name of the ingress class to route through this controller.`)
 	flags.String("election-id", "ingress-controller-leader",
@@ -288,26 +264,12 @@ func parseFlags() (cliConfig, error) {
 		viper.GetString("admission-webhook-key")
 
 	// Kong connection details
-	kongAdminURL := defaultKongAdminURL
-	oldURL := viper.GetString("kong-url")
-	newURL := viper.GetString("kong-admin-url")
-	if oldURL != "" {
-		kongAdminURL = oldURL
-	}
-	if newURL != defaultKongAdminURL {
-		kongAdminURL = newURL
-	}
-	config.KongAdminURL = kongAdminURL
-
+	config.KongAdminURL = viper.GetString("kong-admin-url")
 	config.KongWorkspace = viper.GetString("kong-workspace")
 	config.KongAdminConcurrency = viper.GetInt("kong-admin-concurrency")
 	config.KongAdminFilterTags = viper.GetStringSlice("kong-admin-filter-tag")
 
-	config.KongAdminHeaders = viper.GetStringSlice("admin-header")
-	kongAdminHeaders := viper.GetStringSlice("kong-admin-header")
-	if len(kongAdminHeaders) > 0 {
-		config.KongAdminHeaders = kongAdminHeaders
-	}
+	config.KongAdminHeaders = viper.GetStringSlice("kong-admin-header")
 
 	kongAdminToken := viper.GetString("kong-admin-token")
 	if kongAdminToken != "" {
@@ -315,28 +277,13 @@ func parseFlags() (cliConfig, error) {
 			"kong-admin-token:"+kongAdminToken)
 	}
 
-	config.KongAdminTLSSkipVerify = viper.GetBool("admin-tls-skip-verify")
-	kongAdminTLSSkipVerify := viper.GetBool("kong-admin-tls-skip-verify")
-	if kongAdminTLSSkipVerify {
-		config.KongAdminTLSSkipVerify = kongAdminTLSSkipVerify
-	}
+	config.KongAdminTLSSkipVerify = viper.GetBool("kong-admin-tls-skip-verify")
 
-	config.KongAdminTLSServerName = viper.GetString("admin-tls-server-name")
-	kongAdminTLSServerName := viper.GetString("kong-admin-tls-server-name")
-	if kongAdminTLSServerName != "" {
-		config.KongAdminTLSServerName = kongAdminTLSServerName
-	}
+	config.KongAdminTLSServerName = viper.GetString("kong-admin-tls-server-name")
 
-	config.KongAdminCACertPath = viper.GetString("admin-ca-cert-file")
-	kongAdminCACertPath := viper.GetString("kong-admin-ca-cert-file")
-	if kongAdminCACertPath != "" {
-		config.KongAdminCACertPath = kongAdminCACertPath
-	}
+	config.KongAdminCACertPath = viper.GetString("kong-admin-ca-cert-file")
 
-	kongAdminCACert := viper.GetString("kong-admin-ca-cert")
-	if kongAdminCACert != "" {
-		config.KongAdminCACert = kongAdminCACert
-	}
+	config.KongAdminCACert = viper.GetString("kong-admin-ca-cert")
 
 	config.KongCustomEntitiesSecret = viper.GetString(
 		"kong-custom-entities-secret")

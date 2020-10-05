@@ -38,7 +38,7 @@ func Test_getPluginRelations(t *testing.T) {
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 									},
 								},
 							},
@@ -64,7 +64,7 @@ func Test_getPluginRelations(t *testing.T) {
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 									},
 								},
 							},
@@ -95,7 +95,7 @@ func Test_getPluginRelations(t *testing.T) {
 										Name:      "some-ingress",
 										Namespace: "ns2",
 										Annotations: map[string]string{
-											annotations.DeprecatedPluginsKey: "foo,bar",
+											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 										},
 									},
 								},
@@ -127,7 +127,7 @@ func Test_getPluginRelations(t *testing.T) {
 										Name:      "some-ingress",
 										Namespace: "ns2",
 										Annotations: map[string]string{
-											annotations.DeprecatedPluginsKey: "foo,bar",
+											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 										},
 									},
 								},
@@ -139,7 +139,7 @@ func Test_getPluginRelations(t *testing.T) {
 										Name:      "some-ingress",
 										Namespace: "ns2",
 										Annotations: map[string]string{
-											annotations.DeprecatedPluginsKey: "bar,baz",
+											annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
 										},
 									},
 								},
@@ -167,7 +167,7 @@ func Test_getPluginRelations(t *testing.T) {
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 									},
 								},
 							},
@@ -180,7 +180,7 @@ func Test_getPluginRelations(t *testing.T) {
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns2",
 									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 									},
 								},
 							},
@@ -193,7 +193,7 @@ func Test_getPluginRelations(t *testing.T) {
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foobar",
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foobar",
 									},
 								},
 							},
@@ -208,7 +208,7 @@ func Test_getPluginRelations(t *testing.T) {
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
-										annotations.DeprecatedPluginsKey: "foo,bar",
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 									},
 								},
 							},
@@ -221,7 +221,7 @@ func Test_getPluginRelations(t *testing.T) {
 										Name:      "some-ingress",
 										Namespace: "ns2",
 										Annotations: map[string]string{
-											annotations.DeprecatedPluginsKey: "foo,bar",
+											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 										},
 									},
 								},
@@ -233,7 +233,7 @@ func Test_getPluginRelations(t *testing.T) {
 										Name:      "some-ingress",
 										Namespace: "ns2",
 										Annotations: map[string]string{
-											annotations.DeprecatedPluginsKey: "bar,baz",
+											annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
 										},
 									},
 								},

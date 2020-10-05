@@ -32,9 +32,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	networking "k8s.io/api/networking/v1beta1"
@@ -277,14 +275,6 @@ func (n *KongController) Start() {
 			if evt, ok := event.(Event); ok {
 				n.Logger.WithField("event_type", evt.Type).Debugf("event received")
 				n.syncQueue.Enqueue(evt.Obj)
-				// TODO retry for ephermal error conditions
-				// This function is called outside the task queue because event
-				// information is currently shielded from the sync function.
-				// Sync function syncs everything, no matter what the event is
-				err := n.handleBasicAuthUpdates(ctx, evt)
-				if err != nil {
-					n.Logger.Errorf("failed to update basic-auth credentials: %v", err)
-				}
 			} else {
 				n.Logger.WithField("event_type", evt.Type).Errorf("invalid event received")
 			}
@@ -319,81 +309,5 @@ func (n *KongController) Stop() error {
 		n.Logger.Errorf("background controller task failed: %v", err)
 	}
 
-	return nil
-}
-
-// handleBasicAuthUpdates updates basic-auth password field in Kong whenever it is changed.
-//
-// Kong hashes basic-auth passwords in DB and API responses once created.
-// Due to this reason, one can't perform a 'diff' with them.
-// This function filters for basic-auth password changes and applies them
-// to Kong as they happen.
-func (n *KongController) handleBasicAuthUpdates(ctx context.Context, event Event) error {
-	if !n.elector.IsLeader() {
-		return nil
-	}
-	if n.cfg.Kong.InMemory {
-		return nil
-	}
-	if event.Type != UpdateEvent {
-		return nil
-	}
-	newCred, ok := event.Obj.(*configurationv1.KongCredential)
-	if !ok {
-		return nil
-	}
-	if newCred.ConsumerRef == "" {
-		return nil
-	}
-	oldCred, ok := event.Old.(*configurationv1.KongCredential)
-	if !ok {
-		return nil
-	}
-	// if the credential type was changed, then the basic-auth
-	// credential will be either created or deleted by decK
-	if oldCred.Type != "basic-auth" && newCred.Type != "basic-auth" {
-		return nil
-	}
-	oldPassword := oldCred.Config["password"]
-	newPassword := newCred.Config["password"]
-	if oldPassword == newPassword {
-		return nil
-	}
-	// there was an update to a basic-auth credential and the password
-	// has changed, sync it
-	var cred kong.BasicAuth
-	decoder, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{TagName: "json",
-			Result: &cred,
-		})
-	if err != nil {
-		return fmt.Errorf("failed to create a decoder: %w", err)
-	}
-	err = decoder.Decode(newCred.Config)
-	if err != nil {
-		return fmt.Errorf("error decoding credential '%v/%v': %w",
-			newCred.Namespace, newCred.Name, err)
-	}
-
-	kongConsumer, err := n.store.GetKongConsumer(newCred.Namespace,
-		newCred.ConsumerRef)
-	if err != nil {
-		return fmt.Errorf("error searching for consumer '%v/%v': %w",
-			newCred.Namespace, newCred.ConsumerRef, err)
-	}
-	username := kongConsumer.Username
-	client := n.cfg.Kong.Client
-
-	// find the ID of the cred from Kong
-	outdatedCred, err := client.BasicAuths.Get(ctx, &username, cred.Username)
-	if err != nil {
-		return fmt.Errorf("fetching basic-auth credential: %w", err)
-	}
-	cred.ID = outdatedCred.ID
-	// update it
-	_, err = client.BasicAuths.Create(ctx, &username, &cred)
-	if err != nil {
-		return fmt.Errorf("updating basic-auth credential: %w", err)
-	}
 	return nil
 }

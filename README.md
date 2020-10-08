@@ -79,11 +79,11 @@ a specific setting with Kong Ingress Controller.
 ## Master branch builds
 
 If you would like to use the latest and the greatest version of the controller,
-you can use `latest` tag from the [master repository][bintray-master-builds]
+you can use `latest` tag from the [kong-ingress-controller repository][bintray-builds]
 hosted on Bintray:
 
 ```
-docker pull kong-docker-kubernetes-ingress-controller.bintray.io/master:latest
+docker pull kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:latest
 ```
 
 ## Seeking help
@@ -124,7 +124,7 @@ meeting invite and Zoom links to join the meeting.
 [getting-started-guide]: docs/guides/getting-started.md
 [badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
 [badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
-[bintray-master-builds]: https://bintray.com/kong/kubernetes-ingress-controller/master
+[bintray-builds]: https://bintray.com/kong/kubernetes-ingress-controller/kong-ingress-controller
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/deployment/k4k8s-enterprise.md

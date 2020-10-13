@@ -7,10 +7,7 @@ fail_usage() {
 
 cleanup() {
 	echo ">>> Test $CASE_NAME: cleanup"
-	for kind in ingress kongplugin kongconsumer
-	do
-	kubectl delete "$kind" --all-namespaces --all
-	done
+	kubectl delete -f "$CASE_PATH"
 }
 trap cleanup EXIT
 

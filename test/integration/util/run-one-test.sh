@@ -11,7 +11,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-[ -n "$PROXY_IP" ] || fail_usage PROXY_IP
+[ -n "$SUT_HTTP_HOST" ] || fail_usage SUT_HTTP_HOST
+[ -n "$SUT_HTTPS_HOST" ] || fail_usage SUT_HTTPS_HOST
 [ -n "$CASE_NAME" ] || fail_usage CASE_NAME
 [ -n "$CASE_PATH" ] || fail_usage CASE_PATH
 

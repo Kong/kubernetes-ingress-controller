@@ -1,11 +1,20 @@
 #!/bin/bash
 
-CASES_DIR="$(dirname "$BASH_SOURCE")/cases"
-TEST_RUNNER="$(dirname "$BASH_SOURCE")/util/run-one-test.sh"
+cleanup() {
+	kill $(jobs -p)
+}
+trap cleanup EXIT
+
+CASES_DIR="$(dirname "$BASH_SOURCE")/../cases"
+TEST_RUNNER="$(dirname "$BASH_SOURCE")/run-one-test.sh"
 
 echo ">>> Obtaining Kong proxy IP..."
-PROXY_IP=$(kubectl get service --namespace kong kong-proxy -o jsonpath={.spec.clusterIP})
-echo ">>> Kong proxy IP is '$PROXY_IP'."
+HTTP_PORT=27080
+HTTPS_PORT=27443
+kubectl port-forward -n kong svc/kong-proxy "$HTTP_PORT:80" "$HTTPS_PORT:443" &
+export SUT_HTTP_HOST="127.0.0.1:$HTTP_PORT"
+export SUT_HTTPS_HOST="127.0.0.1:$HTTPS_PORT"
+echo ">>> Kong proxy host is '$SUT_HTTP_HOST' for HTTP and '$SUT_HTTPS_HOST' for HTTPS."
 
 echo ">>> Setting up example services..."
 setup_example_services() (

@@ -1,3 +1,3 @@
 set -ex
 
-curl -v http://$PROXY_IP/baz/ | grep "my-request-id"
+curl -v http://$SUT_HTTP_HOST/baz/ | grep "my-request-id"

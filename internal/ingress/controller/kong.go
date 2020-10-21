@@ -403,9 +403,7 @@ func (n *KongController) toDeckContent(
 		consumer.Oauth2Creds = c.Oauth2Creds
 		content.Consumers = append(content.Consumers, consumer)
 	}
-	sort.SliceStable(content.Consumers, func(i, j int) bool {
-		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
-	})
+	sortByUsername(&content)
 	selectorTags := n.getIngressControllerTags()
 	if len(selectorTags) > 0 {
 		content.Info = &file.Info{
@@ -415,6 +413,21 @@ func (n *KongController) toDeckContent(
 
 	return &content
 }
+
+func sortByUsername(content *file.Content) {
+	sort.SliceStable(content.Consumers, func(i, j int) bool {
+		return strings.Compare(derefString(content.Consumers[i].Username), derefString(content.Consumers[j].Username)) > 0
+	})
+}
+
+func derefString(s *string) string {
+	if s != nil {
+		return *s
+	}
+
+	return ""
+}
+
 func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate
 	if kongCert.ID != nil {

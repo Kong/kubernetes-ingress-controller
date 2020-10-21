@@ -118,3 +118,136 @@ func Test_renderConfigWithCustomEntities(t *testing.T) {
 		})
 	}
 }
+
+func Test_sortUsername(t *testing.T) {
+	username1 := "username1"
+	username2 := "username2"
+	username3 := "username3"
+	username4 := "username4"
+	username5 := "username5"
+
+	type args struct {
+		content *file.Content
+	}
+	tests := []struct {
+		name string
+		args args
+		want []file.FConsumer
+	}{
+		{
+			name: "Test Happy Path",
+			args: args{
+				content: &file.Content{
+					Consumers: []file.FConsumer{
+						{
+							Consumer: kong.Consumer{
+								Username: &username1,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: &username2,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: &username3,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: &username4,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: &username5,
+							},
+						},
+					},
+				},
+			},
+			want: []file.FConsumer{
+				{
+					Consumer: kong.Consumer{
+						Username: &username5,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: &username4,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: &username3,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: &username2,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: &username1,
+					},
+				},
+			},
+		}, {
+			name: "nil username at end",
+			args: args{
+				content: &file.Content{
+					Consumers: []file.FConsumer{
+						{
+							Consumer: kong.Consumer{
+								Username: &username1,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: nil,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: &username3,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: &username4,
+							},
+						}, {
+							Consumer: kong.Consumer{
+								Username: &username5,
+							},
+						},
+					},
+				},
+			},
+			want: []file.FConsumer{
+				{
+					Consumer: kong.Consumer{
+						Username: &username5,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: &username4,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: &username3,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: &username1,
+					},
+				}, {
+					Consumer: kong.Consumer{
+						Username: nil,
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sortByUsername(tt.args.content)
+			// Compare result of function with desired result
+			got := tt.args.content.Consumers
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sortByUsername() got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

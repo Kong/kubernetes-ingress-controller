@@ -119,7 +119,7 @@ func Test_renderConfigWithCustomEntities(t *testing.T) {
 	}
 }
 
-func Test_sortUsername(t *testing.T) {
+func Test_sortByField_Username(t *testing.T) {
 	username1 := "username1"
 	username2 := "username2"
 	username3 := "username3"
@@ -242,11 +242,44 @@ func Test_sortUsername(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sortByUsername(tt.args.content)
+			sortByField(tt.args.content, "Username")
 			// Compare result of function with desired result
 			got := tt.args.content.Consumers
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sortByUsername() got %v, want %v", got, tt.want)
+				t.Errorf("sortByField(\"Username\") got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getValueOfField(t *testing.T) {
+	username1 := "foobar"
+
+	type args struct {
+		obj   kong.Consumer
+		field string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "Get Username",
+			args: args{
+				obj: kong.Consumer{
+					Username: &username1,
+				},
+
+				field: "Username",
+			},
+			want: username1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getValueOfField(tt.args.obj, tt.args.field); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getValueOfField() = %s, want %s", got, tt.want)
 			}
 		})
 	}

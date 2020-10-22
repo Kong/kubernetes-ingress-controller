@@ -60,7 +60,7 @@ to log in to Bintray and password
 is an API-key that can be provisioned via Bintray.
 
 ```bash
-$ kubectl create secret docker-registry kong-enterprise-edition-docker \
+$ kubectl create secret -n kong docker-registry kong-enterprise-edition-docker \
     --docker-server=kong-docker-kong-enterprise-edition-docker.bintray.io \
     --docker-username=<your-bintray-username@kong> \
     --docker-password=<your-bintray-api-key>

@@ -196,6 +196,10 @@ spec:
               type: array
             regex_priority:
               type: integer
+            snis:
+              items:
+                type: string
+              type: array
             strip_path:
               type: boolean
         upstream:
@@ -693,7 +697,7 @@ spec:
         - name: KONG_STATUS_LISTEN
           value: 0.0.0.0:8100
         - name: KONG_NGINX_WORKER_PROCESSES
-          value: "2"
+          value: "1"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG

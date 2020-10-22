@@ -196,6 +196,10 @@ spec:
               type: array
             regex_priority:
               type: integer
+            snis:
+              items:
+                type: string
+              type: array
             strip_path:
               type: boolean
         upstream:
@@ -642,7 +646,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:2.2.0.0-alpine
+        image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:2.0.4.1-alpine
         lifecycle:
           preStop:
             exec:

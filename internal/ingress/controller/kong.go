@@ -417,16 +417,18 @@ func (n *KongController) toDeckContent(
 func sortByField(content *file.Content, field string) {
 	sort.SliceStable(content.Consumers, func(i, j int) bool {
 		return strings.Compare(
-			getValueOfField(content.Consumers[i].Consumer, field),
-			getValueOfField(content.Consumers[j].Consumer, field),
+			getStringValueOfField(content.Consumers[i].Consumer, field),
+			getStringValueOfField(content.Consumers[j].Consumer, field),
 		) > 0
 	})
 }
 
-func getValueOfField(v kong.Consumer, field string) string {
+// Helper function to dynamically and safely get the value behind a (pointer) field
+// Requires that the retrieved field is a pointer to a string (`*string`)
+func getStringValueOfField(v kong.Consumer, field string) string {
 	r := reflect.ValueOf(v)
-	f := r.FieldByName(field).Elem().String()
-	return f
+	// We use `Elem()` here to retrieve the value behind the pointer in a safe way
+	return r.FieldByName(field).Elem().String()
 }
 
 func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {

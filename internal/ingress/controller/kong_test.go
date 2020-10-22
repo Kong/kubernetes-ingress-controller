@@ -252,7 +252,7 @@ func Test_sortByField_Username(t *testing.T) {
 	}
 }
 
-func Test_getValueOfField(t *testing.T) {
+func Test_getStringValueOfField(t *testing.T) {
 	username1 := "foobar"
 
 	type args struct {
@@ -278,8 +278,8 @@ func Test_getValueOfField(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getValueOfField(tt.args.obj, tt.args.field); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getValueOfField() = %s, want %s", got, tt.want)
+			if got := getStringValueOfField(tt.args.obj, tt.args.field); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getStringValueOfField() = %s, want %s", got, tt.want)
 			}
 		})
 	}

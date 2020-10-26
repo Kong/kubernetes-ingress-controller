@@ -642,7 +642,7 @@ spec:
             secretKeyRef:
               key: license
               name: kong-enterprise-license
-        image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:2.0.4.1-alpine
+        image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:2.1.4.0-alpine
         lifecycle:
           preStop:
             exec:

@@ -290,17 +290,17 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 		r.PathHandling = kong.String(*ir.PathHandling)
 	}
 	if len(ir.SNIs) != 0 {
-		var snis []*string
-		for _, sni := range ir.SNIs {
-			sanitizedSNI := strings.TrimSpace(*sni)
-			if validSNIs.MatchString(sanitizedSNI) {
-				snis = append(snis, kong.String(sanitizedSNI))
+		var SNIs []*string
+		for _, unsanitizedSNI := range ir.SNIs {
+			SNI := strings.TrimSpace(*unsanitizedSNI)
+			if validSNIs.MatchString(SNI) {
+				SNIs = append(SNIs, kong.String(SNI))
 			} else {
 				// SNI is not a valid hostname
-				log.WithField("kongroute", ir.Name).Errorf("invalid SNI: %v", sni)
+				log.WithField("kongroute", ir.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
 				return
 			}
 		}
-		r.SNIs = snis
+		r.SNIs = SNIs
 	}
 }

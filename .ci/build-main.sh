@@ -3,6 +3,7 @@
 # build
 export IMGNAME="master"
 export TAG=`git rev-parse --short HEAD`
+export DOCKER_CLI_EXPERIMENTAL=enabled
 
 # Docker login
 REPO="kong-docker-kubernetes-ingress-controller.bintray.io"

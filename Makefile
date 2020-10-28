@@ -47,6 +47,16 @@ container:
     --build-arg REPO_INFO=${REPO_INFO} \
     -t ${IMAGE}:${TAG} .
 
+.PHONY: multi-arch
+multi-arch:
+        docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    --build-arg TAG=${TAG} \
+    --build-arg COMMIT=${COMMIT} \
+    --build-arg REPO_INFO=${REPO_INFO} \
+    -t ${IMAGE}:${TAG} . \
+    --push
+
 .PHONY: run
 run:
 	./hack/dev/start.sh ${DB} ${RUN_VERSION}

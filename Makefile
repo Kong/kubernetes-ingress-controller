@@ -49,7 +49,7 @@ container:
 
 .PHONY: multi-arch
 multi-arch:
-        docker buildx build \
+	docker buildx build \
     --platform linux/amd64,linux/arm64 \
     --build-arg TAG=${TAG} \
     --build-arg COMMIT=${COMMIT} \

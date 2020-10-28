@@ -2757,12 +2757,9 @@ func TestParserSNI(t *testing.T) {
 			StripPath:     kong.Bool(false),
 			RegexPriority: kong.Int(0),
 			Hosts:         kong.StringSlice("example.com"),
-			// TODO disabled pending resolution of https://github.com/Kong/kong/issues/6425
-			// this relies on automatic addition of SNI criteria
-			//SNIs:          kong.StringSlice("example.com"),
-			PreserveHost: kong.Bool(true),
-			Paths:        kong.StringSlice("/"),
-			Protocols:    kong.StringSlice("http", "https"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
 		}, state.Services[0].Routes[0].Route)
 		assert.Equal(kong.Route{
 			Name:          kong.String("default.foo.10"),

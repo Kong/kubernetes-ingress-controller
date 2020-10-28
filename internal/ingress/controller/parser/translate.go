@@ -37,24 +37,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 			allDefaultBackends = append(allDefaultBackends, *ingress)
 		}
 
-		// this essentially iterates over the same content twice. we need to collect SNI information for two different
-		// purposes: result.SecretNameToSNIs collects Secret->SNI hostname info across ALL Ingresses, routeSNIs
-		// collects hostnames for a single Ingress only. This is necessary to support cert+SNI objects, which are
-		// decoupled from any one route, and route SNI match info, which is tied to a specific route. We determine this
-		// based on the actual rule hostname, but need to check that the hostname is available, in the edge case where
-		// someone has created an Ingress whose rule hostname set is a proper superset of the Ingress's TLS hostname
-		// set, ignoring some complications introduced by wildcards. maybe.
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
-		// TODO currently disabled because of https://github.com/Kong/kong/issues/6425
-		//hasSNI := false
-		//for i := range ingressSpec.TLS {
-		//	if len(ingressSpec.TLS[i].Hosts) > 0 {
-		//		hasSNI = true
-		//	}
-		//	//	for _, hostname := range ingressSpec.TLS[i].Hosts {
-		//	//		routeSNIs = append(routeSNIs, &hostname)
-		//	//	}
-		//}
 
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
@@ -93,21 +76,6 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				if host != "" {
 					hosts := kong.StringSlice(host)
 					r.Hosts = hosts
-					// TODO this would SNI criteria to routes with certificates automatically based on their hostnames
-					// It's currently disabled because of https://github.com/Kong/kong/issues/6425. Adding them as-is
-					// would prevent those routes from handling HTTP traffic or HTTP to HTTPS redirects at all.
-					// It should be safe to enable with that fixed, though older Kong versions will remain a concern.
-					// It's also a concern if the route needs to support SNI-incapable clients. As such, this behavior
-					// should probably have a flag.
-					//if hasSNI {
-					//	var snis []*string
-					//	for _, hostname := range hosts {
-					//		if !strings.Contains(*hostname, "*") {
-					//			snis = append(snis, hostname)
-					//		}
-					//	}
-					//	r.SNIs = snis
-					//}
 				}
 
 				serviceName := ingress.Namespace + "." +

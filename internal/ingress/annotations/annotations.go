@@ -202,7 +202,7 @@ func ExtractHostHeader(anns map[string]string) string {
 func ExtractMethods(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+MethodsKey]
 	if val == "" {
-		return []string{}
+		return nil
 	}
 	return strings.Split(val, ",")
 }
@@ -211,7 +211,7 @@ func ExtractMethods(anns map[string]string) []string {
 func ExtractSNIs(anns map[string]string) ([]string, bool) {
 	val, exists := anns[AnnotationPrefix+SNIsKey]
 	if val == "" {
-		return []string{}, exists
+		return nil, exists
 	}
 	return strings.Split(val, ","), exists
 }

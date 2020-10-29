@@ -23,8 +23,8 @@ setup_example_services() (
 	kubectl apply -f https://bit.ly/sample-echo-service
 	kubectl apply -f https://bit.ly/sample-httpbin-service
 
-	kubectl wait --for=condition=Available deploy echo --timeout=120s
-	kubectl wait --for=condition=Available deploy httpbin --timeout=120s
+	kubectl wait --for=condition=Available deploy echo --timeout=300s
+	kubectl wait --for=condition=Available deploy httpbin --timeout=300s
 )
 
 setup_example_services || { echo ">>> ERROR: Failed to set up example services."; exit 1; }

@@ -515,7 +515,7 @@ func TestExtractMethods(t *testing.T) {
 	}{
 		{
 			name: "empty",
-			want: []string{},
+			want: nil,
 		},
 		{
 			name: "non-empty",
@@ -547,7 +547,7 @@ func TestExtractSNIs(t *testing.T) {
 	}{
 		{
 			name: "empty",
-			want: []string{},
+			want: nil,
 		},
 		{
 			name: "non-empty",

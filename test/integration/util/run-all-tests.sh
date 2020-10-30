@@ -37,7 +37,6 @@ do
 	if env \
 		CASE_NAME="$CASE_NAME" \
 		CASE_PATH="$CASE_PATH" \
-		PROXY_IP="$PROXY_IP" \
 		$TEST_RUNNER
 	then
 		let TESTS_PASSED++

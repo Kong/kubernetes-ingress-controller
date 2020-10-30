@@ -1,3 +1,4 @@
+#!/bin/bash
 set -ex
 
 [ "$(curl -XPOST -sw '%{http_code}' -o /dev/null http://$SUT_HTTP_HOST/foo)" == 404 ]

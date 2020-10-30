@@ -1,6 +1,8 @@
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestFixVersion(t *testing.T) {
 	validVersions := map[string]string{
@@ -33,6 +35,4 @@ func TestFixVersion(t *testing.T) {
 			t.Errorf("expecting error converting %s, getting no errors", inputVersion)
 		}
 	}
-
-	return
 }

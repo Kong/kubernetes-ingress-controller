@@ -1,18 +1,19 @@
 package admission
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
-	"github.com/golang/glog"
-	"github.com/hbagdi/go-kong/kong"
-	configuration "github.com/kong/kubernetes-ingress-controller/internal/apis/configuration/v1"
-	"github.com/pkg/errors"
+	"github.com/kong/go-kong/kong"
+	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
-	ValidateConsumer(consumer configuration.KongConsumer) (bool, string, error)
+	ValidateConsumer(ctx context.Context, consumer configuration.KongConsumer) (bool, string, error)
 	ValidatePlugin(consumer configuration.KongPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
@@ -21,6 +22,7 @@ type KongValidator interface {
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
 	Client *kong.Client
+	Logger logrus.FieldLogger
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
@@ -28,19 +30,18 @@ type KongHTTPValidator struct {
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if the consumer is valid or not and string
 // holds a message if the entity is not valid.
-func (validator KongHTTPValidator) ValidateConsumer(
+func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 	consumer configuration.KongConsumer) (bool, string, error) {
 	if consumer.Username == "" {
 		return false, "username cannot be empty", nil
 	}
-	c, err := validator.Client.Consumers.Get(nil, &consumer.Username)
+	c, err := validator.Client.Consumers.Get(ctx, &consumer.Username)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			return true, "", nil
 		}
-		glog.Errorf("admission controller: "+
-			"error getting consumer from Kong: %v", err)
-		return false, "", errors.Wrap(err, "fetching consumer from Kong")
+		validator.Logger.Errorf("failed to fetch consumer from kong: %v", err)
+		return false, "", fmt.Errorf("fetching consumer from Kong: %w", err)
 	}
 	if c != nil {
 		return false, "consumer already exists", nil
@@ -74,7 +75,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if err != nil {
 		return false, "", err
 	}
-	resp, err := validator.Client.Do(nil, req, nil)
+	resp, err := validator.Client.Do(context.Background(), req, nil)
 	if err != nil {
 		return false, err.Error(), nil
 	}
@@ -146,8 +147,4 @@ func (validator KongHTTPValidator) ValidateCredential(
 	// for KongConsumer; return error if the resource is already present in
 	// Kong.
 	return true, "", nil
-}
-
-func empty(s *string) bool {
-	return s == nil && *s == ""
 }

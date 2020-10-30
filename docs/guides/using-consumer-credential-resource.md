@@ -54,6 +54,7 @@ metadata:
   name: demo
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -113,6 +114,7 @@ metadata:
   annotations:
     konghq.com/strip-path: "true"
     konghq.com/plugins: httpbin-auth
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -152,6 +154,8 @@ $ echo "apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: harry
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: harry" | kubectl apply -f -
 kongconsumer.configuration.konghq.com/harry created
 ```
@@ -185,6 +189,8 @@ $ echo "apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: harry
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: harry
 credentials:
 - harry-apikey" | kubectl apply -f -

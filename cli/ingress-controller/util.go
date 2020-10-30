@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/blang/semver"
-	"github.com/hbagdi/go-kong/kong"
-	"github.com/pkg/errors"
+	"github.com/kong/go-kong/kong"
+	"k8s.io/client-go/tools/cache"
 )
 
 func getSemVerVer(v string) (semver.Version, error) {
@@ -17,7 +19,7 @@ func getSemVerVer(v string) (semver.Version, error) {
 	re := regexp.MustCompile(`(\d+\.\d+)(?:[\.-](\d+))?(?:\-?(.+)$|$)`)
 	m := re.FindStringSubmatch(v)
 	if len(m) != 4 {
-		return semver.Version{}, fmt.Errorf("Unknown Kong version")
+		return semver.Version{}, fmt.Errorf("Unknown Kong version : '%v'", v)
 	}
 	if m[2] == "" {
 		m[2] = "0"
@@ -30,30 +32,34 @@ func getSemVerVer(v string) (semver.Version, error) {
 	return semver.Make(v)
 }
 
-func ensureWorkspace(client *kong.Client, workspace string) error {
+func ensureWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
 	req, err := client.NewRequest("GET", "/workspaces/"+workspace, nil, nil)
 	if err != nil {
 		return err
 	}
-	_, err = client.Do(nil, req, nil)
+	_, err = client.Do(ctx, req, nil)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
-			if err := createWorkspace(client, workspace); err != nil {
-				return errors.Wrapf(err, "creating workspace '%v'", workspace)
+			if err := createWorkspace(ctx, client, workspace); err != nil {
+				return fmt.Errorf("creating workspace '%v': %w", workspace, err)
 			}
 			return nil
 		}
-		return errors.Wrapf(err, "looking up workspace '%v'", workspace)
+		return fmt.Errorf("looking up workspace '%v': %w", workspace, err)
 	}
 	return nil
 }
 
-func createWorkspace(client *kong.Client, workspace string) error {
+func createWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
 	body := map[string]string{"name": workspace}
 	req, err := client.NewRequest("POST", "/workspaces", nil, body)
 	if err != nil {
 		return err
 	}
-	_, err = client.Do(nil, req, nil)
+	_, err = client.Do(ctx, req, nil)
 	return err
+}
+
+func newEmptyStore() cache.Store {
+	return cache.NewStore(func(interface{}) (string, error) { return "", errors.New("this store cannot add elements") })
 }

@@ -64,7 +64,7 @@ Once this resource is created, the resource needs to be associated with an
 `Ingress`, `Service`, or `KongConsumer` resource in Kubernetes.
 For more details, please read the reference documentation on `KongPlugin`.
 
-The below diagram shows how the `KongPlugin` resource can be linked to an
+The below diagram shows how you can link `KongPlugin` resource to an
 `Ingress`, `Service`, or `KongConsumer`:
 
 |  |  |
@@ -72,6 +72,8 @@ The below diagram shows how the `KongPlugin` resource can be linked to an
 ![](../images/kong-plugin-association1.png)|![](../images/kong-plugin-association2.png)
 
 ## KongClusterPlugin
+
+_This resource requires the [`kubernetes.io/ingress.class` annotation](../README.md#resource-classes)._
 
 KongClusterPlugin resource is exactly same as KongPlugin, except that it is a
 Kubernetes cluster-level resources instead of being a namespaced resource.
@@ -87,11 +89,19 @@ KongClusterPlugin with the same name.
 
 ## KongConsumer
 
+_This resource requires the `kubernetes.io/ingress.class` annotation. Its value
+must match the value of the controller's `--ingress-class` argument, which is
+"kong" by default._
+
 This custom resource configures `Consumers` in Kong.
 Every `KongConsumer` resource in Kubernetes directly translates to a
 [Consumer][kong-consumer] object in Kong.
 
 ## TCPIngress
+
+_This resource requires the `kubernetes.io/ingress.class` annotation. Its value
+must match the value of the controller's `--ingress-class` argument, which is
+"kong" by default._
 
 This Custom Resource is used for exposing non-HTTP
 and non-GRPC services running inside Kubernetes to

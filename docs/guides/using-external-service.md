@@ -59,6 +59,7 @@ metadata:
   name: proxy-from-k8s-to-httpbin
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

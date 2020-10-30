@@ -17,6 +17,7 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -37,8 +38,8 @@ func ParseNameNS(input string) (string, string, error) {
 }
 
 // GetNodeIPOrName returns the IP address or the name of a node in the cluster
-func GetNodeIPOrName(kubeClient clientset.Interface, name string) string {
-	node, err := kubeClient.CoreV1().Nodes().Get(name, metav1.GetOptions{})
+func GetNodeIPOrName(ctx context.Context, kubeClient clientset.Interface, name string) string {
+	node, err := kubeClient.CoreV1().Nodes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return ""
 	}
@@ -83,7 +84,7 @@ type PodInfo struct {
 
 // GetPodDetails returns runtime information about the pod:
 // name, namespace and IP of the node where it is running
-func GetPodDetails(kubeClient clientset.Interface) (*PodInfo, error) {
+func GetPodDetails(ctx context.Context, kubeClient clientset.Interface) (*PodInfo, error) {
 	podName := os.Getenv("POD_NAME")
 	podNs := os.Getenv("POD_NAMESPACE")
 
@@ -91,7 +92,7 @@ func GetPodDetails(kubeClient clientset.Interface) (*PodInfo, error) {
 		return nil, fmt.Errorf("unable to get POD information (missing POD_NAME or POD_NAMESPACE environment variable")
 	}
 
-	pod, _ := kubeClient.CoreV1().Pods(podNs).Get(podName, metav1.GetOptions{})
+	pod, _ := kubeClient.CoreV1().Pods(podNs).Get(ctx, podName, metav1.GetOptions{})
 	if pod == nil {
 		return nil, fmt.Errorf("unable to get POD information")
 	}
@@ -99,7 +100,7 @@ func GetPodDetails(kubeClient clientset.Interface) (*PodInfo, error) {
 	return &PodInfo{
 		Name:      podName,
 		Namespace: podNs,
-		NodeIP:    GetNodeIPOrName(kubeClient, pod.Spec.NodeName),
+		NodeIP:    GetNodeIPOrName(ctx, kubeClient, pod.Spec.NodeName),
 		Labels:    pod.GetLabels(),
 	}, nil
 }

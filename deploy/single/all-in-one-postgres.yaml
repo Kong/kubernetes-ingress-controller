@@ -34,10 +34,28 @@ spec:
     shortNames:
     - kcp
   scope: Cluster
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
         config:
+          type: object
+        configFrom:
+          properties:
+            secretKeyRef:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                namespace:
+                  type: string
+              required:
+              - name
+              - namespace
+              - key
+              type: object
           type: object
         disabled:
           type: boolean
@@ -85,6 +103,8 @@ spec:
     shortNames:
     - kc
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -101,41 +121,6 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: kongcredentials.configuration.konghq.com
-spec:
-  additionalPrinterColumns:
-  - JSONPath: .type
-    description: Type of credential
-    name: Credential-type
-    type: string
-  - JSONPath: .metadata.creationTimestamp
-    description: Age
-    name: Age
-    type: date
-  - JSONPath: .consumerRef
-    description: Owner of the credential
-    name: Consumer-Ref
-    type: string
-  group: configuration.konghq.com
-  names:
-    kind: KongCredential
-    plural: kongcredentials
-  scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      properties:
-        consumerRef:
-          type: string
-        type:
-          type: string
-      required:
-      - consumerRef
-      - type
-  version: v1
----
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
   name: kongingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -145,6 +130,8 @@ spec:
     shortNames:
     - ki
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -354,10 +341,25 @@ spec:
     shortNames:
     - kp
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
         config:
+          type: object
+        configFrom:
+          properties:
+            secretKeyRef:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+              required:
+              - name
+              - key
+              type: object
           type: object
         disabled:
           type: boolean
@@ -558,43 +560,6 @@ subjects:
   namespace: kong
 ---
 apiVersion: v1
-data:
-  servers.conf: |
-    # Prometheus metrics server
-    server {
-        server_name kong_prometheus_exporter;
-        listen 0.0.0.0:9542; # can be any other port as well
-        access_log off;
-
-        location /metrics {
-            default_type text/plain;
-            content_by_lua_block {
-                 local prometheus = require "kong.plugins.prometheus.exporter"
-                 prometheus:collect()
-            }
-        }
-
-        location /nginx_status {
-            internal;
-            stub_status;
-        }
-    }
-    # Health check server
-    server {
-        server_name kong_health_check;
-        listen 0.0.0.0:9001; # can be any other port as well
-
-        access_log off;
-        location /health {
-          return 200;
-        }
-    }
-kind: ConfigMap
-metadata:
-  name: kong-server-blocks
-  namespace: kong
----
-apiVersion: v1
 kind: Service
 metadata:
   annotations:
@@ -660,7 +625,7 @@ spec:
     metadata:
       annotations:
         kuma.io/gateway: enabled
-        prometheus.io/port: "9542"
+        prometheus.io/port: "8100"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
@@ -668,25 +633,29 @@ spec:
     spec:
       containers:
       - env:
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        - name: KONG_PORT_MAPS
+          value: 80:8000, 443:8443
+        - name: KONG_ADMIN_LISTEN
+          value: 127.0.0.1:8444 ssl
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
         - name: KONG_DATABASE
           value: postgres
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "1"
-        - name: KONG_NGINX_HTTP_INCLUDE
-          value: /kong/servers.conf
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_ADMIN_LISTEN
-          value: 127.0.0.1:8444 ssl
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
-        image: kong:2.0
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
+        image: kong:2.1
         lifecycle:
           preStop:
             exec:
@@ -697,8 +666,8 @@ spec:
         livenessProbe:
           failureThreshold: 3
           httpGet:
-            path: /health
-            port: 9001
+            path: /status
+            port: 8100
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -712,24 +681,19 @@ spec:
         - containerPort: 8443
           name: proxy-ssl
           protocol: TCP
-        - containerPort: 9542
+        - containerPort: 8100
           name: metrics
           protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /health
-            port: 9001
+            path: /status
+            port: 8100
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
-        securityContext:
-          runAsUser: 1000
-        volumeMounts:
-        - mountPath: /kong
-          name: kong-server-blocks
       - env:
         - name: CONTROLLER_KONG_ADMIN_URL
           value: https://127.0.0.1:8444
@@ -747,7 +711,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:0.8.1
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -778,20 +742,15 @@ spec:
       - command:
         - /bin/sh
         - -c
-        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
-          sleep 2;  done;
+        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi; sleep 2;  done;
         env:
         - name: KONG_PG_HOST
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong:1.3
+        image: kong:2.1
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
-      volumes:
-      - configMap:
-          name: kong-server-blocks
-        name: kong-server-blocks
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -860,14 +819,13 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:2.0
+        image: kong:2.1
         name: kong-migrations
       initContainers:
       - command:
         - /bin/sh
         - -c
-        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db';
-          sleep 1; done
+        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done
         env:
         - name: KONG_PG_HOST
           value: postgres

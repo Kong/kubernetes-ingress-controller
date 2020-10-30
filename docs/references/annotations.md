@@ -8,16 +8,25 @@ Following annotations are supported on Ingress resources:
 
 | Annotation name | Description |
 |-----------------|-------------|
-| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy |
+| REQUIRED [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the Ingress rules that Kong should satisfy |
 | [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for specific Ingress. |
 | [`konghq.com/protocols`](#konghqcomprotocols) | Set protocols to handle for each Ingress resource. |
 | [`konghq.com/preserve-host`](#konghqcompreserve-host) | Pass the `host` header as is to the upstream service. |
 | [`konghq.com/strip-path`](#konghqcomstrip-path) | Strip the path defined in Ingress resource and then forward the request to the upstream service. |
 | [`konghq.com/https-redirect-status-code`](#konghqcomhttps-redirect-status-code) | Set the HTTPS redirect status code to use when an HTTP request is recieved. |
+| [`konghq.com/regex-priority`](#konghqcomregex-priority) | Set the route's regex priority. |
+| [`konghq.com/methods`](#konghqcommethods) | Set methods matched by this Ingress. |
 | [`konghq.com/override`](#konghqcomoverride) | Control other routing attributes via `KongIngress` resource. |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
-| DEPRECATED [`configuration.konghq.com`](#configurationkonghqcom) | Please use [`konghq.com/override`](#konghqcomoverride) |
-| DEPRECATED [`configuration.konghq.com/protocols`](#configurationkonghqcomprotocols) | Please use [`konghq.com/protocols`](#konghqcomprotocols) |
+
+`kubernetes.io/ingress.class` is normally required, and its value should match
+the value of the `--ingress-class` controller argument ("kong" by default).
+
+Setting the `--process-classless-ingress-v1beta1` controller flag removes that requirement:
+when enabled, the controller will process Ingresses with no
+`kubernetes.io/ingress.class` annotation. Recommended best practice is to set
+the annotation and leave this flag disabled; the flag is intended for
+older configurations, as controller versions prior to 0.10 processed classless
+Ingress resources by default.
 
 ## Service resource
 
@@ -29,12 +38,9 @@ Following annotations are supported on Service resources:
 | [`konghq.com/protocol`](#konghqcomprotocol) | Set protocol Kong should use to talk to a Kubernetes service |
 | [`konghq.com/path`](#konghqcompath) | HTTP Path that is always prepended to each request that is forwarded to a Kubernetes service |
 | [`konghq.com/client-cert`](#konghqcomclient-cert) | Client certificate and key pair Kong should use to authenticate itself to a specific Kubernetes service |
+| [`konghq.com/host-header`](#konghqcomhost-header) | Set the value sent in the `Host` header when proxying requests upstream |
 | [`konghq.com/override`](#konghqcomoverride) | Fine grained routing and load-balancing |
 | [`ingress.kubernetes.io/service-upstream`](#ingresskubernetesioservice-upstream) | Offload load-balancing to kube-proxy or sidecar |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
-| DEPRECATED [`configuration.konghq.com`](#configurationkonghqcom) | Please use [`konghq.com/override`](#konghqcomoverride) |
-| DEPRECATED [`configuration.konghq.com/protocol`](#configurationkonghqcomprotocol) | Please use [`konghq.com/protocol`](#konghqcomprotocol) |
-| DEPRECATED [`configuration.konghq.com/client-cert`](#configurationkonghqcomclient-cert) | Please use [`konghq.com/client-cert`](#konghqcomclient-cert) |
 
 ## KongConsumer resource
 
@@ -42,9 +48,18 @@ Following annotaitons are supported on KongConsumer resources:
 
 | Annotation name | Description |
 |-----------------|-------------|
-| [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the KongConsumers that a controller should satisfy |
+| REQUIRED [`kubernetes.io/ingress.class`](#kubernetesioingressclass) | Restrict the KongConsumers that a controller should satisfy |
 | [`konghq.com/plugins`](#konghqcomplugins) | Run plugins for a specific consumer |
-| DEPRECATED [`plugins.konghq.com`](#pluginskonghqcom) | Please use [`konghq.com/plugins`](#konghqcomplugins) |
+
+`kubernetes.io/ingress.class` is normally required, and its value should match
+the value of the `--ingress-class` controller argument ("kong" by default).
+
+Setting the `--process-classless-kong-consumer` controller flag removes that requirement:
+when enabled, the controller will process KongConsumers with no
+`kubernetes.io/ingress.class` annotation. Recommended best practice is to set
+the annotation and leave this flag disabled; the flag is primarily intended for
+older configurations, as controller versions prior to 0.10 processed classless
+KongConsumer resources by default.
 
 ## Annotations
 
@@ -87,9 +102,25 @@ metadata:
 will target Kong Ingress controller, forcing the GCE controller
 to ignore it.
 
-> Deploying multiple ingress controller and not specifying the
-annotation will cause both controllers fighting to satisfy the Ingress
-and will lead to unknown behaviour.
+The following resources _require_ this annotation by default:
+
+- Ingress
+- KongConsumer
+- TCPIngress
+- KongClusterPlugin
+- Secret resources with the `ca-cert` label 
+
+You can optionally allow Ingress or KongConsumer resources with no class
+annotation (by setting the `--process-classless-ingress-v1beta1` or
+`--process-classless-kong-consumer` flags, respectively), though recommended
+best practice is to leave these flags disabled: the flags are primarily
+intended for compatibility with configuration created before this requirement
+was introduced in controller 0.10.
+
+If you allow classless resources, you must take care when using multiple
+controller instances in a single cluster: only one controller instance should
+enable these flags to avoid different controller instances fighting over
+classless resources, which will result in unexpected and unknown behavior.
 
 The ingress class used by Kong Ingress Controller to filter Ingress
 resources can be changed using the `CONTROLLER_INGRESS_CLASS`
@@ -246,6 +277,39 @@ konghq.com/https-redirect-status-code: "301"
 
 Please note the quotes (`"`) around the integer value.
 
+### `konghq.com/regex-priority`
+
+> Available since controller 0.9
+
+Sets the `regex_priority` setting to this value on the Kong route associated
+with the Ingress resource. This controls the [matching evaluation
+order](https://docs.konghq.com/latest/proxy/#evaluation-order) for regex-based
+routes. It accepts any integer value. Routes are evaluated in order of highest
+priority to lowest.
+
+Sample usage:
+
+```yaml
+konghq.com/regex-priority: "10"
+```
+
+Please note the quotes (`"`) around the integer value.
+
+### `konghq.com/methods`
+
+> Available since controller 0.9
+
+Sets the `methods` setting on the Kong route associated with the Ingress
+resource. This controls which request methods will match the route. Any
+uppercase alpha ASCII string is accepted, though most users will use only
+[standard methods](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods).
+
+Sample usage:
+
+```yaml
+konghq.com/methods: "GET,POST"
+```
+
 ### `konghq.com/override`
 
 > Available since controller 0.8
@@ -309,6 +373,27 @@ sets the
 [`service.client_certificate`](https://docs.konghq.com/latest/admin-api/#service-object)
 for the service.
 
+### `konghq.com/host-header`
+
+> Available since controller 0.9
+
+Sets the `host_header` setting on the Kong upstream created to represent a
+Kubernetes Service. By default, Kong upstreams set `Host` to the hostname or IP
+address of an individual target (the Pod IP for controller-managed
+configuration). This annotation overrides the default behavior and sends
+the annotation value as the `Host` header value.
+
+If `konghq.com/preserve-host: true` is present on an Ingress (or
+`route.preserve_host: true` is present in a linked KongIngress), it will take
+precedence over this annotation, and requests to the application will use the
+hostname in the Ingress rule.
+
+Sample usage:
+
+```yaml
+konghq.com/host-header: "test.example.com"
+```
+
 ### `ingress.kubernetes.io/service-upstream`
 
 By default, Kong Ingress Controller distributes traffic amongst all the Pods
@@ -337,33 +422,3 @@ annotations:
 ```
 
 You need Kong Ingress Controller >= 0.6 for this annotation.
-
-### `plugins.konghq.com`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/plugins`](#konghqcomplugins).
-
-### `configuration.konghq.com`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/override`](#konghqcomoverride).
-
-### `configuration.konghq.com/protocol`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/protocol`](#konghqcomprotocol).
-
-### `configuration.konghq.com/protocols`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/protocols`](#konghqcomprotocols).
-
-### `configuration.konghq.com/client-cert`
-
-> DEPRECATED in Controller 0.8
-
-Please instead use [`konghq.com/client-cert`](#konghqcomclient-cert).

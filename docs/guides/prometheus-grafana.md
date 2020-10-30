@@ -113,14 +113,16 @@ each request that flows into the Kubernetes cluster gets tracked in Prometheus:
 
 ```bash
 $ echo 'apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
+kind: KongClusterPlugin
 metadata:
   name: prometheus
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: "true"
 plugin: prometheus
 ' | kubectl apply -f -
-kongplugin.configuration.konghq.com/prometheus created
+kongclusterplugin.configuration.konghq.com/prometheus created
 ```
 
 ## Set Up Port Forwards
@@ -201,6 +203,7 @@ metadata:
   name: sample-ingresses
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

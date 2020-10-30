@@ -87,7 +87,7 @@ $ make build
 ### Build a local container image
 
 ```console
-$ TAG=DEV make docker-build
+$ TAG=DEV REGISTRY=docker.example.com/registry make container
 ```
 
 Note: this will use the Docker daemon
@@ -107,8 +107,10 @@ in your Deployment specs.
 ### Push the container image to a remote repository
 
 ```console
-$ TAG=DEV REGISTRY=$USER/kong-ingress-controller make docker-push
+$ docker push docker.example.com/registry/kong-ingress-controller:DEV
 ```
+
+Note: replace `docker.example.com/registry` with your registry URL.
 
 ## Deploying
 

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"syscall"
@@ -25,6 +26,7 @@ import (
 	"github.com/eapache/channels"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
+	"github.com/sirupsen/logrus"
 )
 
 func TestCreateApiserverClient(t *testing.T) {
@@ -32,7 +34,7 @@ func TestCreateApiserverClient(t *testing.T) {
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
-	_, kubeClient, err := createApiserverClient("", kubeConfigFile)
+	_, kubeClient, err := createApiserverClient("", kubeConfigFile, logrus.New())
 	if err != nil {
 		t.Fatalf("unexpected error creating api server client: %v", err)
 	}
@@ -40,18 +42,19 @@ func TestCreateApiserverClient(t *testing.T) {
 		t.Fatalf("expected a kubernetes client but none returned")
 	}
 
-	_, _, err = createApiserverClient("", "")
+	_, _, err = createApiserverClient("", "", logrus.New())
 	if err == nil {
 		t.Fatalf("expected an error creating api server client without an api server URL or kubeconfig file")
 	}
 }
 
 func TestHandleSigterm(t *testing.T) {
+	ctx := context.Background()
 	t.Skip("Skipping TestHandleSigterm.")
 	home := os.Getenv("HOME")
 	kubeConfigFile := fmt.Sprintf("%v/.kube/config", home)
 
-	_, kubeClient, err := createApiserverClient("", kubeConfigFile)
+	_, kubeClient, err := createApiserverClient("", kubeConfigFile, logrus.New())
 	if err != nil {
 		t.Fatalf("unexpected error creating api server client: %v", err)
 	}
@@ -72,22 +75,24 @@ func TestHandleSigterm(t *testing.T) {
 	}
 
 	kong, err := controller.NewKongController(
+		ctx,
 		&controller.Configuration{
 			KubeClient: kubeClient,
 		},
 		channels.NewRingChannel(1024),
-		store.New(store.CacheStores{}, conf.IngressClass),
+		store.New(store.CacheStores{}, conf.IngressClass, conf.ProcessClasslessIngressV1Beta1,
+			conf.ProcessClasslessIngressV1, conf.ProcessClasslessKongConsumer, logrus.New()),
 	)
 
 	exitCh := make(chan int, 1)
-	go handleSigterm(kong, make(chan struct{}), exitCh)
+	go handleSigterm(kong, make(chan struct{}), exitCh, logrus.New())
 
 	t.Logf("sending SIGTERM to process PID %v", syscall.Getpid())
 	if err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM); err != nil {
 		t.Errorf("unexpected error sending SIGTERM signal")
 	}
 
-	// Allow test to time out if no value becomes avaialble soon enough.
+	// Allow test to time out if no value becomes availalble soon enough.
 	if code := <-exitCh; code != 1 {
 		t.Errorf("expected exit code 1 but %v received", code)
 	}

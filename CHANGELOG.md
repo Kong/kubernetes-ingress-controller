@@ -1,5 +1,9 @@
 # Table of Contents
 
+ - [1.0.0](#100---20201005)
+ - [0.10.0](#0100---20200915)
+ - [0.9.1](#091---20200608)
+ - [0.9.0](#090---20200526)
  - [0.8.1](#081---20200415)
  - [0.8.0](#080---20200325)
  - [0.7.1](#071---20200131)
@@ -19,6 +23,208 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [1.0.0] - 2020/10/05
+
+#### Breaking changes
+
+- The controller no longer supports versions of Kong prior to 2.0.0.
+  [#875](https://github.com/Kong/kubernetes-ingress-controller/pull/875)
+- Deprecated 0.x.x flags are no longer supported. Please see [the documentation
+  changes](https://github.com/Kong/kubernetes-ingress-controller/pull/866/files#diff-9a686fb3bf9c18ab81952a0933fb5c00)
+  for a complete list of removed flags and their replacements. Note that this
+  change applies to both flags and their equivalent environment variables, e.g.
+  for `--admin-header`, if you set `CONTROLLER_ADMIN_HEADER`, you should now
+  use `CONTROLLER_KONG_ADMIN_HEADER`.
+  [#866](https://github.com/Kong/kubernetes-ingress-controller/pull/866)
+- KongCredential custom resources are no longer supported. You should convert
+  any KongCredential resources to [credential Secrets](https://github.com/Kong/kubernetes-ingress-controller/blob/next/docs/guides/using-consumer-credential-resource.md#provision-a-consumer)
+  before upgrading to 1.0.0.
+  [#862](https://github.com/Kong/kubernetes-ingress-controller/pull/862)
+- Deprecated 0.x.x annotations are no longer supported. Please see [the
+  documentation changes](https://github.com/Kong/kubernetes-ingress-controller/pull/873/files#diff-777e08783d63482620961c4f93a1e1f6)
+  for a complete list of removed annotations and their replacements.
+  [#873](https://github.com/Kong/kubernetes-ingress-controller/pull/873)
+
+#### Added
+
+- The controller Docker registry now has minor version tags. These always point
+  to the latest patch release for a given minor version, e.g. if `1.0.3` is the
+  latest patch release for the `1.0.x` series, the `1.0` Docker tag will point
+  to `1.0.3`.
+  [#747](https://github.com/Kong/kubernetes-ingress-controller/pull/747)
+- Custom resources now all have a status field. For 1.0.0, this field is a
+  placeholder, and does not contain any actual status information. Future
+  versions will add status information that reflects whether the controller has
+  created Kong configuration for that custom resource.
+  [#824](https://github.com/Kong/kubernetes-ingress-controller/pull/824)
+- Version compatibility documentation now includes [information about supported
+  Kubernetes versions for a given controller version](https://github.com/Kong/kubernetes-ingress-controller/blob/main/docs/references/version-compatibility.md#kubernetes).
+  [#820](https://github.com/Kong/kubernetes-ingress-controller/pull/820)
+
+#### Fixed
+
+- EKS documentation now uses hostnames rather than IP addresses.
+  [#877](https://github.com/Kong/kubernetes-ingress-controller/pull/877)
+
+## [0.10.0] - 2020/09/15
+
+#### Breaking changes
+
+- Ingress resources now require `kubernetes.io/ingress.class` annotations by
+  default. Kong recommends adding this annotation to Ingresses that previously
+  did not have it, but you can override this change and instruct the controller
+  to process Ingresses without this annotation if desired. See the [ingress
+  class documentation](https://example.com/link-tbd) for details.
+  [#767](https://github.com/Kong/kubernetes-ingress-controller/pull/767)
+- KongConsumer resources now require `kubernetes.io/ingress.class` annotations
+  by default. This change can also be overriden using a flag.
+  [#767](https://github.com/Kong/kubernetes-ingress-controller/pull/767)
+- TCPIngress resources now require `kubernetes.io/ingress.class` annotations.
+  This change _cannot_ be overriden.
+  [#767](https://github.com/Kong/kubernetes-ingress-controller/pull/767)
+- CA certificate secrets now require `kubernetes.io/ingress.class` annotations.
+  This change _cannot_ be overriden.
+  [#815](https://github.com/Kong/kubernetes-ingress-controller/pull/815)
+- Removed support for global KongPlugin resources. You must now use
+  KongClusterPlugin resources for global plugins. You should run
+  `kubectl get kongplugin -l global=true --all-namespaces` to list existing
+  global KongPlugins to find and convert them before upgrading. The controller
+  will also log a warning if it finds any global KongPlugins that are still in
+  place.
+  [#751](https://github.com/Kong/kubernetes-ingress-controller/pull/751)
+
+
+#### Added
+
+- Added support for [Ingress
+  v1](https://github.com/kubernetes/enhancements/tree/master/keps/sig-network/1453-ingress-api#summary-of-the-proposed-changes).
+  [#832](https://github.com/Kong/kubernetes-ingress-controller/pull/832).
+  [#843](https://github.com/Kong/kubernetes-ingress-controller/pull/843).
+- Added support for the port mapping functionality in Kong versions 2.1 and
+  newer in example manifests. This feature [improves Kong's functionality when
+  behind a load balancer that uses different ports than Kong's proxy
+  listens](https://github.com/Kong/kong/pull/5861).
+  [#753](https://github.com/Kong/kubernetes-ingress-controller/pull/753)
+- Added support for the `ingress.kubernetes.io/force-ssl-redirect` annotation.
+  [#745](https://github.com/Kong/kubernetes-ingress-controller/pull/745)
+- Transitioned to structured logging.
+  [#748](https://github.com/Kong/kubernetes-ingress-controller/pull/748)
+- Added flags to enable processing of Ingress and KongConsumer resources
+  without `ingress.class` annotations regardless of the controller class.
+  Previously, this functionality was only available when using the default
+  controller class, and could not be disabled.
+  [#767](https://github.com/Kong/kubernetes-ingress-controller/pull/767)
+- Added support for `admission.k8s.io/v1` validating webhooks.
+  [#759](https://github.com/Kong/kubernetes-ingress-controller/pull/759)
+- Migrated to Go 1.13-style error handling.
+  [#765](https://github.com/Kong/kubernetes-ingress-controller/pull/765)
+- Added documentation for using the controller along with Istio.
+  [#798](https://github.com/Kong/kubernetes-ingress-controller/pull/798)
+- Updated documentation to include information on Kong 2.1.
+
+#### Fixed
+
+- Removed `securityContext` from example deployments. Earlier Kong versions
+  had to run as root to support some Enterprise features. This is no longer the
+  case in modern Kong versions.
+  [#672](https://github.com/Kong/kubernetes-ingress-controller/pull/672)
+- Added missing documentation for `--enable-reverse-sync` flag.
+  [#718](https://github.com/Kong/kubernetes-ingress-controller/pull/718)
+- Fixed a bug where the controller did not track updates to resources that
+  should not have required `ingress.class` unless that annotation was present.
+  [#767](https://github.com/Kong/kubernetes-ingress-controller/pull/767)
+- Clarified build instructions for pushing Docker artifacts.
+  [#768](https://github.com/Kong/kubernetes-ingress-controller/pull/768)
+- Improved controller startup behavior in scenarios where Kong was not
+  available. The controller will now retry and exit with an error after a
+  timeout, rather than hanging indefinitely.
+  [#771](https://github.com/Kong/kubernetes-ingress-controller/pull/771)
+  [#799](https://github.com/Kong/kubernetes-ingress-controller/pull/799)
+- Addressed several documentation typos and incongruent examples.
+  [#776](https://github.com/Kong/kubernetes-ingress-controller/pull/776)
+  [#785](https://github.com/Kong/kubernetes-ingress-controller/pull/785)
+  [#809](https://github.com/Kong/kubernetes-ingress-controller/pull/809)
+- Corrected a Helm 3 example that still used deprecated Helm 2 flags.
+  [#793](https://github.com/Kong/kubernetes-ingress-controller/pull/793)
+
+#### Under the hood
+
+- Improved tests by removing many hard-coded default values. The tests now
+  reference variables that define the default value in a single location.
+  [#815](https://github.com/Kong/kubernetes-ingress-controller/pull/815)
+- Added CI warning when base and single-file example manifests diverge.
+  [#797](https://github.com/Kong/kubernetes-ingress-controller/pull/797)
+- Updated Kubernetes dependencies from v0.17.x to v0.19.0 and switched from
+  `knative.dev/serving` to `knative.dev/networking`.
+  [#813](https://github.com/Kong/kubernetes-ingress-controller/pull/813)
+  [#817](https://github.com/Kong/kubernetes-ingress-controller/pull/817)
+- Updated Go build configuration to use Go 1.15.
+  [#816](https://github.com/Kong/kubernetes-ingress-controller/pull/816)
+
+## [0.9.1] - 2020/06/08
+
+#### Fixed
+
+- Parse TLS section of Knative Ingress resources
+  [#721](https://github.com/Kong/kubernetes-ingress-controller/pull/721)
+
+## [0.9.0] - 2020/05/26
+
+#### Breaking change
+
+Health-check behavior of the default manifest has been changed to use
+`status` interface of Kong instead of a simple Nginx server block.
+The change is transparent and doesn't require any additional work.
+[#634](https://github.com/Kong/kubernetes-ingress-controller/pull/634)
+
+### Deprecations
+
+Kong deployments backed by Cassandra are deprecated and will not be supported
+in future. Cassandra deployments for Ingress Controller use cases are rare
+and seldom make sense since the features that Cassandra brings are
+provided by other means in such architectures.
+[#617](https://github.com/Kong/kubernetes-ingress-controller/pull/617)
+
+#### Added
+
+- **Plugin configuration via Kubernetes Secrets**  Configuration of plugins
+  can be stored in Kubernetes Secrets and then referenced in `KongPlugin`
+  and `KongClusterPlugin` resources.
+  [#618](https://github.com/Kong/kubernetes-ingress-controller/pull/618)
+- **mTLS authentication**  The controller can configure CA Certificates
+  in Kong and these can be used by `mtls-auth` plugin in Kong. The plugin
+  is currently enterprise-only.
+  [#616](https://github.com/Kong/kubernetes-ingress-controller/pull/616)
+- **Kong Custom entities in DB-less mode** Custom entities used in
+  custom plugins can now be configured for DB-less deployments of Kong.
+  [#630](https://github.com/Kong/kubernetes-ingress-controller/pull/630)
+- **Host-header manipulation**  Host header of a request destined to a
+  Kubernetes Service can now be manipulated using the `konghq.com/host-header`
+  annotation on the `Service` resource.
+  [#597](https://github.com/Kong/kubernetes-ingress-controller/pull/597)
+- **Method-based routing**  Method based routing can be performed using the
+  Ingress resource. A new annotation `konghq.com/methods` can now be used to
+  match HTTP method in addition to HTTP `host` and `path`. This was
+  previously supported only via `KongIngress` Custom Resource.
+  [#591](https://github.com/Kong/kubernetes-ingress-controller/pull/591)
+- **New configuration options** Following new CLI flags and corresponding
+  environment variables have been added:
+  - `--admission-webhook-cert`, `--admission-webhook-key`
+    and `--kong-admin-ca-cert`. These have been added to ease configuration
+    by enabling users to supply sensitive values using `Secret`
+    references inside `PodSpec`.
+    [#628](https://github.com/Kong/kubernetes-ingress-controller/pull/628)
+  - `--kong-custom-entities-secret` flag has been added to support
+    custom entities in DB-less mode feature.
+
+#### Fixed
+
+- Some errors that were previously ignored are being caught and handled
+  correctly
+  [#635](https://github.com/Kong/kubernetes-ingress-controller/pull/635)
+- Ingress rules with consecutive slashes (`//`) are now ignored
+  [#663](https://github.com/Kong/kubernetes-ingress-controller/pull/663)
 
 ## [0.8.1] - 2020/04/15
 
@@ -695,9 +901,13 @@ Please read the changelog and test in your environment.
 
 ## [v0.0.4] and prior
 
- - The initial versions rapidly were iterated delivering
+ - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[1.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.10.0...1.0.0
+[0.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.9.1...0.10.0
+[0.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.9.0...0.9.1
+[0.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.7.0...0.7.1

@@ -59,14 +59,14 @@ Execute the following command to get the IP address at which Kong is accessible:
 
 ```bash
 $ kubectl get services -n kong
-NAME         TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
-kong-proxy   LoadBalancer   10.63.250.199   203.0.113.42   80:31929/TCP,443:31408/TCP   57d
+NAME         TYPE           CLUSTER-IP      EXTERNAL-IP                           PORT(S)                      AGE
+kong-proxy   LoadBalancer   10.63.250.199   example.eu-west-1.elb.amazonaws.com   80:31929/TCP,443:31408/TCP   57d
 ```
 
-Create an environment variable to hold the IP address:
+Create an environment variable to hold the ELB hostname:
 
 ```bash
-$ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n kong kong-proxy)
+$ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" service -n kong kong-proxy)
 ```
 
 > Note: It may take some time for Amazon to actually associate the

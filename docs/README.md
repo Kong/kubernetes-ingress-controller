@@ -7,6 +7,7 @@
   - [Custom Resources](#custom-resources)
   - [Deployment methods](#deployment-methods)
   - [High-availability and scaling](#high-availability-and-scaling)
+  - [Resource classes](#resource-classes)
   - [Security](#security)
 - [Guides and Tutorials](#guides-and-tutorials)
 - [Configuration reference](#configuration-reference)
@@ -48,6 +49,12 @@ and infrastructure.
 Please refer to [this document](concepts/ha-and-scaling.md) to understand
 failures scenarios, recovery methods, as well as scaling considerations.
 
+### Ingress classes
+
+[Ingress classes](concepts/ingress-classes.md) filter which resources the
+controller loads. They ensure that Kong Ingress Controller instances do not
+load configuration intended for other instances or other ingress controllers.
+
 ### Security
 
 Please refer to [this document](concepts/security.md) to understand the
@@ -68,6 +75,7 @@ Please refer to the following documents detailing this process:
 - [Annotations](references/annotations.md)
 - [CLI arguments](references/cli-arguments.md)
 - [Version compatibility matrix](references/version-compatibility.md)
+- [Plugin compatibility matrix](references/plugin-compatibility.md)
 
 ## FAQs
 

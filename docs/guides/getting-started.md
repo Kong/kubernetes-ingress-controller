@@ -53,6 +53,8 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: demo
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -122,6 +124,7 @@ metadata:
   name: demo-example-com
   annotations:
     konghq.com/plugins: request-id
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - host: example.com

@@ -5,7 +5,7 @@ Enterprise. This architecture is described in detail in [this doc](../concepts/k
 
 We assume that we start from scratch and you don't have Kong Enterprise
 deployed. For the sake of simplicity, we will deploy Kong Enterprise and
-it's database in Kubernetes itself. You can safely run them outside
+its database in Kubernetes itself. You can safely run them outside
 Kubernetes as well.
 
 ## Table of content
@@ -37,14 +37,11 @@ As part of sign up for Kong Enterprise, you should have received a license file.
 Save the license file temporarily to disk and execute the following:
 
 ```bash
-$ kubectl create secret generic kong-enterprise-license --from-file=./license -n kong
+$ kubectl create secret generic kong-enterprise-license --from-file=license=./license.json -n kong
 secret/kong-enterprise-license created
 ```
 
-Please note:
-
-- There is no `.json` extension in the `--from-file` parameter.
-- `-n kong` specifies the namespace in which you are deploying
+Please note that `-n kong` specifies the namespace in which you are deploying
   Kong Ingress Controller. If you are deploying in a different namespace,
   please change this value.
 
@@ -88,7 +85,7 @@ $ kubectl apply -f https://bit.ly/kong-ingress-enterprise
 
 It takes a little while to bootstrap the database.
 Once bootstrapped, you should see Kong Ingress Controller running with
-Kong Enterprise as it's core:
+Kong Enterprise as its core:
 
 ```bash
 $ kubectl get pods -n kong

@@ -35,17 +35,17 @@ import (
 
 	"github.com/eapache/channels"
 	"github.com/fatih/color"
-	"github.com/golang/glog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hbagdi/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
-	configurationclientv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
-	configurationinformer "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
+	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -57,8 +57,26 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	knativeclient "knative.dev/serving/pkg/client/clientset/versioned"
-	knativeinformer "knative.dev/serving/pkg/client/informers/externalversions"
+	"k8s.io/client-go/util/flowcontrol"
+	"k8s.io/klog"
+	knativeclient "knative.dev/networking/pkg/client/clientset/versioned"
+	knativeinformer "knative.dev/networking/pkg/client/informers/externalversions"
+)
+
+var (
+	logrusLevel = map[string]logrus.Level{
+		"panic": logrus.PanicLevel,
+		"fatal": logrus.FatalLevel,
+		"error": logrus.ErrorLevel,
+		"warn":  logrus.WarnLevel,
+		"info":  logrus.InfoLevel,
+		"debug": logrus.DebugLevel,
+		"trace": logrus.TraceLevel,
+	}
+	logrusFormat = map[string]logrus.Formatter{
+		"text": &logrus.TextFormatter{},
+		"json": &logrus.JSONFormatter{},
+	}
 )
 
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
@@ -68,6 +86,7 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 			FilterTags:  cliConfig.KongAdminFilterTags,
 			Concurrency: cliConfig.KongAdminConcurrency,
 		},
+		KongCustomEntitiesSecret: cliConfig.KongCustomEntitiesSecret,
 
 		ResyncPeriod:      cliConfig.SyncPeriod,
 		SyncRateLimit:     cliConfig.SyncRateLimit,
@@ -86,7 +105,14 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 	}
 }
 
+func init() {
+	// initialize for dependencies
+	klog.InitFlags(nil)
+}
+
 func main() {
+	ctx := context.Background()
+
 	color.Output = ioutil.Discard
 	rand.Seed(time.Now().UnixNano())
 
@@ -94,55 +120,75 @@ func main() {
 
 	cliConfig, err := parseFlags()
 	if err != nil {
-		glog.Fatal(err)
+		logrus.Fatalf("failed to parse configuration: %v", err)
+	}
+	log := logrus.New()
+	level, ok := logrusLevel[cliConfig.LogLevel]
+	if !ok {
+		logrus.Fatalf("invalid log-level: %v", cliConfig.LogLevel)
+	}
+	log.Level = level
+
+	format, ok := logrusFormat[cliConfig.LogFormat]
+	if !ok {
+		logrus.Fatalf("invalid log-format: %v", cliConfig.LogFormat)
+	}
+	log.Formatter = format
+
+	for key, value := range viper.AllSettings() {
+		log.WithField(key, fmt.Sprintf("%v", value)).Debug("input flag")
 	}
 
 	if cliConfig.ShowVersion {
 		os.Exit(0)
 	}
 
+	invalidConfErrPrefix := "invalid configuration: "
 	if cliConfig.PublishService == "" && cliConfig.PublishStatusAddress == "" {
-		glog.Fatal("either --publish-service or --publish-status-address",
-			"must be specified")
+		log.Fatal(invalidConfErrPrefix + "either --publish-service or --publish-status-address must be specified")
 	}
 
 	if cliConfig.SyncPeriod.Seconds() < 10 {
-		glog.Fatalf("resync period (%vs) is too low", cliConfig.SyncPeriod.Seconds())
+		log.Fatalf(invalidConfErrPrefix+"resync period (%vs) is too low", cliConfig.SyncPeriod.Seconds())
 	}
 
 	if cliConfig.KongAdminConcurrency < 1 {
-		glog.Fatalf("kong-admin-concurrency (%v) cannot be less than 1",
-			cliConfig.KongAdminConcurrency)
+		log.Fatalf(invalidConfErrPrefix+"kong-admin-concurrency (%v) cannot be less than 1", cliConfig.KongAdminConcurrency)
 	}
 
 	kubeCfg, kubeClient, err := createApiserverClient(cliConfig.APIServerHost,
-		cliConfig.KubeConfigFilePath)
+		cliConfig.KubeConfigFilePath, log)
 	if err != nil {
-		handleFatalInitError(err)
+		log.Fatalf("failed to connect to Kubernetes api-server,"+
+			"this most likely means that the cluster is misconfigured (e.g., it has "+
+			"invalid apiserver certificates or service accounts configuration); error: %v", err)
 	}
 
 	if cliConfig.PublishService != "" {
 		svc := cliConfig.PublishService
 		ns, name, err := utils.ParseNameNS(svc)
 		if err != nil {
-			glog.Fatal(err)
+			log.Fatalf(invalidConfErrPrefix+"publish-service: %v", err)
 		}
-		_, err = kubeClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+		_, err = kubeClient.CoreV1().Services(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			glog.Fatalf("unexpected error getting information about service %v: %v", svc, err)
+			log.WithFields(logrus.Fields{
+				"service_name":      name,
+				"service_namespace": ns,
+			}).Fatalf("failed to fetch publish-service: %v", err)
 		}
 	}
 
 	if cliConfig.WatchNamespace != "" {
-		_, err = kubeClient.CoreV1().Namespaces().Get(cliConfig.WatchNamespace,
+		_, err = kubeClient.CoreV1().Namespaces().Get(ctx, cliConfig.WatchNamespace,
 			metav1.GetOptions{})
 		if err != nil {
-			glog.Fatalf("no namespace with name %v found: %v",
-				cliConfig.WatchNamespace, err)
+			log.Fatalf("failed to fetch watch-namespace '%s': %v", cliConfig.WatchNamespace, err)
 		}
 	}
 
 	controllerConfig := controllerConfigFromCLIConfig(cliConfig)
+	controllerConfig.Logger = log.WithField("component", "controller")
 
 	controllerConfig.KubeClient = kubeClient
 
@@ -158,16 +204,30 @@ func main() {
 		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
 	}
 
+	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
+		log.Fatalf(invalidConfErrPrefix + "both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
+			"are set; please remove one or the other")
+	}
+	if cliConfig.KongAdminCACert != "" {
+		certPool := x509.NewCertPool()
+		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
+		if !ok {
+			// TODO give user an error to make this actionable
+			log.Fatalf("failed to load kong-admin-ca-cert")
+		}
+		tlsConfig.RootCAs = certPool
+	}
 	if cliConfig.KongAdminCACertPath != "" {
 		certPath := cliConfig.KongAdminCACertPath
 		certPool := x509.NewCertPool()
 		cert, err := ioutil.ReadFile(certPath)
 		if err != nil {
-			glog.Fatalf("failed to read CACert: %s", certPath)
+			log.Fatalf("failed to read kong-admin-ca-cert from path '%s': %v", certPath, err)
 		}
-		ok := certPool.AppendCertsFromPEM([]byte(cert))
+		ok := certPool.AppendCertsFromPEM(cert)
 		if !ok {
-			glog.Fatalf("failed to load CACert: %s", certPath)
+			// TODO give user an error to make this actionable
+			log.Fatalf("failed to load kong-admin-ca-cert from path '%s'", certPath)
 		}
 		tlsConfig.RootCAs = certPool
 	}
@@ -180,32 +240,55 @@ func main() {
 
 	kongClient, err := kong.NewClient(kong.String(cliConfig.KongAdminURL), c)
 	if err != nil {
-		glog.Fatalf("Error creating Kong Rest client: %v", err)
+		log.Fatalf("failed to create kong client: %v", err)
 	}
 
-	root, err := kongClient.Root(nil)
-	if err != nil {
-		glog.Fatalf("%v", err)
+	var root map[string]interface{}
+	backoff := flowcontrol.NewBackOff(1*time.Second, 15*time.Second)
+	const backoffID = "kong-admin-api"
+	retryCount := 0
+	for {
+		root, err = rootWithTimeout(ctx, kongClient)
+		if err == nil {
+			break
+		}
+		if retryCount > 5 {
+			log.Fatalf("failed to fetch metadata from kong: %v", err)
+		}
+		backoff.Next(backoffID, backoff.Clock.Now())
+		delay := backoff.Get(backoffID)
+		time.Sleep(delay)
+		retryCount++
+		log.Infof("retry %d to fetch metadata from kong: %v", retryCount, err)
+		continue
 	}
 	v, err := getSemVerVer(root["version"].(string))
-
-	glog.Infof("kong version: %s", v)
-	kongConfiguration := root["configuration"].(map[string]interface{})
+	if err != nil {
+		log.Fatalf("failed to determine version of kong: %v", err)
+	}
+	log.WithField("kong_version", v).Infof("kong version: %s", v)
 	controllerConfig.Kong.Version = v
 
 	if strings.Contains(root["version"].(string), "enterprise") {
+		log.Debug("enterprise version of kong detected")
 		controllerConfig.Kong.Enterprise = true
 	}
 
+	kongConfiguration := root["configuration"].(map[string]interface{})
 	kongDB := kongConfiguration["database"].(string)
-	glog.Infof("Kong datastore: %s", kongDB)
+	log.Infof("datastore strategy for kong: %s", kongDB)
 
 	if kongDB == "off" {
 		controllerConfig.Kong.InMemory = true
 	}
+	if kongDB == "cassandra" {
+		log.Warn("running controller with kong cassandra as a datastore is deprecated; " +
+			"please consider using postgres or in-memory mode")
+	}
+
 	req, _ := http.NewRequest("GET",
 		cliConfig.KongAdminURL+"/tags", nil)
-	res, err := kongClient.Do(nil, req, nil)
+	res, err := kongClient.Do(ctx, req, nil)
 	if err == nil && res.StatusCode == 200 {
 		controllerConfig.Kong.HasTagSupport = true
 	}
@@ -213,36 +296,29 @@ func main() {
 	// setup workspace in Kong Enterprise
 	if cliConfig.KongWorkspace != "" {
 		// ensure the workspace exists or try creating it
-		err := ensureWorkspace(kongClient, cliConfig.KongWorkspace)
+		err := ensureWorkspace(ctx, kongClient, cliConfig.KongWorkspace)
 		if err != nil {
-			glog.Fatalf("Error ensuring workspace: %v", err)
+			log.Fatalf("failed to ensure workspace in kong: %v", err)
 		}
 		kongClient, err = kong.NewClient(kong.String(cliConfig.KongAdminURL+"/"+cliConfig.KongWorkspace), c)
 		if err != nil {
-			glog.Fatalf("Error creating Kong Rest client: %v", err)
+			log.Fatalf("failed to create kong client: %v", err)
 		}
 	}
 	controllerConfig.Kong.Client = kongClient
 
-	err = discovery.ServerSupportsVersion(kubeClient.Discovery(), schema.GroupVersion{
-		Group:   "networking.k8s.io",
-		Version: "v1beta1",
-	})
-	if err == nil {
-		controllerConfig.UseNetworkingV1beta1 = true
-	}
 	coreInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient,
 		cliConfig.SyncPeriod,
 		informers.WithNamespace(cliConfig.WatchNamespace),
 	)
-	confClient, _ := configurationclientv1.NewForConfig(kubeCfg)
+	confClient, _ := configclientv1.NewForConfig(kubeCfg)
 	controllerConfig.KongConfigClient = confClient
 
-	kongInformerFactory := configurationinformer.NewSharedInformerFactoryWithOptions(
+	kongInformerFactory := configinformer.NewSharedInformerFactoryWithOptions(
 		confClient,
 		cliConfig.SyncPeriod,
-		configurationinformer.WithNamespace(cliConfig.WatchNamespace),
+		configinformer.WithNamespace(cliConfig.WatchNamespace),
 	)
 
 	knativeClient, _ := knativeclient.NewForConfig(kubeCfg)
@@ -265,21 +341,44 @@ func main() {
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
-		UpdateCh:           updateChannel,
-		IsValidIngresClass: annotations.IngressClassValidatorFunc(cliConfig.IngressClass),
+		UpdateCh: updateChannel,
 	}
+
+	var preferredIngressAPIs []utils.IngressAPI
+	if !cliConfig.DisableIngressNetworkingV1 {
+		preferredIngressAPIs = append(preferredIngressAPIs, utils.NetworkingV1)
+	}
+	if !cliConfig.DisableIngressNetworkingV1beta1 {
+		preferredIngressAPIs = append(preferredIngressAPIs, utils.NetworkingV1beta1)
+	}
+	if !cliConfig.DisableIngressExtensionsV1beta1 {
+		preferredIngressAPIs = append(preferredIngressAPIs, utils.ExtensionsV1beta1)
+	}
+	controllerConfig.IngressAPI, err = utils.NegotiateResourceAPI(kubeClient, "Ingress", preferredIngressAPIs)
+	if err != nil {
+		log.Fatalf("NegotiateIngressAPI failed: %v, tried: %+v", err, preferredIngressAPIs)
+	}
+	log.Infof("chosen Ingress API version: %v", controllerConfig.IngressAPI)
+
 	var informers []cache.SharedIndexInformer
 	var cacheStores store.CacheStores
 
 	var ingInformer cache.SharedIndexInformer
-	if controllerConfig.UseNetworkingV1beta1 {
+	switch controllerConfig.IngressAPI {
+	case utils.NetworkingV1:
+		ingInformer = coreInformerFactory.Networking().V1().Ingresses().Informer()
+		cacheStores.IngressV1 = ingInformer.GetStore()
+		cacheStores.IngressV1beta1 = newEmptyStore()
+	case utils.NetworkingV1beta1:
 		ingInformer = coreInformerFactory.Networking().V1beta1().Ingresses().Informer()
-	} else {
+		cacheStores.IngressV1 = newEmptyStore()
+		cacheStores.IngressV1beta1 = ingInformer.GetStore()
+	case utils.ExtensionsV1beta1:
 		ingInformer = coreInformerFactory.Extensions().V1beta1().Ingresses().Informer()
+		cacheStores.IngressV1 = newEmptyStore()
+		cacheStores.IngressV1beta1 = ingInformer.GetStore()
 	}
-
 	ingInformer.AddEventHandler(reh)
-	cacheStores.Ingress = ingInformer.GetStore()
 	informers = append(informers, ingInformer)
 
 	endpointsInformer := coreInformerFactory.Core().V1().Endpoints().Informer()
@@ -324,11 +423,6 @@ func main() {
 	cacheStores.Consumer = kongConsumerInformer.GetStore()
 	informers = append(informers, kongConsumerInformer)
 
-	kongCredentialInformer := kongInformerFactory.Configuration().V1().KongCredentials().Informer()
-	kongCredentialInformer.AddEventHandler(reh)
-	cacheStores.Credential = kongCredentialInformer.GetStore()
-	informers = append(informers, kongCredentialInformer)
-
 	if controllerConfig.EnableKnativeIngressSupport {
 		knativeIngressInformer := knativeInformerFactory.Networking().V1alpha1().Ingresses().Informer()
 		knativeIngressInformer.AddEventHandler(reh)
@@ -345,11 +439,12 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	store := store.New(cacheStores, cliConfig.IngressClass)
-	kong, err := controller.NewKongController(&controllerConfig, updateChannel,
+	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.ProcessClasslessIngressV1Beta1,
+		cliConfig.ProcessClasslessIngressV1, cliConfig.ProcessClasslessKongConsumer, log.WithField("component", "store"))
+	kong, err := controller.NewKongController(ctx, &controllerConfig, updateChannel,
 		store)
 	if err != nil {
-		glog.Fatal(err)
+		log.Fatalf("failed to create a controller: %v", err)
 	}
 
 	exitCh := make(chan int, 1)
@@ -358,48 +453,87 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		serveHTTP(cliConfig.EnableProfiling, 10254, mux, stopCh)
+		serveHTTP(cliConfig.EnableProfiling,
+			10254, mux, stopCh,
+			log.WithField("component", "metadata-server"))
 	}()
-	go handleSigterm(kong, stopCh, exitCh)
+	go handleSigterm(kong, stopCh, exitCh, log.WithField("component", "signal-handler"))
 
 	if cliConfig.AnonymousReports {
+		logger := log.WithField("component", "reporter")
 		hostname, err := os.Hostname()
 		if err != nil {
-			glog.Error(err)
+			logger.Warnf("failed to fetch hostname: %v", err)
 		}
 		uuid, err := uuid.GenerateUUID()
 		if err != nil {
-			glog.Error(err)
+			logger.Warnf("failed to generate a random uuid: %v", err)
 		}
 		k8sVersion, err := kubeClient.Discovery().ServerVersion()
 		if err != nil {
-			glog.Error(err)
+			logger.Warnf("failed to fetch k8s api-server version: %v", err)
 		}
 		info := utils.Info{
 			KongVersion:       root["version"].(string),
 			KICVersion:        RELEASE,
-			KubernetesVersion: fmt.Sprintf("%s", k8sVersion),
+			KubernetesVersion: k8sVersion.String(),
 			Hostname:          hostname,
 			ID:                uuid,
 			KongDB:            kongDB,
 		}
-		reporter := utils.NewReporter(info)
+		reporter := utils.Reporter{
+			Info:   info,
+			Logger: logger,
+		}
+		reporter.Logger = logger
 		go reporter.Run(stopCh)
 	}
 	if cliConfig.AdmissionWebhookListen != "off" {
+		logger := log.WithField("component", "admission-server")
 		admissionServer := admission.Server{
 			Validator: admission.KongHTTPValidator{
 				Client: kongClient,
+				Logger: logger,
 			},
+			Logger: logger,
+		}
+		var cert tls.Certificate
+		if cliConfig.AdmissionWebhookCertPath != defaultAdmissionWebhookCertPath && cliConfig.AdmissionWebhookCert != "" {
+			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-file and --admission-webhook-cert" +
+				"are set; please remove one or the other")
+		}
+		if cliConfig.AdmissionWebhookKeyPath != defaultAdmissionWebhookKeyPath && cliConfig.AdmissionWebhookKey != "" {
+			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-key and --admission-webhook-key" +
+				"are set; please remove one or the other")
+		}
+		if cliConfig.AdmissionWebhookCert != "" {
+			var err error
+			cert, err = tls.X509KeyPair([]byte(cliConfig.AdmissionWebhookCert), []byte(cliConfig.AdmissionWebhookKey))
+			if err != nil {
+				logger.Fatalf("failed to load admission webhook certificate: %s", err)
+			}
+		}
+		// although this is partially checked earlier, that check does not fail if it sees the default path
+		// we don't want to overwrite any certs set by admission-webhook-cert, but also don't want to run this
+		// first, as it can potentially result in a fatal error
+		if cliConfig.AdmissionWebhookCertPath != "" && cliConfig.AdmissionWebhookCert == "" {
+			var err error
+			cert, err = tls.LoadX509KeyPair(cliConfig.AdmissionWebhookCertPath, cliConfig.AdmissionWebhookKeyPath)
+			if err != nil {
+				logger.Fatalf("failed to load admission webhook certificate: %s", err)
+			}
+		}
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+		server := http.Server{
+			Addr:      cliConfig.AdmissionWebhookListen,
+			TLSConfig: tlsConfig,
+			Handler:   admissionServer,
 		}
 		go func() {
-			glog.Error("error running the admission controller server:",
-				http.ListenAndServeTLS(
-					cliConfig.AdmissionWebhookListen,
-					cliConfig.AdmissionWebhookCertPath,
-					cliConfig.AdmissionWebhookKeyPath,
-					admissionServer,
-				))
+			err := server.ListenAndServeTLS("", "")
+			logger.Errorf("server stopped with err: %v", err)
 		}()
 	}
 	kong.Start()
@@ -407,18 +541,19 @@ func main() {
 	os.Exit(<-exitCh)
 }
 
-type exiter func(code int)
-
-func handleSigterm(kong *controller.KongController, stopCh chan<- struct{}, exitCh chan<- int) {
+func handleSigterm(kong *controller.KongController,
+	stopCh chan<- struct{},
+	exitCh chan<- int,
+	logger logrus.FieldLogger) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
 	<-signalChan
-	glog.Infof("Received SIGTERM, shutting down")
+	logger.Infof("Received SIGTERM, shutting down")
 
 	exitCode := 0
 	close(stopCh)
 	if err := kong.Stop(); err != nil {
-		glog.Warningf("Stopping Kong controller failed: %v", err)
+		logger.Errorf("failed to stop controller: %v", err)
 		exitCode = 1
 	}
 	exitCh <- exitCode
@@ -430,7 +565,8 @@ func handleSigterm(kong *controller.KongController, stopCh chan<- struct{}, exit
 //
 // apiserverHost param is in the format of protocol://address:port/pathPrefix, e.g.http://localhost:8001.
 // kubeConfig location of kubeconfig file
-func createApiserverClient(apiserverHost string, kubeConfig string) (*rest.Config, *kubernetes.Clientset, error) {
+func createApiserverClient(apiserverHost string, kubeConfig string,
+	logger logrus.FieldLogger) (*rest.Config, *kubernetes.Clientset, error) {
 	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
 	if err != nil {
 		return nil, nil, err
@@ -441,7 +577,8 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*rest.Confi
 
 	// cfg.ContentType = "application/vnd.kubernetes.protobuf"
 
-	glog.Infof("Creating API client for %s", cfg.Host)
+	logger = logger.WithField("api-server-host", cfg.Host)
+	logger.Debugf("creating api client")
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -460,8 +597,8 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*rest.Confi
 	}
 
 	var lastErr error
-	retries := 0
-	glog.V(2).Info("trying to discover Kubernetes version")
+	retryCount := 0
+	logger.Debug("attempting to discover version of kubernetes")
 	err = wait.ExponentialBackoff(defaultRetry, func() (bool, error) {
 		v, err = client.Discovery().ServerVersion()
 
@@ -470,25 +607,32 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*rest.Confi
 		}
 
 		lastErr = err
-		glog.V(2).Infof("unexpected error discovering Kubernetes version (attempt %v): %v", err, retries)
-		retries++
+		logger.WithField("retry_count", retryCount).Warnf("failed to fetch version of kubernetes api-server: %v", err)
+		retryCount++
 		return false, nil
 	})
 
 	// err is not null only if there was a timeout in the exponential backoff (ErrWaitTimeout)
 	if err != nil {
-		return nil, nil, lastErr
+		return nil, nil, fmt.Errorf("failed to fetch version of kubernetes api-server: %w", lastErr)
 	}
 
-	// this should not happen, warn the user
-	if retries > 0 {
-		glog.Warningf("it was required to retry %v times before reaching the API server", retries)
-	}
-
-	glog.Infof("Running in Kubernetes Cluster version v%v.%v (%v) - git (%v) commit %v - platform %v",
-		v.Major, v.Minor, v.GitVersion, v.GitTreeState, v.GitCommit, v.Platform)
+	logger.WithFields(logrus.Fields{
+		"major":          v.Major,
+		"minor":          v.Minor,
+		"git_version":    v.GitVersion,
+		"git_tree_state": v.GitTreeState,
+		"git_commit":     v.GitCommit,
+		"platform":       v.Platform,
+	}).Infof("version of kubernetes api-server: %v.%v", v.Major, v.Minor)
 
 	return cfg, client, nil
+}
+
+func rootWithTimeout(ctx context.Context, kc *kong.Client) (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	return kc.Root(ctx)
 }
 
 const (
@@ -498,23 +642,13 @@ const (
 	// High enough Burst to fit all expected use cases. Burst=0 is not set here, because
 	// client code is overriding it.
 	defaultBurst = 1e6
-
-	fakeCertificate = "default-fake-certificate"
 )
 
-/**
- * Handles fatal init error that prevents server from doing any work. Prints verbose error
- * message and quits the server.
- */
-func handleFatalInitError(err error) {
-	glog.Fatalf("Error while initializing connection to Kubernetes apiserver. "+
-		"This most likely means that the cluster is misconfigured (e.g., it has "+
-		"invalid apiserver certificates or service accounts configuration). Reason: %s\n"+
-		"Refer to the troubleshooting guide for more information: "+
-		"https://github.com/kubernetes/ingress-nginx/blob/master/docs/troubleshooting.md", err)
-}
-
-func serveHTTP(enableProfiling bool, port int, mux *http.ServeMux, stop <-chan struct{}) {
+func serveHTTP(enableProfiling bool,
+	port int,
+	mux *http.ServeMux,
+	stop <-chan struct{},
+	logger logrus.FieldLogger) {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -524,13 +658,15 @@ func serveHTTP(enableProfiling bool, port int, mux *http.ServeMux, stop <-chan s
 	mux.HandleFunc("/build", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		b, _ := json.Marshal(version())
-		w.Write(b)
+		if _, err := w.Write(b); err != nil {
+			logger.WithField("endpoint", "/build").Errorf("failed to write response: %v", err)
+		}
 	})
 
 	mux.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
 		err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 		if err != nil {
-			glog.Errorf("unexpected error: %v", err)
+			logger.WithField("endpoint", "/stop").Errorf("failed to send SIGTERM to self: %v", err)
 		}
 	})
 
@@ -565,13 +701,13 @@ func serveHTTP(enableProfiling bool, port int, mux *http.ServeMux, stop <-chan s
 			// Allow the server to drain for as long as it takes.
 			if err := server.Shutdown(context.Background()); err != nil {
 				// We know the error wasn't due to a timeout.
-				glog.Warningf("Shutting down HTTP server failed: %v", err)
+				logger.Errorf("failed to shut down server: %v", err)
 			}
 		case <-serveDone:
 		}
 	}()
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		glog.Fatalf("HTTP server failed: %v", err)
+		logger.Errorf("server stopped with err: %v", err)
 		close(serveDone)
 	}
 	wg.Wait()

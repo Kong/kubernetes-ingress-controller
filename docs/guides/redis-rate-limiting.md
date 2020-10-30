@@ -62,6 +62,7 @@ metadata:
   name: demo
   annotations:
     konghq.com/strip-path: "true"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -98,9 +99,11 @@ We will start by creating a global rate-limiting policy:
 ```bash
 $ echo "
 apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
+kind: KongClusterPlugin
 metadata:
   name: global-rate-limit
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: \"true\"
 config:
@@ -108,7 +111,7 @@ config:
   policy: local
 plugin: rate-limiting
 " | kubectl apply -f -
-kongplugin.configuration.konghq.com/global-rate-limit created
+kongclusterplugin.configuration.konghq.com/global-rate-limit created
 ```
 
 Here we are configuring Kong Ingress Controller to rate-limit traffic from
@@ -155,7 +158,7 @@ In the current policy, each Kong node is tracking a rate-limit in-memory
 and it will allow 5 requests to go through for a client.
 There is no synchronization of the rate-limit information across Kong nodes.
 In use-cases where rate-limiting is used as a protection mechanism and to
-avoid over-loading your services, each Kong node tracking it's own counter
+avoid over-loading your services, each Kong node tracking its own counter
 for requests is good enough as a malicious user will hit rate-limits on all
 nodes eventually.
 Or if the load-balancer in-front of Kong is performing some
@@ -176,16 +179,18 @@ deployment.apps/redis created
 service/redis created
 ```
 
-Once this is deployed, let's update our KongPlugin configuration to use
+Once this is deployed, let's update our KongClusterPlugin configuration to use
 Redis as a datastore rather than each Kong node storing the counter information
 in-memory:
 
 ```bash
 $ echo "
 apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
+kind: KongClusterPlugin
 metadata:
   name: global-rate-limit
+  annotations:
+    kubernetes.io/ingress.class: kong
   labels:
     global: \"true\"
 config:
@@ -194,7 +199,7 @@ config:
   redis_host: redis
 plugin: rate-limiting
 " | kubectl apply -f -
-kongplugin.configuration.konghq.com/global-rate-limit configured
+kongclusterplugin.configuration.konghq.com/global-rate-limit configured
 ```
 
 Notice, how the `policy` is now set to `redis` and we have configured Kong

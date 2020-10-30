@@ -42,6 +42,19 @@ spec:
           type: boolean
         config:
           type: object
+        configFrom:
+          type: object
+          properties:
+            secretKeyRef:
+              required:
+              - name
+              - key
+              type: object
+              properties:
+                name:
+                  type: string
+                key:
+                  type: string
         run_on:
           type: string
           enum:
@@ -59,6 +72,8 @@ spec:
             - grpcs
             - tcp
             - tls
+  subresources:
+    status: {}
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -104,6 +119,22 @@ spec:
           type: boolean
         config:
           type: object
+        configFrom:
+          type: object
+          properties:
+            secretKeyRef:
+              required:
+              - name
+              - namespace
+              - key
+              type: object
+              properties:
+                namespace:
+                  type: string
+                name:
+                  type: string
+                key:
+                  type: string
         run_on:
           type: string
           enum:
@@ -121,6 +152,8 @@ spec:
             - grpcs
             - tcp
             - tls
+  subresources:
+    status: {}
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -156,42 +189,8 @@ spec:
           type: array
           items:
             type: string
-
----
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: kongcredentials.configuration.konghq.com
-spec:
-  group: configuration.konghq.com
-  version: v1
-  scope: Namespaced
-  names:
-    kind: KongCredential
-    plural: kongcredentials
-  additionalPrinterColumns:
-  - name: Credential-type
-    type: string
-    description: Type of credential
-    JSONPath: .type
-  - name: Age
-    type: date
-    description: Age
-    JSONPath: .metadata.creationTimestamp
-  - name: Consumer-Ref
-    type: string
-    description: Owner of the credential
-    JSONPath: .consumerRef
-  validation:
-    openAPIV3Schema:
-      required:
-      - consumerRef
-      - type
-      properties:
-        consumerRef:
-          type: string
-        type:
-          type: string
+  subresources:
+    status: {}
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -353,6 +352,8 @@ spec:
                   properties:
                     healthy: *healthy
                     unhealthy: *unhealthy
+  subresources:
+    status: {}
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -419,6 +420,8 @@ spec:
                         type: integer
         status:
           type: object
+  subresources:
+    status: {}
 status:
   acceptedNames:
     kind: ""

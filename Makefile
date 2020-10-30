@@ -1,5 +1,5 @@
 REGISTRY?=kong-docker-kubernetes-ingress-controller.bintray.io
-TAG?=0.8.1
+TAG?=1.0.0
 REPO_INFO=$(shell git config --get remote.origin.url)
 IMGNAME?=kong-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
@@ -14,26 +14,23 @@ endif
 export GO111MODULE=on
 
 .PHONY: test-all
-test-all: lint fmt vet test
+test-all: lint test
 
 .PHONY: test
 test:
 	go test -race ./...
 
-.PHONY: vet
-vet:
-	go vet ./...
-
+.PHONY: lint
 lint:
-	golint -set_exit_status ./...
+	golangci-lint run ./...
 
 .PHONY: build
 build:
 	CGO_ENABLED=0 go build -o kong-ingress-controller ./cli/ingress-controller
 
-.PHONY: fmt
-fmt:
-	bash -c "diff -u <(echo -n) <(gofmt -d -l -e -s .)"
+.PHONY: verify-manifests
+verify-manifests:
+	./hack/verify-manifests.sh
 
 .PHONY: verify-codegen
 verify-codegen:

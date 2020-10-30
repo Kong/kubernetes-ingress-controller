@@ -1,4 +1,4 @@
-FROM golang:1.14 AS build
+FROM golang:1.15 AS build
 WORKDIR /kong-ingress-controller
 COPY go.mod ./
 COPY go.sum ./

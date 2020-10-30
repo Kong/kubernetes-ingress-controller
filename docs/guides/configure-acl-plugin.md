@@ -54,6 +54,7 @@ metadata:
   name: demo-get
   annotations:
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -71,6 +72,7 @@ metadata:
   name: demo-post
   annotations:
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -161,6 +163,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -179,6 +182,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -234,6 +238,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: admin
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: admin
 " | kubectl apply -f -
 
@@ -242,6 +248,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: plain-user
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: plain-user
 " | kubectl apply -f -
 ```
@@ -249,8 +257,8 @@ username: plain-user
 ## Secrets
 
 Next, let's provision some Secrets for the KongConsumers to reference. Each
-ACL will need it's own Secret and each JWT public key will need it's own
-Secret. The credential type is specified in the `kongCredType` field. In this
+ACL will need its own Secret and each JWT public key will need its own Secret.
+The credential type is specified in the `kongCredType` field. In this
 case we'll be using `jwt` and `acl`. You can create a secret using any other
 method as well.
 
@@ -299,6 +307,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: admin
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: admin
 credentials:
   - app-admin-jwt
@@ -309,6 +319,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: plain-user
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: plain-user
 credentials:
   - app-user-jwt
@@ -536,6 +548,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: admin
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: admin
 credentials:
   - app-admin-jwt
@@ -547,6 +561,8 @@ apiVersion: configuration.konghq.com/v1
 kind: KongConsumer
 metadata:
   name: plain-user
+  annotations:
+    kubernetes.io/ingress.class: kong
 username: plain-user
 credentials:
   - app-user-jwt
@@ -567,6 +583,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt,plain-user-acl
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:
@@ -585,6 +602,7 @@ metadata:
   annotations:
     plugins.konghq.com: app-jwt,admin-acl
     konghq.com/strip-path: "false"
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - http:

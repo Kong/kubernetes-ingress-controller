@@ -32,8 +32,9 @@ This is expected as Kong does not yet know how to proxy the request.
 
 ## Create a Kubernetes service
 
-First we need to create a Kubernetes Service [type=ExternalName][0] using the hostname of the application we want to expose.
+First we need to create a Kubernetes Service [type=ExternalName][0] using the hostname or IP of the application we want to expose.
 
+Use hostname.
 ```bash
 echo "
 kind: Service
@@ -46,6 +47,21 @@ spec:
     port: 80
   type: ExternalName
   externalName: httpbin.org
+" | kubectl create -f -
+```
+Use IP.
+```bash
+echo "
+kind: Service
+apiVersion: v1
+metadata:
+  name: proxy-to-httpbin
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+  type: ExternalName
+  externalName: 127.0.0.1
 " | kubectl create -f -
 ```
 

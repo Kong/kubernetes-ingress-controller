@@ -41,7 +41,7 @@ patch](#submitting-a-patch) section.
 
 ## Dependencies
 
-The build uses dependencies are managed by [go modules](https://blog.golang.org/using-go-modules) 
+The build uses dependencies are managed by [go modules](https://blog.golang.org/using-go-modules)
 
 ## Running in dev mode
 
@@ -125,6 +125,8 @@ To run unit-tests, just run
 $ cd $GOPATH/src/github.com/kong/kubernetes-ingress-controller
 $ make test
 ```
+
+To run integration tests, see the [integration test readme](test/integration/README.md).
 
 ## Releasing
 

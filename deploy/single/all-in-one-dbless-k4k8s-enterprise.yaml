@@ -619,6 +619,11 @@ spec:
     spec:
       containers:
       - env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              key: license
+              name: kong-enterprise-license
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
         - name: KONG_PORT_MAPS
@@ -637,12 +642,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_LICENSE_DATA
-          valueFrom:
-            secretKeyRef:
-              key: license
-              name: kong-enterprise-license
-        image: kong-docker-kong-enterprise-k8s.bintray.io/kong-enterprise-k8s:2.0.4.1-alpine
+        image: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition:2.1.4.0-alpine
         lifecycle:
           preStop:
             exec:
@@ -726,5 +726,5 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
       imagePullSecrets:
-      - name: kong-enterprise-k8s-docker
+      - name: kong-enterprise-edition-docker
       serviceAccountName: kong-serviceaccount

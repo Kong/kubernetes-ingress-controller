@@ -178,10 +178,10 @@ We will associate the `KongClusterPlugin` resource with the two Ingress resource
 that we previously created:
 
 ```bash
-$ kubectl patch ingress -n httpbin httpbin-app -p '{"metadata":{"annotations":{"plugins.konghq.com":"add-response-header"}}}'
+$ kubectl patch ingress -n httpbin httpbin-app -p '{"metadata":{"annotations":{"konghq.com/plugins":"add-response-header"}}}'
 ingress.extensions/httpbin-app patched
 
-$ kubectl patch ingress -n echo echo-app -p '{"metadata":{"annotations":{"plugins.konghq.com":"add-response-header"}}}'
+$ kubectl patch ingress -n echo echo-app -p '{"metadata":{"annotations":{"konghq.com/plugins":"add-response-header"}}}'
 ingress.extensions/echo-app patched
 ```
 

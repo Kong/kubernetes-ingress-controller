@@ -60,11 +60,11 @@ to log in to Bintray and password
 is an API-key that can be provisioned via Bintray.
 
 ```bash
-$ kubectl create secret -n kong docker-registry kong-enterprise-k8s-docker \
-    --docker-server=kong-docker-kong-enterprise-k8s.bintray.io \
+$ kubectl create secret -n kong docker-registry kong-enterprise-edition-docker \
+    --docker-server=kong-docker-kong-enterprise-edition-docker.bintray.io \
     --docker-username=<your-bintray-username@kong> \
     --docker-password=<your-bintray-api-key>
-secret/kong-enterprise-k8s-docker created
+secret/kong-enterprise-edition-docker created
 ```
 
 Again, please take a note of the namespace `kong`.
@@ -82,7 +82,7 @@ Execute the following to install Kong for Kubernetes Enteprise using YAML
 manifests:
 
 ```bash
-$ kubectl apply -f https://bit.ly/k4k8s-enterprise
+$ kubectl apply -f https://bit.ly/k4k8s-enterprise-install
 ```
 
 It takes a few minutes the first time this setup is done.

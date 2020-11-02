@@ -50,3 +50,7 @@ container:
 .PHONY: run
 run:
 	./hack/dev/start.sh ${DB} ${RUN_VERSION}
+
+.PHONY: integration-test
+integration-test: container
+	KIC_IMAGE="${IMAGE}:${TAG}" ./test/integration/test.sh

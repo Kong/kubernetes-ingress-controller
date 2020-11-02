@@ -37,3 +37,7 @@ kong-ingress-controller
 
 # ignore vendor tree
 vendor
+
+# integration test residuals
+kind
+kubeconfig-test-cluster

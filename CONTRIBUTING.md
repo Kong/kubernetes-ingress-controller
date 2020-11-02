@@ -34,7 +34,7 @@ patch](#submitting-a-patch) section.
 
 ## Environment
 
-- Golang version >= 1.12 installed
+- Golang version matching our [`Dockerfile`](./Dockerfile) installed
 - Access to a k8s cluster, you can use Minikube or GKE
 - make
 - Docker (for building)

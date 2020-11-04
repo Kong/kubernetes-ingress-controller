@@ -1889,6 +1889,77 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		assert.NotEqual(kong.StringSlice("https"), route.Protocols)
 		assert.Nil(route.HTTPSRedirectStatusCode)
 	})
+	t.Run("knative ingress annotated with konghq.com/protocols, konghq.com/strip-path, konghq.com/methods and konghq.com/https-redirect-status-code", func(t *testing.T) {
+		ingresses := []*knative.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "knative-ingress-with-annotations",
+					Namespace: "foo-ns",
+					Annotations: map[string]string{
+						"networking.knative.dev/ingress.class":                          annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.ProtocolsKey:         "https",
+						annotations.AnnotationPrefix + annotations.HTTPSRedirectCodeKey: "308",
+						annotations.AnnotationPrefix + annotations.StripPathKey:         "true",
+						annotations.AnnotationPrefix + annotations.MethodsKey:           "POST,PUT",
+					},
+				},
+				Spec: knative.IngressSpec{
+					Rules: []knative.IngressRule{
+						{
+							Hosts: []string{"my-func.example.com"},
+							HTTP: &knative.HTTPIngressRuleValue{
+								Paths: []knative.HTTPIngressPath{
+									{
+										Path: "/",
+										AppendHeaders: map[string]string{
+											"foo": "bar",
+										},
+										Splits: []knative.IngressBackendSplit{
+											{
+												IngressBackend: knative.IngressBackend{
+													ServiceNamespace: "foo-ns",
+													ServiceName:      "foo-svc",
+													ServicePort:      intstr.FromInt(42),
+												},
+												Percent: 100,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "foo-ns",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: ingresses,
+			Services:         services,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services), "expected one knative service")
+		svc := state.Services[0]
+
+		assert.Equal(1, len(svc.Routes), "expected one route in knative service")
+		route := svc.Routes[0]
+
+		assert.Equal(kong.StringSlice("https"), route.Protocols, "expected https after konghq.com/protocols")
+		assert.Equal(kong.Int(308), route.HTTPSRedirectStatusCode, "expected 308 after konghq.com/https-redirect-status-code")
+		assert.Equal(kong.Bool(true), route.StripPath, "expected true after konghq.com/strip-path")
+		assert.Equal(kong.StringSlice("POST", "PUT"), route.Methods, "expected POST and PUT after konghq.com/methods")
+	})
 	t.Run("knative ingress rule and service-level plugin", func(t *testing.T) {
 		ingresses := []*knative.Ingress{
 			{

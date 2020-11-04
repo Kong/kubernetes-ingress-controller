@@ -1889,7 +1889,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		assert.NotEqual(kong.StringSlice("https"), route.Protocols)
 		assert.Nil(route.HTTPSRedirectStatusCode)
 	})
-	t.Run("knative ingress annotated with konghq.com/protocols, konghq.com/strip-path, konghq.com/methods and konghq.com/https-redirect-status-code", func(t *testing.T) {
+	t.Run("knative ingress with multiple konghq.com annotations", func(t *testing.T) {
 		ingresses := []*knative.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{

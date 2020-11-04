@@ -1,4 +1,4 @@
-# Using KongPlugin resource
+# Using KongClusterPlugin resource
 
 In this guide, we will learn how to use KongClusterPlugin resource to configure
 plugins in Kong.

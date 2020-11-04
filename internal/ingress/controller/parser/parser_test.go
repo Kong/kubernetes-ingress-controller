@@ -1777,9 +1777,6 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "https-only",
 					Namespace: "foo-ns",
-					Annotations: map[string]string{
-						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
-					},
 				},
 				Route: &kong.Route{
 					Protocols:               kong.StringSlice("https"),
@@ -1792,9 +1789,6 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo-svc",
 					Namespace: "foo-ns",
-					Annotations: map[string]string{
-						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
-					},
 				},
 			},
 		}

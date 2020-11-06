@@ -1,4 +1,4 @@
-name: 'sync master with main'
+name: 'sync master alongwith main'
 
 on:
   push:

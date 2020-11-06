@@ -9,6 +9,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/hashicorp/go-memdb v1.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
+    github.com/imdario/mergo v0.3.7
 	github.com/kong/deck v1.2.1
 	github.com/kong/go-kong v0.13.0
 	github.com/lithammer/dedent v1.1.0

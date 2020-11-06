@@ -40,6 +40,10 @@ verify-codegen:
 update-codegen:
 	./hack/update-codegen.sh
 
+.PHONY: verify-tidy
+verify-tidy:
+	./hack/verify-tidy.sh
+
 .PHONY: container
 container:
 	docker build \

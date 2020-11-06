@@ -34,6 +34,9 @@ jobs:
     - name: Verify manifest consistency
       run: |
         make verify-manifests
+    - name: Verify modules are tidy
+      run: |
+        make verify-tidy
   test:
     runs-on: ubuntu-latest
     steps:

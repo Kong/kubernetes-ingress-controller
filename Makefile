@@ -21,7 +21,7 @@ test:
 	go test -race ./...
 
 .PHONY: lint
-lint:
+lint: verify-tidy
 	golangci-lint run ./...
 
 .PHONY: build

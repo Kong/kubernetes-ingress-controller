@@ -21,7 +21,7 @@ test:
 	go test -race ./...
 
 .PHONY: lint
-lint:
+lint: verify-tidy
 	golangci-lint run ./...
 
 .PHONY: build
@@ -39,6 +39,10 @@ verify-codegen:
 .PHONY: update-codegen
 update-codegen:
 	./hack/update-codegen.sh
+
+.PHONY: verify-tidy
+verify-tidy:
+	./hack/verify-tidy.sh
 
 .PHONY: container
 container:

@@ -21,7 +21,7 @@ test:
 	go test -race ./...
 
 .PHONY: lint
-lint:
+lint: verify-tidy
 	golangci-lint run ./...
 
 .PHONY: build
@@ -40,6 +40,10 @@ verify-codegen:
 update-codegen:
 	./hack/update-codegen.sh
 
+.PHONY: verify-tidy
+verify-tidy:
+	./hack/verify-tidy.sh
+
 .PHONY: container
 container:
 	docker build \
@@ -50,3 +54,7 @@ container:
 .PHONY: run
 run:
 	./hack/dev/start.sh ${DB} ${RUN_VERSION}
+
+.PHONY: integration-test
+integration-test: container
+	KIC_IMAGE="${IMAGE}:${TAG}" ./test/integration/test.sh

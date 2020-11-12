@@ -1,0 +1,80 @@
+name: Test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.15'
+
+    - name: Cache Go modules
+      uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go
+
+    - name: 'Check out the repo'
+      uses: actions/checkout@v2
+
+    - name: 'make container'
+      run: |
+        make REGISTRY=local IMGNAME=kong-ingress-controller TAG=ci container
+
+    - run: docker save local/kong-ingress-controller:ci > image.tar
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: image
+        path: image.tar
+
+  push-public:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
+
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: image
+
+    - name: 'Arrange: Push the Kong Operator image to the public registry'
+      env:
+        BINTRAY_KEY: ${{  secrets.BINTRAY_KEY }}
+        BINTRAY_USER: ${{  secrets.BINTRAY_USER }}
+      run: |
+        set -e
+
+        REPO="kong-docker-kubernetes-ingress-controller.bintray.io"
+        REF="${GITHUB_REF//^refs\/+([a-z])\//}" # remove "^refs/(heads|tags|remotes)"
+
+        DOCKER_TAG="$REPO/master:$REF"
+        docker load < image.tar
+        docker tag local/kong-ingress-controller:ci "$DOCKER_TAG"
+        echo "${BINTRAY_KEY}" | docker login -u "${BINTRAY_USER}" ${REPO} --password-stdin
+        docker push "$DOCKER_TAG"
+
+  test-k8s:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Arrange: Check out the repo'
+      uses: actions/checkout@v2
+
+    - uses: actions/download-artifact@v2
+      with:
+        name: image
+
+    - name: 'Arrange: Push the image to the local registry'
+      run: |
+        docker load < image.tar
+        docker tag local/kong-ingress-controller:ci localhost:32000/kong-ingress-controller:ci
+
+    - name: 'Test: Run integration tests'
+      run: |
+        env KIC_IMAGE=local/kong-ingress-controller:ci ./test/integration/test.sh

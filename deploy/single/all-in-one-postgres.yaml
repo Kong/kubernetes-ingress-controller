@@ -648,7 +648,7 @@ spec:
         - name: KONG_STATUS_LISTEN
           value: 0.0.0.0:8100
         - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
+          value: "2"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG

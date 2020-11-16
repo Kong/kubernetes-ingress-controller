@@ -227,7 +227,7 @@ Once a `KongIngress` resource is created, it needs to be associated with
 an Ingress or Service resource using the following annotation:
 
 ```yaml
-configuration.konghq.com: kong-ingress-resource-name
+konghq.com/override: kong-ingress-resource-name
 ```
 
 Specifically,

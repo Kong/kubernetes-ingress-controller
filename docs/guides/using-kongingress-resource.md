@@ -197,7 +197,7 @@ kongingress.configuration.konghq.com/demo-customization created
 Now, let's associate this KongIngress resource to the echo service.
 
 ```bash
-$ kubectl patch service echo -p '{"metadata":{"annotations":{"configuration.konghq.com":"demo-customization"}}}'
+$ kubectl patch service echo -p '{"metadata":{"annotations":{"konghq.com/override":"demo-customization"}}}'
 service/echo patched
 ```
 

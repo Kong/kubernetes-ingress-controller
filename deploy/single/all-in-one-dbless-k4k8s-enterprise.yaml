@@ -635,7 +635,7 @@ spec:
         - name: KONG_DATABASE
           value: "off"
         - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
+          value: "2"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG

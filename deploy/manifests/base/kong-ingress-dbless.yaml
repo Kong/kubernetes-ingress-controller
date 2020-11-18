@@ -40,7 +40,7 @@ spec:
           value: "off"
           # runtime tweaks
         - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
+          value: "2"
           # logging
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout

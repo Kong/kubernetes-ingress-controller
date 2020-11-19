@@ -11,7 +11,7 @@ of a Service that's running inside Kubernetes. Kong will not perform any
 sort of transformations.
 
 There are two modes avaialble:
-- ***Port based routing**: In this mode, Kong simply proxies all traffic it
+- **Port based routing**: In this mode, Kong simply proxies all traffic it
   receives on a specific port to the Kubernetes Service. TCP connections are
   load balanced across all the available pods of the Service.
 - **SNI based routing**: In this mode, Kong accepts a TLS-encrypted stream

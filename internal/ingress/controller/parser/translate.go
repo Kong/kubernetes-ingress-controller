@@ -426,6 +426,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 					path = "/"
 				}
 				r := kongstate.Route{
+					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
 						// TODO (#834) Figure out a way to name the routes
 						// This is not a stable scheme

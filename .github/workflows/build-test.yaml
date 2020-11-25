@@ -51,7 +51,7 @@ jobs:
         set -e
 
         REPO="kong-docker-kubernetes-ingress-controller.bintray.io"
-        REF="${GITHUB_REF//^refs\/+([a-z])\//}" # remove "^refs/(heads|tags|remotes)"
+        REF=`sed -re "s/^refs\/[a-z]+\///" <<< $GITHUB_REF` # remove "^refs/(heads|tags|remotes)"
 
         DOCKER_TAG="$REPO/master:$REF"
         docker load < image.tar

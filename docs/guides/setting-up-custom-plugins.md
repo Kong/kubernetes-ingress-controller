@@ -203,7 +203,7 @@ as the one in which the Ingress or Service to be annotated is going to be instal
 
 Note that any environmental variables that your plugin requires should be added to 
 the `config` section `header_value`. If no environmental variables are used, this
-section can be omitted from the custom resource definition.
+section can be omitted from the `KongPlugin` resource.
 
 Once you have got Kong up and running, configure your
 custom plugin via [KongPlugin resource](using-kongplugin-resource.md).

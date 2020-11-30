@@ -9,6 +9,7 @@ import (
 )
 
 func TestConsumer_SetCredential(t *testing.T) {
+	username := "example"
 	type args struct {
 		credType   string
 		consumer   *Consumer
@@ -47,6 +48,16 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "key-auth without key",
+			args: args{
+				credType:   "key-auth",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]string{},
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
 			name: "keyauth_credential",
 			args: args{
 				credType:   "keyauth_credential",
@@ -81,6 +92,16 @@ func TestConsumer_SetCredential(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "basic-auth without username",
+			args: args{
+				credType:   "basic-auth",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]string{},
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
 		},
 		{
 			name: "basicauth_credential",
@@ -121,6 +142,16 @@ func TestConsumer_SetCredential(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "hmac-auth without username",
+			args: args{
+				credType:   "hmac-auth",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]string{},
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
 		},
 		{
 			name: "hmacauth_credential",
@@ -167,6 +198,16 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "oauth2 without client_id",
+			args: args{
+				credType:   "oauth2",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]string{},
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
 			name: "jwt",
 			args: args{
 				credType: "jwt",
@@ -189,6 +230,16 @@ func TestConsumer_SetCredential(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "jwt without key",
+			args: args{
+				credType:   "jwt",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]string{},
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
 		},
 		{
 			name: "jwt_secret",
@@ -229,6 +280,16 @@ func TestConsumer_SetCredential(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "acl without group",
+			args: args{
+				credType:   "acl",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]string{},
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

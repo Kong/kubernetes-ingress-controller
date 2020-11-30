@@ -4,7 +4,7 @@
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
 
 # Kong for Kubernetes
-Use [Kong][kong] for Kubernetes [Ingress][ingress].  
+Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
 load balancing and more in Kong
 for Kubernetes Services, all using
@@ -14,23 +14,23 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 ## Features
 
-- **Ingress routing**  
+- **Ingress routing**
   Use [Ingress][ingress] resources to configure Kong
-- **Enhanced API management using plugins**  
+- **Enhanced API management using plugins**
   Use a wide-array of [plugins][kong-hub]
   to monitor, transform, protect your traffic.
 - **Native gRPC support**
   Proxy gRPC traffic and gain visibility into it using
   Kong's plugin.
-- **Health checking and Load-balancing**  
+- **Health checking and Load-balancing**
   Load balance requests across your pods and supports active & passive health-checks.
-- **Request/response transformations**  
+- **Request/response transformations**
   Use plugins to
   modify your requests/responses on the fly.
-- **Authentication**  
+- **Authentication**
   Protect your services using authentication methods
   of your choice.
-- **Declarative configuration for Kong**  
+- **Declarative configuration for Kong**
   Configure all of Kong
   using CRDs in Kubernetes and manage Kong declaratively.
 

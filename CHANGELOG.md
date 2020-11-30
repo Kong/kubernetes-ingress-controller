@@ -249,7 +249,7 @@ provided by other means in such architectures.
 
 #### Breaking changes
 
-- **`strip_path` disabled by default**  
+- **`strip_path` disabled by default**
   The value of `strip_path` of routes in Kong is now set to `false`.
   If you are upgrading from a previous version, please carefully test the change
   before rolling it out as this change can possibly break the routing
@@ -386,7 +386,7 @@ authentication, DB-less deployment by default and performance improvements.
   DB-less mode, should be reduced by an order of magnitude for most deployments.
   This will also improve Kong's performance.
   [#484](https://github.com/Kong/kubernetes-ingress-controller/pull/484)
-- `credentials` property has been added to the `KongConsumer` Custom Resource. 
+- `credentials` property has been added to the `KongConsumer` Custom Resource.
   This property holds the references to the secrets containing the credentials.
   [#430](https://github.com/Kong/kubernetes-ingress-controller/pull/430)
 - Flag `--kong-admin-filter-tag` has been added to change the tag used

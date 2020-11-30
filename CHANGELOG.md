@@ -38,7 +38,7 @@
   use `CONTROLLER_KONG_ADMIN_HEADER`.
   [#866](https://github.com/Kong/kubernetes-ingress-controller/pull/866)
 - KongCredential custom resources are no longer supported. You should convert
-  any KongCredential resources to [credential Secrets](https://github.com/Kong/kubernetes-ingress-controller/blob/next/docs/guides/using-consumer-credential-resource.md#provision-a-consumer)
+  any KongCredential resources to [credential Secrets](https://docs.konghq.com/kubernetes-ingress-controller/1.0.x/guides/using-consumer-credential-resource/#provision-a-consumer)
   before upgrading to 1.0.0.
   [#862](https://github.com/Kong/kubernetes-ingress-controller/pull/862)
 - Deprecated 0.x.x annotations are no longer supported. Please see [the
@@ -59,7 +59,7 @@
   created Kong configuration for that custom resource.
   [#824](https://github.com/Kong/kubernetes-ingress-controller/pull/824)
 - Version compatibility documentation now includes [information about supported
-  Kubernetes versions for a given controller version](https://github.com/Kong/kubernetes-ingress-controller/blob/main/docs/references/version-compatibility.md#kubernetes).
+  Kubernetes versions for a given controller version](https://docs.konghq.com/kubernetes-ingress-controller/1.0.x/references/version-compatibility/#kubernetes).
   [#820](https://github.com/Kong/kubernetes-ingress-controller/pull/820)
 
 #### Fixed

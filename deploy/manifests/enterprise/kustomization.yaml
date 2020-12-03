@@ -6,4 +6,4 @@ patchesStrategicMerge:
 images:
 - name: kong
   newName: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition
-  newTag: 1.5.0.2-alpine
+  newTag: 2.2.0.0-alpine

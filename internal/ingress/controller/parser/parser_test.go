@@ -3483,6 +3483,56 @@ func TestGetEndpoints(t *testing.T) {
 				},
 			},
 		},
+		{
+			"should return one endpoint when the name of the port name match a port in the endpoint Subsets and" +
+				" service ipFamily is IPv6",
+			&corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamily:  getIPFamilyPtr(corev1.IPv6Protocol),
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1::1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			&corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			corev1.ProtocolTCP,
+			func(string, string) (*corev1.Endpoints, error) {
+				nodeName := "dummy"
+				return &corev1.Endpoints{
+					Subsets: []corev1.EndpointSubset{
+						{
+							Addresses: []corev1.EndpointAddress{
+								{
+									IP:       "1::1",
+									NodeName: &nodeName,
+								},
+							},
+							Ports: []corev1.EndpointPort{
+								{
+									Protocol: corev1.ProtocolTCP,
+									Port:     int32(80),
+									Name:     "default",
+								},
+							},
+						},
+					},
+				}, nil
+			},
+			[]utils.Endpoint{
+				{
+					Address: "[1::1]",
+					Port:    "80",
+				},
+			},
+		},
 	}
 
 	for _, testCase := range tests {
@@ -3490,6 +3540,14 @@ func TestGetEndpoints(t *testing.T) {
 			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
+			}
+			if testCase.svc != nil && testCase.svc.Spec.IPFamily != nil &&
+				*testCase.svc.Spec.IPFamily == corev1.IPv6Protocol {
+				for index, current := range result {
+					if current.Address != testCase.result[index].Address || current.Port != testCase.result[index].Port {
+						t.Errorf("expected %v Endpoints but got %v", testCase.result, result)
+					}
+				}
 			}
 		})
 	}
@@ -3828,4 +3886,8 @@ func TestPickPort(t *testing.T) {
 			assert.Equal(tt.wantTarget, *state.Upstreams[0].Targets[0].Target.Target)
 		})
 	}
+}
+
+func getIPFamilyPtr(iPFamily corev1.IPFamily) *corev1.IPFamily {
+	return &iPFamily
 }

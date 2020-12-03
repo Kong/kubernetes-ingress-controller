@@ -394,12 +394,19 @@ func getEndpoints(
 			}
 
 			for _, epAddress := range ss.Addresses {
-				ep := fmt.Sprintf("%v:%v", epAddress.IP, targetPort)
+				var epAddressIP string
+				if s.Spec.IPFamily != nil && *s.Spec.IPFamily == corev1.IPv6Protocol {
+					epAddressIP = fmt.Sprintf("[%v]", epAddress.IP)
+				} else {
+					epAddressIP = epAddress.IP
+				}
+
+				ep := fmt.Sprintf("%v:%v", epAddressIP, targetPort)
 				if _, exists := adus[ep]; exists {
 					continue
 				}
 				ups := utils.Endpoint{
-					Address: epAddress.IP,
+					Address: epAddressIP,
 					Port:    fmt.Sprintf("%v", targetPort),
 				}
 				upsServers = append(upsServers, ups)

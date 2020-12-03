@@ -16,6 +16,14 @@ export SUT_HTTP_HOST="127.0.0.1:$HTTP_PORT"
 export SUT_HTTPS_HOST="127.0.0.1:$HTTPS_PORT"
 echo ">>> Kong proxy host is '$SUT_HTTP_HOST' for HTTP and '$SUT_HTTPS_HOST' for HTTPS."
 
+echo ">>> Obtaining Kong admin IP..."
+ADMIN_API_PORT=28444
+INGRESS_KONG_POD_ID=`kubectl -n kong get pods -l app=ingress-kong \
+  -o jsonpath='{.items[*].metadata.name}' | head -n 1`
+kubectl port-forward -n kong pod/"$INGRESS_KONG_POD_ID" "$ADMIN_API_PORT:8444" &
+export SUT_ADMIN_API_HOST="127.0.0.1:$ADMIN_API_PORT"
+echo ">>> Kong admin api host is '$SUT_ADMIN_API_HOST'."
+
 echo ">>> Setting up example services..."
 setup_example_services() (
 	set -ex

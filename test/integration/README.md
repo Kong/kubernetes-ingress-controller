@@ -60,6 +60,19 @@ env SUT_HTTP_HOST=127.0.0.1:27080 SUT_HTTPS_HOST=127.0.0.1:27443 ./test/integrat
 kubectl --kubeconfig=./kubeconfig-test-cluster delete -f ./test/integration/cases/01-https
 ```
 
+Run service-dual-stack test case use different command manually:
+```bash
+# get ingress-kong pod name
+INGRESS_KONG_POD_ID=`kubectl --kubeconfig=./kubeconfig-test-cluster -n kong get pods -l app=ingress-kong \
+  -o jsonpath='{.items[*].metadata.name}' | head -n 1`
+  
+kubectl --kubeconfig=./kubeconfig-test-cluster port-forward -n kong pod/"$INGRESS_KONG_POD_ID" "28444:8444"
+# in a separate terminal window:
+kubectl --kubeconfig=./kubeconfig-test-cluster apply -f ./test/integration/cases/07-service-dual-stack
+env SUT_ADMIN_API_HOST=127.0.0.1:28444 ./test/integration/cases/07-service-dual-stack/verify.sh
+kubectl --kubeconfig=./kubeconfig-test-cluster delete -f ./test/integration/cases/07-service-dual-stack
+```
+
 #### Manually tear down the test cluster
 
 At the end of the debugging session, you can tear down the environment like this:

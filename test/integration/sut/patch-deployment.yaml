@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      containers:
+      - name: ingress-controller
+        env:
+        - name: CONTROLLER_ANONYMOUS_REPORTS
+          value: "false"

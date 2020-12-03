@@ -30,7 +30,7 @@ jobs:
     - name: Setup kustomize
       uses: imranismail/setup-kustomize@v1
       with:
-        kustomize-version: "3.8.1"
+        kustomize-version: "3.8.5"
     - name: Verify manifest consistency
       run: |
         make verify-manifests

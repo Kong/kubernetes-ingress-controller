@@ -33,7 +33,7 @@ environment variables on Kong's container in your deployment:
 
 ```
 KONG_NGINX_PROXY_PROXY_SSL_VERIFY="on"
-KONG_NGINX_PROXY_PROXY_SSL_VERIFY_DEPTH="on"
+KONG_NGINX_PROXY_PROXY_SSL_VERIFY_DEPTH="3"
 KONG_NGINX_PROXY_PROXY_SSL_TRUSTED_CERTIFICATE="/path/to/ca_certs.pem"
 ```
 

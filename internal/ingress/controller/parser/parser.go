@@ -193,7 +193,7 @@ func getUpstreams(
 		if err == nil {
 			targets = getServiceEndpoints(log, s, service.K8sService, port)
 		} else {
-			log.WithField("service_name", service.Name).Warnf("skipping service - getServiceEndpoints failed: %v", err)
+			log.WithField("service_name", *service.Name).Warnf("skipping service - getServiceEndpoints failed: %v", err)
 		}
 
 		upstream := kongstate.Upstream{

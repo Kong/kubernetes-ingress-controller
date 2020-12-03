@@ -68,7 +68,7 @@ by default. It is advised to setup and use the admission validating controller
 to catch user errors.
 
 The plugins can be associated with Ingress
-or Service object in Kubernetes using `plugins.konghq.com` annotation.
+or Service object in Kubernetes using `konghq.com/plugins` annotation.
 
 ### Examples
 
@@ -97,7 +97,7 @@ metadata:
   labels:
      app: myapp-service
   annotations:
-     plugins.konghq.com: request-id
+     konghq.com/plugins: request-id
 spec:
   ports:
   - port: 80
@@ -118,7 +118,7 @@ kind: Ingress
 metadata:
   name: demo-example-com
   annotations:
-    plugins.konghq.com: request-id
+    konghq.com/plugins: request-id
     kubernetes.io/ingress.class: kong
 spec:
   rules:
@@ -132,7 +132,7 @@ spec:
 ```
 
 A plugin can also be applied to a specific KongConsumer by adding
-`plugins.konghq.com` annotation to the KongConsumer resource.
+`konghq.com/plugins` annotation to the KongConsumer resource.
 
 Please follow the
 [Using the KongPlugin resource](../guides/using-kongplugin-resource.md)

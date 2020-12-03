@@ -630,14 +630,14 @@ spec:
         - name: KONG_DATABASE
           value: "off"
         - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
+          value: "2"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong:2.1
+        image: kong:2.2
         lifecycle:
           preStop:
             exec:

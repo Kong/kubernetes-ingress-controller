@@ -120,7 +120,7 @@ Setup an Ingress rule to expose the application:
 
 ```bash
 $ echo "
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   name: demo-yolo42-com
@@ -138,6 +138,8 @@ spec:
 " | kubectl apply -f -
 ingress.extensions/demo-yolo42-com created
 ```
+
+*Note*: The apiVersion of the Ingress uses networking.k8s.io/v1beta1 instead of the deprecated Ingress in extensions/v1beta1. The networking.k8s.io/v1 for Ingress may also be available, depending on the Kubernetes version used.
 
 Access your application:
 
@@ -158,7 +160,7 @@ Via: kong/1.1.2
 First, setup a ClusterIssuer for cert-manager
 
 ```bash
-$ echo "apiVersion: cert-manager.io/v1alpha2
+$ echo "apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: letsencrypt-prod
@@ -171,21 +173,27 @@ spec:
     server: https://acme-v02.api.letsencrypt.org/directory
     solvers:
     - http01:
-        ingress: {}" | kubectl apply -f -
+        ingress:
+          class: kong" | kubectl apply -f -
 clusterissuer.cert-manager.io/letsencrypt-prod configured
 ```
 
-*Note*: If you run into issues configuring this,
-be sure that the group (`cert-manager.io`) and
-version (`v1alpha2`) match those in the output of
-`kubectl describe crd clusterissuer`.
-This directs cert-manager which CA authority to use to issue the certificate.
+Things to note:
+
+- If you run into issues configuring this,
+  be sure that the group (`cert-manager.io`) and
+  version (`v1`) match those in the output of
+  `kubectl describe crd clusterissuer`.
+  This directs cert-manager which CA authority to use to issue the certificate.
+- The apiVersion for the cert-manager has been updated in later versions of the cert-manager to v1. Make sure to check the version installed in order to determine which version you should use.
+- From version 0.10.0 of the Kong kubernetes-ingress-controller, Ingresses requires the ingress class annotation by default.
+  For the cert-manager to be able to create a working Ingress to support the ACME DNS Challenge, the example adds a "class: kong" for the http01 ingress configuration (compared to previous "ingress: {}" configuration).
 
 Next, update your Ingress resource to provision a certificate and then use it:
 
 ```bash
 $ echo '
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   name: demo-yolo42-com
@@ -233,7 +241,7 @@ Name:         demo-example-com
 Namespace:    default
 Labels:       <none>
 Annotations:  <none>
-API Version:  certmanager.k8s.io/v1alpha1
+API Version:  certmanager.k8s.io/v1
 Kind:         Certificate
 Metadata:
   Creation Timestamp:  2019-06-21T20:41:54Z
@@ -246,7 +254,7 @@ Metadata:
     Name:                  demo-example-com
     UID:                   261d15d3-9464-11e9-9965-42010a8a01ad
   Resource Version:        19561898
-  Self Link:               /apis/certmanager.k8s.io/v1alpha1/namespaces/default/certificates/demo-example-com
+  Self Link:               /apis/certmanager.k8s.io/v1/namespaces/default/certificates/demo-example-com
   UID:                     014d3f1d-9465-11e9-9965-42010a8a01ad
 Spec:
   Acme:

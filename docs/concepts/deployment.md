@@ -103,7 +103,7 @@ has the above permissions. The Ingress Controller Pod then has this
 necessary authentication and authorization tokens to communicate with the
 Kubernetes API-server.
 
-[rbac.yaml](../../deploy/manifests/rbac.yaml) contains the permissions
+[rbac.yaml](../../deploy/manifests/base/rbac.yaml) contains the permissions
 needed for the Ingress Controller to operate correctly.
 
 ### Ingress Controller deployment

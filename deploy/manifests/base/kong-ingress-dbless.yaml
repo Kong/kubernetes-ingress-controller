@@ -24,7 +24,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       containers:
       - name: proxy
-        image: kong:2.1
+        image: kong:2.2
         env:
           # servers
         - name: KONG_PROXY_LISTEN
@@ -40,7 +40,7 @@ spec:
           value: "off"
           # runtime tweaks
         - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
+          value: "2"
           # logging
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout

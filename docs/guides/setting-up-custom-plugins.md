@@ -198,5 +198,12 @@ Kong on when to execute the plugin:
 konghq.com/plugins: my-custom-plugin
 ```
 
+Please ensure that the `KongPlugin` custom resource is created in the same namespace 
+as the one in which the Ingress or Service to be annotated is going to be installed.
+
+Note that any environmental variables that your plugin requires should be added to 
+the `config` section `header_value`. If no environmental variables are used, this
+section can be omitted from the `KongPlugin` resource.
+
 Once you have got Kong up and running, configure your
 custom plugin via [KongPlugin resource](using-kongplugin-resource.md).

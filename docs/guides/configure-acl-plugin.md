@@ -161,7 +161,7 @@ kind: Ingress
 metadata:
   name: demo-get
   annotations:
-    plugins.konghq.com: app-jwt
+    konghq.com/plugins: app-jwt
     konghq.com/strip-path: "false"
     kubernetes.io/ingress.class: kong
 spec:
@@ -180,7 +180,7 @@ kind: Ingress
 metadata:
   name: demo-post
   annotations:
-    plugins.konghq.com: app-jwt
+    konghq.com/plugins: app-jwt
     konghq.com/strip-path: "false"
     kubernetes.io/ingress.class: kong
 spec:
@@ -581,7 +581,7 @@ kind: Ingress
 metadata:
   name: demo-get
   annotations:
-    plugins.konghq.com: app-jwt,plain-user-acl
+    konghq.com/plugins: app-jwt,plain-user-acl
     konghq.com/strip-path: "false"
     kubernetes.io/ingress.class: kong
 spec:
@@ -600,7 +600,7 @@ kind: Ingress
 metadata:
   name: demo-post
   annotations:
-    plugins.konghq.com: app-jwt,admin-acl
+    konghq.com/plugins: app-jwt,admin-acl
     konghq.com/strip-path: "false"
     kubernetes.io/ingress.class: kong
 spec:

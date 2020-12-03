@@ -1,0 +1,9 @@
+resources:
+- ../../../deploy/single/all-in-one-dbless.yaml
+patchesStrategicMerge:
+- patch-deployment.yaml
+images:
+  - name: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller
+    newName: test-local-registry:5000/kic
+    newTag: local
+

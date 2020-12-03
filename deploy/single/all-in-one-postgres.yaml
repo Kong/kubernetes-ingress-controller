@@ -633,6 +633,12 @@ spec:
     spec:
       containers:
       - env:
+        - name: KONG_DATABASE
+          value: postgres
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PASSWORD
+          value: kong
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
         - name: KONG_PORT_MAPS
@@ -641,21 +647,15 @@ spec:
           value: 127.0.0.1:8444 ssl
         - name: KONG_STATUS_LISTEN
           value: 0.0.0.0:8100
-        - name: KONG_DATABASE
-          value: postgres
         - name: KONG_NGINX_WORKER_PROCESSES
-          value: "1"
+          value: "2"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
-        image: kong:2.1
+        image: kong:2.2
         lifecycle:
           preStop:
             exec:
@@ -748,7 +748,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong:2.1
+        image: kong:2.2
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
 ---
@@ -819,7 +819,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:2.1
+        image: kong:2.2
         name: kong-migrations
       initContainers:
       - command:

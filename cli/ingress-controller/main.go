@@ -282,8 +282,8 @@ func main() {
 		controllerConfig.Kong.InMemory = true
 	}
 	if kongDB == "cassandra" {
-		log.Warn("running controller with kong cassandra as a datastore is deprecated; " +
-			"please consider using postgres or in-memory mode")
+		log.Fatalf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported;" +
+			"you must migrate to a Postgres-backed or DB-less deployment")
 	}
 
 	req, _ := http.NewRequest("GET",

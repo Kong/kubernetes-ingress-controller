@@ -4,7 +4,7 @@
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
 
 # Kong for Kubernetes
-Use [Kong][kong] for Kubernetes [Ingress][ingress].  
+Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
 load balancing and more in Kong
 for Kubernetes Services, all using
@@ -14,23 +14,23 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 ## Features
 
-- **Ingress routing**  
+- **Ingress routing**
   Use [Ingress][ingress] resources to configure Kong
-- **Enhanced API management using plugins**  
+- **Enhanced API management using plugins**
   Use a wide-array of [plugins][kong-hub]
   to monitor, transform, protect your traffic.
 - **Native gRPC support**
   Proxy gRPC traffic and gain visibility into it using
   Kong's plugin.
-- **Health checking and Load-balancing**  
+- **Health checking and Load-balancing**
   Load balance requests across your pods and supports active & passive health-checks.
-- **Request/response transformations**  
+- **Request/response transformations**
   Use plugins to
   modify your requests/responses on the fly.
-- **Authentication**  
+- **Authentication**
   Protect your services using authentication methods
   of your choice.
-- **Declarative configuration for Kong**  
+- **Declarative configuration for Kong**
   Configure all of Kong
   using CRDs in Kubernetes and manage Kong declaratively.
 
@@ -116,16 +116,16 @@ meeting invite and Zoom links to join the meeting.
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/
 [kong-hub]: https://docs.konghq.com/hub/
-[docs]: docs/
-[deployment]: docs/deployment/
-[annotations]: docs/references/annotations.md
-[crds]: docs/references/custom-resources.md
-[faqs]: docs/faq.md
-[getting-started-guide]: docs/guides/getting-started.md
+[docs]: https://docs.konghq.com/kubernetes-ingress-controller/latest/introduction/
+[deployment]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/overview/
+[annotations]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
+[crds]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
+[faqs]: https://docs.konghq.com/kubernetes-ingress-controller/latest/faq/
+[getting-started-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/getting-started/
 [badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
 [badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
 [bintray-builds]: https://bintray.com/kong/kubernetes-ingress-controller/kong-ingress-controller
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
-[k4k8s-enterprise-setup]: https://github.com/Kong/kubernetes-ingress-controller/blob/master/docs/deployment/k4k8s-enterprise.md
-[guides]: docs/guides/
+[k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/
+[guides]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/overview/

@@ -115,7 +115,7 @@ Note: replace `docker.example.com/registry` with your registry URL.
 ## Deploying
 
 There are several ways to deploy Kong Ingress Controller onto a cluster.
-Please check the [deployment guide](/docs/deployment/README.md)
+Please check the [deployment guide](https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/overview/).
 
 ## Testing
 

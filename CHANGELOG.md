@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [1.1.0](#110---20201209)
  - [1.0.0](#100---20201005)
  - [0.10.0](#0100---20200915)
  - [0.9.1](#091---20200608)
@@ -23,6 +24,43 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [1.1.0] - 2020/12/09
+
+#### Breaking changes
+
+- The controller no longer supports Cassandra-backed Kong clusters, following
+  deprecation in 0.9.0. You must migrate to a Postgres-backed or DB-less
+  cluster before upgrading to 1.1.0. The controller will restore configuration
+  from Kubernetes resources (Ingresses, Services, KongPlugins, etc.) into the
+  new datastore automatically. Kong Enterprise users with
+  non-controller-managed configuration (Portal configuration, RBAC
+  configuration, etc.) will need to migrate that configuration manually.
+  [#974](https://github.com/Kong/kubernetes-ingress-controller/pull/974)
+
+#### Added
+
+- The default Kong version is now 2.2.x and the default Kong Enterprise version
+  is now 2.2.0.0.
+  [#932](https://github.com/Kong/kubernetes-ingress-controller/pull/932)
+  [#965](https://github.com/Kong/kubernetes-ingress-controller/pull/965)
+- The default worker count is now 2 instead of 1. This avoids request latency
+  during blocking configuration changes.
+  [#957](https://github.com/Kong/kubernetes-ingress-controller/pull/957)
+- Knative Services now support `konghq.com/override` (for attaching
+  KongIngress resources).
+  [#908](https://github.com/Kong/kubernetes-ingress-controller/pull/908)
+- Added the `konghq.com/snis` Ingress annotation. This populates SNI
+  configuration on the routes derived from the annotated Ingress.
+  [#863](https://github.com/Kong/kubernetes-ingress-controller/pull/863)
+
+#### Fixed
+
+- The controller now correctly prints the affected Service name when logging
+  warnings about Services without any endpoints.
+  [#915](https://github.com/Kong/kubernetes-ingress-controller/pull/915)
+- Credentials that lack critical fields no longer result in a panic.
+  [#944](https://github.com/Kong/kubernetes-ingress-controller/pull/944)
 
 ## [1.0.0] - 2020/10/05
 

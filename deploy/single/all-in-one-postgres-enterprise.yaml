@@ -196,6 +196,10 @@ spec:
               type: array
             regex_priority:
               type: integer
+            snis:
+              items:
+                type: string
+              type: array
             strip_path:
               type: boolean
         upstream:
@@ -767,7 +771,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.0
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

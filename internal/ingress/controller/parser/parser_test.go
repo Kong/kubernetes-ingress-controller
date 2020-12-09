@@ -1732,6 +1732,234 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 
 func TestKnativeIngressAndPlugins(t *testing.T) {
 	assert := assert.New(t)
+	t.Run("knative ingress annotated with konghq.com/override", func(t *testing.T) {
+		ingresses := []*knative.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "knative-ingress-with-override",
+					Namespace: "foo-ns",
+					Annotations: map[string]string{
+						"networking.knative.dev/ingress.class":                      annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.ConfigurationKey: "https-only",
+					},
+				},
+				Spec: knative.IngressSpec{
+					Rules: []knative.IngressRule{
+						{
+							Hosts: []string{"my-func.example.com"},
+							HTTP: &knative.HTTPIngressRuleValue{
+								Paths: []knative.HTTPIngressPath{
+									{
+										Path: "/",
+										AppendHeaders: map[string]string{
+											"foo": "bar",
+										},
+										Splits: []knative.IngressBackendSplit{
+											{
+												IngressBackend: knative.IngressBackend{
+													ServiceNamespace: "foo-ns",
+													ServiceName:      "foo-svc",
+													ServicePort:      intstr.FromInt(42),
+												},
+												Percent: 100,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		kongIngresses := []*configurationv1.KongIngress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "https-only",
+					Namespace: "foo-ns",
+				},
+				Route: &kong.Route{
+					Protocols:               kong.StringSlice("https"),
+					HTTPSRedirectStatusCode: kong.Int(308),
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "foo-ns",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: ingresses,
+			KongIngresses:    kongIngresses,
+			Services:         services,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services), "expected one knative service")
+		svc := state.Services[0]
+
+		assert.Equal(1, len(svc.Routes), "expected one route in knative service")
+		route := svc.Routes[0]
+
+		assert.Equal(kong.StringSlice("https"), route.Protocols, "expected https protocol after override")
+		assert.Equal(kong.Int(308), route.HTTPSRedirectStatusCode, "expected 308 after override")
+	})
+	t.Run("knative ingress without konghq.com/override", func(t *testing.T) {
+		ingresses := []*knative.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "knative-ingress-without-override",
+					Namespace: "foo-ns",
+					Annotations: map[string]string{
+						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+					},
+				},
+				Spec: knative.IngressSpec{
+					Rules: []knative.IngressRule{
+						{
+							Hosts: []string{"my-func.example.com"},
+							HTTP: &knative.HTTPIngressRuleValue{
+								Paths: []knative.HTTPIngressPath{
+									{
+										Path: "/",
+										AppendHeaders: map[string]string{
+											"foo": "bar",
+										},
+										Splits: []knative.IngressBackendSplit{
+											{
+												IngressBackend: knative.IngressBackend{
+													ServiceNamespace: "foo-ns",
+													ServiceName:      "foo-svc",
+													ServicePort:      intstr.FromInt(42),
+												},
+												Percent: 100,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		kongIngresses := []*configurationv1.KongIngress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "https-only",
+					Namespace: "foo-ns",
+				},
+				Route: &kong.Route{
+					Protocols:               kong.StringSlice("https"),
+					HTTPSRedirectStatusCode: kong.Int(308),
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "foo-ns",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: ingresses,
+			KongIngresses:    kongIngresses,
+			Services:         services,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services), "expected one knative service")
+		svc := state.Services[0]
+
+		assert.Equal(1, len(svc.Routes), "expected one route in knative service")
+		route := svc.Routes[0]
+
+		assert.NotEqual(kong.StringSlice("https"), route.Protocols)
+		assert.Nil(route.HTTPSRedirectStatusCode)
+	})
+	t.Run("knative ingress with multiple konghq.com annotations", func(t *testing.T) {
+		ingresses := []*knative.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "knative-ingress-with-annotations",
+					Namespace: "foo-ns",
+					Annotations: map[string]string{
+						"networking.knative.dev/ingress.class":                          annotations.DefaultIngressClass,
+						annotations.AnnotationPrefix + annotations.ProtocolsKey:         "https",
+						annotations.AnnotationPrefix + annotations.HTTPSRedirectCodeKey: "308",
+						annotations.AnnotationPrefix + annotations.StripPathKey:         "true",
+						annotations.AnnotationPrefix + annotations.MethodsKey:           "POST,PUT",
+					},
+				},
+				Spec: knative.IngressSpec{
+					Rules: []knative.IngressRule{
+						{
+							Hosts: []string{"my-func.example.com"},
+							HTTP: &knative.HTTPIngressRuleValue{
+								Paths: []knative.HTTPIngressPath{
+									{
+										Path: "/",
+										AppendHeaders: map[string]string{
+											"foo": "bar",
+										},
+										Splits: []knative.IngressBackendSplit{
+											{
+												IngressBackend: knative.IngressBackend{
+													ServiceNamespace: "foo-ns",
+													ServiceName:      "foo-svc",
+													ServicePort:      intstr.FromInt(42),
+												},
+												Percent: 100,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "foo-ns",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: ingresses,
+			Services:         services,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services), "expected one knative service")
+		svc := state.Services[0]
+
+		assert.Equal(1, len(svc.Routes), "expected one route in knative service")
+		route := svc.Routes[0]
+
+		assert.Equal(kong.StringSlice("https"), route.Protocols, "expected https after konghq.com/protocols")
+		assert.Equal(kong.Int(308), route.HTTPSRedirectStatusCode, "expected 308 after konghq.com/https-redirect-status-code")
+		assert.Equal(kong.Bool(true), route.StripPath, "expected true after konghq.com/strip-path")
+		assert.Equal(kong.StringSlice("POST", "PUT"), route.Methods, "expected POST and PUT after konghq.com/methods")
+	})
 	t.Run("knative ingress rule and service-level plugin", func(t *testing.T) {
 		ingresses := []*knative.Ingress{
 			{
@@ -2444,6 +2672,156 @@ func TestParserSecret(t *testing.T) {
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"SNIs are de-duplicated")
+	})
+}
+
+func TestParserSNI(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("route includes SNI when TLS info present, but not for wildcard hostnames", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"example.com", "*.example.com"},
+						},
+					},
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+						{
+							Host: "*.example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret1",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.foo.00"),
+			StripPath:     kong.Bool(false),
+			RegexPriority: kong.Int(0),
+			Hosts:         kong.StringSlice("example.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+		}, state.Services[0].Routes[0].Route)
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.foo.10"),
+			StripPath:     kong.Bool(false),
+			RegexPriority: kong.Int(0),
+			Hosts:         kong.StringSlice("*.example.com"),
+			SNIs:          nil,
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+		}, state.Services[0].Routes[1].Route)
+	})
+	t.Run("route does not include SNI when TLS info absent", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.foo.00"),
+			StripPath:     kong.Bool(false),
+			RegexPriority: kong.Int(0),
+			Hosts:         kong.StringSlice("example.com"),
+			SNIs:          nil,
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+		}, state.Services[0].Routes[0].Route)
 	})
 }
 

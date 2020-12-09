@@ -74,7 +74,8 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 					},
 				}
 				if host != "" {
-					r.Hosts = kong.StringSlice(host)
+					hosts := kong.StringSlice(host)
+					r.Hosts = hosts
 				}
 
 				serviceName := ingress.Namespace + "." +

@@ -771,3 +771,54 @@ func Test_overrideRouteMethods(t *testing.T) {
 		})
 	}
 }
+
+func Test_overrideRouteSNIs(t *testing.T) {
+	type args struct {
+		route Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Route
+	}{
+		{name: "basic empty route"},
+		{
+			name: "basic sanity, with strippable space",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": "hrodna.kong.example, katowice.kong.example",
+				},
+			},
+			want: Route{
+				Route: kong.Route{
+					SNIs: kong.StringSlice("hrodna.kong.example", "katowice.kong.example"),
+				},
+			},
+		},
+		{
+			name: "not hostnames at all",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": "-10,GET",
+				},
+			},
+		},
+		{
+			name: "wildcard hostname, not valid for SNI",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": "*.example.com",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.route.overrideSNIs(logrus.New(), tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideRouteSNIs() got = %v, want %v", tt.args.route, tt.want)
+			}
+		})
+	}
+}

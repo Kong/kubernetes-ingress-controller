@@ -1,19 +1,16 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: echo-https
+  name: echo-https-foo
   annotations:
     kubernetes.io/ingress.class: kong
     konghq.com/protocols: https
-    konghq.com/snis: "example.com, example.net"
+    konghq.com/snis: "example.com"
 spec:
   tls:
   - hosts:
       - example.com
     secretName: tls-example-com
-  - hosts:
-      - example.net
-    secretName: tls-example-net
   rules:
   - host: example.com
     http:
@@ -25,6 +22,21 @@ spec:
               number: 8080
         path: /foo
         pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-https-bar
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/protocols: https
+    konghq.com/snis: "example.net"
+spec:
+  tls:
+  - hosts:
+      - example.net
+    secretName: tls-example-net
+  rules:
   - host: example.net
     http:
       paths:

@@ -3668,6 +3668,20 @@ func TestPickPort(t *testing.T) {
 		},
 	}
 
+	svc2 := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-2",
+			Namespace: "foo-namespace",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Type:         corev1.ServiceTypeExternalName,
+			ExternalName: "external.example.com",
+		},
+	}
+
 	endpointList := []*corev1.Endpoints{
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "service-0", Namespace: "foo-namespace"},
@@ -3737,6 +3751,46 @@ func TestPickPort(t *testing.T) {
 				},
 			},
 			wantTarget: "1.1.1.1:111",
+		},
+		{
+			name: "port by number external name",
+			objs: store.FakeObjects{
+				Services:  []*corev1.Service{&svc2},
+				Endpoints: endpointList,
+
+				IngressesV1: []*networkingv1.Ingress{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "foo",
+							Namespace:   "foo-namespace",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+						Spec: networkingv1.IngressSpec{
+							Rules: []networkingv1.IngressRule{
+								{
+									Host: "example.com",
+									IngressRuleValue: networkingv1.IngressRuleValue{
+										HTTP: &networkingv1.HTTPIngressRuleValue{
+											Paths: []networkingv1.HTTPIngressPath{
+												{
+													Path: "/externalname",
+													Backend: networkingv1.IngressBackend{
+														Service: &networkingv1.IngressServiceBackend{
+															Name: "service-2",
+															Port: networkingv1.ServiceBackendPort{Number: 222},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantTarget: "external.example.com:222",
 		},
 		{
 			name: "port by name",

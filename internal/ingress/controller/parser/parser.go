@@ -154,6 +154,16 @@ func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []networki
 func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServicePort, error) {
 	switch wantPort.Mode {
 	case kongstate.PortModeByNumber:
+		// ExternalName Services have no port declaration of their own
+		// We must assume that the user-requested port is valid and construct a ServicePort from it
+		if svc.Spec.Type == corev1.ServiceTypeExternalName {
+			servicePort := corev1.ServicePort{
+				Protocol:   "TCP",
+				Port:       wantPort.Number,
+				TargetPort: intstr.FromInt(int(wantPort.Number)),
+			}
+			return &servicePort, nil
+		}
 		for _, port := range svc.Spec.Ports {
 			if port.Port == wantPort.Number {
 				return &port, nil
@@ -161,6 +171,9 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 		}
 
 	case kongstate.PortModeByName:
+		if svc.Spec.Type == corev1.ServiceTypeExternalName {
+			return nil, fmt.Errorf("rules with an ExternalName service must specify numeric ports")
+		}
 		for _, port := range svc.Spec.Ports {
 			if port.Name == wantPort.Name {
 				return &port, nil
@@ -171,6 +184,9 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 		}
 
 	case kongstate.PortModeImplicit:
+		if svc.Spec.Type == corev1.ServiceTypeExternalName {
+			return nil, fmt.Errorf("rules with an ExternalName service must specify numeric ports")
+		}
 		if len(svc.Spec.Ports) != 1 {
 			return nil, fmt.Errorf("in implicit mode, service must have exactly 1 port, has %d", len(svc.Spec.Ports))
 		}

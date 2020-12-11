@@ -158,7 +158,6 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 		// We must assume that the user-requested port is valid and construct a ServicePort from it
 		if svc.Spec.Type == corev1.ServiceTypeExternalName {
 			return &corev1.ServicePort{
-				Protocol:   "TCP",
 				Port:       wantPort.Number,
 				TargetPort: intstr.FromInt(int(wantPort.Number)),
 			}, nil

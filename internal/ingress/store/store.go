@@ -286,12 +286,15 @@ func (s Store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugi
 
 // GetKongClusterPlugin returns the 'name' KongClusterPlugin resource.
 func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error) {
+	if s.stores.ClusterPlugin == nil {
+		return nil, ErrNotFound{fmt.Sprintf("KongClusterPlugins are not enabled")}
+	}
 	p, exists, err := s.stores.ClusterPlugin.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongClusterPluign %v not found", name)}
+		return nil, ErrNotFound{fmt.Sprintf("KongClusterPlugin %v not found", name)}
 	}
 	return p.(*configurationv1.KongClusterPlugin), nil
 }
@@ -367,8 +370,12 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 // filtered by the ingress.class annotation and with the
 // label global:"true".
 func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error) {
-
 	var plugins []*configurationv1.KongClusterPlugin
+	if s.stores.ClusterPlugin == nil {
+		// if there is no store, this feature is disabled, and the result is always empty
+		return plugins, nil
+	}
+
 	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
 	if err != nil {
 		return nil, err

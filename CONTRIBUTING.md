@@ -30,6 +30,13 @@ make without coding:
 If you wish to contribute code (features or bug fixes), see the [Submitting a
 patch](#submitting-a-patch) section.
 
+## Stale issue and pull request policy
+
+To ensure our backlog is organized and up to date, we will close issues and
+pull requests that have been inactive awaiting a community response for over 2
+weeks. If you wish to reopen a closed issue or PR to continue work, please
+leave a comment asking a team member to do so.
+
 ## Development environment
 
 ## Environment

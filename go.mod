@@ -20,6 +20,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/gjson v1.2.1
 	github.com/tidwall/match v1.0.1 // indirect
+	github.com/yudai/gojsondiff v1.0.0
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1

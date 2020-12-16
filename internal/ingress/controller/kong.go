@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"sort"
@@ -36,7 +37,27 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/yudai/gojsondiff"
+	"github.com/yudai/gojsondiff/formatter"
 )
+
+func getDiff(a []byte, b []byte) (string, error) {
+	differ := gojsondiff.New()
+	d, err := differ.Compare(a, b)
+	if err != nil {
+		return "", err
+	}
+	var rightObject map[string]interface{}
+	err = json.Unmarshal(b, &rightObject)
+	if err != nil {
+		return "", err
+	}
+
+	formatter := formatter.NewAsciiFormatter(rightObject,
+		formatter.AsciiFormatterConfig{})
+	diffString, err := formatter.Format(d)
+	return diffString, err
+}
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
 // returning nil implies the synchronization finished correctly.
@@ -72,10 +93,24 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	} else {
 		err = n.onUpdateDBMode(targetContent)
 	}
+	var target []byte
+	if n.cfg.LogSensitiveConfig {
+		target, _ = json.Marshal(targetContent)
+	} else {
+		state.Sanitize()
+		sanitizedContent := n.toDeckContent(ctx, state)
+		target, _ = json.Marshal(sanitizedContent)
+	}
 	if err != nil {
+		if n.cfg.LogLevel == "debug" {
+			diff, _ := getDiff(target, n.lastConfig)
+			_ = ioutil.WriteFile(n.tmpDir+"/target.json", target, 0600)
+			_ = ioutil.WriteFile(n.tmpDir+"/diff.json", []byte(diff), 0600)
+		}
 		return err
 	}
 	n.runningConfigHash = shaSum
+	n.lastConfig = target
 	n.Logger.Info("successfully synced configuration to kong")
 	return nil
 }

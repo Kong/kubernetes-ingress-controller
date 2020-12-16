@@ -302,6 +302,16 @@ func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
 	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
 }
 
+func (ks *KongState) Sanitize() {
+	redacted := "REDACTED"
+	for _, cert := range ks.Certificates {
+		cert.Certificate.Key = &redacted
+	}
+	for _, consumer := range ks.Consumers {
+		consumer.SanitizeCredentials()
+	}
+}
+
 var supportedCreds = sets.NewString(
 	"acl",
 	"basic-auth",

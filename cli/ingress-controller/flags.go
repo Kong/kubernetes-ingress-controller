@@ -77,8 +77,9 @@ type cliConfig struct {
 	EnableReverseSync bool
 
 	// Logging
-	LogLevel  string
-	LogFormat string
+	LogLevel           string
+	LogFormat          string
+	LogSensitiveConfig bool
 
 	// k8s connection details
 	APIServerHost      string
@@ -310,6 +311,7 @@ func parseFlags() (cliConfig, error) {
 	// Logging
 	config.LogLevel = viper.GetString("log-level")
 	config.LogFormat = viper.GetString("log-format")
+	config.LogSensitiveConfig = viper.GetBool("log-sensitive-config")
 
 	// k8s connection details
 	config.APIServerHost = viper.GetString("apiserver-host")

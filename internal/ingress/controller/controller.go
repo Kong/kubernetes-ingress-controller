@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -90,7 +91,9 @@ type Configuration struct {
 
 	EnableKnativeIngressSupport bool
 
-	Logger logrus.FieldLogger
+	Logger             logrus.FieldLogger
+	LogSensitiveConfig bool
+	LogLevel           string
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -223,6 +226,7 @@ type KongController struct {
 	backgroundGroup errgroup.Group
 
 	runningConfigHash []byte
+	lastConfig        []byte
 
 	isShuttingDown uint32
 
@@ -231,12 +235,19 @@ type KongController struct {
 	PluginSchemaStore PluginSchemaStore
 
 	Logger logrus.FieldLogger
+
+	tmpDir string
 }
 
 // Start starts a new master process running in foreground, blocking until the next call to
 // Stop.
 func (n *KongController) Start() {
 	n.Logger.Debugf("startin up controller")
+	var err error
+	n.tmpDir, err = ioutil.TempDir("", "controller")
+	if err != nil {
+		panic(fmt.Errorf("failed to create a temporary working directory: %v", err))
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

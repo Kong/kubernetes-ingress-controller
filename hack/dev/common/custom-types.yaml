@@ -379,8 +379,6 @@ spec:
     type: date
     description: Age
     JSONPath: .metadata.creationTimestamp
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       properties:

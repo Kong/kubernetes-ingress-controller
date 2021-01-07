@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [1.1.1](#111---20210107)
  - [1.1.0](#110---20201209)
  - [1.0.0](#100---20201005)
  - [0.10.0](#0100---20200915)
@@ -24,6 +25,17 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [1.1.1] - 2021/01/07
+
+#### Fixed
+
+- Ingress controller now correctly sets ports for ExternalName services [#985](https://github.com/Kong/kubernetes-ingress-controller/pull/985)
+- TCPIngress CRD: removed the duplicated subresource YAML key [#997](https://github.com/Kong/kubernetes-ingress-controller/pull/997)
+
+#### Deprecated
+
+- Removed Helm 2 installation instructions because Helm 2 is EOL. Use Helm 3 instead. [#993](https://github.com/Kong/kubernetes-ingress-controller/pull/993)
 
 ## [1.1.0] - 2020/12/09
 
@@ -942,6 +954,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[1.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.10.0...1.0.0
 [0.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.9.1...0.10.0

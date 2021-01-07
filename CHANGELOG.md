@@ -954,6 +954,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[1.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.10.0...1.0.0
 [0.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.9.1...0.10.0

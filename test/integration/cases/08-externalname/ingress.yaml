@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fake-external
+  annotations:
+    kubernetes.io/ingress.class: kong
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: fake-external
+            port:
+              number: 8080
+        path: /foo
+        pathType: Prefix
+---
+# Test that we can create configuration from ExternalName Services
+# Uses a K8S hostname as a pretend external hostname to avoid actual external test dependencies
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-external
+spec:
+  type: ExternalName
+  externalName: echo.default.svc

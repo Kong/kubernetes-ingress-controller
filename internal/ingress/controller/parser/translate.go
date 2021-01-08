@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"hash/crc32"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,12 +40,12 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
 
-		for i, rule := range ingressSpec.Rules {
+		for _, rule := range ingressSpec.Rules {
 			host := rule.Host
 			if rule.HTTP == nil {
 				continue
 			}
-			for j, rule := range rule.HTTP.Paths {
+			for _, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
 				if strings.Contains(path, "//") {
@@ -54,18 +55,11 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				if path == "" {
 					path = "/"
 				}
+				ruleChecksum := crc32.ChecksumIEEE([]byte(host + path))
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:          kong.String(fmt.Sprintf("%s.%s.%d", ingress.Namespace, ingress.Name, ruleChecksum)),
 						Paths:         kong.StringSlice(path),
 						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
@@ -183,11 +177,12 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
 
-		for i, rule := range ingressSpec.Rules {
+		for _, rule := range ingressSpec.Rules {
 			if rule.HTTP == nil {
 				continue
 			}
-			for j, rulePath := range rule.HTTP.Paths {
+			host := rule.Host
+			for _, rulePath := range rule.HTTP.Paths {
 				if strings.Contains(rulePath.Path, "//") {
 					log.Errorf("rule skipped: invalid path: '%v'", rulePath.Path)
 					continue
@@ -204,18 +199,15 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 					continue
 				}
 
+				var pathsDeref []string
+				for _, path := range paths {
+					pathsDeref = append(pathsDeref, *path)
+				}
+				ruleChecksum := crc32.ChecksumIEEE([]byte(host + strings.Join(pathsDeref, ",")))
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:          kong.String(fmt.Sprintf("%s.%s.%d", ingress.Namespace, ingress.Name, ruleChecksum)),
 						Paths:         paths,
 						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),
@@ -223,8 +215,8 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						RegexPriority: kong.Int(priorityForPath[pathType]),
 					},
 				}
-				if rule.Host != "" {
-					r.Hosts = kong.StringSlice(rule.Host)
+				if host != "" {
+					r.Hosts = kong.StringSlice(host)
 				}
 
 				port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
@@ -326,24 +318,18 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
-		for i, rule := range ingressSpec.Rules {
+		for _, rule := range ingressSpec.Rules {
 
 			if rule.Port <= 0 {
 				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
 				continue
 			}
+			host := rule.Host
+			ruleChecksum := crc32.ChecksumIEEE([]byte(host + strconv.Itoa(rule.Port)))
 			r := kongstate.Route{
 				Ingress: util.FromK8sObject(ingress),
 				Route: kong.Route{
-					// TODO (#834) Figure out a way to name the routes
-					// This is not a stable scheme
-					// 1. If a user adds a route in the middle,
-					// due to a shift, all the following routes will
-					// be PATCHED
-					// 2. Is it guaranteed that the order is stable?
-					// Meaning, the routes will always appear in the same
-					// order?
-					Name:      kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i)),
+					Name:      kong.String(fmt.Sprintf("%s.%s.%d", ingress.Namespace, ingress.Name, ruleChecksum)),
 					Protocols: kong.StringSlice("tcp", "tls"),
 					Destinations: []*kong.CIDRPort{
 						{
@@ -352,7 +338,6 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 					},
 				},
 			}
-			host := rule.Host
 			if host != "" {
 				r.SNIs = kong.StringSlice(host)
 			}
@@ -415,29 +400,22 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
 
-		for i, rule := range ingressSpec.Rules {
+		for _, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
 				continue
 			}
-			for j, rule := range rule.HTTP.Paths {
+			for _, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
 				if path == "" {
 					path = "/"
 				}
+				ruleChecksum := crc32.ChecksumIEEE([]byte(strings.Join(hosts, ",") + path))
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:          kong.String(fmt.Sprintf("%s.%s.%d", ingress.Namespace, ingress.Name, ruleChecksum)),
 						Paths:         kong.StringSlice(path),
 						StripPath:     kong.Bool(false),
 						PreserveHost:  kong.Bool(true),

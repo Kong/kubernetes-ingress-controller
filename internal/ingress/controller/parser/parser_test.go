@@ -1066,7 +1066,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services[0].Routes),
 			"expected one route to be rendered")
 		assert.Equal(kong.Route{
-			Name:          kong.String("default.bar.00"),
+			Name:          kong.String("default.bar.3419939762"),
 			StripPath:     kong.Bool(true),
 			Hosts:         kong.StringSlice("example.com"),
 			PreserveHost:  kong.Bool(true),
@@ -1143,7 +1143,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services[0].Routes),
 			"expected one route to be rendered")
 		assert.Equal(kong.Route{
-			Name:          kong.String("default.bar.00"),
+			Name:          kong.String("default.bar.3419939762"),
 			StripPath:     kong.Bool(false),
 			Hosts:         kong.StringSlice("example.com"),
 			PreserveHost:  kong.Bool(true),
@@ -1221,7 +1221,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services[0].Routes),
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
-				Name:                    kong.String("default.bar.00"),
+				Name:                    kong.String("default.bar.3419939762"),
 				StripPath:               kong.Bool(false),
 				HTTPSRedirectStatusCode: kong.Int(301),
 				Hosts:                   kong.StringSlice("example.com"),
@@ -1300,7 +1300,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services[0].Routes),
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
-				Name:          kong.String("default.bar.00"),
+				Name:          kong.String("default.bar.3419939762"),
 				StripPath:     kong.Bool(false),
 				Hosts:         kong.StringSlice("example.com"),
 				PreserveHost:  kong.Bool(true),
@@ -1378,7 +1378,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services[0].Routes),
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
-				Name:          kong.String("default.bar.00"),
+				Name:          kong.String("default.bar.3419939762"),
 				StripPath:     kong.Bool(false),
 				Hosts:         kong.StringSlice("example.com"),
 				PreserveHost:  kong.Bool(false),
@@ -1456,7 +1456,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services[0].Routes),
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
-				Name:          kong.String("default.bar.00"),
+				Name:          kong.String("default.bar.3419939762"),
 				StripPath:     kong.Bool(false),
 				Hosts:         kong.StringSlice("example.com"),
 				PreserveHost:  kong.Bool(true),
@@ -1534,7 +1534,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services[0].Routes),
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
-				Name:          kong.String("default.bar.00"),
+				Name:          kong.String("default.bar.3419939762"),
 				StripPath:     kong.Bool(false),
 				RegexPriority: kong.Int(10),
 				Hosts:         kong.StringSlice("example.com"),
@@ -1612,7 +1612,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services[0].Routes),
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
-				Name:          kong.String("default.bar.00"),
+				Name:          kong.String("default.bar.3419939762"),
 				StripPath:     kong.Bool(false),
 				RegexPriority: kong.Int(0),
 				Hosts:         kong.StringSlice("example.com"),
@@ -2064,7 +2064,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		assert.Equal(1, len(svc.Routes),
 			"expected one route to be rendered")
 		assert.Equal(kong.Route{
-			Name:          kong.String("foo-ns.knative-ingress.00"),
+			Name:          kong.String("foo-ns.knative-ingress.1231748600"),
 			StripPath:     kong.Bool(false),
 			Hosts:         kong.StringSlice("my-func.example.com"),
 			PreserveHost:  kong.Bool(true),
@@ -2160,7 +2160,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services[0].Routes),
 			"expected one route to be rendered")
 		assert.Equal(kong.Route{
-			Name:          kong.String("default.bar.00"),
+			Name:          kong.String("default.bar.3419939762"),
 			StripPath:     kong.Bool(false),
 			Hosts:         kong.StringSlice("example.com"),
 			PreserveHost:  kong.Bool(true),
@@ -2247,7 +2247,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services[0].Routes),
 			"expected one route to be rendered")
 		assert.Equal(kong.Route{
-			Name:          kong.String("default.bar.00"),
+			Name:          kong.String("default.bar.3419939762"),
 			StripPath:     kong.Bool(false),
 			Hosts:         kong.StringSlice("example.com"),
 			PreserveHost:  kong.Bool(true),
@@ -2326,7 +2326,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services[0].Routes),
 				"expected one route to be rendered")
 			assert.Equal(kong.Route{
-				Name:          kong.String("default.bar.00"),
+				Name:          kong.String("default.bar.3419939762"),
 				StripPath:     kong.Bool(false),
 				RegexPriority: kong.Int(0),
 				Hosts:         kong.StringSlice("example.com"),
@@ -2753,7 +2753,7 @@ func TestParserSNI(t *testing.T) {
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(kong.Route{
-			Name:          kong.String("default.foo.00"),
+			Name:          kong.String("default.foo.3419939762"),
 			StripPath:     kong.Bool(false),
 			RegexPriority: kong.Int(0),
 			Hosts:         kong.StringSlice("example.com"),
@@ -2762,7 +2762,7 @@ func TestParserSNI(t *testing.T) {
 			Protocols:     kong.StringSlice("http", "https"),
 		}, state.Services[0].Routes[0].Route)
 		assert.Equal(kong.Route{
-			Name:          kong.String("default.foo.10"),
+			Name:          kong.String("default.foo.930969884"),
 			StripPath:     kong.Bool(false),
 			RegexPriority: kong.Int(0),
 			Hosts:         kong.StringSlice("*.example.com"),
@@ -2813,7 +2813,7 @@ func TestParserSNI(t *testing.T) {
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(kong.Route{
-			Name:          kong.String("default.foo.00"),
+			Name:          kong.String("default.foo.3419939762"),
 			StripPath:     kong.Bool(false),
 			RegexPriority: kong.Int(0),
 			Hosts:         kong.StringSlice("example.com"),

@@ -242,6 +242,87 @@ func TestFromIngressV1beta1(t *testing.T) {
 				},
 			},
 		},
+		// 8
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1beta1.IngressSpec{
+				Rules: []networkingv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1beta1.IngressRuleValue{
+							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+								Paths: []networkingv1beta1.HTTPIngressPath{
+									{
+										Path: "/first",
+										Backend: networkingv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+									{
+										Path: "/second",
+										Backend: networkingv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// 9
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1beta1.IngressSpec{
+				Rules: []networkingv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1beta1.IngressRuleValue{
+							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+								Paths: []networkingv1beta1.HTTPIngressPath{
+									{
+										Path: "/first",
+										Backend: networkingv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+									{
+										Path: "/inserted",
+										Backend: networkingv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+									{
+										Path: "/second",
+										Backend: networkingv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
@@ -326,6 +407,17 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ingressList[7],
 		})
 		assert.Empty(parsedInfo.ServiceNameToServices)
+	})
+	t.Run("rule order has no effect on route name", func(t *testing.T) {
+		parsedInfoA := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
+			ingressList[8],
+		})
+		parsedInfoB := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
+			ingressList[9],
+		})
+		assert.Equal(
+			parsedInfoA.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[1].Name,
+			parsedInfoB.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[2].Name)
 	})
 }
 
@@ -570,6 +662,97 @@ func TestFromIngressV1(t *testing.T) {
 				},
 			},
 		},
+		// 8
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/first",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+									{
+										Path: "/second",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// 9
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/first",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+									{
+										Path: "/inserted",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+									{
+										Path: "/second",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
@@ -655,6 +838,17 @@ func TestFromIngressV1(t *testing.T) {
 		})
 		assert.Empty(parsedInfo.ServiceNameToServices)
 	})
+	t.Run("rule order has no effect on route name", func(t *testing.T) {
+		parsedInfoA := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
+			ingressList[8],
+		})
+		parsedInfoB := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
+			ingressList[9],
+		})
+		assert.Equal(
+			parsedInfoA.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[1].Name,
+			parsedInfoB.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[2].Name)
+	})
 }
 
 func TestFromTCPIngressV1beta1(t *testing.T) {
@@ -729,6 +923,68 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 				},
 			},
 		},
+		// 4
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: configurationv1beta1.IngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						Port: 9000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+					{
+						Host: "example.com",
+						Port: 9002,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+		// 5
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: configurationv1beta1.IngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						Port: 9000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+					{
+						Host: "example.com",
+						Port: 9001,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+					{
+						Host: "example.com",
+						Port: 9002,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no TCPIngress returns empty info", func(t *testing.T) {
 		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{})
@@ -755,7 +1011,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(1, len(svc.Routes))
 		route := svc.Routes[0]
 		assert.Equal(kong.Route{
-			Name:      kong.String("default.foo.0"),
+			Name:      kong.String("default.foo.1905495032"),
 			Protocols: kong.StringSlice("tcp", "tls"),
 			Destinations: []*kong.CIDRPort{
 				{
@@ -775,7 +1031,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(1, len(svc.Routes))
 		route := svc.Routes[0]
 		assert.Equal(kong.Route{
-			Name:      kong.String("default.foo.0"),
+			Name:      kong.String("default.foo.2814129580"),
 			Protocols: kong.StringSlice("tcp", "tls"),
 			SNIs:      kong.StringSlice("example.com"),
 			Destinations: []*kong.CIDRPort{
@@ -790,6 +1046,13 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
+	})
+	t.Run("rule order has no effect on route name", func(t *testing.T) {
+		parsedInfoA := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[4]})
+		parsedInfoB := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[5]})
+		assert.Equal(
+			parsedInfoA.ServiceNameToServices["default.foo-svc.80"].Routes[1].Name,
+			parsedInfoB.ServiceNameToServices["default.foo-svc.80"].Routes[2].Name)
 	})
 }
 
@@ -942,6 +1205,122 @@ func TestFromKnativeIngress(t *testing.T) {
 				},
 			},
 		},
+		// 4
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/first",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+								{
+									Path: "/second",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// 5
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: "/first",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+								{
+									Path: "/inserted",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+								{
+									Path: "/second",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{})
@@ -969,7 +1348,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
-			Name:          kong.String("foo-namespace.foo.00"),
+			Name:          kong.String("foo-namespace.foo.1231748600"),
 			RegexPriority: kong.Int(0),
 			StripPath:     kong.Bool(false),
 			Paths:         kong.StringSlice("/"),
@@ -1012,7 +1391,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
-			Name:          kong.String("foo-namespace.foo.00"),
+			Name:          kong.String("foo-namespace.foo.1231748600"),
 			RegexPriority: kong.Int(0),
 			StripPath:     kong.Bool(false),
 			Paths:         kong.StringSlice("/"),
@@ -1030,6 +1409,13 @@ func TestFromKnativeIngress(t *testing.T) {
 		}, svc.Plugins[0])
 
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+	})
+	t.Run("rule order has no effect on route name", func(t *testing.T) {
+		parsedInfoA := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[4]})
+		parsedInfoB := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[5]})
+		assert.Equal(
+			parsedInfoA.ServiceNameToServices["foo-ns.foo-svc.42"].Routes[1].Name,
+			parsedInfoB.ServiceNameToServices["foo-ns.foo-svc.42"].Routes[2].Name)
 	})
 }
 

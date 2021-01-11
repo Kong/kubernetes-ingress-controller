@@ -414,21 +414,17 @@ func main() {
 	cacheStores.Plugin = kongPluginInformer.GetStore()
 	informers = append(informers, kongPluginInformer)
 
-	supportedKongResources, _ := kubeClient.Discovery().ServerResourcesForGroupVersion(
-		configuration.SchemeGroupVersion.String())
-	hasKongClusterPlugin := false
-	for _, resource := range supportedKongResources.APIResources {
-		if resource.Kind == "KongClusterPlugin" {
-			hasKongClusterPlugin = true
-			break
-		}
-	}
+	hasKongClusterPlugin, _ := utils.ServerHasGVK(kubeClient.Discovery(),
+		configuration.SchemeGroupVersion.String(), "KongClusterPlugin")
 
 	if hasKongClusterPlugin {
 		kongClusterPluginInformer := kongInformerFactory.Configuration().V1().KongClusterPlugins().Informer()
 		kongClusterPluginInformer.AddEventHandler(reh)
 		cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
 		informers = append(informers, kongClusterPluginInformer)
+	} else {
+		log.Warn("KongClusterPlugin CRD not detected. Disabling KongClusterPlugin functionality.")
+		cacheStores.ClusterPlugin = newEmptyStore()
 	}
 
 	kongConsumerInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()

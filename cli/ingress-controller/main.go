@@ -414,7 +414,7 @@ func main() {
 	cacheStores.Plugin = kongPluginInformer.GetStore()
 	informers = append(informers, kongPluginInformer)
 
-	hasKongClusterPlugin, _ := utils.ServerHasGVK(kubeClient.Discovery(),
+	hasKongClusterPlugin, err := utils.ServerHasGVK(kubeClient.Discovery(),
 		configuration.SchemeGroupVersion.String(), "KongClusterPlugin")
 
 	if hasKongClusterPlugin {
@@ -423,6 +423,9 @@ func main() {
 		cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
 		informers = append(informers, kongClusterPluginInformer)
 	} else {
+		if err != nil {
+			log.Fatalf("failed to retrieve KongClusterPlugin availability: %s", err)
+		}
 		log.Warn("KongClusterPlugin CRD not detected. Disabling KongClusterPlugin functionality.")
 		cacheStores.ClusterPlugin = newEmptyStore()
 	}

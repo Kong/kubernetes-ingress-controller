@@ -41,6 +41,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -413,10 +414,21 @@ func main() {
 	cacheStores.Plugin = kongPluginInformer.GetStore()
 	informers = append(informers, kongPluginInformer)
 
-	kongClusterPluginInformer := kongInformerFactory.Configuration().V1().KongClusterPlugins().Informer()
-	kongClusterPluginInformer.AddEventHandler(reh)
-	cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
-	informers = append(informers, kongClusterPluginInformer)
+	hasKongClusterPlugin, err := utils.ServerHasGVK(kubeClient.Discovery(),
+		configuration.SchemeGroupVersion.String(), "KongClusterPlugin")
+
+	if hasKongClusterPlugin {
+		kongClusterPluginInformer := kongInformerFactory.Configuration().V1().KongClusterPlugins().Informer()
+		kongClusterPluginInformer.AddEventHandler(reh)
+		cacheStores.ClusterPlugin = kongClusterPluginInformer.GetStore()
+		informers = append(informers, kongClusterPluginInformer)
+	} else {
+		if err != nil {
+			log.Fatalf("failed to retrieve KongClusterPlugin availability: %s", err)
+		}
+		log.Warn("KongClusterPlugin CRD not detected. Disabling KongClusterPlugin functionality.")
+		cacheStores.ClusterPlugin = newEmptyStore()
+	}
 
 	kongConsumerInformer := kongInformerFactory.Configuration().V1().KongConsumers().Informer()
 	kongConsumerInformer.AddEventHandler(reh)

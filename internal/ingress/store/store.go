@@ -291,7 +291,7 @@ func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPl
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongClusterPluign %v not found", name)}
+		return nil, ErrNotFound{fmt.Sprintf("KongClusterPlugin %v not found", name)}
 	}
 	return p.(*configurationv1.KongClusterPlugin), nil
 }
@@ -367,8 +367,8 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 // filtered by the ingress.class annotation and with the
 // label global:"true".
 func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error) {
-
 	var plugins []*configurationv1.KongClusterPlugin
+
 	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
 	if err != nil {
 		return nil, err

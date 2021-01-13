@@ -88,13 +88,13 @@ func TestServerHasGVK(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			gotResult, gotErr := serverHasGVK(tt.client, tt.groupVersion, tt.kind)
+			gotResult, gotErr := ServerHasGVK(tt.client, tt.groupVersion, tt.kind)
 
 			if gotResult != tt.wantResult {
-				t.Errorf("serverHasGVK result: got %t, want %t", gotResult, tt.wantResult)
+				t.Errorf("ServerHasGVK result: got %t, want %t", gotResult, tt.wantResult)
 			}
 			if (gotErr != nil) != tt.wantErr {
-				t.Errorf("serverHasGVK: got error: %v, wanted error? %t", gotErr, tt.wantErr)
+				t.Errorf("ServerHasGVK: got error: %v, wanted error? %t", gotErr, tt.wantErr)
 			}
 		})
 	}

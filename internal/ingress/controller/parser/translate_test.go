@@ -755,6 +755,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(1, len(svc.Routes))
 		route := svc.Routes[0]
 		assert.Equal(kong.Route{
+			ID:        kong.String("bc4b95ad-6a80-5a4e-bf45-49e53768033a"),
 			Name:      kong.String("default.foo.0"),
 			Protocols: kong.StringSlice("tcp", "tls"),
 			Destinations: []*kong.CIDRPort{
@@ -775,6 +776,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(1, len(svc.Routes))
 		route := svc.Routes[0]
 		assert.Equal(kong.Route{
+			ID:        kong.String("6543a7d8-b590-5a0e-a709-6d65dfc09c01"),
 			Name:      kong.String("default.foo.0"),
 			Protocols: kong.StringSlice("tcp", "tls"),
 			SNIs:      kong.StringSlice("example.com"),
@@ -969,6 +971,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
+			ID:            kong.String("58d08247-c7dc-5219-89b8-1fcbc4e9e088"),
 			Name:          kong.String("foo-namespace.foo.00"),
 			RegexPriority: kong.Int(0),
 			StripPath:     kong.Bool(false),
@@ -1012,6 +1015,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
+			ID:            kong.String("58d08247-c7dc-5219-89b8-1fcbc4e9e088"),
 			Name:          kong.String("foo-namespace.foo.00"),
 			RegexPriority: kong.Int(0),
 			StripPath:     kong.Bool(false),

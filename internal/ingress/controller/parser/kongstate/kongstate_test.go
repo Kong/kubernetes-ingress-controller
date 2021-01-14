@@ -7,10 +7,58 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func Test_FillConsumersAndCredentials(t *testing.T) {
+	tests := []struct {
+		name      string
+		consumers []*configurationv1.KongConsumer
+		want      []Consumer
+	}{
+		{
+			name: "basic consumer",
+			consumers: []*configurationv1.KongConsumer{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "foo",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": "kong",
+						},
+					},
+					Username: "foo",
+				},
+			},
+			want: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						ID:       kong.String("6e7ef1a9-9938-555c-a551-383437f4fb10"),
+						Username: kong.String("foo"),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var state KongState
+			store, _ := store.NewFakeStore(store.FakeObjects{
+				KongConsumers: tt.consumers,
+			})
+			state.FillConsumersAndCredentials(logrus.New(), store)
+			for i, consumer := range state.Consumers {
+				if !reflect.DeepEqual(consumer.Consumer, tt.want[i].Consumer) {
+					t.Errorf("FillConsumersAndCredentials()[%d] = %v, want %v", i, consumer.Consumer, tt.want[i].Consumer)
+				}
+			}
+		})
+	}
+}
 
 func Test_getPluginRelations(t *testing.T) {
 	type args struct {

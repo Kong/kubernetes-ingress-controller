@@ -61,7 +61,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				if path == "" {
 					path = "/"
 				}
-				computedID := uuid.NewSHA1(ingressNamespace, []byte(host+path)).String()
+				computedRouteID := uuid.NewSHA1(ingressNamespace, []byte(host+path)).String()
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
@@ -73,7 +73,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						ID:            kong.String(computedID),
+						ID:            kong.String(computedRouteID),
 						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:         kong.StringSlice(path),
 						StripPath:     kong.Bool(false),
@@ -92,8 +92,10 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 					rule.Backend.ServicePort.String()
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
+					computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
 					service = kongstate.Service{
 						Service: kong.Service{
+							ID:   kong.String(computedServiceID),
 							Name: kong.String(serviceName),
 							Host: kong.String(rule.Backend.ServiceName +
 								"." + ingress.Namespace + "." +
@@ -132,8 +134,10 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 			defaultBackend.ServicePort.String()
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
+			computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
 			service = kongstate.Service{
 				Service: kong.Service{
+					ID:   kong.String(computedServiceID),
 					Name: kong.String(serviceName),
 					Host: kong.String(defaultBackend.ServiceName + "." +
 						ingress.Namespace + "." +
@@ -219,7 +223,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				for _, path := range paths {
 					pathsDeref = append(pathsDeref, *path)
 				}
-				computedID := uuid.NewSHA1(ingressNamespace, []byte(rule.Host+strings.Join(pathsDeref, ","))).String()
+				computedRouteID := uuid.NewSHA1(ingressNamespace, []byte(rule.Host+strings.Join(pathsDeref, ","))).String()
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
@@ -231,7 +235,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						ID:            kong.String(computedID),
+						ID:            kong.String(computedRouteID),
 						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:         paths,
 						StripPath:     kong.Bool(false),
@@ -249,8 +253,10 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 					rulePath.Backend.Service.Port.Number)
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
+					computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
 					service = kongstate.Service{
 						Service: kong.Service{
+							ID:   kong.String(computedServiceID),
 							Name: kong.String(serviceName),
 							Host: kong.String(fmt.Sprintf("%s.%s.%s.svc", rulePath.Backend.Service.Name, ingress.Namespace,
 								port.CanonicalString())),
@@ -288,8 +294,10 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 			port.CanonicalString())
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
+			computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
 			service = kongstate.Service{
 				Service: kong.Service{
+					ID:   kong.String(computedServiceID),
 					Name: kong.String(serviceName),
 					Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", defaultBackend.Service.Name, ingress.Namespace,
 						defaultBackend.Service.Port.Number)),
@@ -351,7 +359,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
 				continue
 			}
-			computedID := uuid.NewSHA1(ingressNamespace, []byte(rule.Host+strconv.Itoa(rule.Port))).String()
+			computedRouteID := uuid.NewSHA1(ingressNamespace, []byte(rule.Host+strconv.Itoa(rule.Port))).String()
 			r := kongstate.Route{
 				Ingress: util.FromK8sObject(ingress),
 				Route: kong.Route{
@@ -363,7 +371,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 					// 2. Is it guaranteed that the order is stable?
 					// Meaning, the routes will always appear in the same
 					// order?
-					ID:        kong.String(computedID),
+					ID:        kong.String(computedRouteID),
 					Name:      kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i)),
 					Protocols: kong.StringSlice("tcp", "tls"),
 					Destinations: []*kong.CIDRPort{
@@ -389,8 +397,10 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
 			service, ok := result.ServiceNameToServices[serviceName]
 			if !ok {
+				computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
 				service = kongstate.Service{
 					Service: kong.Service{
+						ID:   kong.String(computedServiceID),
 						Name: kong.String(serviceName),
 						Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", rule.Backend.ServiceName, ingress.Namespace,
 							rule.Backend.ServicePort)),
@@ -449,7 +459,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 				if path == "" {
 					path = "/"
 				}
-				computedID := uuid.NewSHA1(ingressNamespace, []byte(strings.Join(hosts, ",")+path)).String()
+				computedRouteID := uuid.NewSHA1(ingressNamespace, []byte(strings.Join(hosts, ",")+path)).String()
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
@@ -461,7 +471,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						ID:            kong.String(computedID),
+						ID:            kong.String(computedRouteID),
 						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:         kong.StringSlice(path),
 						StripPath:     kong.Bool(false),
@@ -479,6 +489,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 					knativeBackend.ServicePort.String())
 				service, ok := services[serviceName]
 				if !ok {
+					computedServiceID := uuid.NewSHA1(ingressNamespace, []byte(serviceName)).String()
 
 					var headers []string
 					for key, value := range knativeBackend.AppendHeaders {
@@ -490,6 +501,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 
 					service = kongstate.Service{
 						Service: kong.Service{
+							ID:             kong.String(computedServiceID),
 							Name:           kong.String(serviceName),
 							Host:           kong.String(serviceHost),
 							Port:           kong.Int(80),

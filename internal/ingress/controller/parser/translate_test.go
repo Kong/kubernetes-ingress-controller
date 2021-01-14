@@ -960,6 +960,7 @@ func TestFromKnativeIngress(t *testing.T) {
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
+			ID:             kong.String("127ace6a-c96b-5a65-9977-5dbe44824f7c"),
 			Name:           kong.String("foo-ns.foo-svc.42"),
 			Port:           kong.Int(80),
 			Host:           kong.String("foo-svc.foo-ns.42.svc"),
@@ -1004,6 +1005,7 @@ func TestFromKnativeIngress(t *testing.T) {
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
+			ID:             kong.String("127ace6a-c96b-5a65-9977-5dbe44824f7c"),
 			Name:           kong.String("foo-ns.foo-svc.42"),
 			Port:           kong.Int(80),
 			Host:           kong.String("foo-svc.foo-ns.42.svc"),

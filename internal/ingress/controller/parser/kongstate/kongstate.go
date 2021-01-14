@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
@@ -28,6 +29,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 
 	// build consumer index
 	for _, kConsumer := range s.ListKongConsumers() {
+		computedConsumerID := uuid.NewSHA1(util.ControllerNamespace, []byte(kConsumer.Namespace+"/"+kConsumer.Name)).String()
 		var c Consumer
 		if kConsumer.Username == "" && kConsumer.CustomID == "" {
 			continue
@@ -39,6 +41,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			c.CustomID = kong.String(kConsumer.CustomID)
 		}
 		c.K8sKongConsumer = *kConsumer
+		c.ID = kong.String(computedConsumerID)
 
 		log = log.WithFields(logrus.Fields{
 			"kongconsumer_name":      kConsumer.Name,

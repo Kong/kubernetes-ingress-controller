@@ -1052,6 +1052,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services),
 			"expected one service to be rendered")
 		assert.Equal(kong.Service{
+			ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
@@ -1130,6 +1131,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services),
 			"expected one service to be rendered")
 		assert.Equal(kong.Service{
+			ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
@@ -1209,6 +1211,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services),
 				"expected one service to be rendered")
 			assert.Equal(kong.Service{
+				ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),
@@ -1289,6 +1292,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services),
 				"expected one service to be rendered")
 			assert.Equal(kong.Service{
+				ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),
@@ -1368,6 +1372,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services),
 				"expected one service to be rendered")
 			assert.Equal(kong.Service{
+				ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),
@@ -1447,6 +1452,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services),
 				"expected one service to be rendered")
 			assert.Equal(kong.Service{
+				ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),
@@ -1526,6 +1532,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services),
 				"expected one service to be rendered")
 			assert.Equal(kong.Service{
+				ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),
@@ -1605,6 +1612,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services),
 				"expected one service to be rendered")
 			assert.Equal(kong.Service{
+				ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),
@@ -2048,6 +2056,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		svc := state.Services[0]
 
 		assert.Equal(kong.Service{
+			ID:             kong.String("311fc829-3976-5bb3-aa12-53029d1c09e7"),
 			Name:           kong.String("foo-ns.foo-svc.42"),
 			Host:           kong.String("foo-svc.foo-ns.42.svc"),
 			Path:           kong.String("/"),
@@ -2155,6 +2164,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services),
 			"expected one service to be rendered")
 		assert.Equal(kong.Service{
+			ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/baz"),
@@ -2236,6 +2246,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		assert.Equal(1, len(state.Services),
 			"expected one service to be rendered")
 		assert.Equal(kong.Service{
+			ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
@@ -2323,6 +2334,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			assert.Equal(1, len(state.Services),
 				"expected one service to be rendered")
 			assert.Equal(kong.Service{
+				ID:             kong.String("0d31a75d-ddb3-5ded-b5da-98a23a7ef809"),
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),

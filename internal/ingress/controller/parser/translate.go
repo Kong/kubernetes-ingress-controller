@@ -18,10 +18,6 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
-var (
-	controllerNamespace, _ = uuid.Parse("a7640ba5-73a3-4816-a497-047ac54d7a24")
-)
-
 func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1.Ingress) ingressRules {
 	result := newIngressRules()
 
@@ -38,7 +34,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 			"ingress_name":      ingress.Name,
 		})
 
-		ingressNamespace := uuid.NewSHA1(controllerNamespace, []byte(ingress.Namespace+ingress.Name))
+		ingressNamespace := uuid.NewSHA1(util.ControllerNamespace, []byte(ingress.Namespace+ingress.Name))
 
 		if ingressSpec.Backend != nil {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
@@ -92,7 +88,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 					rule.Backend.ServicePort.String()
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
-					computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
+					computedServiceID := uuid.NewSHA1(util.ControllerNamespace, []byte(serviceName)).String()
 					service = kongstate.Service{
 						Service: kong.Service{
 							ID:   kong.String(computedServiceID),
@@ -134,7 +130,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 			defaultBackend.ServicePort.String()
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
-			computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
+			computedServiceID := uuid.NewSHA1(util.ControllerNamespace, []byte(serviceName)).String()
 			service = kongstate.Service{
 				Service: kong.Service{
 					ID:   kong.String(computedServiceID),
@@ -190,7 +186,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 			"ingress_name":      ingress.Name,
 		})
 
-		ingressNamespace := uuid.NewSHA1(controllerNamespace, []byte(ingress.Namespace+ingress.Name))
+		ingressNamespace := uuid.NewSHA1(util.ControllerNamespace, []byte(ingress.Namespace+ingress.Name))
 
 		if ingressSpec.DefaultBackend != nil {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
@@ -253,7 +249,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 					rulePath.Backend.Service.Port.Number)
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
-					computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
+					computedServiceID := uuid.NewSHA1(util.ControllerNamespace, []byte(serviceName)).String()
 					service = kongstate.Service{
 						Service: kong.Service{
 							ID:   kong.String(computedServiceID),
@@ -294,7 +290,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 			port.CanonicalString())
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
-			computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
+			computedServiceID := uuid.NewSHA1(util.ControllerNamespace, []byte(serviceName)).String()
 			service = kongstate.Service{
 				Service: kong.Service{
 					ID:   kong.String(computedServiceID),
@@ -349,7 +345,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			"tcpingress_name":      ingress.Name,
 		})
 
-		ingressNamespace := uuid.NewSHA1(controllerNamespace, []byte(ingress.Namespace+ingress.Name))
+		ingressNamespace := uuid.NewSHA1(util.ControllerNamespace, []byte(ingress.Namespace+ingress.Name))
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
@@ -397,7 +393,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
 			service, ok := result.ServiceNameToServices[serviceName]
 			if !ok {
-				computedServiceID := uuid.NewSHA1(controllerNamespace, []byte(serviceName)).String()
+				computedServiceID := uuid.NewSHA1(util.ControllerNamespace, []byte(serviceName)).String()
 				service = kongstate.Service{
 					Service: kong.Service{
 						ID:   kong.String(computedServiceID),
@@ -444,7 +440,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 
 		ingressSpec := ingress.Spec
 
-		ingressNamespace := uuid.NewSHA1(controllerNamespace, []byte(ingress.Namespace+ingress.Name))
+		ingressNamespace := uuid.NewSHA1(util.ControllerNamespace, []byte(ingress.Namespace+ingress.Name))
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
 

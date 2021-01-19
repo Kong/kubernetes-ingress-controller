@@ -13,15 +13,38 @@ import (
 type Consumer struct {
 	kong.Consumer
 	Plugins    []kong.Plugin
-	KeyAuths   []*kong.KeyAuth
-	HMACAuths  []*kong.HMACAuth
-	JWTAuths   []*kong.JWTAuth
-	BasicAuths []*kong.BasicAuth
+	KeyAuths   map[string]*kong.KeyAuth
+	HMACAuths  map[string]*kong.HMACAuth
+	JWTAuths   map[string]*kong.JWTAuth
+	BasicAuths map[string]*kong.BasicAuth
 	ACLGroups  []*kong.ACLGroup
 
-	Oauth2Creds []*kong.Oauth2Credential
+	Oauth2Creds map[string]*kong.Oauth2Credential
 
 	K8sKongConsumer configurationv1.KongConsumer
+}
+
+func NewConsumer() Consumer {
+	return Consumer{}.initEmpty()
+}
+
+func (c Consumer) initEmpty() Consumer {
+	if c.KeyAuths == nil {
+		c.KeyAuths = map[string]*kong.KeyAuth{}
+	}
+	if c.HMACAuths == nil {
+		c.HMACAuths = map[string]*kong.HMACAuth{}
+	}
+	if c.JWTAuths == nil {
+		c.JWTAuths = map[string]*kong.JWTAuth{}
+	}
+	if c.BasicAuths == nil {
+		c.BasicAuths = map[string]*kong.BasicAuth{}
+	}
+	if c.Oauth2Creds == nil {
+		c.Oauth2Creds = map[string]*kong.Oauth2Credential{}
+	}
+	return c
 }
 
 func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credConfig interface{}) error {
@@ -42,7 +65,10 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		if cred.Key == nil {
 			return fmt.Errorf("key-auth for consumer %s is invalid: no key", *c.Username)
 		}
-		c.KeyAuths = append(c.KeyAuths, &cred)
+		if _, ok := c.KeyAuths[*cred.Key]; ok {
+			return fmt.Errorf("key-auth for consumer %s: duplicate key", *c.Username)
+		}
+		c.KeyAuths[*cred.Key] = &cred
 	case "basic-auth", "basicauth_credential":
 		var cred kong.BasicAuth
 		err := decodeCredential(credConfig, &cred)
@@ -52,7 +78,10 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		if cred.Username == nil {
 			return fmt.Errorf("basic-auth for consumer %s is invalid: no username", *c.Username)
 		}
-		c.BasicAuths = append(c.BasicAuths, &cred)
+		if _, ok := c.BasicAuths[*cred.Username]; ok {
+			return fmt.Errorf("basic-auth for consumer %s: duplicate username %q", *c.Username, *cred.Username)
+		}
+		c.BasicAuths[*cred.Username] = &cred
 	case "hmac-auth", "hmacauth_credential":
 		var cred kong.HMACAuth
 		err := decodeCredential(credConfig, &cred)
@@ -62,7 +91,10 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		if cred.Username == nil {
 			return fmt.Errorf("hmac-auth for consumer %s is invalid: no username", *c.Username)
 		}
-		c.HMACAuths = append(c.HMACAuths, &cred)
+		if _, ok := c.HMACAuths[*cred.Username]; ok {
+			return fmt.Errorf("hmac-auth for consumer %s: duplicate username %q", *c.Username, *cred.Username)
+		}
+		c.HMACAuths[*cred.Username] = &cred
 	case "oauth2":
 		var cred kong.Oauth2Credential
 		err := decodeCredential(credConfig, &cred)
@@ -72,7 +104,10 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		if cred.ClientID == nil {
 			return fmt.Errorf("oauth2 for consumer %s is invalid: no client_id", *c.Username)
 		}
-		c.Oauth2Creds = append(c.Oauth2Creds, &cred)
+		if _, ok := c.Oauth2Creds[*cred.ClientID]; ok {
+			return fmt.Errorf("oauth2 for consumer %s: duplicate client ID %q", *c.Username, *cred.ClientID)
+		}
+		c.Oauth2Creds[*cred.ClientID] = &cred
 	case "jwt", "jwt_secret":
 		var cred kong.JWTAuth
 		err := decodeCredential(credConfig, &cred)
@@ -91,7 +126,10 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		if cred.Key == nil {
 			return fmt.Errorf("jwt-auth for consumer %s is invalid: no key", *c.Username)
 		}
-		c.JWTAuths = append(c.JWTAuths, &cred)
+		if _, ok := c.JWTAuths[*cred.Key]; ok {
+			return fmt.Errorf("jwt-auth for consumer %s: duplicate key", *c.Username)
+		}
+		c.JWTAuths[*cred.Key] = &cred
 	case "acl":
 		var cred kong.ACLGroup
 		err := decodeCredential(credConfig, &cred)

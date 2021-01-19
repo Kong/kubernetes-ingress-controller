@@ -28,7 +28,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 
 	// build consumer index
 	for _, kConsumer := range s.ListKongConsumers() {
-		var c Consumer
+		c := NewConsumer()
 		if kConsumer.Username == "" && kConsumer.CustomID == "" {
 			continue
 		}

@@ -395,12 +395,27 @@ func (n *KongController) toDeckContent(
 		for _, p := range c.Plugins {
 			consumer.Plugins = append(consumer.Plugins, &file.FPlugin{Plugin: p})
 		}
-		consumer.KeyAuths = c.KeyAuths
-		consumer.HMACAuths = c.HMACAuths
-		consumer.BasicAuths = c.BasicAuths
-		consumer.JWTAuths = c.JWTAuths
-		consumer.ACLGroups = c.ACLGroups
-		consumer.Oauth2Creds = c.Oauth2Creds
+
+		for k := range c.KeyAuths {
+			consumer.KeyAuths = append(consumer.KeyAuths, c.KeyAuths[k])
+		}
+		sort.SliceStable(consumer.KeyAuths, cmpField(func(i int) string { return *consumer.KeyAuths[i].Key }))
+		for k := range c.HMACAuths {
+			consumer.HMACAuths = append(consumer.HMACAuths, c.HMACAuths[k])
+		}
+		sort.SliceStable(consumer.HMACAuths, cmpField(func(i int) string { return *consumer.HMACAuths[i].Username }))
+		for k := range c.BasicAuths {
+			consumer.BasicAuths = append(consumer.BasicAuths, c.BasicAuths[k])
+		}
+		sort.SliceStable(consumer.BasicAuths, cmpField(func(i int) string { return *consumer.BasicAuths[i].Username }))
+		for k := range c.JWTAuths {
+			consumer.JWTAuths = append(consumer.JWTAuths, c.JWTAuths[k])
+		}
+		sort.SliceStable(consumer.JWTAuths, cmpField(func(i int) string { return *consumer.JWTAuths[i].Key }))
+		for k := range c.Oauth2Creds {
+			consumer.Oauth2Creds = append(consumer.Oauth2Creds, c.Oauth2Creds[k])
+		}
+		sort.SliceStable(consumer.Oauth2Creds, cmpField(func(i int) string { return *consumer.Oauth2Creds[i].ClientID }))
 		content.Consumers = append(content.Consumers, consumer)
 	}
 	sort.SliceStable(content.Consumers, func(i, j int) bool {
@@ -415,6 +430,11 @@ func (n *KongController) toDeckContent(
 
 	return &content
 }
+
+func cmpField(fieldFn func(int) string) func(i, j int) bool {
+	return func(i, j int) bool { return strings.Compare(fieldFn(i), fieldFn(j)) > 0 }
+}
+
 func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate
 	if kongCert.ID != nil {

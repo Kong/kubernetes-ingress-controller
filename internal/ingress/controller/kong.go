@@ -310,9 +310,7 @@ func (n *KongController) toDeckContent(
 				n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
-			sort.SliceStable(service.Plugins, func(i, j int) bool {
-				return strings.Compare(*service.Plugins[i].Name, *service.Plugins[j].Name) > 0
-			})
+			sortByString(service.Plugins, func(i int) string { return *service.Plugins[i].Name })
 		}
 
 		for _, r := range s.Routes {
@@ -328,20 +326,14 @@ func (n *KongController) toDeckContent(
 					n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
-				sort.SliceStable(route.Plugins, func(i, j int) bool {
-					return strings.Compare(*route.Plugins[i].Name, *route.Plugins[j].Name) > 0
-				})
+				sortByString(route.Plugins, func(i int) string { return *route.Plugins[i].Name })
 			}
 			service.Routes = append(service.Routes, &route)
 		}
-		sort.SliceStable(service.Routes, func(i, j int) bool {
-			return strings.Compare(*service.Routes[i].Name, *service.Routes[j].Name) > 0
-		})
+		sortByString(service.Routes, func(i int) string { return *service.Routes[i].Name })
 		content.Services = append(content.Services, service)
 	}
-	sort.SliceStable(content.Services, func(i, j int) bool {
-		return strings.Compare(*content.Services[i].Name, *content.Services[j].Name) > 0
-	})
+	sortByString(content.Services, func(i int) string { return *content.Services[i].Name })
 
 	for _, plugin := range k8sState.Plugins {
 		plugin := file.FPlugin{
@@ -353,10 +345,7 @@ func (n *KongController) toDeckContent(
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}
-	sort.SliceStable(content.Plugins, func(i, j int) bool {
-		return strings.Compare(pluginString(content.Plugins[i]),
-			pluginString(content.Plugins[j])) > 0
-	})
+	sortByString(content.Plugins, func(i int) string { return pluginString(content.Plugins[i]) })
 
 	for _, u := range k8sState.Upstreams {
 		n.fillUpstream(&u.Upstream)
@@ -365,30 +354,22 @@ func (n *KongController) toDeckContent(
 			target := file.FTarget{Target: t.Target}
 			upstream.Targets = append(upstream.Targets, &target)
 		}
-		sort.SliceStable(upstream.Targets, func(i, j int) bool {
-			return strings.Compare(*upstream.Targets[i].Target.Target, *upstream.Targets[j].Target.Target) > 0
-		})
+		sortByString(upstream.Targets, func(i int) string { return *upstream.Targets[i].Target.Target })
 		content.Upstreams = append(content.Upstreams, upstream)
 	}
-	sort.SliceStable(content.Upstreams, func(i, j int) bool {
-		return strings.Compare(*content.Upstreams[i].Name, *content.Upstreams[j].Name) > 0
-	})
+	sortByString(content.Upstreams, func(i int) string { return *content.Upstreams[i].Name })
 
 	for _, c := range k8sState.Certificates {
 		cert := getFCertificateFromKongCert(c.Certificate)
 		content.Certificates = append(content.Certificates, cert)
 	}
-	sort.SliceStable(content.Certificates, func(i, j int) bool {
-		return strings.Compare(*content.Certificates[i].Cert, *content.Certificates[j].Cert) > 0
-	})
+	sortByString(content.Certificates, func(i int) string { return *content.Certificates[i].Cert })
 
 	for _, c := range k8sState.CACertificates {
 		content.CACertificates = append(content.CACertificates,
 			file.FCACertificate{CACertificate: c})
 	}
-	sort.SliceStable(content.CACertificates, func(i, j int) bool {
-		return strings.Compare(*content.CACertificates[i].Cert, *content.CACertificates[j].Cert) > 0
-	})
+	sortByString(content.CACertificates, func(i int) string { return *content.CACertificates[i].Cert })
 
 	for _, c := range k8sState.Consumers {
 		consumer := file.FConsumer{Consumer: c.Consumer}
@@ -399,28 +380,27 @@ func (n *KongController) toDeckContent(
 		for k := range c.KeyAuths {
 			consumer.KeyAuths = append(consumer.KeyAuths, c.KeyAuths[k])
 		}
-		sort.SliceStable(consumer.KeyAuths, cmpField(func(i int) string { return *consumer.KeyAuths[i].Key }))
+		sortByString(consumer.KeyAuths, func(i int) string { return *consumer.KeyAuths[i].Key })
 		for k := range c.HMACAuths {
 			consumer.HMACAuths = append(consumer.HMACAuths, c.HMACAuths[k])
 		}
-		sort.SliceStable(consumer.HMACAuths, cmpField(func(i int) string { return *consumer.HMACAuths[i].Username }))
+		sortByString(consumer.HMACAuths, func(i int) string { return *consumer.HMACAuths[i].Username })
 		for k := range c.BasicAuths {
 			consumer.BasicAuths = append(consumer.BasicAuths, c.BasicAuths[k])
 		}
-		sort.SliceStable(consumer.BasicAuths, cmpField(func(i int) string { return *consumer.BasicAuths[i].Username }))
+		sortByString(consumer.BasicAuths, func(i int) string { return *consumer.BasicAuths[i].Username })
 		for k := range c.JWTAuths {
 			consumer.JWTAuths = append(consumer.JWTAuths, c.JWTAuths[k])
 		}
-		sort.SliceStable(consumer.JWTAuths, cmpField(func(i int) string { return *consumer.JWTAuths[i].Key }))
+		sortByString(consumer.JWTAuths, func(i int) string { return *consumer.JWTAuths[i].Key })
 		for k := range c.Oauth2Creds {
 			consumer.Oauth2Creds = append(consumer.Oauth2Creds, c.Oauth2Creds[k])
 		}
-		sort.SliceStable(consumer.Oauth2Creds, cmpField(func(i int) string { return *consumer.Oauth2Creds[i].ClientID }))
+		sortByString(consumer.Oauth2Creds, func(i int) string { return *consumer.Oauth2Creds[i].ClientID })
 		content.Consumers = append(content.Consumers, consumer)
 	}
-	sort.SliceStable(content.Consumers, func(i, j int) bool {
-		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
-	})
+	sortByString(content.Consumers, func(i int) string { return *content.Consumers[i].Username })
+
 	selectorTags := n.getIngressControllerTags()
 	if len(selectorTags) > 0 {
 		content.Info = &file.Info{
@@ -431,8 +411,9 @@ func (n *KongController) toDeckContent(
 	return &content
 }
 
-func cmpField(fieldFn func(int) string) func(i, j int) bool {
-	return func(i, j int) bool { return strings.Compare(fieldFn(i), fieldFn(j)) > 0 }
+func sortByString(slice interface{}, fieldFn func(i int) string) {
+	lessFn := func(i, j int) bool { return strings.Compare(fieldFn(i), fieldFn(j)) > 0 }
+	sort.SliceStable(slice, lessFn)
 }
 
 func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {

@@ -52,5 +52,7 @@ jobs:
       run: go get -u golang.org/x/lint/golint
     - name: Checkout repository
       uses: actions/checkout@v2
-    - name: Run tests
-      run: make test
+    - name: Run tests with Coverage
+      run: make coverage
+    - name: Upload Code Coverage
+      run: "bash <(curl -s https://codecov.io/bash)"

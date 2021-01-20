@@ -48,6 +48,30 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "key-auth duplicate",
+			args: args{
+				credType: "key-auth",
+				consumer: Consumer{
+					Consumer: kong.Consumer{Username: kong.String("x")},
+					KeyAuths: map[string]*kong.KeyAuth{
+						"foo": {
+							Key: kong.String("foo"),
+						},
+					},
+				}.initEmpty(),
+				credConfig: map[string]string{"key": "foo"},
+			},
+			result: Consumer{
+				Consumer: kong.Consumer{Username: kong.String("x")},
+				KeyAuths: map[string]*kong.KeyAuth{
+					"foo": {
+						Key: kong.String("foo"),
+					},
+				},
+			}.initEmpty(),
+			wantErr: true,
+		},
+		{
 			name: "key-auth without key",
 			args: args{
 				credType: "key-auth",
@@ -93,6 +117,30 @@ func TestConsumer_SetCredential(t *testing.T) {
 				},
 			}.initEmpty(),
 			wantErr: false,
+		},
+		{
+			name: "basic-auth duplicate",
+			args: args{
+				credType: "basic-auth",
+				consumer: Consumer{
+					Consumer: kong.Consumer{Username: kong.String("x")},
+					BasicAuths: map[string]*kong.BasicAuth{
+						"foo": {
+							Username: kong.String("foo"),
+						},
+					},
+				}.initEmpty(),
+				credConfig: map[string]string{"key": "foo"},
+			},
+			result: Consumer{
+				Consumer: kong.Consumer{Username: kong.String("x")},
+				BasicAuths: map[string]*kong.BasicAuth{
+					"foo": {
+						Username: kong.String("foo"),
+					},
+				},
+			}.initEmpty(),
+			wantErr: true,
 		},
 		{
 			name: "basic-auth without username",
@@ -143,6 +191,30 @@ func TestConsumer_SetCredential(t *testing.T) {
 				},
 			}.initEmpty(),
 			wantErr: false,
+		},
+		{
+			name: "hmac-auth duplicate",
+			args: args{
+				credType: "hmac-auth",
+				consumer: Consumer{
+					Consumer: kong.Consumer{Username: kong.String("x")},
+					HMACAuths: map[string]*kong.HMACAuth{
+						"foo": {
+							Username: kong.String("foo"),
+						},
+					},
+				}.initEmpty(),
+				credConfig: map[string]string{"key": "foo"},
+			},
+			result: Consumer{
+				Consumer: kong.Consumer{Username: kong.String("x")},
+				HMACAuths: map[string]*kong.HMACAuth{
+					"foo": {
+						Username: kong.String("foo"),
+					},
+				},
+			}.initEmpty(),
+			wantErr: true,
 		},
 		{
 			name: "hmac-auth without username",
@@ -199,6 +271,30 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "oauth2 duplicate",
+			args: args{
+				credType: "oauth2",
+				consumer: Consumer{
+					Consumer: kong.Consumer{Username: kong.String("x")},
+					Oauth2Creds: map[string]*kong.Oauth2Credential{
+						"foo": {
+							ClientID: kong.String("foo"),
+						},
+					},
+				}.initEmpty(),
+				credConfig: map[string]string{"key": "foo"},
+			},
+			result: Consumer{
+				Consumer: kong.Consumer{Username: kong.String("x")},
+				Oauth2Creds: map[string]*kong.Oauth2Credential{
+					"foo": {
+						ClientID: kong.String("foo"),
+					},
+				},
+			}.initEmpty(),
+			wantErr: true,
+		},
+		{
 			name: "oauth2 without client_id",
 			args: args{
 				credType:   "oauth2",
@@ -231,6 +327,30 @@ func TestConsumer_SetCredential(t *testing.T) {
 				},
 			}.initEmpty(),
 			wantErr: false,
+		},
+		{
+			name: "jwt duplicate",
+			args: args{
+				credType: "jwt",
+				consumer: Consumer{
+					Consumer: kong.Consumer{Username: kong.String("x")},
+					JWTAuths: map[string]*kong.JWTAuth{
+						"foo": {
+							Key: kong.String("foo"),
+						},
+					},
+				}.initEmpty(),
+				credConfig: map[string]string{"key": "foo"},
+			},
+			result: Consumer{
+				Consumer: kong.Consumer{Username: kong.String("x")},
+				JWTAuths: map[string]*kong.JWTAuth{
+					"foo": {
+						Key: kong.String("foo"),
+					},
+				},
+			}.initEmpty(),
+			wantErr: true,
 		},
 		{
 			name: "jwt without key",

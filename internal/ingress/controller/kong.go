@@ -292,6 +292,7 @@ func (n *KongController) getIngressControllerTags() []string {
 	return res
 }
 
+// FormatVersion denotes the format version of decK files that we generate.
 const FormatVersion = "1.1"
 
 func (n *KongController) toDeckContent(

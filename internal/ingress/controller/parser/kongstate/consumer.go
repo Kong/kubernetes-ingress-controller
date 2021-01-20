@@ -24,6 +24,7 @@ type Consumer struct {
 	K8sKongConsumer configurationv1.KongConsumer
 }
 
+// NewConsumer initializes an empty Consumer object.
 func NewConsumer() Consumer {
 	return Consumer{}.initEmpty()
 }

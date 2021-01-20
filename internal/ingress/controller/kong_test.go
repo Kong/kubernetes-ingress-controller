@@ -129,7 +129,7 @@ func Test_toDeckContent(t *testing.T) {
 		want file.Content
 	}{
 		{
-			name: "sorts credentials",
+			name: "sorts credentials consistently",
 			in: kongstate.KongState{
 				Consumers: []kongstate.Consumer{
 					{

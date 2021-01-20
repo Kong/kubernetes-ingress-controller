@@ -20,6 +20,13 @@ test-all: lint test
 test:
 	go test -race ./...
 
+.PHONY: coverage
+coverage:
+	go test -race -v -count=1 -coverprofile=coverage.out.tmp ./...
+	# ignoring generated code for coverage
+	grep -E -v 'pkg/apis/|pkg/client/|generated.go|generated.deepcopy.go' coverage.out.tmp > coverage.out
+	rm -f coverage.out.tmp
+
 .PHONY: lint
 lint: verify-tidy
 	golangci-lint run ./...

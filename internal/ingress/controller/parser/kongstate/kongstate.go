@@ -303,12 +303,20 @@ func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
 }
 
 func (ks *KongState) Sanitize() {
-	redacted := "REDACTED"
-	for _, cert := range ks.Certificates {
-		cert.Certificate.Key = &redacted
+	ks.Certificates = make([]Certificate, 0)
+	for i, service := range ks.Services {
+		service.ClientCertificate = nil
+		ks.Services[i] = service
 	}
-	for _, consumer := range ks.Consumers {
-		consumer.SanitizeCredentials()
+
+	for i, consumer := range ks.Consumers {
+		consumer.KeyAuths = make([]*kong.KeyAuth, 0)
+		consumer.HMACAuths = make([]*kong.HMACAuth, 0)
+		consumer.JWTAuths = make([]*kong.JWTAuth, 0)
+		consumer.BasicAuths = make([]*kong.BasicAuth, 0)
+		consumer.ACLGroups = make([]*kong.ACLGroup, 0)
+		consumer.Oauth2Creds = make([]*kong.Oauth2Credential, 0)
+		ks.Consumers[i] = consumer
 	}
 }
 

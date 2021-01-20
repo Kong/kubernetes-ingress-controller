@@ -24,25 +24,6 @@ type Consumer struct {
 	K8sKongConsumer configurationv1.KongConsumer
 }
 
-func (c *Consumer) SanitizeCredentials() {
-	redacted := "REDACTED"
-	for _, auth := range c.KeyAuths {
-		auth.Key = &redacted
-	}
-	for _, auth := range c.HMACAuths {
-		auth.Secret = &redacted
-	}
-	for _, auth := range c.JWTAuths {
-		auth.Secret = &redacted
-	}
-	for _, auth := range c.BasicAuths {
-		auth.Password = &redacted
-	}
-	for _, auth := range c.Oauth2Creds {
-		auth.ClientSecret = &redacted
-	}
-}
-
 func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credConfig interface{}) error {
 	switch credType {
 	case "key-auth", "keyauth_credential":

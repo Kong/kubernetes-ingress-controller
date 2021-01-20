@@ -292,11 +292,13 @@ func (n *KongController) getIngressControllerTags() []string {
 	return res
 }
 
+const FormatVersion = "1.1"
+
 func (n *KongController) toDeckContent(
 	ctx context.Context,
 	k8sState *kongstate.KongState) *file.Content {
 	var content file.Content
-	content.FormatVersion = "1.1"
+	content.FormatVersion = FormatVersion
 	var err error
 
 	for _, s := range k8sState.Services {
@@ -412,7 +414,7 @@ func (n *KongController) toDeckContent(
 }
 
 func sortByString(slice interface{}, fieldFn func(i int) string) {
-	lessFn := func(i, j int) bool { return strings.Compare(fieldFn(i), fieldFn(j)) > 0 }
+	lessFn := func(i, j int) bool { return strings.Compare(fieldFn(i), fieldFn(j)) < 0 }
 	sort.SliceStable(slice, lessFn)
 }
 

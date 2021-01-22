@@ -43,3 +43,6 @@ vendor
 # integration test residuals
 kind
 kubeconfig-test-cluster
+
+# ignore personal TODO lists
+TODO

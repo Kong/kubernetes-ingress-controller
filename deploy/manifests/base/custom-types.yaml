@@ -249,6 +249,10 @@ spec:
               type: array
               items:
                 type: string
+            request_buffering:
+              type: boolean
+            response_buffering:
+              type: boolean
         proxy:
           type: object
           properties:

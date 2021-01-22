@@ -221,6 +221,8 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideRegexPriority(r.Ingress.Annotations)
 	r.overrideMethods(log, r.Ingress.Annotations)
 	r.overrideSNIs(log, r.Ingress.Annotations)
+	r.overrideRequestBuffering(log, r.Ingress.Annotations)
+	r.overrideResponseBuffering(log, r.Ingress.Annotations)
 }
 
 // override sets Route fields by KongIngress first, then by annotation
@@ -303,4 +305,46 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 		}
 		r.SNIs = SNIs
 	}
+	if ir.RequestBuffering != nil {
+		r.RequestBuffering = kong.Bool(*ir.RequestBuffering)
+	}
+	if ir.ResponseBuffering != nil {
+		r.ResponseBuffering = kong.Bool(*ir.ResponseBuffering)
+	}
+}
+
+// overrideRequestBuffering ensures defaults for the request_buffering option
+func (r *Route) overrideRequestBuffering(log logrus.FieldLogger, anns map[string]string) {
+	annotationValue, ok := annotations.ExtractRequestBuffering(anns)
+	if !ok {
+		// the annotation is not set, quit
+		return
+	}
+
+	isEnabled, err := strconv.ParseBool(annotationValue)
+	if err != nil {
+		// the value provided is not a parseable boolean
+		log.WithField("kongroute", r.Name).Errorf("invalid request_buffering value: %s", err)
+		return
+	}
+
+	r.RequestBuffering = kong.Bool(isEnabled)
+}
+
+// overrideResponseBuffering ensures defaults for the response_buffering option
+func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[string]string) {
+	annotationValue, ok := annotations.ExtractResponseBuffering(anns)
+	if !ok {
+		// the annotation is not set, quit
+		return
+	}
+
+	isEnabled, err := strconv.ParseBool(annotationValue)
+	if err != nil {
+		// the value provided is not a parseable boolean
+		log.WithField("kongroute", r.Name).Errorf("invalid response_buffering value: %s", err)
+		return
+	}
+
+	r.ResponseBuffering = kong.Bool(isEnabled)
 }

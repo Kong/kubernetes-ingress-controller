@@ -27,8 +27,10 @@ make without coding:
 - Providing your feedback on the proposed features and designs
 - Reviewing Pull Requests
 
-If you wish to contribute code (features or bug fixes), see the [Submitting a
-patch](#submitting-a-patch) section.
+If you wish to contribute code (features or bug fixes) please keep in mind the following:
+
+- bug fix pull requests should be opened against `main` as the base branch
+- feature pull requests should be opened with `next` as the base branch
 
 ## Stale issue and pull request policy
 

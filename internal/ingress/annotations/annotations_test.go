@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -564,6 +565,82 @@ func TestExtractSNIs(t *testing.T) {
 			var got []string
 			if got, _ = ExtractSNIs(tt.args.anns); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ExtractSNIs() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractRequestBuffering(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/request-buffering": "true",
+				},
+			},
+			want: "true",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractRequestBuffering(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractRequestBuffering() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractResponseBuffering(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/response-buffering": "true",
+				},
+			},
+			want: "true",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractResponseBuffering(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractResponseBuffering() = %v, want %v", got, tt.want)
 			}
 		})
 	}

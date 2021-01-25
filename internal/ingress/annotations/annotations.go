@@ -50,6 +50,8 @@ const (
 	HostHeaderKey        = "/host-header"
 	MethodsKey           = "/methods"
 	SNIsKey              = "/snis"
+	RequestBuffering     = "/request-buffering"
+	ResponseBuffering    = "/response-buffering"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -214,4 +216,18 @@ func ExtractSNIs(anns map[string]string) ([]string, bool) {
 		return nil, exists
 	}
 	return strings.Split(val, ","), exists
+}
+
+// ExtractRequestBuffering extracts the boolean annotation indicating
+// whether or not a route should buffer requests.
+func ExtractRequestBuffering(anns map[string]string) (string, bool) {
+	s, ok := anns[AnnotationPrefix+RequestBuffering]
+	return s, ok
+}
+
+// ExtractResponseBuffering extracts the boolean annotation indicating
+// whether or not a route should buffer responses.
+func ExtractResponseBuffering(anns map[string]string) (string, bool) {
+	s, ok := anns[AnnotationPrefix+ResponseBuffering]
+	return s, ok
 }

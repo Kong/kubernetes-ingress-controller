@@ -190,6 +190,26 @@ func TestOverrideRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("foo.com", "bar.com"),
+				},
+			},
+			configurationv1.KongIngress{
+				Route: &kong.Route{
+					RequestBuffering:  kong.Bool(true),
+					ResponseBuffering: kong.Bool(true),
+				},
+			},
+			Route{
+				Route: kong.Route{
+					Hosts:             kong.StringSlice("foo.com", "bar.com"),
+					RequestBuffering:  kong.Bool(true),
+					ResponseBuffering: kong.Bool(true),
+				},
+			},
+		},
 	}
 
 	for _, testcase := range testTable {
@@ -818,6 +838,150 @@ func Test_overrideRouteSNIs(t *testing.T) {
 			tt.args.route.overrideSNIs(logrus.New(), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteSNIs() got = %v, want %v", tt.args.route, tt.want)
+			}
+		})
+	}
+}
+
+func Test_overrideRequestBuffering(t *testing.T) {
+	type args struct {
+		route Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want kong.Route
+	}{
+		{},
+		{
+			name: "basic empty route",
+			args: args{
+				route: Route{Route: kong.Route{}},
+			},
+			want: kong.Route{},
+		},
+		{
+			name: "set to false",
+			args: args{
+				route: Route{
+					Route: kong.Route{}},
+				anns: map[string]string{
+					"konghq.com/request-buffering": "false",
+				},
+			},
+			want: kong.Route{
+				RequestBuffering: kong.Bool(false),
+			},
+		},
+		{
+			name: "set to true and case insensitive",
+			args: args{
+				route: Route{
+					Route: kong.Route{},
+				},
+				anns: map[string]string{
+					"konghq.com/request-buffering": "tRuE",
+				},
+			},
+			want: kong.Route{
+				RequestBuffering: kong.Bool(true),
+			},
+		},
+		{
+			name: "overrides any other value",
+			args: args{
+				route: Route{
+					Route: kong.Route{
+						RequestBuffering: kong.Bool(false),
+					},
+				},
+				anns: map[string]string{
+					"konghq.com/request-buffering": "tRuE",
+				},
+			},
+			want: kong.Route{
+				RequestBuffering: kong.Bool(true),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.route.overrideRequestBuffering(logrus.New(), tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
+				t.Errorf("overrideRequestBuffering() got = %v, want %v", &tt.args.route.Route, tt.want)
+			}
+		})
+	}
+}
+
+func Test_overrideResponseBuffering(t *testing.T) {
+	type args struct {
+		route Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want kong.Route
+	}{
+		{},
+		{
+			name: "basic empty route",
+			args: args{
+				route: Route{Route: kong.Route{}},
+			},
+			want: kong.Route{},
+		},
+		{
+			name: "set to false",
+			args: args{
+				route: Route{
+					Route: kong.Route{}},
+				anns: map[string]string{
+					"konghq.com/response-buffering": "false",
+				},
+			},
+			want: kong.Route{
+				ResponseBuffering: kong.Bool(false),
+			},
+		},
+		{
+			name: "set to true and case insensitive",
+			args: args{
+				route: Route{
+					Route: kong.Route{},
+				},
+				anns: map[string]string{
+					"konghq.com/response-buffering": "tRuE",
+				},
+			},
+			want: kong.Route{
+				ResponseBuffering: kong.Bool(true),
+			},
+		},
+		{
+			name: "overrides any other value",
+			args: args{
+				route: Route{
+					Route: kong.Route{
+						ResponseBuffering: kong.Bool(false),
+					},
+				},
+				anns: map[string]string{
+					"konghq.com/response-buffering": "tRuE",
+				},
+			},
+			want: kong.Route{
+				ResponseBuffering: kong.Bool(true),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.route.overrideResponseBuffering(logrus.New(), tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
+				t.Errorf("overrideResponseBuffering() got = %v, want %v", &tt.args.route.Route, tt.want)
 			}
 		})
 	}

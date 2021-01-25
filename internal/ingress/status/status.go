@@ -534,7 +534,7 @@ func (s *statusSync) runUpdateKnativeIngress(ctx context.Context,
 				svcName, namespace, clusterDomain)
 		}
 
-		currIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus, lbStatus)
+		currIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus)
 		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionReady)
 		ingressCondSet.Manage(&currIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
 		currIng.Status.ObservedGeneration = currIng.GetObjectMeta().GetGeneration()

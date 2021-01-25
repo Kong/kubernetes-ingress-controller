@@ -207,7 +207,7 @@ func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]
 			log.WithFields(logrus.Fields{
 				"kongplugin_name":      kongPluginName,
 				"kongplugin_namespace": namespace,
-			}).Logger.Errorf("failed to fetch KongPlugin: %v", err)
+			}).Errorf("failed to fetch KongPlugin: %v", err)
 			continue
 		}
 

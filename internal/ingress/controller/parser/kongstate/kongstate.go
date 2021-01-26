@@ -26,9 +26,14 @@ type KongState struct {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (ks *KongState) SanitizedCopy() *KongState {
 	return &KongState{
-		Services:       ks.Services,
-		Upstreams:      ks.Upstreams,
-		Certificates:   ks.Certificates, // TODO
+		Services:  ks.Services,
+		Upstreams: ks.Upstreams,
+		Certificates: func() (res []Certificate) {
+			for _, v := range ks.Certificates {
+				res = append(res, *v.SanitizedCopy())
+			}
+			return
+		}(),
 		CACertificates: ks.CACertificates,
 		Plugins:        ks.Plugins,
 		Consumers: func() (res []Consumer) {

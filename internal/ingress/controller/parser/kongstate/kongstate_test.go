@@ -20,11 +20,11 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 		want KongState
 	}{
 		{
-			name: "sanitizes all consumers and copies all other fields",
+			name: "sanitizes all consumers and certificates and copies all other fields",
 			in: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
-				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: kong.String("secret")}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
 				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
 				Consumers: []Consumer{{
@@ -34,7 +34,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 			want: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
-				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
 				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
 				Consumers: []Consumer{{

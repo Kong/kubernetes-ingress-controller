@@ -104,8 +104,8 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 		UpdateStatusOnShutdown: cliConfig.UpdateStatusOnShutdown,
 		ElectionID:             cliConfig.ElectionID,
 
-		LogSensitiveConfig: cliConfig.LogSensitiveConfig,
-		LogLevel:           cliConfig.LogLevel,
+		DumpConfig: cliConfig.DumpConfig,
+		LogLevel:   cliConfig.LogLevel,
 	}
 }
 

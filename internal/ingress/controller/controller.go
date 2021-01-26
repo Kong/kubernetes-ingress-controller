@@ -91,9 +91,9 @@ type Configuration struct {
 
 	EnableKnativeIngressSupport bool
 
-	Logger             logrus.FieldLogger
-	LogSensitiveConfig bool
-	LogLevel           string
+	Logger     logrus.FieldLogger
+	LogLevel   string
+	DumpConfig string
 }
 
 // sync collects all the pieces required to assemble the configuration file and

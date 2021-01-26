@@ -320,6 +320,22 @@ func (ks *KongState) Sanitize() {
 	}
 }
 
+func (ks *KongState) SanitizedCopy() *KongState {
+	return &KongState{
+		Services:       ks.Services,
+		Upstreams:      ks.Upstreams,
+		Certificates:   make([]Certificate, 0),
+		CACertificates: ks.CACertificates,
+		Plugins:        ks.Plugins,
+		Consumers: func() (res []Consumer) {
+			for _, v := range ks.Consumers {
+				res = append(res, *v.SanitizedCopy())
+			}
+			return
+		}(),
+	}
+}
+
 var supportedCreds = sets.NewString(
 	"acl",
 	"basic-auth",

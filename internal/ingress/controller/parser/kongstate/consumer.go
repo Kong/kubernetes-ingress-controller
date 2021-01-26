@@ -24,6 +24,21 @@ type Consumer struct {
 	K8sKongConsumer configurationv1.KongConsumer
 }
 
+func (c *Consumer) SanitizedCopy() *Consumer {
+	return &Consumer{
+		Consumer:        c.Consumer,
+		Plugins:         c.Plugins,
+		KeyAuths:        make([]*kong.KeyAuth, 0),
+		HMACAuths:       make([]*kong.HMACAuth, 0),
+		JWTAuths:        make([]*kong.JWTAuth, 0),
+		BasicAuths:      make([]*kong.BasicAuth, 0),
+		Oauth2Creds:     make([]*kong.Oauth2Credential, 0),
+		ACLGroups:       c.ACLGroups,
+		K8sKongConsumer: c.K8sKongConsumer,
+	}
+
+}
+
 func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credConfig interface{}) error {
 	switch credType {
 	case "key-auth", "keyauth_credential":

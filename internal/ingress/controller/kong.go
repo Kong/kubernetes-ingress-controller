@@ -78,9 +78,8 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	if n.cfg.LogSensitiveConfig {
 		target, _ = json.Marshal(targetContent)
 	} else {
-		state.Sanitize()
-		sanitizedContent := n.toDeckContent(ctx, state)
-		target, _ = json.Marshal(sanitizedContent)
+		sanitizedState := state.SanitizedCopy()
+		target, _ = json.Marshal(n.toDeckContent(ctx, sanitizedState))
 	}
 	if err != nil {
 		if n.cfg.LogLevel == "debug" {

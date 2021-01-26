@@ -93,7 +93,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				log.Errorf("failed to provision credential: empty secret")
 				continue
 			}
-			err = c.SetCredential(log, credType, credConfig)
+			err = c.SetCredential(credType, credConfig)
 			if err != nil {
 				log.Errorf("failed to provision credential: %v", err)
 				continue

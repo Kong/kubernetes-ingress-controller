@@ -5,7 +5,6 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -354,7 +353,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.args.consumer.SetCredential(logrus.New(), tt.args.credType,
+			if err := tt.args.consumer.SetCredential(tt.args.credType,
 				tt.args.credConfig); (err != nil) != tt.wantErr {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)

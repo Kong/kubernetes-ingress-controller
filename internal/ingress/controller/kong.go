@@ -395,12 +395,25 @@ func (n *KongController) toDeckContent(
 		for _, p := range c.Plugins {
 			consumer.Plugins = append(consumer.Plugins, &file.FPlugin{Plugin: p})
 		}
-		consumer.KeyAuths = c.KeyAuths
-		consumer.HMACAuths = c.HMACAuths
-		consumer.BasicAuths = c.BasicAuths
-		consumer.JWTAuths = c.JWTAuths
-		consumer.ACLGroups = c.ACLGroups
-		consumer.Oauth2Creds = c.Oauth2Creds
+
+		for _, v := range c.KeyAuths {
+			consumer.KeyAuths = append(consumer.KeyAuths, &v.KeyAuth)
+		}
+		for _, v := range c.HMACAuths {
+			consumer.HMACAuths = append(consumer.HMACAuths, &v.HMACAuth)
+		}
+		for _, v := range c.BasicAuths {
+			consumer.BasicAuths = append(consumer.BasicAuths, &v.BasicAuth)
+		}
+		for _, v := range c.JWTAuths {
+			consumer.JWTAuths = append(consumer.JWTAuths, &v.JWTAuth)
+		}
+		for _, v := range c.ACLGroups {
+			consumer.ACLGroups = append(consumer.ACLGroups, &v.ACLGroup)
+		}
+		for _, v := range c.Oauth2Creds {
+			consumer.Oauth2Creds = append(consumer.Oauth2Creds, &v.Oauth2Credential)
+		}
 		content.Consumers = append(content.Consumers, consumer)
 	}
 	sort.SliceStable(content.Consumers, func(i, j int) bool {
@@ -415,6 +428,7 @@ func (n *KongController) toDeckContent(
 
 	return &content
 }
+
 func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate
 	if kongCert.ID != nil {

@@ -13,13 +13,13 @@ import (
 type Consumer struct {
 	kong.Consumer
 	Plugins    []kong.Plugin
-	KeyAuths   []*kong.KeyAuth
-	HMACAuths  []*kong.HMACAuth
-	JWTAuths   []*kong.JWTAuth
-	BasicAuths []*kong.BasicAuth
-	ACLGroups  []*kong.ACLGroup
+	KeyAuths   []*KeyAuth
+	HMACAuths  []*HMACAuth
+	JWTAuths   []*JWTAuth
+	BasicAuths []*BasicAuth
+	ACLGroups  []*ACLGroup
 
-	Oauth2Creds []*kong.Oauth2Credential
+	Oauth2Creds []*Oauth2Credential
 
 	K8sKongConsumer configurationv1.KongConsumer
 }
@@ -27,8 +27,8 @@ type Consumer struct {
 func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credConfig interface{}) error {
 	switch credType {
 	case "key-auth", "keyauth_credential":
-		var cred kong.KeyAuth
-		err := decodeCredential(credConfig, &cred)
+		var cred KeyAuth
+		err := decodeCredential(credConfig, &cred.KeyAuth)
 		if err != nil {
 			return fmt.Errorf("failed to decode key-auth credential: %w", err)
 
@@ -44,8 +44,8 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		}
 		c.KeyAuths = append(c.KeyAuths, &cred)
 	case "basic-auth", "basicauth_credential":
-		var cred kong.BasicAuth
-		err := decodeCredential(credConfig, &cred)
+		var cred BasicAuth
+		err := decodeCredential(credConfig, &cred.BasicAuth)
 		if err != nil {
 			return fmt.Errorf("failed to decode basic-auth credential: %w", err)
 		}
@@ -54,8 +54,8 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		}
 		c.BasicAuths = append(c.BasicAuths, &cred)
 	case "hmac-auth", "hmacauth_credential":
-		var cred kong.HMACAuth
-		err := decodeCredential(credConfig, &cred)
+		var cred HMACAuth
+		err := decodeCredential(credConfig, &cred.HMACAuth)
 		if err != nil {
 			return fmt.Errorf("failed to decode hmac-auth credential: %w", err)
 		}
@@ -64,8 +64,8 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		}
 		c.HMACAuths = append(c.HMACAuths, &cred)
 	case "oauth2":
-		var cred kong.Oauth2Credential
-		err := decodeCredential(credConfig, &cred)
+		var cred Oauth2Credential
+		err := decodeCredential(credConfig, &cred.Oauth2Credential)
 		if err != nil {
 			return fmt.Errorf("failed to decode oauth2 credential: %w", err)
 		}
@@ -74,8 +74,8 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		}
 		c.Oauth2Creds = append(c.Oauth2Creds, &cred)
 	case "jwt", "jwt_secret":
-		var cred kong.JWTAuth
-		err := decodeCredential(credConfig, &cred)
+		var cred JWTAuth
+		err := decodeCredential(credConfig, &cred.JWTAuth)
 		if err != nil {
 			log.Errorf("failed to process JWT credential: %v", err)
 		}
@@ -93,8 +93,8 @@ func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credCo
 		}
 		c.JWTAuths = append(c.JWTAuths, &cred)
 	case "acl":
-		var cred kong.ACLGroup
-		err := decodeCredential(credConfig, &cred)
+		var cred ACLGroup
+		err := decodeCredential(credConfig, &cred.ACLGroup)
 		if err != nil {
 			log.Errorf("failed to process ACL group: %v", err)
 		}

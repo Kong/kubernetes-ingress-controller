@@ -4,9 +4,69 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
+
+func int64Ptr(i int64) *int64 {
+	return &i
+}
+
+func TestConsumer_SanitizedCopy(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		in   Consumer
+		want Consumer
+	}{
+		{
+			name: "sanitizes all credentials and copies all other fields",
+			in: Consumer{
+				Consumer: kong.Consumer{
+					ID:        kong.String("1"),
+					CustomID:  kong.String("2"),
+					Username:  kong.String("3"),
+					CreatedAt: int64Ptr(4),
+					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
+				},
+				Plugins:    []kong.Plugin{{ID: kong.String("1")}},
+				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")}}},
+				HMACAuths:  []*HMACAuth{{kong.HMACAuth{ID: kong.String("1"), Secret: kong.String("secret")}}},
+				JWTAuths:   []*JWTAuth{{kong.JWTAuth{ID: kong.String("1"), Secret: kong.String("secret")}}},
+				BasicAuths: []*BasicAuth{{kong.BasicAuth{ID: kong.String("1"), Password: kong.String("secret")}}},
+				ACLGroups:  []*ACLGroup{{kong.ACLGroup{ID: kong.String("1")}}},
+				Oauth2Creds: []*Oauth2Credential{
+					{kong.Oauth2Credential{ID: kong.String("1"), ClientSecret: kong.String("secret")}},
+				},
+				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
+			},
+			want: Consumer{
+				Consumer: kong.Consumer{
+					ID:        kong.String("1"),
+					CustomID:  kong.String("2"),
+					Username:  kong.String("3"),
+					CreatedAt: int64Ptr(4),
+					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
+				},
+				Plugins:    []kong.Plugin{{ID: kong.String("1")}},
+				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
+				HMACAuths:  []*HMACAuth{{kong.HMACAuth{ID: kong.String("1"), Secret: redactedString}}},
+				JWTAuths:   []*JWTAuth{{kong.JWTAuth{ID: kong.String("1"), Secret: redactedString}}},
+				BasicAuths: []*BasicAuth{{kong.BasicAuth{ID: kong.String("1"), Password: redactedString}}},
+				ACLGroups:  []*ACLGroup{{kong.ACLGroup{ID: kong.String("1")}}},
+				Oauth2Creds: []*Oauth2Credential{
+					{kong.Oauth2Credential{ID: kong.String("1"), ClientSecret: redactedString}},
+				},
+				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := *tt.in.SanitizedCopy()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
 
 func TestConsumer_SetCredential(t *testing.T) {
 	username := "example"

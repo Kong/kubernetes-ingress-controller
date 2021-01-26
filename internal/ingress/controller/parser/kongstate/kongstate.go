@@ -23,6 +23,23 @@ type KongState struct {
 	Consumers      []Consumer
 }
 
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (ks *KongState) SanitizedCopy() *KongState {
+	return &KongState{
+		Services:       ks.Services,
+		Upstreams:      ks.Upstreams,
+		Certificates:   ks.Certificates, // TODO
+		CACertificates: ks.CACertificates,
+		Plugins:        ks.Plugins,
+		Consumers: func() (res []Consumer) {
+			for _, v := range ks.Consumers {
+				res = append(res, *v.SanitizedCopy())
+			}
+			return
+		}(),
+	}
+}
+
 func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
 	consumerIndex := make(map[string]Consumer)
 

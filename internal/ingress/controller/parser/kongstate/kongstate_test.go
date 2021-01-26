@@ -8,9 +8,47 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestKongState_SanitizedCopy(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		in   KongState
+		want KongState
+	}{
+		{
+			name: "sanitizes all consumers and copies all other fields",
+			in: KongState{
+				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
+				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1")}}},
+				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
+				Consumers: []Consumer{{
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")}}},
+				}},
+			},
+			want: KongState{
+				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
+				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1")}}},
+				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
+				Consumers: []Consumer{{
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
+				}},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := *tt.in.SanitizedCopy()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
 
 func Test_getPluginRelations(t *testing.T) {
 	type args struct {

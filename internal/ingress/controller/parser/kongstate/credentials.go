@@ -34,3 +34,76 @@ type ACLGroup struct {
 type Oauth2Credential struct {
 	kong.Oauth2Credential
 }
+
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *KeyAuth) SanitizedCopy() *KeyAuth {
+	return &KeyAuth{
+		kong.KeyAuth{
+			// Consumer field omitted
+			CreatedAt: c.CreatedAt,
+			ID:        c.ID,
+			Key:       redactedString,
+			Tags:      c.Tags,
+		},
+	}
+}
+
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *HMACAuth) SanitizedCopy() *HMACAuth {
+	return &HMACAuth{
+		kong.HMACAuth{
+			// Consumer field omitted
+			CreatedAt: c.CreatedAt,
+			ID:        c.ID,
+			Username:  c.Username,
+			Secret:    redactedString,
+			Tags:      c.Tags,
+		},
+	}
+}
+
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *JWTAuth) SanitizedCopy() *JWTAuth {
+	return &JWTAuth{
+		kong.JWTAuth{
+			// Consumer field omitted
+			CreatedAt:    c.CreatedAt,
+			ID:           c.ID,
+			Algorithm:    c.Algorithm,
+			Key:          c.Key, // despite field name, "key" is an identifier
+			RSAPublicKey: c.RSAPublicKey,
+			Secret:       redactedString,
+			Tags:         c.Tags,
+		},
+	}
+}
+
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *BasicAuth) SanitizedCopy() *BasicAuth {
+	return &BasicAuth{
+		kong.BasicAuth{
+			// Consumer field omitted
+			CreatedAt: c.CreatedAt,
+			ID:        c.ID,
+			Username:  c.Username,
+			Password:  redactedString,
+			Tags:      c.Tags,
+		},
+	}
+}
+
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
+	return &Oauth2Credential{
+		kong.Oauth2Credential{
+			// Consumer field omitted
+			CreatedAt:    c.CreatedAt,
+			ID:           c.ID,
+			Name:         c.Name,
+			ClientID:     c.ClientID,
+			ClientSecret: redactedString,
+			RedirectURIs: c.RedirectURIs,
+			Tags:         c.Tags,
+		},
+	}
+}

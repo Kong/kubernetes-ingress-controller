@@ -24,6 +24,46 @@ type Consumer struct {
 	K8sKongConsumer configurationv1.KongConsumer
 }
 
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *Consumer) SanitizedCopy() *Consumer {
+	return &Consumer{
+		Consumer: c.Consumer,
+		Plugins:  c.Plugins,
+		KeyAuths: func() (res []*KeyAuth) {
+			for _, v := range c.KeyAuths {
+				res = append(res, v.SanitizedCopy())
+			}
+			return
+		}(),
+		HMACAuths: func() (res []*HMACAuth) {
+			for _, v := range c.HMACAuths {
+				res = append(res, v.SanitizedCopy())
+			}
+			return
+		}(),
+		JWTAuths: func() (res []*JWTAuth) {
+			for _, v := range c.JWTAuths {
+				res = append(res, v.SanitizedCopy())
+			}
+			return
+		}(),
+		BasicAuths: func() (res []*BasicAuth) {
+			for _, v := range c.BasicAuths {
+				res = append(res, v.SanitizedCopy())
+			}
+			return
+		}(),
+		Oauth2Creds: func() (res []*Oauth2Credential) {
+			for _, v := range c.Oauth2Creds {
+				res = append(res, v.SanitizedCopy())
+			}
+			return
+		}(),
+		ACLGroups:       c.ACLGroups,
+		K8sKongConsumer: c.K8sKongConsumer,
+	}
+}
+
 func (c *Consumer) SetCredential(log logrus.FieldLogger, credType string, credConfig interface{}) error {
 	switch credType {
 	case "key-auth", "keyauth_credential":

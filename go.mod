@@ -7,6 +7,8 @@ require (
 	github.com/Azure/go-autorest/autorest v0.10.2 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.3 // indirect
 	github.com/go-logr/logr v0.3.0
+	github.com/kong/go-kong v0.15.0
+	github.com/kong/kubernetes-ingress-controller v1.1.1
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.1

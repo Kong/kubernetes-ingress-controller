@@ -1,0 +1,5 @@
+domain: my.domain
+layout: go.kubebuilder.io/v3
+projectName: railgun
+repo: github.com/kong/railgun
+version: 3-alpha

@@ -18,11 +18,11 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v2"
 	netv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,27 +49,36 @@ func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("ingress", req.NamespacedName)
 
-	// ensure this Ingress is managed by KONG
-	// TODO: add these filters to watch options instead!
 	ing := new(netv1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, ing); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// ensure this Ingress is managed by KONG
+	if !isManaged(ing.ObjectMeta) {
+		return ctrl.Result{}, nil
+	}
+
+	// marshal to YAML for later storage
 	cfg, err := yaml.Marshal(ing)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	secret, created, err := getOrCreateConfigSecret(ctx, r.Client, req.NamespacedName)
+	// get the configuration secret
+	secret, created, err := getOrCreateConfigSecret(ctx, r.Client, req.Namespace)
 	if err != nil {
+		if errors.IsAlreadyExists(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, err
 	}
 	if created {
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	key := fmt.Sprintf("%s-%s-%s", ing.GroupVersionKind(), ing.Namespace, ing.Name)
+	// get the storage key for this ingress object
+	key := keyFor(ing, req.NamespacedName)
 	if _, ok := secret.Data[key]; ok {
 		// TODO: for debugging, but need to remove later
 		r.Log.Info("ingress entry already exists and will be overwritten", "key", key)

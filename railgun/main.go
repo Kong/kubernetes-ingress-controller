@@ -77,7 +77,7 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
+	/* TODO: re-enable once fixed
 	if err = (&controllers.KongIngressReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
@@ -110,38 +110,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongConsumer")
 		os.Exit(1)
 	}
-	if err = (&controllers.KongIngressReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongIngress")
-		os.Exit(1)
-	}
-	if err = (&controllers.KongClusterPluginReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongClusterPlugin")
-		os.Exit(1)
-	}
-	if err = (&controllers.KongPluginReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongPlugin")
-		os.Exit(1)
-	}
-	if err = (&controllers.KongConsumerReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongConsumer")
-		os.Exit(1)
-	}
+	*/
 	if err = (&controllers.IngressReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),

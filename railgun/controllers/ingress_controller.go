@@ -18,15 +18,19 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
-	"gopkg.in/yaml.v2"
+	netv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// -----------------------------------------------------------------------------
+// V1 Ingress
+// -----------------------------------------------------------------------------
 
 // IngressReconciler reconciles a Ingress object
 type IngressReconciler struct {
@@ -47,48 +51,57 @@ func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile adds any v1.Ingress configured for use by Kong to the combined configuration secret used to configure
 // the Kong Admin API to configure and add new Services and Routes for the Ingress object.
 func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("ingress", req.NamespacedName)
+	log := r.Log.WithValues("ingress", req.NamespacedName)
 
 	ing := new(netv1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, ing); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// ensure this Ingress is managed by KONG
-	if !isManaged(ing.ObjectMeta) {
-		return ctrl.Result{}, nil
+	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
+		// TODO: finalizer
+		log.Info("ingress resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
+		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, ing)
 	}
 
-	// marshal to YAML for later storage
-	cfg, err := yaml.Marshal(ing)
-	if err != nil {
-		return ctrl.Result{}, err
+	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, ing)
+}
+
+// -----------------------------------------------------------------------------
+// V1Beta1 Ingress
+// -----------------------------------------------------------------------------
+
+// V1Beta1IngressReconciler reconciles a Ingress object
+type V1Beta1IngressReconciler struct {
+	client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *V1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&netv1beta1.Ingress{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/finalizers,verbs=update
+
+// Reconcile adds any v1beta1.Ingress configured for use by Kong to the combined configuration secret used to configure
+// the Kong Admin API to configure and add new Services and Routes for the Ingress object.
+func (r *V1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("v1beta1ingress", req.NamespacedName)
+
+	ing := new(netv1beta1.Ingress)
+	if err := r.Get(ctx, req.NamespacedName, ing); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// get the configuration secret
-	secret, created, err := getOrCreateConfigSecret(ctx, r.Client, req.Namespace)
-	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	if created {
-		return ctrl.Result{Requeue: true}, nil
+	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
+		// TODO: finalizer
+		log.Info("ingress resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
+		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, ing)
 	}
 
-	// get the storage key for this ingress object
-	key := keyFor(ing, req.NamespacedName)
-	if _, ok := secret.Data[key]; ok {
-		// TODO: for debugging, but need to remove later
-		r.Log.Info("ingress entry already exists and will be overwritten", "key", key)
-	}
-
-	// TODO: patch instead of update for perf
-	secret.Data[key] = cfg
-	if err := r.Update(ctx, secret); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
+	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, ing)
 }

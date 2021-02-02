@@ -1,0 +1,7 @@
+apiVersion: konghq.com.my.domain/v1beta1
+kind: KongConsumer
+metadata:
+  name: kongconsumer-sample
+spec:
+  # Add fields here
+  foo: bar

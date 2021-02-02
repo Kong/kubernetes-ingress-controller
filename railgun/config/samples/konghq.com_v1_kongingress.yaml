@@ -1,0 +1,7 @@
+apiVersion: konghq.com.my.domain/v1
+kind: KongIngress
+metadata:
+  name: kongingress-sample
+spec:
+  # Add fields here
+  foo: bar

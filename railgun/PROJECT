@@ -2,4 +2,25 @@ domain: my.domain
 layout: go.kubebuilder.io/v3
 projectName: railgun
 repo: github.com/kong/railgun
+resources:
+- api:
+    crdVersion: v1
+  group: konghq.com
+  kind: KongIngress
+  version: v1beta1
+- api:
+    crdVersion: v1
+  group: konghq.com
+  kind: KongClusterPlugin
+  version: v1beta1
+- api:
+    crdVersion: v1
+  group: konghq.com
+  kind: KongPlugin
+  version: v1beta1
+- api:
+    crdVersion: v1
+  group: konghq.com
+  kind: KongConsumer
+  version: v1beta1
 version: 3-alpha

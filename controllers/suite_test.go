@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	konghqcomv1 "github.com/kong/railgun/api/v1"
+	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 

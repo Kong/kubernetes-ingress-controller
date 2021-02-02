@@ -17,26 +17,15 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/kong/go-kong/kong"
+	kicv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var _ = kicv1.KongIngress{}
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// KongIngressSpec defines the desired state of KongIngress
-type KongIngressSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of KongIngress. Edit kongingress_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-}
-
-// KongIngressStatus defines the observed state of KongIngress
-type KongIngressStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -46,8 +35,9 @@ type KongIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KongIngressSpec   `json:"spec,omitempty"`
-	Status KongIngressStatus `json:"status,omitempty"`
+	Upstream *kong.Upstream `json:"upstream,omitempty"`
+	Proxy    *kong.Service  `json:"proxy,omitempty"`
+	Route    *kong.Route    `json:"route,omitempty"`
 }
 
 //+kubebuilder:object:root=true

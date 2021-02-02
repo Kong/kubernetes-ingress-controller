@@ -18,9 +18,11 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/networking/v1"
+	"gopkg.in/yaml.v2"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,37 +35,51 @@ type IngressReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&netv1.Ingress{}).Complete(r)
+}
+
 //+kubebuilder:rbac:groups=networking.k8s.io.my.domain,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io.my.domain,resources=ingresses/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=networking.k8s.io.my.domain,resources=ingresses/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Ingress object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
+// Reconcile adds any v1.Ingress configured for use by Kong to the combined configuration secret used to configure
+// the Kong Admin API to configure and add new Services and Routes for the Ingress object.
 func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("ingress", req.NamespacedName)
 
-	// TODO: ensure this Ingress is managed by KONG
+	// ensure this Ingress is managed by KONG
+	// TODO: add these filters to watch options instead!
+	ing := new(netv1.Ingress)
+	if err := r.Get(ctx, req.NamespacedName, ing); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
-	// TODO: incoming ingress, scrape for kong annotations:
-	// - https://docs.konghq.com/kubernetes-ingress-controller/1.1.x/references/annotations/
+	cfg, err := yaml.Marshal(ing)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
-	// TODO: get/create an existing Configuration secret
+	secret, created, err := getOrCreateConfigSecret(ctx, r.Client, req.NamespacedName)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if created {
+		return ctrl.Result{Requeue: true}, nil
+	}
 
-	// TODO: dump this ingress to the configuration secret
+	key := fmt.Sprintf("%s-%s-%s", ing.GroupVersionKind(), ing.Namespace, ing.Name)
+	if _, ok := secret.Data[key]; ok {
+		// TODO: for debugging, but need to remove later
+		r.Log.Info("ingress entry already exists and will be overwritten", "key", key)
+	}
 
-	// TODO: PUT new configuration
+	// TODO: patch instead of update for perf
+	secret.Data[key] = cfg
+	if err := r.Update(ctx, secret); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.Ingress{}).Complete(r)
 }

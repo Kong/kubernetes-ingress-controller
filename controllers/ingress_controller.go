@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,15 +49,21 @@ type IngressReconciler struct {
 func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("ingress", req.NamespacedName)
 
-	// your logic here
+	// TODO: ensure this Ingress is managed by KONG
+
+	// TODO: incoming ingress, scrape for kong annotations:
+	// - https://docs.konghq.com/kubernetes-ingress-controller/1.1.x/references/annotations/
+
+	// TODO: get/create an existing Configuration secret
+
+	// TODO: dump this ingress to the configuration secret
+
+	// TODO: PUT new configuration
 
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		// For().
-		Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.Ingress{}).Complete(r)
 }

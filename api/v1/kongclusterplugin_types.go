@@ -17,26 +17,12 @@ limitations under the License.
 package v1
 
 import (
+	kicv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// KongClusterPluginSpec defines the desired state of KongClusterPlugin
-type KongClusterPluginSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of KongClusterPlugin. Edit kongclusterplugin_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-}
-
-// KongClusterPluginStatus defines the observed state of KongClusterPlugin
-type KongClusterPluginStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -46,8 +32,28 @@ type KongClusterPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KongClusterPluginSpec   `json:"spec,omitempty"`
-	Status KongClusterPluginStatus `json:"status,omitempty"`
+	// ConsumerRef is a reference to a particular consumer
+	ConsumerRef string `json:"consumerRef,omitempty"`
+
+	// Disabled set if the plugin is disabled or not
+	Disabled bool `json:"disabled,omitempty"`
+
+	// Config contains the plugin configuration.
+	Config kicv1.Configuration `json:"config,omitempty"`
+
+	// ConfigFrom references a secret containing the plugin configuration.
+	ConfigFrom kicv1.NamespacedConfigSource `json:"configFrom,omitempty"`
+
+	// PluginName is the name of the plugin to which to apply the config
+	PluginName string `json:"plugin,omitempty"`
+
+	// RunOn configures the plugin to run on the first or the second or both
+	// nodes in case of a service mesh deployment.
+	RunOn string `json:"run_on,omitempty"`
+
+	// Protocols configures plugin to run on requests received on specific
+	// protocols.
+	Protocols []string `json:"protocols,omitempty"`
 }
 
 //+kubebuilder:object:root=true

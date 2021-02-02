@@ -23,21 +23,6 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// KongConsumerSpec defines the desired state of KongConsumer
-type KongConsumerSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of KongConsumer. Edit kongconsumer_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-}
-
-// KongConsumerStatus defines the observed state of KongConsumer
-type KongConsumerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
@@ -46,8 +31,16 @@ type KongConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KongConsumerSpec   `json:"spec,omitempty"`
-	Status KongConsumerStatus `json:"status,omitempty"`
+	// Username unique username of the consumer.
+	Username string `json:"username,omitempty"`
+
+	// CustomID existing unique ID for the consumer - useful for mapping
+	// Kong with users in your existing database
+	CustomID string `json:"custom_id,omitempty"`
+
+	// Credentials are references to secrets containing a credential to be
+	// provisioned in Kong.
+	Credentials []string `json:"credentials,omitempty"`
 }
 
 //+kubebuilder:object:root=true

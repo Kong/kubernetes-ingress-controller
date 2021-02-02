@@ -24,7 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konghqcomv1 "github.com/kong/railgun/api/v1"
+	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
 )
 
 // KongConsumerReconciler reconciles a KongConsumer object

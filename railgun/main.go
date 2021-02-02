@@ -31,9 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	konghqcomv1 "github.com/kong/railgun/api/v1"
-	konghqcomv1beta1 "github.com/kong/railgun/api/v1beta1"
-	"github.com/kong/railgun/controllers"
+	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
+	"github.com/shaneutt/railgun/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,7 +44,6 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(konghqcomv1beta1.AddToScheme(scheme))
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }

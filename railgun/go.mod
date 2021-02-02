@@ -1,4 +1,4 @@
-module github.com/kong/railgun
+module github.com/shaneutt/railgun
 
 go 1.15
 

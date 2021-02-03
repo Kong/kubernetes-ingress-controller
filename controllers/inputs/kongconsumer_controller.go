@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package inputs
 
 import (
 	"context"
@@ -23,30 +23,32 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
 )
 
-// SecretReconciler reconciles a Secret object
-type SecretReconciler struct {
+// KongConsumerReconciler reconciles a KongConsumer object
+type KongConsumerReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=secrets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=update
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Secret object against the actual cluster state, and then
+// the KongConsumer object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
-func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("secret", req.NamespacedName)
+func (r *KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = r.Log.WithValues("kongconsumer", req.NamespacedName)
 
 	// your logic here
 
@@ -54,9 +56,8 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		// For().
+		For(&konghqcomv1.KongConsumer{}).
 		Complete(r)
 }

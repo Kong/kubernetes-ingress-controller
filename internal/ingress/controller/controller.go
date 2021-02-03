@@ -28,7 +28,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"

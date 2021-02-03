@@ -39,7 +39,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"

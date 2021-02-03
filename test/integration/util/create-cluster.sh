@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu
 
 REGISTRY_PORT=5000
 docker run -d --restart=always -p "$REGISTRY_PORT:5000" --name "$REGISTRY_NAME" registry:2
@@ -9,6 +9,9 @@ KIND_CONFIG="
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
 name: $CLUSTER_NAME
+nodes:
+- role: control-plane
+  image: 'kindest/node:$KUBE_VERSION'
 containerdConfigPatches:
 - |-
   [plugins.\"io.containerd.grpc.v1.cri\".registry.mirrors.\"$REGISTRY_NAME:$REGISTRY_PORT\"]

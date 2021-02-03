@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/stretchr/testify/assert"
 	networking "k8s.io/api/networking/v1beta1"
 )

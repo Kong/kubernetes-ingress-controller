@@ -24,7 +24,7 @@ This command builds a KIC Docker image and runs the test against that image.
 It is possible to run the test against any prebuilt KIC image, skipping the build step:
 
 ```bash
-env KIC_IMAGE=some-kic-image:tag ./test/integration/test.sh
+env KIC_IMAGE=some-kic-image:tag KUBE_VERSION=v1.20.2 ./test/integration/test.sh
 ```
 
 ### Troubleshooting
@@ -37,7 +37,7 @@ By passing `SKIP_TEARDOWN=yes` to the test you can inspect the test environment 
 ```bash
 make SKIP_TEARDOWN=yes integration-test
 # or
-env KIC_IMAGE=some-kic-image:tag SKIP_TEARDOWN=yes ./test/integration/test.sh
+env KIC_IMAGE=some-kic-image:tag KUBE_VERSION=v1.20.2 SKIP_TEARDOWN=yes ./test/integration/test.sh
 ```
 
 #### Access the test cluster with `kubectl`

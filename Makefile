@@ -6,6 +6,7 @@ IMAGE = $(REGISTRY)/$(IMGNAME)
 # only for dev
 DB?=false
 RUN_VERSION?=20
+KUBE_VERSION?=v1.20.2
 
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
@@ -62,6 +63,7 @@ container:
 run:
 	./hack/dev/start.sh ${DB} ${RUN_VERSION}
 
+
 .PHONY: integration-test
 integration-test: container
-	KIC_IMAGE="${IMAGE}:${TAG}" ./test/integration/test.sh
+	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./test/integration/test.sh

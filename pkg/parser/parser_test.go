@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -3336,7 +3336,7 @@ func TestGetEndpoints(t *testing.T) {
 		port   *corev1.ServicePort
 		proto  corev1.Protocol
 		fn     func(string, string) (*corev1.Endpoints, error)
-		result []utils.Endpoint
+		result []util.Endpoint
 	}{
 		{
 			"no service should return 0 endpoints",
@@ -3346,7 +3346,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"no service port should return 0 endpoints",
@@ -3356,7 +3356,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"a service without endpoints should return 0 endpoints",
@@ -3366,7 +3366,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"a service type ServiceTypeExternalName service with an invalid port should return 0 endpoints",
@@ -3380,7 +3380,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"a service type ServiceTypeExternalName with a valid port should return one endpoint",
@@ -3404,7 +3404,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]utils.Endpoint{
+			[]util.Endpoint{
 				{
 					Address: "10.0.0.1.xip.io",
 					Port:    "80",
@@ -3439,7 +3439,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]utils.Endpoint{
+			[]util.Endpoint{
 				{
 					Address: "foo.bar.svc",
 					Port:    "2080",
@@ -3468,7 +3468,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return nil, fmt.Errorf("unexpected error")
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"should return no endpoints when the protocol does not match",
@@ -3509,7 +3509,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"should return no endpoints when there is no ready Addresses",
@@ -3550,7 +3550,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"should return no endpoints when the name of the port name do not match any port in the endpoint Subsets",
@@ -3593,7 +3593,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]utils.Endpoint{},
+			[]util.Endpoint{},
 		},
 		{
 			"should return one endpoint when the name of the port name match a port in the endpoint Subsets",
@@ -3636,7 +3636,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]utils.Endpoint{
+			[]util.Endpoint{
 				{
 					Address: "1.1.1.1",
 					Port:    "80",
@@ -3689,7 +3689,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]utils.Endpoint{
+			[]util.Endpoint{
 				{
 					Address: "1.1.1.1",
 					Port:    "80",

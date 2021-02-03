@@ -62,6 +62,8 @@ jobs:
   test-k8s:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      KUBE_VERSION: v1.20.2
     steps:
     - name: 'Arrange: Check out the repo'
       uses: actions/checkout@v2
@@ -75,6 +77,6 @@ jobs:
         docker load < image.tar
         docker tag local/kong-ingress-controller:ci localhost:32000/kong-ingress-controller:ci
 
-    - name: 'Test: Run integration tests'
+    - name: 'Test: Run integration tests (k8s ${{ env.KUBE_VERSION }})'
       run: |
         env KIC_IMAGE=local/kong-ingress-controller:ci ./test/integration/test.sh

@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
-	"github.com/shaneutt/railgun/controllers/configuration"
 	"github.com/shaneutt/railgun/controllers/inputs"
 	//+kubebuilder:scaffold:imports
 )
@@ -128,6 +127,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "V1Beta1Ingress")
 		os.Exit(1)
 	}
+	/* re-enable once fixed
 	if err = (&configuration.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
@@ -136,6 +136,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Secret")
 		os.Exit(1)
 	}
+	*/
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

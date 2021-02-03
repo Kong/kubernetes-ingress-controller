@@ -33,7 +33,7 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 func buildLoadBalancerIngressByIP() []apiv1.LoadBalancerIngress {
@@ -350,7 +350,7 @@ func (til *testIngressLister) ListKnativeIngresses() ([]*knative.Ingress, error)
 
 func buildStatusSync() statusSync {
 	return statusSync{
-		pod: &utils.PodInfo{
+		pod: &util.PodInfo{
 			Name:      "foo_base_pod",
 			Namespace: apiv1.NamespaceDefault,
 			Labels: map[string]string{
@@ -362,7 +362,7 @@ func buildStatusSync() statusSync {
 			CoreClient:     buildSimpleClientSet(&networkingv1beta1.IngressList{Items: buildIngressesV1beta1()}),
 			PublishService: apiv1.NamespaceDefault + "/" + "foo",
 			IngressLister:  &testIngressLister{ingressesV1beta1: sampleIngressesV1beta1},
-			IngressAPI:     utils.ExtensionsV1beta1,
+			IngressAPI:     util.ExtensionsV1beta1,
 		},
 	}
 }
@@ -377,7 +377,7 @@ func TestStatusActionsV1beta1(t *testing.T) {
 		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
 		IngressLister:          &testIngressLister{ingressesV1beta1: sampleIngressesV1beta1},
 		UpdateStatusOnShutdown: true,
-		IngressAPI:             utils.NetworkingV1beta1,
+		IngressAPI:             util.NetworkingV1beta1,
 		Logger:                 logrus.New(),
 	}
 	// create object
@@ -447,7 +447,7 @@ func TestStatusActionsV1(t *testing.T) {
 		PublishService:         apiv1.NamespaceDefault + "/" + "foo",
 		IngressLister:          &testIngressLister{ingressesV1: sampleIngressesV1},
 		UpdateStatusOnShutdown: true,
-		IngressAPI:             utils.NetworkingV1,
+		IngressAPI:             util.NetworkingV1,
 		Logger:                 logrus.New(),
 	}
 	// create object

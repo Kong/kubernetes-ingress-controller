@@ -28,11 +28,11 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	networking "k8s.io/api/networking/v1beta1"
@@ -86,7 +86,7 @@ type Configuration struct {
 	UpdateStatusOnShutdown bool
 	ElectionID             string
 
-	IngressAPI utils.IngressAPI
+	IngressAPI util.IngressAPI
 
 	EnableKnativeIngressSupport bool
 

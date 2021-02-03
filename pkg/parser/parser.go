@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -306,7 +306,7 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service,
 	servicePort *corev1.ServicePort) []kongstate.Target {
 	var targets []kongstate.Target
-	var endpoints []utils.Endpoint
+	var endpoints []util.Endpoint
 
 	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
@@ -336,9 +336,9 @@ func getEndpoints(
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
-) []utils.Endpoint {
+) []util.Endpoint {
 
-	upsServers := []utils.Endpoint{}
+	upsServers := []util.Endpoint{}
 
 	if s == nil || port == nil {
 		return upsServers
@@ -366,13 +366,13 @@ func getEndpoints(
 			return upsServers
 		}
 
-		return append(upsServers, utils.Endpoint{
+		return append(upsServers, util.Endpoint{
 			Address: s.Spec.ExternalName,
 			Port:    fmt.Sprintf("%v", targetPort),
 		})
 	}
 	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {
-		return append(upsServers, utils.Endpoint{
+		return append(upsServers, util.Endpoint{
 			Address: s.Name + "." + s.Namespace + ".svc",
 			Port:    fmt.Sprintf("%v", port.Port),
 		})
@@ -412,7 +412,7 @@ func getEndpoints(
 				if _, exists := adus[ep]; exists {
 					continue
 				}
-				ups := utils.Endpoint{
+				ups := util.Endpoint{
 					Address: epAddress.IP,
 					Port:    fmt.Sprintf("%v", targetPort),
 				}

@@ -8,7 +8,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -70,7 +70,7 @@ func (e elector) IsLeader() bool {
 
 // NewElector returns an instance of Elector based on config.
 func NewElector(ctx context.Context, config Config) Elector {
-	pod, err := utils.GetPodDetails(ctx, config.Client)
+	pod, err := util.GetPodDetails(ctx, config.Client)
 	if err != nil {
 		// XXX remove this fatal log and bubble up the error
 		config.Logger.Fatalf("failed to obtain pod info: %v", err)

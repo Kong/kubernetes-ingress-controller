@@ -11,6 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// KongIngressFinalizer is the finalizer used to ensure Kong configuration cleanup for deleted Ingress resources.
+const KongIngressFinalizer = "networking.konghq.com/ingress"
+
 // isManaged verifies whether an Ingress resource is managed by Kong controllers by verifying the
 // annotations of the object.
 // TODO: add these filters to watch options instead!
@@ -56,12 +59,20 @@ func storeIngressUpdates(ctx context.Context, c client.Client, log logr.Logger, 
 	}
 	log.Info("kong configuration secret found", "namespace", nsn.Namespace, "name", ConfigSecretName)
 
-	// get the storage key for this ingress object
-	// TODO: patch instead of update for perf
+	// before we store configuration data for this Ingress object, ensure that it has our finalizer set
+	if !hasFinalizer(obj, KongIngressFinalizer) {
+		finalizers := obj.GetFinalizers()
+		obj.SetFinalizers(append(finalizers, KongIngressFinalizer))
+		if err := c.Update(ctx, obj); err != nil { // TODO: patch here instead of update
+			return ctrl.Result{}, err
+		}
+	}
+
+	// get the storage key for this ingress object and update it
 	// TODO: check before overriding
 	key := keyFor(obj, nsn)
 	secret.Data[key] = cfg
-	if err := c.Update(ctx, secret); err != nil {
+	if err := c.Update(ctx, secret); err != nil { // TODO: patch here instead of update for perf
 		if errors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -74,6 +85,23 @@ func storeIngressUpdates(ctx context.Context, c client.Client, log logr.Logger, 
 
 // cleanupIngress ensures that a deleted ingress resource is no longer present in the kong configuration secret.
 func cleanupIngress(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
-	// WIP
+	// TODO remove secret entry
+
+	if hasFinalizer(obj, KongIngressFinalizer) {
+		log.Info("kong ingress finalizer needs to be removed from ingress resource which is deleting", "ingress", obj.GetName(), "finalizer", KongIngressFinalizer)
+		finalizers := []string{}
+		for _, finalizer := range obj.GetFinalizers() {
+			if finalizer != KongIngressFinalizer {
+				finalizers = append(finalizers, finalizer)
+			}
+		}
+		obj.SetFinalizers(finalizers)
+		if err := c.Update(ctx, obj); err != nil { // TODO: patch here instead of update
+			return ctrl.Result{}, err
+		}
+		log.Info("the kong ingress finalizer was removed from an ingress resource which is deleting", "ingress", obj.GetName(), "finalizer", KongIngressFinalizer)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	return ctrl.Result{}, nil
 }

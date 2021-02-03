@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package inputs
 
 import (
 	"context"
@@ -27,28 +27,28 @@ import (
 	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
 )
 
-// KongConsumerReconciler reconciles a KongConsumer object
-type KongConsumerReconciler struct {
+// KongIngressReconciler reconciles a KongIngress object
+type KongIngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the KongConsumer object against the actual cluster state, and then
+// the KongIngress object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
-func (r *KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("kongconsumer", req.NamespacedName)
+func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = r.Log.WithValues("kongingress", req.NamespacedName)
 
 	// your logic here
 
@@ -56,8 +56,8 @@ func (r *KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&konghqcomv1.KongConsumer{}).
+		For(&konghqcomv1.KongIngress{}).
 		Complete(r)
 }

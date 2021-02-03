@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package configuration
 
 import (
 	"context"
@@ -23,32 +23,30 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
 )
 
-// KongIngressReconciler reconciles a KongIngress object
-type KongIngressReconciler struct {
+// SecretReconciler reconciles a Secret object
+type SecretReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=secrets/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the KongIngress object against the actual cluster state, and then
+// the Secret object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
-func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("kongingress", req.NamespacedName)
+func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = r.Log.WithValues("secret", req.NamespacedName)
 
 	// your logic here
 
@@ -56,8 +54,9 @@ func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&konghqcomv1.KongIngress{}).
+		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
+		// For().
 		Complete(r)
 }

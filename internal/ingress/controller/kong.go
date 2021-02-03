@@ -34,8 +34,8 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.

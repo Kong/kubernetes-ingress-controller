@@ -2,9 +2,9 @@ package parser
 
 import (
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"

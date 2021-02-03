@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )

@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"

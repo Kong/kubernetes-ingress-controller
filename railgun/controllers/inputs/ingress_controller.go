@@ -21,8 +21,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	netv1beta1 "k8s.io/api/extensions/v1beta1"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,7 +60,6 @@ func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
-		// TODO: finalizer
 		log.Info("ingress resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
 		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, ing)
 	}
@@ -93,6 +93,46 @@ func (r *V1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	log := r.Log.WithValues("v1beta1ingress", req.NamespacedName)
 
 	ing := new(netv1beta1.Ingress)
+	if err := r.Get(ctx, req.NamespacedName, ing); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
+		log.Info("ingress resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
+		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, ing)
+	}
+
+	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, ing)
+}
+
+// -----------------------------------------------------------------------------
+// ExtensionsV1Beta1 Ingress
+// TODO: we may be able to drop this controller entirely if the oldest Kubernetes
+// we support is 1.14.10, as that version had net v1beta1 which will cover for this.
+// -----------------------------------------------------------------------------
+
+// ExtensionsV1Beta1IngressReconciler reconciles a Ingress object
+type ExtensionsV1Beta1IngressReconciler struct {
+	client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ExtensionsV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&extv1beta1.Ingress{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses/finalizers,verbs=update
+
+// Reconcile adds any v1beta1.Ingress configured for use by Kong to the combined configuration secret used to configure
+// the Kong Admin API to configure and add new Services and Routes for the Ingress object.
+func (r *ExtensionsV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("extensionsv1beta1ingress", req.NamespacedName)
+
+	ing := new(extv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, ing); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}

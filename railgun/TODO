@@ -3,3 +3,5 @@
 * we need to change OR provider a Getter()/Setter() wrapper for Healthchecks (float64 not supported in controller-gen)
   - https://github.com/Kong/go-kong/blob/main/kong/types.go#L160
   - https://github.com/kubernetes-sigs/controller-tools/issues/245
+* different k8s versions will throw back the controllers based on the Ingress API version they want
+  - we need to have code which covers missing API versions based on the K8s version

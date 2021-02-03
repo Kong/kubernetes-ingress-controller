@@ -32,7 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
-	"github.com/shaneutt/railgun/controllers"
+	"github.com/shaneutt/railgun/controllers/configuration"
+	"github.com/shaneutt/railgun/controllers/inputs"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -78,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 	/* TODO: re-enable once fixed
-	if err = (&controllers.KongIngressReconciler{
+	if err = (&inputs.KongIngressReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
 		Scheme: mgr.GetScheme(),
@@ -86,7 +87,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongIngress")
 		os.Exit(1)
 	}
-	if err = (&controllers.KongClusterPluginReconciler{
+	if err = (&inputs.KongClusterPluginReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 		Scheme: mgr.GetScheme(),
@@ -94,7 +95,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongClusterPlugin")
 		os.Exit(1)
 	}
-	if err = (&controllers.KongPluginReconciler{
+	if err = (&inputs.KongPluginReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
 		Scheme: mgr.GetScheme(),
@@ -102,7 +103,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongPlugin")
 		os.Exit(1)
 	}
-	if err = (&controllers.KongConsumerReconciler{
+	if err = (&inputs.KongConsumerReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
 		Scheme: mgr.GetScheme(),
@@ -111,7 +112,7 @@ func main() {
 		os.Exit(1)
 	}
 	*/
-	if err = (&controllers.IngressReconciler{
+	if err = (&inputs.IngressReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 		Scheme: mgr.GetScheme(),
@@ -119,7 +120,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Ingress")
 		os.Exit(1)
 	}
-	if err = (&controllers.V1Beta1IngressReconciler{
+	if err = (&inputs.V1Beta1IngressReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("V1Beta1Ingress"),
 		Scheme: mgr.GetScheme(),
@@ -127,7 +128,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "V1Beta1Ingress")
 		os.Exit(1)
 	}
-	if err = (&controllers.SecretReconciler{
+	if err = (&configuration.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
 		Scheme: mgr.GetScheme(),

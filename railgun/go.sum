@@ -781,8 +781,6 @@ github.com/kong/deck v1.2.1/go.mod h1:bQ3rKdw35e8oThRXhOMq6IgIFyDe39YQdiEgCp9qJW
 github.com/kong/go-kong v0.13.0/go.mod h1:oF4kdI9l/a8ndDW2ayJA0yhDBpO8Qt2aLiJEv10hqnQ=
 github.com/kong/go-kong v0.15.0 h1:9Y+7iqh7/0z8/BppAaLEV7ueSSyqK6lJOHFvqJnSSqM=
 github.com/kong/go-kong v0.15.0/go.mod h1:oF4kdI9l/a8ndDW2ayJA0yhDBpO8Qt2aLiJEv10hqnQ=
-github.com/kong/kubernetes-ingress-controller v1.1.1 h1:l7+C/2gE2zzMCC3afPSsIUwwn9Guz/XUf4GiXpeeOyo=
-github.com/kong/kubernetes-ingress-controller v1.1.1/go.mod h1:lbF+Bigl1UeV39eN6NNaUHFutxCYh9ySQa7vnIiI9tk=
 github.com/kong/kubernetes-ingress-controller v1.1.2-0.20210203125350-f9d44c654a00 h1:ESiBGwzGobs2ZPO+CzwaHBLBNAtfAs05aSYjKFl7Me8=
 github.com/kong/kubernetes-ingress-controller v1.1.2-0.20210203125350-f9d44c654a00/go.mod h1:lbF+Bigl1UeV39eN6NNaUHFutxCYh9ySQa7vnIiI9tk=
 github.com/konsorten/go-windows-terminal-sequences v0.0.0-20180402223658-b729f2633dfe/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

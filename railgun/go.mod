@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v0.3.0
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/kong/go-kong v0.15.0
-	github.com/kong/kubernetes-ingress-controller v1.1.1
+	github.com/kong/kubernetes-ingress-controller v1.1.2-0.20210203125350-f9d44c654a00
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	golang.org/x/sys v0.0.0-20200928205150-006507a75852 // indirect

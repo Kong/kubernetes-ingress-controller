@@ -98,7 +98,6 @@ func (r *V1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
-		// TODO: finalizer
 		log.Info("ingress resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
 		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, ing)
 	}

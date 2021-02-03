@@ -324,40 +324,6 @@ func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
 	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
 }
 
-func (ks *KongState) Sanitize() {
-	ks.Certificates = make([]Certificate, 0)
-	for i, service := range ks.Services {
-		service.ClientCertificate = nil
-		ks.Services[i] = service
-	}
-
-	for i, consumer := range ks.Consumers {
-		consumer.KeyAuths = make([]*kong.KeyAuth, 0)
-		consumer.HMACAuths = make([]*kong.HMACAuth, 0)
-		consumer.JWTAuths = make([]*kong.JWTAuth, 0)
-		consumer.BasicAuths = make([]*kong.BasicAuth, 0)
-		consumer.ACLGroups = make([]*kong.ACLGroup, 0)
-		consumer.Oauth2Creds = make([]*kong.Oauth2Credential, 0)
-		ks.Consumers[i] = consumer
-	}
-}
-
-func (ks *KongState) SanitizedCopy() *KongState {
-	return &KongState{
-		Services:       ks.Services,
-		Upstreams:      ks.Upstreams,
-		Certificates:   make([]Certificate, 0),
-		CACertificates: ks.CACertificates,
-		Plugins:        ks.Plugins,
-		Consumers: func() (res []Consumer) {
-			for _, v := range ks.Consumers {
-				res = append(res, *v.SanitizedCopy())
-			}
-			return
-		}(),
-	}
-}
-
 var supportedCreds = sets.NewString(
 	"acl",
 	"basic-auth",

@@ -27,9 +27,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	pool "gopkg.in/go-playground/pool.v3"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -81,7 +81,7 @@ type Config struct {
 
 	IngressLister ingressLister
 
-	IngressAPI utils.IngressAPI
+	IngressAPI util.IngressAPI
 
 	Logger logrus.FieldLogger
 }
@@ -96,7 +96,7 @@ type Config struct {
 type statusSync struct {
 	Config
 	// pod contains runtime information about this pod
-	pod *utils.PodInfo
+	pod *util.PodInfo
 
 	// workqueue used to keep in sync the status IP/s
 	// in the Ingress rules
@@ -178,7 +178,7 @@ func (s statusSync) keyfunc(input interface{}) (interface{}, error) {
 
 // NewStatusSyncer returns a new Sync instance
 func NewStatusSyncer(ctx context.Context, config Config) (Sync, error) {
-	pod, err := utils.GetPodDetails(ctx, config.CoreClient)
+	pod, err := util.GetPodDetails(ctx, config.CoreClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch pod information: %v", err)
 	}
@@ -228,7 +228,7 @@ func (s *statusSync) runningAddresses(ctx context.Context) ([]string, error) {
 		return addrs, nil
 	}
 
-	ns, name, _ := utils.ParseNameNS(s.PublishService)
+	ns, name, _ := util.ParseNameNS(s.PublishService)
 	svc, err := s.CoreClient.CoreV1().Services(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (s *statusSync) runningAddresses(ctx context.Context) ([]string, error) {
 				continue
 			}
 
-			name := utils.GetNodeIPOrName(ctx, s.CoreClient, pod.Spec.NodeName)
+			name := util.GetNodeIPOrName(ctx, s.CoreClient, pod.Spec.NodeName)
 			if !inSlice(name, addrs) {
 				addrs = append(addrs, name)
 			}
@@ -367,7 +367,7 @@ func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkin
 		}
 
 		switch s.IngressAPI {
-		case utils.NetworkingV1:
+		case util.NetworkingV1:
 			// I expect this case to never happen, because if s.IngressAPI == NetworkingV1, then I expect Store to have only
 			// v1 ingresses (and no v1beta1 ingresses). If Store happens to have a v1beta1 Ingress nonetheless, I'm choosing
 			// not to drop it, but to log a warning and talk networking.k8s.io/v1beta1 (as opposed to extensions/v1beta1)
@@ -375,7 +375,7 @@ func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkin
 			logger.Warnf("statusSync got an unexpected v1beta1 Ingress when it expected v1")
 			fallthrough
 
-		case utils.NetworkingV1beta1:
+		case util.NetworkingV1beta1:
 			ingClient := client.NetworkingV1beta1().Ingresses(ing.Namespace)
 
 			currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
@@ -393,7 +393,7 @@ func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkin
 				logger.WithField("ingress_status", status).Debugf("successfully updated ingress status")
 			}
 
-		case utils.ExtensionsV1beta1:
+		case util.ExtensionsV1beta1:
 			ingClient := client.ExtensionsV1beta1().Ingresses(ing.Namespace)
 
 			currIng, err := ingClient.Get(ctx, ing.Name, metav1.GetOptions{})
@@ -523,7 +523,7 @@ func (s *statusSync) runUpdateKnativeIngress(ctx context.Context,
 		lbStatus := toKnativeLBStatus(status)
 
 		// TODO: handle the case when s.PublishService is empty
-		namespace, svcName, err := utils.ParseNameNS(s.PublishService)
+		namespace, svcName, err := util.ParseNameNS(s.PublishService)
 		clusterDomain := network.GetClusterDomainName()
 		if err != nil {
 			return false, err

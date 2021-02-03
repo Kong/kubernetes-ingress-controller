@@ -34,8 +34,8 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller/parser/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/utils"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
@@ -190,7 +190,7 @@ func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 }
 
 func (n *KongController) fetchCustomEntities() ([]byte, error) {
-	ns, name, err := utils.ParseNameNS(n.cfg.KongCustomEntitiesSecret)
+	ns, name, err := util.ParseNameNS(n.cfg.KongCustomEntitiesSecret)
 	if err != nil {
 		return nil, fmt.Errorf("parsing kong custom entities secret: %w", err)
 	}

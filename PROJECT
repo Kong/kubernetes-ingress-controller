@@ -1,7 +1,7 @@
 domain: my.domain
 layout: go.kubebuilder.io/v3
 projectName: railgun
-repo: github.com/kong/railgun
+repo: github.com/shaneutt/railgun
 resources:
 - api:
     crdVersion: v1

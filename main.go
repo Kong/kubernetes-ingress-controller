@@ -22,6 +22,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -77,6 +78,7 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+
 	/* TODO: re-enable once fixed
 	if err = (&inputs.KongIngressReconciler{
 		Client: mgr.GetClient(),
@@ -110,24 +112,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongConsumer")
 		os.Exit(1)
 	}
-	*/
-	if err = (&inputs.IngressReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Ingress")
-		os.Exit(1)
-	}
-	if err = (&inputs.V1Beta1IngressReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("V1Beta1Ingress"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "V1Beta1Ingress")
-		os.Exit(1)
-	}
-	/* re-enable once fixed
 	if err = (&configuration.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
@@ -137,6 +121,10 @@ func main() {
 		os.Exit(1)
 	}
 	*/
+	if err := inputs.SetupIngressControllers(mgr); err != nil {
+		setupLog.Error(err, "unable to create controllers", "controllers", "Ingress")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

@@ -77,8 +77,10 @@ type cliConfig struct {
 	EnableReverseSync bool
 
 	// Logging
-	LogLevel   string
-	LogFormat  string
+	LogLevel  string
+	LogFormat string
+
+	// Diagnostics
 	DumpConfig string
 
 	// k8s connection details
@@ -199,8 +201,10 @@ trace, debug, info, warn, error, fatal and panic.`)
 	flags.String("log-format", "text",
 		`Format of logs of the controller. Allowed values are 
 text and json.`)
+
+	// Diagnostics
 	flags.String("dump-config", "",
-		`Dump generated configuration to filesystem when set to "enabled".
+		`Dump generated configuration to a temporary directory when set to "enabled".
 When set to "sensitive", dumps will include certificate+key pairs and credentials.`)
 
 	// k8s connection details
@@ -314,6 +318,8 @@ func parseFlags() (cliConfig, error) {
 	// Logging
 	config.LogLevel = viper.GetString("log-level")
 	config.LogFormat = viper.GetString("log-format")
+
+	// Diagnostics
 	config.DumpConfig = viper.GetString("dump-config")
 
 	// k8s connection details

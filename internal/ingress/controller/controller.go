@@ -91,8 +91,8 @@ type Configuration struct {
 
 	EnableKnativeIngressSupport bool
 
-	Logger     logrus.FieldLogger
-	LogLevel   string
+	Logger logrus.FieldLogger
+
 	DumpConfig string
 }
 
@@ -243,10 +243,12 @@ type KongController struct {
 // Stop.
 func (n *KongController) Start() {
 	n.Logger.Debugf("startin up controller")
-	var err error
-	n.tmpDir, err = ioutil.TempDir("", "controller")
-	if err != nil {
-		panic(fmt.Errorf("failed to create a temporary working directory: %v", err))
+	if len(n.cfg.DumpConfig) > 0 {
+		var err error
+		n.tmpDir, err = ioutil.TempDir("", "controller")
+		if err != nil {
+			panic(fmt.Errorf("failed to create a temporary working directory: %v", err))
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

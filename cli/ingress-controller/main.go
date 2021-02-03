@@ -105,7 +105,6 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 		ElectionID:             cliConfig.ElectionID,
 
 		DumpConfig: cliConfig.DumpConfig,
-		LogLevel:   cliConfig.LogLevel,
 	}
 }
 

@@ -27,3 +27,42 @@ func GenerateSHA(targetContent *file.Content,
 	shaSum := sha256.Sum256(buffer.Bytes())
 	return shaSum[:], nil
 }
+
+func CleanUpNullsInPluginConfigs(state *file.Content) {
+	for _, s := range state.Services {
+		for _, p := range s.Plugins {
+			for k, v := range p.Config {
+				if v == nil {
+					delete(p.Config, k)
+				}
+			}
+		}
+		for _, r := range state.Routes {
+			for _, p := range r.Plugins {
+				for k, v := range p.Config {
+					if v == nil {
+						delete(p.Config, k)
+					}
+				}
+			}
+		}
+	}
+
+	for _, c := range state.Consumers {
+		for _, p := range c.Plugins {
+			for k, v := range p.Config {
+				if v == nil {
+					delete(p.Config, k)
+				}
+			}
+		}
+	}
+
+	for _, p := range state.Plugins {
+		for k, v := range p.Config {
+			if v == nil {
+				delete(p.Config, k)
+			}
+		}
+	}
+}

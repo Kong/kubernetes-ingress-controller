@@ -80,46 +80,6 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	return nil
 }
 
-func cleanUpNullsInPluginConfigs(state *file.Content) {
-
-	for _, s := range state.Services {
-		for _, p := range s.Plugins {
-			for k, v := range p.Config {
-				if v == nil {
-					delete(p.Config, k)
-				}
-			}
-		}
-		for _, r := range state.Routes {
-			for _, p := range r.Plugins {
-				for k, v := range p.Config {
-					if v == nil {
-						delete(p.Config, k)
-					}
-				}
-			}
-		}
-	}
-
-	for _, c := range state.Consumers {
-		for _, p := range c.Plugins {
-			for k, v := range p.Config {
-				if v == nil {
-					delete(p.Config, k)
-				}
-			}
-		}
-	}
-
-	for _, p := range state.Plugins {
-		for k, v := range p.Config {
-			if v == nil {
-				delete(p.Config, k)
-			}
-		}
-	}
-}
-
 func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 	customEntitiesJSONBytes []byte) ([]byte, error) {
 
@@ -195,7 +155,7 @@ func (n *KongController) onUpdateInMemoryMode(ctx context.Context,
 	// Kong will error out if this is set
 	state.Info = nil
 	// Kong errors out if `null`s are present in `config` of plugins
-	cleanUpNullsInPluginConfigs(state)
+	deckgen.CleanUpNullsInPluginConfigs(state)
 
 	config, err := n.renderConfigWithCustomEntities(state, customEntities)
 	if err != nil {

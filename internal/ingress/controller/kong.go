@@ -36,6 +36,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
@@ -80,7 +81,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	return nil
 }
 
-func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
+func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
 	customEntitiesJSONBytes []byte) ([]byte, error) {
 
 	var kongCoreConfig []byte
@@ -111,7 +112,7 @@ func (n *KongController) renderConfigWithCustomEntities(state *file.Content,
 	err = json.Unmarshal(customEntitiesJSONBytes, &customEntities)
 	if err != nil {
 		// do not error out when custom entities are messed up
-		n.Logger.Errorf("failed to unmarshal custom entities from secret data: %v", err)
+		log.Errorf("failed to unmarshal custom entities from secret data: %v", err)
 	} else {
 		for k, v := range customEntities {
 			if _, exists := mergeMap[k]; !exists {
@@ -157,7 +158,7 @@ func (n *KongController) onUpdateInMemoryMode(ctx context.Context,
 	// Kong errors out if `null`s are present in `config` of plugins
 	deckgen.CleanUpNullsInPluginConfigs(state)
 
-	config, err := n.renderConfigWithCustomEntities(state, customEntities)
+	config, err := renderConfigWithCustomEntities(n.Logger, state, customEntities)
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
@@ -246,7 +247,7 @@ func (n *KongController) toDeckContent(
 			plugin := file.FPlugin{
 				Plugin: *p.DeepCopy(),
 			}
-			err = n.fillPlugin(ctx, &plugin)
+			err = fillPlugin(ctx, &plugin, &n.PluginSchemaStore)
 			if err != nil {
 				n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 			}
@@ -258,13 +259,13 @@ func (n *KongController) toDeckContent(
 
 		for _, r := range s.Routes {
 			route := file.FRoute{Route: r.Route}
-			n.fillRoute(&route.Route)
+			fillRoute(&route.Route)
 
 			for _, p := range r.Plugins {
 				plugin := file.FPlugin{
 					Plugin: *p.DeepCopy(),
 				}
-				err = n.fillPlugin(ctx, &plugin)
+				err = fillPlugin(ctx, &plugin, &n.PluginSchemaStore)
 				if err != nil {
 					n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 				}
@@ -288,7 +289,7 @@ func (n *KongController) toDeckContent(
 		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}
-		err = n.fillPlugin(ctx, &plugin)
+		err = fillPlugin(ctx, &plugin, &n.PluginSchemaStore)
 		if err != nil {
 			n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 		}
@@ -300,7 +301,7 @@ func (n *KongController) toDeckContent(
 	})
 
 	for _, u := range k8sState.Upstreams {
-		n.fillUpstream(&u.Upstream)
+		fillUpstream(&u.Upstream)
 		upstream := file.FUpstream{Upstream: u.Upstream}
 		for _, t := range u.Targets {
 			target := file.FTarget{Target: t.Target}
@@ -370,7 +371,7 @@ func (n *KongController) toDeckContent(
 	return &content
 }
 
-func (n *KongController) fillRoute(route *kong.Route) {
+func fillRoute(route *kong.Route) {
 	if route.HTTPSRedirectStatusCode == nil {
 		route.HTTPSRedirectStatusCode = kong.Int(426)
 	}
@@ -379,20 +380,20 @@ func (n *KongController) fillRoute(route *kong.Route) {
 	}
 }
 
-func (n *KongController) fillUpstream(upstream *kong.Upstream) {
+func fillUpstream(upstream *kong.Upstream) {
 	if upstream.Algorithm == nil {
 		upstream.Algorithm = kong.String("round-robin")
 	}
 }
 
-func (n *KongController) fillPlugin(ctx context.Context, plugin *file.FPlugin) error {
+func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas *util.PluginSchemaStore) error {
 	if plugin == nil {
 		return fmt.Errorf("plugin is nil")
 	}
 	if plugin.Name == nil || *plugin.Name == "" {
 		return fmt.Errorf("plugin doesn't have a name")
 	}
-	schema, err := n.PluginSchemaStore.Schema(ctx, *plugin.Name)
+	schema, err := schemas.Schema(ctx, *plugin.Name)
 	if err != nil {
 		return fmt.Errorf("error retrieveing schema for plugin %s: %w", *plugin.Name, err)
 	}

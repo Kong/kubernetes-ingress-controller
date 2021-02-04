@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,31 +33,37 @@ type SecretReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// TODO: something to keep in mind: long term we're still considering use a custom API instead of a secret for the Configuration.
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.Secret{}).Complete(r)
+}
+
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=secrets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Secret object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
+// Reconcile manages the configuration secret for ingresses and parses that into a Kong configuration
+// which is posted to all available Proxy APIs.
 func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("secret", req.NamespacedName)
 
-	// your logic here
+	secret := new(v1.Secret)
+	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// TODO: standardize the namespace for the secret!
+
+	// TODO: add filters to only capture our secret
+
+	// TODO: collect and parse all ingresses
+
+	// TODO: collect all proxy instances
+
+	// TODO: test kong admin API access to each proxy instance
+
+	// TODO: post configuration updates to the Kong Admin API of each proxy
 
 	return ctrl.Result{}, nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		// For().
-		Complete(r)
 }

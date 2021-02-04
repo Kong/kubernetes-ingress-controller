@@ -295,8 +295,8 @@ func (n *KongController) toDeckContent(
 		content.Plugins = append(content.Plugins, plugin)
 	}
 	sort.SliceStable(content.Plugins, func(i, j int) bool {
-		return strings.Compare(pluginString(content.Plugins[i]),
-			pluginString(content.Plugins[j])) > 0
+		return strings.Compare(deckgen.PluginString(content.Plugins[i]),
+			deckgen.PluginString(content.Plugins[j])) > 0
 	})
 
 	for _, u := range k8sState.Upstreams {
@@ -316,7 +316,7 @@ func (n *KongController) toDeckContent(
 	})
 
 	for _, c := range k8sState.Certificates {
-		cert := getFCertificateFromKongCert(c.Certificate)
+		cert := deckgen.GetFCertificateFromKongCert(c.Certificate)
 		content.Certificates = append(content.Certificates, cert)
 	}
 	sort.SliceStable(content.Certificates, func(i, j int) bool {
@@ -368,48 +368,6 @@ func (n *KongController) toDeckContent(
 	}
 
 	return &content
-}
-
-func getFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
-	var res file.FCertificate
-	if kongCert.ID != nil {
-		res.ID = kong.String(*kongCert.ID)
-	}
-	if kongCert.Key != nil {
-		res.Key = kong.String(*kongCert.Key)
-	}
-	if kongCert.Cert != nil {
-		res.Cert = kong.String(*kongCert.Cert)
-	}
-	res.SNIs = getSNIs(kongCert.SNIs)
-	return res
-}
-
-func getSNIs(names []*string) []kong.SNI {
-	var snis []kong.SNI
-	for _, name := range names {
-		snis = append(snis, kong.SNI{
-			Name: kong.String(*name),
-		})
-	}
-	return snis
-}
-
-func pluginString(plugin file.FPlugin) string {
-	result := ""
-	if plugin.Name != nil {
-		result = *plugin.Name
-	}
-	if plugin.Consumer != nil && plugin.Consumer.ID != nil {
-		result += *plugin.Consumer.ID
-	}
-	if plugin.Route != nil && plugin.Route.ID != nil {
-		result += *plugin.Route.ID
-	}
-	if plugin.Service != nil && plugin.Service.ID != nil {
-		result += *plugin.Service.ID
-	}
-	return result
 }
 
 func (n *KongController) fillRoute(route *kong.Route) {

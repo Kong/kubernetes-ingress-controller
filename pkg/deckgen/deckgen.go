@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/kong/deck/file"
+	"github.com/kong/go-kong/kong"
 )
 
 func GenerateSHA(targetContent *file.Content,
@@ -65,4 +66,46 @@ func CleanUpNullsInPluginConfigs(state *file.Content) {
 			}
 		}
 	}
+}
+
+func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
+	var res file.FCertificate
+	if kongCert.ID != nil {
+		res.ID = kong.String(*kongCert.ID)
+	}
+	if kongCert.Key != nil {
+		res.Key = kong.String(*kongCert.Key)
+	}
+	if kongCert.Cert != nil {
+		res.Cert = kong.String(*kongCert.Cert)
+	}
+	res.SNIs = getSNIs(kongCert.SNIs)
+	return res
+}
+
+func getSNIs(names []*string) []kong.SNI {
+	var snis []kong.SNI
+	for _, name := range names {
+		snis = append(snis, kong.SNI{
+			Name: kong.String(*name),
+		})
+	}
+	return snis
+}
+
+func PluginString(plugin file.FPlugin) string {
+	result := ""
+	if plugin.Name != nil {
+		result = *plugin.Name
+	}
+	if plugin.Consumer != nil && plugin.Consumer.ID != nil {
+		result += *plugin.Consumer.ID
+	}
+	if plugin.Route != nil && plugin.Route.ID != nil {
+		result += *plugin.Route.ID
+	}
+	if plugin.Service != nil && plugin.Service.ID != nil {
+		result += *plugin.Service.ID
+	}
+	return result
 }

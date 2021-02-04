@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	konghqcomv1 "github.com/shaneutt/railgun/api/v1"
-	"github.com/shaneutt/railgun/controllers/inputs"
+	konghqcomv1 "github.com/kong/railgun/api/v1"
+	"github.com/kong/railgun/controllers/inputs"
 	//+kubebuilder:scaffold:imports
 )
 

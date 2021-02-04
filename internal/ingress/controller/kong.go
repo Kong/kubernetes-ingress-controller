@@ -43,8 +43,6 @@ import (
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
 func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongState) error {
-	targetContent := toDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, n.getIngressControllerTags())
-
 	var customEntities []byte
 	var err error
 	// process any custom entities
@@ -56,29 +54,61 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		}
 	}
 
-	var shaSum []byte
+	newSHA, err := performUpdate(ctx,
+		n.Logger,
+		&n.cfg.Kong,
+		n.cfg.InMemory,
+		n.cfg.EnableReverseSync,
+		state,
+		&n.PluginSchemaStore,
+		n.getIngressControllerTags(),
+		customEntities,
+		n.runningConfigHash,
+	)
+
+	n.runningConfigHash = newSHA
+	return err
+}
+
+func equalSHA(a, b []byte) bool {
+	return reflect.DeepEqual(a, b)
+}
+
+func performUpdate(ctx context.Context,
+	log logrus.FieldLogger,
+	kongConfig *Kong,
+	inMemory bool,
+	reverseSync bool,
+	state *kongstate.KongState,
+	schemas *util.PluginSchemaStore,
+	selectorTags []string,
+	customEntities []byte,
+	oldSHA []byte,
+) ([]byte, error) {
+	targetContent := toDeckContent(ctx, log, state, schemas, selectorTags)
+
+	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
+	if err != nil {
+		return oldSHA, err
+	}
 	// disable optimization if reverse sync is enabled
-	if !n.cfg.EnableReverseSync {
-		shaSum, err = deckgen.GenerateSHA(targetContent, customEntities)
-		if err != nil {
-			return err
-		}
-		if reflect.DeepEqual(n.runningConfigHash, shaSum) {
-			n.Logger.Info("no configuration change, skipping sync to kong")
-			return nil
+	if !reverseSync {
+		if equalSHA(oldSHA, newSHA) {
+			log.Info("no configuration change, skipping sync to kong")
+			return oldSHA, nil
 		}
 	}
-	if n.cfg.InMemory {
-		err = onUpdateInMemoryMode(ctx, n.Logger, targetContent, customEntities, &n.cfg.Kong)
+
+	if inMemory {
+		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
 	} else {
-		err = onUpdateDBMode(targetContent, &n.cfg.Kong, n.getIngressControllerTags())
+		err = onUpdateDBMode(targetContent, kongConfig, selectorTags)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	n.runningConfigHash = shaSum
-	n.Logger.Info("successfully synced configuration to kong")
-	return nil
+	log.Info("successfully synced configuration to kong")
+	return newSHA, nil
 }
 
 func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,

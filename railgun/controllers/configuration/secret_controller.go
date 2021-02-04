@@ -18,9 +18,18 @@ package configuration
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"time"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/core/v1"
+	"github.com/kong/go-kong/kong"
+	"github.com/kong/railgun/controllers"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +45,7 @@ type SecretReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: something to keep in mind: long term we're still considering use a custom API instead of a secret for the Configuration.
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.Secret{}).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Secret{}).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
@@ -46,22 +55,86 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile manages the configuration secret for ingresses and parses that into a Kong configuration
 // which is posted to all available Proxy APIs.
 func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("secret", req.NamespacedName)
+	log := r.Log.WithValues("secret", req.NamespacedName)
 
-	secret := new(v1.Secret)
-	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
+	configSecret := new(corev1.Secret)
+	if err := r.Get(ctx, req.NamespacedName, configSecret); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// TODO: standardize the namespace for the secret!
+	// get the configuration secret namespace and filter out others
+	// TODO: we can do this with Watcher filters instead later, but if we're going to switch to a CRD
+	// implementation anyway we may not have to bother with this.
+	secretNamespace := os.Getenv(controllers.CtrlNamespaceEnv)
+	if secretNamespace == "" {
+		return ctrl.Result{}, fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv)
+	}
+	if req.Namespace != secretNamespace {
+		return ctrl.Result{}, nil
+	}
+	if req.Name != controllers.ConfigSecretName {
+		return ctrl.Result{}, nil
+	}
 
-	// TODO: add filters to only capture our secret
+	// collect all proxy instances to be configured
+	proxyInstances := new(corev1.PodList)
 
-	// TODO: collect and parse all ingresses
+	matchingLabels := client.MatchingLabels{controllers.ProxyInstanceLabel: "true"}
+	if err := r.List(ctx, proxyInstances, matchingLabels); err != nil {
+		return ctrl.Result{}, err
+	}
+	if len(proxyInstances.Items) < 1 {
+		return ctrl.Result{}, fmt.Errorf("no proxy instances found (pods with label %s) is Kong running?", controllers.ProxyInstanceLabel)
+	}
+	log.Info("found proxy instances which need to be configured", "count", len(proxyInstances.Items))
 
-	// TODO: collect all proxy instances
+	for _, pod := range proxyInstances.Items {
+		ip := pod.Status.PodIP
+		if ip == "" {
+			log.Info("proxy instance pod found but waiting until it has an IP address", "pod", pod.Name)
+			return ctrl.Result{Requeue: true}, nil
+		}
 
-	// TODO: test kong admin API access to each proxy instance
+		// FIXME - super gross hack to for testing, will remove this soon
+		commandCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		cmd := exec.CommandContext(commandCtx, "kubectl", "-n", pod.Namespace, "port-forward", fmt.Sprintf("pod/%s", pod.Name), "8444:8444")
+		if v := os.Getenv(controllers.ExternalCtrlEnv); v == "true" {
+			ip = "127.0.0.1"
+			go func() {
+				cmd.Run()
+			}()
+			time.Sleep(time.Second * 1)
+		}
+		// FIXME
+
+		url, err := url.Parse(fmt.Sprintf("https://%s:8444", ip))
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// TODO: add mTLS
+		transport := http.DefaultTransport
+		transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		httpc := http.Client{Transport: transport}
+		kongc, err := kong.NewClient(kong.String(url.String()), &httpc)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		status, err := kongc.Status(ctx)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		log.Info("proxy instance in pod returned status successfully", "pod", pod.Name, "connections_accepted", status.Server.ConnectionsAccepted)
+
+		// FIXME - super gross testing hack cleanup, will remove this soon
+		cancel()
+		time.Sleep(time.Second * 1)
+		// FIXME
+	}
+
+	// TODO: parse configSecret into Kong configuration (using KIC libs)
 
 	// TODO: post configuration updates to the Kong Admin API of each proxy
 

@@ -399,7 +399,7 @@ func (n *KongController) fillPlugin(ctx context.Context, plugin *file.FPlugin) e
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)
 	}
-	newConfig, err := fill(schema, plugin.Config)
+	newConfig, err := deckgen.FillPluginConfig(schema, plugin.Config)
 	if err != nil {
 		return fmt.Errorf("error filling in default for plugin %s: %w", *plugin.Name, err)
 	}

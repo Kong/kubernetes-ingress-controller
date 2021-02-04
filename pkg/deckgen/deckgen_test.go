@@ -1,4 +1,4 @@
-package controller
+package deckgen
 
 import (
 	"encoding/json"
@@ -573,7 +573,7 @@ var (
 
 func TestFillNil(t *testing.T) {
 	assert := assert.New(t)
-	assert.Nil(fill(nil, nil))
+	assert.Nil(FillPluginConfig(nil, nil))
 }
 
 func TestFillKeyAuth(t *testing.T) {
@@ -589,7 +589,7 @@ func TestFillKeyAuth(t *testing.T) {
 	err = json.Unmarshal([]byte(KeyAuthDefaultConfig), &def)
 	assert.Nil(err)
 
-	res, err := fill(schema, config)
+	res, err := FillPluginConfig(schema, config)
 	assert.Equal(def, res)
 }
 
@@ -606,7 +606,7 @@ func TestFillStatsD(t *testing.T) {
 	err = json.Unmarshal([]byte(StatsDDefaultConfig), &def)
 	assert.Nil(err)
 
-	res, err := fill(schema, config)
+	res, err := FillPluginConfig(schema, config)
 	assert.Equal(def, res)
 }
 
@@ -624,7 +624,7 @@ func TestKeyAuthSetKeys(t *testing.T) {
 	err = json.Unmarshal([]byte(KeyAuthDefaultConfig), &def)
 	assert.Nil(err)
 
-	res, err := fill(schema, config)
+	res, err := FillPluginConfig(schema, config)
 	assert.NotEqual(def, res)
 	assert.Equal(true, res["key_in_body"])
 }
@@ -640,7 +640,7 @@ func TestFillReqeustTransformer(t *testing.T) {
 	err = json.Unmarshal([]byte(RequestTransformerConfig), &def)
 	assert.Nil(err)
 
-	res, err := fill(schema, config)
+	res, err := FillPluginConfig(schema, config)
 	assert.Equal(def, res)
 }
 
@@ -655,7 +655,7 @@ func TestFillReqeustTransformerNestedConfig(t *testing.T) {
 	assert.Nil(err)
 	want := make(kong.Configuration)
 	err = json.Unmarshal([]byte(RequestTransformerNonEmptyFilledConfig), &want)
-	res, err := fill(schema, config)
+	res, err := FillPluginConfig(schema, config)
 	assert.Equal(want, res)
 	assert.Nil(err)
 }

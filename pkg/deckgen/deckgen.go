@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/tidwall/gjson"
 )
 
 func GenerateSHA(targetContent *file.Content,
@@ -108,4 +109,62 @@ func PluginString(plugin file.FPlugin) string {
 		result += *plugin.Service.ID
 	}
 	return result
+}
+
+func FillPluginConfig(schema map[string]interface{},
+	config kong.Configuration) (kong.Configuration, error) {
+	jsonb, err := json.Marshal(&schema)
+	if err != nil {
+		return nil, err
+	}
+	// Get all in the schema
+	value := gjson.ParseBytes((jsonb))
+	return fillRecord(value, config)
+}
+
+func fillRecord(schema gjson.Result, config kong.Configuration) (kong.Configuration, error) {
+	if config == nil {
+		return nil, nil
+	}
+	res := config.DeepCopy()
+	value := schema.Get("fields")
+
+	value.ForEach(func(key, value gjson.Result) bool {
+		// get the key name
+		ms := value.Map()
+		fname := ""
+		for k := range ms {
+			fname = k
+			break
+		}
+		ftype := value.Get(fname + ".type")
+		if ftype.String() == "record" {
+			subConfig := config[fname]
+			if subConfig == nil {
+				subConfig = make(map[string]interface{})
+			}
+			newSubConfig, err := fillRecord(value.Get(fname), subConfig.(map[string]interface{}))
+			if err != nil {
+				panic(err)
+			}
+			res[fname] = map[string]interface{}(newSubConfig)
+			return true
+		}
+		// check if key is already set in the config
+		if _, ok := config[fname]; ok {
+			// yes, don't set it
+			return true
+		}
+		// no, set it
+		value = value.Get(fname + ".default")
+		if value.Exists() {
+			res[fname] = value.Value()
+		} else {
+			// if no default exists, set an explicit nil
+			res[fname] = nil
+		}
+		return true
+	})
+
+	return res, nil
 }

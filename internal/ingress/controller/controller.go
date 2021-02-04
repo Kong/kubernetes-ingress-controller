@@ -143,7 +143,7 @@ func NewKongController(ctx context.Context,
 		updateCh: updateCh,
 
 		stopLock:          &sync.Mutex{},
-		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client),
+		PluginSchemaStore: *util.NewPluginSchemaStore(config.Kong.Client),
 
 		Logger: config.Logger,
 	}
@@ -228,7 +228,7 @@ type KongController struct {
 
 	store store.Storer
 
-	PluginSchemaStore PluginSchemaStore
+	PluginSchemaStore util.PluginSchemaStore
 
 	Logger logrus.FieldLogger
 }

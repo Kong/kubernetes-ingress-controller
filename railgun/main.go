@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -33,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	konghqcomv1 "github.com/kong/railgun/api/v1"
+	"github.com/kong/railgun/controllers"
+	"github.com/kong/railgun/controllers/configuration"
 	"github.com/kong/railgun/controllers/inputs"
 	//+kubebuilder:scaffold:imports
 )
@@ -65,6 +68,11 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {
+		setupLog.Error(fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv), "could not start controller manager")
+		os.Exit(25)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -112,6 +120,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongConsumer")
 		os.Exit(1)
 	}
+	*/
+
 	if err = (&configuration.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
@@ -120,7 +130,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Secret")
 		os.Exit(1)
 	}
-	*/
+
 	if err := inputs.SetupIngressControllers(mgr); err != nil {
 		setupLog.Error(err, "unable to create controllers", "controllers", "Ingress")
 		os.Exit(1)

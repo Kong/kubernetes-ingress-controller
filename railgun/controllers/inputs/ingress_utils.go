@@ -2,8 +2,11 @@ package inputs
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/railgun/controllers"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -85,8 +88,14 @@ func storeIngressUpdates(ctx context.Context, c client.Client, log logr.Logger, 
 		return ctrl.Result{}, err
 	}
 
+	// get the configuration secret namespace
+	secretNamespace := os.Getenv(controllers.CtrlNamespaceEnv)
+	if secretNamespace == "" {
+		return ctrl.Result{}, fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv)
+	}
+
 	// get the configuration secret
-	secret, created, err := getOrCreateConfigSecret(ctx, c, nsn.Namespace)
+	secret, created, err := getOrCreateConfigSecret(ctx, c, secretNamespace)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			log.Info("kong configuration secret was created elsewhere retrying", "namespace", nsn.Namespace, "ingress", nsn.Name)
@@ -98,7 +107,7 @@ func storeIngressUpdates(ctx context.Context, c client.Client, log logr.Logger, 
 		log.Info("kong configuration did not exist, was created successfully", "namespace", nsn.Namespace, "ingress", nsn.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
-	log.Info("kong configuration secret found", "namespace", nsn.Namespace, "name", ConfigSecretName)
+	log.Info("kong configuration secret found", "namespace", nsn.Namespace, "name", controllers.ConfigSecretName)
 
 	// before we store configuration data for this Ingress object, ensure that it has our finalizer set
 	if !hasFinalizer(obj, KongIngressFinalizer) {
@@ -120,7 +129,7 @@ func storeIngressUpdates(ctx context.Context, c client.Client, log logr.Logger, 
 		return ctrl.Result{}, err
 	}
 
-	log.Info("kong configuration patched", "namespace", nsn.Namespace, "name", ConfigSecretName)
+	log.Info("kong configuration patched", "namespace", nsn.Namespace, "name", controllers.ConfigSecretName)
 	return ctrl.Result{}, nil
 }
 
@@ -129,8 +138,15 @@ func cleanupIngress(ctx context.Context, c client.Client, log logr.Logger, nsn t
 	// TODO need EVENTS here
 	// TODO need more status updates
 
+	// get the configuration secret namespace
+	secretNamespace := os.Getenv(controllers.CtrlNamespaceEnv)
+	if secretNamespace == "" {
+		return ctrl.Result{}, fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv)
+	}
+
+	// grab the configuration secret from the API
 	secret := new(corev1.Secret)
-	if err := c.Get(ctx, types.NamespacedName{Namespace: nsn.Namespace, Name: ConfigSecretName}, secret); err != nil {
+	if err := c.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: controllers.ConfigSecretName}, secret); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 

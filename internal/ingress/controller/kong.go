@@ -69,9 +69,9 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		}
 	}
 	if n.cfg.InMemory {
-		err = n.onUpdateInMemoryMode(ctx, targetContent, customEntities)
+		err = onUpdateInMemoryMode(ctx, n.Logger, targetContent, customEntities, &n.cfg.Kong)
 	} else {
-		err = n.onUpdateDBMode(targetContent)
+		err = onUpdateDBMode(targetContent, &n.cfg.Kong, n.getIngressControllerTags())
 	}
 	if err != nil {
 		return err
@@ -148,22 +148,23 @@ func (n *KongController) fetchCustomEntities() ([]byte, error) {
 	return config, nil
 }
 
-func (n *KongController) onUpdateInMemoryMode(ctx context.Context,
+func onUpdateInMemoryMode(ctx context.Context,
+	log logrus.FieldLogger,
 	state *file.Content,
-	customEntities []byte) error {
-	client := n.cfg.Kong.Client
-
+	customEntities []byte,
+	kongConfig *Kong,
+) error {
 	// Kong will error out if this is set
 	state.Info = nil
 	// Kong errors out if `null`s are present in `config` of plugins
 	deckgen.CleanUpNullsInPluginConfigs(state)
 
-	config, err := renderConfigWithCustomEntities(n.Logger, state, customEntities)
+	config, err := renderConfigWithCustomEntities(log, state, customEntities)
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", n.cfg.Kong.URL+"/config",
+	req, err := http.NewRequest("POST", kongConfig.URL+"/config",
 		bytes.NewReader(config))
 	if err != nil {
 		return fmt.Errorf("creating new HTTP request for /config: %w", err)
@@ -175,7 +176,7 @@ func (n *KongController) onUpdateInMemoryMode(ctx context.Context,
 
 	req.URL.RawQuery = queryString.Encode()
 
-	_, err = client.Do(ctx, req, nil)
+	_, err = kongConfig.Client.Do(ctx, req, nil)
 	if err != nil {
 		return fmt.Errorf("posting new config to /config: %w", err)
 	}
@@ -183,12 +184,14 @@ func (n *KongController) onUpdateInMemoryMode(ctx context.Context,
 	return err
 }
 
-func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
-	client := n.cfg.Kong.Client
-
+func onUpdateDBMode(
+	targetContent *file.Content,
+	kongConfig *Kong,
+	selectorTags []string,
+) error {
 	// read the current state
-	rawState, err := dump.Get(client, dump.Config{
-		SelectorTags: n.getIngressControllerTags(),
+	rawState, err := dump.Get(kongConfig.Client, dump.Config{
+		SelectorTags: selectorTags,
 	})
 	if err != nil {
 		return fmt.Errorf("loading configuration from kong: %w", err)
@@ -201,7 +204,7 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 	// read the target state
 	rawState, err = file.Get(targetContent, file.RenderConfig{
 		CurrentState: currentState,
-		KongVersion:  n.cfg.Kong.Version,
+		KongVersion:  kongConfig.Version,
 	})
 	if err != nil {
 		return err
@@ -217,7 +220,7 @@ func (n *KongController) onUpdateDBMode(targetContent *file.Content) error {
 	}
 	syncer.SilenceWarnings = true
 	//client.SetDebugMode(true)
-	_, errs := solver.Solve(nil, syncer, client, n.cfg.Kong.Concurrency, false)
+	_, errs := solver.Solve(nil, syncer, kongConfig.Client, kongConfig.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}

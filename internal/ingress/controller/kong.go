@@ -19,7 +19,6 @@ package controller
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,6 +33,7 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
@@ -58,7 +58,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	var shaSum []byte
 	// disable optimization if reverse sync is enabled
 	if !n.cfg.EnableReverseSync {
-		shaSum, err = generateSHA(targetContent, customEntities)
+		shaSum, err = deckgen.GenerateSHA(targetContent, customEntities)
 		if err != nil {
 			return err
 		}
@@ -78,25 +78,6 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	n.runningConfigHash = shaSum
 	n.Logger.Info("successfully synced configuration to kong")
 	return nil
-}
-
-func generateSHA(targetContent *file.Content,
-	customEntities []byte) ([]byte, error) {
-
-	var buffer bytes.Buffer
-
-	jsonConfig, err := json.Marshal(targetContent)
-	if err != nil {
-		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
-	}
-	buffer.Write(jsonConfig)
-
-	if customEntities != nil {
-		buffer.Write(customEntities)
-	}
-
-	shaSum := sha256.Sum256(buffer.Bytes())
-	return shaSum[:], nil
 }
 
 func cleanUpNullsInPluginConfigs(state *file.Content) {

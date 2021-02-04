@@ -43,7 +43,7 @@ import (
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
 func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongState) error {
-	targetContent := n.toDeckContent(ctx, state)
+	targetContent := toDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, n.getIngressControllerTags())
 
 	var customEntities []byte
 	var err error
@@ -234,9 +234,13 @@ func (n *KongController) getIngressControllerTags() []string {
 	return res
 }
 
-func (n *KongController) toDeckContent(
+func toDeckContent(
 	ctx context.Context,
-	k8sState *kongstate.KongState) *file.Content {
+	log logrus.FieldLogger,
+	k8sState *kongstate.KongState,
+	schemas *util.PluginSchemaStore,
+	selectorTags []string,
+) *file.Content {
 	var content file.Content
 	content.FormatVersion = "1.1"
 	var err error
@@ -247,9 +251,9 @@ func (n *KongController) toDeckContent(
 			plugin := file.FPlugin{
 				Plugin: *p.DeepCopy(),
 			}
-			err = fillPlugin(ctx, &plugin, &n.PluginSchemaStore)
+			err = fillPlugin(ctx, &plugin, schemas)
 			if err != nil {
-				n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+				log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
 			sort.SliceStable(service.Plugins, func(i, j int) bool {
@@ -265,9 +269,9 @@ func (n *KongController) toDeckContent(
 				plugin := file.FPlugin{
 					Plugin: *p.DeepCopy(),
 				}
-				err = fillPlugin(ctx, &plugin, &n.PluginSchemaStore)
+				err = fillPlugin(ctx, &plugin, schemas)
 				if err != nil {
-					n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+					log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
 				sort.SliceStable(route.Plugins, func(i, j int) bool {
@@ -289,9 +293,9 @@ func (n *KongController) toDeckContent(
 		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}
-		err = fillPlugin(ctx, &plugin, &n.PluginSchemaStore)
+		err = fillPlugin(ctx, &plugin, schemas)
 		if err != nil {
-			n.Logger.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+			log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}
@@ -361,7 +365,6 @@ func (n *KongController) toDeckContent(
 	sort.SliceStable(content.Consumers, func(i, j int) bool {
 		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
 	})
-	selectorTags := n.getIngressControllerTags()
 	if len(selectorTags) > 0 {
 		content.Info = &file.Info{
 			SelectorTags: selectorTags,

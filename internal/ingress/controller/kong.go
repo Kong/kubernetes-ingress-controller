@@ -74,21 +74,11 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	} else {
 		err = n.onUpdateDBMode(targetContent)
 	}
-	var target []byte
-	if n.cfg.DumpConfig == util.ConfigDumpModeSensitive {
-		target, err = json.Marshal(targetContent)
-		if err != nil {
-			n.Logger.Warnf("failed to marshal config dump: %s", err)
+	if n.cfg.DumpConfig != util.ConfigDumpModeOff {
+		if n.cfg.DumpConfig == util.ConfigDumpModeEnabled {
+			targetContent = n.toDeckContent(ctx, state.SanitizedCopy())
 		}
-	} else if n.cfg.DumpConfig == util.ConfigDumpModeEnabled {
-		sanitizedState := state.SanitizedCopy()
-		target, err = json.Marshal(n.toDeckContent(ctx, sanitizedState))
-		if err != nil {
-			n.Logger.Warnf("failed to marshal config dump: %s", err)
-		}
-	}
-	if len(target) > 0 {
-		dumpErr := dumpConfig(err != nil, n.dumpDir, target)
+		dumpErr := dumpConfig(err != nil, n.dumpDir, targetContent)
 		if dumpErr != nil {
 			n.Logger.Warnf("failed to dump configuration: %s", dumpErr)
 		}
@@ -101,13 +91,17 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	return nil
 }
 
-func dumpConfig(failed bool, dumpDir string, target []byte) error {
+func dumpConfig(failed bool, dumpDir string, targetContent *file.Content) error {
+	target, err := json.Marshal(targetContent)
+	if err != nil {
+		return err
+	}
 	filename := "last_good.json"
 	if failed {
 		filename = "last_bad.json"
 	}
-	dumpErr := ioutil.WriteFile(filepath.Join(dumpDir, filename), target, 0600)
-	return dumpErr
+	err = ioutil.WriteFile(filepath.Join(dumpDir, filename), target, 0600)
+	return err
 }
 
 func generateSHA(targetContent *file.Content,

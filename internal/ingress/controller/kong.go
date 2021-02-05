@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
@@ -39,14 +40,14 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 			n.Logger.Errorf("failed to fetch custom entities: %v", err)
 		}
 	}
+	targetContent := deckgen.ToDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, n.getIngressControllerTags())
 
 	newSHA, err := sendconfig.PerformUpdate(ctx,
 		n.Logger,
 		&n.cfg.Kong,
 		n.cfg.InMemory,
 		n.cfg.EnableReverseSync,
-		state,
-		&n.PluginSchemaStore,
+		targetContent,
 		n.getIngressControllerTags(),
 		customEntities,
 		n.runningConfigHash,

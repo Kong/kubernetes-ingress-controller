@@ -15,8 +15,6 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,13 +27,11 @@ func PerformUpdate(ctx context.Context,
 	kongConfig *Kong,
 	inMemory bool,
 	reverseSync bool,
-	state *kongstate.KongState,
-	schemas *util.PluginSchemaStore,
+	targetContent *file.Content,
 	selectorTags []string,
 	customEntities []byte,
 	oldSHA []byte,
 ) ([]byte, error) {
-	targetContent := deckgen.ToDeckContent(ctx, log, state, schemas, selectorTags)
 
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {

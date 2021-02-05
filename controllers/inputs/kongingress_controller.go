@@ -18,6 +18,7 @@ package inputs
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +33,11 @@ type KongIngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&konghqcomv1.KongIngress{}).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses,verbs=get;list;watch;create;update;patch;delete
@@ -50,14 +56,19 @@ type KongIngressReconciler struct {
 func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("kongingress", req.NamespacedName)
 
-	// your logic here
+	log := r.Log.WithValues("ingress", req.NamespacedName)
+
+	ing := new(konghqcomv1.KongIngress)
+	if err := r.Get(ctx, req.NamespacedName, ing); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
+		log.Info("resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
+		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, ing)
+	}
+
+	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, ing)
 
 	return ctrl.Result{}, nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&konghqcomv1.KongIngress{}).
-		Complete(r)
 }

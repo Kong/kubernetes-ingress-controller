@@ -228,7 +228,6 @@ type KongController struct {
 	backgroundGroup errgroup.Group
 
 	runningConfigHash []byte
-	lastConfig        []byte
 
 	isShuttingDown uint32
 

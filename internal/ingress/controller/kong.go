@@ -83,13 +83,21 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	}
 	if err != nil {
 		if len(target) > 0 {
-			_ = ioutil.WriteFile(filepath.Join(n.dumpDir, "target.json"), target, 0600)
-			_ = ioutil.WriteFile(filepath.Join(n.dumpDir, "last_good.json"), n.lastConfig, 0600)
+			dumpErr := ioutil.WriteFile(filepath.Join(n.dumpDir, "target.json"), target, 0600)
+			if dumpErr != nil {
+				n.Logger.Warnf("failed to dump configuration: %s", dumpErr)
+			}
 		}
 		return err
+	} else {
+		if len(target) > 0 {
+			dumpErr := ioutil.WriteFile(filepath.Join(n.dumpDir, "last_good.json"), target, 0600)
+			if dumpErr != nil {
+				n.Logger.Warnf("failed to dump configuration: %s", dumpErr)
+			}
+		}
 	}
 	n.runningConfigHash = shaSum
-	n.lastConfig = target
 	n.Logger.Info("successfully synced configuration to kong")
 	return nil
 }

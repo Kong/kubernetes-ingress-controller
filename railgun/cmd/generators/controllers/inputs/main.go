@@ -172,9 +172,9 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
-		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
 }
 `

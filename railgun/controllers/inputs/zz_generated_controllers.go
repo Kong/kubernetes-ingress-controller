@@ -62,10 +62,10 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -99,10 +99,10 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -136,8 +136,8 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
 }

@@ -341,6 +341,13 @@ func main() {
 		)
 	}
 
+	if cliConfig.DumpConfig != util.ConfigDumpModeOff {
+		controllerConfig.DumpDir, err = ioutil.TempDir("", "controller")
+		if err != nil {
+			log.Fatalf("failed to create a dump directory: %v", err)
+		}
+	}
+
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
@@ -456,16 +463,8 @@ func main() {
 	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.ProcessClasslessIngressV1Beta1,
 		cliConfig.ProcessClasslessIngressV1, cliConfig.ProcessClasslessKongConsumer, log.WithField("component", "store"))
 
-	var dumpDir string
-	if cliConfig.DumpConfig > 0 {
-		var err error
-		dumpDir, err = ioutil.TempDir("", "controller")
-		if err != nil {
-			log.Fatalf("failed to create a dump directory: %v", err)
-		}
-	}
 	kong, err := controller.NewKongController(ctx, &controllerConfig, updateChannel,
-		store, dumpDir)
+		store)
 	if err != nil {
 		log.Fatalf("failed to create a controller: %v", err)
 	}

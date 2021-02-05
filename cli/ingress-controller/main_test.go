@@ -82,7 +82,6 @@ func TestHandleSigterm(t *testing.T) {
 		channels.NewRingChannel(1024),
 		store.New(store.CacheStores{}, conf.IngressClass, conf.ProcessClasslessIngressV1Beta1,
 			conf.ProcessClasslessIngressV1, conf.ProcessClasslessKongConsumer, logrus.New()),
-		"", // dump dir, not used in this test
 	)
 
 	exitCh := make(chan int, 1)

@@ -93,6 +93,7 @@ type Configuration struct {
 	Logger logrus.FieldLogger
 
 	DumpConfig util.ConfigDumpMode
+	DumpDir    string
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -131,8 +132,7 @@ func (n *KongController) syncIngress(interface{}) error {
 func NewKongController(ctx context.Context,
 	config *Configuration,
 	updateCh *channels.RingChannel,
-	store store.Storer,
-	dumpDir string) (*KongController, error) {
+	store store.Storer) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: config.KubeClient.CoreV1().Events(config.Namespace),
@@ -155,7 +155,7 @@ func NewKongController(ctx context.Context,
 	n.syncQueue = task.NewTaskQueue(n.syncIngress,
 		config.Logger.WithField("component", "sync-queue"))
 
-	n.dumpDir = dumpDir
+	n.dumpDir = config.DumpDir
 
 	electionID := config.ElectionID + "-" + config.IngressClass
 

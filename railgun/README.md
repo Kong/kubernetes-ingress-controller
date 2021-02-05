@@ -33,6 +33,14 @@ There's a `make run` to do this as well, but it's presently broken until we fix 
 
 Look in the `examples/` directory for `Ingress` resources to deploy for testing.
 
+### Integration Demo
+
+```shell
+docker run -d --rm --name kong-dbless -e KONG_ADMIN_LISTEN="0.0.0.0:8001" -e KONG_DATABASE=off kong:2.2
+env KONG_CONFIGURATION_NAMESPACE=potato ./bin/manager --kong-url=http://172.17.0.2:8001
+kc create secret -n kube-system generic kong-config --from-literal=a=b
+```
+
 [kic]:https://github.com/kong/kubernetes-ingress-controller
 [kb]:https://github.com/kubernetes-sigs/kubebuilder
 [ctrl]:https://github.com/kubernetes-sigs/controller-runtime/releases/tag/v0.7.0

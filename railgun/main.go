@@ -73,8 +73,8 @@ func main() {
 	flag.StringVar(&kongURL, "kong-url", "http://localhost:8001", "TODO")
 	flag.StringVar(&filterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flag.IntVar(&concurrency, "kong-concurrency", 10, "TODO")
-	flag.StringVar(&secretName, "secret-name", "railgun-data", "TODO")
-	flag.StringVar(&secretNamespace, "secret-namespace", "default", "TODO")
+	flag.StringVar(&secretName, "secret-name", "kong-config", "TODO")
+	flag.StringVar(&secretNamespace, "secret-namespace", "kube-system", "TODO")
 
 	opts := zap.Options{
 		Development: true,

@@ -43,6 +43,8 @@ import (
 	//+kubebuilder:scaffold:imports
 )
 
+//go:generate go run github.com/kong/railgun/cmd/generators/controllers/inputs
+
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")

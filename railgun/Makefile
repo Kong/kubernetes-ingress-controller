@@ -26,7 +26,7 @@ manager: generate fmt vet
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
-	KONG_EXTERNAL_CONTROLLER=true KONG_CONFIGURATION_NAMESPACE=kube-system go run main.go
+	KONG_EXTERNAL_CONTROLLER=true KONG_CONFIGURATION_NAMESPACE=kong-system go run main.go
 
 # Deploy a vanilla Kong proxy to the cluster for controller testing/debugging
 deploy.test.proxy:
@@ -34,11 +34,11 @@ deploy.test.proxy:
 
 # Cleanup any deployed test proxies
 clean.test.proxy:
-	helm uninstall --namespace kube-system kong-test-proxy
+	helm uninstall --namespace kong-system kong-test-proxy
 
 # Debug using delve
 debug: generate fmt vet manifests
-	KONG_EXTERNAL_CONTROLLER=true KONG_CONFIGURATION_NAMESPACE=kube-system dlv debug ./main.go
+	KONG_EXTERNAL_CONTROLLER=true KONG_CONFIGURATION_NAMESPACE=kong-system dlv debug ./main.go
 
 # Install CRDs into a cluster
 install: manifests kustomize

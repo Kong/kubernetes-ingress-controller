@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/kong/railgun/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,7 +25,7 @@ func hasFinalizer(obj client.Object, finalizer string) bool {
 // isAPIAvailable is a hack to short circuit controllers for APIs which aren't available on the cluster,
 // enabling us to keep separate logic and logging for some legacy API versions.
 func isAPIAvailable(mgr ctrl.Manager, obj client.Object) (bool, error) {
-	if err := mgr.GetAPIReader().Get(context.Background(), client.ObjectKey{Namespace: "kube-system", Name: "non-existent"}, obj); err != nil {
+	if err := mgr.GetAPIReader().Get(context.Background(), client.ObjectKey{Namespace: controllers.DefaultNamespace, Name: "non-existent"}, obj); err != nil {
 		if strings.Contains(err.Error(), "no matches for kind") {
 			return false, nil
 		}

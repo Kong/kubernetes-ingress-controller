@@ -65,10 +65,10 @@ func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
 		log.Info("resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
-		return cleanupIngress(ctx, r.Client, log, req.NamespacedName, ing)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, ing)
 	}
 
-	return storeIngressUpdates(ctx, r.Client, log, req.NamespacedName, ing)
+	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, ing)
 
 	return ctrl.Result{}, nil
 }

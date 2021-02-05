@@ -26,7 +26,7 @@ This will deploy the helm chart with the KIC disabled, the Admin API enabled ove
 Now you can run the controller:
 
 ```shell
-KONG_EXTERNAL_CONTROLLER=true KONG_CONFIGURATION_NAMESPACE=kube-system go run main.go
+KONG_EXTERNAL_CONTROLLER=true KONG_CONFIGURATION_NAMESPACE=kong-system go run main.go
 ```
 
 There's a `make run` to do this as well, but it's presently broken until we fix `go-kong` upstream issues with `make manifest` (see the [TODO List](/TODO)).
@@ -36,9 +36,10 @@ Look in the `examples/` directory for `Ingress` resources to deploy for testing.
 ### Integration Demo
 
 ```shell
+kubectl create namespace kong-system
 docker run -d --rm --name kong-dbless -e KONG_ADMIN_LISTEN="0.0.0.0:8001" -e KONG_DATABASE=off kong:2.2
-env KONG_CONFIGURATION_NAMESPACE=potato ./bin/manager --kong-url=http://172.17.0.2:8001
-kc create secret -n kube-system generic kong-config --from-literal=a=b
+env KONG_CONFIGURATION_NAMESPACE=kong-system ./bin/manager --kong-url=http://172.17.0.2:8001
+kubectl create secret -n kong-system generic kong-config --from-literal=a=b
 ```
 
 [kic]:https://github.com/kong/kubernetes-ingress-controller

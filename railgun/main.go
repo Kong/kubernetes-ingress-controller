@@ -76,7 +76,7 @@ func main() {
 	flag.StringVar(&filterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flag.IntVar(&concurrency, "kong-concurrency", 10, "TODO")
 	flag.StringVar(&secretName, "secret-name", "kong-config", "TODO")
-	flag.StringVar(&secretNamespace, "secret-namespace", "kube-system", "TODO")
+	flag.StringVar(&secretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
 
 	opts := zap.Options{
 		Development: true,

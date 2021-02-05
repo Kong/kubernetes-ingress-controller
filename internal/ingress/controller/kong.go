@@ -75,16 +75,16 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		err = n.onUpdateDBMode(targetContent)
 	}
 	var target []byte
-	if n.cfg.DumpConfig == "enabled" {
+	if n.cfg.DumpConfig == util.ConfigDumpModeSensitive {
 		target, _ = json.Marshal(targetContent)
-	} else if n.cfg.DumpConfig == "sensitive" {
+	} else if n.cfg.DumpConfig == util.ConfigDumpModeEnabled {
 		sanitizedState := state.SanitizedCopy()
 		target, _ = json.Marshal(n.toDeckContent(ctx, sanitizedState))
 	}
 	if err != nil {
 		if len(target) > 0 {
-			_ = ioutil.WriteFile(filepath.Join(n.tmpDir, "target.json"), target, 0600)
-			_ = ioutil.WriteFile(filepath.Join(n.tmpDir, "last_good.json"), n.lastConfig, 0600)
+			_ = ioutil.WriteFile(filepath.Join(n.dumpDir, "target.json"), target, 0600)
+			_ = ioutil.WriteFile(filepath.Join(n.dumpDir, "last_good.json"), n.lastConfig, 0600)
 		}
 		return err
 	}

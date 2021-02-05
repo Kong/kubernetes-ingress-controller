@@ -28,6 +28,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 const (
@@ -81,7 +82,7 @@ type cliConfig struct {
 	LogFormat string
 
 	// Diagnostics
-	DumpConfig string
+	DumpConfig util.ConfigDumpMode
 
 	// k8s connection details
 	APIServerHost      string
@@ -320,7 +321,7 @@ func parseFlags() (cliConfig, error) {
 	config.LogFormat = viper.GetString("log-format")
 
 	// Diagnostics
-	config.DumpConfig = viper.GetString("dump-config")
+	config.DumpConfig = util.ParseConfigDumpMode(viper.GetString("dump-config"))
 
 	// k8s connection details
 	config.APIServerHost = viper.GetString("apiserver-host")

@@ -29,3 +29,22 @@ type RawSSLCert struct {
 	Cert []byte
 	Key  []byte
 }
+
+type ConfigDumpMode int
+
+const (
+	ConfigDumpModeOff       ConfigDumpMode = iota
+	ConfigDumpModeEnabled   ConfigDumpMode = iota
+	ConfigDumpModeSensitive ConfigDumpMode = iota
+)
+
+func ParseConfigDumpMode(in string) ConfigDumpMode {
+	switch in {
+	case "enabled":
+		return ConfigDumpModeEnabled
+	case "sensitive":
+		return ConfigDumpModeSensitive
+	default:
+		return ConfigDumpModeOff
+	}
+}

@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -93,7 +92,7 @@ type Configuration struct {
 
 	Logger logrus.FieldLogger
 
-	DumpConfig string
+	DumpConfig util.ConfigDumpMode
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -132,7 +131,8 @@ func (n *KongController) syncIngress(interface{}) error {
 func NewKongController(ctx context.Context,
 	config *Configuration,
 	updateCh *channels.RingChannel,
-	store store.Storer) (*KongController, error) {
+	store store.Storer,
+	dumpDir string) (*KongController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
 		Interface: config.KubeClient.CoreV1().Events(config.Namespace),
@@ -154,6 +154,8 @@ func NewKongController(ctx context.Context,
 	n.store = store
 	n.syncQueue = task.NewTaskQueue(n.syncIngress,
 		config.Logger.WithField("component", "sync-queue"))
+
+	n.dumpDir = dumpDir
 
 	electionID := config.ElectionID + "-" + config.IngressClass
 
@@ -236,20 +238,13 @@ type KongController struct {
 
 	Logger logrus.FieldLogger
 
-	tmpDir string
+	dumpDir string
 }
 
 // Start starts a new master process running in foreground, blocking until the next call to
 // Stop.
 func (n *KongController) Start() {
 	n.Logger.Debugf("startin up controller")
-	if len(n.cfg.DumpConfig) > 0 {
-		var err error
-		n.tmpDir, err = ioutil.TempDir("", "controller")
-		if err != nil {
-			panic(fmt.Errorf("failed to create a temporary working directory: %v", err))
-		}
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

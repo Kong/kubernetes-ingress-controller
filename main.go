@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -33,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	konghqcomv1 "github.com/kong/railgun/api/v1"
 	"github.com/kong/railgun/controllers"
 	"github.com/kong/railgun/controllers/configuration"
@@ -61,6 +64,18 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+
+	var kongURL string
+	var filterTag string
+	var concurrency int
+	var secretName string
+	var secretNamespace string
+	flag.StringVar(&kongURL, "kong-url", "http://localhost:8001", "TODO")
+	flag.StringVar(&filterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
+	flag.IntVar(&concurrency, "kong-concurrency", 10, "TODO")
+	flag.StringVar(&secretName, "secret-name", "railgun-data", "TODO")
+	flag.StringVar(&secretNamespace, "secret-namespace", "default", "TODO")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -122,10 +137,26 @@ func main() {
 	}
 	*/
 
+	kongClient, err := kong.NewClient(&kongURL, http.DefaultClient)
+	if err != nil {
+		setupLog.Error(err, "unable to create kongClient")
+		os.Exit(1)
+	}
+
 	if err = (&configuration.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
 		Scheme: mgr.GetScheme(),
+		Params: configuration.SecretReconcilerParams{
+			WatchName:      secretName,
+			WatchNamespace: secretNamespace,
+			KongConfig: sendconfig.Kong{
+				URL:         kongURL,
+				FilterTags:  []string{filterTag},
+				Concurrency: concurrency,
+				Client:      kongClient,
+			},
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Secret")
 		os.Exit(1)

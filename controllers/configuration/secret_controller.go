@@ -18,34 +18,109 @@ package configuration
 
 import (
 	"context"
-	"crypto/tls"
-	"fmt"
-	"net/http"
-	"net/url"
-	"os"
-	"os/exec"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
-	"github.com/kong/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
+
+type SecretReconcilerParams struct {
+	WatchName      string
+	WatchNamespace string
+
+	KongConfig sendconfig.Kong
+}
 
 // SecretReconciler reconciles a Secret object
 type SecretReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	Params SecretReconcilerParams
+}
+
+func (r *SecretReconciler) matchNsName(object client.Object) bool {
+	return object.GetName() == r.Params.WatchName &&
+		object.GetNamespace() == r.Params.WatchNamespace
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: something to keep in mind: long term we're still considering use a custom API instead of a secret for the Configuration.
-	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Secret{}).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&corev1.Secret{}).
+		WithEventFilter(predicate.NewPredicateFuncs(r.matchNsName)).
+		Complete(r)
+}
+
+func storerFromSecret(_ *corev1.Secret) (store.Storer, error) {
+	// TODO: replace the fake content with actual content unpacked from the secret argument.
+	ingresses := []*networkingv1beta1.Ingress{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1beta1.IngressSpec{
+				Rules: []networkingv1beta1.IngressRule{
+					{
+						IngressRuleValue: networkingv1beta1.IngressRuleValue{
+							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+								Paths: []networkingv1beta1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: networkingv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	services := []*corev1.Service{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{Port: 80},
+				},
+			},
+		},
+	}
+
+	return store.NewFakeStore(store.FakeObjects{
+		IngressesV1beta1: ingresses,
+		Services:         services,
+	})
 }
 
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
@@ -55,88 +130,32 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile manages the configuration secret for ingresses and parses that into a Kong configuration
 // which is posted to all available Proxy APIs.
 func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("secret", req.NamespacedName)
+	//	log := r.Log.WithValues("secret", req.NamespacedName)
+	logruslogger := logrus.New()
 
 	configSecret := new(corev1.Secret)
 	if err := r.Get(ctx, req.NamespacedName, configSecret); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// get the configuration secret namespace and filter out others
-	// TODO: we can do this with Watcher filters instead later, but if we're going to switch to a CRD
-	// implementation anyway we may not have to bother with this.
-	secretNamespace := os.Getenv(controllers.CtrlNamespaceEnv)
-	if secretNamespace == "" {
-		return ctrl.Result{}, fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv)
-	}
-	if req.Namespace != secretNamespace {
-		return ctrl.Result{}, nil
-	}
-	if req.Name != controllers.ConfigSecretName {
-		return ctrl.Result{}, nil
-	}
-
-	// collect all proxy instances to be configured
-	proxyInstances := new(corev1.PodList)
-
-	matchingLabels := client.MatchingLabels{controllers.ProxyInstanceLabel: "true"}
-	if err := r.List(ctx, proxyInstances, matchingLabels); err != nil {
+	storer, err := storerFromSecret(configSecret)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if len(proxyInstances.Items) < 1 {
-		return ctrl.Result{}, fmt.Errorf("no proxy instances found (pods with label %s) is Kong running?", controllers.ProxyInstanceLabel)
-	}
-	log.Info("found proxy instances which need to be configured", "count", len(proxyInstances.Items))
 
-	for _, pod := range proxyInstances.Items {
-		ip := pod.Status.PodIP
-		if ip == "" {
-			log.Info("proxy instance pod found but waiting until it has an IP address", "pod", pod.Name)
-			return ctrl.Result{Requeue: true}, nil
-		}
-
-		// FIXME - super gross hack to for testing, will remove this soon
-		commandCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		cmd := exec.CommandContext(commandCtx, "kubectl", "-n", pod.Namespace, "port-forward", fmt.Sprintf("pod/%s", pod.Name), "8444:8444")
-		if v := os.Getenv(controllers.ExternalCtrlEnv); v == "true" {
-			ip = "127.0.0.1"
-			go func() {
-				cmd.Run()
-			}()
-			time.Sleep(time.Second * 1)
-		}
-		// FIXME
-
-		url, err := url.Parse(fmt.Sprintf("https://%s:8444", ip))
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		// TODO: add mTLS
-		transport := http.DefaultTransport
-		transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		httpc := http.Client{Transport: transport}
-		kongc, err := kong.NewClient(kong.String(url.String()), &httpc)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		status, err := kongc.Status(ctx)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		log.Info("proxy instance in pod returned status successfully", "pod", pod.Name, "connections_accepted", status.Server.ConnectionsAccepted)
-
-		// FIXME - super gross testing hack cleanup, will remove this soon
-		cancel()
-		time.Sleep(time.Second * 1)
-		// FIXME
+	kongstate, err := parser.Build(logruslogger, storer)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
-	// TODO: parse configSecret into Kong configuration (using KIC libs)
+	targetConfig := deckgen.ToDeckContent(ctx, logruslogger, kongstate, nil, nil)
 
-	// TODO: post configuration updates to the Kong Admin API of each proxy
+	timedCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	_, err = sendconfig.PerformUpdate(timedCtx, logruslogger, &r.Params.KongConfig, true, false, targetConfig, nil, nil, nil)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }

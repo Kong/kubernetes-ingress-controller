@@ -10,6 +10,25 @@
   - import upstream KIC parser
   - need a label setup to locate all proxy instances
 
+
+Support:
+// FakeObjects can be used to populate a fake Store.
+type FakeObjects struct {
+	IngressesV1beta1   []*networkingv1beta1.Ingress
+	IngressesV1        []*networkingv1.Ingress
+	TCPIngresses       []*configurationv1beta1.TCPIngress
+	Services           []*apiv1.Service
+	Endpoints          []*apiv1.Endpoints
+	Secrets            []*apiv1.Secret
+	KongPlugins        []*configurationv1.KongPlugin
+	KongClusterPlugins []*configurationv1.KongClusterPlugin
+	KongIngresses      []*configurationv1.KongIngress
+	KongConsumers      []*configurationv1.KongConsumer
+
+	KnativeIngresses []*knative.Ingress
+}
+
+
 follow up scope items (for after POC):
 * we're still considering making this a custom API (CRD) instead of a secret
 * need mTLS for proxy configuration

@@ -34,7 +34,7 @@ func SetupIngressControllers(mgr ctrl.Manager) error {
 		return err
 	}
 	if apiAvailable {
-		if err = (&IngressReconciler{
+		if err = (&NetV1IngressReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 			Scheme: mgr.GetScheme(),
@@ -192,7 +192,7 @@ func setupLegacyIngressControllers(mgr ctrl.Manager) error {
 		return err
 	}
 	if apiAvailable {
-		if err = (&V1Beta1IngressReconciler{
+		if err = (&NetV1Beta1IngressReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("V1Beta1Ingress"),
 			Scheme: mgr.GetScheme(),
@@ -214,7 +214,7 @@ func setupLegacyIngressControllers(mgr ctrl.Manager) error {
 			return err
 		}
 		if apiAvailable {
-			if err = (&ExtensionsV1Beta1IngressReconciler{
+			if err = (&ExtV1Beta1IngressReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("ExtensionsV1Beta1Ingress"),
 				Scheme: mgr.GetScheme(),

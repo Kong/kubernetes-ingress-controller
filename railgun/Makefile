@@ -69,8 +69,12 @@ fmt:
 vet:
 	go vet ./...
 
+# Some of our controllers are simple enough to be generated, this generates them.
+generate.controllers:
+	go generate ./...
+
 # Generate code
-generate: controller-gen
+generate: controller-gen generate.controllers
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image

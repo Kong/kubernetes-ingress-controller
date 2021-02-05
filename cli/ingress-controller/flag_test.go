@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -439,4 +440,29 @@ func TestEnvironmentCertificates(t *testing.T) {
 	assert.Equal(expected.AdmissionWebhookCert, conf.AdmissionWebhookCert)
 	assert.Equal(expected.AdmissionWebhookKey, conf.AdmissionWebhookKey)
 	assert.Equal(expected.KongAdminCACert, conf.KongAdminCACert)
+}
+
+func TestDumpConfig(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	tests := []struct {
+		value        string
+		expectedMode util.ConfigDumpMode
+	}{
+		{"", util.ConfigDumpModeOff},
+		{"enabled", util.ConfigDumpModeEnabled},
+		{"sensitive", util.ConfigDumpModeSensitive},
+		{"garbagedjgnkdgd", util.ConfigDumpModeOff},
+	}
+
+	for _, test := range tests {
+		resetForTesting(func() { t.Fatal("bad parse") })
+		assert := assert.New(t)
+		os.Setenv("CONTROLLER_DUMP_CONFIG", test.value)
+		conf, err := parseFlags()
+		assert.Nil(err, "unexpected error parsing dump config")
+		assert.Equal(test.expectedMode, conf.DumpConfig)
+		os.Unsetenv("CONTROLLER_DUMP_CONFIG")
+	}
 }

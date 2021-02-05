@@ -9,6 +9,7 @@ require (
 	github.com/kong/kubernetes-ingress-controller v1.1.2-0.20210205121726-5872d8431e8c
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
+	github.com/sirupsen/logrus v1.6.0
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2

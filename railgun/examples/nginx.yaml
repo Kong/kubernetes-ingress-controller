@@ -46,7 +46,7 @@ metadata:
   name: nginx-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    kubernetes.io/ingress-class: "kong"
+    kubernetes.io/ingress.class: "kong"
 spec:
   rules:
   - http:
@@ -65,7 +65,7 @@ metadata:
   name: nginx-ingress-v1beta1
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    kubernetes.io/ingress-class: "kong"
+    kubernetes.io/ingress.class: "kong"
 spec:
   rules:
   - http:
@@ -81,7 +81,7 @@ metadata:
   name: nginx-ingress-extensions-v1beta1
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    kubernetes.io/ingress-class: "kong"
+    kubernetes.io/ingress.class: "kong"
 spec:
   rules:
   - http:

@@ -178,3 +178,40 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
 }
+
+// -----------------------------------------------------------------------------
+// KongV1 KongPlugin
+// -----------------------------------------------------------------------------
+
+// KongV1KongPlugin reconciles a Ingress object
+type KongV1KongPluginReconciler struct {
+	client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongPlugin{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=networking.konghq.com,resources=kongplugins,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.konghq.com,resources=kongplugins/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.konghq.com,resources=kongplugins/finalizers,verbs=update
+
+// Reconcile processes the watched objects
+func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1KongPlugin", req.NamespacedName)
+
+	obj := new(kongv1.KongPlugin)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/railgun/controllers"
+	"github.com/kong/railgun/pkg/configsecret"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -95,7 +96,7 @@ func storeObjUpdates(ctx context.Context, c client.Client, log logr.Logger, nsn 
 
 	// get the storage key for this ingress object and update it
 	// TODO: check before overriding
-	key := keyFor(obj, nsn)
+	key := configsecret.KeyFor(obj, nsn)
 	secret.Data[key] = cfg
 	if err := c.Update(ctx, secret); err != nil { // TODO: patch here instead of update for perf
 		if errors.IsConflict(err) {
@@ -125,7 +126,7 @@ func cleanupObj(ctx context.Context, c client.Client, log logr.Logger, nsn types
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	key := keyFor(obj, nsn)
+	key := configsecret.KeyFor(obj, nsn)
 	if _, ok := secret.Data[key]; ok {
 		delete(secret.Data, key)
 		if err := c.Update(ctx, secret); err != nil { // TODO: patch here instead of update

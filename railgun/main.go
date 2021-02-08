@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -86,9 +85,9 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
 	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {
-		setupLog.Error(fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv), "could not start controller manager")
-		os.Exit(25)
+		os.Setenv(controllers.CtrlNamespaceEnv, controllers.DefaultNamespace)
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

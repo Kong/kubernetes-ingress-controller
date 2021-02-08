@@ -59,6 +59,14 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:             "kongplugins",
 		URL:                "networking.konghq.com",
 	},
+	typeNeeded{
+		PackageImportAlias: "kongv1",
+		PackageAlias:       "KongV1",
+		Package:            "github.com/kong/railgun/api/v1",
+		Type:               "KongClusterPlugin",
+		Plural:             "kongclusterplugins",
+		URL:                "networking.konghq.com",
+	},
 }
 
 func main() {

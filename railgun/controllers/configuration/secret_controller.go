@@ -26,6 +26,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/railgun/controllers/configuration/decoder"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -67,7 +69,24 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func storerFromSecret(_ *corev1.Secret) (store.Storer, error) {
+func storerFromSecret(s *corev1.Secret) (store.Storer, error) {
+	sb := decoder.StoreBuilder{}
+
+	for k, v := range s.Data {
+		obj, err := decoder.DecodeObject(k, v)
+		if err != nil {
+			return nil, errors.Wrapf(err, "DecodeObject for key %q", k)
+		}
+		logrus.New().WithField("obj", obj).WithField("key", k).Info("decoded object")
+		if err := sb.Add(obj); err != nil {
+			return nil, errors.Wrapf(err, "add object for key %q", k)
+		}
+	}
+
+	return sb.Build()
+}
+
+func storerFromFake(_ *corev1.Secret) (store.Storer, error) {
 	// TODO: replace the fake content with actual content unpacked from the secret argument.
 	ingresses := []*networkingv1beta1.Ingress{
 		{

@@ -48,7 +48,7 @@ func SetupIngressControllers(mgr ctrl.Manager) error {
 // annotations of the object.
 // TODO: add these filters to watch options instead!
 func isManaged(annotations map[string]string) bool {
-	class, ok := annotations["kubernetes.io/ingress-class"]
+	class, ok := annotations["kubernetes.io/ingress.class"]
 	if !ok {
 		return false
 	}

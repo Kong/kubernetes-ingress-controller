@@ -2,12 +2,10 @@ package inputs
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/kong/railgun/controllers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -32,11 +30,4 @@ func getOrCreateConfigSecret(ctx context.Context, c client.Client, ns string) (*
 		secret.Data = make(map[string][]byte)
 	}
 	return secret, false, nil
-}
-
-// keyFor provides the string key that should be used to store the YAML contents of an object in the
-// Kong configuration secret.
-func keyFor(obj runtime.Object, nsn types.NamespacedName) string {
-	gvk := obj.GetObjectKind().GroupVersionKind()
-	return fmt.Sprintf("%s-%s-%s-%s-%s", gvk.Group, gvk.Version, gvk.Kind, nsn.Namespace, nsn.Name)
 }

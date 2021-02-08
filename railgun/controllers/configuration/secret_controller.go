@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/railgun/controllers/configuration/decoder"
+	"github.com/kong/railgun/pkg/configsecret"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -73,7 +74,7 @@ func storerFromSecret(s *corev1.Secret) (store.Storer, error) {
 	sb := decoder.StoreBuilder{}
 
 	for k, v := range s.Data {
-		obj, err := decoder.DecodeObject(k, v)
+		obj, err := configsecret.DecodeObject(k, v)
 		if err != nil {
 			return nil, errors.Wrapf(err, "DecodeObject for key %q", k)
 		}

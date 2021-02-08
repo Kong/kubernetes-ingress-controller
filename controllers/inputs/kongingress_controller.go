@@ -70,5 +70,5 @@ func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, ing)
 
-	return ctrl.Result{}, nil
+	//return ctrl.Result{}, nil
 }

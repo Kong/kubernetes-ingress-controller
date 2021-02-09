@@ -18,8 +18,12 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
+	"github.com/kong/deck/file"
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
@@ -53,8 +57,31 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		n.runningConfigHash,
 	)
 
+	if n.cfg.DumpConfig != util.ConfigDumpModeOff {
+		if n.cfg.DumpConfig == util.ConfigDumpModeEnabled {
+			targetContent = deckgen.ToDeckContent(ctx, n.Logger, state.SanitizedCopy(), &n.PluginSchemaStore,
+				n.getIngressControllerTags())
+		}
+		dumpErr := dumpConfig(err != nil, n.dumpDir, targetContent)
+		if dumpErr != nil {
+			n.Logger.WithError(err).Warn("failed to dump configuration")
+		}
+	}
+
 	n.runningConfigHash = newSHA
 	return err
+}
+
+func dumpConfig(failed bool, dumpDir string, targetContent *file.Content) error {
+	target, err := json.Marshal(targetContent)
+	if err != nil {
+		return err
+	}
+	filename := "last_good.json"
+	if failed {
+		filename = "last_bad.json"
+	}
+	return ioutil.WriteFile(filepath.Join(dumpDir, filename), target, 0600)
 }
 
 func (n *KongController) fetchCustomEntities() ([]byte, error) {

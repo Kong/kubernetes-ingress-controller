@@ -35,14 +35,14 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	konghqcomv1 "github.com/kong/railgun/api/v1"
-	"github.com/kong/railgun/controllers"
-	"github.com/kong/railgun/controllers/configuration"
-	"github.com/kong/railgun/controllers/inputs"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/api/v1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/inputs"
 	//+kubebuilder:scaffold:imports
 )
 
-//go:generate go run github.com/kong/railgun/cmd/generators/controllers/inputs
+//go:generate go run github.com/kong/kubernetes-ingress-controller/railgun/cmd/generators/controllers/inputs
 
 var (
 	scheme   = runtime.NewScheme()

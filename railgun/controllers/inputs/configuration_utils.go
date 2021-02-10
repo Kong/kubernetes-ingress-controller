@@ -3,7 +3,7 @@ package inputs
 import (
 	"context"
 
-	"github.com/kong/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"

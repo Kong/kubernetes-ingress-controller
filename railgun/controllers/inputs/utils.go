@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/railgun/controllers"
-	"github.com/kong/railgun/pkg/configsecret"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/configsecret"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

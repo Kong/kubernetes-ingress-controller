@@ -46,7 +46,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias: "kongv1",
 		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/railgun/api/v1",
+		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/api/v1",
 		Type:               "KongIngress",
 		Plural:             "kongingresses",
 		URL:                "networking.konghq.com",
@@ -54,7 +54,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias: "kongv1",
 		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/railgun/api/v1",
+		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/api/v1",
 		Type:               "KongPlugin",
 		Plural:             "kongplugins",
 		URL:                "networking.konghq.com",
@@ -62,7 +62,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias: "kongv1",
 		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/railgun/api/v1",
+		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/api/v1",
 		Type:               "KongClusterPlugin",
 		Plural:             "kongclusterplugins",
 		URL:                "networking.konghq.com",
@@ -70,7 +70,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias: "kongv1",
 		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/railgun/api/v1",
+		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/api/v1",
 		Type:               "KongConsumer",
 		Plural:             "kongconsumers",
 		URL:                "networking.konghq.com",
@@ -164,7 +164,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	kongv1 "github.com/kong/railgun/api/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/api/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"

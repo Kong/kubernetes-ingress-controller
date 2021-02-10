@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	kongv1 "github.com/kong/railgun/api/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/api/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"

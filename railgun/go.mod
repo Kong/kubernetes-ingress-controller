@@ -1,4 +1,4 @@
-module github.com/kong/railgun
+module github.com/kong/kubernetes-ingress-controller/railgun
 
 go 1.15
 

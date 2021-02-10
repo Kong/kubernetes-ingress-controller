@@ -12,7 +12,7 @@ import (
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/kong"
 	ktfmetal "github.com/kong/kubernetes-testing-framework/pkg/metallb"
 
-	"github.com/kong/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 )
 
 var (

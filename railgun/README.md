@@ -49,6 +49,7 @@ Right now the integration tests in `test/integration` rely on a private repo, ma
 ```shell
 export GOPRIVATE="github.com/kong/kubernetes-testing-framework,${GOPRIVATE}"
 git config --global url."git@github.com:kong/kubernetes-testing-framework".insteadOf https://github.com/kong/kubernetes-testing-framework
+```
 
 [kic]:https://github.com/kong/kubernetes-ingress-controller
 [kb]:https://github.com/kubernetes-sigs/kubebuilder

@@ -22,6 +22,7 @@ func equalSHA(a, b []byte) bool {
 	return reflect.DeepEqual(a, b)
 }
 
+// PerformUpdate writes `targetContent` and `customEntities` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
 	kongConfig *Kong,

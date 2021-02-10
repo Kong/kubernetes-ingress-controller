@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.
 func ToDeckContent(
 	ctx context.Context,
 	log logrus.FieldLogger,

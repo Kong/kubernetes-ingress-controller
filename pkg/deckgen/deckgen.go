@@ -11,6 +11,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// GenerateSHA generates a SHA256 checksum of the (targetContent, customEntities) tuple, with the purpose of change
+// detection.
 func GenerateSHA(targetContent *file.Content,
 	customEntities []byte) ([]byte, error) {
 
@@ -30,6 +32,7 @@ func GenerateSHA(targetContent *file.Content,
 	return shaSum[:], nil
 }
 
+// CleanUpNullsInPluginConfigs modifies `state` by deleting plugin config map keys that have nil as their value.
 func CleanUpNullsInPluginConfigs(state *file.Content) {
 	for _, s := range state.Services {
 		for _, p := range s.Plugins {
@@ -69,6 +72,7 @@ func CleanUpNullsInPluginConfigs(state *file.Content) {
 	}
 }
 
+// GetFCertificateFromKongCert converts a kong.Certificate to a file.FCertificate.
 func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate
 	if kongCert.ID != nil {
@@ -94,6 +98,9 @@ func getSNIs(names []*string) []kong.SNI {
 	return snis
 }
 
+// PluginString returns a string representation of a FPlugin suitable as a sorting key.
+//
+// Deprecated. To be replaced by a predicate that compares two FPlugins.
 func PluginString(plugin file.FPlugin) string {
 	result := ""
 	if plugin.Name != nil {
@@ -111,6 +118,7 @@ func PluginString(plugin file.FPlugin) string {
 	return result
 }
 
+// FillPluginConfig returns a copy of `config` that has default values filled in from `schema`.
 func FillPluginConfig(schema map[string]interface{},
 	config kong.Configuration) (kong.Configuration, error) {
 	jsonb, err := json.Marshal(&schema)

@@ -42,6 +42,7 @@ import (
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -82,7 +83,7 @@ var (
 
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
 	return controller.Configuration{
-		Kong: controller.Kong{
+		Kong: sendconfig.Kong{
 			URL:         cliConfig.KongAdminURL,
 			FilterTags:  cliConfig.KongAdminFilterTags,
 			Concurrency: cliConfig.KongAdminConcurrency,

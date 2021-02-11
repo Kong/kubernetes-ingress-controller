@@ -3,6 +3,7 @@ run:
   skip-dirs:
   - pkg/client
   - pkg/apis
+  - railgun
 linters:
   enable:
   - deadcode

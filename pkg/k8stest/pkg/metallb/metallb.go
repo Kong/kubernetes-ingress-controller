@@ -22,7 +22,8 @@ import (
 // Public Functions - Metallb Management
 // -----------------------------------------------------------------------------
 
-// DeployMetallbForKindCluster deploys Metallb to the given Kind cluster using the Docker network provided for LoadBalancer IPs.
+// DeployMetallbForKindCluster deploys Metallb to the given Kind cluster using the Docker network provided for
+// LoadBalancer IPs.
 func DeployMetallbForKindCluster(kindClusterName, dockerNetwork string) error {
 	// grab a kubernetes client for the cluster
 	kc, err := ktfkind.ClientForKindCluster(kindClusterName)
@@ -92,8 +93,10 @@ func DeployMetallbForKindCluster(kindClusterName, dockerNetwork string) error {
 // GetIPRangeForMetallb provides a range of IP addresses to use for MetalLB given an IPv4 Network
 // FIXME: just choosing specific default IPs for now, need to check range validity and dynamically assign IPs.
 func GetIPRangeForMetallb(network net.IPNet) (startIP, endIP net.IP) {
-	startIP = ktfnet.ConvertUint32ToIPv4(ktfnet.ConvertIPv4ToUint32(network.IP) | ktfnet.ConvertIPv4ToUint32(defaultStartIP))
-	endIP = ktfnet.ConvertUint32ToIPv4(ktfnet.ConvertIPv4ToUint32(network.IP) | ktfnet.ConvertIPv4ToUint32(defaultEndIP))
+	startIP = ktfnet.ConvertUint32ToIPv4(ktfnet.ConvertIPv4ToUint32(network.IP) |
+		ktfnet.ConvertIPv4ToUint32(defaultStartIP))
+	endIP = ktfnet.ConvertUint32ToIPv4(ktfnet.ConvertIPv4ToUint32(network.IP) |
+		ktfnet.ConvertIPv4ToUint32(defaultEndIP))
 	return
 }
 

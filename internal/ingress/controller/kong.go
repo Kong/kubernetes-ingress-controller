@@ -80,7 +80,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		}
 		dumpErr := dumpConfig(err != nil, n.dumpDir, targetContent)
 		if dumpErr != nil {
-			n.Logger.Warnf("failed to dump configuration: %s", dumpErr)
+			n.Logger.WithError(err).Warn("failed to dump configuration")
 		}
 	}
 	if err != nil {
@@ -100,8 +100,7 @@ func dumpConfig(failed bool, dumpDir string, targetContent *file.Content) error 
 	if failed {
 		filename = "last_bad.json"
 	}
-	err = ioutil.WriteFile(filepath.Join(dumpDir, filename), target, 0600)
-	return err
+	return ioutil.WriteFile(filepath.Join(dumpDir, filename), target, 0600)
 }
 
 func generateSHA(targetContent *file.Content,

@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	ktfmetal "github.com/kong/kubernetes-testing-framework/pkg/metallb"
-	ktfnet "github.com/kong/kubernetes-testing-framework/pkg/networking"
+	ktfmetal "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/metallb"
+	ktfnet "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/networking"
 )
 
 func TestHelperFunctions(t *testing.T) {

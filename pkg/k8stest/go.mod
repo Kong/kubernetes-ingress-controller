@@ -1,4 +1,4 @@
-module github.com/kong/kubernetes-testing-framework
+module github.com/kong/kubernetes-ingress-controller/pkg/k8stest
 
 go 1.15
 

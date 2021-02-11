@@ -4,7 +4,6 @@ This repo holds a prototype implementation of the [Kong Kubernetes Ingress Contr
 
 The naming `railgun` is a codename used arbitrarily based on a [video game reference][q3].
 
-If you're confused what you're looking at or have any questions, please reach out to @kong/team-k8s on our [Slack Channel][slack]!
 
 ## Usage
 
@@ -42,17 +41,7 @@ env KONG_CONFIGURATION_NAMESPACE=kong-system ./bin/manager --kong-url=http://172
 kubectl create secret -n kong-system generic kong-config --from-literal=a=b
 ```
 
-# Tests
-
-Right now the integration tests in `test/integration` rely on a private repo, make sure you run the following before running tests:
-
-```shell
-export GOPRIVATE="github.com/kong/kubernetes-testing-framework,${GOPRIVATE}"
-git config --global url."git@github.com:kong/kubernetes-testing-framework".insteadOf https://github.com/kong/kubernetes-testing-framework
-```
-
 [kic]:https://github.com/kong/kubernetes-ingress-controller
 [kb]:https://github.com/kubernetes-sigs/kubebuilder
 [ctrl]:https://github.com/kubernetes-sigs/controller-runtime/releases/tag/v0.7.0
 [q3]:https://github.com/ioquake/ioq3
-[slack]:https://app.slack.com/client/T0DS5NB27/C011RQPHDC7

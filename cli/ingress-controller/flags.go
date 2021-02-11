@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -321,7 +322,10 @@ func parseFlags() (cliConfig, error) {
 	config.LogFormat = viper.GetString("log-format")
 
 	// Diagnostics
-	config.DumpConfig = util.ParseConfigDumpMode(viper.GetString("dump-config"))
+	var err error
+	if config.DumpConfig, err = util.ParseConfigDumpMode(viper.GetString("dump-config")); err != nil {
+		return cliConfig{}, fmt.Errorf("could not parse --dump-config: %w", err)
+	}
 
 	// k8s connection details
 	config.APIServerHost = viper.GetString("apiserver-host")

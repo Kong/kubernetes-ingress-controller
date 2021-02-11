@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/docker/docker v20.10.3+incompatible
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.0
@@ -13,7 +14,6 @@ require (
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/kong/deck v1.2.1
 	github.com/kong/go-kong v0.15.0
-	github.com/kong/kubernetes-testing-framework v0.0.0-20210209161849-62d8d8602a0e
 	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/mapstructure v1.3.1
 	github.com/pkg/errors v0.9.1

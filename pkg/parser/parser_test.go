@@ -20,6 +20,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -156,8 +157,8 @@ func TestGlobalPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config: configurationv1.Configuration{
-						"foo1": "bar1",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"foo1": "bar1"}`),
 					},
 				},
 			},
@@ -467,7 +468,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
@@ -481,7 +484,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
@@ -500,7 +505,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
@@ -515,7 +522,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
@@ -2232,9 +2241,8 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"http"},
-				Config: configurationv1.Configuration{
-					"foo":     "bar",
-					"knative": "yo",
+				Config: runtime.RawExtension{
+					Raw: []byte(`{"foo": "bar", "knative": "yo"}`),
 				},
 			},
 		}
@@ -3090,14 +3098,16 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
+				Config: runtime.RawExtension{
+					Raw: []byte(`{
 					"foo": "bar",
-					"add": map[string]interface{}{
-						"headers": []interface{}{
+					"add": {
+						"headers": [
 							"header1:value1",
-							"header2:value2",
-						},
-					},
+							"header2:value2"
+							]
+						}
+					}`),
 				},
 			},
 		}
@@ -3179,8 +3189,8 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "basic-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
-					"foo": "bar",
+				Config: runtime.RawExtension{
+					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		}
@@ -3192,8 +3202,8 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
-					"foo": "bar",
+				Config: runtime.RawExtension{
+					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		}
@@ -3263,8 +3273,8 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "basic-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
-					"foo": "bar",
+				Config: runtime.RawExtension{
+					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		}

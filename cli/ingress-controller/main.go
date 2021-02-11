@@ -347,6 +347,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to create a dump directory: %v", err)
 		}
+		log.Infof("config dumps will be created in: %v", controllerConfig.DumpDir)
 	}
 
 	var synced []cache.InformerSynced

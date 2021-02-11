@@ -10,9 +10,9 @@ import (
 	"github.com/google/uuid"
 	"k8s.io/client-go/kubernetes"
 
-	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/kong"
-	ktfmetal "github.com/kong/kubernetes-testing-framework/pkg/metallb"
+	ktfkind "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/kind"
+	ktfkong "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/kong"
+	ktfmetal "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/metallb"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 )

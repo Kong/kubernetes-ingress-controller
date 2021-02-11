@@ -13,9 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	ktfdocker "github.com/kong/kubernetes-testing-framework/pkg/docker"
-	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
-	ktfnet "github.com/kong/kubernetes-testing-framework/pkg/networking"
+	ktfdocker "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/docker"
+	ktfkind "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/kind"
+	ktfnet "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/networking"
 )
 
 // -----------------------------------------------------------------------------

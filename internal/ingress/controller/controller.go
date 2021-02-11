@@ -78,7 +78,7 @@ type Configuration struct {
 	// DumpConfig instructs the controller to write generated config to a temp directory for manual inspection (for debugging).
 	DumpConfig util.ConfigDumpMode
 	// DumpDir specifies the target directory for dumps enabled by `DumpConfig`.
-	DumpDir    string
+	DumpDir string
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -139,8 +139,6 @@ func NewKongController(ctx context.Context,
 	n.store = store
 	n.syncQueue = task.NewTaskQueue(n.syncIngress,
 		config.Logger.WithField("component", "sync-queue"))
-
-	n.dumpDir = config.DumpDir
 
 	electionID := config.ElectionID + "-" + config.IngressClass
 
@@ -221,8 +219,6 @@ type KongController struct {
 	PluginSchemaStore util.PluginSchemaStore
 
 	Logger logrus.FieldLogger
-
-	dumpDir string
 }
 
 // Start starts a new master process running in foreground, blocking until the next call to

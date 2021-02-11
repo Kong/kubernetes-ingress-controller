@@ -62,7 +62,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 			targetContent = deckgen.ToDeckContent(ctx, n.Logger, state.SanitizedCopy(), &n.PluginSchemaStore,
 				n.getIngressControllerTags())
 		}
-		dumpErr := dumpConfig(err != nil, n.dumpDir, targetContent)
+		dumpErr := dumpConfig(err != nil, n.cfg.DumpDir, targetContent)
 		if dumpErr != nil {
 			n.Logger.WithError(err).Warn("failed to dump configuration")
 		}

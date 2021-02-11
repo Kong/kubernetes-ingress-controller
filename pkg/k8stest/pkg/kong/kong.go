@@ -41,7 +41,8 @@ func SimpleProxySetup(kc *kubernetes.Clientset, namespace string) error {
 	}
 
 	// create the deployment for the proxy
-	_, err := kc.AppsV1().Deployments(namespace).Create(context.Background(), defaultProxyDeployment, metav1.CreateOptions{})
+	_, err := kc.AppsV1().Deployments(namespace).
+		Create(context.Background(), defaultProxyDeployment, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func SimpleProxySetup(kc *kubernetes.Clientset, namespace string) error {
 		}
 	}
 	if !ok {
-		return fmt.Errorf("kong proxy was not ready after %s\n", ProxyPodTimeout)
+		return fmt.Errorf("kong proxy was not ready after %s", ProxyPodTimeout)
 	}
 
 	return nil
@@ -98,7 +99,7 @@ func DeployControllers(kc *kubernetes.Clientset, containerImage, namespace strin
 
 	go func() {
 		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
+			fmt.Fprintf(os.Stderr, "%v", err.Error())
 		}
 	}()
 

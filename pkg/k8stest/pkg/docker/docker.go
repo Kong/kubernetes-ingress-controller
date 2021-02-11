@@ -16,7 +16,7 @@ import (
 // InspectDockerContainer provides the full container spec for a container by name.
 func InspectDockerContainer(containerID string) (*types.ContainerJSON, error) {
 	// TODO: just grabbing the local ENV for now, later we should be selective & dynamic
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}

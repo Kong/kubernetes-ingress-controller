@@ -75,7 +75,7 @@ type Configuration struct {
 
 	Logger logrus.FieldLogger
 
-	// DumpConfig instructs the controller to write generated config to a temp directory for manual inspection (for debugging).
+	// DumpConfig writes generated config to a temp directory for manual inspection and debugging.
 	DumpConfig util.ConfigDumpMode
 	// DumpDir specifies the target directory for dumps enabled by `DumpConfig`.
 	DumpDir string

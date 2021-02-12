@@ -74,6 +74,11 @@ type Configuration struct {
 	EnableKnativeIngressSupport bool
 
 	Logger logrus.FieldLogger
+
+	// DumpConfig writes generated config to a temp directory for manual inspection and debugging.
+	DumpConfig util.ConfigDumpMode
+	// DumpDir specifies the target directory for dumps enabled by `DumpConfig`.
+	DumpDir string
 }
 
 // sync collects all the pieces required to assemble the configuration file and

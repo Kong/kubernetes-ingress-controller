@@ -7,6 +7,8 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -23,6 +25,7 @@ type KongValidator interface {
 type KongHTTPValidator struct {
 	Client *kong.Client
 	Logger logrus.FieldLogger
+	Store  store.Storer
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
@@ -63,6 +66,18 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	if k8sPlugin.Config != nil {
 		plugin.Config = kong.Configuration(k8sPlugin.Config)
+	}
+	if k8sPlugin.ConfigFrom.SecretValue != (configuration.SecretValueFromSource{}) {
+		if k8sPlugin.Config != nil {
+			return false, "plugin cannot use both Config and ConfigFrom", nil
+		}
+		config, err := kongstate.SecretToConfiguration(validator.Store,
+			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
+		if err != nil {
+			return false, fmt.Sprintf("could not load secret plugin configuration: %v", err), nil
+		}
+		plugin.Config = kong.Configuration(config)
+
 	}
 	if k8sPlugin.RunOn != "" {
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)

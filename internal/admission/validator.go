@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/sirupsen/logrus"
@@ -15,8 +15,8 @@ import (
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
-	ValidateConsumer(ctx context.Context, consumer configuration.KongConsumer) (bool, string, error)
-	ValidatePlugin(consumer configuration.KongPlugin) (bool, string, error)
+	ValidateConsumer(ctx context.Context, consumer configurationv1.KongConsumer) (bool, string, error)
+	ValidatePlugin(consumer configurationv1.KongPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
 
@@ -34,7 +34,7 @@ type KongHTTPValidator struct {
 // The first boolean communicates if the consumer is valid or not and string
 // holds a message if the entity is not valid.
 func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
-	consumer configuration.KongConsumer) (bool, string, error) {
+	consumer configurationv1.KongConsumer) (bool, string, error) {
 	if consumer.Username == "" {
 		return false, "username cannot be empty", nil
 	}
@@ -58,7 +58,7 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 // The first boolean communicates if k8sPluign is valid or not and string
 // holds a message if the entity is not valid.
 func (validator KongHTTPValidator) ValidatePlugin(
-	k8sPlugin configuration.KongPlugin) (bool, string, error) {
+	k8sPlugin configurationv1.KongPlugin) (bool, string, error) {
 	if k8sPlugin.PluginName == "" {
 		return false, "plugin name cannot be empty", nil
 	}
@@ -67,7 +67,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if k8sPlugin.Config != nil {
 		plugin.Config = kong.Configuration(k8sPlugin.Config)
 	}
-	if k8sPlugin.ConfigFrom.SecretValue != (configuration.SecretValueFromSource{}) {
+	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.SecretValueFromSource{}) {
 		if k8sPlugin.Config != nil {
 			return false, "plugin cannot use both Config and ConfigFrom", nil
 		}

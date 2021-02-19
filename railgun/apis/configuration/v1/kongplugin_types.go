@@ -18,8 +18,8 @@ package v1
 
 import (
 	kicv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -40,7 +40,7 @@ type KongPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
-	Config runtime.RawExtension `json:"config,omitempty"`
+	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom kicv1.ConfigSource `json:"configFrom,omitempty"`

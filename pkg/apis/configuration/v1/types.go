@@ -4,8 +4,8 @@ import (
 	"encoding/gob"
 
 	"github.com/kong/go-kong/kong"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -52,7 +52,7 @@ type KongClusterPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
-	Config runtime.RawExtension `json:"config,omitempty"`
+	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
@@ -96,7 +96,7 @@ type KongPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
-	Config runtime.RawExtension `json:"config,omitempty"`
+	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom ConfigSource `json:"configFrom,omitempty"`

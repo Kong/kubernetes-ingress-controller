@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package inputs
+package networking
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/api/v1"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1"
 )
 
 // KongConsumerReconciler reconciles a KongConsumer object

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package inputs
+package networking
 
 import (
 	"context"
@@ -24,31 +24,31 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/api/v1"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1"
 )
 
-// KongPluginReconciler reconciles a KongPlugin object
-type KongPluginReconciler struct {
+// KongClusterPluginReconciler reconciles a KongClusterPlugin object
+type KongClusterPluginReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongplugins,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongplugins/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongplugins/finalizers,verbs=update
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongclusterplugins,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongclusterplugins/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongclusterplugins/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the KongPlugin object against the actual cluster state, and then
+// the KongClusterPlugin object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
-func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("kongplugin", req.NamespacedName)
+func (r *KongClusterPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = r.Log.WithValues("kongclusterplugin", req.NamespacedName)
 
 	// your logic here
 
@@ -56,8 +56,8 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&konghqcomv1.KongPlugin{}).
+		For(&konghqcomv1.KongClusterPlugin{}).
 		Complete(r)
 }

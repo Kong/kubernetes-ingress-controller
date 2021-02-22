@@ -1,4 +1,4 @@
-package inputs
+package networking
 
 import (
 	"context"

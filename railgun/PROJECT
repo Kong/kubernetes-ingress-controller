@@ -2,42 +2,41 @@ domain: konghq.com
 layout: go.kubebuilder.io/v3
 multigroup: true
 projectName: railgun
-version: "3"
 repo: github.com/kong/kubernetes-ingress-controller/railgun
 resources:
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
+  domain: konghq.com
+  group: configuration
   kind: KongIngress
-  controller: true
-  domain: konghq.com
-  group: networking
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
   version: v1
-  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1
 - api:
     crdVersion: v1
-    namespaced: false
+  controller: true
+  domain: konghq.com
+  group: configuration
   kind: KongClusterPlugin
-  controller: true
-  domain: konghq.com
-  group: networking
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
   version: v1
-  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
+  domain: konghq.com
+  group: configuration
   kind: KongPlugin
-  controller: true
-  domain: konghq.com
-  group: networking
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
   version: v1
-  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1
 - api:
     crdVersion: v1
     namespaced: true
-  kind: KongConsumer
   controller: true
   domain: konghq.com
-  group: networking
+  group: configuration
+  kind: KongConsumer
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
   version: v1
-  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1
+version: "3"

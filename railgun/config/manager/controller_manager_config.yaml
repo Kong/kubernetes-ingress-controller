@@ -8,4 +8,4 @@ webhook:
   port: 9443
 leaderElection:
   leaderElect: true
-  resourceName: 5b374a9e.my.domain
+  resourceName: 5b374a9e.konghq.com

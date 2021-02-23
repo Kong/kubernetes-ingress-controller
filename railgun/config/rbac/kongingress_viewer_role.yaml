@@ -5,7 +5,7 @@ metadata:
   name: kongingress-viewer-role
 rules:
 - apiGroups:
-  - konghq.com.my.domain
+  - configuration.konghq.com
   resources:
   - kongingresses
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - konghq.com.my.domain
+  - configuration.konghq.com
   resources:
   - kongingresses/status
   verbs:

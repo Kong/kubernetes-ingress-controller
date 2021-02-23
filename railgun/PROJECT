@@ -16,7 +16,7 @@ resources:
   path: github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1
 - api:
     crdVersion: v1
-    namespaced: true
+    namespaced: false
   kind: KongClusterPlugin
   controller: true
   domain: konghq.com

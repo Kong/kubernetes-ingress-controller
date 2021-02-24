@@ -7,7 +7,7 @@ ADD . .
 ARG TAG
 ARG REPO_INFO
 ARG COMMIT
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o kong-ingress-controller -ldflags "-s -w -X main.RELEASE=$TAG -X main.COMMIT=$COMMIT -X main.REPO=$REPO_INFO" ./cli/ingress-controller
+RUN CGO_ENABLED=0 GOOS=linux go build -o kong-ingress-controller -ldflags "-s -w -X main.RELEASE=$TAG -X main.COMMIT=$COMMIT -X main.REPO=$REPO_INFO" ./cli/ingress-controller
 
 # Final stage: the running container.
 FROM alpine:3.11

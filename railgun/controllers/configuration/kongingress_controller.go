@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package networking
+package configuration
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
 // KongIngressReconciler reconciles a KongIngress object
@@ -40,9 +40,9 @@ func (r *KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&konghqcomv1.KongIngress{}).Complete(r)
 }
 
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongingresses/finalizers,verbs=update
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

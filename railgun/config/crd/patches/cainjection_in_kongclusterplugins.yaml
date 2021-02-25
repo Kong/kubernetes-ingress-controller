@@ -4,4 +4,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  name: kongclusterplugins.konghq.com.my.domain
+  name: kongclusterplugins.configuration.konghq.com

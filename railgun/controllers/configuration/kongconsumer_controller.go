@@ -14,17 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package networking
+package configuration
 
 import (
 	"context"
 
 	"github.com/go-logr/logr"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1"
 )
 
 // KongConsumerReconciler reconciles a KongConsumer object
@@ -34,9 +33,9 @@ type KongConsumerReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=konghq.com.my.domain,resources=kongconsumers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

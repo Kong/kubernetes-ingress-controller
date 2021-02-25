@@ -1,4 +1,4 @@
-package networking
+package configuration
 
 import (
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -12,7 +12,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // KongIngressFinalizer is the finalizer used to ensure Kong configuration cleanup for deleted Ingress resources.
-const KongIngressFinalizer = "networking.konghq.com/ingress"
+const KongIngressFinalizer = "configuration.konghq.com/ingress"
 
 // SetupIngressControllers validates which ingress controllers need to be configured and sets them up with the
 // provided controller manager.

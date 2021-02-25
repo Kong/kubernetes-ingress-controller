@@ -5,7 +5,7 @@ metadata:
   name: kongingress-editor-role
 rules:
 - apiGroups:
-  - konghq.com.my.domain
+  - configuration.konghq.com
   resources:
   - kongingresses
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - konghq.com.my.domain
+  - configuration.konghq.com
   resources:
   - kongingresses/status
   verbs:

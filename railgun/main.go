@@ -36,10 +36,9 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/networking/v1"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/networking"
+	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -97,7 +96,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "5b374a9e.my.domain",
+		LeaderElectionID:       "5b374a9e.konghq.com",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -105,7 +104,7 @@ func main() {
 	}
 
 	/* TODO: re-enable once fixed
-	if err = (&networking.KongIngressReconciler{
+	if err = (&kongctrl.KongIngressReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
 		Scheme: mgr.GetScheme(),
@@ -113,7 +112,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongIngress")
 		os.Exit(1)
 	}
-	if err = (&networking.KongClusterPluginReconciler{
+	if err = (&kongctrl.KongClusterPluginReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 		Scheme: mgr.GetScheme(),
@@ -121,7 +120,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongClusterPlugin")
 		os.Exit(1)
 	}
-	if err = (&networking.KongPluginReconciler{
+	if err = (&kongctrl.KongPluginReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
 		Scheme: mgr.GetScheme(),
@@ -129,7 +128,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KongPlugin")
 		os.Exit(1)
 	}
-	if err = (&networking.KongConsumerReconciler{
+	if err = (&kongctrl.KongConsumerReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
 		Scheme: mgr.GetScheme(),
@@ -145,11 +144,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&configuration.SecretReconciler{
+	if err = (&kongctrl.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
 		Scheme: mgr.GetScheme(),
-		Params: configuration.SecretReconcilerParams{
+		Params: kongctrl.SecretReconcilerParams{
 			WatchName:      secretName,
 			WatchNamespace: secretNamespace,
 			KongConfig: sendconfig.Kong{
@@ -164,7 +163,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := networking.SetupIngressControllers(mgr); err != nil {
+	if err := kongctrl.SetupIngressControllers(mgr); err != nil {
 		setupLog.Error(err, "unable to create controllers", "controllers", "Ingress")
 		os.Exit(1)
 	}

@@ -1,7 +1,0 @@
-apiVersion: configuration.konghq.com/v1
-kind: KongClusterPlugin
-metadata:
-  name: kongclusterplugin-sample
-spec:
-  # Add fields here
-  foo: bar

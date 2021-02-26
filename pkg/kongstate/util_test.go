@@ -8,7 +8,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,7 +41,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				plugin: configurationv1.KongClusterPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 				},
@@ -104,7 +103,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				plugin: configurationv1.KongClusterPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{{}`),
 					},
 				},
@@ -118,7 +117,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				plugin: configurationv1.KongClusterPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 					ConfigFrom: configurationv1.NamespacedConfigSource{
@@ -176,7 +175,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				plugin: configurationv1.KongPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 				},
@@ -244,7 +243,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				plugin: configurationv1.KongPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{{}`),
 					},
 				},
@@ -258,7 +257,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				plugin: configurationv1.KongPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 					ConfigFrom: configurationv1.ConfigSource{

@@ -83,8 +83,9 @@ func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
 	var config kong.Configuration
-	if len(k8sPlugin.Config.Raw) > 0 {
-		err := json.Unmarshal(k8sPlugin.Config.Raw, &config)
+	if !k8sPlugin.Config.Empty() {
+		var err error
+		config, err = k8sPlugin.Config.ToKongConfig()
 		if err != nil {
 			return kong.Plugin{}, fmt.Errorf("could not unmarshal KongClusterPlugin %v config: %s",
 				k8sPlugin.Name, err)
@@ -92,7 +93,7 @@ func kongPluginFromK8SClusterPlugin(
 	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
 		(configurationv1.NamespacedSecretValueFromSource{}) &&
-		len(k8sPlugin.Config.Raw) > 0 {
+		!k8sPlugin.Config.Empty() {
 		return kong.Plugin{},
 			fmt.Errorf("KongClusterPlugin '/%v' has both "+
 				"Config and ConfigFrom set", k8sPlugin.Name)
@@ -129,8 +130,9 @@ func kongPluginFromK8SPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
 	var config kong.Configuration
-	if len(k8sPlugin.Config.Raw) > 0 {
-		err := json.Unmarshal(k8sPlugin.Config.Raw, &config)
+	if !k8sPlugin.Config.Empty() {
+		var err error
+		config, err = k8sPlugin.Config.ToKongConfig()
 		if err != nil {
 			return kong.Plugin{}, fmt.Errorf("could not unmarshal KongClusterPlugin %v/%v config: %s",
 				k8sPlugin.Namespace, k8sPlugin.Name, err)
@@ -138,7 +140,7 @@ func kongPluginFromK8SPlugin(
 	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
 		(configurationv1.SecretValueFromSource{}) &&
-		len(k8sPlugin.Config.Raw) > 0 {
+		!k8sPlugin.Config.Empty() {
 		return kong.Plugin{},
 			fmt.Errorf("KongPlugin '%v/%v' has both "+
 				"Config and ConfigFrom set",

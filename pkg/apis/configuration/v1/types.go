@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/gob"
+	"encoding/json"
 
 	"github.com/kong/go-kong/kong"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -52,7 +53,7 @@ type KongClusterPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
-	Config apiextensionsv1.JSON `json:"config,omitempty"`
+	Config Configuration `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
@@ -79,6 +80,23 @@ type KongClusterPluginList struct {
 	Items []KongClusterPlugin `json:"items"`
 }
 
+// Configuration is a representation of plugin configuration (an opaque JSON object).
+// +k8s:deepcopy-gen=true
+type Configuration apiextensionsv1.JSON
+
+// ToKongConfig converts raw Configuration into a configuration object.
+func (c *Configuration) ToKongConfig() (kong.Configuration, error) {
+	var result kong.Configuration
+	if err := json.Unmarshal(c.Raw, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *Configuration) Empty() bool {
+	return len(c.Raw) == 0
+}
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -96,7 +114,7 @@ type KongPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
-	Config apiextensionsv1.JSON `json:"config,omitempty"`
+	Config Configuration `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom ConfigSource `json:"configFrom,omitempty"`

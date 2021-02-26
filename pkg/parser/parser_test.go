@@ -19,7 +19,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -157,7 +156,7 @@ func TestGlobalPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"foo1": "bar1"}`),
 					},
 				},
@@ -468,7 +467,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"fake": true}`),
 					},
 					ConfigFrom: configurationv1.ConfigSource{
@@ -484,7 +483,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"fake": true}`),
 					},
 					ConfigFrom: configurationv1.ConfigSource{
@@ -505,7 +504,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"fake": true}`),
 					},
 					ConfigFrom: configurationv1.NamespacedConfigSource{
@@ -522,7 +521,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config: apiextensionsv1.JSON{
+					Config: configurationv1.Configuration{
 						Raw: []byte(`{"fake": true}`),
 					},
 					ConfigFrom: configurationv1.NamespacedConfigSource{
@@ -2241,7 +2240,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"http"},
-				Config: apiextensionsv1.JSON{
+				Config: configurationv1.Configuration{
 					Raw: []byte(`{"foo": "bar", "knative": "yo"}`),
 				},
 			},
@@ -3098,7 +3097,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"grpc"},
-				Config: apiextensionsv1.JSON{
+				Config: configurationv1.Configuration{
 					Raw: []byte(`{
 					"foo": "bar",
 					"add": {
@@ -3189,7 +3188,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "basic-auth",
 				Protocols:  []string{"grpc"},
-				Config: apiextensionsv1.JSON{
+				Config: configurationv1.Configuration{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
@@ -3202,7 +3201,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"grpc"},
-				Config: apiextensionsv1.JSON{
+				Config: configurationv1.Configuration{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
@@ -3273,7 +3272,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "basic-auth",
 				Protocols:  []string{"grpc"},
-				Config: apiextensionsv1.JSON{
+				Config: configurationv1.Configuration{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},

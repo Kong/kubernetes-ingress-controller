@@ -548,7 +548,7 @@ func main() {
 				logger.Fatalf("failed to load admission webhook certificate: %s", err)
 			}
 		}
-		tlsConfig := &tls.Config{
+		tlsConfig := &tls.Config{ //nolint:gosec
 			Certificates: []tls.Certificate{cert},
 		}
 		server := http.Server{

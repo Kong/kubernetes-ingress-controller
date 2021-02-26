@@ -37,6 +37,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	//+kubebuilder:scaffold:imports
@@ -53,6 +54,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
+	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -167,6 +169,15 @@ func main() {
 		setupLog.Error(err, "unable to create controllers", "controllers", "Ingress")
 		os.Exit(1)
 	}
+	if err = (&kongctrl.KongV1UDPIngressReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "UDPIngress")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

@@ -74,7 +74,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		plugin.Config = configuration
 	}
 	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.SecretValueFromSource{}) {
-		if k8sPlugin.Config != nil {
+		if len(k8sPlugin.Config.Raw) > 0 {
 			return false, "plugin cannot use both Config and ConfigFrom", nil
 		}
 		config, err := kongstate.SecretToConfiguration(validator.Store,
@@ -82,7 +82,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		if err != nil {
 			return false, fmt.Sprintf("could not load secret plugin configuration: %v", err), nil
 		}
-		plugin.Config = kong.Configuration(config)
+		plugin.Config = config
 
 	}
 	if k8sPlugin.RunOn != "" {

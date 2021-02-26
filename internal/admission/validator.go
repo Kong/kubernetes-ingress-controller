@@ -6,15 +6,17 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
-	ValidateConsumer(ctx context.Context, consumer configuration.KongConsumer) (bool, string, error)
-	ValidatePlugin(consumer configuration.KongPlugin) (bool, string, error)
+	ValidateConsumer(ctx context.Context, consumer configurationv1.KongConsumer) (bool, string, error)
+	ValidatePlugin(consumer configurationv1.KongPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
 
@@ -23,6 +25,7 @@ type KongValidator interface {
 type KongHTTPValidator struct {
 	Client *kong.Client
 	Logger logrus.FieldLogger
+	Store  store.Storer
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
@@ -31,7 +34,7 @@ type KongHTTPValidator struct {
 // The first boolean communicates if the consumer is valid or not and string
 // holds a message if the entity is not valid.
 func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
-	consumer configuration.KongConsumer) (bool, string, error) {
+	consumer configurationv1.KongConsumer) (bool, string, error) {
 	if consumer.Username == "" {
 		return false, "username cannot be empty", nil
 	}
@@ -55,7 +58,7 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 // The first boolean communicates if k8sPluign is valid or not and string
 // holds a message if the entity is not valid.
 func (validator KongHTTPValidator) ValidatePlugin(
-	k8sPlugin configuration.KongPlugin) (bool, string, error) {
+	k8sPlugin configurationv1.KongPlugin) (bool, string, error) {
 	if k8sPlugin.PluginName == "" {
 		return false, "plugin name cannot be empty", nil
 	}
@@ -63,6 +66,18 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	if k8sPlugin.Config != nil {
 		plugin.Config = kong.Configuration(k8sPlugin.Config)
+	}
+	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.SecretValueFromSource{}) {
+		if k8sPlugin.Config != nil {
+			return false, "plugin cannot use both Config and ConfigFrom", nil
+		}
+		config, err := kongstate.SecretToConfiguration(validator.Store,
+			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
+		if err != nil {
+			return false, fmt.Sprintf("could not load secret plugin configuration: %v", err), nil
+		}
+		plugin.Config = kong.Configuration(config)
+
 	}
 	if k8sPlugin.RunOn != "" {
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)

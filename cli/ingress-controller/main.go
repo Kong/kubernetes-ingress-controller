@@ -518,6 +518,7 @@ func main() {
 			Validator: admission.KongHTTPValidator{
 				Client: kongClient,
 				Logger: logger,
+				Store:  store,
 			},
 			Logger: logger,
 		}

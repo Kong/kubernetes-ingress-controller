@@ -69,7 +69,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if k8sPlugin.Config.Raw != nil {
 		err := json.Unmarshal(k8sPlugin.Config.Raw, &configuration)
 		if err != nil {
-			return false, "", fmt.Errorf("could not unmarshal plugin configuration: %s", err)
+			return false, "could not unmarshal plugin configuration", err
 		}
 		plugin.Config = configuration
 	}
@@ -80,7 +80,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		config, err := kongstate.SecretToConfiguration(validator.Store,
 			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
-			return false, fmt.Sprintf("could not load secret plugin configuration: %v", err), nil
+			return false, "could not load secret plugin configuration", err
 		}
 		plugin.Config = config
 

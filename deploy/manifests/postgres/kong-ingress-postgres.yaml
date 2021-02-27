@@ -8,7 +8,7 @@ spec:
     spec:
       initContainers:
       - name: wait-for-migrations
-        image: kong:2.2
+        image: kong:2.3.2
         command:
         - "/bin/sh"
         - "-c"

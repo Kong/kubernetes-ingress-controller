@@ -24,7 +24,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       containers:
       - name: proxy
-        image: kong:2.2
+        image: kong:2.3.2
         env:
           # servers
         - name: KONG_PROXY_LISTEN

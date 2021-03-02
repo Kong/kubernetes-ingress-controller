@@ -66,7 +66,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	var plugin kong.Plugin
 	var configuration kong.Configuration
 	plugin.Name = kong.String(k8sPlugin.PluginName)
-	if k8sPlugin.Config.Raw != nil {
+	if len(k8sPlugin.Config.Raw) > 0 {
 		err := json.Unmarshal(k8sPlugin.Config.Raw, &configuration)
 		if err != nil {
 			return false, "could not unmarshal plugin configuration", err

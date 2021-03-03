@@ -8,7 +8,7 @@ require (
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-logr/logr v0.3.0
+	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-memdb v1.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1

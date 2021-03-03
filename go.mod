@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/docker/docker v20.10.3+incompatible
+	github.com/docker/docker v20.10.5+incompatible
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.0

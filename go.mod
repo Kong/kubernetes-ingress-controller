@@ -8,17 +8,17 @@ require (
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-logr/logr v0.3.0
+	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-memdb v1.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/kong/deck v1.2.1
-	github.com/kong/go-kong v0.15.0
+	github.com/kong/go-kong v0.16.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/mapstructure v1.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0

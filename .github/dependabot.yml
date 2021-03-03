@@ -3,5 +3,6 @@ version: 2
 updates:
 - package-ecosystem: gomod
   directory: /
+  target-branch: next
   schedule:
     interval: daily

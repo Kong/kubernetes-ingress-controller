@@ -15,7 +15,7 @@ require (
 	github.com/kong/deck v1.2.1
 	github.com/kong/go-kong v0.16.0
 	github.com/lithammer/dedent v1.1.0
-	github.com/mitchellh/mapstructure v1.3.1
+	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.8.0

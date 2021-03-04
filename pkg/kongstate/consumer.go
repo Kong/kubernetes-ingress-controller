@@ -18,6 +18,7 @@ type Consumer struct {
 	ACLGroups  []*ACLGroup
 
 	Oauth2Creds []*Oauth2Credential
+	MTLSAuths   []*MTLSAuth
 
 	K8sKongConsumer configurationv1.KongConsumer
 }
@@ -58,6 +59,7 @@ func (c *Consumer) SanitizedCopy() *Consumer {
 			return
 		}(),
 		ACLGroups:       c.ACLGroups,
+		MTLSAuths:       c.MTLSAuths,
 		K8sKongConsumer: c.K8sKongConsumer,
 	}
 }
@@ -100,6 +102,12 @@ func (c *Consumer) SetCredential(credType string, credConfig interface{}) error 
 			return err
 		}
 		c.ACLGroups = append(c.ACLGroups, cred)
+	case "mtls-auth":
+		cred, err := NewMTLSAuth(credConfig)
+		if err != nil {
+			return err
+		}
+		c.MTLSAuths = append(c.MTLSAuths, cred)
 	default:
 		return fmt.Errorf("invalid credential type: '%v'", credType)
 	}

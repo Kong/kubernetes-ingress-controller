@@ -3,8 +3,13 @@ package kongstate
 import (
 	"fmt"
 
+	"github.com/blang/semver"
 	"github.com/kong/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+)
+
+var (
+	minMTLSCredentialVersion, _ = semver.Make("2.3.2")
 )
 
 // Consumer holds a Kong consumer and its plugins and credentials.
@@ -64,7 +69,7 @@ func (c *Consumer) SanitizedCopy() *Consumer {
 	}
 }
 
-func (c *Consumer) SetCredential(credType string, credConfig interface{}) error {
+func (c *Consumer) SetCredential(credType string, credConfig interface{}, version semver.Version) error {
 	switch credType {
 	case "key-auth", "keyauth_credential":
 		cred, err := NewKeyAuth(credConfig)
@@ -103,6 +108,9 @@ func (c *Consumer) SetCredential(credType string, credConfig interface{}) error 
 		}
 		c.ACLGroups = append(c.ACLGroups, cred)
 	case "mtls-auth":
+		if version.LT(minMTLSCredentialVersion) {
+			return fmt.Errorf("controller cannot support mtls-auth below version %v", minMTLSCredentialVersion)
+		}
 		cred, err := NewMTLSAuth(credConfig)
 		if err != nil {
 			return err

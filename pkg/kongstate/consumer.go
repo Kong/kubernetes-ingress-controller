@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	minMTLSCredentialVersion, _ = semver.Make("2.3.2")
+	minMTLSCredentialVersion = semver.MustParse("2.3.2")
 )
 
 // Consumer holds a Kong consumer and its plugins and credentials.

@@ -72,8 +72,8 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 
 func TestConsumer_SetCredential(t *testing.T) {
 	username := "example"
-	standardVersion, _ := semver.Make("2.3.2")
-	mtlsUnsupportedVersion, _ := semver.Make("1.3.2")
+	standardVersion := semver.MustParse("2.3.2")
+	mtlsUnsupportedVersion := semver.MustParse("1.3.2")
 	type args struct {
 		credType   string
 		consumer   *Consumer

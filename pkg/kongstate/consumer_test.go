@@ -126,6 +126,17 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "key-auth with invalid key type",
+			args: args{
+				credType:   "key-auth",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{"key": true},
+				version:    standardVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
 			name: "keyauth_credential",
 			args: args{
 				credType:   "keyauth_credential",
@@ -169,6 +180,17 @@ func TestConsumer_SetCredential(t *testing.T) {
 				credType:   "basic-auth",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
 				credConfig: map[string]string{},
+				version:    standardVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
+			name: "basic-auth with invalid username type",
+			args: args{
+				credType:   "basic-auth",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{"username": true},
 				version:    standardVersion,
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
@@ -222,6 +244,17 @@ func TestConsumer_SetCredential(t *testing.T) {
 				credType:   "hmac-auth",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
 				credConfig: map[string]string{},
+				version:    standardVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
+			name: "hmac-auth with invalid username type",
+			args: args{
+				credType:   "hmac-auth",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{"username": true},
 				version:    standardVersion,
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
@@ -285,6 +318,17 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "oauth2 with invalid client_id type",
+			args: args{
+				credType:   "oauth2",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{"client_id": true},
+				version:    standardVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
 			name: "jwt",
 			args: args{
 				credType: "jwt",
@@ -315,6 +359,17 @@ func TestConsumer_SetCredential(t *testing.T) {
 				credType:   "jwt",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
 				credConfig: map[string]string{},
+				version:    standardVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
+			name: "jwt with invald key type",
+			args: args{
+				credType:   "jwt",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{"key": true},
 				version:    standardVersion,
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
@@ -374,6 +429,17 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "acl with invalid group type",
+			args: args{
+				credType:   "acl",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{"group": true},
+				version:    standardVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
 			name: "mtls-auth",
 			args: args{
 				credType:   "mtls-auth",
@@ -409,6 +475,17 @@ func TestConsumer_SetCredential(t *testing.T) {
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
 				credConfig: map[string]string{"subject_name": "foo@example.com"},
 				version:    mtlsUnsupportedVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
+			name: "mtls-auth with invalid subject_name type",
+			args: args{
+				credType:   "mtls-auth",
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{"subject_name": true},
+				version:    standardVersion,
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
 			wantErr: true,

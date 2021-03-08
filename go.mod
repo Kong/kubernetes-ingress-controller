@@ -12,7 +12,8 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-memdb v1.2.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/kong/deck v1.4.0
+	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
+	github.com/kong/deck v1.5.0
 	github.com/kong/go-kong v0.16.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1

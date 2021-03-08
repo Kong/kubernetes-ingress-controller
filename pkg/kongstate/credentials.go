@@ -40,6 +40,11 @@ type Oauth2Credential struct {
 	kong.Oauth2Credential
 }
 
+// MTLSAuth represents an MTLS auth credential
+type MTLSAuth struct {
+	kong.MTLSAuth
+}
+
 func NewKeyAuth(config interface{}) (*KeyAuth, error) {
 	var res KeyAuth
 	err := decodeCredential(config, &res.KeyAuth)
@@ -124,6 +129,18 @@ func NewOauth2Credential(config interface{}) (*Oauth2Credential, error) {
 	}
 	if res.ClientID == nil {
 		return nil, fmt.Errorf("oauth2 is invalid: no client_id")
+	}
+	return &res, nil
+}
+
+func NewMTLSAuth(config interface{}) (*MTLSAuth, error) {
+	var res MTLSAuth
+	err := decodeCredential(config, &res.MTLSAuth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode mTLS credential: %w", err)
+	}
+	if res.SubjectName == nil {
+		return nil, fmt.Errorf("mtls-auth is invalid: no subject_name")
 	}
 	return &res, nil
 }

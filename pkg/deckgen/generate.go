@@ -140,6 +140,9 @@ func ToDeckContent(
 		for _, v := range c.Oauth2Creds {
 			consumer.Oauth2Creds = append(consumer.Oauth2Creds, &v.Oauth2Credential)
 		}
+		for _, v := range c.MTLSAuths {
+			consumer.MTLSAuths = append(consumer.MTLSAuths, &v.MTLSAuth)
+		}
 		content.Consumers = append(content.Consumers, consumer)
 	}
 	sort.SliceStable(content.Consumers, func(i, j int) bool {

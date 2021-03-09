@@ -33,7 +33,7 @@ require (
 	k8s.io/klog v1.0.0
 	knative.dev/networking v0.0.0-20201028144035-3287613a3b41
 	knative.dev/pkg v0.0.0-20201026165741-2f75016c1368
-	sigs.k8s.io/controller-runtime v0.8.2
+	sigs.k8s.io/controller-runtime v0.8.3
 )
 
 replace k8s.io/client-go => k8s.io/client-go v0.20.2

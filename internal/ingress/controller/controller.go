@@ -101,6 +101,7 @@ func (n *KongController) syncIngress(interface{}) error {
 
 	n.Logger.Infof("syncing configuration")
 	state, err := parser.Build(n.Logger.WithField("component", "store"), n.store)
+	state.Version = n.cfg.Kong.Version
 	if err != nil {
 		return fmt.Errorf("error building kong state: %w", err)
 	}

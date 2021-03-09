@@ -108,6 +108,7 @@ var (
 	basicAuthFields = []string{"username", "password"}
 	hmacAuthFields  = []string{"username", "secret"}
 	jwtAuthFields   = []string{"algorithm", "rsa_public_key", "key", "secret"}
+	mtlsAuthFields  = []string{"subject_name"}
 
 	// TODO dynamically fetch these from Kong
 	credTypeToFields = map[string][]string{
@@ -121,6 +122,7 @@ var (
 		"jwt_secret":           jwtAuthFields,
 		"oauth2":               {"name", "client_id", "client_secret", "redirect_uris"},
 		"acl":                  {"group"},
+		"mtls-auth":            mtlsAuthFields,
 	}
 )
 

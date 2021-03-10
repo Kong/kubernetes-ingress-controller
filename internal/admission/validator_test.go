@@ -6,6 +6,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
@@ -165,7 +166,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			args: args{
 				plugin: configurationv1.KongPlugin{
 					PluginName: "key-auth",
-					Config: configurationv1.Configuration{
+					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{{}`),
 					},
 				},
@@ -179,7 +180,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			args: args{
 				plugin: configurationv1.KongPlugin{
 					PluginName: "key-auth",
-					Config: configurationv1.Configuration{
+					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names": "whatever"}`),
 					},
 					ConfigFrom: configurationv1.ConfigSource{

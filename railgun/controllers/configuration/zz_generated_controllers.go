@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -285,6 +286,43 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+}
+
+// -----------------------------------------------------------------------------
+// KongV1 UDPIngress
+// -----------------------------------------------------------------------------
+
+// KongV1UDPIngress reconciles a Ingress object
+type KongV1UDPIngressReconciler struct {
+	client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongV1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1alpha1.UDPIngress{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/finalizers,verbs=update
+
+// Reconcile processes the watched objects
+func (r *KongV1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1UDPIngress", req.NamespacedName)
+
+	obj := new(kongv1alpha1.UDPIngress)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 

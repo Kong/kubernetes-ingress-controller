@@ -33,13 +33,19 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	}
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 
+	udpIngresses, err := s.ListUDPIngresses()
+	if err != nil {
+		log.Errorf("failed to list UDPIngresses: %v", err)
+	}
+	parsedUDPIngresses := fromUDPIngressV1Alpha1(log, udpIngresses)
+
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
-	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedKnative)
+	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)
 }
 
 // Build creates a Kong configuration from Ingress and Custom resources
@@ -201,6 +207,11 @@ func getUpstreams(
 	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
 	var upstreams []kongstate.Upstream
 	for _, service := range serviceMap {
+		// TODO: for v1alpha1 of UDPIngress we don't support automated Kubernetes service resolution,
+		// See the following issue for follow-up: https://github.com/Kong/kubernetes-ingress-controller/issues/1080
+		if service.Protocol != nil && *service.Protocol == "udp" {
+			return nil
+		}
 
 		var targets []kongstate.Target
 		port, err := findPort(&service.K8sService, service.Backend.Port)

@@ -75,6 +75,14 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:             "kongconsumers",
 		URL:                "configuration.konghq.com",
 	},
+	typeNeeded{
+		PackageImportAlias: "kongv1alpha1",
+		PackageAlias:       "KongV1",
+		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1",
+		Type:               "UDPIngress",
+		Plural:             "udpingresses",
+		URL:                "configuration.konghq.com",
+	},
 }
 
 func main() {
@@ -165,6 +173,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"

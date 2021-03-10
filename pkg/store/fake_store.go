@@ -6,6 +6,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -30,6 +31,7 @@ type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
 	TCPIngresses       []*configurationv1beta1.TCPIngress
+	UDPIngresses       []*v1alpha1.UDPIngress
 	Services           []*apiv1.Service
 	Endpoints          []*apiv1.Endpoints
 	Secrets            []*apiv1.Secret
@@ -64,6 +66,12 @@ func NewFakeStore(
 	for _, ingress := range objects.TCPIngresses {
 		err := tcpIngressStore.Add(ingress)
 		if err != nil {
+			return nil, err
+		}
+	}
+	udpIngressStore := cache.NewStore(keyFunc)
+	for _, ingress := range objects.UDPIngresses {
+		if err := udpIngressStore.Add(ingress); err != nil {
 			return nil, err
 		}
 	}
@@ -129,6 +137,7 @@ func NewFakeStore(
 			IngressV1beta1: ingressV1beta1Store,
 			IngressV1:      ingressV1Store,
 			TCPIngress:     tcpIngressStore,
+			UDPIngress:     udpIngressStore,
 			Service:        serviceStore,
 			Endpoint:       endpointStore,
 			Secret:         secretsStore,

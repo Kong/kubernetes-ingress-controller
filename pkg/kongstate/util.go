@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 func getKongIngressForService(s store.Storer, service corev1.Service) (
@@ -83,16 +84,14 @@ func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
 	var config kong.Configuration
-	if len(k8sPlugin.Config.Raw) > 0 {
-		err := json.Unmarshal(k8sPlugin.Config.Raw, &config)
-		if err != nil {
-			return kong.Plugin{}, fmt.Errorf("could not unmarshal KongClusterPlugin %v config: %s",
-				k8sPlugin.Name, err)
-		}
+	config, err := RawConfigToConfiguration(k8sPlugin.Config)
+	if err != nil {
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
 		(configurationv1.NamespacedSecretValueFromSource{}) &&
-		len(k8sPlugin.Config.Raw) > 0 {
+		len(config) > 0 {
 		return kong.Plugin{},
 			fmt.Errorf("KongClusterPlugin '/%v' has both "+
 				"Config and ConfigFrom set", k8sPlugin.Name)
@@ -129,16 +128,14 @@ func kongPluginFromK8SPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
 	var config kong.Configuration
-	if len(k8sPlugin.Config.Raw) > 0 {
-		err := json.Unmarshal(k8sPlugin.Config.Raw, &config)
-		if err != nil {
-			return kong.Plugin{}, fmt.Errorf("could not unmarshal KongClusterPlugin %v/%v config: %s",
-				k8sPlugin.Namespace, k8sPlugin.Name, err)
-		}
+	config, err := RawConfigToConfiguration(k8sPlugin.Config)
+	if err != nil {
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
 		(configurationv1.SecretValueFromSource{}) &&
-		len(k8sPlugin.Config.Raw) > 0 {
+		len(config) > 0 {
 		return kong.Plugin{},
 			fmt.Errorf("KongPlugin '%v/%v' has both "+
 				"Config and ConfigFrom set",
@@ -164,6 +161,18 @@ func kongPluginFromK8SPlugin(
 		Protocols: k8sPlugin.Protocols,
 	}.toKongPlugin()
 	return kongPlugin, nil
+}
+
+func RawConfigToConfiguration(config apiextensionsv1.JSON) (kong.Configuration, error) {
+	if len(config.Raw) == 0 {
+		return kong.Configuration{}, nil
+	}
+	var kongConfig kong.Configuration
+	err := json.Unmarshal(config.Raw, &kongConfig)
+	if err != nil {
+		return kong.Configuration{}, err
+	}
+	return kongConfig, nil
 }
 
 func namespacedSecretToConfiguration(

@@ -172,7 +172,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 			},
 			wantOK:      false,
-			wantMessage: "could not unmarshal plugin configuration",
+			wantMessage: "could not parse plugin configuration",
 			wantErr:     true,
 		},
 		{

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -21,6 +22,7 @@ type KongState struct {
 	CACertificates []kong.CACertificate
 	Plugins        []Plugin
 	Consumers      []Consumer
+	Version        semver.Version
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -98,7 +100,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				log.Errorf("failed to provision credential: empty secret")
 				continue
 			}
-			err = c.SetCredential(credType, credConfig)
+			err = c.SetCredential(credType, credConfig, ks.Version)
 			if err != nil {
 				log.Errorf("failed to provision credential: %v", err)
 				continue

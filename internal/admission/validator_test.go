@@ -96,6 +96,33 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			wantErr:     false,
 		},
 		{
+			name: "valid mtls-auth credential",
+			args: args{
+				secret: corev1.Secret{
+					Data: map[string][]byte{
+						"subject_name": []byte("foo"),
+						"kongCredType": []byte("mtls-auth"),
+					},
+				},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name: "invalid mtls-auth credential",
+			args: args{
+				secret: corev1.Secret{
+					Data: map[string][]byte{
+						"kongCredType": []byte("mtls-auth"),
+					},
+				},
+			},
+			wantOK:      false,
+			wantMessage: "missing required field(s): subject_name",
+			wantErr:     false,
+		},
+		{
 			name: "invalid credential type",
 			args: args{
 				secret: corev1.Secret{

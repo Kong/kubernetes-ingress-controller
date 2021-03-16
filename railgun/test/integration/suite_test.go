@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
@@ -32,8 +33,16 @@ var (
 	kc *kubernetes.Clientset
 
 	// ProxyReadyChannel is the channel that indicates when the Kong proxy is ready to use.
-	// NOTE: if the proxy doesn't become ready within the timeout, the tests will panic. FIXME
 	ProxyReadyChannel = make(chan *url.URL)
+
+	// ProxyErrorCh indicates if the Proxy provisioning has failed on the cluster.
+	ProxyErrorCh = make(chan error)
+
+	// IngressTimeout is the maximum amount of time that the tests should wait for an Ingress record to be provisioned and the backend accessible.
+	IngressTimeout = time.Minute * 5
+
+	// IngressTimeoutTick is the time to wait between Ingress resource timeout checks
+	IngressTimeoutTick = time.Second * 1
 )
 
 func TestMain(m *testing.M) {
@@ -42,7 +51,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 	var cleanup func()
-	kc, cleanup, err = runbooks.CreateKindClusterWithKongProxy(ctx, ProxyReadyChannel, ClusterName)
+	kc, cleanup, err = runbooks.CreateKindClusterWithKongProxy(ctx, ClusterName, ProxyReadyChannel, ProxyErrorCh)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(10)
@@ -83,8 +92,14 @@ func deployControllers(ctx context.Context, kc *kubernetes.Clientset, containerI
 	fmt.Fprintf(os.Stdout, "INFO: tempfile for controller logs: %s\n", tmpfile.Name())
 
 	go func() {
+		u, err := proxyURL()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			return
+		}
+
 		stderr := new(bytes.Buffer)
-		cmd := exec.CommandContext(ctx, "go", "run", "../../main.go", "--kong-url", fmt.Sprintf("http://%s:8001", proxyURL().Hostname()))
+		cmd := exec.CommandContext(ctx, "go", "run", "../../main.go", "--kong-url", fmt.Sprintf("http://%s:8001", u.Hostname()))
 		cmd.Stdout = tmpfile
 		cmd.Stderr = io.MultiWriter(stderr, tmpfile)
 
@@ -99,7 +114,7 @@ func deployControllers(ctx context.Context, kc *kubernetes.Clientset, containerI
 var prx *url.URL
 var lock = sync.Mutex{}
 
-func proxyURL() *url.URL {
+func proxyURL() (*url.URL, error) {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -107,5 +122,5 @@ func proxyURL() *url.URL {
 		prx = <-ProxyReadyChannel
 	}
 
-	return prx
+	return prx, nil
 }

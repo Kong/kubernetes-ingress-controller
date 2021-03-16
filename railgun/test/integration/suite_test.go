@@ -52,12 +52,16 @@ func TestMain(m *testing.M) {
 	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
 	// TODO - need to fix the context handling here
 	if err := deployControllers(ctx, kc, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllers.DefaultNamespace); err != nil {
+		cleanup()
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(17)
 	}
 
 	// run the tests
 	code := m.Run()
+
+	// cleanup
+	cleanup()
 	os.Exit(code)
 }
 

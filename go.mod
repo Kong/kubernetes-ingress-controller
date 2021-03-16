@@ -1,10 +1,20 @@
 module github.com/kong/kubernetes-ingress-controller
 
-go 1.15
+go 1.16
+
+// -----------------------------------------------------------------------------
+// Replacements
+//
+// If you add replacements here, please make sure the replacement has a comment
+// associated with it that explains why the replacement is necessary.
+// -----------------------------------------------------------------------------
+
+// client-go does not autoresolve versions correctly due to a historical versioning problem upstream
+replace k8s.io/client-go => k8s.io/client-go v0.20.2
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/docker/docker v20.10.5+incompatible
+	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.10.0
 	github.com/ghodss/yaml v1.0.0
@@ -15,6 +25,7 @@ require (
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/kong/deck v1.5.0
 	github.com/kong/go-kong v0.16.0
+	github.com/kong/kubernetes-testing-framework v0.0.0-20210316124955-7fa128606180
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
@@ -43,5 +54,3 @@ require (
 	sigs.k8s.io/controller-runtime v0.8.3
 	sigs.k8s.io/yaml v1.2.0
 )
-
-replace k8s.io/client-go => k8s.io/client-go v0.20.2

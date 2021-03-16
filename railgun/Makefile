@@ -119,4 +119,4 @@ clean.test.proxy:
 # Our integration tests
 test.integration:
 	@./scripts/setup-integration-tests.sh
-	@go test -race -v ./test/integration/...
+	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/

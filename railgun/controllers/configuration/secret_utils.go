@@ -29,6 +29,7 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 	// TODO need EVENTS here
 	// TODO need more status updates
 	// TODO: (shane) I want to refactor this into several smaller functions
+	// ^ follow up for these items is in: https://github.com/Kong/kubernetes-ingress-controller/issues/1094
 
 	// if this is an Ingress resource make sure it's managed by Kong
 	if obj.GetObjectKind().GroupVersionKind().Kind == "Ingress" {
@@ -101,7 +102,7 @@ func isRuntimeObjectSame(secret *corev1.Secret, obj runtime.Object, nsn types.Na
 	return false, nil
 }
 
-// storeRuntimeObject stores a runtime.Object in the configuration secret
+// storeRuntimeObject stores a runtime.Object in the configuration secret. Callers should re-queue after this completes successfully.
 func storeRuntimeObject(ctx context.Context, c client.Client, secret *corev1.Secret, obj runtime.Object, nsn types.NamespacedName) error {
 	// marshal to YAML for storage
 	cfg, err := yaml.Marshal(obj)
@@ -120,6 +121,8 @@ func storeRuntimeObject(ctx context.Context, c client.Client, secret *corev1.Sec
 func cleanupObj(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
 	// TODO need EVENTS here
 	// TODO need more status updates
+	// TODO: (shane) I want to refactor this into several smaller functions
+	// ^ follow up for these items is in: https://github.com/Kong/kubernetes-ingress-controller/issues/1094
 
 	// get the configuration secret namespace
 	secretNamespace := os.Getenv(controllers.CtrlNamespaceEnv)

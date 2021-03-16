@@ -68,7 +68,7 @@ func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, ing)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, ing)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, ing)
 
 	//return ctrl.Result{}, nil
 }

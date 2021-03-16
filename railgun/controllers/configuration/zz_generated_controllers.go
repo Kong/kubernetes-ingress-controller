@@ -67,7 +67,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -104,7 +104,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -141,7 +141,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -178,7 +178,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -215,7 +215,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -252,7 +252,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -289,7 +289,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -326,5 +326,5 @@ func (r *KongV1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }

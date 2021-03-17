@@ -23,7 +23,9 @@ type KongValidator interface {
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	Client *kong.Client
+	consumerSvc kong.AbstractConsumerService
+	pluginSvc   kong.AbstractPluginService
+	//	Client *kong.Client
 	Logger logrus.FieldLogger
 	Store  store.Storer
 }
@@ -38,7 +40,7 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 	if consumer.Username == "" {
 		return false, "username cannot be empty", nil
 	}
-	c, err := validator.Client.Consumers.Get(ctx, &consumer.Username)
+	c, err := validator.consumerSvc.Get(ctx, &consumer.Username)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			return true, "", nil
@@ -85,16 +87,17 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
 	}
-	req, err := validator.Client.NewRequest("POST", "/schemas/plugins/validate",
-		nil, &plugin)
-	if err != nil {
-		return false, "", err
-	}
-	resp, err := validator.Client.Do(context.Background(), req, nil)
-	if err != nil {
-		return false, err.Error(), nil
-	}
-	if resp.StatusCode == 201 {
+	status, err := validator.pluginSvc.Validate(&plugin)
+	// 	req, err := validator.Client.NewRequest("POST", "/schemas/plugins/validate",
+	// 		nil, &plugin)
+	// 	if err != nil {
+	// 		return false, "", err
+	// 	}
+	// 	resp, err := validator.Client.Do(context.Background(), req, nil)
+	// 	if err != nil {
+	// 		return false, err.Error(), nil
+	// 	}
+	if status == 201 {
 		return true, "", nil
 	}
 	if err != nil {

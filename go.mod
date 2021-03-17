@@ -10,7 +10,7 @@ go 1.16
 // -----------------------------------------------------------------------------
 
 // client-go does not autoresolve versions correctly due to a historical versioning problem upstream
-replace k8s.io/client-go => k8s.io/client-go v0.20.2
+replace k8s.io/client-go => k8s.io/client-go v0.20.3
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
@@ -19,13 +19,12 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
-	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-memdb v1.3.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/kong/deck v1.5.0
 	github.com/kong/go-kong v0.16.0
-	github.com/kong/kubernetes-testing-framework v0.0.0-20210316174414-a5a033c30d3e
+	github.com/kong/kubernetes-testing-framework v0.0.0-20210317173912-d95865729bf3
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1

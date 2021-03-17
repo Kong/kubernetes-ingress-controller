@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/kong/deck v1.4.0
-	github.com/kong/go-kong v0.16.0
+	github.com/kong/go-kong v0.15.1-0.20210317172832-6185ea2f2eb2
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1

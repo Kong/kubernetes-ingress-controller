@@ -853,6 +853,8 @@ github.com/knative/build v0.1.2/go.mod h1:/sU74ZQkwlYA5FwYDJhYTy61i/Kn+5eWfln2jD
 github.com/kong/deck v1.4.0 h1:VoweFSMhwv2CPbG8dUymuRX/Uyt64bGWKgzKeCcbcRg=
 github.com/kong/deck v1.4.0/go.mod h1:ifMf/ofgSC5bbS4XdZ6qBfxR1ocEZxMXXojCM81RnN8=
 github.com/kong/go-kong v0.15.0/go.mod h1:oF4kdI9l/a8ndDW2ayJA0yhDBpO8Qt2aLiJEv10hqnQ=
+github.com/kong/go-kong v0.15.1-0.20210317172832-6185ea2f2eb2 h1:rM9CS4qzxCgRrqhm6QXRjgdm/F/7mwCiPhW3o8YTVKU=
+github.com/kong/go-kong v0.15.1-0.20210317172832-6185ea2f2eb2/go.mod h1:7U8wNT23aKPq8dyyM7gdIx9xD5BHCrjR8of0F5lYTcg=
 github.com/kong/go-kong v0.16.0 h1:p4iZLK9OCSheZEqLanh05TLPqbvGyX+Vn4aKliBbZrE=
 github.com/kong/go-kong v0.16.0/go.mod h1:7U8wNT23aKPq8dyyM7gdIx9xD5BHCrjR8of0F5lYTcg=
 github.com/konsorten/go-windows-terminal-sequences v0.0.0-20180402223658-b729f2633dfe/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

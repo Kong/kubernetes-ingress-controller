@@ -1,8 +1,13 @@
 package admission
 
 import (
+	"context"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -159,6 +164,79 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			}
 			if got1 != tt.wantMessage {
 				t.Errorf("KongHTTPValidator.ValidateCredential() got1 = %v, want %v", got1, tt.wantMessage)
+			}
+		})
+	}
+}
+
+type fakeConsumerSvc struct {
+	kong.AbstractConsumerService
+
+	consumer *kong.Consumer
+	err      error
+}
+
+func (f *fakeConsumerSvc) Get(ctx context.Context, usernameOrID *string) (*kong.Consumer, error) {
+	return f.consumer, f.err
+}
+
+func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		consumerSvc kong.AbstractConsumerService
+
+		in configurationv1.KongConsumer
+
+		wantSuccess   bool
+		wantErrorText string
+		wantErr       bool
+	}{
+		{
+			name:          "empty username",
+			in:            configurationv1.KongConsumer{},
+			wantSuccess:   false,
+			wantErrorText: ErrTextUsernameEmpty,
+		},
+		{
+			name:        "kong says consumer not found",
+			consumerSvc: &fakeConsumerSvc{err: kong.NewAPIError(404, "")},
+			in:          configurationv1.KongConsumer{Username: "something"},
+			wantSuccess: true,
+		},
+		{
+			name:        "kong says HTTP 500",
+			consumerSvc: &fakeConsumerSvc{err: kong.NewAPIError(500, "")},
+			in:          configurationv1.KongConsumer{Username: "something"},
+			wantSuccess: false,
+			wantErr:     true,
+		},
+		{
+			name:          "consumer already exists",
+			consumerSvc:   &fakeConsumerSvc{consumer: &kong.Consumer{}},
+			in:            configurationv1.KongConsumer{Username: "something"},
+			wantSuccess:   false,
+			wantErrorText: ErrTextConsumerExists,
+		},
+		{
+			name:        "validation successful",
+			consumerSvc: &fakeConsumerSvc{},
+			in:          configurationv1.KongConsumer{Username: "something"},
+			wantSuccess: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			v := KongHTTPValidator{
+				consumerSvc: tt.consumerSvc,
+				Logger:      logrus.New(),
+			}
+			gotSuccess, gotErrorText, gotErr := v.ValidateConsumer(context.Background(), tt.in)
+
+			require.Equal(t, tt.wantSuccess, gotSuccess)
+			require.Equal(t, tt.wantErrorText, gotErrorText)
+			if tt.wantErr {
+				require.Error(t, gotErr)
+			} else {
+				require.NoError(t, gotErr)
 			}
 		})
 	}

@@ -30,6 +30,9 @@ type KongHTTPValidator struct {
 	Store  store.Storer
 }
 
+const ErrTextUsernameEmpty = "username cannot be empty"
+const ErrTextConsumerExists = "consumer already exists"
+
 // ValidateConsumer checks if consumer has a Username and a consumer with
 // the same username doesn't exist in Kong.
 // If an error occurs during validation, it is returned as the last argument.
@@ -38,7 +41,7 @@ type KongHTTPValidator struct {
 func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 	consumer configurationv1.KongConsumer) (bool, string, error) {
 	if consumer.Username == "" {
-		return false, "username cannot be empty", nil
+		return false, ErrTextUsernameEmpty, nil
 	}
 	c, err := validator.consumerSvc.Get(ctx, &consumer.Username)
 	if err != nil {
@@ -49,7 +52,7 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 		return false, "", fmt.Errorf("fetching consumer from Kong: %w", err)
 	}
 	if c != nil {
-		return false, "consumer already exists", nil
+		return false, ErrTextConsumerExists, nil
 	}
 	return true, "", nil
 }
@@ -59,6 +62,8 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if k8sPluign is valid or not and string
 // holds a message if the entity is not valid.
+//
+// XXX: this function never returns non-nil error
 func (validator KongHTTPValidator) ValidatePlugin(
 	k8sPlugin configurationv1.KongPlugin) (bool, string, error) {
 	if k8sPlugin.PluginName == "" {
@@ -87,23 +92,11 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
 	}
-	status, err := validator.pluginSvc.Validate(&plugin)
-	// 	req, err := validator.Client.NewRequest("POST", "/schemas/plugins/validate",
-	// 		nil, &plugin)
-	// 	if err != nil {
-	// 		return false, "", err
-	// 	}
-	// 	resp, err := validator.Client.Do(context.Background(), req, nil)
-	// 	if err != nil {
-	// 		return false, err.Error(), nil
-	// 	}
-	if status == 201 {
-		return true, "", nil
+	if isValid, err := validator.pluginSvc.Validate(context.TODO(), &plugin); err != nil {
+		return false, err.Error(), nil
+	} else {
+		return isValid, "", nil
 	}
-	if err != nil {
-		return false, "", err
-	}
-	return true, "", nil
 }
 
 var (

@@ -183,7 +183,7 @@ func (f *fakeConsumerSvc) Get(ctx context.Context, usernameOrID *string) (*kong.
 func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
-		consumerSvc kong.AbstractConsumerService
+		ConsumerSvc kong.AbstractConsumerService
 
 		in configurationv1.KongConsumer
 
@@ -199,34 +199,34 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		},
 		{
 			name:        "kong says consumer not found",
-			consumerSvc: &fakeConsumerSvc{err: kong.NewAPIError(404, "")},
+			ConsumerSvc: &fakeConsumerSvc{err: kong.NewAPIError(404, "")},
 			in:          configurationv1.KongConsumer{Username: "something"},
 			wantSuccess: true,
 		},
 		{
 			name:        "kong says HTTP 500",
-			consumerSvc: &fakeConsumerSvc{err: kong.NewAPIError(500, "")},
+			ConsumerSvc: &fakeConsumerSvc{err: kong.NewAPIError(500, "")},
 			in:          configurationv1.KongConsumer{Username: "something"},
 			wantSuccess: false,
 			wantErr:     true,
 		},
 		{
 			name:          "consumer already exists",
-			consumerSvc:   &fakeConsumerSvc{consumer: &kong.Consumer{}},
+			ConsumerSvc:   &fakeConsumerSvc{consumer: &kong.Consumer{}},
 			in:            configurationv1.KongConsumer{Username: "something"},
 			wantSuccess:   false,
 			wantErrorText: ErrTextConsumerExists,
 		},
 		{
 			name:        "validation successful",
-			consumerSvc: &fakeConsumerSvc{},
+			ConsumerSvc: &fakeConsumerSvc{},
 			in:          configurationv1.KongConsumer{Username: "something"},
 			wantSuccess: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			v := KongHTTPValidator{
-				consumerSvc: tt.consumerSvc,
+				ConsumerSvc: tt.ConsumerSvc,
 				Logger:      logrus.New(),
 			}
 			gotSuccess, gotErrorText, gotErr := v.ValidateConsumer(context.Background(), tt.in)

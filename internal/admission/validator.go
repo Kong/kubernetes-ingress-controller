@@ -23,8 +23,8 @@ type KongValidator interface {
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	consumerSvc kong.AbstractConsumerService
-	pluginSvc   kong.AbstractPluginService
+	ConsumerSvc kong.AbstractConsumerService
+	PluginSvc   kong.AbstractPluginService
 	//	Client *kong.Client
 	Logger logrus.FieldLogger
 	Store  store.Storer
@@ -43,7 +43,7 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 	if consumer.Username == "" {
 		return false, ErrTextUsernameEmpty, nil
 	}
-	c, err := validator.consumerSvc.Get(ctx, &consumer.Username)
+	c, err := validator.ConsumerSvc.Get(ctx, &consumer.Username)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			return true, "", nil
@@ -92,7 +92,7 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
 	}
-	if isValid, err := validator.pluginSvc.Validate(ctx, &plugin); err != nil {
+	if isValid, err := validator.PluginSvc.Validate(ctx, &plugin); err != nil {
 		return false, err.Error(), nil
 	} else {
 		return isValid, "", nil

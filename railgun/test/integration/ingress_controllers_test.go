@@ -46,7 +46,7 @@ func TestMinimalIngress(t *testing.T) {
 	cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
 
 	// wait for the ingress backend to be routable
-	u := <-proxyURL
+	u := proxyURL()
 	assert.Eventually(t, func() bool {
 		resp, err := http.Get(fmt.Sprintf("%s/nginx", u.String()))
 		if err != nil {
@@ -55,5 +55,37 @@ func TestMinimalIngress(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusOK
+	}, ingressTimeout, ingressTimeoutTick)
+}
+
+func TestHTTPSRedirect(t *testing.T) {
+	ctx := context.Background()
+	opts := metav1.CreateOptions{}
+
+	container := k8sgen.NewContainer("alsonginx", "nginx", 80)
+	deployment := k8sgen.NewDeploymentForContainer(container)
+	_, err := cluster.Client().AppsV1().Deployments("default").Create(ctx, deployment, opts)
+	assert.NoError(t, err)
+
+	service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+	_, err = cluster.Client().CoreV1().Services("default").Create(ctx, service, opts)
+	assert.NoError(t, err)
+
+	ingress := k8sgen.NewIngressForService("/example", map[string]string{
+		"kubernetes.io/ingress.class":           "kong",
+		"konghq.com/protocols":                  "https",
+		"konghq.com/https-redirect-status-code": "301",
+	}, service)
+	_, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, opts)
+	assert.NoError(t, err)
+
+	assert.Eventually(t, func() bool {
+		u := proxyURL()
+		resp, err := http.Get(fmt.Sprintf("%s/example", u.String()))
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusMovedPermanently
 	}, ingressTimeout, ingressTimeoutTick)
 }

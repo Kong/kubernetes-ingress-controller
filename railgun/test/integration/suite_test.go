@@ -24,8 +24,8 @@ var (
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
 
-	// proxyURL is the channel that indicates when the Kong proxy is ready to use.
-	proxyURL = make(chan *url.URL)
+	// proxyReady is the channel that indicates when the Kong proxyReady is ready to use.
+	proxyReady = make(chan *url.URL)
 )
 
 func TestMain(m *testing.M) {
@@ -71,7 +71,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			panic(event.Err)
 		}
 		u := event.URL
-		proxyURL <- u
+		proxyReady <- u
 
 		cmd := exec.CommandContext(ctx, "go", "run", "../../main.go", "--kong-url", fmt.Sprintf("http://%s:8001", u.Hostname()))
 		if err := cmd.Run(); err != nil {

@@ -4,7 +4,6 @@ This repo holds a prototype implementation of the [Kong Kubernetes Ingress Contr
 
 The naming `railgun` is a codename used arbitrarily based on a [video game reference][q3].
 
-
 ## Usage
 
 To run the dev environment currently, you need a Kubernetes cluster (such as [kind](https://github.com/kubernetes-sigs/kind)):

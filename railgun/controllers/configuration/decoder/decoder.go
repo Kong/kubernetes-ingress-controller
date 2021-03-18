@@ -7,6 +7,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -26,6 +27,8 @@ func (sb *StoreBuilder) Add(obj client.Object) error {
 		sb.objs.IngressesV1 = append(sb.objs.IngressesV1, obj)
 	case *configurationv1beta1.TCPIngress:
 		sb.objs.TCPIngresses = append(sb.objs.TCPIngresses, obj)
+	case *v1alpha1.UDPIngress:
+		sb.objs.UDPIngresses = append(sb.objs.UDPIngresses, obj)
 	case *corev1.Service:
 		sb.objs.Services = append(sb.objs.Services, obj)
 	case *corev1.Endpoints:

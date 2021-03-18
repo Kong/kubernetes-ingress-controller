@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -68,6 +69,7 @@ type Storer interface {
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
 	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
+	ListUDPIngresses() ([]*v1alpha1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
@@ -100,6 +102,7 @@ type CacheStores struct {
 	IngressV1beta1 cache.Store
 	IngressV1      cache.Store
 	TCPIngress     cache.Store
+	UDPIngress     cache.Store
 
 	Service  cache.Store
 	Secret   cache.Store
@@ -227,6 +230,24 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 		return nil, err
 	}
 	return ingresses, nil
+}
+
+// ListUDPIngresses returns the list of UDP Ingresses
+func (s Store) ListUDPIngresses() ([]*v1alpha1.UDPIngress, error) {
+	ingresses := []*v1alpha1.UDPIngress{}
+	if s.stores.UDPIngress == nil {
+		// older versions of the KIC do not support UDPIngress so short circuit to maintain support with them
+		return ingresses, nil
+	}
+
+	err := cache.ListAll(s.stores.UDPIngress, labels.NewSelector(),
+		func(ob interface{}) {
+			ing, ok := ob.(*v1alpha1.UDPIngress)
+			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
+				ingresses = append(ingresses, ing)
+			}
+		})
+	return ingresses, err
 }
 
 func (s Store) validKnativeIngressClass(objectMeta *metav1.ObjectMeta) bool {

@@ -10,6 +10,7 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -389,6 +390,42 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			}
 			service.Routes = append(service.Routes, r)
 			result.ServiceNameToServices[serviceName] = service
+		}
+	}
+
+	return result
+}
+
+func fromUDPIngressV1Alpha1(log logrus.FieldLogger, ingressList []*v1alpha1.UDPIngress) ingressRules {
+	result := newIngressRules()
+
+	sort.SliceStable(ingressList, func(i, j int) bool {
+		return ingressList[i].CreationTimestamp.Before(&ingressList[j].CreationTimestamp)
+	})
+
+	for _, ingress := range ingressList {
+		ingressSpec := ingress.Spec
+
+		log = log.WithFields(logrus.Fields{
+			"udpingress_namespace": ingress.Namespace,
+			"udpingress_name":      ingress.Name,
+		})
+
+		result.ServiceNameToServices[ingress.Namespace+"."+ingress.Name] = kongstate.Service{
+			Service: kong.Service{
+				Name:     kong.String(ingress.Namespace + "." + ingress.Name),
+				Protocol: kong.String("udp"),
+				Host:     kong.String(ingressSpec.Host),
+				Port:     kong.Int(ingress.Spec.TargetPort),
+			},
+			Routes: []kongstate.Route{
+				{
+					Route: kong.Route{
+						Protocols:    []*string{kong.String("udp")},
+						Destinations: []*kong.CIDRPort{{Port: kong.Int(ingressSpec.ListenPort)}},
+					},
+				},
+			},
 		}
 	}
 

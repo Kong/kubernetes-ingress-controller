@@ -31,7 +31,7 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 	// TODO: (shane) I want to refactor this into several smaller functions
 	// ^ follow up for these items is in: https://github.com/Kong/kubernetes-ingress-controller/issues/1094
 
-	// if this is an Ingress resource make sure it's managed by Kong
+	// if this is an Ingress resource make sure it's managed by KIC
 	if obj.GetObjectKind().GroupVersionKind().Kind == "Ingress" {
 		if !isManaged(obj.GetAnnotations()) {
 			return ctrl.Result{}, nil
@@ -93,13 +93,8 @@ func isRuntimeObjectSame(secret *corev1.Secret, obj runtime.Object, nsn types.Na
 
 	// check if there's any existing object
 	key := configsecret.KeyFor(obj, nsn)
-	if foundCFG, ok := secret.Data[key]; ok {
-		if bytes.Equal(foundCFG, cfg) {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	foundCFG, ok := secret.Data[key]
+	return ok && bytes.Equal(foundCFG, cfg), nil
 }
 
 // storeRuntimeObject stores a runtime.Object in the configuration secret. Callers should re-queue after this completes successfully.

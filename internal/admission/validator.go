@@ -62,8 +62,6 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if k8sPluign is valid or not and string
 // holds a message if the entity is not valid.
-//
-// XXX: this function never returns non-nil error
 func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 	k8sPlugin configurationv1.KongPlugin) (bool, string, error) {
 	if k8sPlugin.PluginName == "" {
@@ -81,7 +79,7 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 		config, err := kongstate.SecretToConfiguration(validator.Store,
 			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
-			return false, fmt.Sprintf("could not load secret plugin configuration: %v", err), nil
+			return false, "could not load secret plugin configuration", err
 		}
 		plugin.Config = kong.Configuration(config)
 
@@ -93,7 +91,7 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
 	}
 	if isValid, err := validator.PluginSvc.Validate(ctx, &plugin); err != nil {
-		return false, err.Error(), nil
+		return false, "plugin failed schema validation", err
 	} else {
 		return isValid, "", nil
 	}

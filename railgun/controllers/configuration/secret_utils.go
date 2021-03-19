@@ -34,6 +34,7 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 	// ^ follow up for these items is in: https://github.com/Kong/kubernetes-ingress-controller/issues/1094
 
 	// if this is an Ingress resource make sure it's managed by KIC
+	// BUG: this takes only the kind into account, not the API group.
 	if obj.GetObjectKind().GroupVersionKind().Kind == "Ingress" {
 		if !isManaged(obj.GetAnnotations()) {
 			return ctrl.Result{}, nil

@@ -1,10 +1,10 @@
 package v1
 
 import (
-	"bytes"
 	"encoding/gob"
 
 	"github.com/kong/go-kong/kong"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -52,7 +52,7 @@ type KongClusterPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
-	Config Configuration `json:"config,omitempty"`
+	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
@@ -96,7 +96,7 @@ type KongPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
-	Config Configuration `json:"config,omitempty"`
+	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom ConfigSource `json:"configFrom,omitempty"`
@@ -158,35 +158,6 @@ type KongPluginList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	// +optional
 	Items []KongPlugin `json:"items"`
-}
-
-// Configuration contains a plugin configuration
-// +k8s:deepcopy-gen=false
-type Configuration map[string]interface{}
-
-func init() {
-	gob.Register(map[string]interface{}{})
-}
-
-// DeepCopy deepcopy function, copying the receiver, writing into out. in must be non-nil.
-// TODO: change this to be able to use the k8s code generator
-func (in *Configuration) DeepCopy() *Configuration {
-	var result Configuration
-	in.DeepCopyInto(&result)
-	return &result
-}
-
-// DeepCopyInto deepcopy function, copying the receiver, writing into out. in must be non-nil.
-// TODO: change this to be able to use the k8s code generator
-func (in *Configuration) DeepCopyInto(out *Configuration) {
-	if out == nil {
-		out = new(Configuration)
-	}
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	dec := gob.NewDecoder(&buf)
-	_ = enc.Encode(in)  // ignoring error XXX
-	_ = dec.Decode(out) // ignoring error XXX
 }
 
 // +genclient

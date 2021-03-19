@@ -79,9 +79,15 @@ func TestHTTPSRedirect(t *testing.T) {
 	_, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, opts)
 	assert.NoError(t, err)
 
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
 	assert.Eventually(t, func() bool {
 		u := proxyURL()
-		resp, err := http.Get(fmt.Sprintf("%s/example", u.String()))
+		resp, err := client.Get(fmt.Sprintf("%s/example", u.String()))
 		if err != nil {
 			return false
 		}

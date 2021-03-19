@@ -29,6 +29,8 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 	// TODO need EVENTS here
 	// TODO need more status updates
 	// TODO: (shane) I want to refactor this into several smaller functions
+	// TODO: collapse nsn + obj, this is redudant as obj includes nsn
+	// TODO: pass in secret namespace as part of function sig instead of env
 	// ^ follow up for these items is in: https://github.com/Kong/kubernetes-ingress-controller/issues/1094
 
 	// if this is an Ingress resource make sure it's managed by KIC

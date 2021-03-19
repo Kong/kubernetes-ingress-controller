@@ -29,7 +29,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.9.0
+	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/common v0.19.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/assertions v1.0.0 // indirect
@@ -39,7 +39,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.6.8
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210304203840-7b4935edff86 // indirect
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/grpc v1.36.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect

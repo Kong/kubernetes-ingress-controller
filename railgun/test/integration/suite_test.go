@@ -3,74 +3,81 @@
 package integration
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"os/exec"
 	"testing"
 
-	"github.com/google/uuid"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	ktfkind "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/kind"
-	ktfkong "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/kong"
-	ktfmetal "github.com/kong/kubernetes-ingress-controller/pkg/k8stest/pkg/metallb"
+	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 )
 
 var (
-	// ClusterName indicates the name of the Kind test cluster setup for this test suite.
-	ClusterName = uuid.New().String()
+	// cluster is the object which contains a Kubernetes client for the testing cluster
+	cluster ktfkind.Cluster
 
-	// kc is a kubernetes clientset for the default Kind cluster created for this test suite.
-	kc *kubernetes.Clientset
+	// proxyReady is the channel that indicates when the Kong proxyReady is ready to use.
+	proxyReady = make(chan *url.URL)
 )
 
 func TestMain(m *testing.M) {
-	// setup a kind cluster for testing
-	err := ktfkind.CreateKindCluster(ClusterName)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// create a new cluster for tests
+	config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
+	newCluster, ready, err := config.Deploy(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(10)
 	}
+	defer newCluster.Cleanup()
+	cluster = newCluster
 
-	// cleanup the kind cluster when we're done, unless flagged otherwise
-	defer func() {
-		if v := os.Getenv("KIND_KEEP_CLUSTER"); v == "" { // you can optionally flag the tests to retain the test cluster for inspection.
-			if err := ktfkind.DeleteKindCluster(ClusterName); err != nil {
-				fmt.Fprintf(os.Stderr, err.Error())
-				os.Exit(11)
-			}
+	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
+	if err := deployControllers(ctx, ready, cluster.Client(), os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllers.DefaultNamespace); err != nil {
+		newCluster.Cleanup()
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(11)
+	}
+
+	code := m.Run()
+	newCluster.Cleanup()
+	os.Exit(code)
+}
+
+// FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
+func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEvent, kc *kubernetes.Clientset, containerImage, namespace string) error {
+	// ensure the controller namespace is created
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	if _, err := kc.CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	// run the controller in the background
+	go func() {
+		event := <-ready
+		if event.Err != nil {
+			panic(event.Err)
+		}
+		u := event.URL
+		proxyReady <- u
+
+		cmd := exec.CommandContext(ctx, "go", "run", "../../main.go", "--kong-url", fmt.Sprintf("http://%s:8001", u.Hostname()))
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
 		}
 	}()
 
-	// setup Metallb for the cluster for LoadBalancer addresses for Kong
-	if err := ktfmetal.DeployMetallbForKindCluster(ClusterName, ktfkind.DefaultKindDockerNetwork); err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(12)
-	}
-
-	// retrieve the *kubernetes.Clientset for the cluster
-	kc, err = ktfkind.ClientForKindCluster(ClusterName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(13)
-	}
-
-	// setup a Kong proxy to test against
-	if err := ktfkong.SimpleProxySetup(kc, controllers.DefaultNamespace); err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(14)
-	}
-
-	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
-	cancel, err := ktfkong.DeployControllers(kc, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllers.DefaultNamespace)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(15)
-	}
-	defer cancel()
-
-	// run the tests
-	code := m.Run()
-	os.Exit(code)
+	return nil
 }

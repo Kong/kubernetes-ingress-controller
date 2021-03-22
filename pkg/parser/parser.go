@@ -327,7 +327,7 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 
 	endpoints = getEndpoints(log, &svc, servicePort, corev1.ProtocolTCP, s.GetEndpointsForService)
 	if len(endpoints) == 0 {
-		log.Warningf("no active endpionts")
+		log.Warningf("no active endpoints")
 	}
 	for _, endpoint := range endpoints {
 		target := kongstate.Target{

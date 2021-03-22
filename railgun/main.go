@@ -34,9 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
@@ -165,17 +166,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO - we've got a couple places in here and below where we "short circuit" controllers if the relevant API isn't available.
+	// This is convenient for testing, but maintainers should reconsider this before we release KIC 2.0.
+	// SEE: https://github.com/Kong/kubernetes-ingress-controller/issues/1101
 	if err := kongctrl.SetupIngressControllers(mgr); err != nil {
 		setupLog.Error(err, "unable to create controllers", "controllers", "Ingress")
 		os.Exit(1)
 	}
-	if err = (&kongctrl.KongV1UDPIngressReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "UDPIngress")
-		os.Exit(1)
+
+	// TODO - similar to above, we're short circuiting here. It's convenient, but let's discuss if this is what we want ultimately.
+	// SEE: https://github.com/Kong/kubernetes-ingress-controller/issues/1101
+	udpIngressAvailable, err := kongctrl.IsAPIAvailable(mgr, &v1alpha1.UDPIngress{})
+	if !udpIngressAvailable {
+		setupLog.Error(err, "API configuration.konghq.com/v1alpha1/UDPIngress is not available, skipping controller")
+	} else {
+		if err = (&kongctrl.KongV1UDPIngressReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "UDPIngress")
+			os.Exit(1)
+		}
 	}
 
 	//+kubebuilder:scaffold:builder

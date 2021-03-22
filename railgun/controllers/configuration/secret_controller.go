@@ -21,20 +21,13 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration/decoder"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/configsecret"
-	"github.com/pkg/errors"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/store"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -70,79 +63,6 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func storerFromSecret(s *corev1.Secret) (store.Storer, error) {
-	sb := decoder.StoreBuilder{}
-
-	for k, v := range s.Data {
-		obj, err := configsecret.DecodeObject(k, v)
-		if err != nil {
-			return nil, errors.Wrapf(err, "DecodeObject for key %q", k)
-		}
-		logrus.New().WithField("obj", obj).WithField("key", k).Info("decoded object")
-		if err := sb.Add(obj); err != nil {
-			return nil, errors.Wrapf(err, "add object for key %q", k)
-		}
-	}
-
-	return sb.Build()
-}
-
-func storerFromFake(_ *corev1.Secret) (store.Storer, error) {
-	// TODO: replace the fake content with actual content unpacked from the secret argument.
-	ingresses := []*networkingv1beta1.Ingress{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
-			},
-			Spec: networkingv1beta1.IngressSpec{
-				Rules: []networkingv1beta1.IngressRule{
-					{
-						IngressRuleValue: networkingv1beta1.IngressRuleValue{
-							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-								Paths: []networkingv1beta1.HTTPIngressPath{
-									{
-										Path: "/",
-										Backend: networkingv1beta1.IngressBackend{
-											ServiceName: "foo-svc",
-											ServicePort: intstr.FromInt(80),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	services := []*corev1.Service{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-svc",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"ingress.kubernetes.io/service-upstream": "true",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Ports: []corev1.ServicePort{
-					{Port: 80},
-				},
-			},
-		},
-	}
-
-	return store.NewFakeStore(store.FakeObjects{
-		IngressesV1beta1: ingresses,
-		Services:         services,
-	})
-}
-
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=secrets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=update
@@ -158,11 +78,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	storer, err := storerFromSecret(configSecret)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
+	storer := store.New(r.Client)
 	kongstate, err := parser.Build(logruslogger, storer)
 	if err != nil {
 		return ctrl.Result{}, err

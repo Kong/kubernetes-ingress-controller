@@ -18,7 +18,7 @@ const KongIngressFinalizer = "configuration.konghq.com/ingress"
 // provided controller manager.
 func SetupIngressControllers(mgr ctrl.Manager) error {
 	netV1Ing := new(netv1.Ingress)
-	apiAvailable, err := isAPIAvailable(mgr, netV1Ing)
+	apiAvailable, err := IsAPIAvailable(mgr, netV1Ing)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func setupLegacyIngressControllers(mgr ctrl.Manager) error {
 	// start the networking.k8s.io/v1beta1/Ingress controller (if the API is available)
 	netV1Beta1IngAvailable := false
 	netV1Beta1Ing := new(netv1beta1.Ingress)
-	apiAvailable, err := isAPIAvailable(mgr, netV1Beta1Ing)
+	apiAvailable, err := IsAPIAvailable(mgr, netV1Beta1Ing)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func setupLegacyIngressControllers(mgr ctrl.Manager) error {
 		mgr.GetLogger().Info("No need to start a controller for apiextensions.k8s.io/v1beta1/Ingress as networking.k8s.io/v1beta1/Ingress covers for this through conversions")
 	} else {
 		extV1Beta1Ing := new(extv1beta1.Ingress)
-		apiAvailable, err = isAPIAvailable(mgr, extV1Beta1Ing)
+		apiAvailable, err = IsAPIAvailable(mgr, extV1Beta1Ing)
 		if err != nil {
 			return err
 		}

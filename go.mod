@@ -2,31 +2,34 @@ module github.com/kong/kubernetes-ingress-controller
 
 go 1.16
 
+// -----------------------------------------------------------------------------
+// Replacements
+//
+// If you add replacements here, please make sure the replacement has a comment
+// associated with it that explains why the replacement is necessary.
+// -----------------------------------------------------------------------------
+
+// client-go does not autoresolve versions correctly due to a historical versioning problem upstream
+replace k8s.io/client-go => k8s.io/client-go v0.20.3
+
 require (
-	github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5 // indirect
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/containerd/containerd v1.3.3 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v20.10.5+incompatible
-	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.10.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-memdb v1.3.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/kong/deck v1.4.0
+	github.com/kong/deck v1.5.0
 	github.com/kong/go-kong v0.16.0
+	github.com/kong/kubernetes-testing-framework v0.0.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
-	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0

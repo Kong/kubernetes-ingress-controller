@@ -218,6 +218,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeObjUpdates(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
 }
 `

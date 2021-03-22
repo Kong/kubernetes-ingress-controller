@@ -116,3 +116,8 @@ deploy.test.proxy:
 clean.test.proxy:
 	helm uninstall --namespace kong-system kong-test-proxy
 
+# Our integration tests
+.PHONY: test.integration
+test.integration:
+	@./scripts/setup-integration-tests.sh
+	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/

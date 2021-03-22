@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [1.2.0](#120---20210324)
  - [1.1.1](#111---20210107)
  - [1.1.0](#110---20201209)
  - [1.0.0](#100---20201005)
@@ -25,6 +26,54 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [1.2.0] - 2021/03/22
+
+#### Added
+
+- Ingresses now support `konghq.com/request-buffering` and
+  `konghq.com/response-buffering` annotations, which set the
+  `request-buffering` and `response-buffering` settings on associated Kong
+  routes.
+  [#1016](https://github.com/Kong/kubernetes-ingress-controller/pull/1016/)
+- Added `--dump-config` flag to dump generated Kong configuration to a
+  temporary file to debug issues where the controller generates unexpected
+  configuration or unacceptable configuration. When set to `enabled` it redacts
+  sensitive values (credentials and certificate keys), and when set to
+  `sensitive`, it includes all configuration.
+  [#991](https://github.com/Kong/kubernetes-ingress-controller/pull/991/)
+- Added support for mtls-auth plugin credentials (requires Enterprise 2.3.2.0
+  or newer).
+  [#1078](https://github.com/Kong/kubernetes-ingress-controller/pull/1078/)
+- The KongClusterPlugin CRD is now optional, for installation in clusters
+  where KIC administrators do not have cluster-wide permissions.
+
+#### Fixed
+
+- The admission webhook can now validate KongPlugin configurations stored in a
+  Secret.
+  [#1036](https://github.com/Kong/kubernetes-ingress-controller/pull/1036/)
+
+#### Under the hood
+
+- Build configuration allows target architectures other than `amd64`. Note that
+  other architectures are not officially supported.
+  [#1046](https://github.com/Kong/kubernetes-ingress-controller/pull/1046/)
+- Updated to Go 1.16. Make sure to update your Go version if you build your own
+  controller binaries.
+  [#1110](https://github.com/Kong/kubernetes-ingress-controller/pull/1110/)
+- Refactored synchronization loop into more discrete components and created
+  packages for them.
+  [#1027](https://github.com/Kong/kubernetes-ingress-controller/pull/1027/)
+  [#1029](https://github.com/Kong/kubernetes-ingress-controller/pull/1029/)
+- Broad refactoring (with the purpose of exposing KIC's logic as libraries), in preparation for an architectural upgrade of KIC to a [kubebuilder](https://github.com/kubernetes-sigs/kubebuilder)-based
+  implementation of the controller (expected to be released as KIC v2.0).
+  [#1037](https://github.com/Kong/kubernetes-ingress-controller/pull/1037/)
+- Added a Go-based integration test environment and initial set of tests.
+  [#1102](https://github.com/Kong/kubernetes-ingress-controller/pull/1102/)
+- CI improvements check test coverage for PRs and automaticall open PRs for
+  dependency updates.
+- Upgraded almost all Go library dependencies (from now on, using Dependabot to ensure that minor releases use the newest versions available).
 
 ## [1.1.1] - 2021/01/07
 
@@ -954,6 +1003,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[1.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.1...1.2.0
 [1.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.10.0...1.0.0

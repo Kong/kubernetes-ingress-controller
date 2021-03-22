@@ -2,7 +2,7 @@
 status: provisional
 ---
 
-# Kong Kubernetes Testing Framework (KTF)
+# Kubernetes Ingress Controller (KIC) Minimal Defintion of Done
 
 ## Summary
 

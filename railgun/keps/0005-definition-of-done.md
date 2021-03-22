@@ -90,6 +90,6 @@ Pros:
 Cons:
 
 - ties issue resolution to releases
-- makes planning/acceptance more complicated
+- makes planning/acceptance more complicated because there is uncertainty whether a "closed" issue is actually "fully complete"
 - makes completion of milestones unclear (if a milestone is to be released at once, it would be visible as 0% completed until a release is made, and then suddenly jump to 100% completion)
 - requires additional maintainer/community coordination to retroactively close issues post-release

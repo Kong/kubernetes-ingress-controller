@@ -719,7 +719,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.1
+        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.2
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

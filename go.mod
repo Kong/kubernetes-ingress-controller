@@ -10,7 +10,7 @@ go 1.16
 // -----------------------------------------------------------------------------
 
 // client-go does not autoresolve versions correctly due to a historical versioning problem upstream
-replace k8s.io/client-go => k8s.io/client-go v0.20.3
+replace k8s.io/client-go => k8s.io/client-go v0.20.5
 
 require (
 	github.com/blang/semver v3.5.1+incompatible

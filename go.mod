@@ -9,7 +9,6 @@ go 1.16
 // associated with it that explains why the replacement is necessary.
 // -----------------------------------------------------------------------------
 
-
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/docker/docker v20.10.5+incompatible // indirect

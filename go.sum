@@ -1204,7 +1204,6 @@ honnef.co/go/tools v0.0.1-2020.1.5/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 k8s.io/api v0.19.7/go.mod h1:KTryDUT3l6Mtv7K2J2486PNL9DBns3wOYTkGR+iz63Y=
 k8s.io/api v0.20.1/go.mod h1:KqwcCVogGxQY3nBlRpwt+wpAMF/KjaCc7RpywacvqUo=
 k8s.io/api v0.20.2/go.mod h1:d7n6Ehyzx+S+cE3VhTGfVNNqtGc/oL9DCdYYahlurV8=
-k8s.io/api v0.20.3/go.mod h1:9/N1PKffb5ioImFknLewyktqAKCAh6xnhc7JFMhX6zg=
 k8s.io/api v0.20.5 h1:zsMTffV0Le2EiI0aKvlTHEnXGxk1HiqGRhJcCPiI7JI=
 k8s.io/api v0.20.5/go.mod h1:FQjAceXnVaWDeov2YUWhOb6Yt+5UjErkp6UO3nczO1Y=
 k8s.io/apiextensions-apiserver v0.19.7/go.mod h1:XJNNtjISNNePDEUClHt/igzMpQcmjVVh88QH+PKztPU=
@@ -1214,14 +1213,13 @@ k8s.io/apiextensions-apiserver v0.20.5/go.mod h1:1HoTwgjWNizJBIgg0Y9P4RdLtaQquil
 k8s.io/apimachinery v0.19.7/go.mod h1:6sRbGRAVY5DOCuZwB5XkqguBqpqLU6q/kOaOdk29z6Q=
 k8s.io/apimachinery v0.20.1/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apimachinery v0.20.2/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
-k8s.io/apimachinery v0.20.3/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apimachinery v0.20.5 h1:wO/FxMVRn223rAKxnBbwCyuN96bS9MFTIvP0e/V7cps=
 k8s.io/apimachinery v0.20.5/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apiserver v0.19.7/go.mod h1:DmWVQggNePspa+vSsVytVbS3iBSDTXdJVt0akfHacKk=
 k8s.io/apiserver v0.20.1/go.mod h1:ro5QHeQkgMS7ZGpvf4tSMx6bBOgPfE+f52KwvXfScaU=
 k8s.io/apiserver v0.20.5/go.mod h1:AY3lKhcJ2Tm81XvvcBzk2VnKINSoN+qczYsdo2YEvIc=
-k8s.io/client-go v0.20.3 h1:6ofV+ycm6X/5DfSTo1aJ9C8jloi2nJTzFgRMXJcrK4I=
-k8s.io/client-go v0.20.3/go.mod h1:tRUgITfrhGECV2MGpZPr1Db3pNv9k5coAn89asDm/YE=
+k8s.io/client-go v0.20.5 h1:dJGtYUvFrFGjQ+GjXEIby0gZWdlAOc0xJBJqY3VyDxA=
+k8s.io/client-go v0.20.5/go.mod h1:Ee5OOMMYvlH8FCZhDsacjMlCBwetbGZETwo1OA+e6Zw=
 k8s.io/code-generator v0.19.7/go.mod h1:lwEq3YnLYb/7uVXLorOJfxg+cUu2oihFhHZ0n9NIla0=
 k8s.io/code-generator v0.20.1/go.mod h1:UsqdF+VX4PU2g46NC2JRs4gc+IfrctnwHb76RNbWHJg=
 k8s.io/code-generator v0.20.4/go.mod h1:UsqdF+VX4PU2g46NC2JRs4gc+IfrctnwHb76RNbWHJg=

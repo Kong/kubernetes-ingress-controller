@@ -1,0 +1,400 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: kongingresses.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    kind: KongIngress
+    listKind: KongIngressList
+    plural: kongingresses
+    singular: kongingress
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: KongIngress is the Schema for the kongingresses API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          proxy:
+            description: Service represents a Service in Kong. Read https://getkong.org/docs/0.13.x/admin-api/#Service-object
+            properties:
+              ca_certificates:
+                items:
+                  type: string
+                type: array
+              client_certificate:
+                description: Certificate represents a Certificate in Kong. Read https://getkong.org/docs/0.14.x/admin-api/#certificate-object
+                properties:
+                  cert:
+                    type: string
+                  created_at:
+                    format: int64
+                    type: integer
+                  id:
+                    type: string
+                  key:
+                    type: string
+                  snis:
+                    items:
+                      type: string
+                    type: array
+                  tags:
+                    items:
+                      type: string
+                    type: array
+                type: object
+              connect_timeout:
+                type: integer
+              created_at:
+                type: integer
+              host:
+                type: string
+              id:
+                type: string
+              name:
+                type: string
+              path:
+                type: string
+              port:
+                type: integer
+              protocol:
+                type: string
+              read_timeout:
+                type: integer
+              retries:
+                type: integer
+              tags:
+                items:
+                  type: string
+                type: array
+              tls_verify:
+                type: boolean
+              tls_verify_depth:
+                type: integer
+              updated_at:
+                type: integer
+              url:
+                type: string
+              write_timeout:
+                type: integer
+            type: object
+          route:
+            description: Route represents a Route in Kong. Read https://getkong.org/docs/0.13.x/admin-api/#Route-object
+            properties:
+              created_at:
+                type: integer
+              destinations:
+                items:
+                  description: CIDRPort represents a set of CIDR and a port.
+                  properties:
+                    ip:
+                      type: string
+                    port:
+                      type: integer
+                  type: object
+                type: array
+              headers:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                type: object
+              hosts:
+                items:
+                  type: string
+                type: array
+              https_redirect_status_code:
+                type: integer
+              id:
+                type: string
+              methods:
+                items:
+                  type: string
+                type: array
+              name:
+                type: string
+              path_handling:
+                type: string
+              paths:
+                items:
+                  type: string
+                type: array
+              preserve_host:
+                type: boolean
+              protocols:
+                items:
+                  type: string
+                type: array
+              regex_priority:
+                type: integer
+              request_buffering:
+                description: "Kong buffers requests and responses by default. Buffering
+                  is not always desired, for instance if large payloads are being
+                  proxied using HTTP 1.1 chunked encoding. \n The request and response
+                  route buffering options are enabled by default and allow the user
+                  to disable buffering if desired for their use case. \n SEE ALSO:
+                  - https://github.com/Kong/kong/pull/6057 - https://docs.konghq.com/2.2.x/admin-api/#route-object"
+                type: boolean
+              response_buffering:
+                type: boolean
+              service:
+                description: Service represents a Service in Kong. Read https://getkong.org/docs/0.13.x/admin-api/#Service-object
+                properties:
+                  ca_certificates:
+                    items:
+                      type: string
+                    type: array
+                  client_certificate:
+                    description: Certificate represents a Certificate in Kong. Read
+                      https://getkong.org/docs/0.14.x/admin-api/#certificate-object
+                    properties:
+                      cert:
+                        type: string
+                      created_at:
+                        format: int64
+                        type: integer
+                      id:
+                        type: string
+                      key:
+                        type: string
+                      snis:
+                        items:
+                          type: string
+                        type: array
+                      tags:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  connect_timeout:
+                    type: integer
+                  created_at:
+                    type: integer
+                  host:
+                    type: string
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  path:
+                    type: string
+                  port:
+                    type: integer
+                  protocol:
+                    type: string
+                  read_timeout:
+                    type: integer
+                  retries:
+                    type: integer
+                  tags:
+                    items:
+                      type: string
+                    type: array
+                  tls_verify:
+                    type: boolean
+                  tls_verify_depth:
+                    type: integer
+                  updated_at:
+                    type: integer
+                  url:
+                    type: string
+                  write_timeout:
+                    type: integer
+                type: object
+              snis:
+                items:
+                  type: string
+                type: array
+              sources:
+                items:
+                  description: CIDRPort represents a set of CIDR and a port.
+                  properties:
+                    ip:
+                      type: string
+                    port:
+                      type: integer
+                  type: object
+                type: array
+              strip_path:
+                type: boolean
+              tags:
+                items:
+                  type: string
+                type: array
+              updated_at:
+                type: integer
+            type: object
+          upstream:
+            description: Upstream represents an Upstream in Kong.
+            properties:
+              algorithm:
+                type: string
+              client_certificate:
+                description: Certificate represents a Certificate in Kong. Read https://getkong.org/docs/0.14.x/admin-api/#certificate-object
+                properties:
+                  cert:
+                    type: string
+                  created_at:
+                    format: int64
+                    type: integer
+                  id:
+                    type: string
+                  key:
+                    type: string
+                  snis:
+                    items:
+                      type: string
+                    type: array
+                  tags:
+                    items:
+                      type: string
+                    type: array
+                type: object
+              created_at:
+                format: int64
+                type: integer
+              hash_fallback:
+                type: string
+              hash_fallback_header:
+                type: string
+              hash_on:
+                type: string
+              hash_on_cookie:
+                type: string
+              hash_on_cookie_path:
+                type: string
+              hash_on_header:
+                type: string
+              healthchecks:
+                description: Healthcheck represents a health-check config of an upstream
+                  in Kong.
+                properties:
+                  active:
+                    description: ActiveHealthcheck configures active health check
+                      probing.
+                    properties:
+                      concurrency:
+                        type: integer
+                      healthy:
+                        description: Healthy configures thresholds and HTTP status
+                          codes to mark targets healthy for an upstream.
+                        properties:
+                          http_statuses:
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            type: integer
+                          successes:
+                            type: integer
+                        type: object
+                      http_path:
+                        type: string
+                      https_sni:
+                        type: string
+                      https_verify_certificate:
+                        type: boolean
+                      timeout:
+                        type: integer
+                      type:
+                        type: string
+                      unhealthy:
+                        description: Unhealthy configures thresholds and HTTP status
+                          codes to mark targets unhealthy.
+                        properties:
+                          http_failures:
+                            type: integer
+                          http_statuses:
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            type: integer
+                          tcp_failures:
+                            type: integer
+                          timeouts:
+                            type: integer
+                        type: object
+                    type: object
+                  passive:
+                    description: PassiveHealthcheck configures passive checks around
+                      passive health checks.
+                    properties:
+                      healthy:
+                        description: Healthy configures thresholds and HTTP status
+                          codes to mark targets healthy for an upstream.
+                        properties:
+                          http_statuses:
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            type: integer
+                          successes:
+                            type: integer
+                        type: object
+                      type:
+                        type: string
+                      unhealthy:
+                        description: Unhealthy configures thresholds and HTTP status
+                          codes to mark targets unhealthy.
+                        properties:
+                          http_failures:
+                            type: integer
+                          http_statuses:
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            type: integer
+                          tcp_failures:
+                            type: integer
+                          timeouts:
+                            type: integer
+                        type: object
+                    type: object
+                  threshold:
+                    type: number
+                type: object
+              host_header:
+                type: string
+              id:
+                type: string
+              name:
+                type: string
+              slots:
+                type: integer
+              tags:
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

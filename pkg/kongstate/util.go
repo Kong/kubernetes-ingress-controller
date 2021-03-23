@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 func getKongIngressForService(s store.Storer, service corev1.Service) (
@@ -82,10 +83,15 @@ func getPlugin(s store.Storer, namespace, name string) (kong.Plugin, error) {
 func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
-	config := k8sPlugin.Config
+	var config kong.Configuration
+	config, err := RawConfigToConfiguration(k8sPlugin.Config)
+	if err != nil {
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+			k8sPlugin.Namespace, k8sPlugin.Name, err)
+	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
 		(configurationv1.NamespacedSecretValueFromSource{}) &&
-		len(k8sPlugin.Config) > 0 {
+		len(config) > 0 {
 		return kong.Plugin{},
 			fmt.Errorf("KongClusterPlugin '/%v' has both "+
 				"Config and ConfigFrom set", k8sPlugin.Name)
@@ -121,10 +127,15 @@ func cloneStringPointerSlice(array ...*string) (res []*string) {
 func kongPluginFromK8SPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
-	config := k8sPlugin.Config
+	var config kong.Configuration
+	config, err := RawConfigToConfiguration(k8sPlugin.Config)
+	if err != nil {
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+			k8sPlugin.Namespace, k8sPlugin.Name, err)
+	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
 		(configurationv1.SecretValueFromSource{}) &&
-		len(k8sPlugin.Config) > 0 {
+		len(config) > 0 {
 		return kong.Plugin{},
 			fmt.Errorf("KongPlugin '%v/%v' has both "+
 				"Config and ConfigFrom set",
@@ -152,10 +163,22 @@ func kongPluginFromK8SPlugin(
 	return kongPlugin, nil
 }
 
+func RawConfigToConfiguration(config apiextensionsv1.JSON) (kong.Configuration, error) {
+	if len(config.Raw) == 0 {
+		return kong.Configuration{}, nil
+	}
+	var kongConfig kong.Configuration
+	err := json.Unmarshal(config.Raw, &kongConfig)
+	if err != nil {
+		return kong.Configuration{}, err
+	}
+	return kongConfig, nil
+}
+
 func namespacedSecretToConfiguration(
 	s store.Storer,
 	reference configurationv1.NamespacedSecretValueFromSource) (
-	configurationv1.Configuration, error) {
+	kong.Configuration, error) {
 	bareReference := configurationv1.SecretValueFromSource{
 		Secret: reference.Secret,
 		Key:    reference.Key}
@@ -165,23 +188,23 @@ func namespacedSecretToConfiguration(
 func SecretToConfiguration(
 	s store.Storer,
 	reference configurationv1.SecretValueFromSource, namespace string) (
-	configurationv1.Configuration, error) {
+	kong.Configuration, error) {
 	secret, err := s.GetSecret(namespace, reference.Secret)
 	if err != nil {
-		return configurationv1.Configuration{}, fmt.Errorf(
+		return kong.Configuration{}, fmt.Errorf(
 			"error fetching plugin configuration secret '%v/%v': %v",
 			namespace, reference.Secret, err)
 	}
 	secretVal, ok := secret.Data[reference.Key]
 	if !ok {
-		return configurationv1.Configuration{},
+		return kong.Configuration{},
 			fmt.Errorf("no key '%v' in secret '%v/%v'",
 				reference.Key, namespace, reference.Secret)
 	}
-	var config configurationv1.Configuration
+	var config kong.Configuration
 	if err := json.Unmarshal(secretVal, &config); err != nil {
 		if err := yaml.Unmarshal(secretVal, &config); err != nil {
-			return configurationv1.Configuration{},
+			return kong.Configuration{},
 				fmt.Errorf("key '%v' in secret '%v/%v' contains neither "+
 					"valid JSON nor valid YAML)",
 					reference.Key, namespace, reference.Secret)
@@ -193,7 +216,7 @@ func SecretToConfiguration(
 // plugin is a intermediate type to hold plugin related configuration
 type plugin struct {
 	Name   string
-	Config configurationv1.Configuration
+	Config kong.Configuration
 
 	RunOn     string
 	Disabled  bool
@@ -203,7 +226,7 @@ type plugin struct {
 func (p plugin) toKongPlugin() kong.Plugin {
 	result := kong.Plugin{
 		Name:   kong.String(p.Name),
-		Config: kong.Configuration(p.Config).DeepCopy(),
+		Config: p.Config.DeepCopy(),
 	}
 	if p.RunOn != "" {
 		result.RunOn = kong.String(p.RunOn)

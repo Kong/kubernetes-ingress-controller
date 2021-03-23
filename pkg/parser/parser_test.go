@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -156,8 +157,8 @@ func TestGlobalPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config: configurationv1.Configuration{
-						"foo1": "bar1",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"foo1": "bar1"}`),
 					},
 				},
 			},
@@ -467,7 +468,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
@@ -481,7 +484,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
@@ -500,7 +505,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
@@ -515,7 +522,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					Config:     configurationv1.Configuration{"fake": true},
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"fake": true}`),
+					},
 					ConfigFrom: configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
@@ -1621,6 +1630,219 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Protocols:     kong.StringSlice("http", "https"),
 			}, state.Services[0].Routes[0].Route)
 		})
+	t.Run("route buffering options are processed (true)", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route-buffering-test",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey:     annotations.DefaultIngressClass,
+						"konghq.com/request-buffering":  "True",
+						"konghq.com/response-buffering": "True",
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Services:         services,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services), "expected one service to be rendered")
+		assert.Equal(kong.Service{
+			Name:           kong.String("default.foo-svc.80"),
+			Host:           kong.String("foo-svc.default.80.svc"),
+			Path:           kong.String("/"),
+			Port:           kong.Int(80),
+			ConnectTimeout: kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			WriteTimeout:   kong.Int(60000),
+			Retries:        kong.Int(5),
+			Protocol:       kong.String("http"),
+		}, state.Services[0].Service)
+
+		assert.Equal(1, len(state.Services[0].Routes), "expected one route to be rendered")
+		assert.Equal(kong.Route{
+			Name:              kong.String("default.route-buffering-test.00"),
+			StripPath:         kong.Bool(false),
+			RegexPriority:     kong.Int(0),
+			Hosts:             kong.StringSlice("example.com"),
+			PreserveHost:      kong.Bool(true),
+			Paths:             kong.StringSlice("/"),
+			Protocols:         kong.StringSlice("http", "https"),
+			RequestBuffering:  kong.Bool(true),
+			ResponseBuffering: kong.Bool(true),
+		}, state.Services[0].Routes[0].Route)
+	})
+	t.Run("route buffering options are processed (false)", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route-buffering-test",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey:     annotations.DefaultIngressClass,
+						"konghq.com/request-buffering":  "False",
+						"konghq.com/response-buffering": "False",
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Services:         services,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services), "expected one service to be rendered")
+		assert.Equal(kong.Service{
+			Name:           kong.String("default.foo-svc.80"),
+			Host:           kong.String("foo-svc.default.80.svc"),
+			Path:           kong.String("/"),
+			Port:           kong.Int(80),
+			ConnectTimeout: kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			WriteTimeout:   kong.Int(60000),
+			Retries:        kong.Int(5),
+			Protocol:       kong.String("http"),
+		}, state.Services[0].Service)
+
+		assert.Equal(1, len(state.Services[0].Routes), "expected one route to be rendered")
+		assert.Equal(kong.Route{
+			Name:              kong.String("default.route-buffering-test.00"),
+			StripPath:         kong.Bool(false),
+			RegexPriority:     kong.Int(0),
+			Hosts:             kong.StringSlice("example.com"),
+			PreserveHost:      kong.Bool(true),
+			Paths:             kong.StringSlice("/"),
+			Protocols:         kong.StringSlice("http", "https"),
+			RequestBuffering:  kong.Bool(false),
+			ResponseBuffering: kong.Bool(false),
+		}, state.Services[0].Routes[0].Route)
+	})
+	t.Run("route buffering options are not processed with bad annotation values", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route-buffering-test",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey:     annotations.DefaultIngressClass,
+						"konghq.com/request-buffering":  "invalid-value",
+						"konghq.com/response-buffering": "invalid-value",
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Services:         services,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+
+		assert.Equal(1, len(state.Services), "expected one service to be rendered")
+		assert.Equal(1, len(state.Services[0].Routes), "expected one route to be rendered")
+		assert.Empty(state.Services[0].Routes[0].Route.RequestBuffering)
+		assert.Empty(state.Services[0].Routes[0].Route.ResponseBuffering)
+	})
 }
 
 func TestKongProcessClasslessIngress(t *testing.T) {
@@ -2019,9 +2241,8 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"http"},
-				Config: configurationv1.Configuration{
-					"foo":     "bar",
-					"knative": "yo",
+				Config: apiextensionsv1.JSON{
+					Raw: []byte(`{"foo": "bar", "knative": "yo"}`),
 				},
 			},
 		}
@@ -2877,14 +3098,16 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
+				Config: apiextensionsv1.JSON{
+					Raw: []byte(`{
 					"foo": "bar",
-					"add": map[string]interface{}{
-						"headers": []interface{}{
+					"add": {
+						"headers": [
 							"header1:value1",
-							"header2:value2",
-						},
-					},
+							"header2:value2"
+							]
+						}
+					}`),
 				},
 			},
 		}
@@ -2966,8 +3189,8 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "basic-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
-					"foo": "bar",
+				Config: apiextensionsv1.JSON{
+					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		}
@@ -2979,8 +3202,8 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "key-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
-					"foo": "bar",
+				Config: apiextensionsv1.JSON{
+					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		}
@@ -3050,8 +3273,8 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 				PluginName: "basic-auth",
 				Protocols:  []string{"grpc"},
-				Config: configurationv1.Configuration{
-					"foo": "bar",
+				Config: apiextensionsv1.JSON{
+					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		}

@@ -4,13 +4,54 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/blang/semver"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestKongState_SanitizedCopy(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		in   KongState
+		want KongState
+	}{
+		{
+			name: "sanitizes all consumers and certificates and copies all other fields",
+			in: KongState{
+				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
+				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: kong.String("secret")}}},
+				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
+				Consumers: []Consumer{{
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")}}},
+				}},
+			},
+			want: KongState{
+				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
+				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
+				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
+				Consumers: []Consumer{{
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
+				}},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := *tt.in.SanitizedCopy()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
 
 func Test_getPluginRelations(t *testing.T) {
 	type args struct {
@@ -259,4 +300,60 @@ func Test_getPluginRelations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_FillConsumersAndCredentials(t *testing.T) {
+	secrets := []*corev1.Secret{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fooCredSecret",
+				Namespace: "default",
+			},
+			Data: map[string][]byte{
+				"kongCredType": []byte("key-auth"),
+				"key":          []byte("whatever"),
+			},
+		},
+	}
+	consumers := []*configurationv1.KongConsumer{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+				},
+			},
+			Username: "foo",
+			CustomID: "foo",
+			Credentials: []string{
+				"fooCredSecret",
+			},
+		},
+	}
+	store, _ := store.NewFakeStore(store.FakeObjects{
+		Secrets:       secrets,
+		KongConsumers: consumers,
+	})
+
+	want := KongState{
+		Consumers: []Consumer{{
+			Consumer: kong.Consumer{
+				Username: kong.String("foo"),
+				CustomID: kong.String("foo"),
+			},
+			KeyAuths: []*KeyAuth{{kong.KeyAuth{Key: kong.String("whatever")}}},
+		}},
+		Version: semver.MustParse("2.3.2"),
+	}
+
+	t.Run("parses consumer and credential from store into state", func(t *testing.T) {
+		state := KongState{
+			Version: semver.MustParse("2.3.2"),
+		}
+		state.FillConsumersAndCredentials(logrus.New(), store)
+		assert.Equal(t, want.Consumers[0].Consumer.Username, state.Consumers[0].Consumer.Username)
+		assert.Equal(t, want.Consumers[0].Consumer.CustomID, state.Consumers[0].Consumer.CustomID)
+		assert.Equal(t, want.Consumers[0].KeyAuths[0].Key, state.Consumers[0].KeyAuths[0].Key)
+	})
 }

@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 const (
@@ -79,6 +81,9 @@ type cliConfig struct {
 	// Logging
 	LogLevel  string
 	LogFormat string
+
+	// Diagnostics
+	DumpConfig util.ConfigDumpMode
 
 	// k8s connection details
 	APIServerHost      string
@@ -199,6 +204,11 @@ trace, debug, info, warn, error, fatal and panic.`)
 		`Format of logs of the controller. Allowed values are 
 text and json.`)
 
+	// Diagnostics
+	flags.String("dump-config", "",
+		`Dump generated configuration to a temporary directory when set to "enabled".
+When set to "sensitive", dumps will include certificate+key pairs and credentials.`)
+
 	// k8s connection details
 	flags.String("apiserver-host", "",
 		`The address of the Kubernetes Apiserver to connect to in the format of 
@@ -310,6 +320,12 @@ func parseFlags() (cliConfig, error) {
 	// Logging
 	config.LogLevel = viper.GetString("log-level")
 	config.LogFormat = viper.GetString("log-format")
+
+	// Diagnostics
+	var err error
+	if config.DumpConfig, err = util.ParseConfigDumpMode(viper.GetString("dump-config")); err != nil {
+		return cliConfig{}, fmt.Errorf("could not parse --dump-config: %w", err)
+	}
 
 	// k8s connection details
 	config.APIServerHost = viper.GetString("apiserver-host")

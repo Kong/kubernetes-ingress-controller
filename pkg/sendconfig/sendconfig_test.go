@@ -1,4 +1,4 @@
-package controller
+package sendconfig
 
 import (
 	"reflect"
@@ -104,9 +104,7 @@ func Test_renderConfigWithCustomEntities(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var n KongController
-			n.Logger = logrus.New()
-			got, err := n.renderConfigWithCustomEntities(tt.args.state, tt.args.customEntitiesJSONBytes)
+			got, err := renderConfigWithCustomEntities(logrus.New(), tt.args.state, tt.args.customEntitiesJSONBytes)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("renderConfigWithCustomEntities() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -1,0 +1,51 @@
+domain: konghq.com
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: railgun
+repo: github.com/kong/kubernetes-ingress-controller/railgun
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: konghq.com
+  group: configuration
+  kind: KongIngress
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
+  version: v1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: konghq.com
+  group: configuration
+  kind: KongClusterPlugin
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: konghq.com
+  group: configuration
+  kind: KongPlugin
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: konghq.com
+  group: configuration
+  kind: KongConsumer
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: konghq.com
+  group: configuration
+  kind: UDPIngress
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1
+  version: v1alpha1
+version: "3"

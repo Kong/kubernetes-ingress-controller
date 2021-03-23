@@ -54,6 +54,20 @@ type Certificate struct {
 	kong.Certificate
 }
 
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *Certificate) SanitizedCopy() *Certificate {
+	return &Certificate{
+		kong.Certificate{
+			ID:        c.ID,
+			Cert:      c.Cert,
+			Key:       redactedString,
+			CreatedAt: c.CreatedAt,
+			SNIs:      c.SNIs,
+			Tags:      c.Tags,
+		},
+	}
+}
+
 // Plugin represetns a plugin Object in Kong.
 type Plugin struct {
 	kong.Plugin

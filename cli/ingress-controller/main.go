@@ -42,6 +42,7 @@ import (
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -82,7 +83,7 @@ var (
 
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
 	return controller.Configuration{
-		Kong: controller.Kong{
+		Kong: sendconfig.Kong{
 			URL:         cliConfig.KongAdminURL,
 			FilterTags:  cliConfig.KongAdminFilterTags,
 			Concurrency: cliConfig.KongAdminConcurrency,
@@ -103,6 +104,8 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 		UpdateStatus:           cliConfig.UpdateStatus,
 		UpdateStatusOnShutdown: cliConfig.UpdateStatusOnShutdown,
 		ElectionID:             cliConfig.ElectionID,
+
+		DumpConfig: cliConfig.DumpConfig,
 	}
 }
 
@@ -339,6 +342,14 @@ func main() {
 		)
 	}
 
+	if cliConfig.DumpConfig != util.ConfigDumpModeOff {
+		controllerConfig.DumpDir, err = ioutil.TempDir("", "controller")
+		if err != nil {
+			log.Fatalf("failed to create a dump directory: %v", err)
+		}
+		log.Infof("config dumps will be created in: %v", controllerConfig.DumpDir)
+	}
+
 	var synced []cache.InformerSynced
 	updateChannel := channels.NewRingChannel(1024)
 	reh := controller.ResourceEventHandler{
@@ -453,6 +464,7 @@ func main() {
 
 	store := store.New(cacheStores, cliConfig.IngressClass, cliConfig.ProcessClasslessIngressV1Beta1,
 		cliConfig.ProcessClasslessIngressV1, cliConfig.ProcessClasslessKongConsumer, log.WithField("component", "store"))
+
 	kong, err := controller.NewKongController(ctx, &controllerConfig, updateChannel,
 		store)
 	if err != nil {
@@ -536,7 +548,7 @@ func main() {
 				logger.Fatalf("failed to load admission webhook certificate: %s", err)
 			}
 		}
-		tlsConfig := &tls.Config{
+		tlsConfig := &tls.Config{ //nolint:gosec
 			Certificates: []tls.Certificate{cert},
 		}
 		server := http.Server{

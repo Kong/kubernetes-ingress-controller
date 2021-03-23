@@ -23,14 +23,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/eapache/channels"
-	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/election"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/status"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -44,26 +43,10 @@ import (
 	knativeClientSet "knative.dev/networking/pkg/client/clientset/versioned"
 )
 
-// Kong Represents a Kong client and connection information
-type Kong struct {
-	URL        string
-	FilterTags []string
-	// Headers are injected into every request to Kong's Admin API
-	// to help with authorization/authentication.
-	Client *kong.Client
-
-	InMemory      bool
-	HasTagSupport bool
-	Enterprise    bool
-
-	Version semver.Version
-
-	Concurrency int
-}
-
 // Configuration contains all the settings required by an Ingress controller
 type Configuration struct {
-	Kong
+	sendconfig.Kong
+
 	KongCustomEntitiesSecret string
 
 	KubeClient       clientset.Interface
@@ -91,6 +74,11 @@ type Configuration struct {
 	EnableKnativeIngressSupport bool
 
 	Logger logrus.FieldLogger
+
+	// DumpConfig writes generated config to a temp directory for manual inspection and debugging.
+	DumpConfig util.ConfigDumpMode
+	// DumpDir specifies the target directory for dumps enabled by `DumpConfig`.
+	DumpDir string
 }
 
 // sync collects all the pieces required to assemble the configuration file and
@@ -113,6 +101,7 @@ func (n *KongController) syncIngress(interface{}) error {
 
 	n.Logger.Infof("syncing configuration")
 	state, err := parser.Build(n.Logger.WithField("component", "store"), n.store)
+	state.Version = n.cfg.Kong.Version
 	if err != nil {
 		return fmt.Errorf("error building kong state: %w", err)
 	}
@@ -143,7 +132,7 @@ func NewKongController(ctx context.Context,
 		updateCh: updateCh,
 
 		stopLock:          &sync.Mutex{},
-		PluginSchemaStore: *NewPluginSchemaStore(config.Kong.Client),
+		PluginSchemaStore: *util.NewPluginSchemaStore(config.Kong.Client),
 
 		Logger: config.Logger,
 	}
@@ -228,7 +217,7 @@ type KongController struct {
 
 	store store.Storer
 
-	PluginSchemaStore PluginSchemaStore
+	PluginSchemaStore util.PluginSchemaStore
 
 	Logger logrus.FieldLogger
 }

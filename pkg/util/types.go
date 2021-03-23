@@ -16,6 +16,10 @@ limitations under the License.
 
 package util
 
+import (
+	"fmt"
+)
+
 // Endpoint describes a kubernetes endpoint, same as a target in Kong.
 type Endpoint struct {
 	// Address IP address of the endpoint
@@ -28,4 +32,25 @@ type Endpoint struct {
 type RawSSLCert struct {
 	Cert []byte
 	Key  []byte
+}
+
+type ConfigDumpMode int
+
+const (
+	ConfigDumpModeOff       ConfigDumpMode = iota
+	ConfigDumpModeEnabled   ConfigDumpMode = iota
+	ConfigDumpModeSensitive ConfigDumpMode = iota
+)
+
+func ParseConfigDumpMode(in string) (ConfigDumpMode, error) {
+	switch in {
+	case "enabled":
+		return ConfigDumpModeEnabled, nil
+	case "sensitive":
+		return ConfigDumpModeSensitive, nil
+	case "":
+		return ConfigDumpModeOff, nil
+	default:
+		return ConfigDumpModeOff, fmt.Errorf("unrecognized config dump mode: %s", in)
+	}
 }

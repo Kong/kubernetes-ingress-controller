@@ -1,0 +1,68 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: udpingresses.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    kind: UDPIngress
+    listKind: UDPIngressList
+    plural: udpingresses
+    singular: udpingress
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: UDPIngress is the Schema for the udpingresses API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: UDPIngressSpec defines the desired state of UDPIngress
+            properties:
+              host:
+                description: Host indicates where to send the UDP datagrams
+                type: string
+              listenPort:
+                description: ListenPort indicates the Kong proxy port which will accept
+                  the ingress datagrams
+                type: integer
+              targetPort:
+                description: TargetPort indicates the backend Host port which kong
+                  will proxy the UDP datagrams to
+                type: integer
+            required:
+            - host
+            - listenPort
+            - targetPort
+            type: object
+          status:
+            description: UDPIngressStatus defines the observed state of UDPIngress
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

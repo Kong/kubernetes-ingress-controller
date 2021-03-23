@@ -64,19 +64,21 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	}
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
-	if k8sPlugin.Config != nil {
-		plugin.Config = kong.Configuration(k8sPlugin.Config)
+	var err error
+	plugin.Config, err = kongstate.RawConfigToConfiguration(k8sPlugin.Config)
+	if err != nil {
+		return false, "could not parse plugin configuration", err
 	}
 	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.SecretValueFromSource{}) {
-		if k8sPlugin.Config != nil {
+		if len(plugin.Config) > 0 {
 			return false, "plugin cannot use both Config and ConfigFrom", nil
 		}
 		config, err := kongstate.SecretToConfiguration(validator.Store,
 			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
-			return false, fmt.Sprintf("could not load secret plugin configuration: %v", err), nil
+			return false, "could not load secret plugin configuration", err
 		}
-		plugin.Config = kong.Configuration(config)
+		plugin.Config = config
 
 	}
 	if k8sPlugin.RunOn != "" {
@@ -108,6 +110,7 @@ var (
 	basicAuthFields = []string{"username", "password"}
 	hmacAuthFields  = []string{"username", "secret"}
 	jwtAuthFields   = []string{"algorithm", "rsa_public_key", "key", "secret"}
+	mtlsAuthFields  = []string{"subject_name"}
 
 	// TODO dynamically fetch these from Kong
 	credTypeToFields = map[string][]string{
@@ -121,6 +124,7 @@ var (
 		"jwt_secret":           jwtAuthFields,
 		"oauth2":               {"name", "client_id", "client_secret", "redirect_uris"},
 		"acl":                  {"group"},
+		"mtls-auth":            mtlsAuthFields,
 	}
 )
 

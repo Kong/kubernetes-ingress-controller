@@ -2,13 +2,6 @@ module github.com/kong/kubernetes-ingress-controller
 
 go 1.16
 
-// -----------------------------------------------------------------------------
-// Replacements
-//
-// If you add replacements here, please make sure the replacement has a comment
-// associated with it that explains why the replacement is necessary.
-// -----------------------------------------------------------------------------
-
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/docker/docker v20.10.5+incompatible // indirect
@@ -23,7 +16,7 @@ require (
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/kong/deck v1.5.0
 	github.com/kong/go-kong v0.16.0
-	github.com/kong/kubernetes-testing-framework v0.0.1
+	github.com/kong/kubernetes-testing-framework v0.0.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1

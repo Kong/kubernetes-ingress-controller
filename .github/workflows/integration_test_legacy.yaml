@@ -1,6 +1,16 @@
 name: Integration Tests (Legacy)
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - 'main'
+      - 'next'
+  push:
+    branches:
+      - 'main'
+      - 'next'
+    tags:
+      - 'v*.*.*'
 
 jobs:
   test:

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,16 +57,15 @@ func TestMinimalIngress(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusOK
+		if resp.StatusCode == http.StatusOK {
+			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
+			// Expected: Welcome to nginx!
+			b := new(bytes.Buffer)
+			b.ReadFrom(resp.Body)
+			return strings.Contains(b.String(), "Welcome to nginx!")
+		}
+		return false
 	}, ingressTimeout, ingressTimeoutTick)
-
-	// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-	// Expected: Welcome to nginx!
-	resp, err := http.Get(fmt.Sprintf("%s/nginx", u.String()))
-	assert.NoError(t, err)
-	b := new(bytes.Buffer)
-	b.ReadFrom(resp.Body)
-	assert.Contains(t, b.String(), "Welcome to nginx!")
 
 	// ensure that a deleted ingress results in the route being torn down
 	assert.NoError(t, cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
@@ -76,20 +76,21 @@ func TestMinimalIngress(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusNotFound
+		if resp.StatusCode == http.StatusNotFound {
+			// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
+			// Expected: {"message":"no Route matched with those values"}
+			b := new(bytes.Buffer)
+			b.ReadFrom(resp.Body)
+			body := struct {
+				Message string `json:"message"`
+			}{}
+			if err := json.Unmarshal(b.Bytes(), &body); err != nil {
+				t.Logf("WARNING: error while waiting for %s: %v", u.String(), err)
+			}
+			return body.Message == "no Route matched with those values"
+		}
+		return false
 	}, ingressTimeout, ingressTimeoutTick)
-
-	// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-	// Expected: {"message":"no Route matched with those values"}
-	resp, err = http.Get(fmt.Sprintf("%s/nginx", u.String()))
-	assert.NoError(t, err)
-	b = new(bytes.Buffer)
-	b.ReadFrom(resp.Body)
-	body := struct {
-		Message string `json:"message"`
-	}{}
-	assert.NoError(t, json.Unmarshal(b.Bytes(), &body))
-	assert.Equal(t, "no Route matched with those values", body.Message)
 }
 
 func TestHTTPSRedirect(t *testing.T) {

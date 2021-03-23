@@ -68,7 +68,6 @@ func TestMinimalIngress(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-
 		return resp.StatusCode == http.StatusNotFound
 	}, ingressTimeout, ingressTimeoutTick)
 

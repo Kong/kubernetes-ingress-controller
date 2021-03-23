@@ -9,7 +9,6 @@ go 1.16
 // associated with it that explains why the replacement is necessary.
 // -----------------------------------------------------------------------------
 
-// client-go does not autoresolve versions correctly due to a historical versioning problem upstream
 
 require (
 	github.com/blang/semver v3.5.1+incompatible

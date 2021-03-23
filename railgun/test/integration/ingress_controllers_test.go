@@ -85,7 +85,7 @@ func TestMinimalIngress(t *testing.T) {
 				Message string `json:"message"`
 			}{}
 			if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-				t.Logf("WARNING: error while waiting for %s: %v", u.String(), err)
+				t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", u.String(), err)
 			}
 			return body.Message == "no Route matched with those values"
 		}

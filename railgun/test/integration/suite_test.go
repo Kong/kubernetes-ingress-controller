@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
@@ -106,30 +107,8 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		// if set, allow running the legacy controller for the tests instead
 		// TODO: this will be removed as part of KIC 2.0, where the legacy controller will be replaced.
 		//       for more details see the relevant milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/12
-		if os.Getenv(LegacyControllerEnvVar) != "" {
-			fmt.Fprintln(os.Stdout, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
-
-			// get the proxy pod
-			podList, err := cluster.Client().CoreV1().Pods("kong-system").List(ctx, metav1.ListOptions{
-				LabelSelector: "app.kubernetes.io/component=app,app.kubernetes.io/instance=ingress-controller,app.kubernetes.io/name=kong",
-			})
-			if err != nil {
-				panic(err)
-			}
-			if len(podList.Items) != 1 {
-				panic(fmt.Errorf("expected 1 result, found %d", len(podList.Items)))
-			}
-			proxyPod := podList.Items[0].Name
-
-			// set the environment according to the legacy controller's needs
-			os.Setenv("POD_NAMESPACE", "kong-system")
-			os.Setenv("POD_NAME", proxyPod)
-
-			// custom command for the legacy controller as there are several differences in flags.
-			cmd = exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
-				"--publish-service", "kong-system/ingress-controller-kong-proxy",
-				"--kubeconfig", kubeconfig.Name(),
-				"--kong-admin-url", fmt.Sprintf("http://%s:8001", u.Hostname()))
+		if useLegacyKIC() {
+			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), cluster.Client())
 		}
 
 		// capture stdout/stderr in case we need to report an error
@@ -144,4 +123,34 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 	}()
 
 	return nil
+}
+
+func useLegacyKIC() bool {
+	return os.Getenv(LegacyControllerEnvVar) != ""
+}
+
+func buildLegacyCommand(ctx context.Context, kubeconfigPath string, kc *kubernetes.Clientset) *exec.Cmd {
+	fmt.Fprintln(os.Stdout, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
+
+	// get the proxy pod
+	podList, err := kc.CoreV1().Pods("kong-system").List(ctx, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/component=app,app.kubernetes.io/instance=ingress-controller,app.kubernetes.io/name=kong",
+	})
+	if err != nil {
+		panic(err)
+	}
+	if len(podList.Items) != 1 {
+		panic(fmt.Errorf("expected 1 result, found %d", len(podList.Items)))
+	}
+	proxyPod := podList.Items[0].Name
+
+	// set the environment according to the legacy controller's needs
+	os.Setenv("POD_NAMESPACE", "kong-system")
+	os.Setenv("POD_NAME", proxyPod)
+
+	// custom command for the legacy controller as there are several differences in flags.
+	return exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
+		"--publish-service", "kong-system/ingress-controller-kong-proxy",
+		"--kubeconfig", kubeconfigPath,
+		"--kong-admin-url", fmt.Sprintf("http://%s:8001", u.Hostname()))
 }

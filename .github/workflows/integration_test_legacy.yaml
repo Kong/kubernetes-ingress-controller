@@ -1,4 +1,4 @@
-name: Integration Tests (Legacy)
+name: Integration Tests (Original KIC)
 
 on:
   pull_request:

@@ -144,13 +144,17 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath string, kc *kubernet
 	}
 	proxyPod := podList.Items[0].Name
 
-	// set the environment according to the legacy controller's needs
-	os.Setenv("POD_NAMESPACE", "kong-system")
-	os.Setenv("POD_NAME", proxyPod)
-
 	// custom command for the legacy controller as there are several differences in flags.
-	return exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
+	cmd := exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
 		"--publish-service", "kong-system/ingress-controller-kong-proxy",
 		"--kubeconfig", kubeconfigPath,
 		"--kong-admin-url", fmt.Sprintf("http://%s:8001", u.Hostname()))
+
+	// set the environment according to the legacy controller's needs
+	cmd.Env = append(os.Environ(),
+		"POD_NAMESPACE=kong-system",
+		fmt.Sprintf("POD_NAME=%s", proxyPod),
+	)
+
+	return cmd
 }

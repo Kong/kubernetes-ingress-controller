@@ -35,5 +35,5 @@ jobs:
         registry: docker.pkg.github.com
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: run railgun integration tests
+    - name: run railgun integration tests on legacy KIC
       run: ./scripts/railgun-integration-tests.sh LEGACY

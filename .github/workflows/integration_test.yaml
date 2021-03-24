@@ -30,7 +30,8 @@ jobs:
     - name: checkout repository
       uses: actions/checkout@v2
     - name: run railgun integration tests
-      run: ./scripts/railgun-integration-tests.sh
+      run: make test.integration
+      working-directory: ./railgun
   integration-test-legacy:
     runs-on: ubuntu-latest
     steps:
@@ -48,4 +49,5 @@ jobs:
     - name: checkout repository
       uses: actions/checkout@v2
     - name: run railgun integration tests on legacy KIC
-      run: ./scripts/railgun-integration-tests.sh LEGACY
+      run: make test.integration.legacy
+      working-directory: ./railgun

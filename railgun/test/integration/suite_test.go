@@ -79,6 +79,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			panic(event.Err)
 		}
 		u := event.URL
+		adminHost := u.Hostname()
 		proxyReady <- u
 
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
@@ -101,14 +102,14 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 
 		// set the default command which runs the current controller manager code
 		cmd := exec.CommandContext(ctx, "go", "run", "../../main.go",
-			"--kong-url", fmt.Sprintf("http://%s:8001", u.Hostname()),
+			"--kong-url", fmt.Sprintf("http://%s:8001", adminHost),
 			"--kubeconfig", kubeconfig.Name())
 
 		// if set, allow running the legacy controller for the tests instead
 		// TODO: this will be removed as part of KIC 2.0, where the legacy controller will be replaced.
 		//       for more details see the relevant milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/12
 		if useLegacyKIC() {
-			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), cluster.Client())
+			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 		}
 
 		// capture stdout/stderr in case we need to report an error
@@ -129,7 +130,7 @@ func useLegacyKIC() bool {
 	return os.Getenv(LegacyControllerEnvVar) != ""
 }
 
-func buildLegacyCommand(ctx context.Context, kubeconfigPath string, kc *kubernetes.Clientset) *exec.Cmd {
+func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, kc *kubernetes.Clientset) *exec.Cmd {
 	fmt.Fprintln(os.Stdout, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
 
 	// get the proxy pod
@@ -148,7 +149,7 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath string, kc *kubernet
 	cmd := exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
 		"--publish-service", "kong-system/ingress-controller-kong-proxy",
 		"--kubeconfig", kubeconfigPath,
-		"--kong-admin-url", fmt.Sprintf("http://%s:8001", u.Hostname()))
+		"--kong-admin-url", fmt.Sprintf("http://%s:8001", adminHost))
 
 	// set the environment according to the legacy controller's needs
 	cmd.Env = append(os.Environ(),

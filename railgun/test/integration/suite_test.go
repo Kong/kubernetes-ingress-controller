@@ -87,10 +87,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		if err != nil {
 			panic(err)
 		}
-		defer func() {
-			kubeconfig.Close()
-			os.Remove(kubeconfig.Name())
-		}()
+		defer os.Remove(kubeconfig.Name())
 
 		// dump the kubeconfig from kind into the tempfile
 		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", cluster.Name())
@@ -99,6 +96,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		if err := generateKubeconfig.Run(); err != nil {
 			panic(err)
 		}
+		kubeconfig.Close()
 
 		// if set, allow running the legacy controller for the tests instead of the current controller
 		var cmd *exec.Cmd

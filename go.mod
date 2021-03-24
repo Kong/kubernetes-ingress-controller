@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/kong/deck v1.5.0
+	github.com/kong/deck v1.5.1
 	github.com/kong/go-kong v0.16.0
 	github.com/kong/kubernetes-testing-framework v0.0.2
 	github.com/lithammer/dedent v1.1.0

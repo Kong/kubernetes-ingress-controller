@@ -85,7 +85,10 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		if err != nil {
 			panic(err)
 		}
-		defer kubeconfig.Close()
+		defer func() {
+			kubeconfig.Close()
+			os.Remove(kubeconfig.Name())
+		}()
 
 		// dump the kubeconfig from kind into the tempfile
 		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", cluster.Name())

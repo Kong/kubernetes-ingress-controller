@@ -100,16 +100,12 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			panic(err)
 		}
 
-		// set the default command which runs the current controller manager code
-		cmd := exec.CommandContext(ctx, "go", "run", "../../main.go",
-			"--kong-url", fmt.Sprintf("http://%s:8001", adminHost),
-			"--kubeconfig", kubeconfig.Name())
-
-		// if set, allow running the legacy controller for the tests instead
-		// TODO: this will be removed as part of KIC 2.0, where the legacy controller will be replaced.
-		//       for more details see the relevant milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/12
+		// if set, allow running the legacy controller for the tests instead of the current controller
+		var cmd *exec.Cmd
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
+		} else {
+			cmd = buildControllerCommand(ctx, kubeconfig.Name(), adminHost)
 		}
 
 		// capture stdout/stderr in case we need to report an error
@@ -130,6 +126,8 @@ func useLegacyKIC() bool {
 	return os.Getenv(LegacyControllerEnvVar) != ""
 }
 
+// TODO: this will be removed as part of KIC 2.0, where the legacy controller will be replaced.
+//       for more details see the relevant milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/12
 func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, kc *kubernetes.Clientset) *exec.Cmd {
 	fmt.Fprintln(os.Stdout, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
 
@@ -158,4 +156,10 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	)
 
 	return cmd
+}
+
+func buildControllerCommand(ctx context.Context, kubeconfigPath, adminHost string) *exec.Cmd {
+	return exec.CommandContext(ctx, "go", "run", "../../main.go",
+		"--kong-url", fmt.Sprintf("http://%s:8001", adminHost),
+		"--kubeconfig", kubeconfigPath)
 }

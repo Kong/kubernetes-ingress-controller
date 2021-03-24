@@ -121,3 +121,9 @@ clean.test.proxy:
 test.integration:
 	@./scripts/setup-integration-tests.sh
 	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+
+# Our integration tests using the legacy v1 controller manager
+.PHONY: test.integration.legacy
+test.integration.legacy:
+	@./scripts/setup-integration-tests.sh
+	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/

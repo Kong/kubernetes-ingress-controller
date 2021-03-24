@@ -53,7 +53,7 @@ Historically the [Kong Kubernetes Ingress Controller (KIC)][kic] used bash scrip
 
 Due to incongruencies with one of our most prominent upstream tools ([Kind][kind]) we're going to need to skip on creating complete container images for testing environments in favor of writing setup logic aftermarket for existing default images. While being able to move runtime problems to build time would be helpful, we'll potentially need to look at migrating to new tools in some future iteration to follow up.
 
-For this iteration we're _not trying to solve the problem of automated cleanup of testing environments_, as this is expected to greatly increase scope. Instead tests are expected to use separate namespaces and cleanup after themselves for this iteration.
+For this iteration we're _not trying to solve the problem of automated cleanup of testing environments_, as this is expected to greatly increase scope. Instead tests are expected to use separate namespaces and cleanup after themselves for this iteration. There is a follow up item to take care of cleanup as a separate scope: https://github.com/Kong/kubernetes-testing-framework/issues/4.
 
 ## Proposal
 

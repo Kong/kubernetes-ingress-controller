@@ -108,10 +108,6 @@ endef
 generate.controllers:
 	go generate ./...
 
-# Deploy a vanilla Kong proxy to the cluster for controller testing/debugging
-deploy.test.proxy:
-	./hack/deploy-test-proxy.sh
-
 # Cleanup any deployed test proxies
 clean.test.proxy:
 	helm uninstall --namespace kong-system kong-test-proxy

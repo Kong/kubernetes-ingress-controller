@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -98,19 +99,25 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		}
 		kubeconfig.Close()
 
+		// deploy our CRDs to the cluster
+		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", "../../config/crd/bases/configuration.konghq.com_udpingresses.yaml")
+		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stdout, stdout.String())
+			panic(fmt.Errorf("%s: %w", stderr.String(), err))
+		}
+
 		// if set, allow running the legacy controller for the tests instead of the current controller
-		var cmd *exec.Cmd
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 		} else {
 			cmd = buildControllerCommand(ctx, kubeconfig.Name(), adminHost)
 		}
-
-		// capture stdout/stderr in case we need to report an error
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
+		stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
+		cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
 		cmd.Stderr = stderr
-
 		if err := cmd.Run(); err != nil {
 			fmt.Fprintln(os.Stdout, stdout.String())
 			panic(fmt.Errorf("%s: %w", stderr.String(), err))

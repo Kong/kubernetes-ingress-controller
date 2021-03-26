@@ -74,7 +74,7 @@ We can use the improvements made here to _demonstrate_ the ease of adding new fe
 
 ## Proposal
 
-The historical releases of the KIC (which we will refer to as `v1.x`, even though technically that includes `v0.x` releases) were built on an older controller architecture forked from the [NGinx Ingress Controller][nginx-ingress-controller] some years prior.
+The historical releases of the KIC (which we will refer to as `pre-v2`) were built on an older controller architecture forked from the [NGinx Ingress Controller][nginx-ingress-controller] some years prior.
 
 This legacy served us well for the years to come, but at the point where this KEP was written (early 2021) it was becoming noticeably harder to continue maintaining and adding new features to the KIC as it fundamentally hadn't grown alongside much of the rest of the Kubernetes open source community.
 

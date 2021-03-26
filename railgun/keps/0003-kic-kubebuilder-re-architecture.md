@@ -3,10 +3,17 @@ title: KIC Kubebuilder Rearchitecture
 status: implementable
 ---
 
+# Notes
+
+For reference see the milestones related to this proposal to check the progress of related efforts:
+
+- KIC 2.0 Preview - https://github.com/Kong/kubernetes-ingress-controller/milestone/12
+- Kong Kubernetes Testing Framework (KTF) `v0.1.0` - https://github.com/Kong/kubernetes-testing-framework/milestone/1
+- KIC 2.0 Milestone - https://github.com/Kong/kubernetes-ingress-controller/milestone/15
+
 # Kong Kubernetes Ingress Controller (KIC) Re-architecture using Kubebuilder
 
 <!-- toc -->
-- [Release Signoff Checklist](#release-signoff-checklist)
 - [Summary](#summary)
 - [Motivation](#motivation)
   - [Goals](#goals)
@@ -21,16 +28,6 @@ status: implementable
 - [Implementation History](#implementation-history)
 - [Alternatives](#alternatives)
 <!-- /toc -->
-
-## Release Signoff Checklist
-
-The following milestones represent the work needed to be done to release this enhancement and GA:
-
-- [ ] KIC 2.0 Preview - https://github.com/Kong/kubernetes-ingress-controller/milestone/12
-- [ ] Kong Kubernetes Testing Framework (KTF) `v0.1.0` - https://github.com/Kong/kubernetes-testing-framework/milestone/1
-- [ ] KIC 2.0 Milestone - https://github.com/Kong/kubernetes-ingress-controller/milestone/15
-
-These are in the order of priority.
 
 ## Summary
 

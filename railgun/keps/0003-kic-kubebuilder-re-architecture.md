@@ -83,7 +83,7 @@ Since the inception of KIC new Software Development Kits (SDK) have been created
 - [Kubebuilder][kb]
 - [OperatorSDK][osdk]
 
-These SDK's simplify, automate and ultimately generate some of the code we had been historically maintaining ourselves including (but not limited to):
+These SDKs simplify, automate and ultimately generate some of the code we had been historically maintaining ourselves including (but not limited to):
 
 - API schemas
 - Controller reconcilation machinery

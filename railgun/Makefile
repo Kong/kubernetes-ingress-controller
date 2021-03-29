@@ -104,6 +104,20 @@ endef
 
 # Kong Custom Targets
 
+# this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
+# TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
+generate.clientsets:
+	@client-gen --go-header-file ./hack/boilerplate.go.txt \
+		--clientset-name clientset \
+		--input-base github.com/kong/kubernetes-ingress-controller/railgun/apis/  \
+		--input configuration/v1alpha1 \
+		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1/ \
+		--output-base client-gen-tmp/ \
+		--output-package github.com/kong/kubernetes-ingress-controller/railgun/pkg/
+	@rm -rf pkg/clientset/
+	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset pkg/
+	@rm -rf client-gen-tmp/
+
 # Some of our controllers are simple enough to be generated, this generates them.
 generate.controllers:
 	go generate ./...

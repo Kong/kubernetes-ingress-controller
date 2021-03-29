@@ -6,11 +6,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,6 +24,31 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 )
+
+// -----------------------------------------------------------------------------
+// Timeouts
+// -----------------------------------------------------------------------------
+
+const (
+	// default timeout tick interval
+	waitTick = time.Second * 1
+
+	// default amount of time to wait for changes to the Kong proxy deployment
+	proxyUpdateWait = time.Minute * 3
+
+	// default amount of time to wait for a service to be provisioned an IP by MetalLB
+	serviceWait = time.Minute * 1
+
+	// default amount of time to wait for a UDPIngress resource to be provisioned
+	udpWait = time.Second * 30
+
+	// default amount of time to wait for an Ingress resource to be provisioned
+	ingressWait = time.Minute * 3
+)
+
+// -----------------------------------------------------------------------------
+// Testing Constants & Vars
+// -----------------------------------------------------------------------------
 
 const (
 	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
@@ -98,19 +125,25 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		}
 		kubeconfig.Close()
 
+		// deploy our CRDs to the cluster
+		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", "../../config/crd/bases/configuration.konghq.com_udpingresses.yaml")
+		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stdout, stdout.String())
+			panic(fmt.Errorf("%s: %w", stderr.String(), err))
+		}
+
 		// if set, allow running the legacy controller for the tests instead of the current controller
-		var cmd *exec.Cmd
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 		} else {
 			cmd = buildControllerCommand(ctx, kubeconfig.Name(), adminHost)
 		}
-
-		// capture stdout/stderr in case we need to report an error
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
+		stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
+		cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
 		cmd.Stderr = stderr
-
 		if err := cmd.Run(); err != nil {
 			fmt.Fprintln(os.Stdout, stdout.String())
 			panic(fmt.Errorf("%s: %w", stderr.String(), err))

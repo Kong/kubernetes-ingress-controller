@@ -10,21 +10,12 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
-)
-
-var (
-	// ingressTimeout is the maximum amount of time that the tests should wait for an Ingress record to be provisioned and the backend accessible.
-	ingressTimeout = time.Minute * 5
-
-	// ingressTimeoutTick is the time to wait between Ingress resource timeout checks
-	ingressTimeoutTick = time.Second * 1
 )
 
 func TestMinimalIngress(t *testing.T) {
@@ -65,7 +56,7 @@ func TestMinimalIngress(t *testing.T) {
 			return strings.Contains(b.String(), "Welcome to nginx!")
 		}
 		return false
-	}, ingressTimeout, ingressTimeoutTick)
+	}, ingressWait, waitTick)
 
 	// ensure that a deleted ingress results in the route being torn down
 	assert.NoError(t, cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
@@ -91,7 +82,7 @@ func TestMinimalIngress(t *testing.T) {
 			return body.Message == "no Route matched with those values"
 		}
 		return false
-	}, ingressTimeout, ingressTimeoutTick)
+	}, ingressWait, waitTick)
 }
 
 func TestHTTPSRedirect(t *testing.T) {
@@ -129,5 +120,5 @@ func TestHTTPSRedirect(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusMovedPermanently
-	}, ingressTimeout, ingressTimeoutTick)
+	}, ingressWait, waitTick)
 }

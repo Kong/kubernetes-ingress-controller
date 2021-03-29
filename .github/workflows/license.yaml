@@ -30,7 +30,7 @@ jobs:
       working-directory: ./src
     - name: Generate PR license report
       run: go-licenses csv ./... | sort > ${{ github.workspace }}/pr_licenses.csv
-      working-directory: src/github.com/Kong/kubernetes-ingress-controller
+      working-directory: ./src
     - name: Compare license reports
       id: compare_reports
       run: |

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -23,6 +24,31 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 )
+
+// -----------------------------------------------------------------------------
+// Timeouts
+// -----------------------------------------------------------------------------
+
+const (
+	// default timeout tick interval
+	waitTick = time.Second * 1
+
+	// default amount of time to wait for changes to the Kong proxy deployment
+	proxyUpdateWait = time.Minute * 3
+
+	// default amount of time to wait for a service to be provisioned an IP by MetalLB
+	serviceWait = time.Minute * 1
+
+	// default amount of time to wait for a UDPIngress resource to be provisioned
+	udpWait = time.Second * 30
+
+	// default amount of time to wait for an Ingress resource to be provisioned
+	ingressWait = time.Minute * 3
+)
+
+// -----------------------------------------------------------------------------
+// Testing Constants & Vars
+// -----------------------------------------------------------------------------
 
 const (
 	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager

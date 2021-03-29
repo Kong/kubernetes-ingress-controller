@@ -22,7 +22,6 @@ func TestMinimalUDPIngress(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress")
 	}
-	_ = <-proxyReady
 	ctx := context.Background()
 
 	// gather the proxy container as it will need to be specially configured to serve UDP
@@ -56,6 +55,19 @@ func TestMinimalUDPIngress(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}()
+
+	// ensure that the proxy deployment is ready before we proceed
+	assert.Eventually(t, func() bool {
+		d, err := cluster.Client().AppsV1().Deployments("kong-system").Get(ctx, proxy.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("WARNING: error while waiting for deployment %s to become ready: %v", proxy, err)
+			return false
+		}
+		if d.Status.ReadyReplicas == d.Status.Replicas && d.Status.AvailableReplicas == d.Status.Replicas && d.Status.UnavailableReplicas < 1 {
+			return true
+		}
+		return false
+	}, time.Minute*3, time.Second*1)
 
 	// create a LoadBalancer service to reach port 9999 on the proxy
 	svc := &corev1.Service{

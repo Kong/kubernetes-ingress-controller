@@ -1,0 +1,7 @@
+apiVersion: configuration.konghq.com.konghq.com/v1beta1
+kind: TCPIngress
+metadata:
+  name: tcpingress-sample
+spec:
+  # Add fields here
+  foo: bar

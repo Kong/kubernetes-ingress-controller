@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -34,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/spf13/cobra"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
@@ -51,42 +53,65 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+type Config struct {
+	metricsAddr          string
+	enableLeaderElection bool
+	probeAddr            string
+	kongURL              string
+	filterTag            string
+	concurrency          int
+	secretName           string
+	secretNamespace      string
+
+	zapOptions zap.Options
+}
+
+var rootConfig Config
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
-}
 
-func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	rootCmd.Flags().StringVar(&rootConfig.metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	rootCmd.Flags().StringVar(&rootConfig.probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	rootCmd.Flags().BoolVar(&rootConfig.enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 
-	var kongURL string
-	var filterTag string
-	var concurrency int
-	var secretName string
-	var secretNamespace string
-	flag.StringVar(&kongURL, "kong-url", "http://localhost:8001", "TODO")
-	flag.StringVar(&filterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
-	flag.IntVar(&concurrency, "kong-concurrency", 10, "TODO")
-	flag.StringVar(&secretName, "secret-name", "kong-config", "TODO")
-	flag.StringVar(&secretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
+	rootCmd.Flags().StringVar(&rootConfig.kongURL, "kong-url", "http://localhost:8001", "TODO")
+	rootCmd.Flags().StringVar(&rootConfig.filterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
+	rootCmd.Flags().IntVar(&rootConfig.concurrency, "kong-concurrency", 10, "TODO")
+	rootCmd.Flags().StringVar(&rootConfig.secretName, "secret-name", "kong-config", "TODO")
+	rootCmd.Flags().StringVar(&rootConfig.secretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
 
-	opts := zap.Options{
-		Development: true,
+	zapFlags := flag.NewFlagSet("", flag.ExitOnError)
+	rootConfig.zapOptions.BindFlags(zapFlags)
+	rootCmd.Flags().AddGoFlagSet(zapFlags)
+}
+
+var rootCmd = &cobra.Command{
+	Use:   "railgun",
+	Short: "Kubernetes Ingress Controller (Railgun build)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runControllerManager(&rootConfig)
+	},
+
+	SilenceUsage:  true,
+	SilenceErrors: true,
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		setupLog.Error(err, "rootCmd failed")
+		os.Exit(1)
 	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
+}
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+func runControllerManager(config *Config) error {
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&rootConfig.zapOptions)))
 
 	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
 	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {
@@ -95,10 +120,10 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
+		MetricsBindAddress:     config.metricsAddr,
 		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
+		HealthProbeBindAddress: config.probeAddr,
+		LeaderElection:         config.enableLeaderElection,
 		LeaderElectionID:       "5b374a9e.konghq.com",
 	})
 	if err != nil {
@@ -141,10 +166,9 @@ func main() {
 	}
 	*/
 
-	kongClient, err := kong.NewClient(&kongURL, http.DefaultClient)
+	kongClient, err := kong.NewClient(&config.kongURL, http.DefaultClient)
 	if err != nil {
-		setupLog.Error(err, "unable to create kongClient")
-		os.Exit(1)
+		return fmt.Errorf("unable to create kongClient: %w", err)
 	}
 
 	if err = (&kongctrl.SecretReconciler{
@@ -152,26 +176,24 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
 		Scheme: mgr.GetScheme(),
 		Params: kongctrl.SecretReconcilerParams{
-			WatchName:      secretName,
-			WatchNamespace: secretNamespace,
+			WatchName:      config.secretName,
+			WatchNamespace: config.secretNamespace,
 			KongConfig: sendconfig.Kong{
-				URL:         kongURL,
-				FilterTags:  []string{filterTag},
-				Concurrency: concurrency,
+				URL:         config.kongURL,
+				FilterTags:  []string{config.filterTag},
+				Concurrency: config.concurrency,
 				Client:      kongClient,
 			},
 		},
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Secret")
-		os.Exit(1)
+		return fmt.Errorf("unable to create the secret controller: %w", err)
 	}
 
 	// TODO - we've got a couple places in here and below where we "short circuit" controllers if the relevant API isn't available.
 	// This is convenient for testing, but maintainers should reconsider this before we release KIC 2.0.
 	// SEE: https://github.com/Kong/kubernetes-ingress-controller/issues/1101
 	if err := kongctrl.SetupIngressControllers(mgr); err != nil {
-		setupLog.Error(err, "unable to create controllers", "controllers", "Ingress")
-		os.Exit(1)
+		return fmt.Errorf("unable to create the ingress controller: %w", err)
 	}
 
 	// TODO - similar to above, we're short circuiting here. It's convenient, but let's discuss if this is what we want ultimately.
@@ -185,25 +207,23 @@ func main() {
 			Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "UDPIngress")
-			os.Exit(1)
+			return fmt.Errorf("unable to create the udpingress controller: %w", err)
 		}
 	}
 
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+		return fmt.Errorf("unable to set up health check: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		return fmt.Errorf("problem running manager: %w", err)
 	}
+
+	return nil
 }

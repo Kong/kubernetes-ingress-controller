@@ -22,6 +22,8 @@ import (
 	clientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1alpha1"
 	fakeconfigurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1alpha1/fake"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1beta1"
+	fakeconfigurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,4 +81,9 @@ var _ clientset.Interface = &Clientset{}
 // ConfigurationV1alpha1 retrieves the ConfigurationV1alpha1Client
 func (c *Clientset) ConfigurationV1alpha1() configurationv1alpha1.ConfigurationV1alpha1Interface {
 	return &fakeconfigurationv1alpha1.FakeConfigurationV1alpha1{Fake: &c.Fake}
+}
+
+// ConfigurationV1beta1 retrieves the ConfigurationV1beta1Client
+func (c *Clientset) ConfigurationV1beta1() configurationv1beta1.ConfigurationV1beta1Interface {
+	return &fakeconfigurationv1beta1.FakeConfigurationV1beta1{Fake: &c.Fake}
 }

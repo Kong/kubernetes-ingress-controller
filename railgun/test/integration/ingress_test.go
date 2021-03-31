@@ -24,8 +24,11 @@ func TestMinimalIngress(t *testing.T) {
 	// deploy a minimal deployment to test Ingress routes to
 	container := k8sgen.NewContainer("nginx", "nginx", 80)
 	deployment := k8sgen.NewDeploymentForContainer(container)
-	_, err := cluster.Client().AppsV1().Deployments("default").Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := cluster.Client().AppsV1().Deployments("default").Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
+
+	// ensure cleanup of the deployment
+	defer assert.NoError(t, cluster.Client().AppsV1().Deployments("default").Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 
 	// expose the deployment via service
 	service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)

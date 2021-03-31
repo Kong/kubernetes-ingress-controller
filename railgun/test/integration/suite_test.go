@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +33,7 @@ func TestMain(m *testing.M) {
 
 	// create a new cluster for tests
 	config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
-	newCluster, ready, err := config.Deploy(ctx)
+	newCluster, ready, err := config.Deploy(ctx, time.Now().Add(5*time.Minute))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(10)

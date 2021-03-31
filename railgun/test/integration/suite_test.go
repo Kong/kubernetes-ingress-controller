@@ -53,6 +53,9 @@ const (
 const (
 	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
 	LegacyControllerEnvVar = "KONG_LEGACY_CONTROLLER"
+
+	// clusterDeployWait is the timeout duration for deploying the kind cluster for testing
+	clusterDeployWait = time.Minute * 5
 )
 
 var (
@@ -69,7 +72,7 @@ func TestMain(m *testing.M) {
 
 	// create a new cluster for tests
 	config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
-	newCluster, ready, err := config.Deploy(ctx)
+	newCluster, ready, err := config.Deploy(ctx, time.Now().Add(clusterDeployWait))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(10)
@@ -87,6 +90,11 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	newCluster.Cleanup()
 	os.Exit(code)
+}
+
+var crds = []string{
+	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
 }
 
 // FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
@@ -126,16 +134,20 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		kubeconfig.Close()
 
 		// deploy our CRDs to the cluster
-		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", "../../config/crd/bases/configuration.konghq.com_udpingresses.yaml")
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			panic(fmt.Errorf("%s: %w", stderr.String(), err))
+		for _, crd := range crds {
+			cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", crd)
+			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+			cmd.Stdout = stdout
+			cmd.Stderr = stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintln(os.Stdout, stdout.String())
+				panic(fmt.Errorf("%s: %w", stderr.String(), err))
+			}
 		}
 
 		// if set, allow running the legacy controller for the tests instead of the current controller
+		var cmd *exec.Cmd
+		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 		} else {

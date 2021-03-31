@@ -28,7 +28,9 @@ func TestMinimalIngress(t *testing.T) {
 	assert.NoError(t, err)
 
 	// ensure cleanup of the deployment
-	defer assert.NoError(t, cluster.Client().AppsV1().Deployments("default").Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	defer func() {
+		assert.NoError(t, cluster.Client().AppsV1().Deployments("default").Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	}()
 
 	// expose the deployment via service
 	service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
@@ -40,7 +42,8 @@ func TestMinimalIngress(t *testing.T) {
 		"kubernetes.io/ingress.class": "kong",
 		"konghq.com/strip-path":       "true",
 	}, service)
-	cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
+	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
+	assert.NoError(t, err)
 
 	// wait for the ingress backend to be routable
 	u := proxyURL()

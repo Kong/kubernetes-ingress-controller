@@ -53,7 +53,7 @@ resources:
     namespaced: true
   controller: true
   domain: konghq.com
-  group: configuration.konghq.com
+  group: configuration
   kind: TCPIngress
   path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration.konghq.com/v1beta1
   version: v1beta1

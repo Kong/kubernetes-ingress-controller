@@ -43,7 +43,7 @@ const (
 	udpWait = time.Second * 30
 
 	// default amount of time to wait for an Ingress resource to be provisioned
-	ingressWait = time.Minute * 3
+	ingressWait = time.Minute * 5
 )
 
 // -----------------------------------------------------------------------------

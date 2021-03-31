@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/configsecret"
 )
 
@@ -72,7 +71,7 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, targ
 		return ctrl.Result{}, err
 	}
 
-	log.Info("kong secret configuration successfully patched patched", "namespace", ingressNsn.Namespace, "name", controllers.ConfigSecretName)
+	log.Info("kong secret configuration successfully patched patched", "namespace", ingressNsn.Namespace, "name", ingressNsn.Name)
 	return ctrl.Result{}, nil
 }
 

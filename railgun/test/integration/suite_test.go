@@ -16,8 +16,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
-
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 )
 
 var (
@@ -43,7 +41,7 @@ func TestMain(m *testing.M) {
 	cluster = newCluster
 
 	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
-	if err := deployControllers(ctx, ready, cluster.Client(), os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllers.DefaultNamespace); err != nil {
+	if err := deployControllers(ctx, ready, cluster.Client(), os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), "kic-under-test"); err != nil {
 		newCluster.Cleanup()
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(11)

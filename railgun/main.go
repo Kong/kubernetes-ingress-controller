@@ -42,7 +42,6 @@ import (
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	//+kubebuilder:scaffold:imports
 )
@@ -122,11 +121,6 @@ func main() {
 
 func runControllerManager(config *Config) error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&rootConfig.ZapOptions)))
-
-	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
-	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {
-		os.Setenv(controllers.CtrlNamespaceEnv, controllers.DefaultNamespace)
-	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,

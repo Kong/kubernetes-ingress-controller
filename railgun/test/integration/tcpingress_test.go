@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +21,7 @@ import (
 func TestMinimalTCPIngress(t *testing.T) {
 	ctx := context.Background()
 	namespace := "default"
-	testName := strings.ToLower(t.Name()) // must be a valid DNS name for object.Meta
+	testName := "mintcp"
 
 	// TCPIngress requires an update to the proxy to open up a new listen port
 	proxyLB, cleanup, err := updateProxyListeners(ctx, testName, "0.0.0.0:32080", corev1.ContainerPort{

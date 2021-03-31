@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +24,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := "default"
-	testName := strings.ToLower(t.Name()) // must be a valid DNS name for object.Meta
+	testName := "minudp"
 
 	// UDPIngress requires an update to the proxy to open up a new listen port
 	proxyLB, cleanup, err := updateProxyListeners(ctx, testName, "0.0.0.0:9999 udp reuseport", corev1.ContainerPort{

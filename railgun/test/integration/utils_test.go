@@ -130,8 +130,8 @@ func updateProxyListeners(ctx context.Context, name, kongStreamListen string, co
 	}
 
 	// add the provided container ports to the pod
-	proxy.Spec.Template.Spec.Containers[0] = *container
 	container.Ports = append(container.Ports, containerPorts...)
+	proxy.Spec.Template.Spec.Containers[0] = *container
 
 	// update the deployment with the new container configurations
 	proxy, err = cluster.Client().AppsV1().Deployments(controllers.DefaultNamespace).Update(ctx, proxy, metav1.UpdateOptions{})
@@ -209,7 +209,6 @@ func updateProxyListeners(ctx context.Context, name, kongStreamListen string, co
 
 	return
 }
-
 
 func overrideEnvVar(container *corev1.Container, key, val string) (original *corev1.EnvVar, err error) {
 	newEnv := make([]corev1.EnvVar, 0, len(container.Env))

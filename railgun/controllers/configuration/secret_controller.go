@@ -28,14 +28,14 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 type SecretReconcilerParams struct {
-	WatchName      string
-	WatchNamespace string
+	WatchNamespacedName *types.NamespacedName
 
 	KongConfig sendconfig.Kong
 }
@@ -50,8 +50,8 @@ type SecretReconciler struct {
 }
 
 func (r *SecretReconciler) matchNsName(object client.Object) bool {
-	return object.GetName() == r.Params.WatchName &&
-		object.GetNamespace() == r.Params.WatchNamespace
+	return object.GetName() == r.Params.WatchNamespacedName.Name &&
+		object.GetNamespace() == r.Params.WatchNamespacedName.Namespace
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,6 +34,8 @@ type KongIngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -65,10 +68,10 @@ func (r *KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if !ing.DeletionTimestamp.IsZero() && time.Now().After(ing.DeletionTimestamp.Time) {
 		log.Info("resource being deleted, its configuration will be removed", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, ing)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, ing)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, ing)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, ing)
 
 	//return ctrl.Result{}, nil
 }

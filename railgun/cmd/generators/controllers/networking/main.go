@@ -172,14 +172,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 `
 
@@ -193,6 +194,8 @@ type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -215,9 +218,9 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 `

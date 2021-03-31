@@ -3,8 +3,6 @@ package configuration
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"os"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -25,12 +23,11 @@ import (
 
 // storeIngressObj reconciles storing the YAML contents of Ingress resources (which are managed by Kong)
 // from multiple versions which remain supported.
-func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
+func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, targetNsn, ingressNsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
 	// TODO need EVENTS here
 	// TODO need more status updates
 	// TODO: (shane) I want to refactor this into several smaller functions
 	// TODO: collapse nsn + obj, this is redudant as obj includes nsn
-	// TODO: pass in secret namespace as part of function sig instead of env
 	// ^ follow up for these items is in: https://github.com/Kong/kubernetes-ingress-controller/issues/1094
 
 	// if this is an Ingress resource make sure it's managed by KIC
@@ -41,29 +38,23 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 		}
 	}
 
-	// get the configuration secret namespace
-	secretNamespace := os.Getenv(controllers.CtrlNamespaceEnv)
-	if secretNamespace == "" {
-		return ctrl.Result{}, fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv)
-	}
-
 	// get the configuration secret
-	secret, created, err := getOrCreateConfigSecret(ctx, c, secretNamespace)
+	secret, created, err := getOrCreateConfigSecret(ctx, c, targetNsn)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
-			log.Info("kong configuration secret was created elsewhere retrying", "namespace", nsn.Namespace, "ingress", nsn.Name)
+			log.Info("kong configuration secret was created elsewhere retrying", "namespace", ingressNsn.Namespace, "ingress", ingressNsn.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
 	}
 	if created {
-		log.Info("kong configuration did not exist, was created successfully", "namespace", nsn.Namespace, "ingress", nsn.Name)
+		log.Info("kong configuration did not exist, was created successfully", "namespace", ingressNsn.Namespace, "ingress", ingressNsn.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// before we store configuration data for this Ingress object, ensure that it has our finalizer set
 	if !hasFinalizer(obj, KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", nsn.Namespace, nsn.Name)
+		log.Info("finalizer is not set for ingress object, setting it", ingressNsn.Namespace, ingressNsn.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, KongIngressFinalizer))
 		if err := c.Update(ctx, obj); err != nil { // TODO: patch here instead of update
@@ -73,15 +64,15 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 	}
 
 	// store the ingress record
-	if err := storeRuntimeObject(ctx, c, secret, obj, nsn); err != nil {
+	if err := storeRuntimeObject(ctx, c, secret, obj, ingressNsn); err != nil {
 		if errors.IsConflict(err) {
-			log.Error(err, "object updated while reconcilation was running, retrying", nsn.Namespace, nsn.Name)
+			log.Error(err, "object updated while reconcilation was running, retrying", ingressNsn.Namespace, ingressNsn.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	log.Info("kong secret configuration successfully patched patched", "namespace", nsn.Namespace, "name", controllers.ConfigSecretName)
+	log.Info("kong secret configuration successfully patched patched", "namespace", ingressNsn.Namespace, "name", controllers.ConfigSecretName)
 	return ctrl.Result{}, nil
 }
 
@@ -116,25 +107,19 @@ func storeRuntimeObject(ctx context.Context, c client.Client, secret *corev1.Sec
 }
 
 // cleanupObj ensures that a deleted ingress resource is no longer present in the kong configuration secret.
-func cleanupObj(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
+func cleanupObj(ctx context.Context, c client.Client, log logr.Logger, targetNsn, ingressNsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
 	// TODO need EVENTS here
 	// TODO need more status updates
 	// TODO: (shane) I want to refactor this into several smaller functions
 	// ^ follow up for these items is in: https://github.com/Kong/kubernetes-ingress-controller/issues/1094
 
-	// get the configuration secret namespace
-	secretNamespace := os.Getenv(controllers.CtrlNamespaceEnv)
-	if secretNamespace == "" {
-		return ctrl.Result{}, fmt.Errorf("kong can not be configured because the required %s env var is not present", controllers.CtrlNamespaceEnv)
-	}
-
 	// grab the configuration secret from the API
 	secret := new(corev1.Secret)
-	if err := c.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: controllers.ConfigSecretName}, secret); err != nil {
+	if err := c.Get(ctx, targetNsn, secret); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	key := configsecret.KeyFor(obj, nsn)
+	key := configsecret.KeyFor(obj, ingressNsn)
 	if _, ok := secret.Data[key]; ok {
 		delete(secret.Data, key)
 		if err := c.Update(ctx, secret); err != nil { // TODO: patch here instead of update

@@ -23,14 +23,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // -----------------------------------------------------------------------------
@@ -42,6 +43,8 @@ type NetV1IngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -64,10 +67,10 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -79,6 +82,8 @@ type NetV1Beta1IngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -101,10 +106,10 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -116,6 +121,8 @@ type ExtV1Beta1IngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -138,10 +145,10 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -153,6 +160,8 @@ type KongV1KongIngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -175,10 +184,10 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -190,6 +199,8 @@ type KongV1KongPluginReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -212,10 +223,10 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -227,6 +238,8 @@ type KongV1KongClusterPluginReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -249,10 +262,10 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -264,6 +277,8 @@ type KongV1KongConsumerReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -286,10 +301,10 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -301,6 +316,8 @@ type KongV1UDPIngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+
+	TargetNamespacedName *types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -323,8 +340,8 @@ func (r *KongV1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		return cleanupObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	return storeIngressObj(ctx, r.Client, log, *r.TargetNamespacedName, req.NamespacedName, obj)
 }

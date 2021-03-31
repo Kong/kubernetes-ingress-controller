@@ -28,6 +28,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,16 +55,15 @@ var (
 )
 
 type Config struct {
-	metricsAddr          string
-	enableLeaderElection bool
-	probeAddr            string
-	kongURL              string
-	filterTag            string
-	concurrency          int
-	secretName           string
-	secretNamespace      string
+	MetricsAddr          string
+	EnableLeaderElection bool
+	ProbeAddr            string
+	KongURL              string
+	FilterTag            string
+	Concurrency          int
+	SecretNamespacedName types.NamespacedName
 
-	zapOptions zap.Options
+	ZapOptions zap.Options
 }
 
 var rootConfig Config
@@ -75,20 +75,30 @@ func init() {
 	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
-	rootCmd.Flags().StringVar(&rootConfig.metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	rootCmd.Flags().StringVar(&rootConfig.probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	rootCmd.Flags().BoolVar(&rootConfig.enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+	initFlags()
+}
 
-	rootCmd.Flags().StringVar(&rootConfig.kongURL, "kong-url", "http://localhost:8001", "TODO")
-	rootCmd.Flags().StringVar(&rootConfig.filterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
-	rootCmd.Flags().IntVar(&rootConfig.concurrency, "kong-concurrency", 10, "TODO")
-	rootCmd.Flags().StringVar(&rootConfig.secretName, "secret-name", "kong-config", "TODO")
-	rootCmd.Flags().StringVar(&rootConfig.secretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
+func initFlags() {
+	rootCmd.Flags().StringVar(&rootConfig.MetricsAddr,
+		"metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	rootCmd.Flags().StringVar(&rootConfig.ProbeAddr,
+		"health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	rootCmd.Flags().BoolVar(&rootConfig.EnableLeaderElection,
+		"leader-elect", false, "Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	rootCmd.Flags().StringVar(&rootConfig.KongURL,
+		"kong-url", "http://localhost:8001", "TODO")
+	rootCmd.Flags().StringVar(&rootConfig.FilterTag,
+		"kong-filter-tag", "managed-by-railgun", "TODO")
+	rootCmd.Flags().IntVar(&rootConfig.Concurrency,
+		"kong-concurrency", 10, "TODO")
+	rootCmd.Flags().StringVar(&rootConfig.SecretNamespacedName.Name,
+		"secret-name", "kong-config", "TODO")
+	rootCmd.Flags().StringVar(&rootConfig.SecretNamespacedName.Namespace,
+		"secret-namespace", "kong-system", "TODO")
 
 	zapFlags := flag.NewFlagSet("", flag.ExitOnError)
-	rootConfig.zapOptions.BindFlags(zapFlags)
+	rootConfig.ZapOptions.BindFlags(zapFlags)
 	rootCmd.Flags().AddGoFlagSet(zapFlags)
 }
 
@@ -111,7 +121,7 @@ func main() {
 }
 
 func runControllerManager(config *Config) error {
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&rootConfig.zapOptions)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&rootConfig.ZapOptions)))
 
 	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
 	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {
@@ -120,10 +130,10 @@ func runControllerManager(config *Config) error {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     config.metricsAddr,
+		MetricsBindAddress:     config.MetricsAddr,
 		Port:                   9443,
-		HealthProbeBindAddress: config.probeAddr,
-		LeaderElection:         config.enableLeaderElection,
+		HealthProbeBindAddress: config.ProbeAddr,
+		LeaderElection:         config.EnableLeaderElection,
 		LeaderElectionID:       "5b374a9e.konghq.com",
 	})
 	if err != nil {
@@ -166,7 +176,7 @@ func runControllerManager(config *Config) error {
 	}
 	*/
 
-	kongClient, err := kong.NewClient(&config.kongURL, http.DefaultClient)
+	kongClient, err := kong.NewClient(&config.KongURL, http.DefaultClient)
 	if err != nil {
 		return fmt.Errorf("unable to create kongClient: %w", err)
 	}
@@ -176,12 +186,11 @@ func runControllerManager(config *Config) error {
 		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
 		Scheme: mgr.GetScheme(),
 		Params: kongctrl.SecretReconcilerParams{
-			WatchName:      config.secretName,
-			WatchNamespace: config.secretNamespace,
+			WatchNamespacedName: &config.SecretNamespacedName,
 			KongConfig: sendconfig.Kong{
-				URL:         config.kongURL,
-				FilterTags:  []string{config.filterTag},
-				Concurrency: config.concurrency,
+				URL:         config.KongURL,
+				FilterTags:  []string{config.FilterTag},
+				Concurrency: config.Concurrency,
 				Client:      kongClient,
 			},
 		},

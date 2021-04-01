@@ -34,7 +34,7 @@ const (
 	waitTick = time.Second * 1
 
 	// default amount of time to wait for changes to the Kong proxy deployment
-	proxyUpdateWait = time.Minute * 3
+	proxyUpdateWait = time.Minute * 7
 
 	// default amount of time to wait for a service to be provisioned an IP by MetalLB
 	serviceWait = time.Minute * 1
@@ -43,7 +43,7 @@ const (
 	udpWait = time.Minute * 5
 
 	// default amount of time to wait for an Ingress resource to be provisioned
-	ingressWait = time.Minute * 5
+	ingressWait = time.Minute * 7
 )
 
 // -----------------------------------------------------------------------------

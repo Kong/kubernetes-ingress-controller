@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -193,8 +194,15 @@ func updateProxyListeners(ctx context.Context, name, kongStreamListen string, co
 			if len(svc.Status.LoadBalancer.Ingress) > 0 {
 				ing := svc.Status.LoadBalancer.Ingress[0]
 				if ip := ing.IP; ip != "" {
-					provisioned = true
-					break
+					resp, err := http.Get(fmt.Sprintf("http://%s:8001/services", ip))
+					if err != nil {
+						continue
+					}
+					defer resp.Body.Close()
+					if resp.StatusCode == http.StatusOK {
+						provisioned = true
+						break
+					}
 				}
 			}
 			time.Sleep(waitTick)

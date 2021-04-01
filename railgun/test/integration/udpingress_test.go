@@ -39,6 +39,19 @@ func TestMinimalUDPIngress(t *testing.T) {
 	c, err := clientset.NewForConfig(cluster.Config())
 	assert.NoError(t, err)
 
+	// configure a net.Resolver that will go through our proxy
+	proxyIP := proxyLB.Status.LoadBalancer.Ingress[0].IP
+	assert.NotEmpty(t, proxyIP)
+	resolver := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Second * 5,
+			}
+			return d.DialContext(ctx, network, fmt.Sprintf("%s:9999", proxyIP))
+		},
+	}
+
 	// create the UDPIngress record
 	udp := &kongv1alpha1.UDPIngress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -55,17 +68,6 @@ func TestMinimalUDPIngress(t *testing.T) {
 	}
 	_, err = c.ConfigurationV1alpha1().UDPIngresses(namespace).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
-
-	// configure a net.Resolver that will go through our proxy
-	resolver := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: time.Second * 5,
-			}
-			return d.DialContext(ctx, network, fmt.Sprintf("%s:9999", proxyLB.Status.LoadBalancer.Ingress[0].IP))
-		},
-	}
 
 	// ensure that we can eventually make a successful DNS request through the proxy
 	assert.Eventually(t, func() bool {

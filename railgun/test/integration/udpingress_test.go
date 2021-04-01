@@ -14,6 +14,7 @@ import (
 
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
+	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +28,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 	testName := "minudp"
 
 	// UDPIngress requires an update to the proxy to open up a new listen port
-	proxyLB, cleanup, err := updateProxyListeners(ctx, testName, "0.0.0.0:9999 udp reuseport", corev1.ContainerPort{
+	proxyLB, cleanup, err := kind.UpdateProxyStreamListeners(ctx, cluster, testName, "0.0.0.0:9999 udp reuseport", corev1.ContainerPort{
 		Name:          testName,
 		ContainerPort: 9999,
 		Protocol:      corev1.ProtocolUDP,

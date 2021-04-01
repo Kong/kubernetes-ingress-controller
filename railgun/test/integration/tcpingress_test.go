@@ -13,6 +13,7 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 )
 
 // TODO - provide a new namespace for every test, something that is globally available
@@ -24,7 +25,7 @@ func TestMinimalTCPIngress(t *testing.T) {
 	testName := "mintcp"
 
 	// TCPIngress requires an update to the proxy to open up a new listen port
-	proxyLB, cleanup, err := updateProxyListeners(ctx, testName, "0.0.0.0:32080", corev1.ContainerPort{
+	proxyLB, cleanup, err := kind.UpdateProxyStreamListeners(ctx, cluster, testName, "0.0.0.0:32080", corev1.ContainerPort{
 		Name:          testName,
 		ContainerPort: 32080,
 		Protocol:      corev1.ProtocolTCP,

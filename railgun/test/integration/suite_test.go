@@ -37,7 +37,7 @@ const (
 	proxyUpdateWait = time.Minute * 7
 
 	// default amount of time to wait for a service to be provisioned an IP by MetalLB
-	serviceWait = time.Minute * 1
+	serviceWait = time.Minute * 5
 
 	// default amount of time to wait for a UDPIngress resource to be provisioned
 	udpWait = time.Minute * 5

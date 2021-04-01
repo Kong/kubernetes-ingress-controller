@@ -151,11 +151,24 @@ func updateProxyListeners(ctx context.Context, name, kongStreamListen string, co
 			return
 		}
 		if d.Status.ReadyReplicas == d.Status.Replicas && d.Status.AvailableReplicas == d.Status.Replicas && d.Status.UnavailableReplicas < 1 {
-			ready = true
-			break
+			var proxySVC *corev1.Service
+			proxySVC, err = cluster.Client().CoreV1().Services(proxy.Namespace).Get(ctx, proxy.Name, metav1.GetOptions{})
+			if err != nil {
+				return
+			}
+			if len(proxySVC.Status.LoadBalancer.Ingress) == 1 {
+				ip := proxySVC.Status.LoadBalancer.Ingress[0].IP
+				resp, err := http.Get(fmt.Sprintf("http://%s:8001/services", ip))
+				if err != nil {
+					continue
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					ready = true
+					break
+				}
+			}
 		}
-
-		time.Sleep(waitTick)
 	}
 
 	// if the proxy deployment is ready, expose the new container ports via a LoadBalancer Service
@@ -194,15 +207,8 @@ func updateProxyListeners(ctx context.Context, name, kongStreamListen string, co
 			if len(svc.Status.LoadBalancer.Ingress) > 0 {
 				ing := svc.Status.LoadBalancer.Ingress[0]
 				if ip := ing.IP; ip != "" {
-					resp, err := http.Get(fmt.Sprintf("http://%s:8001/services", ip))
-					if err != nil {
-						continue
-					}
-					defer resp.Body.Close()
-					if resp.StatusCode == http.StatusOK {
-						provisioned = true
-						break
-					}
+					provisioned = true
+					break
 				}
 			}
 			time.Sleep(waitTick)
@@ -214,6 +220,12 @@ func updateProxyListeners(ctx context.Context, name, kongStreamListen string, co
 	} else {
 		err = fmt.Errorf("deployment not ready after %s", timeout)
 	}
+
+	// FIXME: there appears to be a race condition that can occur in kong upstream if the Admin API is restarted and then updated
+	//        too quickly. Effectively the API will return 200 OK but it's not actually ready to accept updates. Given a few seconds
+	//        this will settle so as a workaround we're sleeping here, but we need to dig deeper into this problem to actually fix it.
+	//        NOTE: 10 seconds was chosen because it tested positively over several runs locally in Linux, and in Github Actions.
+	time.Sleep(time.Second * 10)
 
 	return
 }

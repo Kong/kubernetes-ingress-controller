@@ -33,11 +33,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/go-kong/kong"
-
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	//+kubebuilder:scaffold:imports
@@ -54,6 +54,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -178,7 +179,7 @@ func main() {
 	if !udpIngressAvailable {
 		setupLog.Error(err, "API configuration.konghq.com/v1alpha1/UDPIngress is not available, skipping controller")
 	} else {
-		if err = (&kongctrl.KongV1UDPIngressReconciler{
+		if err = (&kongctrl.KongV1Alpha1UDPIngressReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 			Scheme: mgr.GetScheme(),
@@ -188,6 +189,19 @@ func main() {
 		}
 	}
 
+	tcpIngressAvailable, err := kongctrl.IsAPIAvailable(mgr, &configurationv1beta1.TCPIngress{})
+	if !tcpIngressAvailable {
+		setupLog.Error(err, "API configuration.konghq.com/v1alpha1/TCPIngress is not available, skipping controller")
+	} else {
+		if err = (&kongctrl.KongV1Beta1TCPIngressReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "TCPIngress")
+			os.Exit(1)
+		}
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

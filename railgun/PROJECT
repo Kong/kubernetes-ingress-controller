@@ -48,4 +48,13 @@ resources:
   kind: UDPIngress
   path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: konghq.com
+  group: configuration
+  kind: TCPIngress
+  path: github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration.konghq.com/v1beta1
+  version: v1beta1
 version: "3"

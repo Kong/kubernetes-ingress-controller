@@ -42,7 +42,8 @@ func TestMinimalIngress(t *testing.T) {
 		"kubernetes.io/ingress.class": "kong",
 		"konghq.com/strip-path":       "true",
 	}, service)
-	cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
+	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
+	assert.NoError(t, err)
 
 	// wait for the ingress backend to be routable
 	u := proxyURL()

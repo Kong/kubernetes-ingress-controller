@@ -89,6 +89,11 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+var crds = []string{
+	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
+}
+
 // FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
 func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEvent, cluster kind.Cluster, containerImage, namespace string) error {
 	// ensure the controller namespace is created
@@ -126,16 +131,20 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		kubeconfig.Close()
 
 		// deploy our CRDs to the cluster
-		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", "../../config/crd/bases/configuration.konghq.com_udpingresses.yaml")
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			panic(fmt.Errorf("%s: %w", stderr.String(), err))
+		for _, crd := range crds {
+			cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", crd)
+			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+			cmd.Stdout = stdout
+			cmd.Stderr = stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintln(os.Stdout, stdout.String())
+				panic(fmt.Errorf("%s: %w", stderr.String(), err))
+			}
 		}
 
 		// if set, allow running the legacy controller for the tests instead of the current controller
+		var cmd *exec.Cmd
+		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 		} else {

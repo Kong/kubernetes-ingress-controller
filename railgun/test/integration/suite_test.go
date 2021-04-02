@@ -26,36 +26,28 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Timeouts
+// Testing Timeouts
 // -----------------------------------------------------------------------------
 
 const (
-	// default timeout tick interval
+	// clusterDeployWait is the timeout duration for deploying the kind cluster for testing
+	clusterDeployWait = time.Minute * 5
+
+	// waitTick is the default timeout tick interval for checking on ingress resources.
 	waitTick = time.Second * 1
 
-	// default amount of time to wait for changes to the Kong proxy deployment
-	proxyUpdateWait = time.Minute * 3
-
-	// default amount of time to wait for a service to be provisioned an IP by MetalLB
-	serviceWait = time.Minute * 1
-
-	// default amount of time to wait for a UDPIngress resource to be provisioned
-	udpWait = time.Second * 30
-
-	// default amount of time to wait for an Ingress resource to be provisioned
-	ingressWait = time.Minute * 3
+	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
+	ingressWait = time.Minute * 7
 )
 
 // -----------------------------------------------------------------------------
-// Testing Constants & Vars
+// Testing Variables
 // -----------------------------------------------------------------------------
-
-const (
-	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
-	LegacyControllerEnvVar = "KONG_LEGACY_CONTROLLER"
-)
 
 var (
+	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
+	LegacyControllerEnvVar = "KONG_LEGACY_CONTROLLER"
+
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
 
@@ -63,8 +55,12 @@ var (
 	proxyReady = make(chan *url.URL)
 )
 
+// -----------------------------------------------------------------------------
+// Testing Main
+// -----------------------------------------------------------------------------
+
 func TestMain(m *testing.M) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(clusterDeployWait))
 	defer cancel()
 
 	// create a new cluster for tests
@@ -89,6 +85,10 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// -----------------------------------------------------------------------------
+// Testing Main - Controller Deployment
+// -----------------------------------------------------------------------------
+
 var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
@@ -110,7 +110,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		if event.Err != nil {
 			panic(event.Err)
 		}
-		u := event.URL
+		u := event.ProxyAdminURL
 		adminHost := u.Hostname()
 		proxyReady <- u
 

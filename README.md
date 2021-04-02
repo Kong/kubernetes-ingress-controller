@@ -11,7 +11,7 @@ load balancing and more in Kong
 for Kubernetes Services, all using
 Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
-[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**Master branch builds**](#master-branch-builds) | [**Seeking help**](#seeking-help)
+[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main/next branch builds**](#mainnext-branch-builds) | [**Seeking help**](#seeking-help)
 
 ## Features
 
@@ -74,14 +74,21 @@ Pull Requests are welcome for additions and corrections.
 Please browse through [guides][guides] to get started or understand how to configure
 a specific setting with Kong Ingress Controller.
 
-## Master branch builds
+## main/next branch builds
 
-If you would like to use the latest and the greatest version of the controller,
-you can use `latest` tag from the [kong-ingress-controller repository][bintray-builds]
-hosted on Bintray:
+Pre-release builds of the `main` and `next` branches are available from the
+[kong-ingress-controller repository][docker-images] hosted on Docker Hub:
+
+`main` contains unreleased patch code for the current release:
 
 ```
-docker pull kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:latest
+docker pull kong/kubernetes-ingress-controller:main
+```
+
+`next` contains unreleased new features for upcoming minor and major releases:
+
+```
+docker pull kong/kubernetes-ingress-controller:next
 ```
 
 ## Seeking help
@@ -122,7 +129,7 @@ meeting invite and Zoom links to join the meeting.
 [getting-started-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/getting-started/
 [badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
 [badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
-[bintray-builds]: https://bintray.com/kong/kubernetes-ingress-controller/kong-ingress-controller
+[docker-images]: https://hub.docker.com/repository/docker/kong/kong
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/

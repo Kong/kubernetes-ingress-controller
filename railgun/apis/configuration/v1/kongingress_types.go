@@ -29,6 +29,7 @@ var _ = kicv1.KongIngress{}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 
 // KongIngress is the Schema for the kongingresses API
 type KongIngress struct {

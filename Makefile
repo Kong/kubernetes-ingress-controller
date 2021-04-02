@@ -1,7 +1,7 @@
-REGISTRY?=kong-docker-kubernetes-ingress-controller.bintray.io
+REGISTRY?=kong
 TAG?=1.2.0
 REPO_INFO=$(shell git config --get remote.origin.url)
-IMGNAME?=kong-ingress-controller
+IMGNAME?=kubernetes-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 # only for dev
 DB?=false
@@ -57,6 +57,7 @@ container:
 	docker build \
     --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
     --build-arg REPO_INFO=${REPO_INFO} \
+    --target alpine \
     -t ${IMAGE}:${TAG} .
 
 .PHONY: run

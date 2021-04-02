@@ -16,7 +16,7 @@ require (
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/kong/deck v1.5.1
 	github.com/kong/go-kong v0.16.0
-	github.com/kong/kubernetes-testing-framework v0.0.3
+	github.com/kong/kubernetes-testing-framework v0.0.5-0.20210402200043-7a4fc19d4c7b
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1

@@ -46,11 +46,11 @@ func TestMinimalIngress(t *testing.T) {
 	assert.NoError(t, err)
 
 	// wait for the ingress backend to be routable
-	u := proxyURL()
+	p := proxyReady()
 	assert.Eventually(t, func() bool {
-		resp, err := http.Get(fmt.Sprintf("%s/nginx", u.String()))
+		resp, err := http.Get(fmt.Sprintf("%s/nginx", p.ProxyURL.String()))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", u.String(), err)
+			t.Logf("WARNING: error while waiting for %s: %v", p.ProxyURL.String(), err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -67,9 +67,9 @@ func TestMinimalIngress(t *testing.T) {
 	// ensure that a deleted ingress results in the route being torn down
 	assert.NoError(t, cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		resp, err := http.Get(fmt.Sprintf("%s/nginx", u.String()))
+		resp, err := http.Get(fmt.Sprintf("%s/nginx", p.ProxyURL.String()))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", u.String(), err)
+			t.Logf("WARNING: error while waiting for %s: %v", p.ProxyURL.String(), err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -82,7 +82,7 @@ func TestMinimalIngress(t *testing.T) {
 				Message string `json:"message"`
 			}{}
 			if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-				t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", u.String(), err)
+				t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", p.ProxyURL.String(), err)
 				return false
 			}
 			return body.Message == "no Route matched with those values"
@@ -119,8 +119,8 @@ func TestHTTPSRedirect(t *testing.T) {
 	}
 
 	assert.Eventually(t, func() bool {
-		u := proxyURL()
-		resp, err := client.Get(fmt.Sprintf("%s/example", u.String()))
+		p := proxyReady()
+		resp, err := client.Get(fmt.Sprintf("%s/example", p.ProxyURL.String()))
 		if err != nil {
 			return false
 		}

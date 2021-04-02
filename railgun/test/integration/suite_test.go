@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/exec"
 	"testing"
@@ -50,9 +49,6 @@ var (
 
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
-
-	// proxyReady is the channel that indicates when the Kong proxyReady is ready to use.
-	proxyReady = make(chan *url.URL)
 )
 
 // -----------------------------------------------------------------------------
@@ -106,13 +102,18 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 
 	// run the controller in the background
 	go func() {
+		// pull the readiness event for the proxy
 		event := <-ready
+
+		// if there's an error, all tests fail here
 		if event.Err != nil {
 			panic(event.Err)
 		}
+
+		// grab the admin hostname and pass the readiness event on to the tests
 		u := event.ProxyAdminURL
 		adminHost := u.Hostname()
-		proxyReady <- u
+		proxyReadyCh <- event
 
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")

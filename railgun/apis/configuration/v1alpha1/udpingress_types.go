@@ -24,6 +24,7 @@ import (
 //+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 
 // UDPIngress is the Schema for the udpingresses API
 type UDPIngress struct {

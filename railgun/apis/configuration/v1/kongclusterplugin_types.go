@@ -24,6 +24,7 @@ import (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API
 type KongClusterPlugin struct {

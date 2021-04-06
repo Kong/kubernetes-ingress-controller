@@ -2,8 +2,8 @@ name: Build and push release images
 
 on:
   push:
-    tags-ignore:
-      - '*rc*'
+    tags
+      - '*'
 
 jobs:
   docker:
@@ -50,7 +50,6 @@ jobs:
           tags: |
             kong/kubernetes-ingress-controller:${{ steps.extract_shortref.outputs.shortref }}-alpine
             kong/kubernetes-ingress-controller:${{ steps.extract_shortref.outputs.shortref }}
-            kong/kubernetes-ingress-controller:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           target: alpine
       - name: Build and push RedHat

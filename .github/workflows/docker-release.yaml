@@ -2,7 +2,7 @@ name: Build and push release images
 
 on:
   push:
-    tags
+    tags:
       - '*'
 
 jobs:

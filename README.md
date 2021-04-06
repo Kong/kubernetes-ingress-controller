@@ -129,7 +129,7 @@ meeting invite and Zoom links to join the meeting.
 [getting-started-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/getting-started/
 [badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
 [badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
-[docker-images]: https://hub.docker.com/repository/docker/kong/kong
+[docker-images]: https://hub.docker.com/r/kong/kubernetes-ingress-controller
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/

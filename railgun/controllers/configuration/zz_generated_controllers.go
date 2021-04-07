@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -293,18 +294,18 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 }
 
 // -----------------------------------------------------------------------------
-// KongV1 UDPIngress
+// KongV1Alpha1 UDPIngress
 // -----------------------------------------------------------------------------
 
-// KongV1UDPIngress reconciles a Ingress object
-type KongV1UDPIngressReconciler struct {
+// KongV1Alpha1UDPIngress reconciles a Ingress object
+type KongV1Alpha1UDPIngressReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KongV1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KongV1Alpha1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&kongv1alpha1.UDPIngress{}).Complete(r)
 }
 
@@ -313,8 +314,8 @@ func (r *KongV1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
-func (r *KongV1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("KongV1UDPIngress", req.NamespacedName)
+func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1Alpha1UDPIngress", req.NamespacedName)
 
 	obj := new(kongv1alpha1.UDPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
@@ -323,6 +324,43 @@ func (r *KongV1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
+		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+}
+
+// -----------------------------------------------------------------------------
+// KongV1Beta1 TCPIngress
+// -----------------------------------------------------------------------------
+
+// KongV1Beta1TCPIngress reconciles a Ingress object
+type KongV1Beta1TCPIngressReconciler struct {
+	client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1beta1.TCPIngress{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/finalizers,verbs=update
+
+// Reconcile processes the watched objects
+func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1Beta1TCPIngress", req.NamespacedName)
+
+	obj := new(kongv1beta1.TCPIngress)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
 		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 

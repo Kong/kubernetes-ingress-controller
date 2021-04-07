@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/exec"
 	"testing"
@@ -26,45 +25,38 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Timeouts
+// Testing Timeouts
 // -----------------------------------------------------------------------------
 
 const (
-	// default timeout tick interval
+	// clusterDeployWait is the timeout duration for deploying the kind cluster for testing
+	clusterDeployWait = time.Minute * 5
+
+	// waitTick is the default timeout tick interval for checking on ingress resources.
 	waitTick = time.Second * 1
 
-	// default amount of time to wait for changes to the Kong proxy deployment
-	proxyUpdateWait = time.Minute * 3
-
-	// default amount of time to wait for a service to be provisioned an IP by MetalLB
-	serviceWait = time.Minute * 1
-
-	// default amount of time to wait for a UDPIngress resource to be provisioned
-	udpWait = time.Second * 30
-
-	// default amount of time to wait for an Ingress resource to be provisioned
-	ingressWait = time.Minute * 3
+	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
+	ingressWait = time.Minute * 7
 )
 
 // -----------------------------------------------------------------------------
-// Testing Constants & Vars
+// Testing Variables
 // -----------------------------------------------------------------------------
-
-const (
-	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
-	LegacyControllerEnvVar = "KONG_LEGACY_CONTROLLER"
-)
 
 var (
+	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
+	LegacyControllerEnvVar = "KONG_LEGACY_CONTROLLER"
+
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
-
-	// proxyReady is the channel that indicates when the Kong proxyReady is ready to use.
-	proxyReady = make(chan *url.URL)
 )
 
+// -----------------------------------------------------------------------------
+// Testing Main
+// -----------------------------------------------------------------------------
+
 func TestMain(m *testing.M) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(clusterDeployWait))
 	defer cancel()
 
 	// create a new cluster for tests
@@ -89,6 +81,15 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// -----------------------------------------------------------------------------
+// Testing Main - Controller Deployment
+// -----------------------------------------------------------------------------
+
+var crds = []string{
+	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
+}
+
 // FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
 func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEvent, cluster kind.Cluster, containerImage, namespace string) error {
 	// ensure the controller namespace is created
@@ -101,13 +102,18 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 
 	// run the controller in the background
 	go func() {
+		// pull the readiness event for the proxy
 		event := <-ready
+
+		// if there's an error, all tests fail here
 		if event.Err != nil {
 			panic(event.Err)
 		}
-		u := event.URL
+
+		// grab the admin hostname and pass the readiness event on to the tests
+		u := event.ProxyAdminURL
 		adminHost := u.Hostname()
-		proxyReady <- u
+		proxyReadyCh <- event
 
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
@@ -126,16 +132,20 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		kubeconfig.Close()
 
 		// deploy our CRDs to the cluster
-		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", "../../config/crd/bases/configuration.konghq.com_udpingresses.yaml")
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			panic(fmt.Errorf("%s: %w", stderr.String(), err))
+		for _, crd := range crds {
+			cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", crd)
+			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+			cmd.Stdout = stdout
+			cmd.Stderr = stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintln(os.Stdout, stdout.String())
+				panic(fmt.Errorf("%s: %w", stderr.String(), err))
+			}
 		}
 
 		// if set, allow running the legacy controller for the tests instead of the current controller
+		var cmd *exec.Cmd
+		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 		} else {

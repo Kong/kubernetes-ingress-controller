@@ -3,5 +3,8 @@ kind: TCPIngress
 metadata:
   name: tcpingress-sample
 spec:
-  # Add fields here
-  foo: bar
+  rules:
+  - port: 9000
+    backend:
+      serviceName: tcp-echo
+      servicePort: 2701```

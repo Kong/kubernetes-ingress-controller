@@ -18,6 +18,13 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
+func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {
+	if port.Name != "" {
+		return port.Name
+	}
+	return strconv.Itoa(int(port.Number))
+}
+
 func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1.Ingress) ingressRules {
 	result := newIngressRules()
 
@@ -229,8 +236,8 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				}
 
 				port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
-				serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rulePath.Backend.Service.Name,
-					rulePath.Backend.Service.Port.Number)
+				serviceName := fmt.Sprintf("%s.%s.%s", ingress.Namespace, rulePath.Backend.Service.Name,
+					serviceBackendPortToStr(rulePath.Backend.Service.Port))
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
 					service = kongstate.Service{

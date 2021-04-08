@@ -140,7 +140,7 @@ func (a Server) handleValidation(ctx context.Context, request admission.Admissio
 			return nil, err
 		}
 
-		ok, message, err = a.Validator.ValidatePlugin(plugin)
+		ok, message, err = a.Validator.ValidatePlugin(ctx, plugin)
 		if err != nil {
 			return nil, err
 		}

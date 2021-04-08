@@ -26,7 +26,7 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/sirupsen/logrus"
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -58,9 +58,9 @@ func (e ErrNotFound) Error() string {
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
-	GetSecret(namespace, name string) (*apiv1.Secret, error)
-	GetService(namespace, name string) (*apiv1.Service, error)
-	GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error)
+	GetSecret(namespace, name string) (*corev1.Secret, error)
+	GetService(namespace, name string) (*corev1.Service, error)
+	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
 	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error)
@@ -69,12 +69,12 @@ type Storer interface {
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
 	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
-	ListUDPIngresses() ([]*v1alpha1.UDPIngress, error)
+	ListUDPIngresses() ([]*configurationv1alpha1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
 	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongConsumers() []*configurationv1.KongConsumer
-	ListCACerts() ([]*apiv1.Secret, error)
+	ListCACerts() ([]*corev1.Secret, error)
 }
 
 // Store implements Storer and can be used to list Ingress, Services

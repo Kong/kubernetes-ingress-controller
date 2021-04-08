@@ -160,6 +160,85 @@ func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 	return NewCacheStoresFromObjs(kobjs...)
 }
 
+// NewCacheStoresFromObjs provides a new CacheStores object given any number of Kubernetes
+// objects that should be pre-populated. This function will sort objects into the appropriate
+// sub-storage (e.g. IngressV1, TCPIngress, e.t.c.) but will produce an error if any of the
+// input objects are erroneous or otherwise unusable as Kubernetes objects.
+func NewCacheStoresFromObjs(objs ...runtime.Object) (c CacheStores, err error) {
+	c = NewCacheStores()
+	for _, obj := range objs {
+		switch gvk := obj.GetObjectKind().GroupVersionKind(); gvk {
+		case extensions.SchemeGroupVersion.WithKind("Ingress"):
+			if err = convUnstructuredObj(&obj, &extensions.Ingress{}); err != nil {
+				return
+			}
+			err = c.IngressV1beta1.Add(obj)
+		case networkingv1.SchemeGroupVersion.WithKind("Ingress"):
+			if err = convUnstructuredObj(&obj, &networkingv1.Ingress{}); err != nil {
+				return
+			}
+			err = c.IngressV1.Add(obj)
+		case configurationv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
+			if err = convUnstructuredObj(&obj, &configurationv1beta1.TCPIngress{}); err != nil {
+				return
+			}
+			err = c.TCPIngress.Add(obj)
+		case configurationv1alpha1.SchemeGroupVersion.WithKind("UDPIngress"):
+			if err = convUnstructuredObj(&obj, &configurationv1alpha1.UDPIngress{}); err != nil {
+				return
+			}
+			err = c.UDPIngress.Add(obj)
+		case corev1.SchemeGroupVersion.WithKind("Service"):
+			if err = convUnstructuredObj(&obj, &corev1.Service{}); err != nil {
+				return
+			}
+			err = c.Service.Add(obj)
+		case corev1.SchemeGroupVersion.WithKind("Secret"):
+			if err = convUnstructuredObj(&obj, &corev1.Secret{}); err != nil {
+				return
+			}
+			err = c.Secret.Add(obj)
+		case corev1.SchemeGroupVersion.WithKind("Endpoints"):
+			if err = convUnstructuredObj(&obj, &corev1.Endpoints{}); err != nil {
+				return
+			}
+			err = c.Endpoint.Add(obj)
+		case configurationv1.SchemeGroupVersion.WithKind("KongPlugin"):
+			if err = convUnstructuredObj(&obj, &configurationv1.KongPlugin{}); err != nil {
+				return
+			}
+			err = c.Plugin.Add(obj)
+		case configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
+			if err = convUnstructuredObj(&obj, &configurationv1.KongClusterPlugin{}); err != nil {
+				return
+			}
+			err = c.ClusterPlugin.Add(obj)
+		case configurationv1.SchemeGroupVersion.WithKind("KongConsumer"):
+			if err = convUnstructuredObj(&obj, &configurationv1.KongConsumer{}); err != nil {
+				return
+			}
+			err = c.Consumer.Add(obj)
+		case configurationv1.SchemeGroupVersion.WithKind("ConfigSource"):
+			if err = convUnstructuredObj(&obj, &configurationv1.ConfigSource{}); err != nil {
+				return
+			}
+			err = c.Configuration.Add(obj)
+		case knative.SchemeGroupVersion.WithKind("Ingress"):
+			if err = convUnstructuredObj(&obj, &knative.Ingress{}); err != nil {
+				return
+			}
+			err = c.KnativeIngress.Add(obj)
+		default:
+			err = fmt.Errorf("%s is not a supported runtime.Object", gvk)
+			return
+		}
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 // New creates a new object store to be used in the ingress controller
 func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
 	processClasslessKongConsumer bool, logger logrus.FieldLogger) Storer {
@@ -505,4 +584,31 @@ func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*networkingv1beta1.Ing
 	}
 	out.APIVersion = networkingv1beta1.SchemeGroupVersion.String()
 	return &out, nil
+}
+
+// convUnstructuredObj is a convenience function to quickly convert any runtime.Object where the underlying type
+// is an *unstructured.Unstructured (client-go's dynamic client type) and convert that object to a runtime.Object
+// which is backed by the API type it represents. You can use the GVK of the runtime.Object to determine what type
+// you want to convert to. This function is meant so that storer implementations can optionally work with YAML files
+// for caller convenience when initializing new CacheStores objects.
+//
+// TODO: upon some searching I didn't find an analog to this over in client-go (https://github.com/kubernetes/client-go)
+//       however I could have just missed it. We should switch if we find something better, OR we should contribute
+//       this functionality upstream.
+func convUnstructuredObj(obj *runtime.Object, convertedObj runtime.Object) error {
+	_, isUnstructured := (*obj).(*unstructured.Unstructured)
+	if !isUnstructured {
+		return nil
+	}
+
+	var b []byte
+	b, err := yaml.Marshal(obj)
+	if err != nil {
+		return fmt.Errorf("failed to convert object %s to yaml: %w", (*obj).GetObjectKind().GroupVersionKind(), err)
+	}
+	if err = yaml.Unmarshal(b, convertedObj); err != nil {
+		return err
+	}
+	*obj = convertedObj
+	return nil
 }

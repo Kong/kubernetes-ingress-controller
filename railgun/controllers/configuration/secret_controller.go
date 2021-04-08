@@ -18,19 +18,21 @@ package configuration
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/store"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 )
 
 type SecretReconcilerParams struct {
@@ -70,22 +72,43 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile manages the configuration secret for ingresses and parses that into a Kong configuration
 // which is posted to all available Proxy APIs.
 func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	//	log := r.Log.WithValues("secret", req.NamespacedName)
 	logruslogger := logrus.New()
 
+	// pull the configuration secret from the API
 	configSecret := new(corev1.Secret)
 	if err := r.Get(ctx, req.NamespacedName, configSecret); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	storer := store.New(r.Client)
+	// if the configuration secret is empty, something is wrong and we need to wait.
+	if len(configSecret.Data) < 1 {
+		return ctrl.Result{}, fmt.Errorf("no data is present in the configuration secret")
+	}
+
+	// build a new cache store from the objects present in the configuration secret
+	yamls := make([][]byte, 0, len(configSecret.Data))
+	for _, yaml := range configSecret.Data {
+		yamls = append(yamls, yaml)
+	}
+	cache, err := store.NewCacheStoresFromObjYAML(yamls...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// build the storer from the cached objects
+	// TODO; verify these arguments are right
+	storer := store.New(cache, "kong", false, false, false, logruslogger)
+
+	// build the kongstate object from the Kubernetes objects in the storer
 	kongstate, err := parser.Build(logruslogger, storer)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	// generate the deck configuration to be applied to the admin API
 	targetConfig := deckgen.ToDeckContent(ctx, logruslogger, kongstate, nil, nil)
 
+	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	_, err = sendconfig.PerformUpdate(timedCtx, logruslogger, &r.Params.KongConfig, true, false, targetConfig, nil, nil, nil)

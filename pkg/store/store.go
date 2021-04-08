@@ -116,6 +116,42 @@ type CacheStores struct {
 	KnativeIngress cache.Store
 }
 
+// NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores
+func NewCacheStores() (c CacheStores) {
+	c.ClusterPlugin = cache.NewStore(keyFunc)
+	c.Configuration = cache.NewStore(keyFunc)
+	c.Consumer = cache.NewStore(keyFunc)
+	c.Endpoint = cache.NewStore(keyFunc)
+	c.IngressV1 = cache.NewStore(keyFunc)
+	c.IngressV1beta1 = cache.NewStore(keyFunc)
+	c.KnativeIngress = cache.NewStore(keyFunc)
+	c.Plugin = cache.NewStore(keyFunc)
+	c.Secret = cache.NewStore(keyFunc)
+	c.Service = cache.NewStore(keyFunc)
+	c.TCPIngress = cache.NewStore(keyFunc)
+	c.UDPIngress = cache.NewStore(keyFunc)
+	return
+}
+
+// NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
+// YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
+func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
+	kobjs := make([]runtime.Object, 0, len(objs))
+	for _, yaml := range objs {
+		sr := serializer.NewYAMLSerializer(
+			yamlserializer.DefaultMetaFactory,
+			unstructuredscheme.NewUnstructuredCreator(),
+			unstructuredscheme.NewUnstructuredObjectTyper(),
+		)
+		kobj, _, decodeErr := sr.Decode(yaml, nil, nil)
+		if err = decodeErr; err != nil {
+			return
+		}
+		kobjs = append(kobjs, kobj)
+	}
+	return NewCacheStoresFromObjs(kobjs...)
+}
+
 // New creates a new object store to be used in the ingress controller
 func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
 	processClasslessKongConsumer bool, logger logrus.FieldLogger) Storer {

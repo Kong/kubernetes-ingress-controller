@@ -127,7 +127,7 @@ func storeIngressServiceBackends(ctx context.Context, c client.Client, secret *c
 	return nil
 }
 
-// storeEndpoints stores any relevant Service backends for an object. For some times this isn't relevant.
+// storeEndpoints stores any relevant Service backends for an object (for some types this isn't relevant and will be a no-op).
 func storeEndpoints(ctx context.Context, c client.Client, secret *corev1.Secret, obj runtime.Object, nsn types.NamespacedName) error {
 	endpoints := corev1.Endpoints{}
 	if err := c.Get(ctx, nsn, &endpoints); err != nil {

@@ -96,7 +96,6 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// build the storer from the cached objects
-	// TODO; verify these arguments are right
 	storer := store.New(cache, "kong", false, false, false, logruslogger)
 
 	// build the kongstate object from the Kubernetes objects in the storer

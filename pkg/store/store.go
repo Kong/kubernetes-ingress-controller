@@ -21,20 +21,28 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	serializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/yaml"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 )
 
 const (
@@ -186,7 +194,7 @@ func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 boo
 }
 
 // GetSecret returns a Secret using the namespace and name as key
-func (s Store) GetSecret(namespace, name string) (*apiv1.Secret, error) {
+func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	secret, exists, err := s.stores.Secret.GetByKey(key)
 	if err != nil {
@@ -195,11 +203,11 @@ func (s Store) GetSecret(namespace, name string) (*apiv1.Secret, error) {
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("Secret %v not found", key)}
 	}
-	return secret.(*apiv1.Secret), nil
+	return secret.(*corev1.Secret), nil
 }
 
 // GetService returns a Service using the namespace and name as key
-func (s Store) GetService(namespace, name string) (*apiv1.Service, error) {
+func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	service, exists, err := s.stores.Service.GetByKey(key)
 	if err != nil {
@@ -208,7 +216,7 @@ func (s Store) GetService(namespace, name string) (*apiv1.Service, error) {
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("Service %v not found", key)}
 	}
-	return service.(*apiv1.Service), nil
+	return service.(*corev1.Service), nil
 }
 
 // ListIngressesV1 returns the list of Ingresses in the Ingress v1 store.
@@ -316,7 +324,7 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 
 // GetEndpointsForService returns the internal endpoints for service
 // 'namespace/name' inside k8s.
-func (s Store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error) {
+func (s Store) GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	eps, exists, err := s.stores.Endpoint.GetByKey(key)
 	if err != nil {
@@ -325,7 +333,7 @@ func (s Store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints,
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("Endpoints for service %v not found", key)}
 	}
-	return eps.(*apiv1.Endpoints), nil
+	return eps.(*corev1.Endpoints), nil
 }
 
 // GetKongPlugin returns the 'name' KongPlugin resource in namespace.
@@ -446,8 +454,8 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 
 // ListCACerts returns all Secrets containing the label
 // "konghq.com/ca-cert"="true".
-func (s Store) ListCACerts() ([]*apiv1.Secret, error) {
-	var secrets []*apiv1.Secret
+func (s Store) ListCACerts() ([]*corev1.Secret, error) {
+	var secrets []*corev1.Secret
 	req, err := labels.NewRequirement(caCertKey,
 		selection.Equals, []string{"true"})
 	if err != nil {
@@ -456,7 +464,7 @@ func (s Store) ListCACerts() ([]*apiv1.Secret, error) {
 	err = cache.ListAll(s.stores.Secret,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*apiv1.Secret)
+			p, ok := ob.(*corev1.Secret)
 			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ExactClassMatch) {
 				secrets = append(secrets, p)
 			}

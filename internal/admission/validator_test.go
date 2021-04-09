@@ -1,13 +1,103 @@
 package admission
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
+
+type fakeConsumerSvc struct {
+	kong.AbstractConsumerService
+
+	consumer *kong.Consumer
+	err      error
+}
+
+func (f *fakeConsumerSvc) Get(ctx context.Context, usernameOrID *string) (*kong.Consumer, error) {
+	return f.consumer, f.err
+}
+
+type fakePluginSvc struct {
+	kong.AbstractPluginService
+
+	err   error
+	valid bool
+}
+
+func (f *fakePluginSvc) Validate(ctx context.Context, plugin *kong.Plugin) (bool, error) {
+	return f.valid, f.err
+}
+
+func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		ConsumerSvc kong.AbstractConsumerService
+
+		in configurationv1.KongConsumer
+
+		wantSuccess   bool
+		wantErrorText string
+		wantErr       bool
+	}{
+		{
+			name:          "empty username",
+			in:            configurationv1.KongConsumer{},
+			wantSuccess:   false,
+			wantErrorText: ErrTextConsumerUsernameEmpty,
+		},
+		{
+			name:        "kong says consumer not found",
+			ConsumerSvc: &fakeConsumerSvc{err: kong.NewAPIError(404, "")},
+			in:          configurationv1.KongConsumer{Username: "something"},
+			wantSuccess: true,
+		},
+		{
+			name:          "kong says HTTP 500",
+			ConsumerSvc:   &fakeConsumerSvc{err: kong.NewAPIError(500, "")},
+			in:            configurationv1.KongConsumer{Username: "something"},
+			wantSuccess:   false,
+			wantErr:       true,
+			wantErrorText: ErrTextConsumerUnretrievable,
+		},
+		{
+			name:          "consumer already exists",
+			ConsumerSvc:   &fakeConsumerSvc{consumer: &kong.Consumer{}},
+			in:            configurationv1.KongConsumer{Username: "something"},
+			wantSuccess:   false,
+			wantErrorText: ErrTextConsumerExists,
+		},
+		{
+			name:        "validation successful",
+			ConsumerSvc: &fakeConsumerSvc{},
+			in:          configurationv1.KongConsumer{Username: "something"},
+			wantSuccess: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			v := KongHTTPValidator{
+				ConsumerSvc: tt.ConsumerSvc,
+				Logger:      logrus.New(),
+			}
+			gotSuccess, gotErrorText, gotErr := v.ValidateConsumer(context.Background(), tt.in)
+
+			require.Equal(t, tt.wantSuccess, gotSuccess)
+			require.Equal(t, tt.wantErrorText, gotErrorText)
+			if tt.wantErr {
+				require.Error(t, gotErr)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
 
 func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 	type args struct {
@@ -174,22 +264,45 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
+		PluginSvc   kong.AbstractPluginService
 		args        args
 		wantOK      bool
 		wantMessage string
 		wantErr     bool
 	}{
 		{
-			name: "plugin lacks plugin name",
+			name:      "plugin is valid",
+			PluginSvc: &fakePluginSvc{valid: true},
+			args: args{
+				plugin: configurationv1.KongPlugin{PluginName: "foo"},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name:      "plugin is not valid",
+			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("plugin lacks required field")},
+			args: args{
+				plugin: configurationv1.KongPlugin{PluginName: "foo"},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginConfigViolatesSchema,
+			wantErr:     true,
+		},
+		{
+			name:      "plugin lacks plugin name",
+			PluginSvc: &fakePluginSvc{},
 			args: args{
 				plugin: configurationv1.KongPlugin{},
 			},
 			wantOK:      false,
-			wantMessage: "plugin name cannot be empty",
+			wantMessage: ErrTextPluginNameEmpty,
 			wantErr:     false,
 		},
 		{
-			name: "plugin has invalid configuration",
+			name:      "plugin has invalid configuration",
+			PluginSvc: &fakePluginSvc{},
 			args: args{
 				plugin: configurationv1.KongPlugin{
 					PluginName: "key-auth",
@@ -199,11 +312,12 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 			},
 			wantOK:      false,
-			wantMessage: "could not parse plugin configuration",
+			wantMessage: ErrTextPluginConfigInvalid,
 			wantErr:     true,
 		},
 		{
-			name: "plugin has both Config and ConfigFrom",
+			name:      "plugin has both Config and ConfigFrom",
+			PluginSvc: &fakePluginSvc{},
 			args: args{
 				plugin: configurationv1.KongPlugin{
 					PluginName: "key-auth",
@@ -219,11 +333,12 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 			},
 			wantOK:      false,
-			wantMessage: "plugin cannot use both Config and ConfigFrom",
+			wantMessage: ErrTextPluginUsesBothConfigTypes,
 			wantErr:     false,
 		},
 		{
-			name: "plugin ConfigFrom references non-existent Secret",
+			name:      "plugin ConfigFrom references non-existent Secret",
+			PluginSvc: &fakePluginSvc{},
 			args: args{
 				plugin: configurationv1.KongPlugin{
 					PluginName: "key-auth",
@@ -236,16 +351,17 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 			},
 			wantOK:      false,
-			wantMessage: "could not load secret plugin configuration",
+			wantMessage: ErrTextPluginSecretConfigUnretrievable,
 			wantErr:     true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{
-				Store: store,
+				Store:     store,
+				PluginSvc: tt.PluginSvc,
 			}
-			got, got1, err := validator.ValidatePlugin(tt.args.plugin)
+			got, got1, err := validator.ValidatePlugin(context.Background(), tt.args.plugin)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KongHTTPValidator.ValidatePlugin() error = %v, wantErr %v", err, tt.wantErr)
 				return

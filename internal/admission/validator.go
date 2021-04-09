@@ -2,7 +2,6 @@ package admission
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -16,16 +15,17 @@ import (
 // KongValidator validates Kong entities.
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer configurationv1.KongConsumer) (bool, string, error)
-	ValidatePlugin(consumer configurationv1.KongPlugin) (bool, string, error)
+	ValidatePlugin(ctx context.Context, plugin configurationv1.KongPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	Client *kong.Client
-	Logger logrus.FieldLogger
-	Store  store.Storer
+	ConsumerSvc kong.AbstractConsumerService
+	PluginSvc   kong.AbstractPluginService
+	Logger      logrus.FieldLogger
+	Store       store.Storer
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
@@ -36,18 +36,18 @@ type KongHTTPValidator struct {
 func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 	consumer configurationv1.KongConsumer) (bool, string, error) {
 	if consumer.Username == "" {
-		return false, "username cannot be empty", nil
+		return false, ErrTextConsumerUsernameEmpty, nil
 	}
-	c, err := validator.Client.Consumers.Get(ctx, &consumer.Username)
+	c, err := validator.ConsumerSvc.Get(ctx, &consumer.Username)
 	if err != nil {
 		if kong.IsNotFoundErr(err) {
 			return true, "", nil
 		}
 		validator.Logger.Errorf("failed to fetch consumer from kong: %v", err)
-		return false, "", fmt.Errorf("fetching consumer from Kong: %w", err)
+		return false, ErrTextConsumerUnretrievable, err
 	}
 	if c != nil {
-		return false, "consumer already exists", nil
+		return false, ErrTextConsumerExists, nil
 	}
 	return true, "", nil
 }
@@ -57,26 +57,26 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if k8sPluign is valid or not and string
 // holds a message if the entity is not valid.
-func (validator KongHTTPValidator) ValidatePlugin(
+func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 	k8sPlugin configurationv1.KongPlugin) (bool, string, error) {
 	if k8sPlugin.PluginName == "" {
-		return false, "plugin name cannot be empty", nil
+		return false, ErrTextPluginNameEmpty, nil
 	}
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	var err error
 	plugin.Config, err = kongstate.RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return false, "could not parse plugin configuration", err
+		return false, ErrTextPluginConfigInvalid, err
 	}
 	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.SecretValueFromSource{}) {
 		if len(plugin.Config) > 0 {
-			return false, "plugin cannot use both Config and ConfigFrom", nil
+			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
 		config, err := kongstate.SecretToConfiguration(validator.Store,
 			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
-			return false, "could not load secret plugin configuration", err
+			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}
 		plugin.Config = config
 
@@ -87,22 +87,11 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
 	}
-	req, err := validator.Client.NewRequest("POST", "/schemas/plugins/validate",
-		nil, &plugin)
+	isValid, err := validator.PluginSvc.Validate(ctx, &plugin)
 	if err != nil {
-		return false, "", err
+		return false, ErrTextPluginConfigViolatesSchema, err
 	}
-	resp, err := validator.Client.Do(context.Background(), req, nil)
-	if err != nil {
-		return false, err.Error(), nil
-	}
-	if resp.StatusCode == 201 {
-		return true, "", nil
-	}
-	if err != nil {
-		return false, "", err
-	}
-	return true, "", nil
+	return isValid, "", nil
 }
 
 var (

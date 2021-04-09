@@ -35,7 +35,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: false
-          file: Dockerfile.all
+          file: Dockerfile
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           target: build
@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          file: Dockerfile.all
+          file: Dockerfile
           tags: |
             kong/kubernetes-ingress-controller:${{ steps.extract_shortref.outputs.shortref }}-alpine
             kong/kubernetes-ingress-controller:${{ steps.extract_shortref.outputs.shortref }}
@@ -59,7 +59,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          file: Dockerfile.all
+          file: Dockerfile
           tags: kong/kubernetes-ingress-controller:${{ steps.extract_shortref.outputs.shortref }}-rhel
           cache-from: type=local,src=/tmp/.buildx-cache
           target: redhat

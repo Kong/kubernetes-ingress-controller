@@ -18,7 +18,7 @@ LABEL name="Kong Ingress Controller" \
       release="1" \
       url="https://github.com/Kong/kubernetes-ingress-controller" \
       summary="Kong for Kubernetes Ingress" \
-      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions(CRDs) and Kubernetes-native tooling."
+      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
 
 COPY LICENSE /licenses/
 
@@ -50,7 +50,7 @@ LABEL name="Kong Ingress Controller" \
       release="1" \
       url="https://github.com/Kong/kubernetes-ingress-controller" \
       summary="Kong for Kubernetes Ingress" \
-      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions(CRDs) and Kubernetes-native tooling."
+      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
 
 COPY LICENSE /licenses/
 

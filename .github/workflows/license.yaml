@@ -4,7 +4,7 @@ on: [pull_request]
 
 jobs:
   licenses:
-    if: "!contains(github.event.pull_request.labels.*.name, 'ci/license-status-changed')"
+    if: "!contains(github.event.pull_request.labels.*.name, 'ci/license/changed')"
     env:
       GOPATH: ${{ github.workspace }}
       GOBIN: ${{ github.workspace }}/bin
@@ -53,13 +53,13 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              name: ['ci/license-status-unchanged']
+              name: ['ci/license/unchanged']
             })
             github.issues.addLabels({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: ['ci/license-status-changed']
+              labels: ['ci/license/changed']
             })
     - name: Update PR - go-license output equal
       uses: actions/github-script@v3

@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"net/http"
 	"os"
 
@@ -33,7 +34,7 @@ type Config struct {
 	ZapOptions zap.Options
 }
 
-func Run(c *Config) error {
+func Run(ctx context.Context, c *Config) error {
 	setupLog := ctrl.Log.WithName("setup")
 
 	scheme := runtime.NewScheme()
@@ -171,5 +172,5 @@ func Run(c *Config) error {
 	}
 
 	setupLog.Info("starting manager")
-	return mgr.Start(ctrl.SetupSignalHandler())
+	return mgr.Start(ctx)
 }

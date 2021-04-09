@@ -1,6 +1,7 @@
 package rootcmd
 
 import (
+	"context"
 	"flag"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
@@ -34,11 +35,11 @@ func registerFlags(c *manager.Config) {
 var rootCmd = &cobra.Command{
 	Use: "controller",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return manager.Run(&config)
+		return manager.Run(cmd.Context(), &config)
 	},
 	SilenceUsage: true,
 }
 
-func Execute() {
-	rootCmd.Execute()
+func Execute(ctx context.Context) {
+	rootCmd.ExecuteContext(ctx)
 }

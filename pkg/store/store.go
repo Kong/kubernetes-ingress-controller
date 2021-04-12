@@ -145,12 +145,12 @@ func NewCacheStores() (c CacheStores) {
 // YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
 func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 	kobjs := make([]runtime.Object, 0, len(objs))
+	sr := serializer.NewYAMLSerializer(
+		yamlserializer.DefaultMetaFactory,
+		unstructuredscheme.NewUnstructuredCreator(),
+		unstructuredscheme.NewUnstructuredObjectTyper(),
+	)
 	for _, yaml := range objs {
-		sr := serializer.NewYAMLSerializer(
-			yamlserializer.DefaultMetaFactory,
-			unstructuredscheme.NewUnstructuredCreator(),
-			unstructuredscheme.NewUnstructuredObjectTyper(),
-		)
 		kobj, _, decodeErr := sr.Decode(yaml, nil, nil)
 		if err = decodeErr; err != nil {
 			return

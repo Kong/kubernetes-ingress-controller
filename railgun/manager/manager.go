@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -30,6 +32,7 @@ type Config struct {
 	Concurrency          int
 	SecretName           string
 	SecretNamespace      string
+	KubeconfigPath       string
 
 	ZapOptions zap.Options
 }
@@ -50,7 +53,12 @@ func Run(ctx context.Context, c *Config) error {
 		os.Setenv(controllers.CtrlNamespaceEnv, controllers.DefaultNamespace)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	kubeconfig, err := clientcmd.BuildConfigFromFlags("", c.KubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+	}
+
+	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,

@@ -26,6 +26,7 @@ func registerFlags(c *manager.Config) {
 	rootCmd.Flags().IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
 	rootCmd.Flags().StringVar(&c.SecretName, "secret-name", "kong-config", "TODO")
 	rootCmd.Flags().StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
+	rootCmd.Flags().StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
 	zapFlags := flag.NewFlagSet("", flag.ExitOnError)
 	c.ZapOptions.BindFlags(zapFlags)

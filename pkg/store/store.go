@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/selection"
@@ -164,79 +165,56 @@ func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 // objects that should be pre-populated. This function will sort objects into the appropriate
 // sub-storage (e.g. IngressV1, TCPIngress, e.t.c.) but will produce an error if any of the
 // input objects are erroneous or otherwise unusable as Kubernetes objects.
-func NewCacheStoresFromObjs(objs ...runtime.Object) (c CacheStores, err error) {
-	c = NewCacheStores()
+func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
+	c := NewCacheStores()
 	for _, obj := range objs {
-		switch gvk := obj.GetObjectKind().GroupVersionKind(); gvk {
-		case extensions.SchemeGroupVersion.WithKind("Ingress"):
-			if err = convUnstructuredObj(&obj, &extensions.Ingress{}); err != nil {
-				return
-			}
-			err = c.IngressV1beta1.Add(obj)
-		case networkingv1.SchemeGroupVersion.WithKind("Ingress"):
-			if err = convUnstructuredObj(&obj, &networkingv1.Ingress{}); err != nil {
-				return
-			}
-			err = c.IngressV1.Add(obj)
-		case configurationv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
-			if err = convUnstructuredObj(&obj, &configurationv1beta1.TCPIngress{}); err != nil {
-				return
-			}
-			err = c.TCPIngress.Add(obj)
-		case configurationv1alpha1.SchemeGroupVersion.WithKind("UDPIngress"):
-			if err = convUnstructuredObj(&obj, &configurationv1alpha1.UDPIngress{}); err != nil {
-				return
-			}
-			err = c.UDPIngress.Add(obj)
-		case corev1.SchemeGroupVersion.WithKind("Service"):
-			if err = convUnstructuredObj(&obj, &corev1.Service{}); err != nil {
-				return
-			}
-			err = c.Service.Add(obj)
-		case corev1.SchemeGroupVersion.WithKind("Secret"):
-			if err = convUnstructuredObj(&obj, &corev1.Secret{}); err != nil {
-				return
-			}
-			err = c.Secret.Add(obj)
-		case corev1.SchemeGroupVersion.WithKind("Endpoints"):
-			if err = convUnstructuredObj(&obj, &corev1.Endpoints{}); err != nil {
-				return
-			}
-			err = c.Endpoint.Add(obj)
-		case configurationv1.SchemeGroupVersion.WithKind("KongPlugin"):
-			if err = convUnstructuredObj(&obj, &configurationv1.KongPlugin{}); err != nil {
-				return
-			}
-			err = c.Plugin.Add(obj)
-		case configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
-			if err = convUnstructuredObj(&obj, &configurationv1.KongClusterPlugin{}); err != nil {
-				return
-			}
-			err = c.ClusterPlugin.Add(obj)
-		case configurationv1.SchemeGroupVersion.WithKind("KongConsumer"):
-			if err = convUnstructuredObj(&obj, &configurationv1.KongConsumer{}); err != nil {
-				return
-			}
-			err = c.Consumer.Add(obj)
-		case configurationv1.SchemeGroupVersion.WithKind("ConfigSource"):
-			if err = convUnstructuredObj(&obj, &configurationv1.ConfigSource{}); err != nil {
-				return
-			}
-			err = c.Configuration.Add(obj)
-		case knative.SchemeGroupVersion.WithKind("Ingress"):
-			if err = convUnstructuredObj(&obj, &knative.Ingress{}); err != nil {
-				return
-			}
-			err = c.KnativeIngress.Add(obj)
-		default:
-			err = fmt.Errorf("%s is not a supported runtime.Object", gvk)
-			return
-		}
+		typedObj, err := mkObjFromGVK(obj.GetObjectKind().GroupVersionKind())
 		if err != nil {
-			return
+			return c, err
+		}
+
+		if err := convUnstructuredObj(&obj, typedObj); err != nil {
+			return c, err
+		}
+
+		if err := c.Add(obj); err != nil {
+			return c, err
 		}
 	}
-	return
+	return c, nil
+}
+
+// Add stores a provided runtime.Object into the CacheStore if it's of a supported type.
+// The CacheStore must be initialized (see NewCacheStores()) or this will panic.
+func (c CacheStores) Add(obj runtime.Object) error {
+	switch obj := obj.(type) {
+	case *extensions.Ingress:
+		return c.IngressV1beta1.Add(obj)
+	case *networkingv1.Ingress:
+		return c.IngressV1.Add(obj)
+	case *configurationv1beta1.TCPIngress:
+		return c.TCPIngress.Add(obj)
+	case *configurationv1alpha1.UDPIngress:
+		return c.UDPIngress.Add(obj)
+	case *corev1.Service:
+		return c.Service.Add(obj)
+	case *corev1.Secret:
+		return c.Secret.Add(obj)
+	case *corev1.Endpoints:
+		return c.Endpoint.Add(obj)
+	case *configurationv1.KongPlugin:
+		return c.Plugin.Add(obj)
+	case *configurationv1.KongClusterPlugin:
+		return c.ClusterPlugin.Add(obj)
+	case *configurationv1.KongConsumer:
+		return c.Consumer.Add(obj)
+	case *configurationv1.ConfigSource:
+		return c.Configuration.Add(obj)
+	case *knative.Ingress:
+		return c.KnativeIngress.Add(obj)
+	default:
+		return fmt.Errorf("%s is not a supported API type", obj.GetObjectKind().GroupVersionKind())
+	}
 }
 
 // New creates a new object store to be used in the ingress controller
@@ -611,4 +589,37 @@ func convUnstructuredObj(obj *runtime.Object, convertedObj runtime.Object) error
 	}
 	*obj = convertedObj
 	return nil
+}
+
+// mkObjFromGVK is used to provide a new runtime.Object given a GVK, and is particularly useful for handling
+// unstructured runtime.Objects and converted them to structured.
+func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
+	switch gvk {
+	case extensions.SchemeGroupVersion.WithKind("Ingress"):
+		return &extensions.Ingress{}, nil
+	case networkingv1.SchemeGroupVersion.WithKind("Ingress"):
+		return &networkingv1.Ingress{}, nil
+	case configurationv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
+		return &configurationv1beta1.TCPIngress{}, nil
+	case configurationv1alpha1.SchemeGroupVersion.WithKind("UDPIngress"):
+		return &configurationv1alpha1.UDPIngress{}, nil
+	case corev1.SchemeGroupVersion.WithKind("Service"):
+		return &corev1.Service{}, nil
+	case corev1.SchemeGroupVersion.WithKind("Secret"):
+		return &corev1.Secret{}, nil
+	case corev1.SchemeGroupVersion.WithKind("Endpoints"):
+		return &corev1.Endpoints{}, nil
+	case configurationv1.SchemeGroupVersion.WithKind("KongPlugin"):
+		return &configurationv1.KongPlugin{}, nil
+	case configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
+		return &configurationv1.KongClusterPlugin{}, nil
+	case configurationv1.SchemeGroupVersion.WithKind("KongConsumer"):
+		return &configurationv1.KongConsumer{}, nil
+	case configurationv1.SchemeGroupVersion.WithKind("ConfigSource"):
+		return &configurationv1.ConfigSource{}, nil
+	case knative.SchemeGroupVersion.WithKind("Ingress"):
+		return &knative.Ingress{}, nil
+	default:
+		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
+	}
 }

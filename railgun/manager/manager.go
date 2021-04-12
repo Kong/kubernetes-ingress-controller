@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -37,7 +38,24 @@ type Config struct {
 	ZapOptions zap.Options
 }
 
+func RegisterFlags(c *Config, flagSet *flag.FlagSet) {
+	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	flagSet.StringVar(&c.KongURL, "kong-url", "http://localhost:8001", "TODO")
+	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
+	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
+	flagSet.StringVar(&c.SecretName, "secret-name", "kong-config", "TODO")
+	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
+	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
+
+	c.ZapOptions.BindFlags(flagSet)
+}
+
 func Run(ctx context.Context, c *Config) error {
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&c.ZapOptions)))
 	setupLog := ctrl.Log.WithName("setup")
 
 	scheme := runtime.NewScheme()
@@ -45,8 +63,6 @@ func Run(ctx context.Context, c *Config) error {
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&c.ZapOptions)))
 
 	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
 	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {

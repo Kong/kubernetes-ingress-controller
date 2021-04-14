@@ -213,7 +213,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	case *knative.Ingress:
 		return c.KnativeIngress.Add(obj)
 	default:
-		return fmt.Errorf("%s is not a supported API type", obj.GetObjectKind().GroupVersionKind())
+		return fmt.Errorf("cannot add kind %q to the store", obj.GetObjectKind().GroupVersionKind())
 	}
 }
 

@@ -570,6 +570,47 @@ func TestFromIngressV1(t *testing.T) {
 				},
 			},
 		},
+		// 8
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{Name: "http"},
+											},
+										},
+									},
+									{
+										Path: "/ws",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: networkingv1.ServiceBackendPort{Name: "ws"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
@@ -584,22 +625,22 @@ func TestFromIngressV1(t *testing.T) {
 			ingressList[0],
 		})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
 
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
+		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(),
 			[]*networkingv1.Ingress{ingressList[0], ingressList[2]},
 		)
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
 
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
+		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
@@ -619,21 +660,21 @@ func TestFromIngressV1(t *testing.T) {
 		})
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
-			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Port)
+			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Host)
+		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Port)
 
 		assert.Equal("/.well-known/acme-challenge/yolo",
-			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Paths[0])
+			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].Paths[0])
 		assert.Equal("example.com",
-			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Hosts[0])
-		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
+			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].Hosts[0])
+		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].StripPath)
 	})
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[4],
 		})
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
+		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 	})
 	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
 		assert.NotPanics(func() {
@@ -646,14 +687,23 @@ func TestFromIngressV1(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[6],
 		})
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
-		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-8000"].Host)
 	})
 	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[7],
 		})
 		assert.Empty(parsedInfo.ServiceNameToServices)
+	})
+	t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
+		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
+			ingressList[8],
+		})
+		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-http"]
+		assert.True(ok)
+		_, ok = parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-ws"]
+		assert.True(ok)
 	})
 }
 

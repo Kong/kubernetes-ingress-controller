@@ -20,9 +20,9 @@ import (
 
 func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {
 	if port.Name != "" {
-		return port.Name
+		return fmt.Sprintf("pname-%s", port.Name)
 	}
-	return strconv.Itoa(int(port.Number))
+	return fmt.Sprintf("pnum-%d", port.Number)
 }
 
 func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1.Ingress) ingressRules {

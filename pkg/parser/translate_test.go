@@ -687,8 +687,10 @@ func TestFromIngressV1(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[6],
 		})
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
-		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-8000"].Host)
+		assert.Equal("foo-svc.foo-namespace.80.svc",
+			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+		assert.Equal("foo-svc.foo-namespace.8000.svc",
+			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-8000"].Host)
 	})
 	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{

@@ -27,7 +27,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -173,11 +172,11 @@ func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
 			return c, err
 		}
 
-		if err := convUnstructuredObj(&obj, typedObj); err != nil {
+		if err := convUnstructuredObj(obj, typedObj); err != nil {
 			return c, err
 		}
 
-		if err := c.Add(obj); err != nil {
+		if err := c.Add(typedObj); err != nil {
 			return c, err
 		}
 	}
@@ -573,21 +572,12 @@ func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*networkingv1beta1.Ing
 // TODO: upon some searching I didn't find an analog to this over in client-go (https://github.com/kubernetes/client-go)
 //       however I could have just missed it. We should switch if we find something better, OR we should contribute
 //       this functionality upstream.
-func convUnstructuredObj(obj *runtime.Object, convertedObj runtime.Object) error {
-	_, isUnstructured := (*obj).(*unstructured.Unstructured)
-	if !isUnstructured {
-		return nil
-	}
-
-	b, err := yaml.Marshal(obj)
+func convUnstructuredObj(from, to runtime.Object) error {
+	b, err := yaml.Marshal(from)
 	if err != nil {
-		return fmt.Errorf("failed to convert object %s to yaml: %w", (*obj).GetObjectKind().GroupVersionKind(), err)
+		return fmt.Errorf("failed to convert object %s to yaml: %w", from.GetObjectKind().GroupVersionKind(), err)
 	}
-	if err = yaml.Unmarshal(b, convertedObj); err != nil {
-		return err
-	}
-	*obj = convertedObj
-	return nil
+	return yaml.Unmarshal(b, to)
 }
 
 // mkObjFromGVK is a factory function that returns a concrete implementation runtime.Object

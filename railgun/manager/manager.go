@@ -28,6 +28,8 @@ import (
 // Config collects all configuration that the controller manager takes from the environment.
 // BUG: the above is not 100% accurate today - controllers read some settings from environment variables directly
 type Config struct {
+	// See flag definitions in RegisterFlags(...) for documentation of the fields defined here.
+
 	MetricsAddr          string
 	EnableLeaderElection bool
 	ProbeAddr            string

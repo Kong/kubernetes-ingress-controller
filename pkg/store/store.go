@@ -579,7 +579,6 @@ func convUnstructuredObj(obj *runtime.Object, convertedObj runtime.Object) error
 		return nil
 	}
 
-	var b []byte
 	b, err := yaml.Marshal(obj)
 	if err != nil {
 		return fmt.Errorf("failed to convert object %s to yaml: %w", (*obj).GetObjectKind().GroupVersionKind(), err)
@@ -591,8 +590,9 @@ func convUnstructuredObj(obj *runtime.Object, convertedObj runtime.Object) error
 	return nil
 }
 
-// mkObjFromGVK is used to provide a new runtime.Object given a GVK, and is particularly useful for handling
-// unstructured runtime.Objects and converted them to structured.
+// mkObjFromGVK is a factory function that returns a concrete implementation runtime.Object
+// for the given GVK. Callers can then use `convert()` to convert an unstructured
+// runtime.Object into a concrete one.
 func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	switch gvk {
 	case extensions.SchemeGroupVersion.WithKind("Ingress"):

@@ -9,7 +9,13 @@ COPY go.sum go.sum
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
 
-COPY . .
+COPY pkg/ pkg/
+COPY railgun/apis/ railgun/apis/
+COPY railgun/cmd/ railgun/cmd/
+COPY railgun/controllers/ railgun/controllers/
+COPY railgun/manager/ railgun/manager/
+COPY railgun/pkg/ railgun/pkg/
+COPY railgun/main.go railgun/main.go
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager ./railgun/main.go

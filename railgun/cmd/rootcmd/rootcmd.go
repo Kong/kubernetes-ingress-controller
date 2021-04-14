@@ -10,14 +10,15 @@ import (
 
 var config manager.Config
 
-func init() {
+func bindFlags(cmd *cobra.Command, args []string) {
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	manager.RegisterFlags(&config, fs)
-	rootCmd.Flags().AddGoFlagSet(fs)
+	cmd.Flags().AddGoFlagSet(fs)
 }
 
 var rootCmd = &cobra.Command{
-	Use: "controller",
+	Use:    "controller",
+	PreRun: bindFlags,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return manager.Run(cmd.Context(), &config)
 	},

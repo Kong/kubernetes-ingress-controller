@@ -71,8 +71,6 @@ func TestMain(m *testing.M) {
 	defer newCluster.Cleanup()
 	cluster = newCluster
 
-	fmt.Printf("xxx cluster created")
-
 	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
 	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllers.DefaultNamespace); err != nil {
 		newCluster.Cleanup()

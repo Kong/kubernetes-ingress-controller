@@ -189,6 +189,7 @@ func Run(ctx context.Context, c *Config) error {
 			return err
 		}
 	}
+	// BUG: kubebuilder (at the time of writing - 3.0.0-rc.1) does not allow this tag anywhere else than main.go
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

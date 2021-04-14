@@ -1,3 +1,4 @@
+// Package manager implements the controller manager for all controllers in Railgun.
 package manager
 
 import (
@@ -24,6 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
+// Config collects all configuration that the controller manager takes from the environment.
+// BUG: the above is not 100% accurate today - controllers read some settings from environment variables directly
 type Config struct {
 	MetricsAddr          string
 	EnableLeaderElection bool
@@ -38,6 +41,7 @@ type Config struct {
 	ZapOptions zap.Options
 }
 
+// RegisterFlags binds the provided Config to commandline flags.
 func RegisterFlags(c *Config, flagSet *flag.FlagSet) {
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -54,6 +58,7 @@ func RegisterFlags(c *Config, flagSet *flag.FlagSet) {
 	c.ZapOptions.BindFlags(flagSet)
 }
 
+// Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config) error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&c.ZapOptions)))
 	setupLog := ctrl.Log.WithName("setup")

@@ -1,3 +1,4 @@
+// Package rootcmd implements the cobra.Command that manages the controller manager lifecycle.
 package rootcmd
 
 import (
@@ -25,6 +26,7 @@ var rootCmd = &cobra.Command{
 	SilenceUsage: true,
 }
 
+// Execute is the entry point to the controller manager.
 func Execute(ctx context.Context) {
 	rootCmd.ExecuteContext(ctx)
 }

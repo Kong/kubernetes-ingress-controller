@@ -19,6 +19,11 @@ import (
 )
 
 func TestMinimalKongIngress(t *testing.T) {
+	// FIXME: we're temporarily disabling this test due to timing issues that will be sorted out as part
+	//        of a later iteration in our upcoming testing milestone.
+	//        SEE: https://github.com/Kong/kubernetes-ingress-controller/milestone/16
+	t.Skip()
+
 	// test setup
 	namespace := "default"
 	testName := "minking"

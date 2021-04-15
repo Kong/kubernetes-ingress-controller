@@ -7,4 +7,4 @@ spec:
   - port: 9000
     backend:
       serviceName: tcp-echo
-      servicePort: 2701```
+      servicePort: 2701

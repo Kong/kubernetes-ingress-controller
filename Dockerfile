@@ -20,8 +20,6 @@ LABEL name="Kong Ingress Controller" \
       summary="Kong for Kubernetes Ingress" \
       description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
 
-COPY LICENSE /licenses/
-
 RUN apk --no-cache add ca-certificates
 
 # Create the user (ID 1000) and group that will be used in the
@@ -51,8 +49,6 @@ LABEL name="Kong Ingress Controller" \
       url="https://github.com/Kong/kubernetes-ingress-controller" \
       summary="Kong for Kubernetes Ingress" \
       description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
-
-COPY LICENSE /licenses/
 
 # Create the user (ID 1000) and group that will be used in the
 # running container to run the process as an unprivileged user.

@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
@@ -44,6 +45,15 @@ func TestMinimalIngress(t *testing.T) {
 	}, service)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
 	assert.NoError(t, err)
+
+	// ensure cleanup of the ingress
+	defer func() {
+		if err := cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				assert.NoError(t, err)
+			}
+		}
+	}()
 
 	// wait for the ingress backend to be routable
 	p := proxyReady()
@@ -100,17 +110,32 @@ func TestHTTPSRedirect(t *testing.T) {
 	_, err := cluster.Client().AppsV1().Deployments("default").Create(ctx, deployment, opts)
 	assert.NoError(t, err)
 
+	// ensure cleanup of the deployment
+	defer func() {
+		assert.NoError(t, cluster.Client().AppsV1().Deployments("default").Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	}()
+
 	service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-	_, err = cluster.Client().CoreV1().Services("default").Create(ctx, service, opts)
+	service, err = cluster.Client().CoreV1().Services("default").Create(ctx, service, opts)
 	assert.NoError(t, err)
+
+	// ensure cleanup of the service
+	defer func() {
+		assert.NoError(t, cluster.Client().CoreV1().Services("default").Delete(ctx, service.Name, metav1.DeleteOptions{}))
+	}()
 
 	ingress := k8sgen.NewIngressForService("/example", map[string]string{
 		"kubernetes.io/ingress.class":           "kong",
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)
-	_, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, opts)
+	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, opts)
 	assert.NoError(t, err)
+
+	// ensure cleanup of the ingress
+	defer func() {
+		assert.NoError(t, cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
+	}()
 
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {

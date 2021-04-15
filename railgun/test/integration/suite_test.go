@@ -5,6 +5,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,6 +23,7 @@ import (
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 )
 
 // -----------------------------------------------------------------------------
@@ -106,9 +108,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		event := <-ready
 
 		// if there's an error, all tests fail here
-		if event.Err != nil {
-			panic(event.Err)
-		}
 
 		// grab the admin hostname and pass the readiness event on to the tests
 		u := event.ProxyAdminURL
@@ -145,18 +144,28 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 
 		// if set, allow running the legacy controller for the tests instead of the current controller
 		var cmd *exec.Cmd
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
+			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+			cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
+			cmd.Stderr = io.MultiWriter(stderr, os.Stderr)
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintln(os.Stdout, stdout.String())
+				panic(fmt.Errorf("%s: %w", stderr.String(), err))
+			}
 		} else {
-			cmd = buildControllerCommand(ctx, kubeconfig.Name(), adminHost)
-		}
-		stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			panic(fmt.Errorf("%s: %w", stderr.String(), err))
+			config := manager.Config{}
+			flags := flag.NewFlagSet("", flag.ExitOnError)
+			manager.RegisterFlags(&config, flags)
+			flags.Parse([]string{
+				fmt.Sprintf("--kong-url=http://%s:8001", adminHost),
+				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
+			})
+			fmt.Printf("config: %+v\n", config)
+
+			if err := manager.Run(ctx, &config); err != nil {
+				panic(fmt.Errorf("controller manager exited with error: %w", err))
+			}
 		}
 	}()
 
@@ -197,10 +206,4 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	)
 
 	return cmd
-}
-
-func buildControllerCommand(ctx context.Context, kubeconfigPath, adminHost string) *exec.Cmd {
-	return exec.CommandContext(ctx, "go", "run", "../../main.go",
-		"--kong-url", fmt.Sprintf("http://%s:8001", adminHost),
-		"--kubeconfig", kubeconfigPath)
 }

@@ -73,16 +73,27 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
-	flagSet.EnablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled, "TODO")
-	flagSet.EnablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "TODO")
-	flagSet.EnablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusDisabled, "TODO")
-	flagSet.EnablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusDisabled, "TODO")
-	flagSet.EnablementStatusVar(&c.UDPIngressEnabled, "controller-udpingress", util.EnablementStatusDisabled, "TODO")
-	flagSet.EnablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusDisabled, "TODO")
-	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusDisabled, "TODO")
-	flagSet.EnablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusDisabled, "TODO")
-	flagSet.EnablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusDisabled, "TODO")
-	flagSet.EnablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled, "TODO")
+	const onOffUsage = "Can be one of [enabled, disabled]."
+	flagSet.EnablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled,
+		"Enable or disable the KongState controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled,
+		"Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
+	flagSet.EnablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusDisabled,
+		"Enable or disable the Ingress controller (using API version networking.k8s.io/v1beta1)."+onOffUsage)
+	flagSet.EnablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusDisabled,
+		"Enable or disable the Ingress controller (using API version extensions/v1beta1)."+onOffUsage)
+	flagSet.EnablementStatusVar(&c.UDPIngressEnabled, "controller-udpingress", util.EnablementStatusDisabled,
+		"Enable or disable the UDPIngress controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusDisabled,
+		"Enable or disable the TCPIngress controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusDisabled,
+		"Enable or disable the KongIngress controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusDisabled,
+		"Enable or disable the KongClusterPlugin controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusDisabled,
+		"Enable or disable the KongPlugin controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled,
+		"Enable or disable the KongConsumer controller. "+onOffUsage)
 
 	c.ZapOptions.BindFlags(&flagSet.FlagSet)
 

@@ -11,8 +11,6 @@ const (
 	EnablementStatusAuto     EnablementStatus = iota
 )
 
-const EnablementStatusUsageString = "can be one of [enabled, disabled, auto]"
-
 func (e *EnablementStatus) String() string {
 	switch *e {
 	case EnablementStatusDisabled:

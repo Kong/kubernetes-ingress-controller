@@ -260,55 +260,18 @@ func Run(ctx context.Context, c *Config) error {
 
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", c.Name())
+			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
 	}
-
-	/* TODO: re-enable once fixed
-	if err = (&kongctrl.KongIngressReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongIngress")
-		return err
-	}
-	if err = (&kongctrl.KongClusterPluginReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongClusterPlugin")
-		return err
-	}
-	if err = (&kongctrl.KongPluginReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongPlugin")
-		return err
-	}
-	if err = (&kongctrl.KongConsumerReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongConsumer")
-		return err
-	}
-	*/
 
 	// BUG: kubebuilder (at the time of writing - 3.0.0-rc.1) does not allow this tag anywhere else than main.go
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		return err
+		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		return err
+		return fmt.Errorf("unable to setup readyz: %w", err)
 	}
 
 	setupLog.Info("starting manager")

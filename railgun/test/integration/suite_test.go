@@ -5,7 +5,6 @@ package integration
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -155,8 +154,8 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			}
 		} else {
 			config := manager.Config{}
-			flags := flag.NewFlagSet("", flag.ExitOnError)
-			manager.RegisterFlags(&config, flags)
+
+			flags := manager.MakeFlagSetFor(&config)
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-url=http://%s:8001", adminHost),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),

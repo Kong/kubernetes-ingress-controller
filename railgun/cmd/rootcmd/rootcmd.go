@@ -3,7 +3,6 @@ package rootcmd
 
 import (
 	"context"
-	"flag"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 	"github.com/spf13/cobra"
@@ -11,15 +10,11 @@ import (
 
 var config manager.Config
 
-func bindFlags(cmd *cobra.Command, args []string) {
-	fs := flag.NewFlagSet("", flag.ExitOnError)
-	manager.RegisterFlags(&config, fs)
-	cmd.Flags().AddGoFlagSet(fs)
+func init() {
+	rootCmd.Flags().AddGoFlagSet(manager.MakeFlagSetFor(&config))
 }
 
 var rootCmd = &cobra.Command{
-	Use:    "controller",
-	PreRun: bindFlags,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return manager.Run(cmd.Context(), &config)
 	},

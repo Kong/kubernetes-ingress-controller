@@ -55,6 +55,13 @@ jobs:
               repo: context.repo.repo,
               name: ['ci/license/unchanged']
             })
+    - name: Update PR - go-license output differs
+      continue-on-error: true
+      uses: actions/github-script@v3
+      if: ${{ env.DIFF_OUT != '' }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
             github.issues.addLabels({
               issue_number: context.issue.number,
               owner: context.repo.owner,

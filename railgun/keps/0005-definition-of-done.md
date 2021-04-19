@@ -2,7 +2,7 @@
 status: implemented
 ---
 
-# Kubernetes Ingress Controller (KIC) Minimal Defintion of Done
+# Kubernetes Ingress Controller (KIC) Minimal Definition of Done
 
 ## Summary
 

@@ -663,7 +663,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong:2.2
+        image: kong:2.3
         lifecycle:
           preStop:
             exec:
@@ -719,7 +719,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong-docker-kubernetes-ingress-controller.bintray.io/kong-ingress-controller:1.2
+        image: kong/kubernetes-ingress-controller:1.2
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -756,7 +756,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong:2.2
+        image: kong:2.3
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
 ---
@@ -827,7 +827,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:2.2
+        image: kong:2.3
         name: kong-migrations
       initContainers:
       - command:

@@ -49,24 +49,24 @@ jobs:
               repo: context.repo.repo,
               body: 'Licenses differ between commit ' + context.sha + ' and base:\n```' + process.env.DIFF_OUT + '```'
             })
-            github.issues.removeLabel({
+            github.issues.addLabels({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              name: ['ci/license/unchanged']
+              labels: ['ci/license/changed']
             })
-    - name: Update PR - go-license output differs
+    - name: Update PR - remove unchanged label
       continue-on-error: true
       uses: actions/github-script@v3
       if: ${{ env.DIFF_OUT != '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-            github.issues.addLabels({
+            github.issues.removeLabel({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: ['ci/license/changed']
+              name: ['ci/license/unchanged']
             })
     - name: Update PR - go-license output equal
       uses: actions/github-script@v3

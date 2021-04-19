@@ -28,8 +28,20 @@ type FakeConfigurationV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeConfigurationV1) KongClusterPlugins(namespace string) v1.KongClusterPluginInterface {
+	return &FakeKongClusterPlugins{c, namespace}
+}
+
+func (c *FakeConfigurationV1) KongConsumers(namespace string) v1.KongConsumerInterface {
+	return &FakeKongConsumers{c, namespace}
+}
+
 func (c *FakeConfigurationV1) KongIngresses(namespace string) v1.KongIngressInterface {
 	return &FakeKongIngresses{c, namespace}
+}
+
+func (c *FakeConfigurationV1) KongPlugins(namespace string) v1.KongPluginInterface {
+	return &FakeKongPlugins{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -18,4 +18,10 @@ limitations under the License.
 
 package v1
 
+type KongClusterPluginExpansion interface{}
+
+type KongConsumerExpansion interface{}
+
 type KongIngressExpansion interface{}
+
+type KongPluginExpansion interface{}

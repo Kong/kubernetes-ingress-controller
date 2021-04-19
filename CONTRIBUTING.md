@@ -39,6 +39,32 @@ pull requests that have been inactive awaiting a community response for over 2
 weeks. If you wish to reopen a closed issue or PR to continue work, please
 leave a comment asking a team member to do so.
 
+## When to close an issue
+
+For a GitHub issue describing a problem/feature request:
+
+- **Duplicates**. if there are other issues in the repository describing the same problem/FR:
+
+    1. find the issue that has the most context (possibly not the first reported)
+
+    1. close all other issues with a comment _Duplicate of #XYZ_
+
+- **Resolution by code**. if resolution involves creating PRs:
+
+    1. ensure that all PRs reference the issue they are solving. Keep in mind that the _fixes_/_resolves_ directive only works for PRs merged to the default branch of the repository.
+
+    1. close the issue as soon as all the PRs have been merged to **`main` or `next`**. If it's obvious from PRs that the issue has been resolved, a closing comment on the issue is purely optional.
+
+- **Other resolutions/rejections**. if resolution happens for any other reason (_resolved without code_, _user's question answered_, _won't fix_, _infeasible_, _not useful_, _alternative approach chosen_, _problem will go away in $FUTURE-VERSION_)
+
+    1. close the issue with a comment describing the resolution/reason.
+
+For a closed issue, one can verify which released versions contain the fix/enhancement by navigating into the merge commit of each attached PR, where GitHub lists tags/branches that contain the merge commit.
+Thus:
+- if the list includes a release tag: the fix/enhancement is included in that release tag.
+- if the list includes `next` but no release tags: the fix/enhancement will come in the nearest minor release.
+- if the list includes `main` but no release tags: the fix/enhancement will come in the nearest patch release.
+
 ## Development environment
 
 ## Environment

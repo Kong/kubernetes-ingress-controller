@@ -1,5 +1,5 @@
 ---
-status: provisional
+status: implemented
 ---
 
 # Kubernetes Ingress Controller (KIC) Minimal Defintion of Done

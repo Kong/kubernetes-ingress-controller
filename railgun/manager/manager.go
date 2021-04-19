@@ -100,22 +100,28 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 	return &flagSet.FlagSet
 }
 
+// Controller is a Kubernetes controller that can be plugged into Manager.
 type Controller interface {
 	SetupWithManager(ctrl.Manager) error
 }
 
+// AutoHandler decides whether the specific controller shall be enabled (true) or disabled (false).
 type AutoHandler func(client.Reader) bool
 
+// ControllerDef is a specification of a Controller that can be conditionally registered with Manager.
 type ControllerDef struct {
 	IsEnabled   *util.EnablementStatus
 	AutoHandler AutoHandler
 	Controller  Controller
 }
 
+// Name returns a human-readable name of the controller.
 func (c *ControllerDef) Name() string {
 	return reflect.TypeOf(c.Controller).String()
 }
 
+// MaybeSetupWithManager runs SetupWithManager on the controller if its EnablementStatus is either "enabled", or "auto"
+// and AutoHandler says that it should be enabled.
 func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 	switch *c.IsEnabled {
 	case util.EnablementStatusDisabled:
@@ -276,6 +282,7 @@ func Run(ctx context.Context, c *Config) error {
 	}
 
 	// BUG: kubebuilder (at the time of writing - 3.0.0-rc.1) does not allow this tag anywhere else than main.go
+	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

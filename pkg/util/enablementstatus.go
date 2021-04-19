@@ -6,11 +6,15 @@ import "fmt"
 type EnablementStatus int
 
 const (
+	// EnablementStatusDisabled says that the resource it controls is disabled.
 	EnablementStatusDisabled EnablementStatus = iota
-	EnablementStatusEnabled  EnablementStatus = iota
-	EnablementStatusAuto     EnablementStatus = iota
+	// EnablementStatusEnabled says that the resource it controls is enabled.
+	EnablementStatusEnabled EnablementStatus = iota
+	// EnablementStatusAuto says that whether the resource it controls is enabled or disabled should be decided upon by automation.
+	EnablementStatusAuto EnablementStatus = iota
 )
 
+// String converts EnablementStatus to a lowercase word.
 func (e *EnablementStatus) String() string {
 	switch *e {
 	case EnablementStatusDisabled:
@@ -24,6 +28,7 @@ func (e *EnablementStatus) String() string {
 	}
 }
 
+// Set sets the value of the EnablementStatus to match the provided string value.
 func (e *EnablementStatus) Set(s string) error {
 	for _, val := range []EnablementStatus{
 		EnablementStatusDisabled, EnablementStatusEnabled, EnablementStatusAuto,

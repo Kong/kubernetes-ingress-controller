@@ -107,7 +107,7 @@ generate.clientsets:
 	@client-gen --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base github.com/kong/kubernetes-ingress-controller/railgun/apis/  \
-		--input configuration/v1alpha1,configuration/v1beta1 \
+		--input configuration/v1,configuration/v1alpha1,configuration/v1beta1 \
 		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1/ \
 		--output-base client-gen-tmp/ \
 		--output-package github.com/kong/kubernetes-ingress-controller/railgun/pkg/

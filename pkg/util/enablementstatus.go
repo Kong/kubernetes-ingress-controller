@@ -10,7 +10,8 @@ const (
 	EnablementStatusDisabled EnablementStatus = iota
 	// EnablementStatusEnabled says that the resource it controls is enabled.
 	EnablementStatusEnabled EnablementStatus = iota
-	// EnablementStatusAuto says that whether the resource it controls is enabled or disabled should be decided upon by automation.
+	// EnablementStatusAuto says that whether the resource it controls is enabled
+	// or disabled should be decided upon by automation.
 	EnablementStatusAuto EnablementStatus = iota
 )
 

@@ -20,6 +20,8 @@ package fake
 
 import (
 	clientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1"
+	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1/fake"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1alpha1"
 	fakeconfigurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1alpha1/fake"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/typed/configuration/v1beta1"
@@ -77,6 +79,11 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 }
 
 var _ clientset.Interface = &Clientset{}
+
+// ConfigurationV1 retrieves the ConfigurationV1Client
+func (c *Clientset) ConfigurationV1() configurationv1.ConfigurationV1Interface {
+	return &fakeconfigurationv1.FakeConfigurationV1{Fake: &c.Fake}
+}
 
 // ConfigurationV1alpha1 retrieves the ConfigurationV1alpha1Client
 func (c *Clientset) ConfigurationV1alpha1() configurationv1alpha1.ConfigurationV1alpha1Interface {

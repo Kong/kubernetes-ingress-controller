@@ -5,7 +5,6 @@ package integration
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -155,11 +154,21 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			}
 		} else {
 			config := manager.Config{}
-			flags := flag.NewFlagSet("", flag.ExitOnError)
-			manager.RegisterFlags(&config, flags)
+
+			flags := manager.MakeFlagSetFor(&config)
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-url=http://%s:8001", adminHost),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
+				"--controller-kongstate=enabled",
+				"--controller-ingress-networkingv1=enabled",
+				"--controller-ingress-networkingv1beta1=disabled",
+				"--controller-ingress-extensionsv1beta1=disabled",
+				"--controller-udpingress=enabled",
+				"--controller-tcpingress=disabled",
+				"--controller-kongingress=disabled",
+				"--controller-kongclusterplugin=disabled",
+				"--controller-kongplugin=disabled",
+				"--controller-kongconsumer=disabled",
 			})
 			fmt.Printf("config: %+v\n", config)
 

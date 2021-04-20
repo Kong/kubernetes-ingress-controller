@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,7 @@ func TestMinimalIngress(t *testing.T) {
 	defer func() {
 		if err := cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		}
 	}()

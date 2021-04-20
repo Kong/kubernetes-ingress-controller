@@ -7,20 +7,23 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -41,10 +44,23 @@ type Config struct {
 	KubeconfigPath       string
 
 	ZapOptions zap.Options
+
+	KongStateEnabled         util.EnablementStatus
+	IngressExtV1beta1Enabled util.EnablementStatus
+	IngressNetV1beta1Enabled util.EnablementStatus
+	IngressNetV1Enabled      util.EnablementStatus
+	UDPIngressEnabled        util.EnablementStatus
+	TCPIngressEnabled        util.EnablementStatus
+	KongIngressEnabled       util.EnablementStatus
+	KongClusterPluginEnabled util.EnablementStatus
+	KongPluginEnabled        util.EnablementStatus
+	KongConsumerEnabled      util.EnablementStatus
 }
 
-// RegisterFlags binds the provided Config to commandline flags.
-func RegisterFlags(c *Config, flagSet *flag.FlagSet) {
+// MakeFlagSetFor binds the provided Config to commandline flags.
+func MakeFlagSetFor(c *Config) *flag.FlagSet {
+	flagSet := flagSet{*flag.NewFlagSet("", flag.ExitOnError)}
+
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false,
@@ -57,7 +73,73 @@ func RegisterFlags(c *Config, flagSet *flag.FlagSet) {
 	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
-	c.ZapOptions.BindFlags(flagSet)
+	const onOffUsage = "Can be one of [enabled, disabled]."
+	flagSet.EnablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled,
+		"Enable or disable the KongState controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled,
+		"Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
+	flagSet.EnablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusDisabled,
+		"Enable or disable the Ingress controller (using API version networking.k8s.io/v1beta1)."+onOffUsage)
+	flagSet.EnablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusDisabled,
+		"Enable or disable the Ingress controller (using API version extensions/v1beta1)."+onOffUsage)
+	flagSet.EnablementStatusVar(&c.UDPIngressEnabled, "controller-udpingress", util.EnablementStatusDisabled,
+		"Enable or disable the UDPIngress controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusDisabled,
+		"Enable or disable the TCPIngress controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusDisabled,
+		"Enable or disable the KongIngress controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusDisabled,
+		"Enable or disable the KongClusterPlugin controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusDisabled,
+		"Enable or disable the KongPlugin controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled,
+		"Enable or disable the KongConsumer controller. "+onOffUsage)
+
+	c.ZapOptions.BindFlags(&flagSet.FlagSet)
+
+	return &flagSet.FlagSet
+}
+
+// Controller is a Kubernetes controller that can be plugged into Manager.
+type Controller interface {
+	SetupWithManager(ctrl.Manager) error
+}
+
+// AutoHandler decides whether the specific controller shall be enabled (true) or disabled (false).
+type AutoHandler func(client.Reader) bool
+
+// ControllerDef is a specification of a Controller that can be conditionally registered with Manager.
+type ControllerDef struct {
+	IsEnabled   *util.EnablementStatus
+	AutoHandler AutoHandler
+	Controller  Controller
+}
+
+// Name returns a human-readable name of the controller.
+func (c *ControllerDef) Name() string {
+	return reflect.TypeOf(c.Controller).String()
+}
+
+// MaybeSetupWithManager runs SetupWithManager on the controller if its EnablementStatus is either "enabled", or "auto"
+// and AutoHandler says that it should be enabled.
+func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
+	switch *c.IsEnabled {
+	case util.EnablementStatusDisabled:
+		return nil
+
+	case util.EnablementStatusAuto:
+		if c.AutoHandler == nil {
+			return fmt.Errorf("'auto' enablement not supported for controller %q", c.Name())
+		}
+
+		if enable := c.AutoHandler(mgr.GetAPIReader()); !enable {
+			return nil
+		}
+		fallthrough
+
+	default: // controller enabled
+		return c.Controller.SetupWithManager(mgr)
+	}
 }
 
 // Run starts the controller manager and blocks until it exits.
@@ -94,113 +176,120 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
-	/* TODO: re-enable once fixed
-	if err = (&kongctrl.KongIngressReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongIngress")
-		return err
-	}
-	if err = (&kongctrl.KongClusterPluginReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongClusterPlugin")
-		return err
-	}
-	if err = (&kongctrl.KongPluginReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongPlugin")
-		return err
-	}
-	if err = (&kongctrl.KongConsumerReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KongConsumer")
-		return err
-	}
-	*/
-
 	kongClient, err := kong.NewClient(&c.KongURL, http.DefaultClient)
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err
 	}
 
-	if err = (&kongctrl.SecretReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
-		Scheme: mgr.GetScheme(),
-		Params: kongctrl.SecretReconcilerParams{
-			WatchName:      c.SecretName,
-			WatchNamespace: c.SecretNamespace,
-			KongConfig: sendconfig.Kong{
-				URL:         c.KongURL,
-				FilterTags:  []string{c.FilterTag},
-				Concurrency: c.Concurrency,
-				Client:      kongClient,
+	controllers := []ControllerDef{
+		{
+			IsEnabled: &c.KongStateEnabled,
+			Controller: &kongctrl.SecretReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
+				Scheme: mgr.GetScheme(),
+				Params: kongctrl.SecretReconcilerParams{
+					WatchName:      c.SecretName,
+					WatchNamespace: c.SecretNamespace,
+					KongConfig: sendconfig.Kong{
+						URL:         c.KongURL,
+						FilterTags:  []string{c.FilterTag},
+						Concurrency: c.Concurrency,
+						Client:      kongClient,
+					},
+				},
 			},
 		},
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Secret")
-		return err
+		{
+			IsEnabled: &c.IngressNetV1Enabled,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.IngressNetV1beta1Enabled,
+			Controller: &configuration.NetV1Beta1IngressReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.IngressExtV1beta1Enabled,
+			Controller: &configuration.ExtV1Beta1IngressReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.UDPIngressEnabled,
+			Controller: &kongctrl.KongV1Alpha1UDPIngressReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.TCPIngressEnabled,
+			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.KongIngressEnabled,
+			Controller: &kongctrl.KongIngressReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.KongClusterPluginEnabled,
+			Controller: &kongctrl.KongClusterPluginReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.KongPluginEnabled,
+			Controller: &kongctrl.KongPluginReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
+		{
+			IsEnabled: &c.KongConsumerEnabled,
+			Controller: &kongctrl.KongConsumerReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
+				Scheme: mgr.GetScheme(),
+			},
+		},
 	}
 
-	// TODO - we've got a couple places in here and below where we "short circuit" controllers if the relevant API isn't available.
-	// This is convenient for testing, but maintainers should reconsider this before we release KIC 2.0.
-	// SEE: https://github.com/Kong/kubernetes-ingress-controller/issues/1101
-	if err := kongctrl.SetupIngressControllers(mgr); err != nil {
-		setupLog.Error(err, "unable to create controllers", "controllers", "Ingress")
-		return err
-	}
-
-	// TODO - similar to above, we're short circuiting here. It's convenient, but let's discuss if this is what we want ultimately.
-	// SEE: https://github.com/Kong/kubernetes-ingress-controller/issues/1101
-	udpIngressAvailable, err := kongctrl.IsAPIAvailable(mgr, &v1alpha1.UDPIngress{})
-	if !udpIngressAvailable {
-		setupLog.Error(err, "API configuration.konghq.com/v1alpha1/UDPIngress is not available, skipping controller")
-	} else {
-		if err = (&kongctrl.KongV1Alpha1UDPIngressReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "UDPIngress")
-			return err
+	for _, c := range controllers {
+		if err := c.MaybeSetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
 	}
 
-	tcpIngressAvailable, err := kongctrl.IsAPIAvailable(mgr, &configurationv1beta1.TCPIngress{})
-	if !tcpIngressAvailable {
-		setupLog.Error(err, "API configuration.konghq.com/v1alpha1/TCPIngress is not available, skipping controller")
-	} else {
-		if err = (&kongctrl.KongV1Beta1TCPIngressReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "TCPIngress")
-			return err
-		}
-	}
 	// BUG: kubebuilder (at the time of writing - 3.0.0-rc.1) does not allow this tag anywhere else than main.go
+	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		return err
+		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		return err
+		return fmt.Errorf("unable to setup readyz: %w", err)
 	}
 
 	setupLog.Info("starting manager")

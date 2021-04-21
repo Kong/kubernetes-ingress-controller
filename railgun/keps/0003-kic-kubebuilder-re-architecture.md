@@ -64,6 +64,10 @@ Historically the [Kong Kubernetes Ingress Controller (KIC)][kic] was built on ol
 
 ### Non-Goals
 
+#### Configuration Monolith Re-architecture
+
+When we first started experimenting and prototyping for this KEP we were motivated to deconstruct the existing monolithic controller such that individual controllers for APIs could be separate microservices and autonomous. Due to limitations of maintainer capacity and some desires for upstream changes that would not be able to occur logistically fast enough to support us (namely having a single upstream API to develop against rather than a separate API for DB vs DBLESS Kong instances) we've pulled this work out of scope. We are however still motivated to make this change and continue our re-architecture, just consider it out of scope for this KEP and it will become the subject of its own.
+
 #### Kubebuilder Controller Management
 
 Despite the motivation present in this KEP to automate some of our controller management, logistics and time constraints have led us to keeping the conversion our existing controller to `kubebuilder` managed controllers _out of scope_ for this KEP. For this iteration we will focus on using the API, CRD, and configuration management features of `kubebuilder`, but the controller management features will be considered as part of a later iteration to reduce the number of changes we make with a single release (we will however still convert to controller runtime and ultimately use the kubebuilder provided controller machinery to replace our historical machinery).
@@ -149,5 +153,11 @@ As a user of KIC, I want to be able to inspect the intermediate objects produced
 [legacy-tests]:https://github.com/Kong/kubernetes-ingress-controller/issues/1040
 
 ## Alternatives
+
+### CRD/Secret vs. In-Memory Cache
+
+To help break apart the monolithic controller from 1.x we considered using a `Secret` or `CRD` as the caching location for resources as an interim solution between previous arch and the future arch we wanted to define, however the timing and logistics of that simply didn't work for this KEPs scope and limitations such as maximum object size for `Secrets` led us to stop on this and save it for a later iteration.
+
+### OperatorSDK vs. Kubebuilder
 
 The [OperatorSDK][osdk] from [Redhat][rhel] was considered for our new Kubernetes SDK, but ultimately decided against due to lack of familiarity and preferring a more generic and flexible toolkit.

@@ -112,6 +112,9 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		event := <-ready
 
 		// if there's an error, all tests fail here
+		if event.Err != nil {
+			panic(event.Err)
+		}
 
 		// grab the admin hostname and pass the readiness event on to the tests
 		u := event.ProxyAdminURL

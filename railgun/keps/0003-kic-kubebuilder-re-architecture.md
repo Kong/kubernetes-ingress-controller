@@ -26,6 +26,7 @@ For reference see the milestones related to this proposal to check the progress 
 - [Design Details](#design-details)
   - [Test Plan](#test-plan)
   - [Graduation Criteria](#graduation-criteria)
+  - [Upgrade / Downgrade Strategy](#upgrade--downgrade-strategy)
 - [Implementation History](#implementation-history)
 - [Alternatives](#alternatives)
 <!-- /toc -->
@@ -128,6 +129,76 @@ As a contributor to the KIC I want to be able to quickly contribute new ideas an
 #### Story 4
 
 As a user of KIC, I want to be able to inspect the intermediate objects produced by KIC (collected KongState, generated decK config) for debugging purposes, as inspired by [this review comment](https://github.com/Kong/kubernetes-ingress-controller/pull/991#pullrequestreview-570627606).
+
+## Design Details
+
+This re-architecture is focused on moving the existing APIs, controllers, and libraries onto [Kubebuilder SDK][kb] for multiple expected benefits including (but not limited to):
+
+- reducing large amounts of code, particularly by using [controller-runtime][cr] to replace our own machinery in several places
+- configuring our APIs within the Kubebuilder SDK, making management (creation, update, deletion) of APIs more automated
+- automating management and build of our manifests, including controller manager, CRDs, RBAC configurations, e.t.c.
+- generating our public Go API of `kubernetes.ClientSet` via [client-gen][cg]
+
+These among other gains will bring us closer to how upstream works and will reduce the amount of maintenance we have to perform to keep up to date and add features.
+
+On top of transplanting our APIs and adding a new Go API, we also want to transplant the existing monolithic controller onto `controller-runtime` and align ourselves with other controller implementations throughout the community.
+
+[kb]:https://github.com/kubernetes-sigs/kubebuilder
+[cr]:https://github.com/kubernetes-sigs/controller-runtime
+[cg]:https://github.com/kubernetes/code-generator
+
+### Test Plan
+
+Prior to these efforts only minimal testing for the controller and the API functionality existed, with these efforts we will add a new integration test suite that covers:
+
+- significantly improve our unit testing coverage
+- establish integration tests in Golang which test all our APIs against real Kubernetes clusters
+- document testing requirements for new contributions going forward in CONTRIBUTING.md
+
+**NOTE**: Testing of our new Go API is covered for free by `client-gen`.
+
+#### TCPIngress Example
+
+The following is an example testing plan that outlines how we will test each of our APIs as part of this effort.
+
+##### Validation Tests
+
+- [ ] several valid permutations of each available field in the `TCPIngress` API spec are covered
+- [ ] several invalid permutations of each available field in the `TCPIngress` API spec are covered
+
+##### General Functionality Tests
+
+- [ ] `TCPIngress` resources can be created and route properly to the relevant `Service`, the route becomes available in under 1 minute
+- [ ] `TCPIngress` resources can be updated for a new backend `Service`, the routes change properly in under 1 minute
+- [ ] When `TCPIngress` spec changes, the behavior of persistent connections is tested (backend specific)
+- [ ] When `TCPIngress` spec changes, repeated parallel transient connections to the backend show no failures.
+- [ ] Long running persistent connections (where the backend server doesn't support reconnect mechanisms) disconnect and fail properly when pods change
+- [ ] `TCPIngress` resources can be deleted and the backend route is disconnected in under 1 minute
+
+##### Status Tests
+
+- [ ] `TCPIngress` status is checked for consistent `LoadBalancer` state between creation and multiple updates to the spec
+
+##### Specific Functionality Tests
+
+- [ ] `TCPIngress` ingress TLS configuration
+- [ ] `TCPIngress` ingress TLS configuration for multiple hosts
+
+##### Performance Tests
+
+- [ ] Multiple `TCPIngress` resources can be rapidly created, each backend resolving in under 1 minute
+- [ ] Bulk parallel connections through `TCPIngress` succeed, no failures at KIC/Kong level
+- [ ] Multiple `TCPIngress` resources can be rapidly deleted, each backend route becomes disconnected in under 1 minute
+
+### Graduation Criteria
+
+- [x] all APIs are ported to the new architecture
+- [x] all APIs are exposed via the public Go API
+- [x] all APIs are given a controller responsible for ingest of the relevant resources
+- [ ] the existing controller that configures the Kong Admin API is ported
+- [ ] all APIs receive new automated testing equivalent to the example provided in the above `Testing Plan` section
+- [ ] an alpha release cycle with feedback and bug reporting is conducted
+- [ ] an beta release cycle with feedback and bug reporting is conducted maintaining backwards compatibility
 
 ## Implementation History
 

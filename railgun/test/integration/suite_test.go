@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -89,6 +90,10 @@ func TestMain(m *testing.M) {
 var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongplugins.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
 }
 
 // FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
@@ -128,6 +133,29 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			panic(err)
 		}
 		kubeconfig.Close()
+
+		// cleanup any previously existing CRDs
+		// TODO: can disable when we fix:
+		//       https://github.com/Kong/kubernetes-testing-framework/issues/19
+		crdCleanup := []string{
+			"kongclusterplugins.configuration.konghq.com",
+			"kongconsumers.configuration.konghq.com",
+			"kongingresses.configuration.konghq.com",
+			"kongplugins.configuration.konghq.com",
+			"tcpingresses.configuration.konghq.com",
+		}
+		for _, crd := range crdCleanup {
+			cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "delete", "crd", crd)
+			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+			cmd.Stdout = stdout
+			cmd.Stderr = stderr
+			if err := cmd.Run(); err != nil {
+				if !strings.Contains(stderr.String(), "not found") {
+					fmt.Fprintln(os.Stdout, stdout.String())
+					panic(fmt.Errorf("%s: %w", stderr.String(), err))
+				}
+			}
+		}
 
 		// deploy our CRDs to the cluster
 		for _, crd := range crds {

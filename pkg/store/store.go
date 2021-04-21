@@ -221,7 +221,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	//
 	// TODO: we expect to be able to remove these older duplicate APIs in favor of
 	//       the ones above prior to releasing KIC 2.0.
-	//       SEE: https://github.com/Kong/kubernetes-ingress-controller/milestone/12
+	//       SEE: https://github.com/Kong/kubernetes-ingress-controller/issues/1217
 	//
 	// ----------------------------------------------------------------------------
 	case *legacyv1.KongPlugin:

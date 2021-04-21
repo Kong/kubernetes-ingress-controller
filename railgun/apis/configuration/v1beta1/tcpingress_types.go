@@ -29,8 +29,7 @@ import (
 
 // TCPIngress is the Schema for the tcpingresses API
 type TCPIngress struct {
-	metav1.TypeMeta `json:",inline"`
-	// +optional
+	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   TCPIngressSpec   `json:"spec,omitempty"`
@@ -58,13 +57,6 @@ type TCPIngressSpec struct {
 	// effect.
 	// +optional
 	TLS []IngressTLS `json:"tls,omitempty"`
-}
-
-// TCPIngressStatus defines the observed state of TCPIngress
-type TCPIngressStatus struct {
-	// LoadBalancer contains the current status of the load-balancer.
-	// +optional
-	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`
 }
 
 // IngressTLS describes the transport layer security.
@@ -107,6 +99,13 @@ type IngressBackend struct {
 
 	// Specifies the port of the referenced service.
 	ServicePort int `json:"servicePort"`
+}
+
+// TCPIngressStatus defines the observed state of TCPIngress
+type TCPIngressStatus struct {
+	// LoadBalancer contains the current status of the load-balancer.
+	// +optional
+	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`
 }
 
 func init() {

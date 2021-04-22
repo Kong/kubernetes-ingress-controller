@@ -190,15 +190,6 @@ The following is an example testing plan that outlines how we may test each of o
 - [ ] Bulk parallel connections through `TCPIngress` succeed, no failures at KIC/Kong level
 - [ ] Multiple `TCPIngress` resources can be rapidly deleted, each backend route becomes disconnected in under 1 minute
 
-### Graduation Criteria
-
-- [x] all APIs are ported to the new architecture
-- [x] all APIs are exposed via the public Go API
-- [x] all APIs are given a controller responsible for ingest of the relevant resources
-- [ ] the existing controller that configures the Kong Admin API is ported
-- [ ] all APIs receive new automated testing equivalent to the example provided in the above `Testing Plan` section
-- [ ] an alpha release cycle with feedback and bug reporting is conducted
-- [ ] an beta release cycle with feedback and bug reporting is conducted maintaining backwards compatibility
 
 ## Implementation History
 

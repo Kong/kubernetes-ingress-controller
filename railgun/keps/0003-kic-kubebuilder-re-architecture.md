@@ -159,7 +159,7 @@ Prior to these efforts only minimal testing for the controller and the API funct
 
 #### TCPIngress Example
 
-The following is an example testing plan that outlines how we will test each of our APIs as part of this effort.
+The following is an example testing plan that outlines how we may test each of our APIs as part of this effort. This is only an example, the actual testing plans may vary.
 
 ##### Validation Tests
 

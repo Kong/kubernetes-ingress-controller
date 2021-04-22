@@ -157,40 +157,6 @@ Prior to these efforts only minimal testing for the controller and the API funct
 
 **NOTE**: Testing of our new Go API is covered for free by `client-gen`.
 
-#### TCPIngress Example
-
-The following is an example testing plan that outlines how we may test each of our APIs as part of this effort. This is only an example, the actual testing plans may vary.
-
-##### Validation Tests
-
-- [ ] several valid permutations of each available field in the `TCPIngress` API spec are covered
-- [ ] several invalid permutations of each available field in the `TCPIngress` API spec are covered
-
-##### General Functionality Tests
-
-- [ ] `TCPIngress` resources can be created and route properly to the relevant `Service`, the route becomes available in under 1 minute
-- [ ] `TCPIngress` resources can be updated for a new backend `Service`, the routes change properly in under 1 minute
-- [ ] When `TCPIngress` spec changes, the behavior of persistent connections is tested (backend specific)
-- [ ] When `TCPIngress` spec changes, repeated parallel transient connections to the backend show no failures.
-- [ ] Long running persistent connections (where the backend server doesn't support reconnect mechanisms) disconnect and fail properly when pods change
-- [ ] `TCPIngress` resources can be deleted and the backend route is disconnected in under 1 minute
-
-##### Status Tests
-
-- [ ] `TCPIngress` status is checked for consistent `LoadBalancer` state between creation and multiple updates to the spec
-
-##### Specific Functionality Tests
-
-- [ ] `TCPIngress` ingress TLS configuration
-- [ ] `TCPIngress` ingress TLS configuration for multiple hosts
-
-##### Performance Tests
-
-- [ ] Multiple `TCPIngress` resources can be rapidly created, each backend resolving in under 1 minute
-- [ ] Bulk parallel connections through `TCPIngress` succeed, no failures at KIC/Kong level
-- [ ] Multiple `TCPIngress` resources can be rapidly deleted, each backend route becomes disconnected in under 1 minute
-
-
 ## Implementation History
 
 - spike and prototype started to re-architect the KIC and move it to modern tooling: https://github.com/kong/railgun

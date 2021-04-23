@@ -5,11 +5,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"reflect"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
@@ -44,6 +44,8 @@ type Config struct {
 	SecretNamespace      string
 	KubeconfigPath       string
 
+	KongAdminAPIConfig adminapi.HTTPClientOpts
+
 	ZapOptions zap.Options
 
 	KongStateEnabled         util.EnablementStatus
@@ -73,6 +75,18 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.StringVar(&c.SecretName, "secret-name", "kong-config", "TODO")
 	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
+
+	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
+		"Disable verification of TLS certificate of Kong's Admin endpoint.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSServerName, "kong-admin-tls-server-name", "",
+		"SNI name to use to verify the certificate presented by Kong in TLS.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.CACertPath, "kong-admin-ca-cert-file", "",
+		`Path to PEM-encoded CA certificate file to verify
+Kong's Admin SSL certificate.`)
+	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "",
+		`PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
+	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil,
+		`add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
 
 	const onOffUsage = "Can be one of [enabled, disabled]."
 	flagSet.EnablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled,
@@ -179,7 +193,12 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
-	kongClient, err := kong.NewClient(&c.KongURL, http.DefaultClient)
+	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+	if err != nil {
+		setupLog.Error(err, "cannot create a Kong Admin API client")
+	}
+
+	kongClient, err := kong.NewClient(&c.KongURL, httpclient)
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err

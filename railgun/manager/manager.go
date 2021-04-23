@@ -5,11 +5,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"reflect"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -43,6 +44,8 @@ type Config struct {
 	SecretNamespace      string
 	KubeconfigPath       string
 
+	KongAdminAPIConfig adminapi.HTTPClientOpts
+
 	ZapOptions zap.Options
 
 	KongStateEnabled         util.EnablementStatus
@@ -58,8 +61,8 @@ type Config struct {
 }
 
 // MakeFlagSetFor binds the provided Config to commandline flags.
-func MakeFlagSetFor(c *Config) *flag.FlagSet {
-	flagSet := flagSet{*flag.NewFlagSet("", flag.ExitOnError)}
+func MakeFlagSetFor(c *Config) *pflag.FlagSet {
+	flagSet := flagSet{*pflag.NewFlagSet("", pflag.ExitOnError)}
 
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -72,6 +75,18 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 	flagSet.StringVar(&c.SecretName, "secret-name", "kong-config", "TODO")
 	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
+
+	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
+		"Disable verification of TLS certificate of Kong's Admin endpoint.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSServerName, "kong-admin-tls-server-name", "",
+		"SNI name to use to verify the certificate presented by Kong in TLS.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.CACertPath, "kong-admin-ca-cert-file", "",
+		`Path to PEM-encoded CA certificate file to verify
+Kong's Admin SSL certificate.`)
+	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "",
+		`PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
+	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil,
+		`add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
 
 	const onOffUsage = "Can be one of [enabled, disabled]."
 	flagSet.EnablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled,
@@ -95,7 +110,9 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 	flagSet.EnablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled,
 		"Enable or disable the KongConsumer controller. "+onOffUsage)
 
-	c.ZapOptions.BindFlags(&flagSet.FlagSet)
+	zapFlagSet := flag.NewFlagSet("", flag.ExitOnError)
+	c.ZapOptions.BindFlags(zapFlagSet)
+	flagSet.AddGoFlagSet(zapFlagSet)
 
 	return &flagSet.FlagSet
 }
@@ -176,7 +193,12 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
-	kongClient, err := kong.NewClient(&c.KongURL, http.DefaultClient)
+	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+	if err != nil {
+		setupLog.Error(err, "cannot create a Kong Admin API client")
+	}
+
+	kongClient, err := kong.NewClient(&c.KongURL, httpclient)
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err

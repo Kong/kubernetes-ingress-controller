@@ -1,14 +1,13 @@
 package manager
 
 import (
-	"flag"
-
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/spf13/pflag"
 )
 
 // flagSet extends flag.FlagSet with additional variable types.
 type flagSet struct {
-	flag.FlagSet
+	pflag.FlagSet
 }
 
 // EnablementStatusVar defines a flag of type EnablementStatus.

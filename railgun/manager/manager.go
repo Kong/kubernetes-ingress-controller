@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -58,8 +59,8 @@ type Config struct {
 }
 
 // MakeFlagSetFor binds the provided Config to commandline flags.
-func MakeFlagSetFor(c *Config) *flag.FlagSet {
-	flagSet := flagSet{*flag.NewFlagSet("", flag.ExitOnError)}
+func MakeFlagSetFor(c *Config) *pflag.FlagSet {
+	flagSet := flagSet{*pflag.NewFlagSet("", pflag.ExitOnError)}
 
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -95,7 +96,9 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 	flagSet.EnablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled,
 		"Enable or disable the KongConsumer controller. "+onOffUsage)
 
-	c.ZapOptions.BindFlags(&flagSet.FlagSet)
+	zapFlagSet := flag.NewFlagSet("", flag.ExitOnError)
+	c.ZapOptions.BindFlags(zapFlagSet)
+	flagSet.AddGoFlagSet(zapFlagSet)
 
 	return &flagSet.FlagSet
 }

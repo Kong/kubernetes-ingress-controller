@@ -11,7 +11,7 @@ import (
 var config manager.Config
 
 func init() {
-	rootCmd.Flags().AddGoFlagSet(manager.MakeFlagSetFor(&config))
+	rootCmd.Flags().AddFlagSet(manager.MakeFlagSetFor(&config))
 }
 
 var rootCmd = &cobra.Command{

@@ -122,6 +122,7 @@ type CacheStores struct {
 	ClusterPlugin cache.Store
 	Consumer      cache.Store
 	Configuration cache.Store
+	KongIngress   cache.Store
 
 	KnativeIngress cache.Store
 }
@@ -140,6 +141,7 @@ func NewCacheStores() (c CacheStores) {
 	c.Service = cache.NewStore(keyFunc)
 	c.TCPIngress = cache.NewStore(keyFunc)
 	c.UDPIngress = cache.NewStore(keyFunc)
+	c.KongIngress = cache.NewStore(keyFunc)
 	return
 }
 
@@ -211,6 +213,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.ClusterPlugin.Add(obj)
 	case *kongv1.KongConsumer:
 		return c.Consumer.Add(obj)
+	case *kongv1.KongIngress:
+		return c.KongIngress.Add(obj)
 	case *kongv1beta1.TCPIngress:
 		return c.TCPIngress.Add(obj)
 	case *kongv1alpha1.UDPIngress:
@@ -228,6 +232,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Plugin.Add(obj)
 	case *legacyv1.KongClusterPlugin:
 		return c.ClusterPlugin.Add(obj)
+	case *legacyv1.KongIngress:
+		return c.KongIngress.Add(obj)
 	case *legacyv1.KongConsumer:
 		return c.Consumer.Add(obj)
 	case *legacyv1.ConfigSource:
@@ -619,6 +625,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &networkingv1.Ingress{}, nil
 	case legacyv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
 		return &legacyv1beta1.TCPIngress{}, nil
+	case legacyv1.SchemeGroupVersion.WithKind("KongIngress"):
+		return &legacyv1.KongIngress{}, nil
 	case kongv1alpha1.SchemeGroupVersion.WithKind("UDPIngress"):
 		return &kongv1alpha1.UDPIngress{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):

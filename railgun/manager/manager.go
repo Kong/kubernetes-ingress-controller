@@ -86,7 +86,7 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 		"Enable or disable the UDPIngress controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusDisabled,
 		"Enable or disable the TCPIngress controller. "+onOffUsage)
-	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusDisabled,
+	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusEnabled,
 		"Enable or disable the KongIngress controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusDisabled,
 		"Enable or disable the KongClusterPlugin controller. "+onOffUsage)

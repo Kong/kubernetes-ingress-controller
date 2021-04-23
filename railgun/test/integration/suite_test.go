@@ -172,7 +172,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-ingress-extensionsv1beta1=disabled",
 				"--controller-udpingress=enabled",
 				"--controller-tcpingress=enabled",
-				"--controller-kongingress=disabled",
+				"--controller-kongingress=enabled",
 				"--controller-kongclusterplugin=disabled",
 				"--controller-kongplugin=disabled",
 				"--controller-kongconsumer=disabled",

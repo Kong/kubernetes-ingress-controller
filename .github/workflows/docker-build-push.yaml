@@ -1,0 +1,94 @@
+name: Build and push development images
+
+on:
+  push:
+    branches:
+      - 'main-test'
+    tags:
+      - '*'
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - name: Login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - uses: actions/checkout@v2.2.0
+        with:
+          fetch-depth: 0
+      - name: Get Latest Tag
+        id: latest_tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+      - name: Docker meta (alpine)
+        id: meta_alpine
+        uses: crazy-max/ghaction-docker-meta@v2
+        with:
+          images: traines/kic
+          flavor: |
+            latest=false
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch,suffix=-alpine
+            type=semver,pattern={{version}},suffix=-alpine
+            type=semver,pattern={{major}}.{{minor}},suffix=-alpine
+      - name: Docker meta (redhat)
+        id: meta_redhat
+        uses: crazy-max/ghaction-docker-meta@v2
+        with:
+          images: traines/kic
+          flavor: |
+            latest=false
+            suffix=-redhat
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Build binary
+        env:
+          TAG: ${{ steps.latest_tag.outputs.tag }}
+          COMMIT: ${{ github.sha }}
+          REPO_INFO: https://github.com/${{ github.repository }}.git
+        id: docker_build_binary
+        uses: docker/build-push-action@v2
+        with:
+          push: false
+          file: Dockerfile
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          target: build
+      - name: Build and push Alpine
+        id: docker_build_alpine
+        env:
+          TAG: ${{ steps.latest_tag.outputs.tag }}
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta_alpine.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: alpine
+      - name: Build and push RedHat
+        id: docker_build_redhat
+        env:
+          TAG: ${{ steps.latest_tag.outputs.tag }}
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta_redhat.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: redhat

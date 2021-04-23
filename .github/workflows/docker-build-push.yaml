@@ -35,7 +35,7 @@ jobs:
         id: meta_alpine
         uses: crazy-max/ghaction-docker-meta@v2
         with:
-          images: traines/kic
+          images: kong/kubernetes-ingress-controller
           flavor: |
             latest=false
           tags: |
@@ -49,7 +49,7 @@ jobs:
         id: meta_redhat
         uses: crazy-max/ghaction-docker-meta@v2
         with:
-          images: traines/kic
+          images: kong/kubernetes-ingress-controller
           flavor: |
             latest=false
             suffix=-redhat

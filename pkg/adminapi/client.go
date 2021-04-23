@@ -20,6 +20,7 @@ type HTTPClientOpts struct {
 // MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
 // BUG: This function overwrites the default transport and client in package http!
 // This problem is being left as-is during refactoring to avoid regression of untested code.
+// https://github.com/Kong/kubernetes-ingress-controller/issues/1233
 func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	defaultTransport := http.DefaultTransport.(*http.Transport)
 

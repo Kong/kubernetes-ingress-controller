@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -39,6 +38,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
+	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
@@ -107,66 +107,6 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 
 		DumpConfig: cliConfig.DumpConfig,
 	}
-}
-
-// HTTPClientOpts defines parameters that configure an HTTP client.
-type HTTPClientOpts struct {
-	TLSSkipVerify bool
-	TLSServerName string
-	CACertPath    string
-	CACert        string
-	Headers       []string
-}
-
-func makeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
-	defaultTransport := http.DefaultTransport.(*http.Transport)
-
-	var tlsConfig tls.Config
-
-	if opts.TLSSkipVerify {
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	if opts.TLSServerName != "" {
-		tlsConfig.ServerName = opts.TLSServerName
-	}
-
-	if opts.CACertPath != "" && opts.CACert != "" {
-		return nil, fmt.Errorf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
-			"are set; please remove one or the other")
-	}
-	if opts.CACert != "" {
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(opts.CACert))
-		if !ok {
-			// TODO give user an error to make this actionable
-			return nil, fmt.Errorf("failed to load kong-admin-ca-cert")
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	if opts.CACertPath != "" {
-		certPath := opts.CACertPath
-		certPool := x509.NewCertPool()
-		cert, err := ioutil.ReadFile(certPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read kong-admin-ca-cert from path '%s': %w", certPath, err)
-		}
-		ok := certPool.AppendCertsFromPEM(cert)
-		if !ok {
-			// TODO give user an error to make this actionable
-			return nil, fmt.Errorf("failed to load kong-admin-ca-cert from path '%s'", certPath)
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	defaultTransport.TLSClientConfig = &tlsConfig
-	c := http.DefaultClient
-	// BUG: this overwrites the DefaultClient instance!
-	c.Transport = &HeaderRoundTripper{
-		headers: opts.Headers,
-		rt:      defaultTransport,
-	}
-
-	return c, nil
 }
 
 func init() {
@@ -257,8 +197,8 @@ func main() {
 
 	controllerConfig.KubeClient = kubeClient
 
-	c, err := makeHTTPClient(
-		&HTTPClientOpts{
+	c, err := adminapi.MakeHTTPClient(
+		&adminapi.HTTPClientOpts{
 			TLSSkipVerify: cliConfig.KongAdminTLSSkipVerify,
 			TLSServerName: cliConfig.KongAdminTLSServerName,
 			CACertPath:    cliConfig.KongAdminCACertPath,

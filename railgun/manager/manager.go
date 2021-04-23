@@ -243,7 +243,7 @@ func Run(ctx context.Context, c *Config) error {
 		},
 		{
 			IsEnabled: &c.KongIngressEnabled,
-			Controller: &kongctrl.KongIngressReconciler{
+			Controller: &kongctrl.KongV1KongIngressReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
 				Scheme: mgr.GetScheme(),
@@ -251,7 +251,7 @@ func Run(ctx context.Context, c *Config) error {
 		},
 		{
 			IsEnabled: &c.KongClusterPluginEnabled,
-			Controller: &kongctrl.KongClusterPluginReconciler{
+			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme: mgr.GetScheme(),
@@ -259,7 +259,7 @@ func Run(ctx context.Context, c *Config) error {
 		},
 		{
 			IsEnabled: &c.KongPluginEnabled,
-			Controller: &kongctrl.KongPluginReconciler{
+			Controller: &kongctrl.KongV1KongPluginReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
 				Scheme: mgr.GetScheme(),
@@ -267,7 +267,7 @@ func Run(ctx context.Context, c *Config) error {
 		},
 		{
 			IsEnabled: &c.KongConsumerEnabled,
-			Controller: &kongctrl.KongConsumerReconciler{
+			Controller: &kongctrl.KongV1KongConsumerReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
 				Scheme: mgr.GetScheme(),

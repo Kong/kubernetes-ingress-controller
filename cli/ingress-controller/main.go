@@ -109,34 +109,43 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 	}
 }
 
-func makeHTTPClient(cliConfig *cliConfig) (*http.Client, error) {
+// HTTPClientOpts defines parameters that configure an HTTP client.
+type HTTPClientOpts struct {
+	TLSSkipVerify bool
+	TLSServerName string
+	CACertPath    string
+	CACert        string
+	Headers       []string
+}
+
+func makeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	defaultTransport := http.DefaultTransport.(*http.Transport)
 
 	var tlsConfig tls.Config
 
-	if cliConfig.KongAdminTLSSkipVerify {
+	if opts.TLSSkipVerify {
 		tlsConfig.InsecureSkipVerify = true
 	}
 
-	if cliConfig.KongAdminTLSServerName != "" {
-		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
+	if opts.TLSServerName != "" {
+		tlsConfig.ServerName = opts.TLSServerName
 	}
 
-	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
+	if opts.CACertPath != "" && opts.CACert != "" {
 		return nil, fmt.Errorf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
 			"are set; please remove one or the other")
 	}
-	if cliConfig.KongAdminCACert != "" {
+	if opts.CACert != "" {
 		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
+		ok := certPool.AppendCertsFromPEM([]byte(opts.CACert))
 		if !ok {
 			// TODO give user an error to make this actionable
 			return nil, fmt.Errorf("failed to load kong-admin-ca-cert")
 		}
 		tlsConfig.RootCAs = certPool
 	}
-	if cliConfig.KongAdminCACertPath != "" {
-		certPath := cliConfig.KongAdminCACertPath
+	if opts.CACertPath != "" {
+		certPath := opts.CACertPath
 		certPool := x509.NewCertPool()
 		cert, err := ioutil.ReadFile(certPath)
 		if err != nil {
@@ -153,7 +162,7 @@ func makeHTTPClient(cliConfig *cliConfig) (*http.Client, error) {
 	c := http.DefaultClient
 	// BUG: this overwrites the DefaultClient instance!
 	c.Transport = &HeaderRoundTripper{
-		headers: cliConfig.KongAdminHeaders,
+		headers: opts.Headers,
 		rt:      defaultTransport,
 	}
 
@@ -248,7 +257,15 @@ func main() {
 
 	controllerConfig.KubeClient = kubeClient
 
-	c, err := makeHTTPClient(&cliConfig)
+	c, err := makeHTTPClient(
+		&HTTPClientOpts{
+			TLSSkipVerify: cliConfig.KongAdminTLSSkipVerify,
+			TLSServerName: cliConfig.KongAdminTLSServerName,
+			CACertPath:    cliConfig.KongAdminCACertPath,
+			CACert:        cliConfig.KongAdminCACert,
+			Headers:       cliConfig.KongAdminHeaders,
+		},
+	)
 	if err != nil {
 		log.Fatalf("%s: %v", invalidConfErrPrefix, err)
 	}

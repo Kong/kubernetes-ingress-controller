@@ -5,5 +5,5 @@ patchesStrategicMerge:
 - kong-enterprise.yaml
 images:
 - name: kong
-  newName: kong-docker-kong-enterprise-edition-docker.bintray.io/kong-enterprise-edition
-  newTag: 2.2.0.0-alpine
+  newName: kong/kong-gateway
+  newTag: 2.3.3.2-alpine

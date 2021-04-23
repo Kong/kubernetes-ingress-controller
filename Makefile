@@ -55,22 +55,22 @@ verify-tidy:
 .PHONY: container-alpine
 container-alpine:
 	docker build \
-    --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
-    --build-arg REPO_INFO=${REPO_INFO} \
-    --target alpine \
-    -t ${IMAGE}:${TAG}-alpine .
+	--build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+	--build-arg REPO_INFO=${REPO_INFO} \
+	--target alpine \
+	-t ${IMAGE}:${TAG}-alpine .
 
 .PHONY: container-redhat
 container-redhat:
 	docker build \
-    --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
-    --build-arg REPO_INFO=${REPO_INFO} \
-    --target redhat \
-    -t ${IMAGE}:${TAG}-redhat .
+	--build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+	--build-arg REPO_INFO=${REPO_INFO} \
+	--target redhat \
+	-t ${IMAGE}:${TAG}-redhat .
 
 .PHONY: container
 container: container-alpine
-  docker tag "${IMAGE}:${TAG}-alpine" "${IMAGE}:${TAG}"
+	docker tag "${IMAGE}:${TAG}-alpine" "${IMAGE}:${TAG}"
 
 .PHONY: run
 run:

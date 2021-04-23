@@ -1,4 +1,4 @@
-
+KIND_CLUSTER_NAME ?= "integration-tests"
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -122,6 +122,19 @@ generate.controllers:
 # Cleanup any deployed test proxies
 clean.test.proxy:
 	helm uninstall --namespace kong-system kong-test-proxy
+
+# Create only the base cluster that would be used for integration tests.
+# This can be helpful when developing new tests, as you can deploy the cluster
+# and run the test suite setup but then run tests individually against the cluster:
+#
+#   $ make test.integration.cluster KIND_CLUSTER_NAME="integration-tests"
+#   $ export KIND_CLUSTER="integration-tests"
+#   $ go test -v -run 'TestTCPIngress' ./test/integration/
+.PHONY: test.integration.cluster
+test.integration.cluster:
+	@./scripts/setup-integration-tests.sh
+	@go clean -testcache
+	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
 # Our integration tests
 .PHONY: test.integration

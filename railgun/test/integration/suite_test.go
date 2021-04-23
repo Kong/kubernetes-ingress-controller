@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"testing"
@@ -60,25 +61,43 @@ func TestMain(m *testing.M) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(clusterDeployWait))
 	defer cancel()
 
-	// create a new cluster for tests
-	config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
-	newCluster, ready, err := config.Deploy(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(10)
+	var err error
+	var existingClusterInUse bool
+	ready := make(chan ktfkind.ProxyReadinessEvent)
+	if existingClusterName := os.Getenv("KIND_CLUSTER"); existingClusterName != "" {
+		existingClusterInUse = true
+		cluster, err = ktfkind.GetExistingCluster(existingClusterName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(10)
+		}
+		go waitForExistingClusterReadiness(ctx, cluster, existingClusterName, ready)
+	} else {
+		// create a new cluster for tests
+		config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
+		if name := os.Getenv("KIND_CLUSTER_NAME"); name != "" {
+			cluster, ready, err = config.DeployWithName(ctx, name)
+		} else {
+			cluster, ready, err = config.Deploy(ctx)
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(12)
+		}
+		defer cluster.Cleanup()
 	}
-	defer newCluster.Cleanup()
-	cluster = newCluster
 
 	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
 	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllers.DefaultNamespace); err != nil {
-		newCluster.Cleanup()
+		cluster.Cleanup()
 		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(11)
+		os.Exit(13)
 	}
 
 	code := m.Run()
-	newCluster.Cleanup()
+	if !existingClusterInUse {
+		cluster.Cleanup()
+	}
 	os.Exit(code)
 }
 
@@ -222,4 +241,45 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	)
 
 	return cmd
+}
+
+func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluster, name string, ready chan ktfkind.ProxyReadinessEvent) {
+	var proxyAdminURL *url.URL
+	var proxyURL *url.URL
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Fprintf(os.Stderr, "ERROR: timed out waiting for readiness from existing cluster %s", name)
+			os.Exit(11)
+		default:
+			svcs, err := cluster.Client().CoreV1().Services(controllers.DefaultNamespace).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				ready <- ktfkind.ProxyReadinessEvent{Err: err}
+				break
+			}
+			for _, svc := range svcs.Items {
+				if svc.Name == "ingress-controller-kong-admin" && len(svc.Status.LoadBalancer.Ingress) == 1 {
+					proxyAdminURL, err = url.Parse(fmt.Sprintf("http://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 8001))
+					if err != nil {
+						ready <- ktfkind.ProxyReadinessEvent{Err: err}
+						break
+					}
+				} else if svc.Name == "ingress-controller-kong-proxy" && len(svc.Status.LoadBalancer.Ingress) == 1 {
+					proxyURL, err = url.Parse(fmt.Sprintf("http://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 80))
+					if err != nil {
+						ready <- ktfkind.ProxyReadinessEvent{Err: err}
+						break
+					}
+				}
+			}
+		}
+		if proxyAdminURL != nil && proxyURL != nil {
+			ready <- ktfkind.ProxyReadinessEvent{
+				ProxyAdminURL: proxyAdminURL,
+				ProxyURL:      proxyURL,
+			}
+			break
+		}
+		time.Sleep(time.Millisecond * 200)
+	}
 }

@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/configsecret"
 )
@@ -122,6 +123,18 @@ func storeIngressServiceBackends(ctx context.Context, c client.Client, secret *c
 				}
 				return storeEndpoints(ctx, c, secret, &svc, nsn)
 			}
+		}
+	case *kongv1beta1.TCPIngress:
+		for _, rule := range ing.Spec.Rules {
+			svc := corev1.Service{}
+			nsn := types.NamespacedName{Namespace: nsn.Namespace, Name: rule.Backend.ServiceName}
+			if err := c.Get(ctx, nsn, &svc); err != nil {
+				return err
+			}
+			if err := storeRuntimeObject(ctx, c, secret, &svc, nsn); err != nil {
+				return err
+			}
+			return storeEndpoints(ctx, c, secret, &svc, nsn)
 		}
 	}
 	return nil

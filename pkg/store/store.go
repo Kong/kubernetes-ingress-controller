@@ -39,10 +39,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	legacyv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	legacyv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
 const (
@@ -69,19 +71,19 @@ type Storer interface {
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
-	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
-	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
-	GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error)
-	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
+	GetKongIngress(namespace, name string) (*legacyv1.KongIngress, error)
+	GetKongPlugin(namespace, name string) (*legacyv1.KongPlugin, error)
+	GetKongClusterPlugin(name string) (*legacyv1.KongClusterPlugin, error)
+	GetKongConsumer(namespace, name string) (*legacyv1.KongConsumer, error)
 
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
-	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
-	ListUDPIngresses() ([]*configurationv1alpha1.UDPIngress, error)
+	ListTCPIngresses() ([]*legacyv1beta1.TCPIngress, error)
+	ListUDPIngresses() ([]*kongv1alpha1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
-	ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error)
-	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
-	ListKongConsumers() []*configurationv1.KongConsumer
+	ListGlobalKongPlugins() ([]*legacyv1.KongPlugin, error)
+	ListGlobalKongClusterPlugins() ([]*legacyv1.KongClusterPlugin, error)
+	ListKongConsumers() []*legacyv1.KongConsumer
 	ListCACerts() ([]*corev1.Secret, error)
 }
 
@@ -187,28 +189,54 @@ func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
 // The CacheStore must be initialized (see NewCacheStores()) or this will panic.
 func (c CacheStores) Add(obj runtime.Object) error {
 	switch obj := obj.(type) {
+	// ----------------------------------------------------------------------------
+	// Kubernetes Core API Support
+	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
 		return c.IngressV1beta1.Add(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Add(obj)
-	case *configurationv1beta1.TCPIngress:
-		return c.TCPIngress.Add(obj)
-	case *configurationv1alpha1.UDPIngress:
-		return c.UDPIngress.Add(obj)
 	case *corev1.Service:
 		return c.Service.Add(obj)
 	case *corev1.Secret:
 		return c.Secret.Add(obj)
 	case *corev1.Endpoints:
 		return c.Endpoint.Add(obj)
-	case *configurationv1.KongPlugin:
+	// ----------------------------------------------------------------------------
+	// Kong API Support
+	// ----------------------------------------------------------------------------
+	case *kongv1.KongPlugin:
 		return c.Plugin.Add(obj)
-	case *configurationv1.KongClusterPlugin:
+	case *kongv1.KongClusterPlugin:
 		return c.ClusterPlugin.Add(obj)
-	case *configurationv1.KongConsumer:
+	case *kongv1.KongConsumer:
 		return c.Consumer.Add(obj)
-	case *configurationv1.ConfigSource:
+	case *kongv1beta1.TCPIngress:
+		return c.TCPIngress.Add(obj)
+	case *kongv1alpha1.UDPIngress:
+		return c.UDPIngress.Add(obj)
+	// ----------------------------------------------------------------------------
+	// Legacy Kong API Support
+	// ***********************
+	//
+	// TODO: we expect to be able to remove these older duplicate APIs in favor of
+	//       the ones above prior to releasing KIC 2.0.
+	//       SEE: https://github.com/Kong/kubernetes-ingress-controller/issues/1217
+	//
+	// ----------------------------------------------------------------------------
+	case *legacyv1.KongPlugin:
+		return c.Plugin.Add(obj)
+	case *legacyv1.KongClusterPlugin:
+		return c.ClusterPlugin.Add(obj)
+	case *legacyv1.KongConsumer:
+		return c.Consumer.Add(obj)
+	case *legacyv1.ConfigSource:
 		return c.Configuration.Add(obj)
+	case *legacyv1beta1.TCPIngress:
+		return c.TCPIngress.Add(obj)
+	// ----------------------------------------------------------------------------
+	// 3rd Party API Support
+	// ----------------------------------------------------------------------------
 	case *knative.Ingress:
 		return c.KnativeIngress.Add(obj)
 	default:
@@ -317,11 +345,11 @@ func (s Store) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
 
 // ListTCPIngresses returns the list of TCP Ingresses from
 // configuration.konghq.com group.
-func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
-	var ingresses []*configurationv1beta1.TCPIngress
+func (s Store) ListTCPIngresses() ([]*legacyv1beta1.TCPIngress, error) {
+	var ingresses []*legacyv1beta1.TCPIngress
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
 		func(ob interface{}) {
-			ing, ok := ob.(*configurationv1beta1.TCPIngress)
+			ing, ok := ob.(*legacyv1beta1.TCPIngress)
 			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
 				ingresses = append(ingresses, ing)
 			}
@@ -393,7 +421,7 @@ func (s Store) GetEndpointsForService(namespace, name string) (*corev1.Endpoints
 }
 
 // GetKongPlugin returns the 'name' KongPlugin resource in namespace.
-func (s Store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error) {
+func (s Store) GetKongPlugin(namespace, name string) (*legacyv1.KongPlugin, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	p, exists, err := s.stores.Plugin.GetByKey(key)
 	if err != nil {
@@ -402,11 +430,11 @@ func (s Store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugi
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("KongPlugin %v not found", key)}
 	}
-	return p.(*configurationv1.KongPlugin), nil
+	return p.(*legacyv1.KongPlugin), nil
 }
 
 // GetKongClusterPlugin returns the 'name' KongClusterPlugin resource.
-func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error) {
+func (s Store) GetKongClusterPlugin(name string) (*legacyv1.KongClusterPlugin, error) {
 	p, exists, err := s.stores.ClusterPlugin.GetByKey(name)
 	if err != nil {
 		return nil, err
@@ -414,11 +442,11 @@ func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPl
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("KongClusterPlugin %v not found", name)}
 	}
-	return p.(*configurationv1.KongClusterPlugin), nil
+	return p.(*legacyv1.KongClusterPlugin), nil
 }
 
 // GetKongIngress returns the 'name' KongIngress resource in namespace.
-func (s Store) GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error) {
+func (s Store) GetKongIngress(namespace, name string) (*legacyv1.KongIngress, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	p, exists, err := s.stores.Configuration.GetByKey(key)
 	if err != nil {
@@ -427,11 +455,11 @@ func (s Store) GetKongIngress(namespace, name string) (*configurationv1.KongIngr
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("KongIngress %v not found", name)}
 	}
-	return p.(*configurationv1.KongIngress), nil
+	return p.(*legacyv1.KongIngress), nil
 }
 
 // GetKongConsumer returns the 'name' KongConsumer resource in namespace.
-func (s Store) GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error) {
+func (s Store) GetKongConsumer(namespace, name string) (*legacyv1.KongConsumer, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	p, exists, err := s.stores.Consumer.GetByKey(key)
 	if err != nil {
@@ -440,15 +468,15 @@ func (s Store) GetKongConsumer(namespace, name string) (*configurationv1.KongCon
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("KongConsumer %v not found", key)}
 	}
-	return p.(*configurationv1.KongConsumer), nil
+	return p.(*legacyv1.KongConsumer), nil
 }
 
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
 // annotation.
-func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
-	var consumers []*configurationv1.KongConsumer
+func (s Store) ListKongConsumers() []*legacyv1.KongConsumer {
+	var consumers []*legacyv1.KongConsumer
 	for _, item := range s.stores.Consumer.List() {
-		c, ok := item.(*configurationv1.KongConsumer)
+		c, ok := item.(*legacyv1.KongConsumer)
 		if ok && s.isValidIngressClass(&c.ObjectMeta, s.kongConsumerClassMatching) {
 			consumers = append(consumers, c)
 		}
@@ -462,9 +490,9 @@ func (s Store) ListKongConsumers() []*configurationv1.KongConsumer {
 // label global:"true".
 // Support for these global namespaced KongPlugins was removed in 0.10.0
 // This function remains only to provide warnings to users with old configuration
-func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
+func (s Store) ListGlobalKongPlugins() ([]*legacyv1.KongPlugin, error) {
 
-	var plugins []*configurationv1.KongPlugin
+	var plugins []*legacyv1.KongPlugin
 	// var globalPlugins []*configurationv1.KongPlugin
 	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
 	if err != nil {
@@ -473,7 +501,7 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 	err = cache.ListAll(s.stores.Plugin,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*configurationv1.KongPlugin)
+			p, ok := ob.(*legacyv1.KongPlugin)
 			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ExactOrEmptyClassMatch) {
 				plugins = append(plugins, p)
 			}
@@ -487,8 +515,8 @@ func (s Store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
 // ListGlobalKongClusterPlugins returns all KongClusterPlugin resources
 // filtered by the ingress.class annotation and with the
 // label global:"true".
-func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error) {
-	var plugins []*configurationv1.KongClusterPlugin
+func (s Store) ListGlobalKongClusterPlugins() ([]*legacyv1.KongClusterPlugin, error) {
+	var plugins []*legacyv1.KongClusterPlugin
 
 	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
 	if err != nil {
@@ -497,7 +525,7 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 	err = cache.ListAll(s.stores.ClusterPlugin,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*configurationv1.KongClusterPlugin)
+			p, ok := ob.(*legacyv1.KongClusterPlugin)
 			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.ExactClassMatch) {
 				plugins = append(plugins, p)
 			}
@@ -589,24 +617,24 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &extensions.Ingress{}, nil
 	case networkingv1.SchemeGroupVersion.WithKind("Ingress"):
 		return &networkingv1.Ingress{}, nil
-	case configurationv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
-		return &configurationv1beta1.TCPIngress{}, nil
-	case configurationv1alpha1.SchemeGroupVersion.WithKind("UDPIngress"):
-		return &configurationv1alpha1.UDPIngress{}, nil
+	case legacyv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
+		return &legacyv1beta1.TCPIngress{}, nil
+	case kongv1alpha1.SchemeGroupVersion.WithKind("UDPIngress"):
+		return &kongv1alpha1.UDPIngress{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		return &corev1.Secret{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Endpoints"):
 		return &corev1.Endpoints{}, nil
-	case configurationv1.SchemeGroupVersion.WithKind("KongPlugin"):
-		return &configurationv1.KongPlugin{}, nil
-	case configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
-		return &configurationv1.KongClusterPlugin{}, nil
-	case configurationv1.SchemeGroupVersion.WithKind("KongConsumer"):
-		return &configurationv1.KongConsumer{}, nil
-	case configurationv1.SchemeGroupVersion.WithKind("ConfigSource"):
-		return &configurationv1.ConfigSource{}, nil
+	case legacyv1.SchemeGroupVersion.WithKind("KongPlugin"):
+		return &legacyv1.KongPlugin{}, nil
+	case legacyv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
+		return &legacyv1.KongClusterPlugin{}, nil
+	case legacyv1.SchemeGroupVersion.WithKind("KongConsumer"):
+		return &legacyv1.KongConsumer{}, nil
+	case legacyv1.SchemeGroupVersion.WithKind("ConfigSource"):
+		return &legacyv1.ConfigSource{}, nil
 	case knative.SchemeGroupVersion.WithKind("Ingress"):
 		return &knative.Ingress{}, nil
 	default:

@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/http/pprof"
@@ -109,10 +110,63 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 	}
 }
 
+func makeHTTPClient(cliConfig *cliConfig) *http.Client {
+	defaultTransport := http.DefaultTransport.(*http.Transport)
+
+	var tlsConfig tls.Config
+
+	if cliConfig.KongAdminTLSSkipVerify {
+		tlsConfig.InsecureSkipVerify = true
+	}
+
+	if cliConfig.KongAdminTLSServerName != "" {
+		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
+	}
+
+	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
+		log.Fatalf(invalidConfErrPrefix + "both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
+			"are set; please remove one or the other")
+	}
+	if cliConfig.KongAdminCACert != "" {
+		certPool := x509.NewCertPool()
+		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
+		if !ok {
+			// TODO give user an error to make this actionable
+			log.Fatalf("failed to load kong-admin-ca-cert")
+		}
+		tlsConfig.RootCAs = certPool
+	}
+	if cliConfig.KongAdminCACertPath != "" {
+		certPath := cliConfig.KongAdminCACertPath
+		certPool := x509.NewCertPool()
+		cert, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			log.Fatalf("failed to read kong-admin-ca-cert from path '%s': %v", certPath, err)
+		}
+		ok := certPool.AppendCertsFromPEM(cert)
+		if !ok {
+			// TODO give user an error to make this actionable
+			log.Fatalf("failed to load kong-admin-ca-cert from path '%s'", certPath)
+		}
+		tlsConfig.RootCAs = certPool
+	}
+	defaultTransport.TLSClientConfig = &tlsConfig
+	c := http.DefaultClient
+	// BUG: this overwrites the DefaultClient instance!
+	c.Transport = &HeaderRoundTripper{
+		headers: cliConfig.KongAdminHeaders,
+		rt:      defaultTransport,
+	}
+
+	return c
+}
+
 func init() {
 	// initialize for dependencies
 	klog.InitFlags(nil)
 }
+
+const invalidConfErrPrefix = "invalid configuration: "
 
 func main() {
 	ctx := context.Background()
@@ -147,7 +201,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	invalidConfErrPrefix := "invalid configuration: "
 	if cliConfig.PublishService == "" && cliConfig.PublishStatusAddress == "" {
 		log.Fatal(invalidConfErrPrefix + "either --publish-service or --publish-status-address must be specified")
 	}
@@ -196,51 +249,7 @@ func main() {
 
 	controllerConfig.KubeClient = kubeClient
 
-	defaultTransport := http.DefaultTransport.(*http.Transport)
-
-	var tlsConfig tls.Config
-
-	if cliConfig.KongAdminTLSSkipVerify {
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	if cliConfig.KongAdminTLSServerName != "" {
-		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
-	}
-
-	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
-		log.Fatalf(invalidConfErrPrefix + "both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
-			"are set; please remove one or the other")
-	}
-	if cliConfig.KongAdminCACert != "" {
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
-		if !ok {
-			// TODO give user an error to make this actionable
-			log.Fatalf("failed to load kong-admin-ca-cert")
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	if cliConfig.KongAdminCACertPath != "" {
-		certPath := cliConfig.KongAdminCACertPath
-		certPool := x509.NewCertPool()
-		cert, err := ioutil.ReadFile(certPath)
-		if err != nil {
-			log.Fatalf("failed to read kong-admin-ca-cert from path '%s': %v", certPath, err)
-		}
-		ok := certPool.AppendCertsFromPEM(cert)
-		if !ok {
-			// TODO give user an error to make this actionable
-			log.Fatalf("failed to load kong-admin-ca-cert from path '%s'", certPath)
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	defaultTransport.TLSClientConfig = &tlsConfig
-	c := http.DefaultClient
-	c.Transport = &HeaderRoundTripper{
-		headers: cliConfig.KongAdminHeaders,
-		rt:      defaultTransport,
-	}
+	c := makeHTTPClient(&cliConfig)
 
 	kongClient, err := kong.NewClient(kong.String(cliConfig.KongAdminURL), c)
 	if err != nil {

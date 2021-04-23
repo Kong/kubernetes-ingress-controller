@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/http/pprof"
@@ -110,7 +109,7 @@ func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration
 	}
 }
 
-func makeHTTPClient(cliConfig *cliConfig) *http.Client {
+func makeHTTPClient(cliConfig *cliConfig) (*http.Client, error) {
 	defaultTransport := http.DefaultTransport.(*http.Transport)
 
 	var tlsConfig tls.Config
@@ -124,7 +123,7 @@ func makeHTTPClient(cliConfig *cliConfig) *http.Client {
 	}
 
 	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
-		log.Fatalf(invalidConfErrPrefix + "both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
+		return nil, fmt.Errorf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
 			"are set; please remove one or the other")
 	}
 	if cliConfig.KongAdminCACert != "" {
@@ -132,7 +131,7 @@ func makeHTTPClient(cliConfig *cliConfig) *http.Client {
 		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
 		if !ok {
 			// TODO give user an error to make this actionable
-			log.Fatalf("failed to load kong-admin-ca-cert")
+			return nil, fmt.Errorf("failed to load kong-admin-ca-cert")
 		}
 		tlsConfig.RootCAs = certPool
 	}
@@ -141,12 +140,12 @@ func makeHTTPClient(cliConfig *cliConfig) *http.Client {
 		certPool := x509.NewCertPool()
 		cert, err := ioutil.ReadFile(certPath)
 		if err != nil {
-			log.Fatalf("failed to read kong-admin-ca-cert from path '%s': %v", certPath, err)
+			return nil, fmt.Errorf("failed to read kong-admin-ca-cert from path '%s': %w", certPath, err)
 		}
 		ok := certPool.AppendCertsFromPEM(cert)
 		if !ok {
 			// TODO give user an error to make this actionable
-			log.Fatalf("failed to load kong-admin-ca-cert from path '%s'", certPath)
+			return nil, fmt.Errorf("failed to load kong-admin-ca-cert from path '%s'", certPath)
 		}
 		tlsConfig.RootCAs = certPool
 	}
@@ -158,7 +157,7 @@ func makeHTTPClient(cliConfig *cliConfig) *http.Client {
 		rt:      defaultTransport,
 	}
 
-	return c
+	return c, nil
 }
 
 func init() {
@@ -249,7 +248,10 @@ func main() {
 
 	controllerConfig.KubeClient = kubeClient
 
-	c := makeHTTPClient(&cliConfig)
+	c, err := makeHTTPClient(&cliConfig)
+	if err != nil {
+		log.Fatalf("%s: %v", invalidConfErrPrefix, err)
+	}
 
 	kongClient, err := kong.NewClient(kong.String(cliConfig.KongAdminURL), c)
 	if err != nil {

@@ -88,6 +88,7 @@ type IngressRule struct {
 	// route. It is a required field. If a Host is not specified, the requested
 	// are routed based only on Port.
 	Port int `json:"port,omitempty"`
+
 	// Backend defines the referenced service endpoint to which the traffic
 	// will be forwarded to.
 	Backend IngressBackend `json:"backend"`

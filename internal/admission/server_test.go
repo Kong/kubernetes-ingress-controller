@@ -31,7 +31,7 @@ func (v KongFakeValidator) ValidateConsumer(_ context.Context,
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidatePlugin(
+func (v KongFakeValidator) ValidatePlugin(_ context.Context,
 	k8sPlugin configuration.KongPlugin) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }

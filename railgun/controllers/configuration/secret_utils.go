@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/configsecret"
 )
@@ -81,8 +84,69 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 		return ctrl.Result{}, err
 	}
 
+	// store the service backends for the object as well, if relevant
+	if err := storeIngressServiceBackends(ctx, c, secret, obj, nsn); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	log.Info("kong secret configuration successfully patched patched", "namespace", nsn.Namespace, "name", controllers.ConfigSecretName)
 	return ctrl.Result{}, nil
+}
+
+// storeIngressServiceBackends stores any relevant Service backends for an object. For some times this isn't relevant.
+func storeIngressServiceBackends(ctx context.Context, c client.Client, secret *corev1.Secret, obj runtime.Object, nsn types.NamespacedName) error {
+	switch ing := obj.(type) {
+	case *netv1.Ingress:
+		for _, rule := range ing.Spec.Rules {
+			for _, path := range rule.HTTP.Paths {
+				svc := corev1.Service{}
+				nsn := types.NamespacedName{Namespace: nsn.Namespace, Name: path.Backend.Service.Name}
+				if err := c.Get(ctx, nsn, &svc); err != nil {
+					return err
+				}
+				if err := storeRuntimeObject(ctx, c, secret, &svc, nsn); err != nil {
+					return err
+				}
+				return storeEndpoints(ctx, c, secret, &svc, nsn)
+			}
+		}
+	case *extv1beta1.Ingress:
+		for _, rule := range ing.Spec.Rules {
+			for _, path := range rule.HTTP.Paths {
+				svc := corev1.Service{}
+				nsn := types.NamespacedName{Namespace: nsn.Namespace, Name: path.Backend.ServiceName}
+				if err := c.Get(ctx, nsn, &svc); err != nil {
+					return err
+				}
+				if err := storeRuntimeObject(ctx, c, secret, &svc, nsn); err != nil {
+					return err
+				}
+				return storeEndpoints(ctx, c, secret, &svc, nsn)
+			}
+		}
+	case *kongv1beta1.TCPIngress:
+		for _, rule := range ing.Spec.Rules {
+			svc := corev1.Service{}
+			nsn := types.NamespacedName{Namespace: nsn.Namespace, Name: rule.Backend.ServiceName}
+			if err := c.Get(ctx, nsn, &svc); err != nil {
+				return err
+			}
+			if err := storeRuntimeObject(ctx, c, secret, &svc, nsn); err != nil {
+				return err
+			}
+			return storeEndpoints(ctx, c, secret, &svc, nsn)
+		}
+	}
+	return nil
+}
+
+// storeEndpoints stores any relevant Service backends for an object (for some types this isn't relevant and will be a no-op).
+func storeEndpoints(ctx context.Context, c client.Client, secret *corev1.Secret, obj runtime.Object, nsn types.NamespacedName) error {
+	endpoints := corev1.Endpoints{}
+	if err := c.Get(ctx, nsn, &endpoints); err != nil {
+		return err
+	}
+	return storeRuntimeObject(ctx, c, secret, &endpoints, nsn)
 }
 
 // isRuntimeObjectSame indicates whether a runtime.Object you intend to store in the configuration secret is the same as what's already stored.

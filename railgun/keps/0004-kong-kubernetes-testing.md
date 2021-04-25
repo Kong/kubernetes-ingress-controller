@@ -79,8 +79,6 @@ One of the main risks of this proposal is the increase in CI costs for the team.
 
 ## Design Details
 
-
-
 ### Test Plan
 
 All code which can feasibly be unit tested will be, the only code we expect will not be feasible to unit test will be code that makes shell calls to other programs.

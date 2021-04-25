@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group
 //+kubebuilder:object:generate=true
-//+groupName=configuration.konghq.com.konghq.com
+//+groupName=configuration.konghq.com
 package v1beta1
 
 import (
@@ -26,7 +26,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "configuration.konghq.com.konghq.com", Version: "v1beta1"}
+	GroupVersion = schema.GroupVersion{Group: "configuration.konghq.com", Version: "v1beta1"}
 
 	// SchemeGroupVersion is a convenience var for generated clientsets
 	SchemeGroupVersion = GroupVersion

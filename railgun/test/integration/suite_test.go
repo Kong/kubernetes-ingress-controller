@@ -22,6 +22,7 @@ import (
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
+	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 )
 
 // -----------------------------------------------------------------------------
@@ -88,6 +89,10 @@ func TestMain(m *testing.M) {
 var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongplugins.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
 }
 
 // FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
@@ -145,18 +150,38 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 
 		// if set, allow running the legacy controller for the tests instead of the current controller
 		var cmd *exec.Cmd
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 		if useLegacyKIC() {
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
+			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+			cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
+			cmd.Stderr = io.MultiWriter(stderr, os.Stderr)
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintln(os.Stdout, stdout.String())
+				panic(fmt.Errorf("%s: %w", stderr.String(), err))
+			}
 		} else {
-			cmd = buildControllerCommand(ctx, kubeconfig.Name(), adminHost)
-		}
-		stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			panic(fmt.Errorf("%s: %w", stderr.String(), err))
+			config := manager.Config{}
+
+			flags := manager.MakeFlagSetFor(&config)
+			flags.Parse([]string{
+				fmt.Sprintf("--kong-url=http://%s:8001", adminHost),
+				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
+				"--controller-kongstate=enabled",
+				"--controller-ingress-networkingv1=enabled",
+				"--controller-ingress-networkingv1beta1=disabled",
+				"--controller-ingress-extensionsv1beta1=disabled",
+				"--controller-udpingress=enabled",
+				"--controller-tcpingress=enabled",
+				"--controller-kongingress=disabled",
+				"--controller-kongclusterplugin=disabled",
+				"--controller-kongplugin=disabled",
+				"--controller-kongconsumer=disabled",
+			})
+			fmt.Printf("config: %+v\n", config)
+
+			if err := manager.Run(ctx, &config); err != nil {
+				panic(fmt.Errorf("controller manager exited with error: %w", err))
+			}
 		}
 	}()
 
@@ -197,10 +222,4 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	)
 
 	return cmd
-}
-
-func buildControllerCommand(ctx context.Context, kubeconfigPath, adminHost string) *exec.Cmd {
-	return exec.CommandContext(ctx, "go", "run", "../../main.go",
-		"--kong-url", fmt.Sprintf("http://%s:8001", adminHost),
-		"--kubeconfig", kubeconfigPath)
 }

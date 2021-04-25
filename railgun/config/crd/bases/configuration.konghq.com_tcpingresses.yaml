@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: tcpingresses.configuration.konghq.com.konghq.com
+  name: tcpingresses.configuration.konghq.com
 spec:
-  group: configuration.konghq.com.konghq.com
+  group: configuration.konghq.com
   names:
     kind: TCPIngress
     listKind: TCPIngressList

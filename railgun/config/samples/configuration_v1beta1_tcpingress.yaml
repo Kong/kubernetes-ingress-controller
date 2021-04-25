@@ -1,10 +1,12 @@
-apiVersion: configuration.konghq.com.konghq.com/v1beta1
+apiVersion: configuration.konghq.com/v1beta1
 kind: TCPIngress
 metadata:
   name: tcpingress-sample
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
   rules:
   - port: 9000
     backend:
       serviceName: tcp-echo
-      servicePort: 2701```
+      servicePort: 2701

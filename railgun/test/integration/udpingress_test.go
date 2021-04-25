@@ -6,10 +6,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
@@ -58,8 +61,17 @@ func TestMinimalUDPIngress(t *testing.T) {
 			TargetPort: 53,
 		},
 	}
-	_, err = c.ConfigurationV1alpha1().UDPIngresses(namespace).Create(ctx, udp, metav1.CreateOptions{})
+	udp, err = c.ConfigurationV1alpha1().UDPIngresses(namespace).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
+
+	// ensure cleanup of the UDPIngress
+	defer func() {
+		if err := c.ConfigurationV1alpha1().UDPIngresses(namespace).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		}
+	}()
 
 	// ensure that we can eventually make a successful DNS request through the proxy
 	assert.Eventually(t, func() bool {
@@ -68,5 +80,17 @@ func TestMinimalUDPIngress(t *testing.T) {
 			return false
 		}
 		return true
+	}, ingressWait, waitTick)
+
+	// cleanup and ensure the UDP ingress is cleaned up
+	assert.NoError(t, c.ConfigurationV1alpha1().UDPIngresses(namespace).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
+	assert.Eventually(t, func() bool {
+		_, err := resolver.LookupHost(ctx, "kernel.org")
+		if err != nil {
+			if strings.Contains(err.Error(), "i/o timeout") {
+				return true
+			}
+		}
+		return false
 	}, ingressWait, waitTick)
 }

@@ -7,8 +7,9 @@ status: implementable
 
 For reference see the milestones related to this proposal to check the progress of related efforts:
 
-- KIC 2.0 Preview - https://github.com/Kong/kubernetes-ingress-controller/milestone/12
 - Kong Kubernetes Testing Framework (KTF) `v0.1.0` - https://github.com/Kong/kubernetes-testing-framework/milestone/1
+- KIC 2.0 Alpha - https://github.com/Kong/kubernetes-ingress-controller/milestone/12
+- KIC 2.0 Testing Renaissance - https://github.com/Kong/kubernetes-ingress-controller/milestone/16
 - KIC 2.0 Milestone - https://github.com/Kong/kubernetes-ingress-controller/milestone/15
 
 # Kong Kubernetes Ingress Controller (KIC) Re-architecture using Kubebuilder
@@ -62,6 +63,12 @@ Historically the [Kong Kubernetes Ingress Controller (KIC)][kic] was built on ol
 [impl]:https://kubebuilder.io/cronjob-tutorial/controller-overview.html
 
 ### Non-Goals
+
+#### Kubebuilder Controller Management
+
+Despite the motivation present in this KEP to automate some of our controller management, logistics and time constraints have led us to keeping the conversion our existing controller to `kubebuilder` managed controllers _out of scope_ for this KEP. For this iteration we will focus on using the API, CRD, and configuration management features of `kubebuilder`, but the controller management features will be considered as part of a later iteration to reduce the number of changes we make with a single release (we will however still convert to controller runtime and ultimately use the kubebuilder provided controller machinery to replace our historical machinery).
+
+#### New APIs
 
 We reference [UDPIngress][udpingress] in the implementation history (below) as it was used for demonstration, but completing new features and APIs is not in scope for this KEP, though the result of this KEP is that newer features are intended to be easier to contribute.
 
@@ -129,6 +136,7 @@ As a user of KIC, I want to be able to inspect the intermediate objects produced
 - [Established KIC 2.0 Preview release criteria][ms15]
 - KTF fully separated into it's [own repo][ktf]
 - integration tests [added][legacy-tests] to test `v1.x` and railgun controllers on every PR from now until release
+- First alpha release objectives defined in milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/15
 
 [cr]:https://github.com/kubernetes-sigs/controller-runtime
 [kb]:https://github.com/kubernetes-sigs/kubebuilder

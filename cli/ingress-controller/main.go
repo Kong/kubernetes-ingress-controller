@@ -39,12 +39,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
-	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configuration "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -385,7 +385,7 @@ func main() {
 
 	kongIngressInformer := kongInformerFactory.Configuration().V1().KongIngresses().Informer()
 	kongIngressInformer.AddEventHandler(reh)
-	cacheStores.Configuration = kongIngressInformer.GetStore()
+	cacheStores.KongIngress = kongIngressInformer.GetStore()
 	informers = append(informers, kongIngressInformer)
 
 	kongPluginInformer := kongInformerFactory.Configuration().V1().KongPlugins().Informer()

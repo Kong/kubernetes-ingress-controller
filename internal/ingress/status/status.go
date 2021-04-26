@@ -27,7 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	pool "gopkg.in/go-playground/pool.v3"

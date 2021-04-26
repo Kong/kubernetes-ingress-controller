@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"

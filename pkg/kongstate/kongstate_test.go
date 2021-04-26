@@ -7,7 +7,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"

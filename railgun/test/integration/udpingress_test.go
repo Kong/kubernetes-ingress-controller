@@ -25,17 +25,14 @@ func TestMinimalUDPIngress(t *testing.T) {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
 	}
 
-	// test setup
 	namespace := "default"
 	testName := "minudp"
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()
 
-	// build a kong kubernetes clientset
+	t.Log("configurating a net.Resolver to resolve DNS via the proxy")
 	c, err := clientset.NewForConfig(cluster.Config())
 	assert.NoError(t, err)
-
-	// configure a net.Resolver that will go through our proxy
 	p := proxyReady()
 	resolver := &net.Resolver{
 		PreferGo: true,
@@ -47,7 +44,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 		},
 	}
 
-	// create the UDPIngress record
+	t.Log("exposing DNS service via UDPIngress")
 	udp := &kongv1alpha1.UDPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testName,
@@ -64,8 +61,8 @@ func TestMinimalUDPIngress(t *testing.T) {
 	udp, err = c.ConfigurationV1alpha1().UDPIngresses(namespace).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
-	// ensure cleanup of the UDPIngress
 	defer func() {
+		t.Logf("ensuring UDPIngress %s is cleaned up", udp.Name)
 		if err := c.ConfigurationV1alpha1().UDPIngresses(namespace).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
@@ -73,7 +70,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 		}
 	}()
 
-	// ensure that we can eventually make a successful DNS request through the proxy
+	t.Logf("waiting for DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		if err != nil {
@@ -82,7 +79,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 		return true
 	}, ingressWait, waitTick)
 
-	// cleanup and ensure the UDP ingress is cleaned up
+	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
 	assert.NoError(t, c.ConfigurationV1alpha1().UDPIngresses(namespace).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")

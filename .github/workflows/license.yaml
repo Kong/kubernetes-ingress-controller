@@ -23,13 +23,13 @@ jobs:
         path: ./src
         fetch-depth: 0
     - name: Generate target license report
-      run: go-licenses csv ./... | sort > ${{ github.workspace }}/target_licenses.csv
+      run: go-licenses csv ./... | grep -v "github.com/kong" | sort > ${{ github.workspace }}/target_licenses.csv
       working-directory: ./src
     - name: Checkout PR
       run: git checkout ${{ github.head_ref }}
       working-directory: ./src
     - name: Generate PR license report
-      run: go-licenses csv ./... | sort > ${{ github.workspace }}/pr_licenses.csv
+      run: go-licenses csv ./... | grep -v "github.com/kong" || sort > ${{ github.workspace }}/pr_licenses.csv
       working-directory: ./src
     - name: Compare license reports
       id: compare_reports

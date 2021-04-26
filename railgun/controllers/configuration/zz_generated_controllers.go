@@ -101,6 +101,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -165,6 +166,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -229,6 +231,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -293,6 +296,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -357,6 +361,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -421,6 +426,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -485,6 +491,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -549,6 +556,7 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 
@@ -613,5 +621,6 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }

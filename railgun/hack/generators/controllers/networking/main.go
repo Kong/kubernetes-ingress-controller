@@ -269,6 +269,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
+	// update the kong Admin API with the changes
 	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 `

@@ -1,2 +1,2 @@
-// Package configuration implements the proxy instance configuration controller.
+// Package configuration contains Kubernetes controllers responsible for configuration.konghq.com grouped API types.
 package configuration

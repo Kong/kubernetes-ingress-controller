@@ -5,8 +5,8 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -725,7 +725,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 			},
-			Spec: configurationv1beta1.IngressSpec{
+			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
 					{
 						Port: 9000,
@@ -743,7 +743,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 			},
-			Spec: configurationv1beta1.IngressSpec{
+			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
 					{
 						Host: "example.com",
@@ -762,7 +762,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 			},
-			Spec: configurationv1beta1.IngressSpec{
+			Spec: configurationv1beta1.TCPIngressSpec{
 				TLS: []configurationv1beta1.IngressTLS{
 					{
 						Hosts: []string{

@@ -89,6 +89,10 @@ func TestMain(m *testing.M) {
 var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongplugins.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
+	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
 }
 
 // FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
@@ -107,6 +111,9 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		event := <-ready
 
 		// if there's an error, all tests fail here
+		if event.Err != nil {
+			panic(event.Err)
+		}
 
 		// grab the admin hostname and pass the readiness event on to the tests
 		u := event.ProxyAdminURL
@@ -164,7 +171,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-ingress-networkingv1beta1=disabled",
 				"--controller-ingress-extensionsv1beta1=disabled",
 				"--controller-udpingress=enabled",
-				"--controller-tcpingress=disabled",
+				"--controller-tcpingress=enabled",
 				"--controller-kongingress=disabled",
 				"--controller-kongclusterplugin=disabled",
 				"--controller-kongplugin=disabled",

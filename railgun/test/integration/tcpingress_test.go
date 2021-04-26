@@ -3,11 +3,19 @@
 package integration
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
@@ -42,6 +50,9 @@ func TestMinimalTCPIngress(t *testing.T) {
 		assert.NoError(t, cluster.Client().CoreV1().Services(namespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
+	// TODO: this is a workaround for https://github.com/Kong/kubernetes-ingress-controller/issues/1146
+	time.Sleep(time.Second * 30)
+
 	// initialize a clientset for the TCPIngress API
 	c, err := clientset.NewForConfig(cluster.Config())
 	assert.NoError(t, err)
@@ -70,8 +81,44 @@ func TestMinimalTCPIngress(t *testing.T) {
 	tcp, err = c.ConfigurationV1beta1().TCPIngresses(namespace).Create(ctx, tcp, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
-	// make sure we clean up after ourselves
+	// ensure cleanup of the TCPIngress
 	defer func() {
-		assert.NoError(t, c.ConfigurationV1beta1().TCPIngresses(namespace).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
+		if err := c.ConfigurationV1beta1().TCPIngresses(namespace).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		}
 	}()
+
+	// wait for the ingress backend to be routable
+	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", proxyReady().ProxyURL.Hostname()))
+	assert.NoError(t, err)
+
+	assert.Eventually(t, func() bool {
+		resp, err := http.Get(tcpProxyURL.String())
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s to resolve: %v", tcpProxyURL.String(), err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
+			// Expected: Welcome to nginx!
+			b := new(bytes.Buffer)
+			b.ReadFrom(resp.Body)
+			return strings.Contains(b.String(), "Welcome to nginx!")
+		}
+		return false
+	}, ingressWait, waitTick)
+
+	// ensure that a deleted ingress results in the route being torn down
+	assert.NoError(t, c.ConfigurationV1beta1().TCPIngresses(namespace).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
+	assert.Eventually(t, func() bool {
+		resp, err := http.Get(tcpProxyURL.String())
+		if err != nil {
+			return true
+		}
+		defer resp.Body.Close()
+		return false
+	}, ingressWait, waitTick)
 }

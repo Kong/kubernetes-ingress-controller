@@ -26,6 +26,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "Ingress",
 		Plural:             "ingresses",
 		URL:                "networking.k8s.io",
+		CacheType:          "IngressV1",
 	},
 	typeNeeded{
 		PackageImportAlias: "netv1beta1",
@@ -34,6 +35,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "Ingress",
 		Plural:             "ingresses",
 		URL:                "networking.k8s.io",
+		CacheType:          "IngressV1beta1",
 	},
 	typeNeeded{
 		PackageImportAlias: "extv1beta1",
@@ -42,6 +44,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "Ingress",
 		Plural:             "ingresses",
 		URL:                "apiextensions.k8s.io",
+		CacheType:          "IngressV1beta1",
 	},
 	typeNeeded{
 		PackageImportAlias: "kongv1",
@@ -50,6 +53,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "KongIngress",
 		Plural:             "kongingresses",
 		URL:                "configuration.konghq.com",
+		CacheType:          "KongIngress",
 	},
 	typeNeeded{
 		PackageImportAlias: "kongv1",
@@ -58,6 +62,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "KongPlugin",
 		Plural:             "kongplugins",
 		URL:                "configuration.konghq.com",
+		CacheType:          "Plugin",
 	},
 	typeNeeded{
 		PackageImportAlias: "kongv1",
@@ -66,6 +71,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "KongClusterPlugin",
 		Plural:             "kongclusterplugins",
 		URL:                "configuration.konghq.com",
+		CacheType:          "ClusterPlugin",
 	},
 	typeNeeded{
 		PackageImportAlias: "kongv1",
@@ -74,6 +80,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "KongConsumer",
 		Plural:             "kongconsumers",
 		URL:                "configuration.konghq.com",
+		CacheType:          "Consumer",
 	},
 	typeNeeded{
 		PackageImportAlias: "kongv1alpha1",
@@ -82,6 +89,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "UDPIngress",
 		Plural:             "udpingresses",
 		URL:                "configuration.konghq.com",
+		CacheType:          "UDPIngress",
 	},
 	typeNeeded{
 		PackageImportAlias: "kongv1beta1",
@@ -90,6 +98,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:               "TCPIngress",
 		Plural:             "tcpingresses",
 		URL:                "configuration.konghq.com",
+		CacheType:          "TCPIngress",
 	},
 }
 
@@ -155,6 +164,7 @@ type typeNeeded struct {
 	Type               string
 	Plural             string
 	URL                string
+	CacheType          string
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
@@ -179,15 +189,21 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 )
 `
 
@@ -199,8 +215,10 @@ var controllerTemplate = `
 // {{.PackageAlias}}{{.Type}} reconciles a Ingress object
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	KongConfig sendconfig.Kong
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -216,16 +234,41 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("{{.PackageAlias}}{{.Type}}", req.NamespacedName)
 
+	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Type}})
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
+	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
-		return cleanupObj(ctx, r.Client, log, req.NamespacedName, obj)
+		if err := mgrutils.CacheStores.{{.CacheType}}.Delete(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
-	return storeIngressObj(ctx, r.Client, log, req.NamespacedName, obj)
+	// before we store cache data for this object, ensure that it has our finalizer set
+	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
+		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		finalizers := obj.GetFinalizers()
+		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
+		if err := r.Client.Update(ctx, obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// cache the new object
+	if err := mgrutils.CacheStores.{{.CacheType}}.Add(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }
 `

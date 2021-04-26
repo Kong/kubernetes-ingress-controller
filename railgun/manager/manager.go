@@ -15,9 +15,10 @@ import (
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/corev1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -59,6 +60,7 @@ type Config struct {
 	KongClusterPluginEnabled util.EnablementStatus
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus
+	ServiceEnabled           util.EnablementStatus
 }
 
 // MakeFlagSetFor binds the provided Config to commandline flags.
@@ -75,7 +77,7 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
 	flagSet.StringVar(&c.SecretName, "secret-name", "kong-config", "TODO")
-	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
+	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", ctrlutils.DefaultNamespace, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
@@ -103,7 +105,7 @@ Kong's Admin SSL certificate.`)
 		"Enable or disable the UDPIngress controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusDisabled,
 		"Enable or disable the TCPIngress controller. "+onOffUsage)
-	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusDisabled,
+	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusEnabled,
 		"Enable or disable the KongIngress controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusDisabled,
 		"Enable or disable the KongClusterPlugin controller. "+onOffUsage)
@@ -111,6 +113,8 @@ Kong's Admin SSL certificate.`)
 		"Enable or disable the KongPlugin controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled,
 		"Enable or disable the KongConsumer controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled,
+		"Enable or disable the Service controller. "+onOffUsage)
 
 	zapFlagSet := flag.NewFlagSet("", flag.ExitOnError)
 	c.ZapOptions.BindFlags(zapFlagSet)
@@ -173,8 +177,8 @@ func Run(ctx context.Context, c *Config) error {
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 
 	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
-	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {
-		os.Setenv(controllers.CtrlNamespaceEnv, controllers.DefaultNamespace)
+	if v := os.Getenv(ctrlutils.CtrlNamespaceEnv); v == "" {
+		os.Setenv(ctrlutils.CtrlNamespaceEnv, ctrlutils.DefaultNamespace)
 	}
 
 	kubeconfig, err := clientcmd.BuildConfigFromFlags("", c.KubeconfigPath)
@@ -206,95 +210,112 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
+	kongCFG := sendconfig.Kong{
+		URL:         c.KongURL,
+		FilterTags:  []string{c.FilterTag},
+		Concurrency: c.Concurrency,
+		Client:      kongClient,
+	}
+
 	controllers := []ControllerDef{
 		{
-			IsEnabled: &c.KongStateEnabled,
-			Controller: &kongctrl.SecretReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
-				Scheme: mgr.GetScheme(),
-				Params: kongctrl.SecretReconcilerParams{
-					WatchName:      c.SecretName,
-					WatchNamespace: c.SecretNamespace,
-					KongConfig: sendconfig.Kong{
-						URL:         c.KongURL,
-						FilterTags:  []string{c.FilterTag},
-						Concurrency: c.Concurrency,
-						Client:      kongClient,
-					},
-				},
+			IsEnabled: &c.ServiceEnabled,
+			Controller: &corev1.CoreV1ServiceReconciler{
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("Service"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
+			IsEnabled: &c.ServiceEnabled,
+			Controller: &corev1.CoreV1EndpointsReconciler{
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
+			},
+		},
+
+		{
 			IsEnabled: &c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.IngressNetV1beta1Enabled,
 			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.IngressExtV1beta1Enabled,
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.UDPIngressEnabled,
 			Controller: &kongctrl.KongV1Alpha1UDPIngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.TCPIngressEnabled,
 			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.KongIngressEnabled,
 			Controller: &kongctrl.KongV1KongIngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("KongIngress"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.KongClusterPluginEnabled,
 			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.KongPluginEnabled,
 			Controller: &kongctrl.KongV1KongPluginReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 		{
 			IsEnabled: &c.KongConsumerEnabled,
 			Controller: &kongctrl.KongV1KongConsumerReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
-				Scheme: mgr.GetScheme(),
+				Client:     mgr.GetClient(),
+				Log:        ctrl.Log.WithName("controllers").WithName("KongConsumer"),
+				Scheme:     mgr.GetScheme(),
+				KongConfig: kongCFG,
 			},
 		},
 	}

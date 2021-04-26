@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
 // KongValidator validates Kong entities.

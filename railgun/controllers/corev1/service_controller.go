@@ -5,16 +5,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 )
@@ -83,23 +79,6 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*mgrutils.CacheStores, "kong", false, false, false, logrus.StandardLogger())
-	kongstate, err := parser.Build(logrus.StandardLogger(), storer)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// generate the deck configuration to be applied to the admin API
-	targetConfig := deckgen.ToDeckContent(ctx, logrus.StandardLogger(), kongstate, nil, nil)
-
-	// apply the configuration update in Kong
-	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	_, err = sendconfig.PerformUpdate(timedCtx, logrus.StandardLogger(), &r.KongConfig, true, false, targetConfig, nil, nil, nil)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
+	// update the kong Admin API with the changes
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
 }

@@ -138,15 +138,9 @@ test.integration.cluster:
 	@go clean -testcache
 	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
-# Our integration tests, with minimal output
+# Our integration tests, with verbose output
 .PHONY: test.integration
 test.integration:
-	@./scripts/setup-integration-tests.sh
-	@GOFLAGS="-tags=integration_tests" go test -race ./test/integration/
-
-# Our integration tests, with verbose output
-.PHONY: test.integration.verbose
-test.integration.verbose:
 	@./scripts/setup-integration-tests.sh
 	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
 

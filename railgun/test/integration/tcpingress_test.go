@@ -93,9 +93,8 @@ func TestMinimalTCPIngress(t *testing.T) {
 	// wait for the ingress backend to be routable
 	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", proxyReady().ProxyURL.Hostname()))
 	assert.NoError(t, err)
-
 	assert.Eventually(t, func() bool {
-		resp, err := http.Get(tcpProxyURL.String())
+		resp, err := httpc.Get(tcpProxyURL.String())
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s to resolve: %v", tcpProxyURL.String(), err)
 			return false
@@ -114,7 +113,7 @@ func TestMinimalTCPIngress(t *testing.T) {
 	// ensure that a deleted ingress results in the route being torn down
 	assert.NoError(t, c.ConfigurationV1beta1().TCPIngresses(namespace).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		resp, err := http.Get(tcpProxyURL.String())
+		resp, err := httpc.Get(tcpProxyURL.String())
 		if err != nil {
 			return true
 		}

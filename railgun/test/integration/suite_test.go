@@ -37,7 +37,10 @@ const (
 	waitTick = time.Second * 1
 
 	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	ingressWait = time.Minute * 7
+	ingressWait = time.Minute * 10
+
+	// httpcTimeout is the default client timeout for HTTP clients used in tests.
+	httpcTimeout = time.Second * 3
 )
 
 // -----------------------------------------------------------------------------
@@ -47,6 +50,9 @@ const (
 var (
 	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
 	LegacyControllerEnvVar = "KONG_LEGACY_CONTROLLER"
+
+	// httpc is the default HTTP client to use for tests
+	httpc = http.Client{Timeout: httpcTimeout}
 
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster

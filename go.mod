@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/kong/deck v1.6.0
 	github.com/kong/go-kong v0.17.0
-	github.com/kong/kubernetes-testing-framework v0.0.7
+	github.com/kong/kubernetes-testing-framework v0.0.8
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1

@@ -18,6 +18,6 @@ fi
 /tmp/code-generator/generate-groups.sh \
 all \
 ${PACKAGE_NAME}/pkg/client/configuration \
-${PACKAGE_NAME}/pkg/apis \
+${PACKAGE_NAME}/railgun/apis \
 "configuration:v1,v1beta1" \
 --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt

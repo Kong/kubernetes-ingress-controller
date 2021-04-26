@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"

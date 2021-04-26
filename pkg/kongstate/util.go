@@ -7,12 +7,13 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/kong/go-kong/kong"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 func getKongIngressForService(s store.Storer, service corev1.Service) (

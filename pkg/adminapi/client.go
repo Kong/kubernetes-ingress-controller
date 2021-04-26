@@ -61,7 +61,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		}
 		tlsConfig.RootCAs = certPool
 	}
-	defaultTransport.TLSClientConfig = &tlsConfig
+	defaultTransport.TLSClientConfig = tlsConfig.Clone()
 	c := http.DefaultClient
 	// BUG: this overwrites the DefaultClient instance!
 	c.Transport = &HeaderRoundTripper{

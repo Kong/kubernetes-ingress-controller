@@ -1,5 +1,6 @@
 ---
 status: provisional
+WARNING: this is an early draft and we are NOT ready to commit to any process that results from it, it's only ideas "on paper" for now.
 ---
 
 # Official Support for new Platforms and Integrations with KIC

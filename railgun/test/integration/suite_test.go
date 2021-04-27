@@ -176,6 +176,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-kongclusterplugin=disabled",
 				"--controller-kongplugin=disabled",
 				"--controller-kongconsumer=disabled",
+				"--election-id=integrationtests.konghq.com",
 			})
 			fmt.Printf("config: %+v\n", config)
 

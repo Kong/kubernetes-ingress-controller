@@ -36,6 +36,7 @@ type Config struct {
 
 	MetricsAddr          string
 	EnableLeaderElection bool
+	LeaderElectionID     string
 	ProbeAddr            string
 	KongURL              string
 	FilterTag            string
@@ -69,6 +70,7 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
 	flagSet.StringVar(&c.KongURL, "kong-url", "http://localhost:8001", "TODO")
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
@@ -186,7 +188,7 @@ func Run(ctx context.Context, c *Config) error {
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,
 		LeaderElection:         c.EnableLeaderElection,
-		LeaderElectionID:       "5b374a9e.konghq.com",
+		LeaderElectionID:       c.LeaderElectionID,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

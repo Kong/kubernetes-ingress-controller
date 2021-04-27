@@ -31,6 +31,7 @@ type CoreV1ServiceReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: this is too broad, we need to sweep for Services referred to by other objects we support not all
+	//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1259
 	return ctrl.NewControllerManagedBy(mgr).For(&v1.Service{}).Complete(r)
 }
 
@@ -43,6 +44,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log := r.Log.WithValues("CoreV1Service", req.NamespacedName)
 
 	// TODO: this just reduces log noise for now, we can clean this up when we clean up other TODO items
+	//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1259
 	if req.Namespace == "local-path-storage" || req.Namespace == "kong-system" || req.Namespace == "kube-system" || req.Name == "kubernetes" {
 		return ctrl.Result{}, nil
 	}

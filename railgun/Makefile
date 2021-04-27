@@ -2,7 +2,8 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-# FIXME: investigate `go-kong` changes that would allow us to remove `allowDangerousTypes=true`.
+# TODO: investigate `go-kong` changes that would allow us to remove `allowDangerousTypes=true`.
+#       See: https://github.com/Kong/go-kong/issues/54
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,allowDangerousTypes=true"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)

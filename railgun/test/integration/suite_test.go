@@ -95,7 +95,7 @@ var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
 }
 
-// FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
+// deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.
 func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEvent, cluster kind.Cluster, containerImage, namespace string) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}

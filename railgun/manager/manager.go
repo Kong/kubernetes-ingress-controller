@@ -8,7 +8,20 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
@@ -20,15 +33,17 @@ import (
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/corev1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+)
+
+var (
+	// Release returns the release version
+	Release = "UNKNOWN"
+
+	// Repo returns the git repository URL
+	Repo = "UNKNOWN"
+
+	// Commit returns the short sha from git
+	Commit = "UNKNOWN"
 )
 
 // Config collects all configuration that the controller manager takes from the environment.
@@ -45,6 +60,7 @@ type Config struct {
 	Concurrency          int
 	KubeconfigPath       string
 	IngressClassName     string
+	AnonymousReports     bool
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 
@@ -82,6 +98,7 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
+	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
 		"Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -412,6 +429,75 @@ func Run(ctx context.Context, c *Config) error {
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
+	}
+
+	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
+	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
+	// This data helps inform us what versions, features, e.t.c. end-users are actively using which helps to inform
+	// our prioritization of work and we appreciate when our end-users provide them, however if you do feel
+	// uncomfortable and would rather turn them off run the controller with the "--anonymous-reports false" flag.
+	reporterLogger := logrus.StandardLogger()
+	if c.AnonymousReports {
+		reporterLogger.Info("running anonymous reports")
+
+		// record the system hostname
+		hostname, err := os.Hostname()
+		if err != nil {
+			reporterLogger.Error(err, "failed to fetch hostname")
+		}
+
+		// create a universal unique identifer for this system
+		uuid, err := uuid.GenerateUUID()
+		if err != nil {
+			reporterLogger.Error(err, "failed to generate a random uuid")
+		}
+
+		// record the current Kubernetes server version
+		kc, err := kubernetes.NewForConfig(kubeconfig)
+		if err != nil {
+			reporterLogger.Error(err, "could not create client-go for Kubernetes discovery")
+		}
+		k8sVersion, err := kc.Discovery().ServerVersion()
+		if err != nil {
+			reporterLogger.Error(err, "failed to fetch k8s api-server version")
+		}
+
+		// gather versioning information from the kong client
+		root, err := kongCFG.Client.Root(ctx)
+		if err != nil {
+			reporterLogger.Error(err, "failed to get Kong root config data")
+		}
+		kongVersion, ok := root["version"].(string)
+		if !ok {
+			reporterLogger.Error("malformed Kong version found in Kong client root")
+		}
+		cfg, ok := root["configuration"].(map[string]interface{})
+		if !ok {
+			reporterLogger.Error("malformed Kong configuration found in Kong client root")
+		}
+		kongDB, ok := cfg["database"].(string)
+		if !ok {
+			reporterLogger.Error("malformed database configuration found in Kong client root")
+		}
+
+		// build the final report
+		info := util.Info{
+			KongVersion:       kongVersion,
+			KICVersion:        Release,
+			KubernetesVersion: k8sVersion.String(),
+			Hostname:          hostname,
+			ID:                uuid,
+			KongDB:            kongDB,
+		}
+
+		// run the reporter in the background
+		reporter := util.Reporter{
+			Info:   info,
+			Logger: reporterLogger,
+		}
+		go reporter.Run(ctx.Done())
+	} else {
+		reporterLogger.Info("anonymous reports have been disabled, skipping")
 	}
 
 	setupLog.Info("starting manager")

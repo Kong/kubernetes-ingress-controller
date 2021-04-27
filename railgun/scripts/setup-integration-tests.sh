@@ -1,5 +1,4 @@
 #!/bin/bash
-# TODO: (shane) this is all going to be replaced by a container image soon
 
 set -euox pipefail
 

@@ -104,6 +104,7 @@ endef
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 # TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
+#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1254
 generate.clientsets:
 	@client-gen --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \

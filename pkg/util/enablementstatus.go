@@ -42,3 +42,7 @@ func (e *EnablementStatus) Set(s string) error {
 
 	return fmt.Errorf("%q is not a valid EnablementStatus", s)
 }
+
+func (e *EnablementStatus) Type() string {
+	return "EnablementStatus"
+}

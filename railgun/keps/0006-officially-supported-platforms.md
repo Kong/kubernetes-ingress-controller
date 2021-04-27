@@ -40,6 +40,9 @@ Provide the criteria for contributors to request and add new "official supported
 [upstream]:https://github.com/kong/kong
 [issues-451]:https://github.com/Kong/kubernetes-ingress-controller/issues/451
 
+# Non Goals
+
+As a result of this proposal we want to explicitly stay away from having processes that are developed out of this become authoritative "accepted"/"declined" processes in favor of them being prescriptive to help contributors, but if we're going to come up with a process for hard declines or hard committing to features that should be a later iteration after we've had some time to see the effects of these changes.
 ## Proposal
 
 ### User Stories

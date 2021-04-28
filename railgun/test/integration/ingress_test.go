@@ -25,7 +25,7 @@ func TestMinimalIngress(t *testing.T) {
 	ctx := context.Background()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := k8sgen.NewContainer("nginx", "nginx", 80)
+	container := k8sgen.NewContainer("httpbin", httpBinImage, 80)
 	deployment := k8sgen.NewDeploymentForContainer(container)
 	deployment, err := cluster.Client().AppsV1().Deployments("default").Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -46,7 +46,7 @@ func TestMinimalIngress(t *testing.T) {
 	}()
 
 	t.Logf("routing to service %s via Ingress", service.Name)
-	ingress := k8sgen.NewIngressForService("/nginx", map[string]string{
+	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
 		"kubernetes.io/ingress.class": "kong",
 		"konghq.com/strip-path":       "true",
 	}, service)
@@ -65,7 +65,7 @@ func TestMinimalIngress(t *testing.T) {
 	t.Logf("waiting for routes from Ingress %s to be operational", ingress.Name)
 	p := proxyReady()
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/nginx", p.ProxyURL.String()))
+		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", p.ProxyURL.String(), err)
 			return false
@@ -73,10 +73,10 @@ func TestMinimalIngress(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-			// Expected: Welcome to nginx!
+			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
 			b.ReadFrom(resp.Body)
-			return strings.Contains(b.String(), "Welcome to nginx!")
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
 	}, ingressWait, waitTick)
@@ -84,7 +84,7 @@ func TestMinimalIngress(t *testing.T) {
 	t.Logf("deleting Ingress %s and waiting for routes to be torn down", ingress.Name)
 	assert.NoError(t, cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/nginx", p.ProxyURL.String()))
+		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", p.ProxyURL.String(), err)
 			return false
@@ -113,7 +113,7 @@ func TestHTTPSRedirect(t *testing.T) {
 	opts := metav1.CreateOptions{}
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
-	container := k8sgen.NewContainer("alsonginx", "nginx", 80)
+	container := k8sgen.NewContainer("alsohttpbin", httpBinImage, 80)
 	deployment := k8sgen.NewDeploymentForContainer(container)
 	_, err := cluster.Client().AppsV1().Deployments("default").Create(ctx, deployment, opts)
 	assert.NoError(t, err)
@@ -134,7 +134,7 @@ func TestHTTPSRedirect(t *testing.T) {
 	}()
 
 	t.Logf("exposing Service %s via Ingress", service.Name)
-	ingress := k8sgen.NewIngressForService("/example", map[string]string{
+	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
 		"kubernetes.io/ingress.class":           "kong",
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
@@ -156,7 +156,7 @@ func TestHTTPSRedirect(t *testing.T) {
 	}
 	assert.Eventually(t, func() bool {
 		p := proxyReady()
-		resp, err := client.Get(fmt.Sprintf("%s/example", p.ProxyURL.String()))
+		resp, err := client.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
 		if err != nil {
 			return false
 		}

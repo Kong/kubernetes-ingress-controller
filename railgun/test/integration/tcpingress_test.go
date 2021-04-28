@@ -29,7 +29,7 @@ func TestMinimalTCPIngress(t *testing.T) {
 	defer cancel()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	deployment := k8sgen.NewDeploymentForContainer(k8sgen.NewContainer(testName, "nginx", 80))
+	deployment := k8sgen.NewDeploymentForContainer(k8sgen.NewContainer(testName, httpBinImage, 80))
 	_, err := cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
@@ -95,10 +95,10 @@ func TestMinimalTCPIngress(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-			// Expected: Welcome to nginx!
+			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
 			b.ReadFrom(resp.Body)
-			return strings.Contains(b.String(), "Welcome to nginx!")
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
 	}, ingressWait, waitTick)

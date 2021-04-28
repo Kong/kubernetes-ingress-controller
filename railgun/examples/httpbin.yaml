@@ -1,27 +1,27 @@
 # Usage:
 # -----
 # go run main.go
-# kubectl apply -f examples/nginx.yaml
-# kubectl get secrets kong-config -o=go-template='{{index .data "networking.k8s.io-v1-Ingress-default-nginx-ingress" }}' | base64 -d
+# kubectl apply -f examples/httpbin.yaml
+# kubectl get secrets kong-config -o=go-template='{{index .data "networking.k8s.io-v1-Ingress-default-httpbin-ingress" }}' | base64 -d
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-deployment
+  name: httpbin-deployment
   labels:
-    app: nginx
+    app: httpbin
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: nginx
+      app: httpbin
   template:
     metadata:
       labels:
-        app: nginx
+        app: httpbin
     spec:
       containers:
-      - name: nginx
-        image: nginx
+      - name: httpbin
+        image: kennethreitz/httpbin
         ports:
         - containerPort: 80
 ---
@@ -29,23 +29,23 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: nginx
-  name: nginx-deployment
+    app: httpbin
+  name: httpbin-deployment
 spec:
   ports:
   - port: 80
     protocol: TCP
     targetPort: 80
   selector:
-    app: nginx
+    app: httpbin
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: nginx-ingress
+  name: httpbin-ingress
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    httpbin.ingress.kubernetes.io/rewrite-target: /
     kubernetes.io/ingress.class: "kong"
 spec:
   rules:
@@ -55,16 +55,16 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: nginx-deployment
+            name: httpbin-deployment
             port:
               number: 80
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
-  name: nginx-ingress-v1beta1
+  name: httpbin-ingress-v1beta1
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    httpbin.ingress.kubernetes.io/rewrite-target: /
     kubernetes.io/ingress.class: "kong"
 spec:
   rules:
@@ -72,15 +72,15 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: nginx-deployment
+          serviceName: httpbin-deployment
           servicePort: 80
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: Ingress
 metadata:
-  name: nginx-ingress-extensions-v1beta1
+  name: httpbin-ingress-extensions-v1beta1
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    httpbin.ingress.kubernetes.io/rewrite-target: /
     kubernetes.io/ingress.class: "kong"
 spec:
   rules:
@@ -88,5 +88,5 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: nginx-deployment
+          serviceName: httpbin-deployment
           servicePort: 80

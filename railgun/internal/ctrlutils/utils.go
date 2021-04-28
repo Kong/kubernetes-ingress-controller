@@ -44,7 +44,7 @@ func UpdateKongAdmin(ctx context.Context, kongCFG *sendconfig.Kong) error {
 	return nil
 }
 
-// CleanupFinalizer ensures that a deleted resource is no longer present in the kong configuration secret.
+// CleanupFinalizer ensures that a deleted resource is no longer present in the object cache.
 func CleanupFinalizer(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
 	if HasFinalizer(obj, KongIngressFinalizer) {
 		log.Info("kong ingress finalizer needs to be removed from a resource which is deleting", "ingress", obj.GetName(), "finalizer", KongIngressFinalizer)

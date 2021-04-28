@@ -42,8 +42,6 @@ type Config struct {
 	KongURL              string
 	FilterTag            string
 	Concurrency          int
-	SecretName           string
-	SecretNamespace      string
 	KubeconfigPath       string
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
@@ -76,8 +74,6 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.StringVar(&c.KongURL, "kong-url", "http://localhost:8001", "TODO")
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
-	flagSet.StringVar(&c.SecretName, "secret-name", "kong-config", "TODO")
-	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", ctrlutils.DefaultNamespace, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,

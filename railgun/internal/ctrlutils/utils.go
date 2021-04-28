@@ -69,8 +69,8 @@ func CleanupFinalizer(ctx context.Context, c client.Client, log logr.Logger, nsn
 // already has a specific finalizer set.
 func HasFinalizer(obj client.Object, finalizer string) bool {
 	hasFinalizer := false
-	for _, finalizer := range obj.GetFinalizers() {
-		if finalizer == finalizer {
+	for _, foundFinalizer := range obj.GetFinalizers() {
+		if foundFinalizer == finalizer {
 			hasFinalizer = true
 		}
 	}

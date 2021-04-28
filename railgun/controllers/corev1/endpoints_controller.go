@@ -43,12 +43,6 @@ func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("CoreV1Endpoint", req.NamespacedName)
 
-	// TODO: this just reduces log noise for now, we can clean this up when we clean up other TODO items
-	//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1259
-	if req.Namespace == "local-path-storage" || req.Namespace == "kong-system" || req.Namespace == "kube-system" || req.Name == "kubernetes" {
-		return ctrl.Result{}, nil
-	}
-
 	// get the relevant object
 	obj := new(v1.Endpoints)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {

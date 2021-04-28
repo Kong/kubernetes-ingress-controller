@@ -28,7 +28,7 @@ func TestMinimalKongIngress(t *testing.T) {
 	defer cancel()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	deployment := k8sgen.NewDeploymentForContainer(k8sgen.NewContainer(testName, "kennethreitz/httpbin", 80))
+	deployment := k8sgen.NewDeploymentForContainer(k8sgen.NewContainer(testName, httpBinImage, 80))
 	_, err := cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 

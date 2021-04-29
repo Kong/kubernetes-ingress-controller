@@ -16,7 +16,7 @@ import (
 // KongValidator validates Kong entities.
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer configurationv1.KongConsumer) (bool, string, error)
-	ValidatePlugin(ctx context.Context, consumer configurationv1.KongPlugin) (bool, string, error)
+	ValidatePlugin(ctx context.Context, plugin configurationv1.KongPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
 

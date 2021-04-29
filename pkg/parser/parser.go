@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -309,6 +310,9 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 	}
 	var res []kongstate.Certificate
 	for _, cert := range certs {
+		sort.SliceStable(cert.cert.SNIs, func(i, j int) bool {
+			return strings.Compare(*cert.cert.SNIs[i], *cert.cert.SNIs[j]) < 0
+		})
 		res = append(res, kongstate.Certificate{Certificate: cert.cert})
 	}
 	return res

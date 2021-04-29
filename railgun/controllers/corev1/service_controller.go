@@ -23,9 +23,10 @@ import (
 type CoreV1ServiceReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	KongConfig       sendconfig.Kong
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -76,5 +77,5 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig, r.IngressClassName)
 }

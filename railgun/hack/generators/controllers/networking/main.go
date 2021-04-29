@@ -216,9 +216,10 @@ var controllerTemplate = `
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	KongConfig       sendconfig.Kong
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -247,7 +248,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		if err := mgrutils.CacheStores.{{.CacheType}}.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig, r.IngressClassName); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -270,6 +271,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig, r.IngressClassName)
 }
 `

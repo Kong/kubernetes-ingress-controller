@@ -56,7 +56,7 @@ func TestMinimalTCPIngress(t *testing.T) {
 			Name:      testName,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				"kubernetes.io/ingress.class": "kong",
+				"kubernetes.io/ingress.class": ingressClass,
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{

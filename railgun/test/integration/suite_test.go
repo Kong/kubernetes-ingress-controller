@@ -48,6 +48,9 @@ const (
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
 	// See: https://github.com/postmanlabs/httpbin
 	httpBinImage = "kennethreitz/httpbin"
+
+	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
+	ingressClass = "kongtests"
 )
 
 // -----------------------------------------------------------------------------
@@ -208,6 +211,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-kongplugin=disabled",
 				"--controller-kongconsumer=disabled",
 				"--election-id=integrationtests.konghq.com",
+				fmt.Sprintf("--ingress-class=%s", ingressClass),
 			})
 			fmt.Printf("config: %+v\n", config)
 

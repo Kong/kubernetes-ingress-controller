@@ -437,7 +437,9 @@ func Run(ctx context.Context, c *Config) error {
 
 	if c.AnonymousReports {
 		setupLog.Info("running anonymous reports")
-		mgrutils.RunReport(ctx, kubeconfig, kongCFG, Release)
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongCFG, Release); err != nil {
+			setupLog.Error(err, "anonymous reporting failed")
+		}
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}

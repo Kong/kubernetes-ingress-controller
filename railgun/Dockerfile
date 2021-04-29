@@ -3,4 +3,4 @@
 #       for the actual image build, look at ../Dockerfile.railgun.
 #       Otherwise this file simply exists as a shim to work around the upstream functionality.
 #       See https://github.com/kubernetes-sigs/kubebuilder/issues/2165 for follow-up.
-COPY api/ api/
+COPY apis/ apis/

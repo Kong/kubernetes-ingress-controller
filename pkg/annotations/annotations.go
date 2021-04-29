@@ -52,6 +52,7 @@ const (
 	SNIsKey              = "/snis"
 	RequestBuffering     = "/request-buffering"
 	ResponseBuffering    = "/response-buffering"
+	HostAliasesKey       = "/host-aliases"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -190,12 +191,12 @@ func HasServiceUpstreamAnnotation(anns map[string]string) bool {
 	return anns["ingress.kubernetes.io/service-upstream"] == "true"
 }
 
-// ExtractRegexPriority extracts the host-header annotation value.
+// ExtractRegexPriority extracts the regex-priority annotation value.
 func ExtractRegexPriority(anns map[string]string) string {
 	return anns[AnnotationPrefix+RegexPriorityKey]
 }
 
-// ExtractHostHeader extracts the regex-priority annotation value.
+// ExtractHostHeader extracts the host-header annotation value.
 func ExtractHostHeader(anns map[string]string) string {
 	return anns[AnnotationPrefix+HostHeaderKey]
 }
@@ -230,4 +231,13 @@ func ExtractRequestBuffering(anns map[string]string) (string, bool) {
 func ExtractResponseBuffering(anns map[string]string) (string, bool) {
 	s, ok := anns[AnnotationPrefix+ResponseBuffering]
 	return s, ok
+}
+
+// ExtractHostAliases extracts the host-aliases annotation value.
+func ExtractHostAliases(anns map[string]string) ([]string, bool) {
+	val, exists := anns[AnnotationPrefix+HostAliasesKey]
+	if val == "" {
+		return nil, exists
+	}
+	return strings.Split(val, ","), exists
 }

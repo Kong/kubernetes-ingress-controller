@@ -27,6 +27,7 @@ var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 // hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
 // TODO if the Kong core adds support for wildcard SNI route match criteria, this should change
 var validSNIs = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
+var validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 
 // normalizeProtocols prevents users from mismatching grpc/http
 func (r *Route) normalizeProtocols() {
@@ -224,6 +225,7 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideSNIs(log, r.Ingress.Annotations)
 	r.overrideRequestBuffering(log, r.Ingress.Annotations)
 	r.overrideResponseBuffering(log, r.Ingress.Annotations)
+	r.overrideHosts(log, r.Ingress.Annotations)
 }
 
 // override sets Route fields by KongIngress first, then by annotation
@@ -348,4 +350,41 @@ func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[strin
 	}
 
 	r.ResponseBuffering = kong.Bool(isEnabled)
+}
+
+// overrideHosts appends Host-Aliases to Hosts
+func (r *Route) overrideHosts(log logrus.FieldLogger, anns map[string]string) {
+	var hosts []*string
+	var annHostAliases []string
+	var exists bool
+	annHostAliases, exists = annotations.ExtractHostAliases(anns)
+	if !exists {
+		// the annotation is not set, quit
+		return
+	}
+
+	// avoid allowing duplicate hosts or host-aliases from being added
+	appendIfMissing := func(hosts []*string, sanitizedHost string) []*string {
+		for _, uniqueHost := range hosts {
+			if *uniqueHost == sanitizedHost {
+				return hosts
+			}
+		}
+		return append(hosts, kong.String(sanitizedHost))
+	}
+
+	// Merge hosts and host-aliases
+	hosts = append(hosts, r.Hosts...)
+	for _, hostAlias := range annHostAliases {
+		sanitizedHost := strings.TrimSpace(hostAlias)
+		if validHosts.MatchString(sanitizedHost) {
+			hosts = appendIfMissing(hosts, sanitizedHost)
+		} else {
+			// Host Alias is not a valid hostname
+			log.WithField("kongroute", r.Name).Errorf("invalid host: %v", hostAlias)
+			return
+		}
+	}
+
+	r.Hosts = hosts
 }

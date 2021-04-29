@@ -36,17 +36,17 @@ import (
 var (
 	// Release returns the release version
 	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
-	//       See: "go help cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
 	Release = "UNKNOWN"
 
 	// Repo returns the git repository URL
 	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
-	//       See: "go help cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
 	Repo = "UNKNOWN"
 
 	// Commit returns the short sha from git
 	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
-	//       See: "go help cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
 	Commit = "UNKNOWN"
 )
 

@@ -197,6 +197,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 func Run(ctx context.Context, c *Config) error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&c.ZapOptions)))
 	setupLog := ctrl.Log.WithName("setup")
+	setupLog.Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
 
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))

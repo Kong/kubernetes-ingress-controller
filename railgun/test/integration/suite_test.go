@@ -249,7 +249,8 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	cmd := exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
 		"--publish-service", "kong-system/ingress-controller-kong-proxy",
 		"--kubeconfig", kubeconfigPath,
-		"--kong-admin-url", fmt.Sprintf("http://%s:8001", adminHost))
+		"--kong-admin-url", fmt.Sprintf("http://%s:8001", adminHost),
+		"--ingress-class", ingressClass)
 
 	// set the environment according to the legacy controller's needs
 	cmd.Env = append(os.Environ(),

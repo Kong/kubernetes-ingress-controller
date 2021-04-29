@@ -186,8 +186,12 @@ func namespacedSecretToConfiguration(
 	return SecretToConfiguration(s, bareReference, reference.Namespace)
 }
 
+type SecretGetter interface {
+	GetSecret(namespace, name string) (*corev1.Secret, error)
+}
+
 func SecretToConfiguration(
-	s store.Storer,
+	s SecretGetter,
 	reference configurationv1.SecretValueFromSource, namespace string) (
 	kong.Configuration, error) {
 	secret, err := s.GetSecret(namespace, reference.Secret)

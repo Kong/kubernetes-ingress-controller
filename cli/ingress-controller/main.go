@@ -461,10 +461,10 @@ func main() {
 		logger := log.WithField("component", "admission-server")
 		admissionServer := admission.Server{
 			Validator: admission.KongHTTPValidator{
-				ConsumerSvc: kongClient.Consumers,
-				PluginSvc:   kongClient.Plugins,
-				Logger:      logger,
-				Store:       store,
+				ConsumerSvc:  kongClient.Consumers,
+				PluginSvc:    kongClient.Plugins,
+				Logger:       logger,
+				SecretGetter: store,
 			},
 			Logger: logger,
 		}

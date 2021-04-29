@@ -201,7 +201,6 @@ import (
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 )
@@ -216,10 +215,10 @@ var controllerTemplate = `
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	KongConfig       sendconfig.Kong
-	IngressClassName string
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -248,7 +247,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		if err := mgrutils.CacheStores.{{.CacheType}}.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig, r.IngressClassName); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -271,6 +270,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig, r.IngressClassName)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 `

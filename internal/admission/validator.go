@@ -16,7 +16,7 @@ import (
 // KongValidator validates Kong entities.
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer configurationv1.KongConsumer) (bool, string, error)
-	ValidatePlugin(consumer configurationv1.KongPlugin) (bool, string, error)
+	ValidatePlugin(ctx context.Context, consumer configurationv1.KongPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
 
@@ -57,7 +57,7 @@ func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context,
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if k8sPluign is valid or not and string
 // holds a message if the entity is not valid.
-func (validator KongHTTPValidator) ValidatePlugin(
+func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 	k8sPlugin configurationv1.KongPlugin) (bool, string, error) {
 	if k8sPlugin.PluginName == "" {
 		return false, "plugin name cannot be empty", nil
@@ -92,7 +92,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if err != nil {
 		return false, "", err
 	}
-	resp, err := validator.Client.Do(context.Background(), req, nil)
+	resp, err := validator.Client.Do(ctx, req, nil)
 	if err != nil {
 		return false, err.Error(), nil
 	}
@@ -103,6 +103,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		return false, "", err
 	}
 	return true, "", nil
+
 }
 
 var (

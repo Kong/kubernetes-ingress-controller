@@ -25,12 +25,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
-      - name: Get Latest Tag
-        id: latest_tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
       - name: Docker meta (alpine)
         id: meta_alpine
         uses: crazy-max/ghaction-docker-meta@v2
@@ -52,14 +46,13 @@ jobs:
           images: kong/kubernetes-ingress-controller
           flavor: |
             latest=false
-            suffix=-redhat
           tags: |
             type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}}-redhat
+            type=semver,pattern={{major}}.{{minor}}-redhat
       - name: Build binary
         env:
-          TAG: ${{ steps.latest_tag.outputs.tag }}
+          TAG: ${{ steps.meta_alpine.outputs.version }}
           COMMIT: ${{ github.sha }}
           REPO_INFO: https://github.com/${{ github.repository }}.git
         id: docker_build_binary
@@ -73,7 +66,7 @@ jobs:
       - name: Build and push Alpine
         id: docker_build_alpine
         env:
-          TAG: ${{ steps.latest_tag.outputs.tag }}
+          TAG: ${{ steps.meta_alpine.outputs.version }}
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -84,7 +77,7 @@ jobs:
       - name: Build and push RedHat
         id: docker_build_redhat
         env:
-          TAG: ${{ steps.latest_tag.outputs.tag }}
+          TAG: ${{ steps.meta_redhat.outputs.version }}
         uses: docker/build-push-action@v2
         with:
           push: true

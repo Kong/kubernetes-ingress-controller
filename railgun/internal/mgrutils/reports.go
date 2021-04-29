@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
-// RunReport is runs the full report wanted for new KIC controller setups.
+// RunReport runs the anonymous data report and reports any errors that have occurred.
 func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kong, kicVersion string) error {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.

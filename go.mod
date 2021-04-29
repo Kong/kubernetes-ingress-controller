@@ -14,6 +14,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
+	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/kong/deck v1.6.0
 	github.com/kong/go-kong v0.17.0
 	github.com/kong/kubernetes-testing-framework v0.0.8

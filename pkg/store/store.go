@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
+	"strings"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -197,6 +199,11 @@ func (s Store) ListIngressesV1() []*networkingv1.Ingress {
 		ingresses = append(ingresses, ing)
 	}
 
+	sort.SliceStable(ingresses, func(i, j int) bool {
+		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
+			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
+	})
+
 	return ingresses
 }
 
@@ -211,7 +218,10 @@ func (s Store) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
 		}
 		ingresses = append(ingresses, ing)
 	}
-
+	sort.SliceStable(ingresses, func(i, j int) bool {
+		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
+			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
+	})
 	return ingresses
 }
 
@@ -229,6 +239,10 @@ func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 	if err != nil {
 		return nil, err
 	}
+	sort.SliceStable(ingresses, func(i, j int) bool {
+		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
+			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
+	})
 	return ingresses, nil
 }
 
@@ -247,6 +261,10 @@ func (s Store) ListUDPIngresses() ([]*v1alpha1.UDPIngress, error) {
 				ingresses = append(ingresses, ing)
 			}
 		})
+	sort.SliceStable(ingresses, func(i, j int) bool {
+		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
+			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
+	})
 	return ingresses, err
 }
 
@@ -275,6 +293,10 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	if err != nil {
 		return nil, err
 	}
+	sort.SliceStable(ingresses, func(i, j int) bool {
+		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
+			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
+	})
 	return ingresses, nil
 }
 

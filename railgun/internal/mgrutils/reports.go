@@ -14,7 +14,7 @@ import (
 )
 
 // RunReport is runs the full report wanted for new KIC controller setups.
-func RunReport(ctx context.Context, kubeCFG *rest.Config, kongCFG sendconfig.Kong, kicVersion string) error {
+func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kong, kicVersion string) error {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
 	// This data helps inform us what versions, features, e.t.c. end-users are actively using which helps to inform
@@ -34,7 +34,7 @@ func RunReport(ctx context.Context, kubeCFG *rest.Config, kongCFG sendconfig.Kon
 	}
 
 	// record the current Kubernetes server version
-	kc, err := kubernetes.NewForConfig(kubeCFG)
+	kc, err := kubernetes.NewForConfig(kubeCfg)
 	if err != nil {
 		return fmt.Errorf("could not create client-go for Kubernetes discovery: %w", err)
 	}
@@ -44,7 +44,7 @@ func RunReport(ctx context.Context, kubeCFG *rest.Config, kongCFG sendconfig.Kon
 	}
 
 	// gather versioning information from the kong client
-	root, err := kongCFG.Client.Root(ctx)
+	root, err := kongCfg.Client.Root(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get Kong root config data: %w", err)
 	}

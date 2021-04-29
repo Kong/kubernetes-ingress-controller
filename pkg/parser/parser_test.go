@@ -80,6 +80,104 @@ kqlmLPBJAJeUsP/9KidBjTE5mIbn/2n089VPMBvnlt2xIcuB6+zrf2NjvlcZEyKS
 Gn+T2uCyOP4a1DTUoPyoNJXo
 -----END PRIVATE KEY-----`,
 		},
+		{
+			Cert: `-----BEGIN CERTIFICATE-----
+MIIDEzCCAfugAwIBAgIUOwYJvXJ+s0qX9uAKFjW0zExV51IwDQYJKoZIhvcNAQEF
+BQAwJTEKMAgGA1UEAwwBIzEKMAgGA1UECgwBIzELMAkGA1UEBhMCQ04wHhcNMjEw
+NDMwMDAwMDAwWhcNMjEwNDMwMDAwMDAwWjBDMQswCQYDVQQGEwJDTjEKMAgGA1UE
+CAwBIzEKMAgGA1UEBwwBIzEKMAgGA1UECgwBIzEQMA4GA1UEAwwHZm9vLmNvbTCC
+ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPRFV285ScP1ntF3zlj60GC0
+DJyCEX6Ji38gBf+6An6Zk7D+3Aif9C/3e7V0811x0VoO4o9ZdQUSdxmE9fj/ADOU
+OM/AYf62L51d/zdqXVaF89vpqPk8em4179wo6jg2IiCewGVLTtuMa/5Mud8XZOly
+tcOXS7ZnCbfm/XklwGL1rAmWhOTSDHlIH5bbC46tmi3E9Cjp+VTiwzVCgVtrLkzY
+0cjs72m2wb5uZ9TlT7n1TKYjdX74FvYp4X70YEcFYEUmFMxMV7otkJ7wTWWVNah/
+ZsojaiJ48ueJFQR1S9utYA/h6LcA4T6UQJxw7+6SjJElLCHGht5UHFvQkjQvxZkC
+AwEAAaMdMBswCwYDVR0RBAQwAoIAMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQEF
+BQADggEBAHE4U9SlCIVNjpfOyfH0NPhxLTAqH83GQKJc7TgQFmhby1dfQE7MOTaN
+ayA1RJ0qKcNGlHP70M/Xc8TIF+E7pOASqa+zNztiv14zHIgJC9oGJcwt1sh8GADz
+4EJSQ1mIRxbgs39BA9FDY91HBa3RfLxkmyTbQK1rhKdh8aBYr0/6R1oAdKEQF/vQ
+HxD4NCpJruxp7g+RSet1PB12GOao1Ntfb7kOLAHzYW3yvTsCaQ7EdeueOs8dv+G/
+Ncy+4n/l3audbi+WQFfEvb1bwyADPpp90C9OczHzpR4+dtuR4oUXB6ZXimB3MljC
+BhoOkUOMjrKl/QDkB5pxa/IxURffFDs=
+-----END CERTIFICATE-----`,
+			Key: `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD0RVdvOUnD9Z7R
+d85Y+tBgtAycghF+iYt/IAX/ugJ+mZOw/twIn/Qv93u1dPNdcdFaDuKPWXUFEncZ
+hPX4/wAzlDjPwGH+ti+dXf83al1WhfPb6aj5PHpuNe/cKOo4NiIgnsBlS07bjGv+
+TLnfF2TpcrXDl0u2Zwm35v15JcBi9awJloTk0gx5SB+W2wuOrZotxPQo6flU4sM1
+QoFbay5M2NHI7O9ptsG+bmfU5U+59UymI3V++Bb2KeF+9GBHBWBFJhTMTFe6LZCe
+8E1llTWof2bKI2oiePLniRUEdUvbrWAP4ei3AOE+lECccO/ukoyRJSwhxobeVBxb
+0JI0L8WZAgMBAAECggEAS3gBA4QXnkuMvfrd7e/P4ZC/NLua3BVy29vw/olhq+uX
+DeAv6xpAP3Ge7vkrF3vKyqA+rztcRCzoTyIdPMjMLyNkSguOOzveiig4ac6a99h6
+9z7Bzf85dEOFz+d0NdnDwYBKwQD7ZCmGVBMwehSoQNgIAF4GLly3S/I57ewT/H6A
+GjknY/jCmk+L9388hjcL0jrEJR/br2O/o6f1zdRYWqqb9A1wDW4zkiu4Wrq5in9s
+cxQ/7667eGkciD3HkJvwcbi7xg9ZJHxCWScVYGRBX9ek6fMKxML5hUsITZjt5zxF
+p+HmOKJcii6hlR1RWaUsbrpQOHVui3US7CAJNR/gAQKBgQD7zE0z2XGv81XjIvMk
+sS+IvtsSGpvoUI2QRbdnelC8ahCdKj5PmVQyfhPxrgNCTu6k7VzQUDL+wZDGKoRL
+NEaRkoHz7tVzBE7DY7Y2SD0yfjT477w98iaF/nwortmhpXms0KyzPhZOF5d5166q
+PDR31NIFvmy2H+Hh9bVM5BYaGQKBgQD4WOIgocc+pXn+3fehNT3qedrvGuXGYX7I
+PAO/4zM/oP/0TtxKTz5wGAFR9heBKfogW2jYUBBOofraLMJq3X+T9jEOXuQ9+UQq
+HaybHdQycxpTIWhtiAs9khvSbuEBs2SXyKussPGW8Do5uVfi4/KWWu/wcTzMlfEv
+w207iaN3gQKBgQDAh7u0XJx4PCi871lZAf5logGiOyRhI07LNPOCtN0M5FDly4ov
+lP7zSMH5NuQZDH+fLjucsOX9M4Z+b74OPt+CqbKiEUm2k2GiNxj5Mo1QkX3xpmWa
+PBDGvgqzlNalqgB6amjS+TNW7OUO7iMI2dYIlnsslylKrOArxZOmQnS/6QKBgQCs
+ZVcj++nKDSjwybk6yTDf8hMO5IcY/Vj7Ot4HeHp88xB60buOQhA/1AomkUSjvzYI
+/Ct97aZET6FJjsSvVm9XkRFgvnKGquCss8i8LSq+krR1fL13O3dCGIkDvUCo45Uy
+4HR7/qDWfJCOvaDKuh4OTbY+HP1tr7CrzWeoatV1AQKBgFFmlMWrIThfjtjVWDTg
++QPLQTofB1A3lrCmB52iBdUMi0qGnExLn8aiy54wPz/I7rEplsLzg2hmDNuBPM7q
+QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
+4uiYeQPmK6USKjntOFQ0eNOe
+-----END PRIVATE KEY-----`,
+		},
+		{
+			Cert: `-----BEGIN CERTIFICATE-----
+MIIDEzCCAfugAwIBAgIUBXt+uyE/nkPDO+LmBHyau3e7QpIwDQYJKoZIhvcNAQEF
+BQAwJTEKMAgGA1UEAwwBIzEKMAgGA1UECgwBIzELMAkGA1UEBhMCQ04wHhcNMjEw
+NDMwMDAwMDAwWhcNMjEwNDMwMDAwMDAwWjBDMQswCQYDVQQGEwJDTjEKMAgGA1UE
+CAwBIzEKMAgGA1UEBwwBIzEKMAgGA1UECgwBIzEQMA4GA1UEAwwHZm9vLmNvbTCC
+ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANWQF6xf6EAYSdSUnsOQlojg
+6zjI+U26JpfJqkqsZJ4aOQdUnlDUY+nYEKb7VSH10rszmHltJfKXUBWlXAK/qzZs
+8fnnSa7mI1BejVDQpZ+QYPmxgSfmKlxwgYbHxCB5dklzZv8OGUIeKWau+pnc8Bsr
+gofM+MDdHV4Njcfdf9+g23gNGNQN1MxRdbKRUmmTV3Yiq2YAYO62HkYemd7KrdO3
+QLsKMdodOxN8of6E6654ecctfiae3xkdSYDcBr8ig0T1KVhremFNAAw9mEOzmpR+
+tRKB0Z7hwsR5wYviKmkMa3MyakYAb1EE8R/dt7WedqXDC+JYOjLWh1vVDcrib3cC
+AwEAAaMdMBswCwYDVR0RBAQwAoIAMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQEF
+BQADggEBAGkM8IFbeonb8hguAccoIM3sZgvUnFq3jbdfi4xD4AgjqqLnGRSZxobh
+jDQIX+4wEbGillWspZvg4W8Eb20LOwWpg9J19ORTFLzz09+rkRieawINbs6diirh
+smkEPTI18kKZb1virUoSipviiXFRLra9YOG16YTCoZyeToSe1UKfvBJJPro451tU
+RjIaqFeHIC9t1SoMIHJS1H4jjpdLNunEgNDUdYOMXfFqX2HgYU9626cjxt0otrlw
+6AN08UAvnh72gjaMa7YG0/SQJIJvKFPrC/C4A6vcLd+RMf3y4uNBsMPLUX/ksNs+
+IqaxjG7sWj87o/uWzTCujD7PjdQ2P/o=
+-----END CERTIFICATE-----`,
+			Key: `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDVkBesX+hAGEnU
+lJ7DkJaI4Os4yPlNuiaXyapKrGSeGjkHVJ5Q1GPp2BCm+1Uh9dK7M5h5bSXyl1AV
+pVwCv6s2bPH550mu5iNQXo1Q0KWfkGD5sYEn5ipccIGGx8QgeXZJc2b/DhlCHilm
+rvqZ3PAbK4KHzPjA3R1eDY3H3X/foNt4DRjUDdTMUXWykVJpk1d2IqtmAGDuth5G
+Hpneyq3Tt0C7CjHaHTsTfKH+hOuueHnHLX4mnt8ZHUmA3Aa/IoNE9SlYa3phTQAM
+PZhDs5qUfrUSgdGe4cLEecGL4ippDGtzMmpGAG9RBPEf3be1nnalwwviWDoy1odb
+1Q3K4m93AgMBAAECggEAWqZBBi/ne11T6WH0SfqTiyI9desIt09uljtJh0zJoLps
+vonScWjVyCqoVtiT+EhJ3KA39kK4OtKzcZyxA5Gr8PwpcfQUuKKDFtgrj8QgqSw1
+nYcU1YTDMl2m/TjKLSahaOgNLfIkEoaO+EEJqkm3uTCsxUvhwquYjZWfOtjwMFFm
+Oa5m1kb+QvIRTle3wumzN6yIUXdQRFsK0D8UQUQw5UWGZ8xhwa1TJRGdGwxFT+Kk
+hH+/+PQO62+bWJ27EQFZ9mTMuleG2YGa20u05tXlj3qUmws53yuzwALCBGQYmolh
+2I+pfQ4vAPuXWSL33QIAAkOwPHExbKNyD/w6r79wsQKBgQD4cSejoNFcEzIqlONj
+RNMh2UhpwhMlboU7Xs7x5BAggImk6/wPzOdCL1ytfBJoaNs8MD6tYWU8sa38Vsdh
+DwcbRRTSFzCdZGZw7E1g8/hOqY6dcirJYmOOTAVM0UBy5M2nL/W385B8+9IpzSTN
+ylsJTMZNBh1U9da36D2lqdSbAwKBgQDcD01CW7rDnXS6jnn03KAN2DGXAR3JxvKO
+GSdhcmojORgKYD9tN/AnNriWzUVTB7L0hzsLzuyqFW8g6nY8PKV+IAYBmq12XlpO
+llppwWoDz7JXcO3pKhdwfjYLDag92fWChO4pFctwZhIRurD0FDdvlzM9Ou5LKyzE
+px+sfJ6VfQKBgQDmxNyoDfpKR35itTfd/pELMPQlYGM+csGI21DouQoN1reEHLte
+xdrNzIaOkt/aYgO6jam6jOxnizdsXAMI8deNCgcD+wxqNlc9bxGVDClKkA7ryp9Z
+vm1xQMXvi7MMxeEM+eyJONGudo7Jy0bzbJJROiI8a4CVaWFQJIYWuoDElwKBgQC9
+BTPCrRImVoheemVNK3kbizlFUMMqf4X3Aqot7N44NSFuQDAa+3J/7GPvvJAweqt/
+mOzh/rKQgeq7pkk7AojQZmdiV19qDi+Z01IEBwuuDGhO7YSdw/bwPKjlI60Au8hD
+fTUo+zyM5k/dBLRcY0UeyAxOKuFmlcZVgIwXV8/L7QKBgF/uzlzkW7kujr9QLuas
+b8mVWKEUxmwD4ppmNDrszztQRel0ujl/15bMmXav2UaAzIvnuo0JqVnTc+e2/xu+
+5/cjaN4hxgSSdxsYgDjk727A5L0jb85rVF559qeZck5PatMDt/Lbaz7BeMLw0c3y
+t/0TgcCP3Nl7JDtqRP6PrnZp
+-----END PRIVATE KEY-----`,
+		},
 	}
 
 	caCert1 = `-----BEGIN CERTIFICATE-----
@@ -4105,4 +4203,209 @@ func TestPickPort(t *testing.T) {
 			assert.Equal(tt.wantTarget, *state.Upstreams[0].Targets[0].Target.Target)
 		})
 	}
+}
+
+func TestCertificate(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("same host with multiple namespace return the first namespace/secret by asc ", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "ns3",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "ns2",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+		}
+
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret1",
+					Namespace: "ns1",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("6392jz73-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret1",
+					Namespace: "ns2",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[1].Cert),
+					"tls.key": []byte(tlsPairs[1].Key),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("72x2j56k-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret1",
+					Namespace: "ns3",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[2].Cert),
+					"tls.key": []byte(tlsPairs[2].Key),
+				},
+			},
+		}
+		fooCertificate := kongstate.Certificate{
+			Certificate: kong.Certificate{
+				ID:   kong.String("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Cert: kong.String(tlsPairs[0].Cert),
+				Key:  kong.String(tlsPairs[0].Key),
+				SNIs: []*string{kong.String("foo.com")},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(3, len(state.Certificates))
+		//foo.com with cert should be fixed
+		assert.Contains(state.Certificates, fooCertificate)
+	})
+	t.Run("SNIs slice with same certificate should be ordered by asc", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo3",
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret",
+							Hosts:      []string{"foo3.xxx.com"},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo2",
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret",
+							Hosts:      []string{"foo2.xxx.com"},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo1",
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret",
+							Hosts:      []string{"foo1.xxx.com"},
+						},
+					},
+				},
+			},
+		}
+
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret",
+					Namespace: "ns1",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+		}
+		fooCertificate := kongstate.Certificate{
+			Certificate: kong.Certificate{
+				ID:   kong.String("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Cert: kong.String(tlsPairs[0].Cert),
+				Key:  kong.String(tlsPairs[0].Key),
+				SNIs: []*string{
+					kong.String("foo1.xxx.com"),
+					kong.String("foo2.xxx.com"),
+					kong.String("foo3.xxx.com"),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Certificates))
+		assert.Equal(state.Certificates[0], fooCertificate)
+	})
 }

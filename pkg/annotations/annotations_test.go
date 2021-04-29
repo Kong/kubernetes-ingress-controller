@@ -645,3 +645,36 @@ func TestExtractResponseBuffering(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractHostAliases(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "empty",
+			want: nil,
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": "foo.kong.com,bar.kong.com",
+				},
+			},
+			want: []string{"foo.kong.com", "bar.kong.com"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []string
+			if got, _ = ExtractHostAliases(tt.args.anns); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExtractHostAliases() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

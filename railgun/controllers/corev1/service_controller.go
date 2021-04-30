@@ -25,8 +25,6 @@ type CoreV1ServiceReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 	Proxy             proxy.Proxy
 }
 

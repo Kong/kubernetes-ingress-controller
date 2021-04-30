@@ -25,9 +25,7 @@ type CoreV1EndpointsReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
-	Proxy             proxy.Proxy
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.

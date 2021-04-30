@@ -261,14 +261,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongConfig,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
-				Proxy: prx,
+				Proxy:  prx,
 			},
 		},
 		{
@@ -277,14 +270,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongConfig,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
-				Proxy: prx,
+				Proxy:  prx,
 			},
 		},
 

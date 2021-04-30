@@ -202,7 +202,7 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
 `
 
@@ -217,8 +217,7 @@ type {{.PackageAlias}}{{.Type}}Reconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -244,12 +243,12 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.{{.CacheType}}.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -264,12 +263,14 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.{{.CacheType}}.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new {{.Type}}", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 `

@@ -2,6 +2,7 @@ package corev1
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -11,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
 
 // -----------------------------------------------------------------------------
@@ -26,6 +27,7 @@ type CoreV1EndpointsReconciler struct {
 	Scheme *runtime.Scheme
 
 	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy             proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -43,6 +45,10 @@ func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("CoreV1Endpoint", req.NamespacedName)
 
+	if strings.HasPrefix(req.Namespace, "kube-") || strings.HasPrefix(req.Namespace, "kong-") || req.Name == "kubernetes" {
+		return ctrl.Result{}, nil
+	}
+
 	// get the relevant object
 	obj := new(v1.Endpoints)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
@@ -53,12 +59,12 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Endpoint", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.Endpoint.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -73,11 +79,13 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.Endpoint.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new endpoint", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }

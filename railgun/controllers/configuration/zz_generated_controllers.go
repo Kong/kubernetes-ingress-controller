@@ -36,7 +36,7 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
 
 // -----------------------------------------------------------------------------
@@ -49,8 +49,7 @@ type NetV1IngressReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -76,12 +75,12 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.IngressV1.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -96,13 +95,15 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.IngressV1.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -115,8 +116,7 @@ type NetV1Beta1IngressReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -142,12 +142,12 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.IngressV1beta1.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -162,13 +162,15 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.IngressV1beta1.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -181,8 +183,7 @@ type ExtV1Beta1IngressReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -208,12 +209,12 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.IngressV1beta1.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -228,13 +229,15 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.IngressV1beta1.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -247,8 +250,7 @@ type KongV1KongIngressReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -274,12 +276,12 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.KongIngress.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -294,13 +296,15 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.KongIngress.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new KongIngress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -313,8 +317,7 @@ type KongV1KongPluginReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -340,12 +343,12 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.Plugin.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -360,13 +363,15 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.Plugin.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new KongPlugin", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -379,8 +384,7 @@ type KongV1KongClusterPluginReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -406,12 +410,12 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.ClusterPlugin.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -426,13 +430,15 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.ClusterPlugin.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new KongClusterPlugin", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -445,8 +451,7 @@ type KongV1KongConsumerReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -472,12 +477,12 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.Consumer.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -492,13 +497,15 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.Consumer.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new KongConsumer", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -511,8 +518,7 @@ type KongV1Alpha1UDPIngressReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -538,12 +544,12 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.UDPIngress.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -558,13 +564,15 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.UDPIngress.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new UDPIngress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -577,8 +585,7 @@ type KongV1Beta1TCPIngressReconciler struct {
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-
-	ProxyUpdateParams ctrlutils.ProxyUpdateParams
+	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -604,12 +611,12 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
-		if err := mgrutils.CacheStores.TCPIngress.Delete(obj); err != nil {
+		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
-			return ctrl.Result{}, err
-		}
+
+		// FIXME: wait for proxy to update status before resolving
+
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
 
@@ -624,11 +631,13 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// cache the new object
-	if err := mgrutils.CacheStores.TCPIngress.Add(obj); err != nil {
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new TCPIngress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
 }

@@ -35,7 +35,6 @@ import (
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 )
@@ -48,9 +47,10 @@ import (
 type NetV1IngressReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -79,7 +79,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err := mgrutils.CacheStores.IngressV1.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -102,7 +102,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -113,9 +113,10 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 type NetV1Beta1IngressReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -144,7 +145,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err := mgrutils.CacheStores.IngressV1beta1.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -167,7 +168,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -178,9 +179,10 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 type ExtV1Beta1IngressReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -209,7 +211,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err := mgrutils.CacheStores.IngressV1beta1.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -232,7 +234,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -243,9 +245,10 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 type KongV1KongIngressReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -274,7 +277,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err := mgrutils.CacheStores.KongIngress.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -297,7 +300,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -308,9 +311,10 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 type KongV1KongPluginReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -339,7 +343,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if err := mgrutils.CacheStores.Plugin.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -362,7 +366,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -373,9 +377,10 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 type KongV1KongClusterPluginReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -404,7 +409,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		if err := mgrutils.CacheStores.ClusterPlugin.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -427,7 +432,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -438,9 +443,10 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 type KongV1KongConsumerReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -469,7 +475,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err := mgrutils.CacheStores.Consumer.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -492,7 +498,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -503,9 +509,10 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 type KongV1Alpha1UDPIngressReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -534,7 +541,7 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 		if err := mgrutils.CacheStores.UDPIngress.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -557,7 +564,7 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }
 
 // -----------------------------------------------------------------------------
@@ -568,9 +575,10 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 type KongV1Beta1TCPIngressReconciler struct {
 	client.Client
 
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	KongConfig sendconfig.Kong
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	ProxyUpdateParams ctrlutils.ProxyUpdateParams
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -599,7 +607,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		if err := mgrutils.CacheStores.TCPIngress.Delete(obj); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig); err != nil {
+		if err := ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
@@ -622,5 +630,5 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	// update the kong Admin API with the changes
-	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, &r.KongConfig)
+	return ctrl.Result{}, ctrlutils.UpdateKongAdmin(ctx, r.ProxyUpdateParams)
 }

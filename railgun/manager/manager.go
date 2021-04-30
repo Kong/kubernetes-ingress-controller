@@ -10,6 +10,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
@@ -43,6 +44,7 @@ type Config struct {
 	FilterTag            string
 	Concurrency          int
 	KubeconfigPath       string
+	IngressClassName     string
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 
@@ -59,6 +61,10 @@ type Config struct {
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus
 	ServiceEnabled           util.EnablementStatus
+
+	ProcessClasslessIngressV1      bool
+	ProcessClasslessIngressV1Beta1 bool
+	ProcessClasslessKongConsumer   bool
 }
 
 // MakeFlagSetFor binds the provided Config to commandline flags.
@@ -75,6 +81,7 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
+	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
 		"Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -111,6 +118,10 @@ Kong's Admin SSL certificate.`)
 		"Enable or disable the KongConsumer controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled,
 		"Enable or disable the Service controller. "+onOffUsage)
+
+	flagSet.BoolVar(&c.ProcessClasslessIngressV1Beta1, "process-classless-ingress-v1beta1", false, `Process v1beta1 Ingress resources with no class annotation.`)
+	flagSet.BoolVar(&c.ProcessClasslessIngressV1, "process-classless-ingress-v1", false, `Process v1 Ingress resources with no class annotation.`)
+	flagSet.BoolVar(&c.ProcessClasslessKongConsumer, "process-classless-kong-consumer", false, `Process KongConsumer resources with no class annotation.`)
 
 	zapFlagSet := flag.NewFlagSet("", flag.ExitOnError)
 	c.ZapOptions.BindFlags(zapFlagSet)
@@ -182,6 +193,10 @@ func Run(ctx context.Context, c *Config) error {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 
+	// set "kubernetes.io/ingress.class" to be used by controllers (defaults to "kong")
+	setupLog.Info(`the ingress class name has been set`, "value", c.IngressClassName)
+
+	// build the controller manager
 	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
@@ -217,101 +232,167 @@ func Run(ctx context.Context, c *Config) error {
 		{
 			IsEnabled: &c.ServiceEnabled,
 			Controller: &corev1.CoreV1ServiceReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("Service"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.ServiceEnabled,
 			Controller: &corev1.CoreV1EndpointsReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("Endpoints"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 
 		{
 			IsEnabled: &c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("Ingress"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.IngressNetV1beta1Enabled,
 			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("Ingress"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.IngressExtV1beta1Enabled,
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("Ingress"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.UDPIngressEnabled,
 			Controller: &kongctrl.KongV1Alpha1UDPIngressReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("UDPIngress"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.TCPIngressEnabled,
 			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("TCPIngress"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.KongIngressEnabled,
 			Controller: &kongctrl.KongV1KongIngressReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("KongIngress"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.KongClusterPluginEnabled,
 			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.KongPluginEnabled,
 			Controller: &kongctrl.KongV1KongPluginReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
 			IsEnabled: &c.KongConsumerEnabled,
 			Controller: &kongctrl.KongV1KongConsumerReconciler{
-				Client:     mgr.GetClient(),
-				Log:        ctrl.Log.WithName("controllers").WithName("KongConsumer"),
-				Scheme:     mgr.GetScheme(),
-				KongConfig: kongCFG,
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 	}

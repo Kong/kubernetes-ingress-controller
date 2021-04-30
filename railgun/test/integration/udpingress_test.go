@@ -49,7 +49,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testName,
 			Annotations: map[string]string{
-				"kubernetes.io/ingress.class": "kong",
+				"kubernetes.io/ingress.class": ingressClass,
 			},
 		},
 		Spec: kongv1alpha1.UDPIngressSpec{

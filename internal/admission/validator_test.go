@@ -1,6 +1,7 @@
 package admission
 
 import (
+	"context"
 	"testing"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
@@ -245,7 +246,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			validator := KongHTTPValidator{
 				Store: store,
 			}
-			got, got1, err := validator.ValidatePlugin(tt.args.plugin)
+			got, got1, err := validator.ValidatePlugin(context.Background(), tt.args.plugin)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KongHTTPValidator.ValidatePlugin() error = %v, wantErr %v", err, tt.wantErr)
 				return

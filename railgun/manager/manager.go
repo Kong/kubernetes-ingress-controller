@@ -9,6 +9,16 @@ import (
 	"reflect"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
@@ -20,15 +30,24 @@ import (
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/corev1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+)
+
+var (
+	// Release returns the release version
+	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	Release = "UNKNOWN"
+
+	// Repo returns the git repository URL
+	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	Repo = "UNKNOWN"
+
+	// Commit returns the short sha from git
+	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	Commit = "UNKNOWN"
 )
 
 // Config collects all configuration that the controller manager takes from the environment.
@@ -45,6 +64,7 @@ type Config struct {
 	Concurrency          int
 	KubeconfigPath       string
 	IngressClassName     string
+	AnonymousReports     bool
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 
@@ -82,6 +102,7 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
+	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
 		"Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -176,6 +197,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 func Run(ctx context.Context, c *Config) error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&c.ZapOptions)))
 	setupLog := ctrl.Log.WithName("setup")
+	setupLog.Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
 
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -412,6 +434,15 @@ func Run(ctx context.Context, c *Config) error {
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
+	}
+
+	if c.AnonymousReports {
+		setupLog.Info("running anonymous reports")
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongCFG, Release); err != nil {
+			setupLog.Error(err, "anonymous reporting failed")
+		}
+	} else {
+		setupLog.Info("anonymous reports disabled, skipping")
 	}
 
 	setupLog.Info("starting manager")

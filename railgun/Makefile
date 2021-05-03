@@ -1,11 +1,25 @@
-KIND_CLUSTER_NAME ?= "integration-tests"
+##@ Versioning
+
+ifndef COMMIT
+  COMMIT := $(shell git rev-parse --short HEAD)
+endif
+REPO_INFO=$(shell git config --get remote.origin.url)
+
+##@ Container Image Vars
+
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 # TODO: investigate `go-kong` changes that would allow us to remove `allowDangerousTypes=true`.
 #       See: https://github.com/Kong/go-kong/issues/54
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,allowDangerousTypes=true"
 
+##@ Testing Vars
+
+KIND_CLUSTER_NAME ?= "integration-tests"
+
+##@ Build Vars
+
+CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,allowDangerousTypes=true"
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -54,7 +68,10 @@ test: manifests generate fmt vet ## Run tests.
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -a -o bin/manager -ldflags "-s -w \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Release=$(TAG) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Commit=$(COMMIT) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Repo=$(REPO_INFO)" main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	KONG_EXTERNAL_CONTROLLER=true go run ./main.go
@@ -76,7 +93,6 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

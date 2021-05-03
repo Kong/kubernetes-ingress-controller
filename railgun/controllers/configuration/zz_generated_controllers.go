@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -38,6 +39,140 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
+
+// -----------------------------------------------------------------------------
+// CoreV1 Service
+// -----------------------------------------------------------------------------
+
+// CoreV1Service reconciles a Ingress object
+type CoreV1ServiceReconciler struct {
+	client.Client
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Service{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=v1,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=v1,resources=services/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=v1,resources=services/finalizers,verbs=update
+
+// Reconcile processes the watched objects
+func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("CoreV1Service", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(corev1.Service)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// FIXME: wait for proxy to update status before resolving
+
+		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// before we store cache data for this object, ensure that it has our finalizer set
+	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
+		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		finalizers := obj.GetFinalizers()
+		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
+		if err := r.Client.Update(ctx, obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new Service", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
+// CoreV1 Endpoints
+// -----------------------------------------------------------------------------
+
+// CoreV1Endpoints reconciles a Ingress object
+type CoreV1EndpointsReconciler struct {
+	client.Client
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Endpoints{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=v1,resources=endpoints,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=v1,resources=endpoints/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=v1,resources=endpoints/finalizers,verbs=update
+
+// Reconcile processes the watched objects
+func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("CoreV1Endpoints", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(corev1.Endpoints)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "Endpoints", "namespace", req.Namespace, "name", req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// FIXME: wait for proxy to update status before resolving
+
+		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// before we store cache data for this object, ensure that it has our finalizer set
+	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
+		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		finalizers := obj.GetFinalizers()
+		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
+		if err := r.Client.Update(ctx, obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new Endpoints", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// FIXME: wait for proxy to update status before resolving
+
+	return ctrl.Result{}, nil
+}
 
 // -----------------------------------------------------------------------------
 // NetV1 Ingress

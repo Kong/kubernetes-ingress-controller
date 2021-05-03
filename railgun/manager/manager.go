@@ -28,7 +28,6 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/corev1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
@@ -257,7 +256,7 @@ func Run(ctx context.Context, c *Config) error {
 	controllers := []ControllerDef{
 		{
 			IsEnabled: &c.ServiceEnabled,
-			Controller: &corev1.CoreV1ServiceReconciler{
+			Controller: &configuration.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
 				Scheme: mgr.GetScheme(),
@@ -266,7 +265,7 @@ func Run(ctx context.Context, c *Config) error {
 		},
 		{
 			IsEnabled: &c.ServiceEnabled,
-			Controller: &corev1.CoreV1EndpointsReconciler{
+			Controller: &configuration.CoreV1EndpointsReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
 				Scheme: mgr.GetScheme(),

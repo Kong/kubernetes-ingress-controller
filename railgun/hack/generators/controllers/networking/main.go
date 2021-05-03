@@ -20,6 +20,24 @@ const outputFile = "controllers/configuration/zz_generated_controllers.go"
 // when you run `make controllers`.
 var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
+		PackageImportAlias: "corev1",
+		PackageAlias:       "CoreV1",
+		Package:            "k8s.io/api/core/v1",
+		Type:               "Service",
+		Plural:             "services",
+		URL:                "v1",
+		CacheType:          "Service",
+	},
+	typeNeeded{
+		PackageImportAlias: "corev1",
+		PackageAlias:       "CoreV1",
+		Package:            "k8s.io/api/core/v1",
+		Type:               "Endpoints",
+		Plural:             "endpoints",
+		URL:                "v1",
+		CacheType:          "Endpoint",
+	},
+	typeNeeded{
 		PackageImportAlias: "netv1",
 		PackageAlias:       "NetV1",
 		Package:            "k8s.io/api/networking/v1",
@@ -190,6 +208,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"

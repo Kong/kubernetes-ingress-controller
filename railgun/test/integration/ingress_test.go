@@ -47,7 +47,7 @@ func TestMinimalIngress(t *testing.T) {
 
 	t.Logf("routing to service %s via Ingress", service.Name)
 	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
-		"kubernetes.io/ingress.class": "kong",
+		"kubernetes.io/ingress.class": ingressClass,
 		"konghq.com/strip-path":       "true",
 	}, service)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
@@ -135,7 +135,7 @@ func TestHTTPSRedirect(t *testing.T) {
 
 	t.Logf("exposing Service %s via Ingress", service.Name)
 	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
-		"kubernetes.io/ingress.class":           "kong",
+		"kubernetes.io/ingress.class":           ingressClass,
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)

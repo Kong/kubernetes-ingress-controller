@@ -22,9 +22,9 @@ import (
 const KongIngressFinalizer = "configuration.konghq.com/ingress"
 
 // UpdateKongAdmin is a helper function to take the contents of a Kong config and update the Admin API with the parsed contents.
-func UpdateKongAdmin(ctx context.Context, kongCFG *sendconfig.Kong) error {
+func UpdateKongAdmin(ctx context.Context, params ProxyUpdateParams) error {
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*mgrutils.CacheStores, "kong", false, false, false, logrus.StandardLogger())
+	storer := store.New(*mgrutils.CacheStores, params.IngressClassName, params.ProcessClasslessIngressV1, params.ProcessClasslessIngressV1Beta1, params.ProcessClasslessKongConsumer, logrus.StandardLogger())
 	kongstate, err := parser.Build(logrus.StandardLogger(), storer)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func UpdateKongAdmin(ctx context.Context, kongCFG *sendconfig.Kong) error {
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	_, err = sendconfig.PerformUpdate(timedCtx, logrus.StandardLogger(), kongCFG, true, false, targetConfig, nil, nil, nil)
+	_, err = sendconfig.PerformUpdate(timedCtx, logrus.StandardLogger(), &params.KongConfig, true, false, targetConfig, nil, nil, nil)
 	if err != nil {
 		return err
 	}

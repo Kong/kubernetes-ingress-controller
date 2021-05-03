@@ -1,5 +1,4 @@
 #!/bin/bash
-# TODO: (shane) this is all going to be replaced by a container image soon
 
 set -euox pipefail
 
@@ -13,7 +12,7 @@ then
 fi
 
 # ensure docker is functional
-docker info
+docker info 1>/dev/null
 
 # ensure kind command is accessible
 if ! command -v kind &> /dev/null

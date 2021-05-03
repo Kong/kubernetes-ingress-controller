@@ -3,15 +3,16 @@ package store
 import (
 	"reflect"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
 func keyFunc(obj interface{}) (string, error) {
@@ -145,7 +146,7 @@ func NewFakeStore(
 			Plugin:        kongPluginsStore,
 			ClusterPlugin: kongClusterPluginsStore,
 			Consumer:      consumerStore,
-			Configuration: kongIngressStore,
+			KongIngress:   kongIngressStore,
 
 			KnativeIngress: knativeIngressStore,
 		},

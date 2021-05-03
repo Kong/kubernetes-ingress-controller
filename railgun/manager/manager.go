@@ -5,19 +5,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"reflect"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -26,6 +18,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/corev1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+)
+
+var (
+	// Release returns the release version
+	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	Release = "UNKNOWN"
+
+	// Repo returns the git repository URL
+	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	Repo = "UNKNOWN"
+
+	// Commit returns the short sha from git
+	// NOTE: the value of this is set at compile time using the -X flag for go tool link.
+	//       See: "go doc cmd/link" for details, and "../Dockerfile.railgun" for invocation via "go build".
+	Commit = "UNKNOWN"
 )
 
 // Config collects all configuration that the controller manager takes from the environment.
@@ -35,13 +57,16 @@ type Config struct {
 
 	MetricsAddr          string
 	EnableLeaderElection bool
+	LeaderElectionID     string
 	ProbeAddr            string
 	KongURL              string
 	FilterTag            string
 	Concurrency          int
-	SecretName           string
-	SecretNamespace      string
 	KubeconfigPath       string
+	IngressClassName     string
+	AnonymousReports     bool
+
+	KongAdminAPIConfig adminapi.HTTPClientOpts
 
 	ZapOptions zap.Options
 
@@ -55,23 +80,41 @@ type Config struct {
 	KongClusterPluginEnabled util.EnablementStatus
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus
+	ServiceEnabled           util.EnablementStatus
+
+	ProcessClasslessIngressV1      bool
+	ProcessClasslessIngressV1Beta1 bool
+	ProcessClasslessKongConsumer   bool
 }
 
 // MakeFlagSetFor binds the provided Config to commandline flags.
-func MakeFlagSetFor(c *Config) *flag.FlagSet {
-	flagSet := flagSet{*flag.NewFlagSet("", flag.ExitOnError)}
+func MakeFlagSetFor(c *Config) *pflag.FlagSet {
+	flagSet := flagSet{*pflag.NewFlagSet("", pflag.ExitOnError)}
 
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
 	flagSet.StringVar(&c.KongURL, "kong-url", "http://localhost:8001", "TODO")
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
-	flagSet.StringVar(&c.SecretName, "secret-name", "kong-config", "TODO")
-	flagSet.StringVar(&c.SecretNamespace, "secret-namespace", controllers.DefaultNamespace, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
+	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
+	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
+
+	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
+		"Disable verification of TLS certificate of Kong's Admin endpoint.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSServerName, "kong-admin-tls-server-name", "",
+		"SNI name to use to verify the certificate presented by Kong in TLS.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.CACertPath, "kong-admin-ca-cert-file", "",
+		`Path to PEM-encoded CA certificate file to verify
+Kong's Admin SSL certificate.`)
+	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "",
+		`PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
+	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil,
+		`add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
 
 	const onOffUsage = "Can be one of [enabled, disabled]."
 	flagSet.EnablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled,
@@ -86,7 +129,7 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 		"Enable or disable the UDPIngress controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusDisabled,
 		"Enable or disable the TCPIngress controller. "+onOffUsage)
-	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusDisabled,
+	flagSet.EnablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusEnabled,
 		"Enable or disable the KongIngress controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusDisabled,
 		"Enable or disable the KongClusterPlugin controller. "+onOffUsage)
@@ -94,8 +137,16 @@ func MakeFlagSetFor(c *Config) *flag.FlagSet {
 		"Enable or disable the KongPlugin controller. "+onOffUsage)
 	flagSet.EnablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled,
 		"Enable or disable the KongConsumer controller. "+onOffUsage)
+	flagSet.EnablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled,
+		"Enable or disable the Service controller. "+onOffUsage)
 
-	c.ZapOptions.BindFlags(&flagSet.FlagSet)
+	flagSet.BoolVar(&c.ProcessClasslessIngressV1Beta1, "process-classless-ingress-v1beta1", false, `Process v1beta1 Ingress resources with no class annotation.`)
+	flagSet.BoolVar(&c.ProcessClasslessIngressV1, "process-classless-ingress-v1", false, `Process v1 Ingress resources with no class annotation.`)
+	flagSet.BoolVar(&c.ProcessClasslessKongConsumer, "process-classless-kong-consumer", false, `Process KongConsumer resources with no class annotation.`)
+
+	zapFlagSet := flag.NewFlagSet("", flag.ExitOnError)
+	c.ZapOptions.BindFlags(zapFlagSet)
+	flagSet.AddGoFlagSet(zapFlagSet)
 
 	return &flagSet.FlagSet
 }
@@ -146,6 +197,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 func Run(ctx context.Context, c *Config) error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&c.ZapOptions)))
 	setupLog := ctrl.Log.WithName("setup")
+	setupLog.Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
 
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -154,8 +206,8 @@ func Run(ctx context.Context, c *Config) error {
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 
 	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
-	if v := os.Getenv(controllers.CtrlNamespaceEnv); v == "" {
-		os.Setenv(controllers.CtrlNamespaceEnv, controllers.DefaultNamespace)
+	if v := os.Getenv(ctrlutils.CtrlNamespaceEnv); v == "" {
+		os.Setenv(ctrlutils.CtrlNamespaceEnv, ctrlutils.DefaultNamespace)
 	}
 
 	kubeconfig, err := clientcmd.BuildConfigFromFlags("", c.KubeconfigPath)
@@ -163,50 +215,86 @@ func Run(ctx context.Context, c *Config) error {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 
+	// set "kubernetes.io/ingress.class" to be used by controllers (defaults to "kong")
+	setupLog.Info(`the ingress class name has been set`, "value", c.IngressClassName)
+
+	// build the controller manager
 	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,
 		LeaderElection:         c.EnableLeaderElection,
-		LeaderElectionID:       "5b374a9e.konghq.com",
+		LeaderElectionID:       c.LeaderElectionID,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return err
 	}
 
-	kongClient, err := kong.NewClient(&c.KongURL, http.DefaultClient)
+	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+	if err != nil {
+		setupLog.Error(err, "cannot create a Kong Admin API client")
+	}
+
+	kongClient, err := kong.NewClient(&c.KongURL, httpclient)
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err
 	}
 
+	kongCFG := sendconfig.Kong{
+		URL:         c.KongURL,
+		FilterTags:  []string{c.FilterTag},
+		Concurrency: c.Concurrency,
+		Client:      kongClient,
+	}
+
 	controllers := []ControllerDef{
 		{
-			IsEnabled: &c.KongStateEnabled,
-			Controller: &kongctrl.SecretReconciler{
+			IsEnabled: &c.ServiceEnabled,
+			Controller: &corev1.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Secret"),
+				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
 				Scheme: mgr.GetScheme(),
-				Params: kongctrl.SecretReconcilerParams{
-					WatchName:      c.SecretName,
-					WatchNamespace: c.SecretNamespace,
-					KongConfig: sendconfig.Kong{
-						URL:         c.KongURL,
-						FilterTags:  []string{c.FilterTag},
-						Concurrency: c.Concurrency,
-						Client:      kongClient,
-					},
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
 				},
 			},
 		},
+		{
+			IsEnabled: &c.ServiceEnabled,
+			Controller: &corev1.CoreV1EndpointsReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
+			},
+		},
+
 		{
 			IsEnabled: &c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -215,6 +303,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -223,6 +318,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -231,6 +333,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -239,6 +348,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -247,6 +363,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -255,6 +378,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -263,6 +393,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 		{
@@ -271,6 +408,13 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
 				Scheme: mgr.GetScheme(),
+				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
+					IngressClassName:               c.IngressClassName,
+					KongConfig:                     kongCFG,
+					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
+					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
+					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
+				},
 			},
 		},
 	}
@@ -290,6 +434,15 @@ func Run(ctx context.Context, c *Config) error {
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
+	}
+
+	if c.AnonymousReports {
+		setupLog.Info("running anonymous reports")
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongCFG, Release); err != nil {
+			setupLog.Error(err, "anonymous reporting failed")
+		}
+	} else {
+		setupLog.Info("anonymous reports disabled, skipping")
 	}
 
 	setupLog.Info("starting manager")

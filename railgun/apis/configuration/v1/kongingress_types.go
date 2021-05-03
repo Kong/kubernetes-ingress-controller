@@ -18,11 +18,8 @@ package v1
 
 import (
 	"github.com/kong/go-kong/kong"
-	kicv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var _ = kicv1.KongIngress{}
 
 //+genclient
 //+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -65,6 +65,7 @@ type Config struct {
 	KubeconfigPath       string
 	IngressClassName     string
 	AnonymousReports     bool
+	KongWorkspace        string
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 
@@ -103,6 +104,7 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
+	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", `Kong Enterprise workspace to configure.`)
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
 		"Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -241,6 +243,18 @@ func Run(ctx context.Context, c *Config) error {
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err
+	}
+	if c.KongWorkspace != "" {
+		err := mgrutils.EnsureWorkspace(ctx, kongClient, c.KongWorkspace)
+		if err != nil {
+			setupLog.Error(err, "faileb to ensure workspace in kong")
+			return err
+		}
+		kongClient, err = kong.NewClient(kong.String(c.KongURL+"/"+c.KongWorkspace), httpclient)
+		if err != nil {
+			setupLog.Error(err, "unable to create kongClient")
+			return err
+		}
 	}
 
 	kongConfig := sendconfig.Kong{

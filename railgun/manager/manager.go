@@ -59,7 +59,7 @@ type Config struct {
 	EnableLeaderElection bool
 	LeaderElectionID     string
 	ProbeAddr            string
-	KongURL              string
+	KongAdminURL         string
 	FilterTag            string
 	Concurrency          int
 	KubeconfigPath       string
@@ -98,7 +98,8 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
-	flagSet.StringVar(&c.KongURL, "kong-url", "http://localhost:8001", "TODO")
+	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001",
+		`The Kong Admin URL to connect to in the format "protocol://address:port".`)
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
@@ -239,7 +240,7 @@ func Run(ctx context.Context, c *Config) error {
 		setupLog.Error(err, "cannot create a Kong Admin API client")
 	}
 
-	kongClient, err := kong.NewClient(&c.KongURL, httpclient)
+	kongClient, err := kong.NewClient(&c.KongAdminURL, httpclient)
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err
@@ -250,7 +251,7 @@ func Run(ctx context.Context, c *Config) error {
 			setupLog.Error(err, "faileb to ensure workspace in kong")
 			return err
 		}
-		kongClient, err = kong.NewClient(kong.String(c.KongURL+"/"+c.KongWorkspace), httpclient)
+		kongClient, err = kong.NewClient(kong.String(c.KongAdminURL+"/"+c.KongWorkspace), httpclient)
 		if err != nil {
 			setupLog.Error(err, "unable to create kongClient")
 			return err
@@ -258,7 +259,7 @@ func Run(ctx context.Context, c *Config) error {
 	}
 
 	kongConfig := sendconfig.Kong{
-		URL:         c.KongURL,
+		URL:         c.KongAdminURL,
 		FilterTags:  []string{c.FilterTag},
 		Concurrency: c.Concurrency,
 		Client:      kongClient,

@@ -183,6 +183,8 @@ func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
 	return c, nil
 }
 
+// Add stores a provided runtime.Object into the CacheStore if it's of a supported type.
+// The CacheStore must be initialized (see NewCacheStores()) or this will panic.
 func (c CacheStores) Add(obj runtime.Object) error {
 	switch obj := obj.(type) {
 	// ----------------------------------------------------------------------------

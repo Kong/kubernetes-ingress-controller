@@ -1,14 +1,9 @@
 package proxy
 
 import (
-	"context"
 	"time"
 
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 )
 
 // -----------------------------------------------------------------------------
@@ -58,41 +53,4 @@ type Proxy interface {
 	// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
 	// A status will later be added to the object whether the configuration update succeeds or fails.
 	DeleteObject(obj client.Object) error
-}
-
-// -----------------------------------------------------------------------------
-// Proxy - Public Functions
-// -----------------------------------------------------------------------------
-
-// TODO: these need to be specific to the clientgoCachedProxyResolver
-
-// TODO: .WithStagger() and .WithContext() and .WithLogger() | and .Start()
-//       NOTE: need to maintain thread safety!!!
-
-// NewProxy will provide a new Proxy object. Note that this starts some background services
-// and the caller is thereafter responsible for closing the Proxy.StopCh.
-func NewProxy(ctx context.Context, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool) Proxy {
-	return NewProxyWithStagger(ctx, k8s, kongConfig, ingressClassName, processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, DefaultStagger)
-}
-
-func NewProxyWithStagger(ctx context.Context, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool, stagger time.Duration) Proxy {
-	cache := store.NewCacheStores()
-	proxy := &clientgoCachedProxyResolver{
-		kongConfig: kongConfig,
-		cache:      &cache,
-		logger:     logr.Discard(),
-
-		ingressClassName:               ingressClassName,
-		processClasslessIngressV1Beta1: processClasslessIngressV1Beta1,
-		processClasslessIngressV1:      processClasslessIngressV1,
-		processClasslessKongConsumer:   processClasslessKongConsumer,
-		stopCh:                         make(chan struct{}),
-
-		ctx:     ctx,
-		update:  make(chan *cachedObject, DefaultObjectBufferSize),
-		del:     make(chan *cachedObject, DefaultObjectBufferSize),
-		stagger: stagger,
-	}
-	go proxy.startCacheServer()
-	return proxy
 }

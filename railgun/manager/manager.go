@@ -250,8 +250,7 @@ func Run(ctx context.Context, c *Config) error {
 		Client:      kongClient,
 	}
 
-	// TODO
-	prx := proxy.NewProxy(ctx, mgr.GetClient(), kongConfig, c.IngressClassName, c.ProcessClasslessIngressV1Beta1, c.ProcessClasslessIngressV1, c.ProcessClasslessKongConsumer)
+	prx := proxy.NewCacheBasedProxy(ctx, setupLog.WithName("proxy-cache-resolver"), mgr.GetClient(), kongConfig, c.IngressClassName, c.ProcessClasslessIngressV1Beta1, c.ProcessClasslessIngressV1, c.ProcessClasslessKongConsumer)
 
 	controllers := []ControllerDef{
 		{

@@ -28,9 +28,9 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/corev1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
 
 var (
@@ -243,42 +243,32 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
-	kongCFG := sendconfig.Kong{
+	kongConfig := sendconfig.Kong{
 		URL:         c.KongURL,
 		FilterTags:  []string{c.FilterTag},
 		Concurrency: c.Concurrency,
 		Client:      kongClient,
 	}
 
+	prx := proxy.NewCacheBasedProxy(ctx, setupLog.WithName("proxy-cache-resolver"), mgr.GetClient(), kongConfig, c.IngressClassName, c.ProcessClasslessIngressV1Beta1, c.ProcessClasslessIngressV1, c.ProcessClasslessKongConsumer)
+
 	controllers := []ControllerDef{
 		{
 			IsEnabled: &c.ServiceEnabled,
-			Controller: &corev1.CoreV1ServiceReconciler{
+			Controller: &configuration.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
 			IsEnabled: &c.ServiceEnabled,
-			Controller: &corev1.CoreV1EndpointsReconciler{
+			Controller: &configuration.CoreV1EndpointsReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 
@@ -288,13 +278,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -303,13 +287,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -318,13 +296,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -333,13 +305,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -348,13 +314,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -363,13 +323,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -378,13 +332,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -393,13 +341,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 		{
@@ -408,13 +350,7 @@ func Run(ctx context.Context, c *Config) error {
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
 				Scheme: mgr.GetScheme(),
-				ProxyUpdateParams: ctrlutils.ProxyUpdateParams{
-					IngressClassName:               c.IngressClassName,
-					KongConfig:                     kongCFG,
-					ProcessClasslessIngressV1:      c.ProcessClasslessIngressV1,
-					ProcessClasslessIngressV1Beta1: c.ProcessClasslessIngressV1Beta1,
-					ProcessClasslessKongConsumer:   c.ProcessClasslessKongConsumer,
-				},
+				Proxy:  prx,
 			},
 		},
 	}
@@ -438,7 +374,7 @@ func Run(ctx context.Context, c *Config) error {
 
 	if c.AnonymousReports {
 		setupLog.Info("running anonymous reports")
-		if err := mgrutils.RunReport(ctx, kubeconfig, kongCFG, Release); err != nil {
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, Release); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}
 	} else {

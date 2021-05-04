@@ -221,7 +221,49 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	case *knative.Ingress:
 		return c.KnativeIngress.Add(obj)
 	default:
-		return fmt.Errorf("cannot add kind %q to the store", obj.GetObjectKind().GroupVersionKind())
+		return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
+	}
+}
+
+// Delete removes a provided runtime.Object from the CacheStore if it's of a supported type.
+// The CacheStore must be initialized (see NewCacheStores()) or this will panic.
+func (c CacheStores) Delete(obj runtime.Object) error {
+	switch obj := obj.(type) {
+	// ----------------------------------------------------------------------------
+	// Kubernetes Core API Support
+	// ----------------------------------------------------------------------------
+	case *extensions.Ingress:
+		return c.IngressV1beta1.Delete(obj)
+	case *networkingv1.Ingress:
+		return c.IngressV1.Delete(obj)
+	case *corev1.Service:
+		return c.Service.Delete(obj)
+	case *corev1.Secret:
+		return c.Secret.Delete(obj)
+	case *corev1.Endpoints:
+		return c.Endpoint.Delete(obj)
+	// ----------------------------------------------------------------------------
+	// Kong API Support
+	// ----------------------------------------------------------------------------
+	case *kongv1.KongPlugin:
+		return c.Plugin.Delete(obj)
+	case *kongv1.KongClusterPlugin:
+		return c.ClusterPlugin.Delete(obj)
+	case *kongv1.KongConsumer:
+		return c.Consumer.Delete(obj)
+	case *kongv1.KongIngress:
+		return c.KongIngress.Delete(obj)
+	case *kongv1beta1.TCPIngress:
+		return c.TCPIngress.Delete(obj)
+	case *kongv1alpha1.UDPIngress:
+		return c.UDPIngress.Delete(obj)
+	// ----------------------------------------------------------------------------
+	// 3rd Party API Support
+	// ----------------------------------------------------------------------------
+	case *knative.Ingress:
+		return c.KnativeIngress.Delete(obj)
+	default:
+		return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
 	}
 }
 

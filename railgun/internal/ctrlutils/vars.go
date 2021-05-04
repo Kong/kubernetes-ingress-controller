@@ -31,4 +31,7 @@ var (
 	// ProxyInstanceLabel is a label used for controllers (such as the secret configuration
 	// controller) to identify which pods are running the Kong proxy which needs to be configured.
 	ProxyInstanceLabel = "konghq.com/proxy-instance"
+
+	// KongIngressFinalizer is the finalizer used to ensure Kong configuration cleanup for deleted resources.
+	KongIngressFinalizer = "configuration.konghq.com/ingress"
 )

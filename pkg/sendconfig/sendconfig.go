@@ -40,6 +40,7 @@ func PerformUpdate(ctx context.Context,
 	}
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
+		// use the previous SHA to determine whether or not to perform an update
 		if equalSHA(oldSHA, newSHA) {
 			log.Info("no configuration change, skipping sync to kong")
 			return oldSHA, nil

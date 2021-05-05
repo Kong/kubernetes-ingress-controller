@@ -3,46 +3,13 @@ package ctrlutils
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// KongIngressFinalizer is the finalizer used to ensure Kong configuration cleanup for deleted resources.
-const KongIngressFinalizer = "configuration.konghq.com/ingress"
-
-// UpdateKongAdmin is a helper function to take the contents of a Kong config and update the Admin API with the parsed contents.
-func UpdateKongAdmin(ctx context.Context, params ProxyUpdateParams) error {
-	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*mgrutils.CacheStores, params.IngressClassName, params.ProcessClasslessIngressV1, params.ProcessClasslessIngressV1Beta1, params.ProcessClasslessKongConsumer, logrus.StandardLogger())
-	kongstate, err := parser.Build(logrus.StandardLogger(), storer)
-	if err != nil {
-		return err
-	}
-
-	// generate the deck configuration to be applied to the admin API
-	targetConfig := deckgen.ToDeckContent(ctx, logrus.StandardLogger(), kongstate, nil, nil)
-
-	// apply the configuration update in Kong
-	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	_, err = sendconfig.PerformUpdate(timedCtx, logrus.StandardLogger(), &params.KongConfig, true, false, targetConfig, nil, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // CleanupFinalizer ensures that a deleted resource is no longer present in the object cache.
 func CleanupFinalizer(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {

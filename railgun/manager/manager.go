@@ -298,6 +298,10 @@ func Run(ctx context.Context, c *Config) error {
 	)
 
 	controllers := []ControllerDef{
+		// ---------------------------------------------------------------------------
+		// Core API Controllers
+		// ---------------------------------------------------------------------------
+
 		{
 			IsEnabled: &c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
@@ -316,7 +320,6 @@ func Run(ctx context.Context, c *Config) error {
 				Proxy:  prx,
 			},
 		},
-
 		{
 			IsEnabled: &c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
@@ -344,22 +347,29 @@ func Run(ctx context.Context, c *Config) error {
 				Proxy:  prx,
 			},
 		},
+
+		// ---------------------------------------------------------------------------
+		// Kong API Controllers
+		// ---------------------------------------------------------------------------
+
 		{
 			IsEnabled: &c.UDPIngressEnabled,
 			Controller: &kongctrl.KongV1Alpha1UDPIngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 		{
 			IsEnabled: &c.TCPIngressEnabled,
 			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 		{
@@ -374,10 +384,11 @@ func Run(ctx context.Context, c *Config) error {
 		{
 			IsEnabled: &c.KongClusterPluginEnabled,
 			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 		{
@@ -392,10 +403,11 @@ func Run(ctx context.Context, c *Config) error {
 		{
 			IsEnabled: &c.KongConsumerEnabled,
 			Controller: &kongctrl.KongV1KongConsumerReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongConsumer"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongConsumer"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 	}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,4 +59,25 @@ func IsAPIAvailable(mgr ctrl.Manager, obj client.Object) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
+// to the value provided.
+func HasAnnotation(obj client.Object, key, val string) bool {
+	if v, ok := obj.GetAnnotations()[key]; ok {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
+
+// MatchesIngressClassName indicates whether or not an object indicates that it's supported by the ingress class name provided.
+func MatchesIngressClassName(obj client.Object, ingressClassName string) bool {
+	if ing, ok := obj.(*netv1.Ingress); ok {
+		if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == ingressClassName {
+			return true
+		}
+	}
+	return HasAnnotation(obj, "kubernetes.io/ingress.class", ingressClassName)
 }

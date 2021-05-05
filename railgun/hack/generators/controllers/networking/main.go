@@ -20,103 +20,125 @@ const outputFile = "controllers/configuration/zz_generated_controllers.go"
 // when you run `make controllers`.
 var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
-		PackageImportAlias: "corev1",
-		PackageAlias:       "CoreV1",
-		Package:            "k8s.io/api/core/v1",
-		Type:               "Service",
-		Plural:             "services",
-		URL:                "v1",
-		CacheType:          "Service",
+		PackageImportAlias:                "corev1",
+		PackageAlias:                      "CoreV1",
+		Package:                           "k8s.io/api/core/v1",
+		Type:                              "Service",
+		Plural:                            "services",
+		URL:                               "v1",
+		CacheType:                         "Service",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "corev1",
-		PackageAlias:       "CoreV1",
-		Package:            "k8s.io/api/core/v1",
-		Type:               "Endpoints",
-		Plural:             "endpoints",
-		URL:                "v1",
-		CacheType:          "Endpoint",
+		PackageImportAlias:                "corev1",
+		PackageAlias:                      "CoreV1",
+		Package:                           "k8s.io/api/core/v1",
+		Type:                              "Endpoints",
+		Plural:                            "endpoints",
+		URL:                               "v1",
+		CacheType:                         "Endpoint",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "netv1",
-		PackageAlias:       "NetV1",
-		Package:            "k8s.io/api/networking/v1",
-		Type:               "Ingress",
-		Plural:             "ingresses",
-		URL:                "networking.k8s.io",
-		CacheType:          "IngressV1",
+		PackageImportAlias:                "netv1",
+		PackageAlias:                      "NetV1",
+		Package:                           "k8s.io/api/networking/v1",
+		Type:                              "Ingress",
+		Plural:                            "ingresses",
+		URL:                               "networking.k8s.io",
+		CacheType:                         "IngressV1",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       true,
 	},
 	typeNeeded{
-		PackageImportAlias: "netv1beta1",
-		PackageAlias:       "NetV1Beta1",
-		Package:            "k8s.io/api/networking/v1beta1",
-		Type:               "Ingress",
-		Plural:             "ingresses",
-		URL:                "networking.k8s.io",
-		CacheType:          "IngressV1beta1",
+		PackageImportAlias:                "netv1beta1",
+		PackageAlias:                      "NetV1Beta1",
+		Package:                           "k8s.io/api/networking/v1beta1",
+		Type:                              "Ingress",
+		Plural:                            "ingresses",
+		URL:                               "networking.k8s.io",
+		CacheType:                         "IngressV1beta1",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "extv1beta1",
-		PackageAlias:       "ExtV1Beta1",
-		Package:            "k8s.io/api/extensions/v1beta1",
-		Type:               "Ingress",
-		Plural:             "ingresses",
-		URL:                "apiextensions.k8s.io",
-		CacheType:          "IngressV1beta1",
+		PackageImportAlias:                "extv1beta1",
+		PackageAlias:                      "ExtV1Beta1",
+		Package:                           "k8s.io/api/extensions/v1beta1",
+		Type:                              "Ingress",
+		Plural:                            "ingresses",
+		URL:                               "apiextensions.k8s.io",
+		CacheType:                         "IngressV1beta1",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "kongv1",
-		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
-		Type:               "KongIngress",
-		Plural:             "kongingresses",
-		URL:                "configuration.konghq.com",
-		CacheType:          "KongIngress",
+		PackageImportAlias:                "kongv1",
+		PackageAlias:                      "KongV1",
+		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Type:                              "KongIngress",
+		Plural:                            "kongingresses",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "KongIngress",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "kongv1",
-		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
-		Type:               "KongPlugin",
-		Plural:             "kongplugins",
-		URL:                "configuration.konghq.com",
-		CacheType:          "Plugin",
+		PackageImportAlias:                "kongv1",
+		PackageAlias:                      "KongV1",
+		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Type:                              "KongPlugin",
+		Plural:                            "kongplugins",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "Plugin",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "kongv1",
-		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
-		Type:               "KongClusterPlugin",
-		Plural:             "kongclusterplugins",
-		URL:                "configuration.konghq.com",
-		CacheType:          "ClusterPlugin",
+		PackageImportAlias:                "kongv1",
+		PackageAlias:                      "KongV1",
+		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Type:                              "KongClusterPlugin",
+		Plural:                            "kongclusterplugins",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "ClusterPlugin",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "kongv1",
-		PackageAlias:       "KongV1",
-		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
-		Type:               "KongConsumer",
-		Plural:             "kongconsumers",
-		URL:                "configuration.konghq.com",
-		CacheType:          "Consumer",
+		PackageImportAlias:                "kongv1",
+		PackageAlias:                      "KongV1",
+		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Type:                              "KongConsumer",
+		Plural:                            "kongconsumers",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "Consumer",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "kongv1alpha1",
-		PackageAlias:       "KongV1Alpha1",
-		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1",
-		Type:               "UDPIngress",
-		Plural:             "udpingresses",
-		URL:                "configuration.konghq.com",
-		CacheType:          "UDPIngress",
+		PackageImportAlias:                "kongv1alpha1",
+		PackageAlias:                      "KongV1Alpha1",
+		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1",
+		Type:                              "UDPIngress",
+		Plural:                            "udpingresses",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "UDPIngress",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias: "kongv1beta1",
-		PackageAlias:       "KongV1Beta1",
-		Package:            "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1",
-		Type:               "TCPIngress",
-		Plural:             "tcpingresses",
-		URL:                "configuration.konghq.com",
-		CacheType:          "TCPIngress",
+		PackageImportAlias:                "kongv1beta1",
+		PackageAlias:                      "KongV1Beta1",
+		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1",
+		Type:                              "TCPIngress",
+		Plural:                            "tcpingresses",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "TCPIngress",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
 	},
 }
 
@@ -183,6 +205,14 @@ type typeNeeded struct {
 	Plural             string
 	URL                string
 	CacheType          string
+
+	// AcceptsIngressClassNameAnnotation indicates that the object accepts (and the controller will listen to)
+	// the "kubernetes.io/ingress.class" annotation to decide whether or not the object is supported.
+	AcceptsIngressClassNameAnnotation bool
+
+	// AcceptsIngressClassNameSpec indicates the the object indicates the ingress.class that should support it via
+	// an attribute in its specification named .IngressClassName
+	AcceptsIngressClassNameSpec bool
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
@@ -214,7 +244,10 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
@@ -234,14 +267,66 @@ var controllerTemplate = `
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 
+{{- if or .AcceptsIngressClassNameSpec .AcceptsIngressClassNameAnnotation}}
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	Proxy            proxy.Proxy
+	IngressClassName string
+{{- else}}
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+{{- end}}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+{{- if .AcceptsIngressClassNameAnnotation}}
+	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if v, ok := obj.GetAnnotations()["kubernetes.io/ingress.class"]; ok {
+			if v == r.IngressClassName {
+				return true
+			}
+		}
+{{- if .AcceptsIngressClassNameSpec }}
+		if ing, ok := obj.(*{{.PackageImportAlias}}.{{.Type}}); ok {
+			if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == r.IngressClassName {
+				return true
+			}
+		}
+{{- end}}
+		return false
+	})
+	preds.UpdateFunc = func(e event.UpdateEvent) bool {
+		// at least one of the objects (old or new) needs to be configured with the relevant ingress.class to be supported.
+		if v, ok := e.ObjectOld.GetAnnotations()["kubernetes.io/ingress.class"]; ok {
+			if v == r.IngressClassName {
+				return true
+			}
+		}
+		if v, ok := e.ObjectNew.GetAnnotations()["kubernetes.io/ingress.class"]; ok {
+			if v == r.IngressClassName {
+				return true
+			}
+		}
+{{- if .AcceptsIngressClassNameSpec }}
+		if ing, ok := e.ObjectOld.(*{{.PackageImportAlias}}.{{.Type}}); ok {
+			if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == r.IngressClassName {
+				return true
+			}
+		}
+		if ing, ok := e.ObjectNew.(*{{.PackageImportAlias}}.{{.Type}}); ok {
+			if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == r.IngressClassName {
+				return true
+			}
+		}
+{{- end}}
+		return false
+	}
+	return ctrl.NewControllerManagedBy(mgr).For(&{{.PackageImportAlias}}.{{.Type}}{}, builder.WithPredicates(preds)).Complete(r)
+{{- else}}
 	return ctrl.NewControllerManagedBy(mgr).For(&{{.PackageImportAlias}}.{{.Type}}{}).Complete(r)
+{{- end}}
 }
 
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs=get;list;watch;create;update;patch;delete
@@ -267,7 +352,16 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
 	}
-
+{{if .AcceptsIngressClassNameAnnotation}}
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+{{end}}
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
 		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)

@@ -5,9 +5,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/kong/go-kong/kong"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/kong/go-kong/kong"
 )
 
 // HTTPClientOpts defines parameters that configure an HTTP client.

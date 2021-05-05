@@ -3196,7 +3196,7 @@ func TestParserHostAliases(t *testing.T) {
 			Name:          kong.String("default.foo.00"),
 			StripPath:     kong.Bool(false),
 			RegexPriority: kong.Int(0),
-			Hosts:         kong.StringSlice("example.com","*.example.com"),
+			Hosts:         kong.StringSlice("example.com", "*.example.com"),
 			PreserveHost:  kong.Bool(true),
 			Paths:         kong.StringSlice("/"),
 			Protocols:     kong.StringSlice("http", "https"),

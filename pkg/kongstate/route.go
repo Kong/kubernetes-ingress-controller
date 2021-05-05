@@ -22,12 +22,14 @@ type Route struct {
 	Plugins []kong.Plugin
 }
 
-var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
+var (
+	validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
-// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
-// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change
-var validSNIs = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
-var validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
+	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
+	// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change
+	validSNIs  = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
+	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
+)
 
 // normalizeProtocols prevents users from mismatching grpc/http
 func (r *Route) normalizeProtocols() {

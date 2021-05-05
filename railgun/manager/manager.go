@@ -8,7 +8,6 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -240,22 +239,10 @@ func Run(ctx context.Context, c *Config) error {
 		setupLog.Error(err, "cannot create a Kong Admin API client")
 	}
 
-	kongClient, err := kong.NewClient(&c.KongAdminURL, httpclient)
+	kongClient, err := adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err
-	}
-	if c.KongWorkspace != "" {
-		err := mgrutils.EnsureWorkspace(ctx, kongClient, c.KongWorkspace)
-		if err != nil {
-			setupLog.Error(err, "faileb to ensure workspace in kong")
-			return err
-		}
-		kongClient, err = kong.NewClient(kong.String(c.KongAdminURL+"/"+c.KongWorkspace), httpclient)
-		if err != nil {
-			setupLog.Error(err, "unable to create kongClient")
-			return err
-		}
 	}
 
 	kongConfig := sendconfig.Kong{

@@ -1,9 +1,11 @@
 package adminapi
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/kong/go-kong/kong"
 	"io/ioutil"
 	"net/http"
 )
@@ -70,4 +72,34 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	}
 
 	return c, nil
+}
+
+// GetKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
+// If the workspace does not already exist, GetKongClientForWorkspace will create it.
+func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
+	httpclient *http.Client) (*kong.Client, error) {
+	client, err := kong.NewClient(kong.String(adminURL), httpclient)
+	if err != nil {
+		return nil, fmt.Errorf("creating Kong client: %w", err)
+	}
+	if wsName != "" {
+		exists, err := client.Workspaces.Exists(ctx, kong.String(wsName))
+		if err != nil {
+			return nil, fmt.Errorf("looking up workspace: %w", err)
+		}
+		if !exists {
+			workspace := kong.Workspace{
+				Name: kong.String(wsName),
+			}
+			_, err := client.Workspaces.Create(ctx, &workspace)
+			if err != nil {
+				return nil, fmt.Errorf("creating workspace: %w", err)
+			}
+		}
+		client, err = kong.NewClient(kong.String(adminURL+"/"+wsName), httpclient)
+		if err != nil {
+			return nil, fmt.Errorf("creating Kong client: %w", err)
+		}
+	}
+	return client, nil
 }

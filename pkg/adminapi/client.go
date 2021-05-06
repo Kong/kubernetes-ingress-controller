@@ -83,24 +83,26 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
-	if wsName != "" {
-		exists, err := client.Workspaces.Exists(ctx, kong.String(wsName))
+	if wsName == "" {
+		return client, nil
+	}
+
+	exists, err := client.Workspaces.Exists(ctx, kong.String(wsName))
+	if err != nil {
+		return nil, fmt.Errorf("looking up workspace: %w", err)
+	}
+	if !exists {
+		workspace := kong.Workspace{
+			Name: kong.String(wsName),
+		}
+		_, err := client.Workspaces.Create(ctx, &workspace)
 		if err != nil {
-			return nil, fmt.Errorf("looking up workspace: %w", err)
+			return nil, fmt.Errorf("creating workspace: %w", err)
 		}
-		if !exists {
-			workspace := kong.Workspace{
-				Name: kong.String(wsName),
-			}
-			_, err := client.Workspaces.Create(ctx, &workspace)
-			if err != nil {
-				return nil, fmt.Errorf("creating workspace: %w", err)
-			}
-		}
-		client, err = kong.NewClient(kong.String(adminURL+"/"+wsName), httpclient)
-		if err != nil {
-			return nil, fmt.Errorf("creating Kong client: %w", err)
-		}
+	}
+	client, err = kong.NewClient(kong.String(adminURL+"/"+wsName), httpclient)
+	if err != nil {
+		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
 	return client, nil
 }

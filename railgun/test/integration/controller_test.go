@@ -16,9 +16,10 @@ import (
 func TestHealthEndpoint(t *testing.T) {
 	_ = proxyReady()
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://localhost:%v/healthz", manager.HealthzPort))
+		healthzURL := fmt.Sprintf("http://localhost:%v/healthz", manager.HealthzPort)
+		resp, err := httpc.Get(healthzURL)
 		if err != nil {
-			t.Logf("WARNING: error while waiting for http://localhost:%v/healthz: %v", manager.HealthzPort, err)
+			t.Logf("WARNING: error while waiting for %s: %v", healthzURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -36,9 +37,10 @@ func TestMetricsEndpoint(t *testing.T) {
 	}
 	_ = proxyReady()
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort))
+		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
+		resp, err := httpc.Get(metricsURL)
 		if err != nil {
-			t.Logf("WARNING: error while waiting for http://localhost:%v/metrics: %v", manager.MetricsPort, err)
+			t.Logf("WARNING: error while waiting for %s: %v", metricsURL, err)
 			return false
 		}
 		defer resp.Body.Close()

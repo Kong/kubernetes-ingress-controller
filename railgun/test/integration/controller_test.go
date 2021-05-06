@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/manager"
+	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 	"github.com/stretchr/testify/assert"
 )
 

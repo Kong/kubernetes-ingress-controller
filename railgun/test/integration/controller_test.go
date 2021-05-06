@@ -30,6 +30,10 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestMetricsEndpoint(t *testing.T) {
+	if useLegacyKIC() {
+		// The metrics endpoint was intentionally changed for 2.0. Skip if legacy.
+		return
+	}
 	_ = proxyReady()
 	assert.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort))

@@ -60,7 +60,7 @@ const HealthzPort = 10254
 // MetricsPort is the port the manager's metrics service listens on.
 // Similar to HealthzPort, it may be used in existing user deployment configurations, and its
 // literal value is used in several stock manifests, which must be updated along with this value.
-const MetricsPort = 8080
+const MetricsPort = 10255
 
 // Config collects all configuration that the controller manager takes from the environment.
 // BUG: the above is not 100% accurate today - controllers read some settings from environment variables directly

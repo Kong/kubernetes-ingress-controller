@@ -8,7 +8,6 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -59,12 +58,13 @@ type Config struct {
 	EnableLeaderElection bool
 	LeaderElectionID     string
 	ProbeAddr            string
-	KongURL              string
+	KongAdminURL         string
 	FilterTag            string
 	Concurrency          int
 	KubeconfigPath       string
 	IngressClassName     string
 	AnonymousReports     bool
+	KongWorkspace        string
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 
@@ -97,12 +97,15 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
-	flagSet.StringVar(&c.KongURL, "kong-url", "http://localhost:8001", "TODO")
+	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001",
+		`The Kong Admin URL to connect to in the format "protocol://address:port".`)
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
+	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. "+
+		"Leave this empty if not using Kong workspaces.")
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
 		"Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -237,14 +240,14 @@ func Run(ctx context.Context, c *Config) error {
 		setupLog.Error(err, "cannot create a Kong Admin API client")
 	}
 
-	kongClient, err := kong.NewClient(&c.KongURL, httpclient)
+	kongClient, err := adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
 	if err != nil {
 		setupLog.Error(err, "unable to create kongClient")
 		return err
 	}
 
 	kongConfig := sendconfig.Kong{
-		URL:         c.KongURL,
+		URL:         c.KongAdminURL,
 		FilterTags:  []string{c.FilterTag},
 		Concurrency: c.Concurrency,
 		Client:      kongClient,

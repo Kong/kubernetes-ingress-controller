@@ -15,7 +15,7 @@ require (
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/kong/deck v1.6.0
-	github.com/kong/go-kong v0.17.0
+	github.com/kong/go-kong v0.18.0
 	github.com/kong/kubernetes-testing-framework v0.0.8
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
@@ -35,13 +35,10 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.7.5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
-	golang.org/x/mod v0.3.1-0.20200828183125-ce943fd02449 // indirect
-	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
-	golang.org/x/tools v0.1.0 // indirect
 	google.golang.org/grpc v1.36.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1
@@ -51,11 +48,8 @@ require (
 	k8s.io/apimachinery v0.20.5
 	k8s.io/client-go v0.20.5
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.5.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7 // indirect
 	knative.dev/networking v0.0.0-20210216014426-94bfc013982b
 	knative.dev/pkg v0.0.0-20210216013737-584933f8280b
 	sigs.k8s.io/controller-runtime v0.8.3
-	sigs.k8s.io/structured-merge-diff/v4 v4.0.3 // indirect
 	sigs.k8s.io/yaml v1.2.0
 )

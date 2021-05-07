@@ -63,6 +63,10 @@ type clientgoCachedProxyResolver struct {
 	k8s   client.Client
 	cache *store.CacheStores
 
+	// lastConfigSHA indicates the last SHA sum for the last configuration
+	// updated in the Kong Proxy and is used to avoid making unnecessary updates.
+	lastConfigSHA []byte
+
 	// kong configuration
 	kongConfig sendconfig.Kong
 
@@ -149,7 +153,6 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 	syncTicker := time.NewTicker(p.stagger)
 
 	// updates tracks whether any updates/deletes were tracked this cycle
-	updates := false
 	for {
 		select {
 		case cobj := <-p.update:
@@ -157,23 +160,15 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				p.logger.Error(err, "object could not be updated in the cache and will be discarded")
 				break
 			}
-			updates = true
 		case cobj := <-p.del:
 			if err := p.cacheDelete(cobj); err != nil {
 				p.logger.Error(err, "object could not be deleted from the cache and will be discarded")
 				break
 			}
-			updates = true
 		case <-syncTicker.C:
-			// if there are no relevant object updates for this cycle, then there's no reason to
-			// bother the Kong Proxy with updates from the cache.
-			if !updates {
-				break
-			}
 			if err := p.updateKongAdmin(); err != nil {
 				p.logger.Error(err, "could not update kong admin")
 			}
-			updates = false
 		case <-p.ctx.Done():
 			p.logger.Info("the proxy cache server's context is done, shutting down")
 			return
@@ -218,7 +213,7 @@ func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(p.ctx, 10*time.Second)
 	defer cancel()
-	_, err = sendconfig.PerformUpdate(timedCtx, logrus.StandardLogger(), &p.kongConfig, true, false, targetConfig, nil, nil, nil)
+	p.lastConfigSHA, err = sendconfig.PerformUpdate(timedCtx, logrus.StandardLogger(), &p.kongConfig, true, false, targetConfig, nil, nil, p.lastConfigSHA)
 	if err != nil {
 		return err
 	}

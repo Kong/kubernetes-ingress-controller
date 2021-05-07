@@ -49,7 +49,7 @@ var (
 	Commit = "UNKNOWN"
 )
 
-// HealthzPort is the port the manager's health service listens on.
+// HealthzPort is the default port the manager's health service listens on.
 // Changing this will result in a breaking change. Existing deployments may use the literal
 // port number in their liveness and readiness probes, and upgrading to a controller version
 // with a changed HealthzPort will result in crash loops until users update their probe config.
@@ -57,7 +57,7 @@ var (
 // update this value, search for the old port number and update the stock manifests also.
 const HealthzPort = 10254
 
-// MetricsPort is the port the manager's metrics service listens on.
+// MetricsPort is the default port the manager's metrics service listens on.
 // Similar to HealthzPort, it may be used in existing user deployment configurations, and its
 // literal value is used in several stock manifests, which must be updated along with this value.
 const MetricsPort = 10255

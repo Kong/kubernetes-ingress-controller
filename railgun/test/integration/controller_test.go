@@ -40,20 +40,20 @@ func TestMetricsEndpoint(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			decoder := expfmt.SampleDecoder{
-				Dec:  expfmt.NewDecoder(resp.Body, expfmt.FmtText),
-				Opts: &expfmt.DecodeOptions{},
-			}
-
-			var v model.Vector
-			if err := decoder.Decode(&v); err != nil {
-				t.Logf("decoder failed: %v", err)
-				return false
-			}
-
-			return len(v) > 0
+		if resp.StatusCode != http.StatusOK {
+			return false
+		}		
+		decoder := expfmt.SampleDecoder{
+			Dec:  expfmt.NewDecoder(resp.Body, expfmt.FmtText),
+			Opts: &expfmt.DecodeOptions{},
 		}
-		return false
+
+		var v model.Vector
+		if err := decoder.Decode(&v); err != nil {
+			t.Logf("decoder failed: %v", err)
+			return false
+		}
+
+		return len(v) > 0
 	}, ingressWait, waitTick)
 }

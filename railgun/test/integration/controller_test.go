@@ -3,13 +3,13 @@
 package integration
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
+	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,17 +23,13 @@ func TestHealthEndpoint(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return true
-		}
-		return false
+		return resp.StatusCode == http.StatusOK
 	}, ingressWait, waitTick)
 }
 
 func TestMetricsEndpoint(t *testing.T) {
 	if useLegacyKIC() {
-		// The metrics endpoint was intentionally changed for 2.0. Skip if legacy.
-		return
+		t.Skip("metrics endpoint test does not apply to legacy KIC")
 	}
 	_ = proxyReady()
 	assert.Eventually(t, func() bool {
@@ -45,9 +41,18 @@ func TestMetricsEndpoint(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
-			return strings.Contains(b.String(), "controller_runtime_active_workers")
+			decoder := expfmt.SampleDecoder{
+				Dec:  expfmt.NewDecoder(resp.Body, expfmt.FmtText),
+				Opts: &expfmt.DecodeOptions{},
+			}
+
+			var v model.Vector
+			if err := decoder.Decode(&v); err != nil {
+				t.Logf("decoder failed: %v", err)
+				return false
+			}
+
+			return len(v) > 0
 		}
 		return false
 	}, ingressWait, waitTick)

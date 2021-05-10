@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -79,5 +80,5 @@ func MatchesIngressClassName(obj client.Object, ingressClassName string) bool {
 			return true
 		}
 	}
-	return HasAnnotation(obj, "kubernetes.io/ingress.class", ingressClassName)
+	return HasAnnotation(obj, annotations.IngressClassKey, ingressClassName)
 }

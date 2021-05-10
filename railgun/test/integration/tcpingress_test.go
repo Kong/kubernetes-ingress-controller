@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
@@ -56,7 +57,7 @@ func TestMinimalTCPIngress(t *testing.T) {
 			Name:      testName,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				"kubernetes.io/ingress.class": ingressClass,
+				annotations.IngressClassKey: ingressClass,
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{

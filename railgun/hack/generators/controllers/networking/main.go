@@ -249,6 +249,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
@@ -283,7 +284,7 @@ type {{.PackageAlias}}{{.Type}}Reconciler struct {
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 {{- if .AcceptsIngressClassNameAnnotation}}
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if v, ok := obj.GetAnnotations()["kubernetes.io/ingress.class"]; ok {
+		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
 				return true
 			}
@@ -299,12 +300,12 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 	})
 	preds.UpdateFunc = func(e event.UpdateEvent) bool {
 		// at least one of the objects (old or new) needs to be configured with the relevant ingress.class to be supported.
-		if v, ok := e.ObjectOld.GetAnnotations()["kubernetes.io/ingress.class"]; ok {
+		if v, ok := e.ObjectOld.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
 				return true
 			}
 		}
-		if v, ok := e.ObjectNew.GetAnnotations()["kubernetes.io/ingress.class"]; ok {
+		if v, ok := e.ObjectNew.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
 				return true
 			}

@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
@@ -52,8 +53,8 @@ func TestMinimalKongIngress(t *testing.T) {
 
 	t.Logf("routing to service %s via Ingress", service.Name)
 	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
-		"kubernetes.io/ingress.class": ingressClass,
-		"konghq.com/strip-path":       "true",
+		annotations.IngressClassKey: ingressClass,
+		"konghq.com/strip-path":     "true",
 	}, service)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -69,7 +70,7 @@ func TestMinimalKongIngress(t *testing.T) {
 			Name:      testName,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				"kubernetes.io/ingress.class": ingressClass,
+				annotations.IngressClassKey: ingressClass,
 			},
 		},
 		Proxy: &kong.Service{

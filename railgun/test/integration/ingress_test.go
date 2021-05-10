@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 )
 
@@ -48,8 +49,8 @@ func TestMinimalIngress(t *testing.T) {
 
 	t.Logf("creating an ingress for service %s without ingress.class %s", service.Name, ingressClass)
 	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
-		"kubernetes.io/ingress.class": ingressClass,
-		"konghq.com/strip-path":       "true",
+		annotations.IngressClassKey: ingressClass,
+		"konghq.com/strip-path":     "true",
 	}, service)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -85,7 +86,7 @@ func TestMinimalIngress(t *testing.T) {
 	t.Logf("removing the ingress.class annotation \"%s\" from ingress %s", ingressClass, ingress.Name)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Get(ctx, ingress.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
-	delete(ingress.ObjectMeta.Annotations, "kubernetes.io/ingress.class")
+	delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Update(ctx, ingress, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
@@ -117,7 +118,7 @@ func TestMinimalIngress(t *testing.T) {
 	t.Logf("putting the ingress.class annotation \"%s\" back on ingress %s", ingressClass, ingress.Name)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Get(ctx, ingress.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
-	ingress.ObjectMeta.Annotations["kubernetes.io/ingress.class"] = ingressClass
+	ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Update(ctx, ingress, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
@@ -193,7 +194,7 @@ func TestHTTPSRedirect(t *testing.T) {
 
 	t.Logf("exposing Service %s via Ingress", service.Name)
 	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
-		"kubernetes.io/ingress.class":           ingressClass,
+		annotations.IngressClassKey:             ingressClass,
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)

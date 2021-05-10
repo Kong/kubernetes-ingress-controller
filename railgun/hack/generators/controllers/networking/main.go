@@ -280,6 +280,8 @@ type {{.PackageAlias}}{{.Type}}Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 {{- if .AcceptsIngressClassNameAnnotation}}
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {

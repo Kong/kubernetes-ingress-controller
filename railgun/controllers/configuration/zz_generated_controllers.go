@@ -185,6 +185,8 @@ type NetV1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
@@ -295,6 +297,8 @@ type NetV1Beta1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
@@ -390,6 +394,8 @@ type ExtV1Beta1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
@@ -609,6 +615,8 @@ type KongV1KongClusterPluginReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
@@ -704,6 +712,8 @@ type KongV1KongConsumerReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
@@ -799,6 +809,8 @@ type KongV1Alpha1UDPIngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Alpha1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {
@@ -894,6 +906,8 @@ type KongV1Beta1TCPIngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
+	//                  future release of Kubernetes.
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			if v == r.IngressClassName {

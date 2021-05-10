@@ -268,15 +268,12 @@ var controllerTemplate = `
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 
-{{- if or .AcceptsIngressClassNameSpec .AcceptsIngressClassNameAnnotation}}
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
-	IngressClassName string
-{{- else}}
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+{{- if or .AcceptsIngressClassNameSpec .AcceptsIngressClassNameAnnotation}}
+
+	IngressClassName string
 {{- end}}
 }
 

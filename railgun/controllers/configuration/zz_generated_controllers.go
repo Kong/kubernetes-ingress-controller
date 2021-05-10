@@ -51,6 +51,7 @@ import (
 // CoreV1Service reconciles a Ingress object
 type CoreV1ServiceReconciler struct {
 	client.Client
+
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
@@ -112,6 +113,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // CoreV1Endpoints reconciles a Ingress object
 type CoreV1EndpointsReconciler struct {
 	client.Client
+
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
@@ -173,9 +175,11 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // NetV1Ingress reconciles a Ingress object
 type NetV1IngressReconciler struct {
 	client.Client
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
 	IngressClassName string
 }
 
@@ -281,9 +285,11 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // NetV1Beta1Ingress reconciles a Ingress object
 type NetV1Beta1IngressReconciler struct {
 	client.Client
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
 	IngressClassName string
 }
 
@@ -374,9 +380,11 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // ExtV1Beta1Ingress reconciles a Ingress object
 type ExtV1Beta1IngressReconciler struct {
 	client.Client
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
 	IngressClassName string
 }
 
@@ -467,6 +475,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // KongV1KongIngress reconciles a Ingress object
 type KongV1KongIngressReconciler struct {
 	client.Client
+
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
@@ -528,6 +537,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // KongV1KongPlugin reconciles a Ingress object
 type KongV1KongPluginReconciler struct {
 	client.Client
+
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
@@ -589,9 +599,11 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 // KongV1KongClusterPlugin reconciles a Ingress object
 type KongV1KongClusterPluginReconciler struct {
 	client.Client
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
 	IngressClassName string
 }
 
@@ -682,9 +694,11 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 // KongV1KongConsumer reconciles a Ingress object
 type KongV1KongConsumerReconciler struct {
 	client.Client
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
 	IngressClassName string
 }
 
@@ -775,9 +789,11 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 // KongV1Alpha1UDPIngress reconciles a Ingress object
 type KongV1Alpha1UDPIngressReconciler struct {
 	client.Client
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
 	IngressClassName string
 }
 
@@ -868,9 +884,11 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 // KongV1Beta1TCPIngress reconciles a Ingress object
 type KongV1Beta1TCPIngressReconciler struct {
 	client.Client
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	Proxy            proxy.Proxy
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
 	IngressClassName string
 }
 

@@ -67,6 +67,7 @@ const MetricsPort = 10255
 type Config struct {
 	// See flag definitions in RegisterFlags(...) for documentation of the fields defined here.
 
+	APIServerHost        string
 	MetricsAddr          string
 	EnableLeaderElection bool
 	LeaderElectionID     string
@@ -104,6 +105,8 @@ type Config struct {
 func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet := flagSet{*pflag.NewFlagSet("", pflag.ExitOnError)}
 
+	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "",
+		`The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort),
 		"The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort),
@@ -228,7 +231,7 @@ func Run(ctx context.Context, c *Config) error {
 		os.Setenv(ctrlutils.CtrlNamespaceEnv, ctrlutils.DefaultNamespace)
 	}
 
-	kubeconfig, err := clientcmd.BuildConfigFromFlags("", c.KubeconfigPath)
+	kubeconfig, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}

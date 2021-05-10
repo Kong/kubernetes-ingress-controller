@@ -83,14 +83,14 @@ func TestMinimalIngress(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("removing the ingress.class annotation \"%s\" from ingress %s", ingressClass, ingress.Name)
+	t.Logf("removing the ingress.class annotation %q from ingress %s", ingressClass, ingress.Name)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Get(ctx, ingress.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
 	delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Update(ctx, ingress, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
-	t.Logf("verifying that removing the ingress.class annotation \"%s\" from ingress %s causes routes to disconnect", ingressClass, ingress.Name)
+	t.Logf("verifying that removing the ingress.class annotation %q from ingress %s causes routes to disconnect", ingressClass, ingress.Name)
 	assert.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
 		if err != nil {
@@ -115,7 +115,7 @@ func TestMinimalIngress(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("putting the ingress.class annotation \"%s\" back on ingress %s", ingressClass, ingress.Name)
+	t.Logf("putting the ingress.class annotation %q back on ingress %s", ingressClass, ingress.Name)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Get(ctx, ingress.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
 	ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
@@ -282,14 +282,14 @@ func TestIngressClassNameSpec(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("removing the IngressClassName \"%s\" from ingress %s", ingressClass, ingress.Name)
+	t.Logf("removing the IngressClassName %q from ingress %s", ingressClass, ingress.Name)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Get(ctx, ingress.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
 	ingress.Spec.IngressClassName = nil
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Update(ctx, ingress, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
-	t.Logf("verifying that removing the IngressClassName \"%s\" from ingress %s causes routes to disconnect", ingressClass, ingress.Name)
+	t.Logf("verifying that removing the IngressClassName %q from ingress %s causes routes to disconnect", ingressClass, ingress.Name)
 	assert.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
 		if err != nil {
@@ -314,7 +314,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("putting the IngressClassName \"%s\" back on ingress %s", ingressClass, ingress.Name)
+	t.Logf("putting the IngressClassName %q back on ingress %s", ingressClass, ingress.Name)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Get(ctx, ingress.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
 	ingress.Spec.IngressClassName = kong.String(ingressClass)

@@ -9,7 +9,6 @@ import (
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -80,6 +79,9 @@ type Config struct {
 	AnonymousReports     bool
 	KongWorkspace        string
 
+	LogLevel  string
+	LogFormat string
+
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 
 	KongStateEnabled         util.EnablementStatus
@@ -120,6 +122,11 @@ func MakeFlagSetFor(c *Config) *pflag.FlagSet {
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. "+
 		"Leave this empty if not using Kong workspaces.")
+
+	flagSet.StringVar(&c.LogLevel, "log-level", "info",
+		`Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
+	flagSet.StringVar(&c.LogFormat, "log-format", "text",
+		`Format of logs of the controller. Allowed values are text and json.`)
 
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false,
 		"Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -208,7 +215,10 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config) error {
-	deprecatedLogger := logrus.StandardLogger()
+	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
+	if err != nil {
+		return fmt.Errorf("failed to make logger: %w", err)
+	}
 	var logger logr.Logger = logrusr.NewLogger(deprecatedLogger)
 
 	ctrl.SetLogger(logger)

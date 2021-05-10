@@ -3,11 +3,13 @@ package manager
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"reflect"
 
+	"github.com/bombsimon/logrusr"
+	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -16,7 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
@@ -80,8 +81,6 @@ type Config struct {
 	KongWorkspace        string
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
-
-	ZapOptions zap.Options
 
 	KongStateEnabled         util.EnablementStatus
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -162,10 +161,6 @@ Kong's Admin SSL certificate.`)
 	flagSet.BoolVar(&c.ProcessClasslessIngressV1, "process-classless-ingress-v1", false, `Process v1 Ingress resources with no class annotation.`)
 	flagSet.BoolVar(&c.ProcessClasslessKongConsumer, "process-classless-kong-consumer", false, `Process KongConsumer resources with no class annotation.`)
 
-	zapFlagSet := flag.NewFlagSet("", flag.ExitOnError)
-	c.ZapOptions.BindFlags(zapFlagSet)
-	flagSet.AddGoFlagSet(zapFlagSet)
-
 	return &flagSet.FlagSet
 }
 
@@ -213,7 +208,10 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config) error {
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&c.ZapOptions)))
+	deprecatedLogger := logrus.StandardLogger()
+	var logger logr.Logger = logrusr.NewLogger(deprecatedLogger)
+
+	ctrl.SetLogger(logger)
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
 
@@ -268,7 +266,17 @@ func Run(ctx context.Context, c *Config) error {
 		Client:      kongClient,
 	}
 
-	prx := proxy.NewCacheBasedProxy(ctx, setupLog.WithName("proxy-cache-resolver"), mgr.GetClient(), kongConfig, c.IngressClassName, c.ProcessClasslessIngressV1Beta1, c.ProcessClasslessIngressV1, c.ProcessClasslessKongConsumer)
+	prx := proxy.NewCacheBasedProxy(ctx,
+		// NOTE: logr-based loggers use the "logger" field instead of "subsystem". When replacing logrus with logr, replace
+		// WithField("subsystem", ...) with WithName(...).
+		deprecatedLogger.WithField("subsystem", "proxy-cache-resolver"),
+		mgr.GetClient(),
+		kongConfig,
+		c.IngressClassName,
+		c.ProcessClasslessIngressV1Beta1,
+		c.ProcessClasslessIngressV1,
+		c.ProcessClasslessKongConsumer,
+	)
 
 	controllers := []ControllerDef{
 		{
@@ -294,7 +302,7 @@ func Run(ctx context.Context, c *Config) error {
 			IsEnabled: &c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
 				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
 				Scheme: mgr.GetScheme(),
 				Proxy:  prx,
 			},
@@ -303,7 +311,7 @@ func Run(ctx context.Context, c *Config) error {
 			IsEnabled: &c.IngressNetV1beta1Enabled,
 			Controller: &configuration.NetV1Beta1IngressReconciler{
 				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
 				Scheme: mgr.GetScheme(),
 				Proxy:  prx,
 			},
@@ -312,7 +320,7 @@ func Run(ctx context.Context, c *Config) error {
 			IsEnabled: &c.IngressExtV1beta1Enabled,
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
 				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
 				Scheme: mgr.GetScheme(),
 				Proxy:  prx,
 			},

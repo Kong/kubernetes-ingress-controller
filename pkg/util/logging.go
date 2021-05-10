@@ -16,10 +16,6 @@ var (
 		"debug": logrus.DebugLevel,
 		"trace": logrus.TraceLevel,
 	}
-	logrusFormats = map[string]logrus.Formatter{
-		"text": &logrus.TextFormatter{},
-		"json": &logrus.JSONFormatter{},
-	}
 )
 
 func MakeLogger(level string, formatter string) (logrus.FieldLogger, error) {

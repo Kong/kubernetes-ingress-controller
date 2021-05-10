@@ -113,12 +113,9 @@ func main() {
 		logrus.Fatalf("failed to parse configuration: %v", err)
 	}
 
-	log := logrus.New()
-	if log.Level, err = util.GetLogrusLevel(cliConfig.LogLevel); err != nil {
-		logrus.WithError(err).Fatalf("setting log level failed")
-	}
-	if log.Formatter, err = util.GetLogrusFormatter(cliConfig.LogFormat); err != nil {
-		logrus.WithError(err).Fatalf("setting log formatter failed")
+	log, err := util.MakeLogger(cliConfig.LogLevel, cliConfig.LogFormat)
+	if err != nil {
+		log.WithError(err).Fatal("failed to make logger")
 	}
 
 	for key, value := range viper.AllSettings() {

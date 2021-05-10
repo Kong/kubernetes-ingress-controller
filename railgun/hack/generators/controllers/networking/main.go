@@ -12,7 +12,18 @@ import (
 // Main
 // -----------------------------------------------------------------------------
 
-const outputFile = "controllers/configuration/zz_generated_controllers.go"
+const (
+	outputFile = "controllers/configuration/zz_generated_controllers.go"
+
+	corev1     = "k8s.io/api/core/v1"
+	netv1      = "k8s.io/api/networking/v1"
+	netv1beta1 = "k8s.io/api/networking/v1beta1"
+	extv1beta1 = "k8s.io/api/extensions/v1beta1"
+
+	kongv1       = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1 = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1"
+)
 
 // inputControllersNeeded is a list of the supported Types for the
 // Kong Kubernetes Ingress Controller. If you need to add a new type
@@ -22,7 +33,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "corev1",
 		PackageAlias:                      "CoreV1",
-		Package:                           "k8s.io/api/core/v1",
+		Package:                           corev1,
 		Type:                              "Service",
 		Plural:                            "services",
 		URL:                               "v1",
@@ -33,7 +44,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "corev1",
 		PackageAlias:                      "CoreV1",
-		Package:                           "k8s.io/api/core/v1",
+		Package:                           corev1,
 		Type:                              "Endpoints",
 		Plural:                            "endpoints",
 		URL:                               "v1",
@@ -44,7 +55,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "netv1",
 		PackageAlias:                      "NetV1",
-		Package:                           "k8s.io/api/networking/v1",
+		Package:                           netv1,
 		Type:                              "Ingress",
 		Plural:                            "ingresses",
 		URL:                               "networking.k8s.io",
@@ -55,7 +66,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "netv1beta1",
 		PackageAlias:                      "NetV1Beta1",
-		Package:                           "k8s.io/api/networking/v1beta1",
+		Package:                           netv1beta1,
 		Type:                              "Ingress",
 		Plural:                            "ingresses",
 		URL:                               "networking.k8s.io",
@@ -66,7 +77,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "extv1beta1",
 		PackageAlias:                      "ExtV1Beta1",
-		Package:                           "k8s.io/api/extensions/v1beta1",
+		Package:                           extv1beta1,
 		Type:                              "Ingress",
 		Plural:                            "ingresses",
 		URL:                               "apiextensions.k8s.io",
@@ -77,7 +88,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
 		PackageAlias:                      "KongV1",
-		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Package:                           kongv1,
 		Type:                              "KongIngress",
 		Plural:                            "kongingresses",
 		URL:                               "configuration.konghq.com",
@@ -88,7 +99,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
 		PackageAlias:                      "KongV1",
-		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Package:                           kongv1,
 		Type:                              "KongPlugin",
 		Plural:                            "kongplugins",
 		URL:                               "configuration.konghq.com",
@@ -99,7 +110,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
 		PackageAlias:                      "KongV1",
-		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Package:                           kongv1,
 		Type:                              "KongClusterPlugin",
 		Plural:                            "kongclusterplugins",
 		URL:                               "configuration.konghq.com",
@@ -110,7 +121,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
 		PackageAlias:                      "KongV1",
-		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1",
+		Package:                           kongv1,
 		Type:                              "KongConsumer",
 		Plural:                            "kongconsumers",
 		URL:                               "configuration.konghq.com",
@@ -121,7 +132,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "kongv1alpha1",
 		PackageAlias:                      "KongV1Alpha1",
-		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1",
+		Package:                           kongv1alpha1,
 		Type:                              "UDPIngress",
 		Plural:                            "udpingresses",
 		URL:                               "configuration.konghq.com",
@@ -132,7 +143,7 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "kongv1beta1",
 		PackageAlias:                      "KongV1Beta1",
-		Package:                           "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1",
+		Package:                           kongv1beta1,
 		Type:                              "TCPIngress",
 		Plural:                            "tcpingresses",
 		URL:                               "configuration.konghq.com",
@@ -246,10 +257,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
@@ -280,49 +288,7 @@ type {{.PackageAlias}}{{.Type}}Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 {{- if .AcceptsIngressClassNameAnnotation}}
-	// NOTE(generated): keep in mind that the ingress.class annotation is deprecated and will be removed in a
-	//                  future release of Kubernetes.
-	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if v, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
-			if v == r.IngressClassName {
-				return true
-			}
-		}
-{{- if .AcceptsIngressClassNameSpec }}
-		if ing, ok := obj.(*{{.PackageImportAlias}}.{{.Type}}); ok {
-			if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == r.IngressClassName {
-				return true
-			}
-		}
-{{- end}}
-		return false
-	})
-	preds.UpdateFunc = func(e event.UpdateEvent) bool {
-		// at least one of the objects (old or new) needs to be configured with the relevant ingress.class to be supported.
-		if v, ok := e.ObjectOld.GetAnnotations()[annotations.IngressClassKey]; ok {
-			if v == r.IngressClassName {
-				return true
-			}
-		}
-		if v, ok := e.ObjectNew.GetAnnotations()[annotations.IngressClassKey]; ok {
-			if v == r.IngressClassName {
-				return true
-			}
-		}
-{{- if .AcceptsIngressClassNameSpec }}
-		if ing, ok := e.ObjectOld.(*{{.PackageImportAlias}}.{{.Type}}); ok {
-			if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == r.IngressClassName {
-				return true
-			}
-		}
-		if ing, ok := e.ObjectNew.(*{{.PackageImportAlias}}.{{.Type}}); ok {
-			if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == r.IngressClassName {
-				return true
-			}
-		}
-{{- end}}
-		return false
-	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, {{.AcceptsIngressClassNameSpec}}, true)
 	return ctrl.NewControllerManagedBy(mgr).For(&{{.PackageImportAlias}}.{{.Type}}{}, builder.WithPredicates(preds)).Complete(r)
 {{- else}}
 	return ctrl.NewControllerManagedBy(mgr).For(&{{.PackageImportAlias}}.{{.Type}}{}).Complete(r)

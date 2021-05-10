@@ -323,28 +323,31 @@ func Run(ctx context.Context, c *Config) error {
 		{
 			IsEnabled: &c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 		{
 			IsEnabled: &c.IngressNetV1beta1Enabled,
 			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 		{
 			IsEnabled: &c.IngressExtV1beta1Enabled,
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 

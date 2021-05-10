@@ -80,6 +80,7 @@ type Config struct {
 	KongWorkspace        string
 
 	KongAdminAPIConfig adminapi.HTTPClientOpts
+	KongAdminToken     string
 
 	ZapOptions zap.Options
 
@@ -133,6 +134,8 @@ Kong's Admin SSL certificate.`)
 		`PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
 	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil,
 		`add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
+	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "",
+		`The Kong Enterprise RBAC token used by the controller.`)
 
 	const onOffUsage = "Can be one of [enabled, disabled]."
 	flagSet.EnablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled,
@@ -250,6 +253,9 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
+	if c.KongAdminToken != "" {
+		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
+	}
 	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
 	if err != nil {
 		setupLog.Error(err, "cannot create a Kong Admin API client")

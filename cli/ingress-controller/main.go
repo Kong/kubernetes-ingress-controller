@@ -65,22 +65,6 @@ import (
 	knativeinformer "knative.dev/networking/pkg/client/informers/externalversions"
 )
 
-var (
-	logrusLevel = map[string]logrus.Level{
-		"panic": logrus.PanicLevel,
-		"fatal": logrus.FatalLevel,
-		"error": logrus.ErrorLevel,
-		"warn":  logrus.WarnLevel,
-		"info":  logrus.InfoLevel,
-		"debug": logrus.DebugLevel,
-		"trace": logrus.TraceLevel,
-	}
-	logrusFormat = map[string]logrus.Formatter{
-		"text": &logrus.TextFormatter{},
-		"json": &logrus.JSONFormatter{},
-	}
-)
-
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
 	return controller.Configuration{
 		Kong: sendconfig.Kong{
@@ -128,18 +112,14 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to parse configuration: %v", err)
 	}
-	log := logrus.New()
-	level, ok := logrusLevel[cliConfig.LogLevel]
-	if !ok {
-		logrus.Fatalf("invalid log-level: %v", cliConfig.LogLevel)
-	}
-	log.Level = level
 
-	format, ok := logrusFormat[cliConfig.LogFormat]
-	if !ok {
-		logrus.Fatalf("invalid log-format: %v", cliConfig.LogFormat)
+	log := logrus.New()
+	if log.Level, err = util.GetLogrusLevel(cliConfig.LogLevel); err != nil {
+		logrus.WithError(err).Fatalf("setting log level failed")
 	}
-	log.Formatter = format
+	if log.Formatter, err = util.GetLogrusFormatter(cliConfig.LogFormat); err != nil {
+		logrus.WithError(err).Fatalf("setting log formatter failed")
+	}
 
 	for key, value := range viper.AllSettings() {
 		log.WithField(key, fmt.Sprintf("%v", value)).Debug("input flag")

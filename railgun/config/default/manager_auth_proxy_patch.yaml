@@ -13,7 +13,7 @@ spec:
         image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
         args:
         - "--secure-listen-address=0.0.0.0:8443"
-        - "--upstream=http://127.0.0.1:8080/"
+        - "--upstream=http://127.0.0.1:10255/"
         - "--logtostderr=true"
         - "--v=10"
         ports:
@@ -21,6 +21,6 @@ spec:
           name: https
       - name: manager
         args:
-        - "--health-probe-bind-address=:8081"
-        - "--metrics-bind-address=127.0.0.1:8080"
+        - "--health-probe-bind-address=:10254"
+        - "--metrics-bind-address=127.0.0.1:10255"
         - "--leader-elect"

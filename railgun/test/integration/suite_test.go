@@ -212,6 +212,8 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-kongconsumer=disabled",
 				"--election-id=integrationtests.konghq.com",
 				fmt.Sprintf("--ingress-class=%s", ingressClass),
+				"--log-level=trace",
+				"--log-format=text",
 			})
 			fmt.Printf("config: %+v\n", config)
 

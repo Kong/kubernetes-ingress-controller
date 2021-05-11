@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,16 +23,18 @@ import (
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background services
 // and the caller is thereafter responsible for closing the Proxy.StopCh.
-func NewCacheBasedProxy(ctx context.Context, logger logr.Logger, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool) Proxy {
+func NewCacheBasedProxy(ctx context.Context, logger logrus.FieldLogger, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool) Proxy {
 	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, DefaultStagger)
 }
 
-func NewCacheBasedProxyWithStagger(ctx context.Context, logger logr.Logger, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool, stagger time.Duration) Proxy {
+func NewCacheBasedProxyWithStagger(ctx context.Context, logger logrus.FieldLogger, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool, stagger time.Duration) Proxy {
 	cache := store.NewCacheStores()
 	proxy := &clientgoCachedProxyResolver{
 		kongConfig: kongConfig,
 		cache:      &cache,
-		logger:     logr.Discard(),
+
+		deprecatedLogger: logger,
+		logger:           logrusr.NewLogger(logger),
 
 		ingressClassName:               ingressClassName,
 		processClasslessIngressV1Beta1: processClasslessIngressV1Beta1,
@@ -79,8 +82,12 @@ type clientgoCachedProxyResolver struct {
 	// cache server flow control, channels and utility attributes
 	ctx     context.Context
 	stagger time.Duration
-	logger  logr.Logger
 	stopCh  chan struct{}
+
+	// New code should log using "logger". "deprecatedLogger" is here for compatibility with legacy code that relies
+	// on the logrus API.
+	deprecatedLogger logrus.FieldLogger
+	logger           logr.Logger
 
 	// channels
 	update chan *cachedObject
@@ -201,19 +208,19 @@ func (p *clientgoCachedProxyResolver) cacheDelete(cobj *cachedObject) error {
 // and apply the resulting configuration to the Kong Admin API.
 func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*p.cache, p.ingressClassName, p.processClasslessIngressV1, p.processClasslessIngressV1Beta1, p.processClasslessKongConsumer, logrus.StandardLogger())
-	kongstate, err := parser.Build(logrus.StandardLogger(), storer)
+	storer := store.New(*p.cache, p.ingressClassName, p.processClasslessIngressV1, p.processClasslessIngressV1Beta1, p.processClasslessKongConsumer, p.deprecatedLogger)
+	kongstate, err := parser.Build(p.deprecatedLogger, storer)
 	if err != nil {
 		return err
 	}
 
 	// generate the deck configuration to be applied to the admin API
-	targetConfig := deckgen.ToDeckContent(p.ctx, logrus.StandardLogger(), kongstate, nil, nil)
+	targetConfig := deckgen.ToDeckContent(p.ctx, p.deprecatedLogger, kongstate, nil, nil)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(p.ctx, 10*time.Second)
 	defer cancel()
-	p.lastConfigSHA, err = sendconfig.PerformUpdate(timedCtx, logrus.StandardLogger(), &p.kongConfig, true, false, targetConfig, nil, nil, p.lastConfigSHA)
+	p.lastConfigSHA, err = sendconfig.PerformUpdate(timedCtx, p.deprecatedLogger, &p.kongConfig, true, false, targetConfig, nil, nil, p.lastConfigSHA)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ package integration
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -98,21 +97,7 @@ func TestMinimalIngress(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusNotFound {
-			// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-			// Expected: {"message":"no Route matched with those values"}
-			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
-			body := struct {
-				Message string `json:"message"`
-			}{}
-			if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-				t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", p.ProxyURL.String(), err)
-				return false
-			}
-			return body.Message == "no Route matched with those values"
-		}
-		return false
+		return expect404WithNoRoute(t, p.ProxyURL.String(), resp)
 	}, ingressWait, waitTick)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress %s", ingressClass, ingress.Name)
@@ -149,21 +134,7 @@ func TestMinimalIngress(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusNotFound {
-			// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-			// Expected: {"message":"no Route matched with those values"}
-			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
-			body := struct {
-				Message string `json:"message"`
-			}{}
-			if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-				t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", p.ProxyURL.String(), err)
-				return false
-			}
-			return body.Message == "no Route matched with those values"
-		}
-		return false
+		return expect404WithNoRoute(t, p.ProxyURL.String(), resp)
 	}, ingressWait, waitTick)
 }
 
@@ -297,21 +268,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusNotFound {
-			// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-			// Expected: {"message":"no Route matched with those values"}
-			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
-			body := struct {
-				Message string `json:"message"`
-			}{}
-			if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-				t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", p.ProxyURL.String(), err)
-				return false
-			}
-			return body.Message == "no Route matched with those values"
-		}
-		return false
+		return expect404WithNoRoute(t, p.ProxyURL.String(), resp)
 	}, ingressWait, waitTick)
 
 	t.Logf("putting the IngressClassName %q back on ingress %s", ingressClass, ingress.Name)
@@ -348,21 +305,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusNotFound {
-			// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-			// Expected: {"message":"no Route matched with those values"}
-			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
-			body := struct {
-				Message string `json:"message"`
-			}{}
-			if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-				t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", p.ProxyURL.String(), err)
-				return false
-			}
-			return body.Message == "no Route matched with those values"
-		}
-		return false
+		return expect404WithNoRoute(t, p.ProxyURL.String(), resp)
 	}, ingressWait, waitTick)
 
 }

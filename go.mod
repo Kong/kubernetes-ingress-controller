@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/blang/semver/v4 v4.0.0
+	github.com/bombsimon/logrusr v1.1.0
 	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.10.0
@@ -25,7 +26,7 @@ require (
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
-	github.com/prometheus/common v0.19.0 // indirect
+	github.com/prometheus/common v0.19.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/assertions v1.0.0 // indirect
 	github.com/spf13/afero v1.5.1 // indirect

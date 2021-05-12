@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 )
@@ -49,7 +50,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testName,
 			Annotations: map[string]string{
-				"kubernetes.io/ingress.class": ingressClass,
+				annotations.IngressClassKey: ingressClass,
 			},
 		},
 		Spec: kongv1alpha1.UDPIngressSpec{

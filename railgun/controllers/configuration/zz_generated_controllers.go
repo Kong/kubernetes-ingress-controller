@@ -30,6 +30,7 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
@@ -175,11 +176,14 @@ type NetV1IngressReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&netv1.Ingress{}).Complete(r)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&netv1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
@@ -204,6 +208,15 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set
@@ -237,11 +250,14 @@ type NetV1Beta1IngressReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&netv1beta1.Ingress{}).Complete(r)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&netv1beta1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
@@ -266,6 +282,15 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set
@@ -299,11 +324,14 @@ type ExtV1Beta1IngressReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&extv1beta1.Ingress{}).Complete(r)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&extv1beta1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
@@ -328,6 +356,15 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set
@@ -485,11 +522,14 @@ type KongV1KongClusterPluginReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongClusterPlugin{}).Complete(r)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongClusterPlugin{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch;create;update;patch;delete
@@ -514,6 +554,15 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set
@@ -547,11 +596,14 @@ type KongV1KongConsumerReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongConsumer{}).Complete(r)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongConsumer{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch;create;update;patch;delete
@@ -576,6 +628,15 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set
@@ -609,11 +670,14 @@ type KongV1Alpha1UDPIngressReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Alpha1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1alpha1.UDPIngress{}).Complete(r)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1alpha1.UDPIngress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch;create;update;patch;delete
@@ -638,6 +702,15 @@ func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ct
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set
@@ -671,11 +744,14 @@ type KongV1Beta1TCPIngressReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	Proxy  proxy.Proxy
+
+	IngressClassName string
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1beta1.TCPIngress{}).Complete(r)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1beta1.TCPIngress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch;create;update;patch;delete
@@ -700,6 +776,15 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			return ctrl.Result{}, err
 		}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set

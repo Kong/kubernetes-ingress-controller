@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/blang/semver/v4 v4.0.0
-	github.com/bombsimon/logrusr v1.0.0
+	github.com/bombsimon/logrusr v1.1.0
 	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.10.0

@@ -13,7 +13,7 @@ on:
       - 'v*.*.*'
 
 jobs:
-  integration-test:
+  integration-test-dbless:
     runs-on: ubuntu-latest
     steps:
     - name: setup golang
@@ -30,7 +30,7 @@ jobs:
     - name: checkout repository
       uses: actions/checkout@v2
     - name: run railgun integration tests
-      run: make test.integration
+      run: make test.integration.dbless
       working-directory: ./railgun
   integration-test-postgres:
     runs-on: ubuntu-latest

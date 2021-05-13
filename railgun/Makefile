@@ -154,17 +154,15 @@ test.integration.cluster:
 	@go clean -testcache
 	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
-# Our integration tests, with verbose output
+# Our integration tests using all supported backends, with verbose output
 .PHONY: test.integration
-test.integration:
-	@./scripts/setup-integration-tests.sh
-	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+test.integration: test.integration.dbless test.integration.postgres
 
-# Our integration tests, with verbose output
-.PHONY: test.integration
-test.integration:
+# Our integration tests using the dbless backend, with verbose output
+.PHONY: test.integration.dbless
+test.integration.dbless:
 	@./scripts/setup-integration-tests.sh
-	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+	@KONG_DATABASE="off" GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
 
 # Our integration tests using the postgres backend, with verbose output
 # FIXME: race checking has been turned off because of race conditions found with deck (NEED TO POST ISSUE HERE)

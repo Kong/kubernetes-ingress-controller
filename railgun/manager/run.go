@@ -27,6 +27,7 @@ import (
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,7 +35,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *Config) error {
+func Run(ctx context.Context, c *config.Config) error {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
 		return fmt.Errorf("failed to make logger: %w", err)

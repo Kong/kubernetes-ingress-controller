@@ -66,6 +66,7 @@ func Run(ctx context.Context, c *Config) error {
 	// build the controller manager
 	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
 		Scheme:                 scheme,
+		Namespace:              c.WatchNamespace,
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,

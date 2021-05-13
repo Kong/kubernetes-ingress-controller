@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -21,9 +22,77 @@ var (
 	codecs = serializer.NewCodecFactory(scheme)
 )
 
-// Server is an HTTP server that can validate Kong Ingress Controllers'
+const DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
+const DefaultAdmissionWebhookKeyPath = "/admission-webhook/tls.key"
+
+type ServerConfig struct {
+	ListenAddr string
+
+	CertPath string
+	Cert     string
+
+	KeyPath string
+	Key     string
+}
+
+func readKeyPairFiles(certPath, keyPath string) ([]byte, []byte, error) {
+	cert, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read cert from file %q: %w", certPath, err)
+	}
+	key, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read key from file %q: %w", keyPath, err)
+	}
+
+	return cert, key, nil
+}
+
+func (sc *ServerConfig) toTLSConfig() (*tls.Config, error) {
+	var cert, key []byte
+	switch {
+	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
+		cert, key = []byte(sc.Cert), []byte(sc.Key)
+
+	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert != "" && sc.Key != "":
+		var err error
+		cert, key, err = readKeyPairFiles(sc.CertPath, sc.KeyPath)
+		if err != nil {
+			return nil, err
+		}
+
+	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert == "" && sc.Key == "":
+		var err error
+		cert, key, err = readKeyPairFiles(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	keyPair, err := tls.X509KeyPair(cert, key)
+	if err != nil {
+		return nil, fmt.Errorf("X509KeyPair error: %w", err)
+	}
+	return &tls.Config{
+		Certificates: []tls.Certificate{keyPair},
+	}, nil
+}
+
+func MakeTLSServer(config *ServerConfig, handler http.Handler) (*http.Server, error) {
+	tlsConfig, err := config.toTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	return &http.Server{
+		Addr:      config.ListenAddr,
+		TLSConfig: tlsConfig,
+		Handler:   handler,
+	}, nil
+}
+
+// RequestHandler is an HTTP server that can validate Kong Ingress Controllers'
 // Custom Resources using Kubernetes Admission Webhooks.
-type Server struct {
+type RequestHandler struct {
 	// Validator validates the entities that the k8s API-server asks
 	// it the server to validate.
 	Validator KongValidator
@@ -33,7 +102,7 @@ type Server struct {
 
 // ServeHTTP parses AdmissionReview requests and responds back
 // with the validation result of the entity.
-func (a Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		a.Logger.Error("received request with empty body")
 		http.Error(w, "admission review object is missing",
@@ -88,7 +157,7 @@ var (
 		Resource: "secrets"}
 )
 
-func (a Server) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
+func (a RequestHandler) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
 	*admission.AdmissionResponse, error) {
 	var response admission.AdmissionResponse
 

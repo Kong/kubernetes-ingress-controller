@@ -459,7 +459,7 @@ func main() {
 	}
 	if cliConfig.AdmissionWebhookListen != "off" {
 		logger := log.WithField("component", "admission-server")
-		admissionServer := admission.Server{
+		admissionServer := admission.RequestHandler{
 			Validator: admission.KongHTTPValidator{
 				ConsumerSvc:  kongClient.Consumers,
 				PluginSvc:    kongClient.Plugins,
@@ -469,14 +469,16 @@ func main() {
 			Logger: logger,
 		}
 		var cert tls.Certificate
-		if cliConfig.AdmissionWebhookCertPath != defaultAdmissionWebhookCertPath && cliConfig.AdmissionWebhookCert != "" {
+		if cliConfig.AdmissionWebhookCertPath != admission.DefaultAdmissionWebhookCertPath && cliConfig.AdmissionWebhookCert != "" {
 			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-file and --admission-webhook-cert" +
 				"are set; please remove one or the other")
 		}
-		if cliConfig.AdmissionWebhookKeyPath != defaultAdmissionWebhookKeyPath && cliConfig.AdmissionWebhookKey != "" {
+		if cliConfig.AdmissionWebhookKeyPath != admission.DefaultAdmissionWebhookKeyPath && cliConfig.AdmissionWebhookKey != "" {
 			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-key and --admission-webhook-key" +
 				"are set; please remove one or the other")
 		}
+		// NOTE: this is superseded by admission.ServerConfig. Leaving this (duplicate) implementation here only to
+		// limit the risk of regression in KIC 1.x.
 		if cliConfig.AdmissionWebhookCert != "" {
 			var err error
 			cert, err = tls.X509KeyPair([]byte(cliConfig.AdmissionWebhookCert), []byte(cliConfig.AdmissionWebhookKey))
@@ -497,6 +499,8 @@ func main() {
 		tlsConfig := &tls.Config{ //nolint:gosec
 			Certificates: []tls.Certificate{cert},
 		}
+		// NOTE: This is superseded by admission.MakeTLSServer. Leaving this duplicate implementation here only to
+		// limit the risk of regressin in KIC 1.x.
 		server := http.Server{
 			Addr:      cliConfig.AdmissionWebhookListen,
 			TLSConfig: tlsConfig,

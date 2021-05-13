@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
@@ -18,6 +19,15 @@ func init() {
 
 var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if cfg.AdmissionServer.ListenAddr != "off" {
+			admissionServer, err := admission.MakeTLSServer(
+				&cfg.AdmissionServer,
+				&admission.RequestHandler{
+					Validator: &admission.KongHTTPValidator{},
+				},
+			)
+		}
+
 		return manager.Run(cmd.Context(), &cfg)
 	},
 	SilenceUsage: true,

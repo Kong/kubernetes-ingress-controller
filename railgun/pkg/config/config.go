@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
@@ -59,6 +60,9 @@ type Config struct {
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus
 	ServiceEnabled           util.EnablementStatus
+
+	// Admission Webhook server config
+	AdmissionServer admission.ServerConfig
 }
 
 // -----------------------------------------------------------------------------
@@ -131,6 +135,20 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.enablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusDisabled, "Enable or disable the KongPlugin controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled, "Enable or disable the KongConsumer controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled, "Enable or disable the Service controller. "+onOffUsage)
+
+	// Admission Webhook server config
+	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
+		`The address to start admission controller on (ip:port).  Setting it to 'off' disables the admission controller.`)
+	flagSet.StringVar(&c.AdmissionServer.CertPath, "admission-webhook-cert-file", "",
+		`admission server PEM certificate file path; `+
+			`if both this and the cert value is unset, defaults to `+admission.DefaultAdmissionWebhookCertPath)
+	flagSet.StringVar(&c.AdmissionServer.KeyPath, "admission-webhook-key-file",
+		`admission server PEM private key file path; `+
+			`if both this and the key value is unset, defaults to `+admission.DefaultAdmissionWebhookKeyPath)
+	flagSet.StringVar(&c.AdmissionServer.Cert, "admission-webhook-cert", "",
+		`admission server PEM certificate value`)
+	flagSet.StringVar(&c.AdmissionServer.Key, "admission-webhook-key", "",
+		`admission server PEM private key value`)
 
 	return &flagSet.FlagSet
 }

@@ -107,7 +107,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
 	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
 	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
-	flagSet.StringVar(&c.WatchNamespace, "watch-namespace", apiv1.NamespaceAll, "Namespace to watch for Kubernetes resources. Defaults to all namespaces.")
+	flagSet.StringVar(&c.WatchNamespace, "watch-namespace", apiv1.NamespaceAll,
+		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
+		a comma-separated list of namespaces.`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)

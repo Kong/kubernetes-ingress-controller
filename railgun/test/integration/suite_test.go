@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -51,6 +52,9 @@ const (
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
 	ingressClass = "kongtests"
+
+	// elsewhere is the name of an alternative namespace
+	elsewhere = "elsewhere"
 )
 
 // -----------------------------------------------------------------------------
@@ -66,6 +70,9 @@ var (
 
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
+
+	// watchNamespaces is a list of namespaces the controller watches
+	watchNamespaces = strings.Join([]string{elsewhere, corev1.NamespaceDefault}, ",")
 )
 
 // -----------------------------------------------------------------------------
@@ -134,6 +141,13 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	if _, err := cluster.Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+	// ensure the alternative namespace is created
+	elsewhereNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "elsewhere"}}
+	if _, err := cluster.Client().CoreV1().Namespaces().Create(ctx, elsewhereNS, metav1.CreateOptions{}); err != nil {
 		if !errors.IsAlreadyExists(err) {
 			return err
 		}
@@ -210,6 +224,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-kongplugin=disabled",
 				"--controller-kongconsumer=disabled",
 				"--election-id=integrationtests.konghq.com",
+				fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
 				fmt.Sprintf("--ingress-class=%s", ingressClass),
 				"--log-level=trace",
 				"--log-format=text",

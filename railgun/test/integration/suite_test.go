@@ -88,8 +88,11 @@ func TestMain(m *testing.M) {
 		}
 		go waitForExistingClusterReadiness(ctx, cluster, existingClusterName, ready)
 	} else {
-		// create a new cluster for tests
-		config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
+		// configure and deploy a new cluster for tests
+		config := ktfkind.ClusterConfigurationWithKongProxy{
+			EnableMetalLB: true,
+			DBMode:        os.Getenv("KONG_DATABASE"),
+		}
 		if name := os.Getenv("KIND_CLUSTER_NAME"); name != "" {
 			cluster, ready, err = config.DeployWithName(ctx, name)
 		} else {

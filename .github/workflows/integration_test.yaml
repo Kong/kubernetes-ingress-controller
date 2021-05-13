@@ -32,6 +32,25 @@ jobs:
     - name: run railgun integration tests
       run: make test.integration
       working-directory: ./railgun
+  integration-test-postgres:
+    runs-on: ubuntu-latest
+    steps:
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.16'
+    - name: cache go modules
+      uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go
+    - name: checkout repository
+      uses: actions/checkout@v2
+    - name: run railgun integration tests
+      run: make test.integration.postgres
+      working-directory: ./railgun
   integration-test-legacy:
     runs-on: ubuntu-latest
     steps:

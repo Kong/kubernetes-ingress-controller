@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,9 @@ func TestMinimalUDPIngress(t *testing.T) {
 	// TODO: once KIC 2.0 lands and pre v2 is gone, we can remove this check
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
+	}
+	if dbmode := os.Getenv("KONG_DATABASE"); dbmode != "" && dbmode != "off" {
+		t.Skip("v1alpha1.UDPIngress is only supported on DBLESS backend proxies at this time")
 	}
 
 	namespace := "default"

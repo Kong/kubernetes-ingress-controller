@@ -160,6 +160,19 @@ test.integration:
 	@./scripts/setup-integration-tests.sh
 	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
 
+# Our integration tests, with verbose output
+.PHONY: test.integration
+test.integration:
+	@./scripts/setup-integration-tests.sh
+	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+
+# Our integration tests using the postgres backend, with verbose output
+# FIXME: race checking has been turned off because of race conditions found with deck (NEED TO POST ISSUE HERE)
+.PHONY: test.integration.postgres
+test.integration.postgres:
+	@./scripts/setup-integration-tests.sh
+	@KONG_DATABASE="postgres" GOFLAGS="-tags=integration_tests" go test -v ./test/integration/
+
 # Our integration tests using the legacy v1 controller manager
 .PHONY: test.integration.legacy
 test.integration.legacy:

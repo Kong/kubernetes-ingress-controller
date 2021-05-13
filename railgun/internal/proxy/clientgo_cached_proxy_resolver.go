@@ -23,15 +23,29 @@ import (
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background services
 // and the caller is thereafter responsible for closing the Proxy.StopCh.
-func NewCacheBasedProxy(ctx context.Context, logger logrus.FieldLogger, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool) Proxy {
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, DefaultStagger)
+func NewCacheBasedProxy(ctx context.Context,
+	logger logrus.FieldLogger,
+	k8s client.Client,
+	kongConfig sendconfig.Kong,
+	ingressClassName string,
+	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
+) Proxy {
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync, DefaultStagger)
 }
 
-func NewCacheBasedProxyWithStagger(ctx context.Context, logger logrus.FieldLogger, k8s client.Client, kongConfig sendconfig.Kong, ingressClassName string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool, processClasslessKongConsumer bool, stagger time.Duration) Proxy {
+func NewCacheBasedProxyWithStagger(ctx context.Context,
+	logger logrus.FieldLogger,
+	k8s client.Client,
+	kongConfig sendconfig.Kong,
+	ingressClassName string,
+	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
+	stagger time.Duration,
+) Proxy {
 	cache := store.NewCacheStores()
 	proxy := &clientgoCachedProxyResolver{
-		kongConfig: kongConfig,
-		cache:      &cache,
+		enableReverseSync: enableReverseSync,
+		kongConfig:        kongConfig,
+		cache:             &cache,
 
 		deprecatedLogger: logger,
 		logger:           logrusr.NewLogger(logger),
@@ -71,7 +85,8 @@ type clientgoCachedProxyResolver struct {
 	lastConfigSHA []byte
 
 	// kong configuration
-	kongConfig sendconfig.Kong
+	kongConfig        sendconfig.Kong
+	enableReverseSync bool
 
 	// cache store configuration options
 	ingressClassName               string
@@ -220,7 +235,11 @@ func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(p.ctx, 10*time.Second)
 	defer cancel()
-	p.lastConfigSHA, err = sendconfig.PerformUpdate(timedCtx, p.deprecatedLogger, &p.kongConfig, true, false, targetConfig, nil, nil, p.lastConfigSHA)
+	p.lastConfigSHA, err = sendconfig.PerformUpdate(timedCtx,
+		p.deprecatedLogger, &p.kongConfig,
+		p.kongConfig.InMemory, p.enableReverseSync,
+		targetConfig, nil, nil, p.lastConfigSHA,
+	)
 	if err != nil {
 		return err
 	}

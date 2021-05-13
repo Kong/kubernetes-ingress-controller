@@ -12,7 +12,7 @@ import (
 var config manager.Config
 
 func init() {
-	rootCmd.Flags().AddFlagSet(manager.MakeFlagSetFor(&config))
+	rootCmd.Flags().AddFlagSet(config.FlagSet())
 }
 
 var rootCmd = &cobra.Command{

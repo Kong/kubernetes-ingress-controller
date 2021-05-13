@@ -195,8 +195,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			}
 		} else {
 			config := manager.Config{}
-
-			flags := manager.MakeFlagSetFor(&config)
+			flags := config.FlagSet()
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-admin-url=http://%s:8001", adminHost),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),

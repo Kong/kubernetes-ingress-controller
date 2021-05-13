@@ -12,11 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 )
 
 // -----------------------------------------------------------------------------
@@ -43,65 +43,13 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
 	stagger time.Duration,
 ) (Proxy, error) {
-	// download the kong root configuration (and validate connectivity to the proxy API)
-	root, err := kongConfig.Client.Root(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// pull the proxy configuration out of the root config and validate it
-	proxyConfig, ok := root["configuration"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
-	}
-
-	// validate the database configuration for the proxy
-	dbmode, ok := proxyConfig["database"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
-	}
-	if dbmode == "off" || dbmode == "" {
-		kongConfig.InMemory = true
-	}
-
-	// check for supported database configurations
-	switch dbmode {
-	case "off":
-		kongConfig.InMemory = true
-	case "":
-		kongConfig.InMemory = true
-	case "postgres":
-		kongConfig.InMemory = false
-	case "cassandra":
-		return nil, fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
-	default:
-		return nil, fmt.Errorf("%s is not a supported database backend", dbmode)
-	}
-
-	// validate the proxy version
-	proxyStringVersion, ok := root["version"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid value found for version in kong root config: %t", root["version"])
-	}
-	proxySemver, err := ctrlutils.GetSemver(proxyStringVersion)
-	if err != nil {
-		return nil, err
-	}
-	kongConfig.Version = proxySemver
-
-	// configure the cache stores
+	// configure the cachestores and the proxy instance
 	cache := store.NewCacheStores()
-
-	// configure the proxy
 	proxy := &clientgoCachedProxyResolver{
 		cache: &cache,
 
 		kongConfig:        kongConfig,
-		kongRootConfig:    root,
-		kongProxyConfig:   proxyConfig,
 		enableReverseSync: enableReverseSync,
-		dbmode:            dbmode,
-		version:           proxySemver,
 
 		deprecatedLogger: logger,
 		logger:           logrusr.NewLogger(logger),
@@ -118,7 +66,13 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		stagger: stagger,
 	}
 
-	// start the proxy cache server
+	// initialize the proxy which validates connectivity with the Admin API and
+	// checks several proxy server attributes such as version and dbmode.
+	if err := proxy.initialize(); err != nil {
+		return nil, err
+	}
+
+	// start the proxy cache server in the background
 	go proxy.startCacheServer()
 
 	return proxy, nil
@@ -219,14 +173,6 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 	}
 }
 
-func (p *clientgoCachedProxyResolver) DBMode() string {
-	return p.dbmode
-}
-
-func (p *clientgoCachedProxyResolver) Version() semver.Version {
-	return p.version
-}
-
 // -----------------------------------------------------------------------------
 // Client Go Cached Proxy Resolver - Private Methods - Cache Server
 // -----------------------------------------------------------------------------
@@ -273,6 +219,55 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 // Client Go Cached Proxy Resolver - Private Methods - Cache Server Utils
 // -----------------------------------------------------------------------------
 
+// initialize validates connectivity with the Kong proxy and some of the configuration options thereof
+// and populates several local attributes given retrieved configuration data from the proxy root config.
+//
+// Note: this must be run (and must succeed) in order to successfully start the cache server.
+func (p *clientgoCachedProxyResolver) initialize() error {
+	// download the kong root configuration (and validate connectivity to the proxy API)
+	root, err := p.kongRootWithTimeout()
+	if err != nil {
+		return err
+	}
+
+	// pull the proxy configuration out of the root config and validate it
+	proxyConfig, ok := root["configuration"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
+	}
+
+	// validate the database configuration for the proxy and check for supported database configurations
+	dbmode, ok := proxyConfig["database"].(string)
+	if !ok {
+		return fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
+	}
+	switch dbmode {
+	case "off":
+		p.kongConfig.InMemory = true
+	case "":
+		p.kongConfig.InMemory = true
+	case "postgres":
+		p.kongConfig.InMemory = false
+	case "cassandra":
+		return fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
+	default:
+		return fmt.Errorf("%s is not a supported database backend", dbmode)
+	}
+
+	// validate the proxy version
+	proxySemver, err := kong.ParseSemanticVersion(kong.VersionFromInfo(root))
+	if err != nil {
+		return err
+	}
+
+	// store the gathered configuration options
+	p.kongConfig.Version = proxySemver
+	p.dbmode = dbmode
+	p.version = proxySemver
+
+	return nil
+}
+
 // objectKey provides a key unique to the cacheServer for tracking objects that are being resolved.
 func (p *clientgoCachedProxyResolver) clientObjectKey(obj client.Object) string {
 	return fmt.Sprintf("%s/%s/%s", obj.GetObjectKind().GroupVersionKind().String(), obj.GetNamespace(), obj.GetName())
@@ -316,4 +311,10 @@ func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
 	}
 
 	return nil
+}
+
+func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(p.ctx, 3*time.Second)
+	defer cancel()
+	return p.kongConfig.Client.Root(ctx)
 }

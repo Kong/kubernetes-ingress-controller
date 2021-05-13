@@ -165,7 +165,8 @@ test.integration.dbless:
 	@KONG_DATABASE="off" GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
 
 # Our integration tests using the postgres backend, with verbose output
-# FIXME: race checking has been turned off because of race conditions found with deck (NEED TO POST ISSUE HERE)
+# TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
+#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/setup-integration-tests.sh

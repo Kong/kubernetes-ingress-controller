@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,7 +31,7 @@ func NewCacheBasedProxy(ctx context.Context,
 	kongConfig sendconfig.Kong,
 	ingressClassName string,
 	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
-) Proxy {
+) (Proxy, error) {
 	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync, DefaultStagger)
 }
 
@@ -40,12 +42,66 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	ingressClassName string,
 	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
 	stagger time.Duration,
-) Proxy {
+) (Proxy, error) {
+	// download the kong root configuration (and validate connectivity to the proxy API)
+	root, err := kongConfig.Client.Root(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// pull the proxy configuration out of the root config and validate it
+	proxyConfig, ok := root["configuration"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
+	}
+
+	// validate the database configuration for the proxy
+	dbmode, ok := proxyConfig["database"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
+	}
+	if dbmode == "off" || dbmode == "" {
+		kongConfig.InMemory = true
+	}
+
+	// check for supported database configurations
+	switch dbmode {
+	case "off":
+		kongConfig.InMemory = true
+	case "":
+		kongConfig.InMemory = true
+	case "postgres":
+		kongConfig.InMemory = false
+	case "cassandra":
+		return nil, fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
+	default:
+		return nil, fmt.Errorf("%s is not a supported database backend", dbmode)
+	}
+
+	// validate the proxy version
+	proxyStringVersion, ok := root["version"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid value found for version in kong root config: %t", root["version"])
+	}
+	proxySemver, err := ctrlutils.GetSemver(proxyStringVersion)
+	if err != nil {
+		return nil, err
+	}
+	kongConfig.Version = proxySemver
+
+	// configure the cache stores
 	cache := store.NewCacheStores()
+
+	// configure the proxy
 	proxy := &clientgoCachedProxyResolver{
-		enableReverseSync: enableReverseSync,
+		cache: &cache,
+
 		kongConfig:        kongConfig,
-		cache:             &cache,
+		kongRootConfig:    root,
+		kongProxyConfig:   proxyConfig,
+		enableReverseSync: enableReverseSync,
+		dbmode:            dbmode,
+		version:           proxySemver,
 
 		deprecatedLogger: logger,
 		logger:           logrusr.NewLogger(logger),
@@ -61,8 +117,11 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		del:     make(chan *cachedObject, DefaultObjectBufferSize),
 		stagger: stagger,
 	}
+
+	// start the proxy cache server
 	go proxy.startCacheServer()
-	return proxy
+
+	return proxy, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -86,7 +145,11 @@ type clientgoCachedProxyResolver struct {
 
 	// kong configuration
 	kongConfig        sendconfig.Kong
+	kongRootConfig    map[string]interface{}
+	kongProxyConfig   map[string]interface{}
 	enableReverseSync bool
+	dbmode            string
+	version           semver.Version
 
 	// cache store configuration options
 	ingressClassName               string
@@ -154,6 +217,14 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 	default:
 		return fmt.Errorf("the proxy is too busy to accept requests at this time, try again later")
 	}
+}
+
+func (p *clientgoCachedProxyResolver) DBMode() string {
+	return p.dbmode
+}
+
+func (p *clientgoCachedProxyResolver) Version() semver.Version {
+	return p.version
 }
 
 // -----------------------------------------------------------------------------

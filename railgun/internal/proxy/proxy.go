@@ -3,6 +3,7 @@ package proxy
 import (
 	"time"
 
+	"github.com/blang/semver/v4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -53,4 +54,10 @@ type Proxy interface {
 	// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
 	// A status will later be added to the object whether the configuration update succeeds or fails.
 	DeleteObject(obj client.Object) error
+
+	// DBMode indicate the database configuration in use by the running proxy (e.g. "off", "postgres")
+	DBMode() string
+
+	// Version indicates the version of the proxy
+	Version() semver.Version
 }

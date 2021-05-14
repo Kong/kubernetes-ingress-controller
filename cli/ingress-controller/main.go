@@ -236,8 +236,9 @@ func main() {
 	}
 
 	exists, err := kongClient.Tags.Exists(ctx)
-	controllerConfig.Kong.HasTagSupport = exists
-
+	if err == nil && exists {
+		controllerConfig.Kong.HasTagSupport = true
+	}
 	// setup workspace in Kong Enterprise
 	if cliConfig.KongWorkspace != "" {
 		// ensure the workspace exists or try creating it

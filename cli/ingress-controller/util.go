@@ -33,30 +33,23 @@ func getSemVerVer(v string) (semver.Version, error) {
 }
 
 func ensureWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
-	req, err := client.NewRequest("GET", "/workspaces/"+workspace, nil, nil)
+	exists, err := client.Workspaces.Exists(ctx,workspace)
 	if err != nil {
-		return err
-	}
-	_, err = client.Do(ctx, req, nil)
-	if err != nil {
-		if kong.IsNotFoundErr(err) {
-			if err := createWorkspace(ctx, client, workspace); err != nil {
-				return fmt.Errorf("creating workspace '%v': %w", workspace, err)
-			}
-			return nil
-		}
 		return fmt.Errorf("looking up workspace '%v': %w", workspace, err)
+	}
+	if !exists {
+		if err := createWorkspace(ctx, client, workspace); err != nil {
+			return fmt.Errorf("creating workspace '%v': %w", workspace, err)
+		}
 	}
 	return nil
 }
 
 func createWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
-	body := map[string]string{"name": workspace}
-	req, err := client.NewRequest("POST", "/workspaces", nil, body)
-	if err != nil {
-		return err
+	workspace := &kong.Workspace{
+		Name: kong.String(workspaceName),
 	}
-	_, err = client.Do(ctx, req, nil)
+	_, err := client.Workspaces.Create(ctx, workspace)
 	return err
 }
 

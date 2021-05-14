@@ -50,13 +50,11 @@ func ensureWorkspace(ctx context.Context, client *kong.Client, workspace string)
 	return nil
 }
 
-func createWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
-	body := map[string]string{"name": workspace}
-	req, err := client.NewRequest("POST", "/workspaces", nil, body)
-	if err != nil {
-		return err
+func createWorkspace(ctx context.Context, client *kong.Client, workspaceName string) error {
+	workspace := &kong.Workspace{
+		Name: kong.String(workspaceName),
 	}
-	_, err = client.Do(ctx, req, nil)
+	_, err := client.Workspaces.Create(ctx, workspace)
 	return err
 }
 

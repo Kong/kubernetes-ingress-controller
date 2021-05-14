@@ -74,7 +74,7 @@ build: generate fmt vet ## Build manager binary.
 		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Repo=$(REPO_INFO)" main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	KONG_EXTERNAL_CONTROLLER=true go run ./main.go
+	go run ./main.go
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}

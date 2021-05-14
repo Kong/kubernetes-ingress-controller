@@ -33,7 +33,7 @@ func getSemVerVer(v string) (semver.Version, error) {
 }
 
 func ensureWorkspace(ctx context.Context, client *kong.Client, workspaceName string) error {
-	exists, err := client.Workspaces.Exists(ctx, workspaceName)
+	exists, err := client.Workspaces.Exists(ctx, &workspaceName)
 	if err != nil {
 		return fmt.Errorf("looking up workspace '%v': %w", workspaceName, err)
 	}

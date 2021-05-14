@@ -32,20 +32,20 @@ func getSemVerVer(v string) (semver.Version, error) {
 	return semver.Make(v)
 }
 
-func ensureWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
-	exists, err := client.Workspaces.Exists(ctx,workspace)
+func ensureWorkspace(ctx context.Context, client *kong.Client, workspaceName string) error {
+	exists, err := client.Workspaces.Exists(ctx, workspaceName)
 	if err != nil {
-		return fmt.Errorf("looking up workspace '%v': %w", workspace, err)
+		return fmt.Errorf("looking up workspace '%v': %w", workspaceName, err)
 	}
 	if !exists {
-		if err := createWorkspace(ctx, client, workspace); err != nil {
-			return fmt.Errorf("creating workspace '%v': %w", workspace, err)
+		if err := createWorkspace(ctx, client, workspaceName); err != nil {
+			return fmt.Errorf("creating workspace '%v': %w", workspaceName, err)
 		}
 	}
 	return nil
 }
 
-func createWorkspace(ctx context.Context, client *kong.Client, workspace string) error {
+func createWorkspace(ctx context.Context, client *kong.Client, workspaceName string) error {
 	workspace := &kong.Workspace{
 		Name: kong.String(workspaceName),
 	}

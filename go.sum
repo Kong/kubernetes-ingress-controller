@@ -460,8 +460,6 @@ github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+o
 github.com/kong/deck v1.6.0 h1:7u73b7UE5UOZP5lCFlIK+LqKcjvIBkj/uSpX2lgrDIc=
 github.com/kong/deck v1.6.0/go.mod h1:2GtvwbKSqtdyd3CMKyYyS0Uz37W/P1Mxv+PV2z59wwk=
 github.com/kong/go-kong v0.17.0/go.mod h1:T/MHPd5NzX68Kn8zSIWOjpEBbiMKAyoEps9yYukTZck=
-github.com/kong/go-kong v0.18.0 h1:TWhj+7UBKA6GMNUWMJg0hkobSkJtaELY9U7YJRGOiRs=
-github.com/kong/go-kong v0.18.0/go.mod h1:HyNtOxzh/tzmOV//ccO5NAdmrCnq8b86YUPjmdy5aog=
 github.com/kong/go-kong v0.19.0 h1:PCgxU9KsLD7eOt4xwGthdI7G4X61V5NVE0u9s1z+62U=
 github.com/kong/go-kong v0.19.0/go.mod h1:HyNtOxzh/tzmOV//ccO5NAdmrCnq8b86YUPjmdy5aog=
 github.com/kong/kubernetes-testing-framework v0.0.9 h1:CbmslW879zkr6BoQ45q5I15bDEhnEHa+lJwmRvouKxk=

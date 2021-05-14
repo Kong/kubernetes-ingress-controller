@@ -11,6 +11,42 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Parse semver string
+        id: semver_parser
+        if: ${{ contains(github.ref, 'tags') }}
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.ref }}
+          version_extractor_regex: 'refs\/tags\/(.*)$'
+      - name: Add Alpine standard tags
+        run: |
+          echo 'ALPINE_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=ref,event=branch,suffix=-alpine' >> $GITHUB_ENV
+          echo 'type=semver,pattern={{version}},suffix=-alpine' >> $GITHUB_ENV
+          echo 'type=ref,event=branch' >> $GITHUB_ENV
+          echo 'type=semver,pattern={{version}}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Add Red Hat standard tags
+        run: |
+          echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=ref,event=branch,suffix=-redhat' >> $GITHUB_ENV
+          echo 'type=semver,pattern={{version}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Add Alpine major.minor tag
+        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        run: |
+          echo 'ALPINE_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo 'type=semver,pattern={{major}}.{{minor}}' >> $GITHUB_ENV
+          echo 'type=semver,pattern={{major}}.{{minor}},suffix=-alpine' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Add Red Hat major.minor tag
+        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        run: |
+          echo 'REDHAT_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo 'type=semver,pattern={{major}}.{{minor}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
@@ -32,13 +68,7 @@ jobs:
           images: kong/kubernetes-ingress-controller
           flavor: |
             latest=false
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=branch,suffix=-alpine
-            type=semver,pattern={{version}},suffix=-alpine
-            type=semver,pattern={{major}}.{{minor}},suffix=-alpine
+          tags: ${{ env.ALPINE_STANDARD }}${{ env.ALPINE_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
         uses: crazy-max/ghaction-docker-meta@v2
@@ -46,10 +76,7 @@ jobs:
           images: kong/kubernetes-ingress-controller
           flavor: |
             latest=false
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}-redhat
-            type=semver,pattern={{major}}.{{minor}}-redhat
+          tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
         env:
           TAG: ${{ steps.meta_alpine.outputs.version }}

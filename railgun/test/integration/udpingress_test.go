@@ -26,7 +26,7 @@ func TestMinimalUDPIngress(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
 	}
-	if dbmode := os.Getenv("KONG_DATABASE"); dbmode != "" && dbmode != "off" {
+	if dbmode := os.Getenv("TEST_DATABASE_MODE"); dbmode != "" && dbmode != "off" {
 		t.Skip("v1alpha1.UDPIngress is only supported on DBLESS backend proxies at this time")
 	}
 

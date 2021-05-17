@@ -68,7 +68,7 @@ var (
 	cluster ktfkind.Cluster
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
-	dbmode = os.Getenv("KONG_DATABASE")
+	dbmode = os.Getenv("TEST_DATABASE_MODE")
 )
 
 // -----------------------------------------------------------------------------

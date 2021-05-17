@@ -24,7 +24,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
+	"github.com/kong/kubernetes-ingress-controller/railgun/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
@@ -234,7 +234,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			})
 			fmt.Printf("config: %+v\n", config)
 
-			if err := manager.Run(ctx, &config); err != nil {
+			if err := rootcmd.Run(ctx, &config); err != nil {
 				panic(fmt.Errorf("controller manager exited with error: %w", err))
 			}
 		}

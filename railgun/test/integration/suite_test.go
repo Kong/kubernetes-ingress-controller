@@ -23,7 +23,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 )
 
@@ -51,6 +50,9 @@ const (
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
 	ingressClass = "kongtests"
+
+	// controllerNamespace is the Kubernetes namespace where the controller is deployed
+	controllerNamespace = "kong-system"
 )
 
 // -----------------------------------------------------------------------------
@@ -66,6 +68,9 @@ var (
 
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
+
+	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
+	dbmode = os.Getenv("TEST_DATABASE_MODE")
 )
 
 // -----------------------------------------------------------------------------
@@ -88,8 +93,11 @@ func TestMain(m *testing.M) {
 		}
 		go waitForExistingClusterReadiness(ctx, cluster, existingClusterName, ready)
 	} else {
-		// create a new cluster for tests
-		config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
+		// configure and deploy a new cluster for tests
+		config := ktfkind.ClusterConfigurationWithKongProxy{
+			EnableMetalLB: true,
+			DBMode:        dbmode,
+		}
 		if name := os.Getenv("KIND_CLUSTER_NAME"); name != "" {
 			cluster, ready, err = config.DeployWithName(ctx, name)
 		} else {
@@ -103,7 +111,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
-	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), ctrlutils.DefaultNamespace); err != nil {
+	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllerNamespace); err != nil {
 		cluster.Cleanup()
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(13)
@@ -273,7 +281,7 @@ func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluste
 			fmt.Fprintf(os.Stderr, "ERROR: timed out waiting for readiness from existing cluster %s", name)
 			os.Exit(11)
 		default:
-			svcs, err := cluster.Client().CoreV1().Services(ctrlutils.DefaultNamespace).List(ctx, metav1.ListOptions{})
+			svcs, err := cluster.Client().CoreV1().Services(controllerNamespace).List(ctx, metav1.ListOptions{})
 			if err != nil {
 				ready <- ktfkind.ProxyReadinessEvent{Err: err}
 				break

@@ -154,11 +154,23 @@ test.integration.cluster:
 	@go clean -testcache
 	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
-# Our integration tests, with verbose output
+# Our integration tests using all supported backends, with verbose output
 .PHONY: test.integration
-test.integration:
+test.integration: test.integration.dbless test.integration.postgres
+
+# Our integration tests using the dbless backend, with verbose output
+.PHONY: test.integration.dbless
+test.integration.dbless:
 	@./scripts/setup-integration-tests.sh
-	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+
+# Our integration tests using the postgres backend, with verbose output
+# TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
+#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
+.PHONY: test.integration.postgres
+test.integration.postgres:
+	@./scripts/setup-integration-tests.sh
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v ./test/integration/
 
 # Our integration tests using the legacy v1 controller manager
 .PHONY: test.integration.legacy

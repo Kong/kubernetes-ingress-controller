@@ -25,6 +25,9 @@ func TestMinimalUDPIngress(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
 	}
+	if dbmode != "" && dbmode != "off" {
+		t.Skip("v1alpha1.UDPIngress is only supported on DBLESS backend proxies at this time")
+	}
 
 	namespace := "default"
 	testName := "minudp"

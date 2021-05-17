@@ -68,6 +68,9 @@ var (
 
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
+
+	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
+	dbmode = os.Getenv("TEST_DATABASE_MODE")
 )
 
 // -----------------------------------------------------------------------------
@@ -90,8 +93,11 @@ func TestMain(m *testing.M) {
 		}
 		go waitForExistingClusterReadiness(ctx, cluster, existingClusterName, ready)
 	} else {
-		// create a new cluster for tests
-		config := ktfkind.ClusterConfigurationWithKongProxy{EnableMetalLB: true}
+		// configure and deploy a new cluster for tests
+		config := ktfkind.ClusterConfigurationWithKongProxy{
+			EnableMetalLB: true,
+			DBMode:        dbmode,
+		}
 		if name := os.Getenv("KIND_CLUSTER_NAME"); name != "" {
 			cluster, ready, err = config.DeployWithName(ctx, name)
 		} else {

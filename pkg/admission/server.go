@@ -73,7 +73,7 @@ func (sc *ServerConfig) toTLSConfig() (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("X509KeyPair error: %w", err)
 	}
-	return &tls.Config{
+	return &tls.Config{ //nolint:gosec
 		Certificates: []tls.Certificate{keyPair},
 	}, nil
 }

@@ -242,9 +242,7 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 		return fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
 	}
 	switch dbmode {
-	case "off":
-		p.kongConfig.InMemory = true
-	case "":
+	case "off", "":
 		p.kongConfig.InMemory = true
 	case "postgres":
 		p.kongConfig.InMemory = false

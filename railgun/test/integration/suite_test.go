@@ -25,6 +25,7 @@ import (
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -209,7 +210,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				panic(fmt.Errorf("%s: %w", stderr.String(), err))
 			}
 		} else {
-			config := manager.Config{}
+			config := config.Config{}
 			flags := config.FlagSet()
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-admin-url=http://%s:8001", adminHost),

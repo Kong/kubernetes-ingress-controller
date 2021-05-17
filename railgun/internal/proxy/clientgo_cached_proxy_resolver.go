@@ -233,7 +233,7 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 	// pull the proxy configuration out of the root config and validate it
 	proxyConfig, ok := root["configuration"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
+		return fmt.Errorf("invalid database configuration, expected a string got %T", proxyConfig["database"])
 	}
 
 	// validate the database configuration for the proxy and check for supported database configurations

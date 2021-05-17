@@ -469,11 +469,13 @@ func main() {
 			Logger: logger,
 		}
 		var cert tls.Certificate
-		if cliConfig.AdmissionWebhookCertPath != admission.DefaultAdmissionWebhookCertPath && cliConfig.AdmissionWebhookCert != "" {
+		if cliConfig.AdmissionWebhookCertPath != admission.DefaultAdmissionWebhookCertPath &&
+			cliConfig.AdmissionWebhookCert != "" {
 			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-file and --admission-webhook-cert" +
 				"are set; please remove one or the other")
 		}
-		if cliConfig.AdmissionWebhookKeyPath != admission.DefaultAdmissionWebhookKeyPath && cliConfig.AdmissionWebhookKey != "" {
+		if cliConfig.AdmissionWebhookKeyPath != admission.DefaultAdmissionWebhookKeyPath &&
+			cliConfig.AdmissionWebhookKey != "" {
 			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-key and --admission-webhook-key" +
 				"are set; please remove one or the other")
 		}

@@ -1,8 +1,10 @@
 package config
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
@@ -10,6 +12,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // -----------------------------------------------------------------------------
@@ -142,7 +146,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.AdmissionServer.CertPath, "admission-webhook-cert-file", "",
 		`admission server PEM certificate file path; `+
 			`if both this and the cert value is unset, defaults to `+admission.DefaultAdmissionWebhookCertPath)
-	flagSet.StringVar(&c.AdmissionServer.KeyPath, "admission-webhook-key-file",
+	flagSet.StringVar(&c.AdmissionServer.KeyPath, "admission-webhook-key-file", "",
 		`admission server PEM private key file path; `+
 			`if both this and the key value is unset, defaults to `+admission.DefaultAdmissionWebhookKeyPath)
 	flagSet.StringVar(&c.AdmissionServer.Cert, "admission-webhook-cert", "",
@@ -151,4 +155,20 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`admission server PEM private key value`)
 
 	return &flagSet.FlagSet
+}
+
+func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
+	if c.KongAdminToken != "" {
+		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
+	}
+	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
+}
+
+func (c *Config) GetKubeconfig() (*rest.Config, error) {
+	return clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
 }

@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // -----------------------------------------------------------------------------
@@ -171,4 +172,12 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {
 	return clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+}
+
+func (c *Config) GetKubeClient() (client.Client, error) {
+	conf, err := c.GetKubeconfig()
+	if err != nil {
+		return nil, err
+	}
+	return client.New(conf, client.Options{})
 }

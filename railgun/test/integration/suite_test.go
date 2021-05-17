@@ -23,7 +23,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 )
 
@@ -51,6 +50,9 @@ const (
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
 	ingressClass = "kongtests"
+
+	// controllerNamespace is the Kubernetes namespace where the controller is deployed
+	controllerNamespace = "kong-system"
 )
 
 // -----------------------------------------------------------------------------
@@ -109,7 +111,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
-	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), ctrlutils.DefaultNamespace); err != nil {
+	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllerNamespace); err != nil {
 		cluster.Cleanup()
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(13)
@@ -279,7 +281,7 @@ func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluste
 			fmt.Fprintf(os.Stderr, "ERROR: timed out waiting for readiness from existing cluster %s", name)
 			os.Exit(11)
 		default:
-			svcs, err := cluster.Client().CoreV1().Services(ctrlutils.DefaultNamespace).List(ctx, metav1.ListOptions{})
+			svcs, err := cluster.Client().CoreV1().Services(controllerNamespace).List(ctx, metav1.ListOptions{})
 			if err != nil {
 				ready <- ktfkind.ProxyReadinessEvent{Err: err}
 				break

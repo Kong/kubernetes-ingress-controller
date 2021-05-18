@@ -28,6 +28,7 @@ type Config struct {
 	KongStateEnabled   util.EnablementStatus
 	KongWorkspace      string
 	AnonymousReports   bool
+	EnableReverseSync  bool
 
 	// Kong Proxy configurations
 	APIServerHost string
@@ -91,6 +92,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.enablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled, "Enable or disable the KongState controller. "+onOffUsage)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
+	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
 
 	// Kong Proxy configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)

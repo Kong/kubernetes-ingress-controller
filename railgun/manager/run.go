@@ -115,9 +115,6 @@ func Run(ctx context.Context, c *Config) error {
 		mgr.GetClient(),
 		kongConfig,
 		c.IngressClassName,
-		c.ProcessClasslessIngressV1Beta1,
-		c.ProcessClasslessIngressV1,
-		c.ProcessClasslessKongConsumer,
 		c.EnableReverseSync,
 	)
 	if err != nil {

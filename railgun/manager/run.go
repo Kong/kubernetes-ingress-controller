@@ -4,7 +4,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/bombsimon/logrusr"

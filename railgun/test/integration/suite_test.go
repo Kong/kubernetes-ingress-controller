@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -51,6 +52,9 @@ const (
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
 	ingressClass = "kongtests"
 
+	// elsewhere is the name of an alternative namespace
+	elsewhere = "elsewhere"
+
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed
 	controllerNamespace = "kong-system"
 )
@@ -68,6 +72,9 @@ var (
 
 	// cluster is the object which contains a Kubernetes client for the testing cluster
 	cluster ktfkind.Cluster
+
+	// watchNamespaces is a list of namespaces the controller watches
+	watchNamespaces = strings.Join([]string{elsewhere, corev1.NamespaceDefault}, ",")
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
 	dbmode = os.Getenv("TEST_DATABASE_MODE")
@@ -218,6 +225,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-kongplugin=disabled",
 				"--controller-kongconsumer=disabled",
 				"--election-id=integrationtests.konghq.com",
+				fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
 				fmt.Sprintf("--ingress-class=%s", ingressClass),
 				"--log-level=trace",
 				"--log-format=text",

@@ -4,6 +4,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
@@ -12,6 +13,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
@@ -56,15 +58,28 @@ func Run(ctx context.Context, c *Config) error {
 	// set "kubernetes.io/ingress.class" to be used by controllers (defaults to "kong")
 	setupLog.Info(`the ingress class name has been set`, "value", c.IngressClassName)
 
-	// build the controller manager
-	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
+	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,
 		LeaderElection:         c.EnableLeaderElection,
 		LeaderElectionID:       c.LeaderElectionID,
-	})
+	}
+
+	// determine how to configure namespace watchers
+	if strings.Contains(c.WatchNamespace, ",") {
+		setupLog.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespace)
+		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
+		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
+		// from the watched namespaces only.
+		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(c.WatchNamespace, ","))
+	} else {
+		controllerOpts.Namespace = c.WatchNamespace
+	}
+
+	// build the controller manager
+	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return err

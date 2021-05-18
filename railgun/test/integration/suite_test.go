@@ -145,13 +145,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			return err
 		}
 	}
-	// ensure the alternative namespace is created
-	elsewhereNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "elsewhere"}}
-	if _, err := cluster.Client().CoreV1().Namespaces().Create(ctx, elsewhereNS, metav1.CreateOptions{}); err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return err
-		}
-	}
 
 	// run the controller in the background
 	go func() {

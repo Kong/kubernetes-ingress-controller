@@ -316,11 +316,20 @@ func TestIngressNamespaces(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	elsewhere := "elsewhere"
+	// ensure the alternative namespace is created
+	elsewhereNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: elsewhere}}
 	nowhere := "nowhere"
 	nowhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nowhere}}
 	_, err := cluster.Client().CoreV1().Namespaces().Create(ctx, nowhereNamespace, metav1.CreateOptions{})
 	assert.NoError(t, err)
+	_, err := cluster.Client().CoreV1().Namespaces().Create(ctx, elsewhereNS, metav1.CreateOptions{})
+	assert.NoError(t, err)
+	defer func() {
+		t.Logf("cleaning up namespace %s", elsewhereNamespace.Name)
+		assert.NoError(t, cluster.Client().CoreV1().Namespaces().Delete(ctx, elsewhereNamespace.Name, metav1.DeleteOptions{}))
+		t.Logf("cleaning up namespace %s", nowhereNamespace.Name)
+		assert.NoError(t, cluster.Client().CoreV1().Namespaces().Delete(ctx, nowhereNamespace.Name, metav1.DeleteOptions{}))
+	}()
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := k8sgen.NewContainer("httpbin", httpBinImage, 80)
 	deployment := k8sgen.NewDeploymentForContainer(container)

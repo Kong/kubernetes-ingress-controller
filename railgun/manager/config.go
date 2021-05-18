@@ -57,11 +57,6 @@ type Config struct {
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus
 	ServiceEnabled           util.EnablementStatus
-
-	// "Classless" API support
-	ProcessClasslessIngressV1      bool
-	ProcessClasslessIngressV1Beta1 bool
-	ProcessClasslessKongConsumer   bool
 }
 
 // -----------------------------------------------------------------------------
@@ -124,11 +119,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.enablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusDisabled, "Enable or disable the KongPlugin controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled, "Enable or disable the KongConsumer controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled, "Enable or disable the Service controller. "+onOffUsage)
-
-	// "Classless" API support
-	flagSet.BoolVar(&c.ProcessClasslessIngressV1Beta1, "process-classless-ingress-v1beta1", false, `Process v1beta1 Ingress resources with no class annotation.`)
-	flagSet.BoolVar(&c.ProcessClasslessIngressV1, "process-classless-ingress-v1", false, `Process v1 Ingress resources with no class annotation.`)
-	flagSet.BoolVar(&c.ProcessClasslessKongConsumer, "process-classless-kong-consumer", false, `Process KongConsumer resources with no class annotation.`)
 
 	return &flagSet.FlagSet
 }

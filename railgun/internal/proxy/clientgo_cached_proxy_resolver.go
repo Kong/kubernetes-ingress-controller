@@ -30,9 +30,9 @@ func NewCacheBasedProxy(ctx context.Context,
 	k8s client.Client,
 	kongConfig sendconfig.Kong,
 	ingressClassName string,
-	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
+	enableReverseSync bool,
 ) (Proxy, error) {
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync, DefaultStagger)
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, DefaultStagger)
 }
 
 func NewCacheBasedProxyWithStagger(ctx context.Context,
@@ -40,7 +40,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	k8s client.Client,
 	kongConfig sendconfig.Kong,
 	ingressClassName string,
-	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
+	enableReverseSync bool,
 	stagger time.Duration,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
@@ -54,11 +54,8 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		deprecatedLogger: logger,
 		logger:           logrusr.NewLogger(logger),
 
-		ingressClassName:               ingressClassName,
-		processClasslessIngressV1Beta1: processClasslessIngressV1Beta1,
-		processClasslessIngressV1:      processClasslessIngressV1,
-		processClasslessKongConsumer:   processClasslessKongConsumer,
-		stopCh:                         make(chan struct{}),
+		ingressClassName: ingressClassName,
+		stopCh:           make(chan struct{}),
 
 		ctx:     ctx,
 		update:  make(chan *cachedObject, DefaultObjectBufferSize),
@@ -105,16 +102,11 @@ type clientgoCachedProxyResolver struct {
 	dbmode            string
 	version           semver.Version
 
-	// cache store configuration options
-	ingressClassName               string
-	processClasslessIngressV1Beta1 bool
-	processClasslessIngressV1      bool
-	processClasslessKongConsumer   bool
-
-	// cache server flow control, channels and utility attributes
-	ctx     context.Context
-	stagger time.Duration
-	stopCh  chan struct{}
+	// cache server configuration, flow control, channels and utility attributes
+	ingressClassName string
+	ctx              context.Context
+	stagger          time.Duration
+	stopCh           chan struct{}
 
 	// New code should log using "logger". "deprecatedLogger" is here for compatibility with legacy code that relies
 	// on the logrus API.
@@ -287,7 +279,7 @@ func (p *clientgoCachedProxyResolver) cacheDelete(cobj *cachedObject) error {
 // and apply the resulting configuration to the Kong Admin API.
 func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*p.cache, p.ingressClassName, p.processClasslessIngressV1, p.processClasslessIngressV1Beta1, p.processClasslessKongConsumer, p.deprecatedLogger)
+	storer := store.New(*p.cache, p.ingressClassName, false, false, false, p.deprecatedLogger)
 	kongstate, err := parser.Build(p.deprecatedLogger, storer)
 	if err != nil {
 		return err

@@ -317,12 +317,12 @@ func TestIngressNamespaces(t *testing.T) {
 	ctx := context.Background()
 
 	// ensure the alternative namespace is created
-	elsewhereNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: elsewhere}}
+	elsewhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: elsewhere}}
 	nowhere := "nowhere"
 	nowhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nowhere}}
 	_, err := cluster.Client().CoreV1().Namespaces().Create(ctx, nowhereNamespace, metav1.CreateOptions{})
 	assert.NoError(t, err)
-	_, err := cluster.Client().CoreV1().Namespaces().Create(ctx, elsewhereNS, metav1.CreateOptions{})
+	_, err = cluster.Client().CoreV1().Namespaces().Create(ctx, elsewhereNamespace, metav1.CreateOptions{})
 	assert.NoError(t, err)
 	defer func() {
 		t.Logf("cleaning up namespace %s", elsewhereNamespace.Name)

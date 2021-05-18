@@ -25,7 +25,6 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
@@ -51,11 +50,6 @@ func Run(ctx context.Context, c *Config) error {
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
-
-	// TODO: we might want to change how this works in the future, rather than just assuming the default ns
-	if v := os.Getenv(ctrlutils.CtrlNamespaceEnv); v == "" {
-		os.Setenv(ctrlutils.CtrlNamespaceEnv, ctrlutils.DefaultNamespace)
-	}
 
 	kubeconfig, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
 	if err != nil {
@@ -106,6 +100,7 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
+	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:         c.KongAdminURL,
 		FilterTags:  []string{c.FilterTag},
@@ -113,7 +108,8 @@ func Run(ctx context.Context, c *Config) error {
 		Client:      kongClient,
 	}
 
-	prx := proxy.NewCacheBasedProxy(ctx,
+	// start the proxy cache server
+	prx, err := proxy.NewCacheBasedProxy(ctx,
 		// NOTE: logr-based loggers use the "logger" field instead of "subsystem". When replacing logrus with logr, replace
 		// WithField("subsystem", ...) with WithName(...).
 		deprecatedLogger.WithField("subsystem", "proxy-cache-resolver"),
@@ -123,7 +119,12 @@ func Run(ctx context.Context, c *Config) error {
 		c.ProcessClasslessIngressV1Beta1,
 		c.ProcessClasslessIngressV1,
 		c.ProcessClasslessKongConsumer,
+		c.EnableReverseSync,
 	)
+	if err != nil {
+		setupLog.Error(err, "unable to start proxy cache server")
+		return err
+	}
 
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------

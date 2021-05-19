@@ -13,8 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 )
@@ -176,6 +174,10 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 // Client Go Cached Proxy Resolver - Private Methods - Cache Server
 // -----------------------------------------------------------------------------
 
+// updateKongAdmin is the function that will be used by the cache server to ultimately make the API
+// call to resolve the current cache to the Kong Admin API configuration endpoint.
+var updateKongAdmin = sendconfig.UpdateKongAdminSimple
+
 // startCacheServer runs a server in a background goroutine that is responsible for:
 //
 //   1. processing kubernetes object updates (add, replace)
@@ -204,9 +206,11 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				break
 			}
 		case <-syncTicker.C:
-			if err := p.updateKongAdmin(); err != nil {
+			updateConfigSHA, err := updateKongAdmin(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
+			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 			}
+			p.lastConfigSHA = updateConfigSHA
 		case <-p.ctx.Done():
 			p.logger.Info("the proxy cache server's context is done, shutting down")
 			return
@@ -280,34 +284,6 @@ func (p *clientgoCachedProxyResolver) cacheUpdate(cobj *cachedObject) error {
 func (p *clientgoCachedProxyResolver) cacheDelete(cobj *cachedObject) error {
 	cobj.err = p.cache.Delete(cobj.runtimeObj)
 	return cobj.err
-}
-
-// updateKongAdmin will take whatever the current state of the Proxy.cache is an convert that to Kong DSL
-// and apply the resulting configuration to the Kong Admin API.
-func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
-	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*p.cache, p.ingressClassName, false, false, false, p.deprecatedLogger)
-	kongstate, err := parser.Build(p.deprecatedLogger, storer)
-	if err != nil {
-		return err
-	}
-
-	// generate the deck configuration to be applied to the admin API
-	targetConfig := deckgen.ToDeckContent(p.ctx, p.deprecatedLogger, kongstate, nil, nil)
-
-	// apply the configuration update in Kong
-	timedCtx, cancel := context.WithTimeout(p.ctx, 10*time.Second)
-	defer cancel()
-	p.lastConfigSHA, err = sendconfig.PerformUpdate(timedCtx,
-		p.deprecatedLogger, &p.kongConfig,
-		p.kongConfig.InMemory, p.enableReverseSync,
-		targetConfig, nil, nil, p.lastConfigSHA,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interface{}, error) {

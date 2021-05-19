@@ -23,8 +23,8 @@ import (
 // Client Go Cached Proxy Resolver - Public Functions
 // -----------------------------------------------------------------------------
 
-// NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background services
-// and the caller is thereafter responsible for closing the Proxy.StopCh.
+// NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the
+// caller is resonsible for marking the provided context.Context as "Done()" to shut down the background routines.
 func NewCacheBasedProxy(ctx context.Context,
 	logger logrus.FieldLogger,
 	k8s client.Client,
@@ -32,9 +32,16 @@ func NewCacheBasedProxy(ctx context.Context,
 	ingressClassName string,
 	enableReverseSync bool,
 ) (Proxy, error) {
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, DefaultStagger)
+	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
+	if err != nil {
+		return nil, err
+	}
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger)
 }
 
+// NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
+// is resonsible for marking the provided context.Context as "Done()" to shut down the background routines. A "stagger"
+// time duration is provided to indicate how often the background routines will sync configuration to the Kong Admin API.
 func NewCacheBasedProxyWithStagger(ctx context.Context,
 	logger logrus.FieldLogger,
 	k8s client.Client,
@@ -180,7 +187,7 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 func (p *clientgoCachedProxyResolver) startCacheServer() {
 	p.logger.Info("the proxy cache server has been started")
 
-	// syncTimer is a regular interval to check for cache updates and resolve the cache to the Kong Admin API
+	// syncTicker is a regular interval to check for cache updates and resolve the cache to the Kong Admin API
 	syncTicker := time.NewTicker(p.stagger)
 
 	// updates tracks whether any updates/deletes were tracked this cycle

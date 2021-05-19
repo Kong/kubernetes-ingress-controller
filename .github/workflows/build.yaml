@@ -58,25 +58,3 @@ jobs:
         docker tag local/kong-ingress-controller:ci "$DOCKER_TAG"
         echo "${BINTRAY_KEY}" | docker login -u "${BINTRAY_USER}" ${REPO} --password-stdin
         docker push "$DOCKER_TAG"
-
-  test-k8s:
-    needs: build
-    runs-on: ubuntu-latest
-    env:
-      KUBE_VERSION: v1.20.2
-    steps:
-    - name: 'Arrange: Check out the repo'
-      uses: actions/checkout@v2
-
-    - uses: actions/download-artifact@v2
-      with:
-        name: image
-
-    - name: 'Arrange: Push the image to the local registry'
-      run: |
-        docker load < image.tar
-        docker tag local/kong-ingress-controller:ci localhost:32000/kong-ingress-controller:ci
-
-    - name: 'Test: Run integration tests (k8s ${{ env.KUBE_VERSION }})'
-      run: |
-        env KIC_IMAGE=local/kong-ingress-controller:ci ./test/integration/test.sh

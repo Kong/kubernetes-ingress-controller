@@ -161,7 +161,11 @@ $ cd $GOPATH/src/github.com/kong/kubernetes-ingress-controller
 $ make test
 ```
 
-To run integration tests, see the [integration test readme](test/integration/README.md).
+Integration tests can be run using a `Makefile` target:
+
+```console
+$ make test.integration
+```
 
 ## Releasing
 

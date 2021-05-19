@@ -286,6 +286,8 @@ func (p *clientgoCachedProxyResolver) cacheDelete(cobj *cachedObject) error {
 	return cobj.err
 }
 
+// kongRootWithTimeout provides the root configuration from Kong, but uses a default timeout to avoid long waits if the Admin API
+// is not yet ready to respond. If a timeout error occurs, the caller is responsible for providing a retry mechanism.
 func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(p.ctx, 3*time.Second)
 	defer cancel()

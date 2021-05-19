@@ -23,24 +23,31 @@ import (
 // Client Go Cached Proxy Resolver - Public Functions
 // -----------------------------------------------------------------------------
 
-// NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background services
-// and the caller is thereafter responsible for closing the Proxy.StopCh.
+// NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the
+// caller is resonsible for marking the provided context.Context as "Done()" to shut down the background routines.
 func NewCacheBasedProxy(ctx context.Context,
 	logger logrus.FieldLogger,
 	k8s client.Client,
 	kongConfig sendconfig.Kong,
 	ingressClassName string,
-	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
+	enableReverseSync bool,
 ) (Proxy, error) {
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync, DefaultStagger)
+	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
+	if err != nil {
+		return nil, err
+	}
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger)
 }
 
+// NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
+// is resonsible for marking the provided context.Context as "Done()" to shut down the background routines. A "stagger"
+// time duration is provided to indicate how often the background routines will sync configuration to the Kong Admin API.
 func NewCacheBasedProxyWithStagger(ctx context.Context,
 	logger logrus.FieldLogger,
 	k8s client.Client,
 	kongConfig sendconfig.Kong,
 	ingressClassName string,
-	processClasslessIngressV1Beta1, processClasslessIngressV1, processClasslessKongConsumer, enableReverseSync bool,
+	enableReverseSync bool,
 	stagger time.Duration,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
@@ -54,11 +61,8 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		deprecatedLogger: logger,
 		logger:           logrusr.NewLogger(logger),
 
-		ingressClassName:               ingressClassName,
-		processClasslessIngressV1Beta1: processClasslessIngressV1Beta1,
-		processClasslessIngressV1:      processClasslessIngressV1,
-		processClasslessKongConsumer:   processClasslessKongConsumer,
-		stopCh:                         make(chan struct{}),
+		ingressClassName: ingressClassName,
+		stopCh:           make(chan struct{}),
 
 		ctx:     ctx,
 		update:  make(chan *cachedObject, DefaultObjectBufferSize),
@@ -105,16 +109,11 @@ type clientgoCachedProxyResolver struct {
 	dbmode            string
 	version           semver.Version
 
-	// cache store configuration options
-	ingressClassName               string
-	processClasslessIngressV1Beta1 bool
-	processClasslessIngressV1      bool
-	processClasslessKongConsumer   bool
-
-	// cache server flow control, channels and utility attributes
-	ctx     context.Context
-	stagger time.Duration
-	stopCh  chan struct{}
+	// cache server configuration, flow control, channels and utility attributes
+	ingressClassName string
+	ctx              context.Context
+	stagger          time.Duration
+	stopCh           chan struct{}
 
 	// New code should log using "logger". "deprecatedLogger" is here for compatibility with legacy code that relies
 	// on the logrus API.
@@ -188,7 +187,7 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 func (p *clientgoCachedProxyResolver) startCacheServer() {
 	p.logger.Info("the proxy cache server has been started")
 
-	// syncTimer is a regular interval to check for cache updates and resolve the cache to the Kong Admin API
+	// syncTicker is a regular interval to check for cache updates and resolve the cache to the Kong Admin API
 	syncTicker := time.NewTicker(p.stagger)
 
 	// updates tracks whether any updates/deletes were tracked this cycle
@@ -287,7 +286,7 @@ func (p *clientgoCachedProxyResolver) cacheDelete(cobj *cachedObject) error {
 // and apply the resulting configuration to the Kong Admin API.
 func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*p.cache, p.ingressClassName, p.processClasslessIngressV1, p.processClasslessIngressV1Beta1, p.processClasslessKongConsumer, p.deprecatedLogger)
+	storer := store.New(*p.cache, p.ingressClassName, false, false, false, p.deprecatedLogger)
 	kongstate, err := parser.Build(p.deprecatedLogger, storer)
 	if err != nil {
 		return err

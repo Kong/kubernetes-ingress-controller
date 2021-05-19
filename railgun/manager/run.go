@@ -4,6 +4,8 @@ package manager
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
@@ -12,6 +14,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
@@ -56,15 +59,28 @@ func Run(ctx context.Context, c *Config) error {
 	// set "kubernetes.io/ingress.class" to be used by controllers (defaults to "kong")
 	setupLog.Info(`the ingress class name has been set`, "value", c.IngressClassName)
 
-	// build the controller manager
-	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
+	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,
 		LeaderElection:         c.EnableLeaderElection,
 		LeaderElectionID:       c.LeaderElectionID,
-	})
+	}
+
+	// determine how to configure namespace watchers
+	if strings.Contains(c.WatchNamespace, ",") {
+		setupLog.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespace)
+		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
+		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
+		// from the watched namespaces only.
+		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(c.WatchNamespace, ","))
+	} else {
+		controllerOpts.Namespace = c.WatchNamespace
+	}
+
+	// build the controller manager
+	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return err
@@ -87,23 +103,28 @@ func Run(ctx context.Context, c *Config) error {
 	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:         c.KongAdminURL,
-		FilterTags:  []string{c.FilterTag},
+		FilterTags:  c.FilterTags,
 		Concurrency: c.Concurrency,
 		Client:      kongClient,
 	}
 
+	// determine the proxy synchronization strategy
+	syncTickDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxySyncSeconds))
+	if err != nil {
+		setupLog.Error(err, "%s is not a valid number of seconds to stagger the proxy server synchronization")
+		return err
+	}
+
 	// start the proxy cache server
-	prx, err := proxy.NewCacheBasedProxy(ctx,
+	prx, err := proxy.NewCacheBasedProxyWithStagger(ctx,
 		// NOTE: logr-based loggers use the "logger" field instead of "subsystem". When replacing logrus with logr, replace
 		// WithField("subsystem", ...) with WithName(...).
 		deprecatedLogger.WithField("subsystem", "proxy-cache-resolver"),
 		mgr.GetClient(),
 		kongConfig,
 		c.IngressClassName,
-		c.ProcessClasslessIngressV1Beta1,
-		c.ProcessClasslessIngressV1,
-		c.ProcessClasslessKongConsumer,
 		c.EnableReverseSync,
+		syncTickDuration,
 	)
 	if err != nil {
 		setupLog.Error(err, "unable to start proxy cache server")

@@ -136,12 +136,12 @@ func TestMain(m *testing.M) {
 // -----------------------------------------------------------------------------
 
 var crds = []string{
-	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
-	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongplugins.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
+	"../../railgun/config/crd/bases/configuration.konghq.com_udpingresses.yaml",
+	"../../railgun/config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
+	"../../railgun/config/crd/bases/configuration.konghq.com_kongplugins.yaml",
+	"../../railgun/config/crd/bases/configuration.konghq.com_kongingresses.yaml",
+	"../../railgun/config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
+	"../../railgun/config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.
@@ -214,7 +214,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-admin-url=http://%s:8001", adminHost),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-				"--proxy-sync-seconds=0.05", // run the test updates at 50ms for high speed
 				"--controller-kongstate=enabled",
 				"--controller-ingress-networkingv1=enabled",
 				"--controller-ingress-networkingv1beta1=disabled",
@@ -264,7 +263,7 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	proxyPod := podList.Items[0].Name
 
 	// custom command for the legacy controller as there are several differences in flags.
-	cmd := exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
+	cmd := exec.CommandContext(ctx, "go", "run", "../../cli/ingress-controller/",
 		"--publish-service", "kong-system/ingress-controller-kong-proxy",
 		"--kubeconfig", kubeconfigPath,
 		"--kong-admin-url", fmt.Sprintf("http://%s:8001", adminHost),

@@ -70,3 +70,46 @@ railgun-container:
 .PHONY: run
 run:
 	./hack/dev/start.sh ${DB} ${RUN_VERSION}
+
+# ------------------------------------------------------------------------------
+# Integration Tests
+# ------------------------------------------------------------------------------
+
+KIND_CLUSTER_NAME ?= "integration-tests"
+
+# Create only the base cluster that would be used for integration tests.
+# This can be helpful when developing new tests, as you can deploy the cluster
+# and run the test suite setup but then run tests individually against the cluster:
+#
+#   $ make test.integration.cluster KIND_CLUSTER_NAME="integration-tests"
+#   $ export KIND_CLUSTER="integration-tests"
+#   $ go test -v -run 'TestTCPIngress' ./test/integration/
+.PHONY: test.integration.cluster
+test.integration.cluster:
+	@./hack/setup-integration-tests.sh
+	@go clean -testcache
+	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
+
+# Our integration tests using all supported backends, with verbose output
+.PHONY: test.integration
+test.integration: test.integration.dbless test.integration.postgres
+
+# Our integration tests using the dbless backend, with verbose output
+.PHONY: test.integration.dbless
+test.integration.dbless:
+	@./hack/setup-integration-tests.sh
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+
+# Our integration tests using the postgres backend, with verbose output
+# TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
+#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
+.PHONY: test.integration.postgres
+test.integration.postgres:
+	@./hack/setup-integration-tests.sh
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v ./test/integration/
+
+# Our integration tests using the legacy v1 controller manager
+.PHONY: test.integration.legacy
+test.integration.legacy:
+	@./hack/setup-integration-tests.sh
+	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/

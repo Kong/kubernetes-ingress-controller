@@ -102,7 +102,7 @@ func Run(ctx context.Context, c *Config) error {
 	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:         c.KongAdminURL,
-		FilterTags:  []string{c.FilterTag},
+		FilterTags:  c.FilterTags,
 		Concurrency: c.Concurrency,
 		Client:      kongClient,
 	}

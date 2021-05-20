@@ -213,6 +213,9 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 			p.lastConfigSHA = updateConfigSHA
 		case <-p.ctx.Done():
 			p.logger.Info("the proxy cache server's context is done, shutting down")
+			if err := p.ctx.Err(); err != nil {
+				p.logger.Error(err, "context completed with error")
+			}
 			return
 		}
 	}

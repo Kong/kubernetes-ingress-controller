@@ -62,10 +62,11 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		ingressClassName: ingressClassName,
 		stopCh:           make(chan struct{}),
 
-		ctx:     ctx,
-		update:  make(chan *cachedObject, DefaultObjectBufferSize),
-		del:     make(chan *cachedObject, DefaultObjectBufferSize),
-		stagger: stagger,
+		ctx:        ctx,
+		update:     make(chan *cachedObject, DefaultObjectBufferSize),
+		del:        make(chan *cachedObject, DefaultObjectBufferSize),
+		stagger:    stagger,
+		syncTicker: time.NewTicker(stagger),
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -111,6 +112,7 @@ type clientgoCachedProxyResolver struct {
 	ingressClassName string
 	ctx              context.Context
 	stagger          time.Duration
+	syncTicker       *time.Ticker
 	stopCh           chan struct{}
 
 	// New code should log using "logger". "deprecatedLogger" is here for compatibility with legacy code that relies
@@ -188,11 +190,6 @@ var updateKongAdmin = sendconfig.UpdateKongAdminSimple
 // submit POST updates to the Kong Admin API with the new configuration.
 func (p *clientgoCachedProxyResolver) startCacheServer() {
 	p.logger.Info("the proxy cache server has been started")
-
-	// syncTicker is a regular interval to check for cache updates and resolve the cache to the Kong Admin API
-	syncTicker := time.NewTicker(p.stagger)
-
-	// updates tracks whether any updates/deletes were tracked this cycle
 	for {
 		select {
 		case cobj := <-p.update:
@@ -205,7 +202,7 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				p.logger.Error(err, "object could not be deleted from the cache and will be discarded")
 				break
 			}
-		case <-syncTicker.C:
+		case <-p.syncTicker.C:
 			updateConfigSHA, err := updateKongAdmin(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
@@ -239,7 +236,7 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 	// pull the proxy configuration out of the root config and validate it
 	proxyConfig, ok := root["configuration"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("invalid database configuration, expected a string got %T", proxyConfig["database"])
+		return fmt.Errorf("invalid root configuration, expected a map[string]interface{} got %T", proxyConfig["configuration"])
 	}
 
 	// validate the database configuration for the proxy and check for supported database configurations

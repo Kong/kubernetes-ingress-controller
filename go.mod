@@ -13,6 +13,7 @@ require (
 	github.com/go-logr/zapr v0.4.0 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/uuid v1.2.0
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/kong/deck v1.6.0

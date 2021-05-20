@@ -236,8 +236,11 @@ func ExtractResponseBuffering(anns map[string]string) (string, bool) {
 // ExtractHostAliases extracts the host-aliases annotation value.
 func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 	val, exists := anns[AnnotationPrefix+HostAliasesKey]
-	if val == "" {
-		return nil, exists
+	if !exists {
+		return nil, false
 	}
-	return strings.Split(val, ","), exists
+	if val == "" {
+		return nil, false
+	}
+	return strings.Split(val, ","), true
 }

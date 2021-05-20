@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	util "github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -108,6 +109,10 @@ type clientgoCachedProxyResolver struct {
 	enableReverseSync bool
 	dbmode            string
 	version           semver.Version
+
+	// KongCustomEntitiesSecret is a "namespace/name" Secret locator for a Secret
+	// that contains raw YAML custom entities, for use with DB-less mode
+	KongCustomEntitiesSecret string
 
 	// cache server configuration, flow control, channels and utility attributes
 	ingressClassName string
@@ -295,13 +300,23 @@ func (p *clientgoCachedProxyResolver) updateKongAdmin() error {
 	// generate the deck configuration to be applied to the admin API
 	targetConfig := deckgen.ToDeckContent(p.ctx, p.deprecatedLogger, kongstate, nil, nil)
 
+	// retrieve custom entities
+	var customEntities []byte
+	if p.kongConfig.InMemory && p.KongCustomEntitiesSecret != "" {
+		customEntities, err = fetchCustomEntities(p.KongCustomEntitiesSecret, storer)
+		if err != nil {
+			// failure to fetch custom entities shouldn't block updates
+			p.logger.Error(err, "failed to fetch custom entities")
+		}
+	}
+
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(p.ctx, 10*time.Second)
 	defer cancel()
 	p.lastConfigSHA, err = sendconfig.PerformUpdate(timedCtx,
 		p.deprecatedLogger, &p.kongConfig,
 		p.kongConfig.InMemory, p.enableReverseSync,
-		targetConfig, nil, nil, p.lastConfigSHA,
+		targetConfig, nil, customEntities, p.lastConfigSHA,
 	)
 	if err != nil {
 		return err
@@ -314,4 +329,21 @@ func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interfac
 	ctx, cancel := context.WithTimeout(p.ctx, 3*time.Second)
 	defer cancel()
 	return p.kongConfig.Client.Root(ctx)
+}
+
+func fetchCustomEntities(secret string, store store.Storer) ([]byte, error) {
+	ns, name, err := util.ParseNameNS(secret)
+	if err != nil {
+		return nil, fmt.Errorf("parsing kong custom entities secret: %w", err)
+	}
+	kSecret, err := store.GetSecret(ns, name)
+	if err != nil {
+		return nil, fmt.Errorf("fetching secret: %w", err)
+	}
+	config, ok := kSecret.Data["config"]
+	if !ok {
+		return nil, fmt.Errorf("'config' key not found in "+
+			"custom entities secret '%v'", secret)
+	}
+	return config, nil
 }

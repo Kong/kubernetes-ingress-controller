@@ -45,11 +45,13 @@
 
 #### Under the hood
 
+- the `--sync-rate-limit` is now deprecated in favor of `--sync-time-seconds`. This functionality no longer blocks goroutines until the provided number of seconds has passed to enforce rate limiting, now instead it configures a non-blocking [time.Ticker][go-tick] that runs at the provided seconds interval. Input remains a float that indicates seconds.
 - project layout for contributions has been changed: this project now uses the [Kubebuilder SDK][kubebuilder] and there are layout changes and configurations specific to the new build environment.
 - controller architecture has been changed: each API type now has an independent controller implementation and all controllers now utilize [controller-runtime][controller-runtime].
 - full integration testing in [Golang][go] has been added for testing APIs and controllers on a fully featured Kubernetes cluster, this is now supported by the new [Kong Kubernetes Testing Framework (KTF)][ktf] project and now runs as part of CI.
 - the mechanism for caching and resolving Kong Admin `/config` configurations when running in `DBLESS` mode has been reimplemented to enable fine-tuned configuration options in later iterations.
 
+[go-tick]:https://golang.org/pkg/time/#Ticker
 [kubebuilder]:https://github.com/kubernetes-sigs/kubebuilder
 [controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
 [go]:https://golang.org

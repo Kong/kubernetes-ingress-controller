@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
@@ -102,13 +103,20 @@ func Run(ctx context.Context, c *Config) error {
 	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:         c.KongAdminURL,
-		FilterTags:  []string{c.FilterTag},
+		FilterTags:  c.FilterTags,
 		Concurrency: c.Concurrency,
 		Client:      kongClient,
 	}
 
+	// determine the proxy synchronization strategy
+	syncTickDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxySyncSeconds))
+	if err != nil {
+		setupLog.Error(err, "%s is not a valid number of seconds to stagger the proxy server synchronization")
+		return err
+	}
+
 	// start the proxy cache server
-	prx, err := proxy.NewCacheBasedProxy(ctx,
+	prx, err := proxy.NewCacheBasedProxyWithStagger(ctx,
 		// NOTE: logr-based loggers use the "logger" field instead of "subsystem". When replacing logrus with logr, replace
 		// WithField("subsystem", ...) with WithName(...).
 		deprecatedLogger.WithField("subsystem", "proxy-cache-resolver"),
@@ -116,6 +124,7 @@ func Run(ctx context.Context, c *Config) error {
 		kongConfig,
 		c.IngressClassName,
 		c.EnableReverseSync,
+		syncTickDuration,
 	)
 	if err != nil {
 		setupLog.Error(err, "unable to start proxy cache server")

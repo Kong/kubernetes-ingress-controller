@@ -6,6 +6,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -32,10 +33,11 @@ type Config struct {
 	EnableReverseSync  bool
 
 	// Kong Proxy configurations
-	APIServerHost string
-	MetricsAddr   string
-	ProbeAddr     string
-	KongAdminURL  string
+	APIServerHost    string
+	MetricsAddr      string
+	ProbeAddr        string
+	KongAdminURL     string
+	ProxySyncSeconds float32
 
 	// Kubernetes configurations
 	KubeconfigPath       string
@@ -43,7 +45,7 @@ type Config struct {
 	EnableLeaderElection bool
 	LeaderElectionID     string
 	Concurrency          int
-	FilterTag            string
+	FilterTags           []string
 	WatchNamespace       string
 
 	// Kubernetes API toggling
@@ -91,19 +93,29 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
 
-	// Kong Proxy configurations
+	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
+	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
+		fmt.Sprintf(
+			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds) (DEPRECATED, use --proxy-sync-seconds instead)",
+			proxy.DefaultSyncSeconds,
+		))
+	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", proxy.DefaultSyncSeconds,
+		fmt.Sprintf(
+			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds)",
+			proxy.DefaultSyncSeconds,
+		))
 
 	// Kubernetes configurations
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
-	flagSet.StringVar(&c.FilterTag, "kong-filter-tag", "managed-by-railgun", "TODO")
-	flagSet.IntVar(&c.Concurrency, "kong-concurrency", 10, "TODO")
+	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags")
+	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringVar(&c.WatchNamespace, "watch-namespace", corev1.NamespaceAll,
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
 		a comma-separated list of namespaces.`)

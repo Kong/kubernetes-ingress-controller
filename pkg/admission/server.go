@@ -51,10 +51,10 @@ func readKeyPairFiles(certPath, keyPath string) ([]byte, []byte, error) {
 func (sc *ServerConfig) toTLSConfig() (*tls.Config, error) {
 	var cert, key []byte
 	switch {
-	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
+	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert != "" && sc.Key != "":
 		cert, key = []byte(sc.Cert), []byte(sc.Key)
 
-	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert != "" && sc.Key != "":
+	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
 		var err error
 		cert, key, err = readKeyPairFiles(sc.CertPath, sc.KeyPath)
 		if err != nil {
@@ -67,6 +67,9 @@ func (sc *ServerConfig) toTLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
+	default:
+		return nil, fmt.Errorf("either cert/key files OR cert/key values must be provided, or none")
 	}
 
 	keyPair, err := tls.X509KeyPair(cert, key)

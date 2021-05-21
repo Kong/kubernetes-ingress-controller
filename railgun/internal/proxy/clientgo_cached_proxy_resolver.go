@@ -216,6 +216,7 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 			if err := p.ctx.Err(); err != nil {
 				p.logger.Error(err, "context completed with error")
 			}
+			p.syncTicker.Stop()
 			return
 		}
 	}

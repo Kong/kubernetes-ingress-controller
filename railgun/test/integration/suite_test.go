@@ -34,13 +34,13 @@ import (
 
 const (
 	// clusterDeployWait is the timeout duration for deploying the kind cluster for testing
-	clusterDeployWait = time.Minute * 5
+	clusterDeployWait = time.Minute * 20
 
 	// waitTick is the default timeout tick interval for checking on ingress resources.
 	waitTick = time.Second * 1
 
 	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	ingressWait = time.Minute * 10
+	ingressWait = time.Minute * 20
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
@@ -235,7 +235,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			})
-			fmt.Printf("config: %+v\n", config)
+			fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 
 			if err := rootcmd.Run(ctx, &config); err != nil {
 				panic(fmt.Errorf("controller manager exited with error: %w", err))

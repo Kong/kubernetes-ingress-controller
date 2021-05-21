@@ -29,12 +29,13 @@ func NewCacheBasedProxy(ctx context.Context,
 	kongConfig sendconfig.Kong,
 	ingressClassName string,
 	enableReverseSync bool,
+	kongUpdater KongUpdater,
 ) (Proxy, error) {
 	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
 	if err != nil {
 		return nil, err
 	}
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger)
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, kongUpdater)
 }
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
@@ -47,6 +48,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	ingressClassName string,
 	enableReverseSync bool,
 	stagger time.Duration,
+	kongUpdater KongUpdater,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
 	cache := store.NewCacheStores()
@@ -54,6 +56,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		cache: &cache,
 
 		kongConfig:        kongConfig,
+		kongUpdater:       kongUpdater,
 		enableReverseSync: enableReverseSync,
 
 		deprecatedLogger: logger,
@@ -107,6 +110,10 @@ type clientgoCachedProxyResolver struct {
 	enableReverseSync bool
 	dbmode            string
 	version           semver.Version
+
+	// kongUpdater is the function that will be used by the cache server to ultimately make the API
+	// call to resolve the current cache to the Kong Admin API configuration endpoint.
+	kongUpdater KongUpdater
 
 	// cache server configuration, flow control, channels and utility attributes
 	ingressClassName string
@@ -176,10 +183,6 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 // Client Go Cached Proxy Resolver - Private Methods - Cache Server
 // -----------------------------------------------------------------------------
 
-// updateKongAdmin is the function that will be used by the cache server to ultimately make the API
-// call to resolve the current cache to the Kong Admin API configuration endpoint.
-var updateKongAdmin = sendconfig.UpdateKongAdminSimple
-
 // startCacheServer runs a server in a background goroutine that is responsible for:
 //
 //   1. processing kubernetes object updates (add, replace)
@@ -203,7 +206,7 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				break
 			}
 		case <-p.syncTicker.C:
-			updateConfigSHA, err := updateKongAdmin(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
+			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 			}

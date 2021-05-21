@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
@@ -18,7 +17,7 @@ func init() {
 
 var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return manager.Run(cmd.Context(), &cfg)
+		return Run(cmd.Context(), &cfg)
 	},
 	SilenceUsage: true,
 }

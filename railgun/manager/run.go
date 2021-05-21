@@ -125,6 +125,7 @@ func Run(ctx context.Context, c *Config) error {
 		c.IngressClassName,
 		c.EnableReverseSync,
 		syncTickDuration,
+		sendconfig.UpdateKongAdminSimple,
 	)
 	if err != nil {
 		setupLog.Error(err, "unable to start proxy cache server")

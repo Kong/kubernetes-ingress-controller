@@ -17,7 +17,7 @@ func TestCaching(t *testing.T) {
 	defer cancel()
 
 	t.Log("configuring and starting a new proxy server")
-	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false)
+	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin)
 	assert.NoError(t, err)
 
 	t.Log("ensuring the integrity of the proxy server")

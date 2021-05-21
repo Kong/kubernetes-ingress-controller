@@ -36,7 +36,6 @@ var (
 
 func TestMain(m *testing.M) {
 	setupVars()
-	setupMocks()
 	code := m.Run()
 	os.Exit(code)
 }
@@ -67,25 +66,23 @@ func setupVars() {
 	fakeKongConfig.Client = fakeKongAdminAPI.KongClient
 }
 
-func setupMocks() {
-	// this mock will stop us from needing a functioning Kong proxy and simply
-	// assumes that all updates to the Kong Admin API succeed. Test which want
-	// to test failure conditions will need to add their own mock, and then put
-	// this one back when they're done.
-	//
-	// NOTE: as these tests grow, we can use the kongt.FakeAdminAPIServer implementation to properly
-	//       mock out the requests (this is used above to ensure that tests can properly initialize a Proxy instance)
-	//       instead of the always-succeed functionality we use currently.
-	updateKongAdmin = func(ctx context.Context,
-		lastConfigSHA []byte,
-		cache *store.CacheStores,
-		ingressClassName string,
-		deprecatedLogger logrus.FieldLogger,
-		kongConfig sendconfig.Kong,
-		enableReverseSync bool) ([]byte, error) {
-		fakeKongAdminUpdateCount(1)
-		return lastConfigSHA, nil
-	}
+// this mock will stop us from needing a functioning Kong proxy and simply
+// assumes that all updates to the Kong Admin API succeed. Test which want
+// to test failure conditions will need to add their own mock, and then put
+// this one back when they're done.
+//
+// NOTE: as these tests grow, we can use the kongt.FakeAdminAPIServer implementation to properly
+//       mock out the requests (this is used above to ensure that tests can properly initialize a Proxy instance)
+//       instead of the always-succeed functionality we use currently.
+var mockKongAdmin KongUpdater = func(ctx context.Context,
+	lastConfigSHA []byte,
+	cache *store.CacheStores,
+	ingressClassName string,
+	deprecatedLogger logrus.FieldLogger,
+	kongConfig sendconfig.Kong,
+	enableReverseSync bool) ([]byte, error) {
+	fakeKongAdminUpdateCount(1)
+	return lastConfigSHA, nil
 }
 
 // these globs are for threadsafety and tracking of the fakeKongAdminUpdateCount() function,

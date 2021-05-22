@@ -1,9 +1,13 @@
 package proxy
 
 import (
-	"time"
+	"context"
 
+	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 )
 
 // -----------------------------------------------------------------------------
@@ -11,10 +15,11 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// DefaultStagger indicates the time.Duration (minimum) that will occur between
+	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
 	// updates to the Kong Proxy Admin API when using the NewProxy() constructor.
-	// Use the NewProxyWithStagger() constructor to provide your own duration.
-	DefaultStagger time.Duration = time.Second * 3
+	//
+	// NOTE: this default was originally inherited from KIC v1.x.
+	DefaultSyncSeconds float32 = 0.3
 
 	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
 	// before it starts rejecting new objects while it processes the originals.
@@ -54,3 +59,13 @@ type Proxy interface {
 	// A status will later be added to the object whether the configuration update succeeds or fails.
 	DeleteObject(obj client.Object) error
 }
+
+// KongUpdater is a type of function that describes how to provide updates to the Kong Admin API
+// and implementations will report the configuration SHA that results from any update performed.
+type KongUpdater func(ctx context.Context,
+	lastConfigSHA []byte,
+	cache *store.CacheStores,
+	ingressClassName string,
+	deprecatedLogger logrus.FieldLogger,
+	kongConfig sendconfig.Kong,
+	enableReverseSync bool) ([]byte, error)

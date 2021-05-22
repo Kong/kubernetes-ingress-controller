@@ -13,11 +13,12 @@ require (
 	github.com/go-logr/zapr v0.4.0 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/uuid v1.2.0
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/kong/deck v1.6.0
 	github.com/kong/go-kong v0.19.0
-	github.com/kong/kubernetes-testing-framework v0.0.9
+	github.com/kong/kubernetes-testing-framework v0.0.10
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
@@ -44,9 +45,9 @@ require (
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1
 	gopkg.in/ini.v1 v1.62.0 // indirect
-	k8s.io/api v0.20.6
+	k8s.io/api v0.20.7
 	k8s.io/apiextensions-apiserver v0.20.6
-	k8s.io/apimachinery v0.20.6
+	k8s.io/apimachinery v0.20.7
 	k8s.io/client-go v0.20.6
 	k8s.io/klog v1.0.0
 	knative.dev/networking v0.0.0-20210216014426-94bfc013982b

@@ -46,9 +46,9 @@ require (
 	gopkg.in/go-playground/pool.v3 v3.1.1
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	k8s.io/api v0.20.7
-	k8s.io/apiextensions-apiserver v0.20.6
+	k8s.io/apiextensions-apiserver v0.20.7
 	k8s.io/apimachinery v0.20.7
-	k8s.io/client-go v0.20.6
+	k8s.io/client-go v0.20.7
 	k8s.io/klog v1.0.0
 	knative.dev/networking v0.0.0-20210216014426-94bfc013982b
 	knative.dev/pkg v0.0.0-20210216013737-584933f8280b

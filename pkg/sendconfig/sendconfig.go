@@ -180,7 +180,7 @@ func onUpdateDBMode(ctx context.Context,
 		return fmt.Errorf("creating a new syncer: %w", err)
 	}
 	syncer.SilenceWarnings = true
-	_, errs := solver.Solve(nil, syncer, kongConfig.Client, nil, kongConfig.Concurrency, false)
+	_, errs := solver.Solve(ctx, syncer, kongConfig.Client, nil, kongConfig.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}

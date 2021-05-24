@@ -1,14 +1,20 @@
-package manager
+package config
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // -----------------------------------------------------------------------------
@@ -59,6 +65,9 @@ type Config struct {
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus
 	ServiceEnabled           util.EnablementStatus
+
+	// Admission Webhook server config
+	AdmissionServer admission.ServerConfig
 }
 
 // -----------------------------------------------------------------------------
@@ -132,5 +141,43 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.enablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusDisabled, "Enable or disable the KongConsumer controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled, "Enable or disable the Service controller. "+onOffUsage)
 
+	// Admission Webhook server config
+	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
+		`The address to start admission controller on (ip:port).  Setting it to 'off' disables the admission controller.`)
+	flagSet.StringVar(&c.AdmissionServer.CertPath, "admission-webhook-cert-file", "",
+		`admission server PEM certificate file path; `+
+			`if both this and the cert value is unset, defaults to `+admission.DefaultAdmissionWebhookCertPath)
+	flagSet.StringVar(&c.AdmissionServer.KeyPath, "admission-webhook-key-file", "",
+		`admission server PEM private key file path; `+
+			`if both this and the key value is unset, defaults to `+admission.DefaultAdmissionWebhookKeyPath)
+	flagSet.StringVar(&c.AdmissionServer.Cert, "admission-webhook-cert", "",
+		`admission server PEM certificate value`)
+	flagSet.StringVar(&c.AdmissionServer.Key, "admission-webhook-key", "",
+		`admission server PEM private key value`)
+
 	return &flagSet.FlagSet
+}
+
+func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
+	if c.KongAdminToken != "" {
+		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
+	}
+	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
+}
+
+func (c *Config) GetKubeconfig() (*rest.Config, error) {
+	return clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+}
+
+func (c *Config) GetKubeClient() (client.Client, error) {
+	conf, err := c.GetKubeconfig()
+	if err != nil {
+		return nil, err
+	}
+	return client.New(conf, client.Options{})
 }

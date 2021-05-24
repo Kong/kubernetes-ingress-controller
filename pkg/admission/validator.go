@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
@@ -23,10 +22,10 @@ type KongValidator interface {
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	ConsumerSvc kong.AbstractConsumerService
-	PluginSvc   kong.AbstractPluginService
-	Logger      logrus.FieldLogger
-	Store       store.Storer
+	ConsumerSvc  kong.AbstractConsumerService
+	PluginSvc    kong.AbstractPluginService
+	Logger       logrus.FieldLogger
+	SecretGetter kongstate.SecretGetter
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
@@ -74,7 +73,7 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
-		config, err := kongstate.SecretToConfiguration(validator.Store,
+		config, err := kongstate.SecretToConfiguration(validator.SecretGetter,
 			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err

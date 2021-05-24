@@ -12,12 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
@@ -27,6 +25,7 @@ import (
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,7 +33,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *Config) error {
+func Run(ctx context.Context, c *config.Config) error {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
 		return fmt.Errorf("failed to make logger: %w", err)
@@ -45,19 +44,19 @@ func Run(ctx context.Context, c *Config) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
 
-	scheme := runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
-	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
-
-	kubeconfig, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+	kubeconfig, err := c.GetKubeconfig()
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 
 	// set "kubernetes.io/ingress.class" to be used by controllers (defaults to "kong")
 	setupLog.Info(`the ingress class name has been set`, "value", c.IngressClassName)
+
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
+	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 
 	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
@@ -86,17 +85,9 @@ func Run(ctx context.Context, c *Config) error {
 		return err
 	}
 
-	if c.KongAdminToken != "" {
-		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
-	}
-	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+	kongClient, err := c.GetKongClient(ctx)
 	if err != nil {
 		setupLog.Error(err, "cannot create a Kong Admin API client")
-	}
-
-	kongClient, err := adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
-	if err != nil {
-		setupLog.Error(err, "unable to create kongClient")
 		return err
 	}
 
@@ -125,6 +116,7 @@ func Run(ctx context.Context, c *Config) error {
 		c.IngressClassName,
 		c.EnableReverseSync,
 		syncTickDuration,
+		sendconfig.UpdateKongAdminSimple,
 	)
 	if err != nil {
 		setupLog.Error(err, "unable to start proxy cache server")

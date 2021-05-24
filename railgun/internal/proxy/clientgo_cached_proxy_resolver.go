@@ -17,7 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/parser"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	util "github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -331,6 +331,8 @@ func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interfac
 	return p.kongConfig.Client.Root(ctx)
 }
 
+// fetchCustomEntities returns the value of the "config" key from a Secret (identified by a "namespace/secretName"
+// string in the store.
 func fetchCustomEntities(secret string, store store.Storer) ([]byte, error) {
 	ns, name, err := util.ParseNameNS(secret)
 	if err != nil {

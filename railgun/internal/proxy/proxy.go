@@ -1,7 +1,13 @@
 package proxy
 
 import (
+	"context"
+
+	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 )
 
 // -----------------------------------------------------------------------------
@@ -53,3 +59,13 @@ type Proxy interface {
 	// A status will later be added to the object whether the configuration update succeeds or fails.
 	DeleteObject(obj client.Object) error
 }
+
+// KongUpdater is a type of function that describes how to provide updates to the Kong Admin API
+// and implementations will report the configuration SHA that results from any update performed.
+type KongUpdater func(ctx context.Context,
+	lastConfigSHA []byte,
+	cache *store.CacheStores,
+	ingressClassName string,
+	deprecatedLogger logrus.FieldLogger,
+	kongConfig sendconfig.Kong,
+	enableReverseSync bool) ([]byte, error)

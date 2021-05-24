@@ -34,13 +34,13 @@ import (
 
 const (
 	// clusterDeployWait is the timeout duration for deploying the kind cluster for testing
-	clusterDeployWait = time.Minute * 20
+	clusterDeployWait = time.Minute * 5
 
 	// waitTick is the default timeout tick interval for checking on ingress resources.
 	waitTick = time.Second * 1
 
 	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	ingressWait = time.Minute * 20
+	ingressWait = time.Minute * 5
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3

@@ -38,11 +38,12 @@ type Config struct {
 	EnableReverseSync  bool
 
 	// Kong Proxy configurations
-	APIServerHost    string
-	MetricsAddr      string
-	ProbeAddr        string
-	KongAdminURL     string
-	ProxySyncSeconds float32
+	APIServerHost            string
+	MetricsAddr              string
+	ProbeAddr                string
+	KongAdminURL             string
+	ProxySyncSeconds         float32
+	KongCustomEntitiesSecret string
 
 	// Kubernetes configurations
 	KubeconfigPath       string
@@ -116,6 +117,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds)",
 			proxy.DefaultSyncSeconds,
 		))
+	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `A Secret containing custom entities for DB-less mode, in "namespace/name" format`)
 
 	// Kubernetes configurations
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")

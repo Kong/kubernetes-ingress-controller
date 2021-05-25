@@ -100,13 +100,11 @@ var (
 //
 // If newcounts are provided the function appends the count with those provided counts first.
 func fakeKongAdminUpdateCount(newcounts ...int) int {
-	if len(newcounts) < 1 {
-		countLock.RLock()
-		defer countLock.RUnlock()
-		return updateCount
-	}
 	countLock.Lock()
 	defer countLock.Unlock()
+	if len(newcounts) < 1 {
+		return updateCount
+	}
 	for _, count := range newcounts {
 		updateCount = updateCount + count
 	}

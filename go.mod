@@ -7,7 +7,7 @@ require (
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/eapache/channels v1.1.0
-	github.com/fatih/color v1.11.0
+	github.com/fatih/color v1.12.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0 // indirect

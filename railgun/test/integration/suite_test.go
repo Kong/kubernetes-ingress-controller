@@ -24,7 +24,8 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
+	"github.com/kong/kubernetes-ingress-controller/railgun/cmd/rootcmd"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -39,7 +40,7 @@ const (
 	waitTick = time.Second * 1
 
 	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	ingressWait = time.Minute * 10
+	ingressWait = time.Minute * 5
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
@@ -209,7 +210,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				panic(fmt.Errorf("%s: %w", stderr.String(), err))
 			}
 		} else {
-			config := manager.Config{}
+			config := config.Config{}
 			flags := config.FlagSet()
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-admin-url=http://%s:8001", adminHost),
@@ -230,10 +231,13 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				fmt.Sprintf("--ingress-class=%s", ingressClass),
 				"--log-level=trace",
 				"--log-format=text",
+				"--admission-webhook-listen=172.17.0.1:49023",
+				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
+				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			})
-			fmt.Printf("config: %+v\n", config)
+			fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 
-			if err := manager.Run(ctx, &config); err != nil {
+			if err := rootcmd.Run(ctx, &config); err != nil {
 				panic(fmt.Errorf("controller manager exited with error: %w", err))
 			}
 		}

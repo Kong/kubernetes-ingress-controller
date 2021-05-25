@@ -44,7 +44,7 @@ func (v KongFakeValidator) ValidateCredential(
 func TestServeHTTPBasic(t *testing.T) {
 	assert := assert.New(t)
 	res := httptest.NewRecorder()
-	server := Server{
+	server := RequestHandler{
 		Validator: KongFakeValidator{},
 		Logger:    logrus.New(),
 	}
@@ -315,7 +315,7 @@ func TestValidationWebhook(t *testing.T) {
 				// arrange
 				assert := assert.New(t)
 				res := httptest.NewRecorder()
-				server := Server{
+				server := RequestHandler{
 					Validator: tt.validator,
 					Logger:    logrus.New(),
 				}

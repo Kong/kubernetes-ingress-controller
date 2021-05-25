@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/manager"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ import (
 func TestHealthEndpoint(t *testing.T) {
 	_ = proxyReady()
 	assert.Eventually(t, func() bool {
-		healthzURL := fmt.Sprintf("http://localhost:%v/healthz", manager.HealthzPort)
+		healthzURL := fmt.Sprintf("http://localhost:%v/healthz", config.HealthzPort)
 		resp, err := httpc.Get(healthzURL)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", healthzURL, err)
@@ -33,7 +33,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	}
 	_ = proxyReady()
 	assert.Eventually(t, func() bool {
-		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
+		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", config.MetricsPort)
 		resp, err := httpc.Get(metricsURL)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", metricsURL, err)
@@ -42,7 +42,7 @@ func TestMetricsEndpoint(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			return false
-		}		
+		}
 		decoder := expfmt.SampleDecoder{
 			Dec:  expfmt.NewDecoder(resp.Body, expfmt.FmtText),
 			Opts: &expfmt.DecodeOptions{},

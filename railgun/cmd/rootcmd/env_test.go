@@ -31,8 +31,12 @@ func TestBindEnvVars(t *testing.T) {
 	cmd.Flags().String("flag-3", "default3", "Set by args only")
 	cmd.Flags().String("flag-4", "default4", "Set by both env and args")
 
-	os.Setenv("CONTROLLER_FLAG_2", "env2")
-	os.Setenv("CONTROLLER_FLAG_4", "env4")
+	_ = os.Setenv("CONTROLLER_FLAG_2", "env2")
+	_ = os.Setenv("CONTROLLER_FLAG_4", "env4")
+	defer func() {
+		_ = os.Unsetenv("CONTROLLER_FLAG_2")
+		_ = os.Unsetenv("CONTROLLER_FLAG_4")
+	}()
 
 	cmd.SetArgs([]string{
 		"--flag-3=args3",

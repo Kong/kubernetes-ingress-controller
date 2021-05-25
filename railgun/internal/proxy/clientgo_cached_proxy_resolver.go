@@ -15,6 +15,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -110,6 +111,10 @@ type clientgoCachedProxyResolver struct {
 	enableReverseSync bool
 	dbmode            string
 	version           semver.Version
+
+	// KongCustomEntitiesSecret is a "namespace/name" Secret locator for a Secret
+	// that contains raw YAML custom entities, for use with DB-less mode
+	KongCustomEntitiesSecret string
 
 	// kongUpdater is the function that will be used by the cache server to ultimately make the API
 	// call to resolve the current cache to the Kong Admin API configuration endpoint.
@@ -296,4 +301,23 @@ func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interfac
 	ctx, cancel := context.WithTimeout(p.ctx, 3*time.Second)
 	defer cancel()
 	return p.kongConfig.Client.Root(ctx)
+}
+
+// fetchCustomEntities returns the value of the "config" key from a Secret (identified by a "namespace/secretName"
+// string in the store.
+func fetchCustomEntities(secret string, store store.Storer) ([]byte, error) {
+	ns, name, err := util.ParseNameNS(secret)
+	if err != nil {
+		return nil, fmt.Errorf("parsing kong custom entities secret: %w", err)
+	}
+	kSecret, err := store.GetSecret(ns, name)
+	if err != nil {
+		return nil, fmt.Errorf("fetching secret: %w", err)
+	}
+	config, ok := kSecret.Data["config"]
+	if !ok {
+		return nil, fmt.Errorf("'config' key not found in "+
+			"custom entities secret '%v'", secret)
+	}
+	return config, nil
 }

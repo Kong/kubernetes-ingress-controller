@@ -7,7 +7,7 @@ require (
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/eapache/channels v1.1.0
-	github.com/fatih/color v1.11.0
+	github.com/fatih/color v1.12.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0 // indirect
@@ -16,7 +16,7 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/kong/deck v1.6.0
+	github.com/kong/deck v1.7.0
 	github.com/kong/go-kong v0.19.0
 	github.com/kong/kubernetes-testing-framework v0.0.10
 	github.com/lithammer/dedent v1.1.0

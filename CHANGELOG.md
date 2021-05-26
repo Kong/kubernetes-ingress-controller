@@ -36,12 +36,14 @@
 
 - support for [UDP][kong-udp] via the new `UDPIngress` API.
 - `--watch-namespace` now supports multiple distinct namespaces versus simply supporting all namespaces (the default) or a single namespace. To watch multiple namespaces, use a comma-separated list (for example, `--watch-namespace "namespaceA,namespaceB"`).
+- support for the `konghq.com/host-aliases` annotation.
 
 [kong-udp]:https://konghq.com/blog/kong-gateway-2-2-released/#UDP-Support
 
 #### Breaking changes
 
 - support for "classless" ingress types has been removed: the controller flags `--process-classless-ingress-v1beta1`, `--process-classless-ingress-v1` and `--process-classless-kong-consumer` flags are no longer valid
+- autonegotiation of the Ingress API version (extensions v1beta1, networking v1beta1, networking v1) has been disabled. Instead, the user is expected to set **exactly** one of `--controller-ingress-networkingv1`, `--controller-ingress-networkingv1beta1`, `--controller-ingress-extensionsv1beta1` flags to `enabled`. There will be an `auto` mode implemented soon that will add the autonegotiation capability back.
 
 #### Under the hood
 
@@ -50,6 +52,8 @@
 - controller architecture has been changed: each API type now has an independent controller implementation and all controllers now utilize [controller-runtime][controller-runtime].
 - full integration testing in [Golang][go] has been added for testing APIs and controllers on a fully featured Kubernetes cluster, this is now supported by the new [Kong Kubernetes Testing Framework (KTF)][ktf] project and now runs as part of CI.
 - the mechanism for caching and resolving Kong Admin `/config` configurations when running in `DBLESS` mode has been reimplemented to enable fine-tuned configuration options in later iterations.
+- contains the refactored admission webhook server. The server key and certificate flags have improved semantics: the default flag value is no longer the default path, but an empty string. When both key/cert value flags and key/cert file flags remain unset, KIC will read cert/key files from the default paths, as said in the flag descriptions. This change should not affect any existing configuration - in all configuration cases, behavior is expected to remain unchanged.
+- taking configuration values from environment variables no longer uses Viper.
 
 [go-tick]:https://golang.org/pkg/time/#Ticker
 [kubebuilder]:https://github.com/kubernetes-sigs/kubebuilder

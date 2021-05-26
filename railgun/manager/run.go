@@ -93,10 +93,11 @@ func Run(ctx context.Context, c *config.Config) error {
 
 	// configure the kong client
 	kongConfig := sendconfig.Kong{
-		URL:         c.KongAdminURL,
-		FilterTags:  c.FilterTags,
-		Concurrency: c.Concurrency,
-		Client:      kongClient,
+		URL:               c.KongAdminURL,
+		FilterTags:        c.FilterTags,
+		Concurrency:       c.Concurrency,
+		Client:            kongClient,
+		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
 	}
 
 	// determine the proxy synchronization strategy

@@ -40,7 +40,8 @@ func UpdateKongAdminSimple(ctx context.Context,
 	}
 
 	// generate the deck configuration to be applied to the admin API
-	targetConfig := deckgen.ToDeckContent(ctx, deprecatedLogger, kongstate, nil, nil)
+	targetConfig := deckgen.ToDeckContent(ctx, deprecatedLogger, kongstate, kongConfig.PluginSchemaStore,
+		kongConfig.FilterTags)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)

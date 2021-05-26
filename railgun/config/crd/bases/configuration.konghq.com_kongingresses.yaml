@@ -19,7 +19,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: KongIngress is a top-level type. A client is created for it.
+        description: KongIngress is the Schema for the kongingresses API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

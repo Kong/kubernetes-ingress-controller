@@ -7,6 +7,58 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - endpoints/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - apiextensions.k8s.io
   resources:
   - ingresses
@@ -210,58 +262,6 @@ rules:
   - networking.k8s.io
   resources:
   - ingresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - v1
-  resources:
-  - endpoints
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - endpoints/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - v1
-  resources:
-  - endpoints/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - v1
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - services/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - v1
-  resources:
-  - services/status
   verbs:
   - get
   - patch

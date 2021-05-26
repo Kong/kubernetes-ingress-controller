@@ -59,9 +59,9 @@ func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Service{}).Complete(r)
 }
 
-//+kubebuilder:rbac:groups=v1,resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=v1,resources=services/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=v1,resources=services/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=services/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -121,9 +121,9 @@ func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Endpoints{}).Complete(r)
 }
 
-//+kubebuilder:rbac:groups=v1,resources=endpoints,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=v1,resources=endpoints/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=v1,resources=endpoints/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=endpoints/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=endpoints/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

@@ -3,6 +3,7 @@ package sendconfig
 import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 // Kong Represents a Kong client and connection information
@@ -11,7 +12,8 @@ type Kong struct {
 	FilterTags []string
 	// Headers are injected into every request to Kong's Admin API
 	// to help with authorization/authentication.
-	Client *kong.Client
+	Client            *kong.Client
+	PluginSchemaStore *util.PluginSchemaStore
 
 	InMemory      bool
 	HasTagSupport bool

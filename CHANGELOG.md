@@ -1,6 +1,7 @@
 # Table of Contents
 
  - [2.0.0-alpha.1](#200-alpha1---20210527)
+ - [1.3.0](#130---20210527)
  - [1.2.0](#120---20210324)
  - [1.1.1](#111---20210107)
  - [1.1.0](#110---20201209)
@@ -92,6 +93,23 @@ released and the release notes may change significantly before then.
 [controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
+
+## [1.3.0] - 2021/05/27
+
+#### Added
+
+- support for the `konghq.com/host-aliases` annotation.
+  [#1016](https://github.com/Kong/kubernetes-ingress-controller/pull/1016/)
+
+#### Fixed
+
+- Sort SNIs and certificates consistently to avoid an issue with unnecessary
+  configuration re-syncs.
+  [#1268](https://github.com/Kong/kubernetes-ingress-controller/pull/1016/)
+
+#### Under the hood
+
+- Upgraded various dependencies.
 
 ## [1.2.0] - 2021/03/24
 
@@ -1070,6 +1088,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
+[1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.1...1.2.0
 [1.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.0.0...1.1.0

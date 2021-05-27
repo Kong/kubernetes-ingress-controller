@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [2.0.0-alpha.1](#200-alpha1---TBD)
+ - [2.0.0-alpha.1](#200-alpha1---20210527)
  - [1.2.0](#120---20210324)
  - [1.1.1](#111---20210107)
  - [1.1.0](#110---20201209)
@@ -28,7 +28,7 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0-alpha.1] - TBD
+## [2.0.0-alpha.1] - 2021/05/27
 
 **NOTE**: This is a draft of release notes for the next major version to be released and the release notes may change significantly before then.
 

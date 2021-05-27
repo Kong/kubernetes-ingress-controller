@@ -1,7 +1,7 @@
-REGISTRY?=kong-docker-kubernetes-ingress-controller.bintray.io
 TAG?=2.0.0-alpha.1
+REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
-IMGNAME?=kong-ingress-controller
+IMGNAME?=kubernetes-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 # only for dev
 DB?=false
@@ -52,12 +52,25 @@ update-codegen:
 verify-tidy:
 	./hack/verify-tidy.sh
 
-.PHONY: container
-container:
+.PHONY: container-alpine
+container-alpine:
 	docker build \
-    --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
-    --build-arg REPO_INFO=${REPO_INFO} \
-    -t ${IMAGE}:${TAG} .
+	--build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+	--build-arg REPO_INFO=${REPO_INFO} \
+	--target alpine \
+	-t ${IMAGE}:${TAG}-alpine .
+
+.PHONY: container-redhat
+container-redhat:
+	docker build \
+	--build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+	--build-arg REPO_INFO=${REPO_INFO} \
+	--target redhat \
+	-t ${IMAGE}:${TAG}-redhat .
+
+.PHONY: container
+container: container-alpine
+	docker tag "${IMAGE}:${TAG}-alpine" "${IMAGE}:${TAG}"
 
 .PHONY: railgun-container
 railgun-container:

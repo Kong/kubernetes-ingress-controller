@@ -311,7 +311,7 @@ func parseFlags() (cliConfig, error) {
 	config.UpdateStatus = viper.GetBool("update-status")
 	config.UpdateStatusOnShutdown = viper.GetBool("update-status-on-shutdown")
 
-	// Rutnime behavior
+	// Runtime behavior
 	config.SyncPeriod = viper.GetDuration("sync-period")
 	config.SyncRateLimit = (float32)(viper.GetFloat64("sync-rate-limit"))
 	config.EnableReverseSync = viper.GetBool("enable-reverse-sync")

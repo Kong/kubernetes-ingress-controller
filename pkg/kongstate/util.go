@@ -7,12 +7,13 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
 func getKongIngressForService(s store.Storer, service corev1.Service) (
@@ -185,8 +186,12 @@ func namespacedSecretToConfiguration(
 	return SecretToConfiguration(s, bareReference, reference.Namespace)
 }
 
+type SecretGetter interface {
+	GetSecret(namespace, name string) (*corev1.Secret, error)
+}
+
 func SecretToConfiguration(
-	s store.Storer,
+	s SecretGetter,
 	reference configurationv1.SecretValueFromSource, namespace string) (
 	kong.Configuration, error) {
 	secret, err := s.GetSecret(namespace, reference.Secret)

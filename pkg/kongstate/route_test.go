@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
 func TestOverrideRoute(t *testing.T) {
@@ -982,6 +983,70 @@ func Test_overrideResponseBuffering(t *testing.T) {
 			tt.args.route.overrideResponseBuffering(logrus.New(), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
 				t.Errorf("overrideResponseBuffering() got = %v, want %v", &tt.args.route.Route, tt.want)
+			}
+		})
+	}
+}
+
+func Test_overrideHosts(t *testing.T) {
+	type args struct {
+		route Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Route
+	}{
+		{name: "basic empty route"},
+		{
+			name: "basic sanity",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": "illustration.com, example.com, *.example.com, example.*, *.illustration.*",
+				},
+			},
+			want: Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("illustration.com", "example.com", "*.example.com", "example.*", "*.illustration.*"),
+				},
+			},
+		},
+		{
+			name: "ignore duplicates",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": "example.com, example.com",
+				},
+			},
+			want: Route{
+				Route: kong.Route{
+					Hosts: kong.StringSlice("example.com"),
+				},
+			},
+		},
+		{
+			name: "not hostnames",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": "-10,GET",
+				},
+			},
+		},
+		{
+			name: "wildcard not allowed in the domain name",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": "kong.*.com",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.route.overrideHosts(logrus.New(), tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideHosts() got = %v, want %v", tt.args.route, tt.want)
 			}
 		})
 	}

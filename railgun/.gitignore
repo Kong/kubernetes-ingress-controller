@@ -7,6 +7,7 @@
 *.dylib
 bin
 testbin/*
+railgun
 
 # Test binary, build with `go test -c`
 *.test
@@ -15,7 +16,6 @@ testbin/*
 *.out
 
 # Kubernetes Generated files - skip generated files, except for vendored files
-
 !vendor/**/zz_generated.*
 
 # editor and IDE paraphernalia
@@ -26,3 +26,6 @@ testbin/*
 
 # Delve Debugger Output
 __debug_bin
+
+# tmp files
+client-gen-tmp/*

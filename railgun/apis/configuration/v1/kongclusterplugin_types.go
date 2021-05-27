@@ -17,13 +17,15 @@ limitations under the License.
 package v1
 
 import (
-	kicv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+//+genclient
+//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API
 type KongClusterPlugin struct {
@@ -40,7 +42,7 @@ type KongClusterPlugin struct {
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
-	ConfigFrom kicv1.NamespacedConfigSource `json:"configFrom,omitempty"`
+	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
 	PluginName string `json:"plugin,omitempty"`

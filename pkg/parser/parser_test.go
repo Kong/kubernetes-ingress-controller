@@ -9,11 +9,6 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +19,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
 type TLSPair struct {
@@ -3137,6 +3138,163 @@ func TestParserSNI(t *testing.T) {
 			RegexPriority: kong.Int(0),
 			Hosts:         kong.StringSlice("example.com"),
 			SNIs:          nil,
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+		}, state.Services[0].Routes[0].Route)
+	})
+}
+
+func TestParserHostAliases(t *testing.T) {
+	assert := assert.New(t)
+	annHostAliasesKey := annotations.AnnotationPrefix + annotations.HostAliasesKey
+	t.Run("route Hosts includes Host-Aliases when Host-Aliases are present", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+						annHostAliasesKey:           "*.example.com,*.sample.com,*.illustration.com",
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.foo.00"),
+			StripPath:     kong.Bool(false),
+			RegexPriority: kong.Int(0),
+			Hosts:         kong.StringSlice("example.com", "*.example.com", "*.sample.com", "*.illustration.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+		}, state.Services[0].Routes[0].Route)
+	})
+	t.Run("route Hosts remain unmodified when Host-Aliases are not present", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.foo.00"),
+			StripPath:     kong.Bool(false),
+			RegexPriority: kong.Int(0),
+			Hosts:         kong.StringSlice("example.com"),
+			PreserveHost:  kong.Bool(true),
+			Paths:         kong.StringSlice("/"),
+			Protocols:     kong.StringSlice("http", "https"),
+		}, state.Services[0].Routes[0].Route)
+	})
+	t.Run("route Hosts will not contain duplicates when Host-Aliases duplicates the host", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+						annHostAliasesKey:           "example.com,*.example.com",
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					Rules: []networkingv1beta1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: networkingv1beta1.IngressRuleValue{
+								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+									Paths: []networkingv1beta1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1beta1.IngressBackend{
+												ServiceName: "foo-svc",
+												ServicePort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+		})
+		assert.Nil(err)
+		state, err := Build(logrus.New(), store)
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(kong.Route{
+			Name:          kong.String("default.foo.00"),
+			StripPath:     kong.Bool(false),
+			RegexPriority: kong.Int(0),
+			Hosts:         kong.StringSlice("example.com", "*.example.com"),
 			PreserveHost:  kong.Bool(true),
 			Paths:         kong.StringSlice("/"),
 			Protocols:     kong.StringSlice("http", "https"),

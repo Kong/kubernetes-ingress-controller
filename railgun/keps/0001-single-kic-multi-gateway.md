@@ -115,7 +115,7 @@ In order to reduce the risk of complexity and maintenance burden while still all
 
 ### Using Secrets
 
-**TODO**: "@hbagdi" brought up concerns about the usage of secrets for the mTLS configuration:
+"@hbagdi" brought up concerns about the usage of secrets for the mTLS configuration:
 
 https://github.com/Kong/keps/pull/1#discussion_r566176503
 
@@ -123,7 +123,7 @@ we need to investigate alternative solutions, including potentially creating our
 
 We need a resolution on this concern that "@hbagdi" and "@shaneutt" sign off on before moving this KEP to `implementable` state.
 
-# ADDITIONAL NOTES & TODO
+# ADDITIONAL NOTES & Follow Up
 
 - we need to handle DB mode as well (not just DBLESS mode) "@hbagdi" & "@shaneutt"
 - we need to consider what statuses we will provide on the `Pods` themselves "@hbagdi" & "@shaneutt"

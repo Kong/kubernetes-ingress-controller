@@ -1,9 +1,19 @@
 name: Integration Tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - 'main'
+      - 'next'
+  push:
+    branches:
+      - 'main'
+      - 'next'
+    tags:
+      - 'v*.*.*'
 
 jobs:
-  test:
+  integration-test-dbless:
     runs-on: ubuntu-latest
     steps:
     - name: setup golang
@@ -19,11 +29,44 @@ jobs:
           ${{ runner.os }}-go
     - name: checkout repository
       uses: actions/checkout@v2
-    - name: Login to GitHub Packages Docker Registry
-      uses: docker/login-action@v1
-      with:
-        registry: docker.pkg.github.com
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     - name: run railgun integration tests
-      run: ./scripts/railgun-integration-tests.sh
+      run: make test.integration.dbless
+      working-directory: ./railgun
+  integration-test-postgres:
+    runs-on: ubuntu-latest
+    steps:
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.16'
+    - name: cache go modules
+      uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go
+    - name: checkout repository
+      uses: actions/checkout@v2
+    - name: run railgun integration tests
+      run: make test.integration.postgres
+      working-directory: ./railgun
+  integration-test-legacy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.16'
+    - name: cache go modules
+      uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go
+    - name: checkout repository
+      uses: actions/checkout@v2
+    - name: run railgun integration tests on legacy KIC
+      run: make test.integration.legacy
+      working-directory: ./railgun

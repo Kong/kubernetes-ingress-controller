@@ -6,10 +6,11 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/sirupsen/logrus"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -21,11 +22,14 @@ type Route struct {
 	Plugins []kong.Plugin
 }
 
-var validMethods = regexp.MustCompile(`\A[A-Z]+$`)
+var (
+	validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
-// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
-// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change
-var validSNIs = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
+	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
+	// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change
+	validSNIs  = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
+	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
+)
 
 // normalizeProtocols prevents users from mismatching grpc/http
 func (r *Route) normalizeProtocols() {
@@ -223,6 +227,7 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideSNIs(log, r.Ingress.Annotations)
 	r.overrideRequestBuffering(log, r.Ingress.Annotations)
 	r.overrideResponseBuffering(log, r.Ingress.Annotations)
+	r.overrideHosts(log, r.Ingress.Annotations)
 }
 
 // override sets Route fields by KongIngress first, then by annotation
@@ -347,4 +352,41 @@ func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[strin
 	}
 
 	r.ResponseBuffering = kong.Bool(isEnabled)
+}
+
+// overrideHosts appends Host-Aliases to Hosts
+func (r *Route) overrideHosts(log logrus.FieldLogger, anns map[string]string) {
+	var hosts []*string
+	var annHostAliases []string
+	var exists bool
+	annHostAliases, exists = annotations.ExtractHostAliases(anns)
+	if !exists {
+		// the annotation is not set, quit
+		return
+	}
+
+	// avoid allowing duplicate hosts or host-aliases from being added
+	appendIfMissing := func(hosts []*string, sanitizedHost string) []*string {
+		for _, uniqueHost := range hosts {
+			if *uniqueHost == sanitizedHost {
+				return hosts
+			}
+		}
+		return append(hosts, kong.String(sanitizedHost))
+	}
+
+	// Merge hosts and host-aliases
+	hosts = append(hosts, r.Hosts...)
+	for _, hostAlias := range annHostAliases {
+		sanitizedHost := strings.TrimSpace(hostAlias)
+		if validHosts.MatchString(sanitizedHost) {
+			hosts = appendIfMissing(hosts, sanitizedHost)
+		} else {
+			// Host Alias is not a valid hostname
+			log.WithField("kongroute", r.Name).Errorf("invalid host: %v", hostAlias)
+			return
+		}
+	}
+
+	r.Hosts = hosts
 }

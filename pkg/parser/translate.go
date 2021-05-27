@@ -7,16 +7,24 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
+
+func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {
+	if port.Name != "" {
+		return fmt.Sprintf("pname-%s", port.Name)
+	}
+	return fmt.Sprintf("pnum-%d", port.Number)
+}
 
 func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1.Ingress) ingressRules {
 	result := newIngressRules()
@@ -229,8 +237,8 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				}
 
 				port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
-				serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rulePath.Backend.Service.Name,
-					rulePath.Backend.Service.Port.Number)
+				serviceName := fmt.Sprintf("%s.%s.%s", ingress.Namespace, rulePath.Backend.Service.Name,
+					serviceBackendPortToStr(rulePath.Backend.Service.Port))
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
 					service = kongstate.Service{

@@ -18,17 +18,14 @@ package v1
 
 import (
 	"github.com/kong/go-kong/kong"
-	kicv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = kicv1.KongIngress{}
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
+//+genclient
+//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 
 // KongIngress is the Schema for the kongingresses API
 type KongIngress struct {

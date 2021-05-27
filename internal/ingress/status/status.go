@@ -26,10 +26,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	pool "gopkg.in/go-playground/pool.v3"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -43,6 +39,11 @@ import (
 	knativeClientSet "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeApis "knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
+	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
 const (

@@ -4,9 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -14,6 +11,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
 func Test_keyFunc(t *testing.T) {
@@ -274,7 +275,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
-			Spec: configurationv1beta1.IngressSpec{
+			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
 					{
 						Port: 9000,
@@ -292,7 +293,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 				Name:      "baz",
 				Namespace: "default",
 			},
-			Spec: configurationv1beta1.IngressSpec{
+			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
 					{
 						Port: 9000,
@@ -312,7 +313,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 					annotations.IngressClassKey: "not-kong",
 				},
 			},
-			Spec: configurationv1beta1.IngressSpec{
+			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
 					{
 						Port: 8000,

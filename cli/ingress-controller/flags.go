@@ -28,15 +28,14 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 const (
-	defaultKongAdminURL             = "http://localhost:8001"
-	defaultKongFilterTag            = "managed-by-ingress-controller"
-	defaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
-	defaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
+	defaultKongAdminURL  = "http://localhost:8001"
+	defaultKongFilterTag = "managed-by-ingress-controller"
 )
 
 type cliConfig struct {
@@ -109,10 +108,10 @@ func flagSet() *pflag.FlagSet {
 	flags.String("admission-webhook-listen", "off",
 		`The address to start admission controller on (ip:port).
 Setting it to 'off' disables the admission controller.`)
-	flags.String("admission-webhook-cert-file", defaultAdmissionWebhookCertPath,
+	flags.String("admission-webhook-cert-file", admission.DefaultAdmissionWebhookCertPath,
 		`Path to the PEM-encoded certificate file for
 TLS handshake`)
-	flags.String("admission-webhook-key-file", defaultAdmissionWebhookKeyPath,
+	flags.String("admission-webhook-key-file", admission.DefaultAdmissionWebhookKeyPath,
 		`Path to the PEM-encoded private key file for
 TLS handshake`)
 	flags.String("admission-webhook-cert", "",

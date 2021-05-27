@@ -40,6 +40,7 @@ func PerformUpdate(ctx context.Context,
 	}
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
+		// use the previous SHA to determine whether or not to perform an update
 		if equalSHA(oldSHA, newSHA) {
 			log.Info("no configuration change, skipping sync to kong")
 			return oldSHA, nil
@@ -49,7 +50,7 @@ func PerformUpdate(ctx context.Context,
 	if inMemory {
 		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
 	} else {
-		err = onUpdateDBMode(targetContent, kongConfig, selectorTags)
+		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
 	}
 	if err != nil {
 		return nil, err
@@ -144,13 +145,13 @@ func onUpdateInMemoryMode(ctx context.Context,
 	return err
 }
 
-func onUpdateDBMode(
+func onUpdateDBMode(ctx context.Context,
 	targetContent *file.Content,
 	kongConfig *Kong,
 	selectorTags []string,
 ) error {
 	// read the current state
-	rawState, err := dump.Get(kongConfig.Client, dump.Config{
+	rawState, err := dump.Get(ctx, kongConfig.Client, dump.Config{
 		SelectorTags: selectorTags,
 	})
 	if err != nil {
@@ -179,7 +180,7 @@ func onUpdateDBMode(
 		return fmt.Errorf("creating a new syncer: %w", err)
 	}
 	syncer.SilenceWarnings = true
-	_, errs := solver.Solve(nil, syncer, kongConfig.Client, nil, kongConfig.Concurrency, false)
+	_, errs := solver.Solve(ctx, syncer, kongConfig.Client, nil, kongConfig.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}

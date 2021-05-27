@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -37,14 +36,15 @@ import (
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-uuid"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
-	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	configclientv1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	configinformer "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configuration "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -63,22 +63,6 @@ import (
 	"k8s.io/klog"
 	knativeclient "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeinformer "knative.dev/networking/pkg/client/informers/externalversions"
-)
-
-var (
-	logrusLevel = map[string]logrus.Level{
-		"panic": logrus.PanicLevel,
-		"fatal": logrus.FatalLevel,
-		"error": logrus.ErrorLevel,
-		"warn":  logrus.WarnLevel,
-		"info":  logrus.InfoLevel,
-		"debug": logrus.DebugLevel,
-		"trace": logrus.TraceLevel,
-	}
-	logrusFormat = map[string]logrus.Formatter{
-		"text": &logrus.TextFormatter{},
-		"json": &logrus.JSONFormatter{},
-	}
 )
 
 func controllerConfigFromCLIConfig(cliConfig cliConfig) controller.Configuration {
@@ -114,6 +98,8 @@ func init() {
 	klog.InitFlags(nil)
 }
 
+const invalidConfErrPrefix = "invalid configuration: "
+
 func main() {
 	ctx := context.Background()
 
@@ -126,18 +112,11 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to parse configuration: %v", err)
 	}
-	log := logrus.New()
-	level, ok := logrusLevel[cliConfig.LogLevel]
-	if !ok {
-		logrus.Fatalf("invalid log-level: %v", cliConfig.LogLevel)
-	}
-	log.Level = level
 
-	format, ok := logrusFormat[cliConfig.LogFormat]
-	if !ok {
-		logrus.Fatalf("invalid log-format: %v", cliConfig.LogFormat)
+	log, err := util.MakeLogger(cliConfig.LogLevel, cliConfig.LogFormat)
+	if err != nil {
+		log.WithError(err).Fatal("failed to make logger")
 	}
-	log.Formatter = format
 
 	for key, value := range viper.AllSettings() {
 		log.WithField(key, fmt.Sprintf("%v", value)).Debug("input flag")
@@ -147,7 +126,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	invalidConfErrPrefix := "invalid configuration: "
 	if cliConfig.PublishService == "" && cliConfig.PublishStatusAddress == "" {
 		log.Fatal(invalidConfErrPrefix + "either --publish-service or --publish-status-address must be specified")
 	}
@@ -196,50 +174,17 @@ func main() {
 
 	controllerConfig.KubeClient = kubeClient
 
-	defaultTransport := http.DefaultTransport.(*http.Transport)
-
-	var tlsConfig tls.Config
-
-	if cliConfig.KongAdminTLSSkipVerify {
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	if cliConfig.KongAdminTLSServerName != "" {
-		tlsConfig.ServerName = cliConfig.KongAdminTLSServerName
-	}
-
-	if cliConfig.KongAdminCACertPath != "" && cliConfig.KongAdminCACert != "" {
-		log.Fatalf(invalidConfErrPrefix + "both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
-			"are set; please remove one or the other")
-	}
-	if cliConfig.KongAdminCACert != "" {
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(cliConfig.KongAdminCACert))
-		if !ok {
-			// TODO give user an error to make this actionable
-			log.Fatalf("failed to load kong-admin-ca-cert")
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	if cliConfig.KongAdminCACertPath != "" {
-		certPath := cliConfig.KongAdminCACertPath
-		certPool := x509.NewCertPool()
-		cert, err := ioutil.ReadFile(certPath)
-		if err != nil {
-			log.Fatalf("failed to read kong-admin-ca-cert from path '%s': %v", certPath, err)
-		}
-		ok := certPool.AppendCertsFromPEM(cert)
-		if !ok {
-			// TODO give user an error to make this actionable
-			log.Fatalf("failed to load kong-admin-ca-cert from path '%s'", certPath)
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	defaultTransport.TLSClientConfig = &tlsConfig
-	c := http.DefaultClient
-	c.Transport = &HeaderRoundTripper{
-		headers: cliConfig.KongAdminHeaders,
-		rt:      defaultTransport,
+	c, err := adminapi.MakeHTTPClient(
+		&adminapi.HTTPClientOpts{
+			TLSSkipVerify: cliConfig.KongAdminTLSSkipVerify,
+			TLSServerName: cliConfig.KongAdminTLSServerName,
+			CACertPath:    cliConfig.KongAdminCACertPath,
+			CACert:        cliConfig.KongAdminCACert,
+			Headers:       cliConfig.KongAdminHeaders,
+		},
+	)
+	if err != nil {
+		log.Fatalf("%s: %v", invalidConfErrPrefix, err)
 	}
 
 	kongClient, err := kong.NewClient(kong.String(cliConfig.KongAdminURL), c)
@@ -417,7 +362,7 @@ func main() {
 
 	kongIngressInformer := kongInformerFactory.Configuration().V1().KongIngresses().Informer()
 	kongIngressInformer.AddEventHandler(reh)
-	cacheStores.Configuration = kongIngressInformer.GetStore()
+	cacheStores.KongIngress = kongIngressInformer.GetStore()
 	informers = append(informers, kongIngressInformer)
 
 	kongPluginInformer := kongInformerFactory.Configuration().V1().KongPlugins().Informer()
@@ -514,23 +459,28 @@ func main() {
 	}
 	if cliConfig.AdmissionWebhookListen != "off" {
 		logger := log.WithField("component", "admission-server")
-		admissionServer := admission.Server{
+		admissionServer := admission.RequestHandler{
 			Validator: admission.KongHTTPValidator{
-				Client: kongClient,
-				Logger: logger,
-				Store:  store,
+				ConsumerSvc:  kongClient.Consumers,
+				PluginSvc:    kongClient.Plugins,
+				Logger:       logger,
+				SecretGetter: store,
 			},
 			Logger: logger,
 		}
 		var cert tls.Certificate
-		if cliConfig.AdmissionWebhookCertPath != defaultAdmissionWebhookCertPath && cliConfig.AdmissionWebhookCert != "" {
+		if cliConfig.AdmissionWebhookCertPath != admission.DefaultAdmissionWebhookCertPath &&
+			cliConfig.AdmissionWebhookCert != "" {
 			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-file and --admission-webhook-cert" +
 				"are set; please remove one or the other")
 		}
-		if cliConfig.AdmissionWebhookKeyPath != defaultAdmissionWebhookKeyPath && cliConfig.AdmissionWebhookKey != "" {
+		if cliConfig.AdmissionWebhookKeyPath != admission.DefaultAdmissionWebhookKeyPath &&
+			cliConfig.AdmissionWebhookKey != "" {
 			logger.Fatalf(invalidConfErrPrefix + "both --admission-webhook-cert-key and --admission-webhook-key" +
 				"are set; please remove one or the other")
 		}
+		// NOTE: this is superseded by admission.ServerConfig. Leaving this (duplicate) implementation here only to
+		// limit the risk of regression in KIC 1.x.
 		if cliConfig.AdmissionWebhookCert != "" {
 			var err error
 			cert, err = tls.X509KeyPair([]byte(cliConfig.AdmissionWebhookCert), []byte(cliConfig.AdmissionWebhookKey))
@@ -551,6 +501,8 @@ func main() {
 		tlsConfig := &tls.Config{ //nolint:gosec
 			Certificates: []tls.Certificate{cert},
 		}
+		// NOTE: This is superseded by admission.MakeTLSServer. Leaving this duplicate implementation here only to
+		// limit the risk of regressin in KIC 1.x.
 		server := http.Server{
 			Addr:      cliConfig.AdmissionWebhookListen,
 			TLSConfig: tlsConfig,

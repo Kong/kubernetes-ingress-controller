@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/stretchr/testify/assert"
+
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 )
 
 func TestOverrideUpstream(t *testing.T) {

@@ -1,10 +1,25 @@
+##@ Versioning
+
+ifndef COMMIT
+  COMMIT := $(shell git rev-parse --short HEAD)
+endif
+REPO_INFO=$(shell git config --get remote.origin.url)
+
+##@ Container Image Vars
 
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-# FIXME: investigate `go-kong` changes that would allow us to remove `allowDangerousTypes=true`.
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,allowDangerousTypes=true"
+# TODO: investigate `go-kong` changes that would allow us to remove `allowDangerousTypes=true`.
+#       See: https://github.com/Kong/go-kong/issues/54
 
+##@ Testing Vars
+
+KIND_CLUSTER_NAME ?= "integration-tests"
+
+##@ Build Vars
+
+CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,allowDangerousTypes=true"
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -53,13 +68,13 @@ test: manifests generate fmt vet ## Run tests.
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -a -o bin/manager -ldflags "-s -w \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Release=$(TAG) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Commit=$(COMMIT) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Repo=$(REPO_INFO)" main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	KONG_EXTERNAL_CONTROLLER=true go run ./main.go
-
-docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	go run ./main.go
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
@@ -78,7 +93,6 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
@@ -104,20 +118,62 @@ endef
 
 # Kong Custom Targets
 
+# this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
+# TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
+#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1254
+generate.clientsets:
+	@client-gen --go-header-file ./hack/boilerplate.go.txt \
+		--clientset-name clientset \
+		--input-base github.com/kong/kubernetes-ingress-controller/railgun/apis/  \
+		--input configuration/v1,configuration/v1alpha1,configuration/v1beta1 \
+		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1/ \
+		--output-base client-gen-tmp/ \
+		--output-package github.com/kong/kubernetes-ingress-controller/railgun/pkg/
+	@rm -rf pkg/clientset/
+	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset pkg/
+	@rm -rf client-gen-tmp/
+
 # Some of our controllers are simple enough to be generated, this generates them.
 generate.controllers:
 	go generate ./...
-
-# Deploy a vanilla Kong proxy to the cluster for controller testing/debugging
-deploy.test.proxy:
-	./hack/deploy-test-proxy.sh
 
 # Cleanup any deployed test proxies
 clean.test.proxy:
 	helm uninstall --namespace kong-system kong-test-proxy
 
-# Our integration tests
-.PHONY: test.integration
-test.integration:
+# Create only the base cluster that would be used for integration tests.
+# This can be helpful when developing new tests, as you can deploy the cluster
+# and run the test suite setup but then run tests individually against the cluster:
+#
+#   $ make test.integration.cluster KIND_CLUSTER_NAME="integration-tests"
+#   $ export KIND_CLUSTER="integration-tests"
+#   $ go test -v -run 'TestTCPIngress' ./test/integration/
+.PHONY: test.integration.cluster
+test.integration.cluster:
 	@./scripts/setup-integration-tests.sh
-	@GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+	@go clean -testcache
+	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
+
+# Our integration tests using all supported backends, with verbose output
+.PHONY: test.integration
+test.integration: test.integration.dbless test.integration.postgres
+
+# Our integration tests using the dbless backend, with verbose output
+.PHONY: test.integration.dbless
+test.integration.dbless:
+	@./scripts/setup-integration-tests.sh
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+
+# Our integration tests using the postgres backend, with verbose output
+# TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
+#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
+.PHONY: test.integration.postgres
+test.integration.postgres:
+	@./scripts/setup-integration-tests.sh
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v ./test/integration/
+
+# Our integration tests using the legacy v1 controller manager
+.PHONY: test.integration.legacy
+test.integration.legacy:
+	@./scripts/setup-integration-tests.sh
+	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/

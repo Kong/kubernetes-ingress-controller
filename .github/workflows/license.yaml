@@ -23,7 +23,7 @@ jobs:
         path: ./src
         fetch-depth: 0
     - name: Generate target license report
-      run: go-licenses csv ./... | grep -v "github.com/kong" | sort > ${{ github.workspace }}/target_licenses.csv
+      run: go-licenses csv ./... | grep -vE "github.com/kong|golang.org/x" | sort > ${{ github.workspace }}/target_licenses.csv
       working-directory: ./src
     - name: Checkout PR
       uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
         repository: ${{ github.repository }}
         fetch-depth: 0
     - name: Generate PR license report
-      run: go-licenses csv ./... | sort > ${{ github.workspace }}/pr_licenses.csv
+      run: go-licenses csv ./... | grep -vE "github.com/kong|golang.org/x" | sort > ${{ github.workspace }}/pr_licenses.csv
       working-directory: ./pr
     - name: Compare license reports
       id: compare_reports

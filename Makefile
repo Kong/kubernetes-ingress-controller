@@ -1,4 +1,5 @@
-TAG?=2.0.0-alpha.1
+TAG?=1.3.0
+RG_TAG?=2.0.0-alpha.1
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
 IMGNAME?=kubernetes-ingress-controller
@@ -75,10 +76,10 @@ container: container-alpine
 .PHONY: railgun-container
 railgun-container:
 	docker build \
-		-f Dockerfile.railgun \
-    --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+    -f Dockerfile.railgun \
+    --build-arg TAG=${RG_TAG} --build-arg COMMIT=${COMMIT} \
     --build-arg REPO_INFO=${REPO_INFO} \
-    -t ${IMAGE}:${TAG} .
+    -t ${IMAGE}:${RG_TAG} .
 
 .PHONY: run
 run:

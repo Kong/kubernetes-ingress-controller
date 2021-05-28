@@ -25,7 +25,7 @@ jq ".[] | select(.name == \"$WORKFLOWNAME\")" "02_repo_runs.json" > "03_repo_run
 echo "Extracting workflow run IDs..."
 jq -r ".id" "03_repo_runs_for_workflow.json" > "04_workflow_run_ids.txt"
 
-nruns="$(wc -l 04_workflow_run_ids.txt)"
+nruns="$(wc -l 04_workflow_run_ids.txt | cut -d' ' -f1)"
 echo "Retrieving workflow run metadata ($nruns runs...)"
 for id in $(cat 04_workflow_run_ids.txt); do
 	echo "Retrieving metadata for workflow run $id"

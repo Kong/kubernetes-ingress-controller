@@ -1100,6 +1100,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
+[1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.1...1.2.0
 [1.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.0...1.1.1

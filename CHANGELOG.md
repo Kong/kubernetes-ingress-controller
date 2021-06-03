@@ -94,6 +94,17 @@ released and the release notes may change significantly before then.
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
 
+## [1.3.1] - 2021/06/03
+
+#### Fixed
+
+- fixed a bug that now stops `v1.3.x` releases from advertising themselves as `v2` if manually built with default configurations.
+
+#### Under the hood
+
+- Upgraded CI dependencies
+- Some cleanup iterations on RELEASE.md release process
+
 ## [1.3.0] - 2021/05/27
 
 #### Added

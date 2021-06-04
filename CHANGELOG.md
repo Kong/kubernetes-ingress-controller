@@ -61,6 +61,11 @@ released and the release notes may change significantly before then.
 
 #### Under the hood
 
+- the controller manager will no longer log multiple entries for `nil` updates
+  to the Kong Admin API. The result is that operators will no longer see multiple
+  "no configuration change, skipping sync to kong" entries for any single update,
+  instead it will only report this `nil` update scenario the first time it is
+  encountered for any particular SHA derived from the configuration contents.
 - the `--sync-rate-limit` is now deprecated in favor of `--sync-time-seconds`.
   This functionality no longer blocks goroutines until the provided number of
   seconds has passed to enforce rate limiting, now instead it configures a

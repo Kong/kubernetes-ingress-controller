@@ -40,7 +40,7 @@ const (
 	waitTick = time.Second * 1
 
 	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	ingressWait = time.Minute * 5
+	ingressWait = time.Minute * 3
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3

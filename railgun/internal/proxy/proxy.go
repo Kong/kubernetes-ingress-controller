@@ -17,6 +17,12 @@ import (
 const (
 	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
 	// updates to the Kong Proxy Admin API when using the NewProxy() constructor.
+	// this 1s default was based on local testing wherein it appeared sub-second updates
+	// to the Admin API could be problematic (or at least operate differently) based on
+	// which storage backend was in use (i.e. "dbless", "postgres"). This is a workaround
+	// for improvements we still need to investigate upstream.
+	//
+	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
 	DefaultSyncSeconds float32 = 1.0
 
 	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer

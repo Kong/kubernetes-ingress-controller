@@ -61,6 +61,7 @@ type Config struct {
 	UDPIngressEnabled        util.EnablementStatus
 	TCPIngressEnabled        util.EnablementStatus
 	KongIngressEnabled       util.EnablementStatus
+	KnativeIngressEnabled    util.EnablementStatus
 	KongClusterPluginEnabled util.EnablementStatus
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus

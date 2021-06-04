@@ -18,6 +18,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
@@ -82,6 +83,13 @@ func Run(ctx context.Context, c *config.Config) error {
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		return err
+	}
+
+	// setup scheme for all resources
+	logger.Info("setup scheme for all resources")
+	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Error(err, "unable to add scheme to all resources.")
 		return err
 	}
 
@@ -197,6 +205,16 @@ func Run(ctx context.Context, c *config.Config) error {
 			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled: &c.KnativeIngressEnabled,
+			Controller: &kongctrl.KnativeIngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KnativeIngress"),
 				Scheme:           mgr.GetScheme(),
 				Proxy:            prx,
 				IngressClassName: c.IngressClassName,

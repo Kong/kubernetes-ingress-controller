@@ -59,7 +59,8 @@ func TestMinimaKnativeIngress(t *testing.T) {
 			DeprecatedVisibility: "visibility"
 		},
 	}
-	udp, err = c.UDPIngresses(namespace).Create(ctx, udp, metav1.CreateOptions{})
+	udp, err = c
+	c.UDPIngresses(namespace).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {

@@ -16,7 +16,7 @@ limitations under the License.
 package apis
 
 import (
-	"knative/networking/pkg/apis/networking/v1alpha1"
+	"knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
 func init() {

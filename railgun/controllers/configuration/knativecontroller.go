@@ -23,17 +23,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
-	corev1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
-	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	knative "knative/networking/pkg/apis/networking/v1alpha1"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
@@ -43,7 +38,7 @@ import (
 // Knative Ingress
 // -----------------------------------------------------------------------------
 
-// Knative Ingress reconciles a Ingress object
+// Knative Ingress reconciles a knative Ingress object
 type KnativeIngressReconciler struct {
 	client.Client
 
@@ -60,9 +55,9 @@ func (r *KnativeIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&knative.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/finalizers,verbs=update
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=knativeingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=knativeingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=knativeingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *KnativeIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

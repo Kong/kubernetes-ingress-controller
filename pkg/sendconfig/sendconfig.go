@@ -42,7 +42,7 @@ func PerformUpdate(ctx context.Context,
 	if !reverseSync {
 		// use the previous SHA to determine whether or not to perform an update
 		if equalSHA(oldSHA, newSHA) {
-			if !hasUpdateAlreadyBeenReported(newSHA) {
+			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
 				log.Info("no configuration change, skipping sync to kong")
 			}
 			return oldSHA, nil
@@ -198,7 +198,7 @@ var (
 	shaLock           sync.RWMutex
 )
 
-// hasUpdateAlreadyBeenReported is a helper function to allow
+// hasSHAUpdateAlreadyBeenReported is a helper function to allow
 // sendconfig internals to be aware of the last logged/reported
 // update to the Kong Admin API. Given the most recent update SHA,
 // it will return true/false whether or not that SHA has previously
@@ -209,7 +209,7 @@ var (
 //       but in the future we might configure rolling this into
 //       some object/interface which has this functionality as an
 //       inherent behavior.
-func hasUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
+func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 	shaLock.Lock()
 	defer shaLock.Unlock()
 	if equalSHA(latestReportedSHA, latestUpdateSHA) {

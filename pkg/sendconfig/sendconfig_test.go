@@ -119,12 +119,12 @@ func Test_renderConfigWithCustomEntities(t *testing.T) {
 }
 
 func Test_updateReportingUtilities(t *testing.T) {
-	assert.False(t, hasUpdateAlreadyBeenReported([]byte("fake-sha")))
-	assert.True(t, hasUpdateAlreadyBeenReported([]byte("fake-sha")))
-	assert.False(t, hasUpdateAlreadyBeenReported([]byte("another-fake-sha")))
-	assert.True(t, hasUpdateAlreadyBeenReported([]byte("another-fake-sha")))
-	assert.False(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
-	assert.True(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
-	assert.True(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
-	assert.True(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("fake-sha")))
+	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("fake-sha")))
+	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("another-fake-sha")))
+	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("another-fake-sha")))
+	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
 }

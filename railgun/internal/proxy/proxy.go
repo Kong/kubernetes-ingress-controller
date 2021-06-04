@@ -17,9 +17,7 @@ import (
 const (
 	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
 	// updates to the Kong Proxy Admin API when using the NewProxy() constructor.
-	//
-	// NOTE: this default was originally inherited from KIC v1.x.
-	DefaultSyncSeconds float32 = 0.3
+	DefaultSyncSeconds float32 = 1.0
 
 	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
 	// before it starts rejecting new objects while it processes the originals.

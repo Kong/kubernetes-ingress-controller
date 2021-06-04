@@ -7,6 +7,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_renderConfigWithCustomEntities(t *testing.T) {
@@ -115,4 +116,15 @@ func Test_renderConfigWithCustomEntities(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_updateReportingUtilities(t *testing.T) {
+	assert.False(t, hasUpdateAlreadyBeenReported([]byte("fake-sha")))
+	assert.True(t, hasUpdateAlreadyBeenReported([]byte("fake-sha")))
+	assert.False(t, hasUpdateAlreadyBeenReported([]byte("another-fake-sha")))
+	assert.True(t, hasUpdateAlreadyBeenReported([]byte("another-fake-sha")))
+	assert.False(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+	assert.True(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+	assert.True(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+	assert.True(t, hasUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
 }

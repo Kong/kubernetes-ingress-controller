@@ -36,7 +36,11 @@ func NewCacheBasedProxy(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, kongUpdater)
+	timeout, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
+	if err != nil {
+		return nil, err
+	}
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, timeout, kongUpdater)
 }
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
@@ -49,6 +53,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	ingressClassName string,
 	enableReverseSync bool,
 	stagger time.Duration,
+	timeout time.Duration,
 	kongUpdater KongUpdater,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
@@ -70,6 +75,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		update:     make(chan *cachedObject, DefaultObjectBufferSize),
 		del:        make(chan *cachedObject, DefaultObjectBufferSize),
 		stagger:    stagger,
+		timeout:    timeout,
 		syncTicker: time.NewTicker(stagger),
 	}
 
@@ -124,6 +130,7 @@ type clientgoCachedProxyResolver struct {
 	ingressClassName string
 	ctx              context.Context
 	stagger          time.Duration
+	timeout          time.Duration
 	syncTicker       *time.Ticker
 	stopCh           chan struct{}
 
@@ -295,10 +302,10 @@ func (p *clientgoCachedProxyResolver) cacheDelete(cobj *cachedObject) error {
 	return cobj.err
 }
 
-// kongRootWithTimeout provides the root configuration from Kong, but uses a default timeout to avoid long waits if the Admin API
+// kongRootWithTimeout provides the root configuration from Kong, but uses a configurable timeout to avoid long waits if the Admin API
 // is not yet ready to respond. If a timeout error occurs, the caller is responsible for providing a retry mechanism.
 func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(p.ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(p.ctx, p.timeout)
 	defer cancel()
 	return p.kongConfig.Client.Root(ctx)
 }

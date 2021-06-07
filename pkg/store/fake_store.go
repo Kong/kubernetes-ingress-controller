@@ -11,7 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
@@ -32,7 +32,7 @@ type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
 	TCPIngresses       []*configurationv1beta1.TCPIngress
-	UDPIngresses       []*v1alpha1.UDPIngress
+	UDPIngresses       []*v1beta1.UDPIngress
 	Services           []*apiv1.Service
 	Endpoints          []*apiv1.Endpoints
 	Secrets            []*apiv1.Secret

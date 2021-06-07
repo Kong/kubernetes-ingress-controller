@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
@@ -71,6 +70,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// get the relevant object
 	obj := new(corev1.Service)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -86,7 +86,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -133,6 +133,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// get the relevant object
 	obj := new(corev1.Endpoints)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -148,7 +149,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -198,6 +199,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// get the relevant object
 	obj := new(netv1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -222,7 +224,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -272,6 +274,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(netv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -296,7 +299,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -346,6 +349,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(extv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -370,7 +374,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -417,6 +421,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(kongv1.KongIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -432,7 +437,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -479,6 +484,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// get the relevant object
 	obj := new(kongv1.KongPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -494,7 +500,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -544,6 +550,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	// get the relevant object
 	obj := new(kongv1.KongClusterPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -568,7 +575,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -618,6 +625,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// get the relevant object
 	obj := new(kongv1.KongConsumer)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -642,7 +650,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -653,80 +661,6 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// update the kong Admin API with the changes
 	log.Info("updating the proxy with new KongConsumer", "namespace", obj.Namespace, "name", obj.Name)
-	if err := r.Proxy.UpdateObject(obj); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
-
-// -----------------------------------------------------------------------------
-// KongV1Alpha1 UDPIngress
-// -----------------------------------------------------------------------------
-
-// KongV1Alpha1UDPIngress reconciles a Ingress object
-type KongV1Alpha1UDPIngressReconciler struct {
-	client.Client
-
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	Proxy  proxy.Proxy
-
-	IngressClassName string
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *KongV1Alpha1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1alpha1.UDPIngress{}, builder.WithPredicates(preds)).Complete(r)
-}
-
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/finalizers,verbs=update
-
-// Reconcile processes the watched objects
-func (r *KongV1Alpha1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("KongV1Alpha1UDPIngress", req.NamespacedName)
-
-	// get the relevant object
-	obj := new(kongv1alpha1.UDPIngress)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	// clean the object up if it's being deleted
-	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
-		if err := r.Proxy.DeleteObject(obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
-	}
-
-	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
-		if err := r.Proxy.DeleteObject(obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new UDPIngress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -766,6 +700,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// get the relevant object
 	obj := new(kongv1beta1.TCPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -790,7 +725,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
@@ -801,6 +736,81 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	// update the kong Admin API with the changes
 	log.Info("updating the proxy with new TCPIngress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
+// KongV1Beta1 UDPIngress
+// -----------------------------------------------------------------------------
+
+// KongV1Beta1UDPIngress reconciles a Ingress object
+type KongV1Beta1UDPIngressReconciler struct {
+	client.Client
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
+	IngressClassName string
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&kongv1beta1.UDPIngress{}, builder.WithPredicates(preds)).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/finalizers,verbs=update
+
+// Reconcile processes the watched objects
+func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1Beta1UDPIngress", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(kongv1beta1.UDPIngress)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// before we store cache data for this object, ensure that it has our finalizer set
+	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
+		finalizers := obj.GetFinalizers()
+		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
+		if err := r.Client.Update(ctx, obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new UDPIngress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}

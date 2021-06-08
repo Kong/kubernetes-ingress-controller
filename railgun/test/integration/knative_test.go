@@ -54,6 +54,8 @@ func isKnativeReady(ctx context.Context, cluster kind.Cluster) bool {
 		}
 		if ready == true {
 			fmt.Println("All knative pods are up and ready.")
+			fmt.Println("Covering a window that webhook has been configured itself but not ready to receive traffic yet.")
+			time.Sleep(3 * time.Second)
 			return true
 		}
 		if ready == false {
@@ -105,6 +107,26 @@ func TestKnativeIngress(t *testing.T) {
 	if srvaccessable == false {
 		t.Fatalf("failed to access knative service.")
 	}
+
+	t.Log("clean up test deployments.")
+	deleteManifest(knativeCrds, ctx)
+	deleteManifest(knativeCore, ctx)
+	deleteManifest(kongyaml, ctx)
+	deleteManifest("helloworldgo.yaml", ctx)
+	time.Sleep(5 * time.Second)
+}
+
+func deleteManifest(yml string, ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "kubectl", "delete", "-f", yml)
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stdout, stdout.String())
+		return err
+	}
+	fmt.Println("successfully delete manifest " + yml)
+	return nil
 }
 
 func deployManifest(yml string, ctx context.Context) error {

@@ -117,7 +117,7 @@ released and the release notes may change significantly before then.
 
 - Sort SNIs and certificates consistently to avoid an issue with unnecessary
   configuration re-syncs.
-  [#1268](https://github.com/Kong/kubernetes-ingress-controller/pull/1016/)
+  [#1268](https://github.com/Kong/kubernetes-ingress-controller/pull/1268/)
 
 #### Under the hood
 

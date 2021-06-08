@@ -3,6 +3,9 @@
 package integration
 
 import (
+	"crypto/tls"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"time"
@@ -24,7 +27,6 @@ import (
 const (
 	knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
-	kongyaml    = "https://bit.ly/k4k8s"
 )
 
 func isKnativeReady(ctx context.Context, cluster kind.Cluster) bool {
@@ -73,10 +75,6 @@ func TestKnativeIngress(t *testing.T) {
 	knativeReady := isKnativeReady(ctx, cluster)
 	assert.Equal(t, knativeReady, true)
 
-	t.Log("Deploying kong ingress.")
-	err = deployManifest(kongyaml, ctx)
-	assert.NoError(t, err)
-
 	t.Log("Note down the ip address or public CNAME of kong-proxy service.")
 	proxy, err := retrieveProxyInfo(ctx)
 	assert.NoError(t, err)
@@ -117,22 +115,39 @@ func deployManifest(yml string, ctx context.Context) error {
 	return nil
 }
 
-func retrieveProxyInfo(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, "kubectl", "get", "service", "kong-proxy", "--namespace", "kong")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stdout, stdout.String())
-		fmt.Fprintln(os.Stderr, stderr.String())
-		return "", err
+func checkIPAddress(ip string) bool {
+	if net.ParseIP(ip) == nil {
+		fmt.Printf("IP Address: %s - Invalid\n", ip)
+		return false
+	} else {
+		fmt.Printf("IP Address: %s - Valid\n", ip)
+		return true
 	}
+}
 
-	if len(stdout.String()) > 0 {
-		info := strings.Split(stdout.String(), "\n")
-		proxy := strings.Fields(info[1])[3]
-		fmt.Println("kong-proxy " + proxy)
-		return proxy, nil
+func retrieveProxyInfo(ctx context.Context) (string, error) {
+	cnt := 1
+	for cnt < 60 {
+		cmd := exec.CommandContext(ctx, "kubectl", "get", "service", "kong-proxy", "--namespace", "kong")
+		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stdout, stdout.String())
+			fmt.Fprintln(os.Stderr, stderr.String())
+			return "", err
+		}
+
+		if len(stdout.String()) > 0 {
+			info := strings.Split(stdout.String(), "\n")
+			proxy := strings.Fields(info[1])[3]
+			fmt.Println("kong-proxy " + proxy)
+			if checkIPAddress(proxy) == true {
+				return proxy, nil
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
 	}
 	return "", nil
 }
@@ -151,12 +166,13 @@ func configKnativeNetwork(ctx context.Context, cluster kind.Cluster) error {
 
 func installKnativeSrv(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx,
-		"kubectl", "apply", "-f", "config/helloworldgo.yaml")
+		"kubectl", "apply", "-f", "helloworldgo.yaml")
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintln(os.Stdout, stdout.String())
+		fmt.Fprintln(os.Stderr, stderr.String())
 		return err
 	}
 	fmt.Println("successfully installed knative service.")
@@ -213,26 +229,34 @@ func ensureKnativeSrv(ctx context.Context) error {
 }
 
 func accessKnativeSrv(ctx context.Context, proxy string) bool {
-	header := "\"Host: helloworld-go.default." + proxy + "\""
-	ingress := "http://" + proxy
-	fmt.Println("header " + header + " ingress " + ingress)
-	cnt := 1
-	for cnt < 60 {
-		curl := exec.CommandContext(ctx, "curl", "--header", header,
-			ingress)
-		output, e := curl.Output()
-		if e != nil {
-			fmt.Println(e)
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		fmt.Println("output ", string(output))
-		if strings.Contains(string(output), "Hello Go Sample v1!") {
-			return true
-		}
-		time.Sleep(1 * time.Second)
-		cnt += 1
+	url := "http://" + proxy
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := http.Client{
+		Transport: tr,
+		Timeout:   time.Second * 60,
 	}
 
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Println("failed generating httpquerst err ", err)
+	}
+	req.Header.Set("Host", "helloworld-go.default."+proxy)
+	req.Host = "helloworld-go.default." + proxy
+
+	resp, err := client.Do(req)
+	fmt.Println("resp {", resp, "}")
+	if err != nil {
+		fmt.Println("WARNING: error ", err)
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return true
+	}
+	fmt.Println("knative service query ", resp)
 	return false
 }

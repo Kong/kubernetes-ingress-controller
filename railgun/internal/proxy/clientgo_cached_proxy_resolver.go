@@ -31,12 +31,9 @@ func NewCacheBasedProxy(ctx context.Context,
 	ingressClassName string,
 	enableReverseSync bool,
 	kongUpdater KongUpdater,
+	timeout time.Duration,
 ) (Proxy, error) {
 	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
-	if err != nil {
-		return nil, err
-	}
-	timeout, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
 	if err != nil {
 		return nil, err
 	}

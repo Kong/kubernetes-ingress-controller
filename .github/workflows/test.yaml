@@ -3,6 +3,7 @@ name: Test
 on: [push, pull_request]
 
 jobs:
+  environment: "Configure ci"
   lint:
     runs-on: ubuntu-latest
     steps:

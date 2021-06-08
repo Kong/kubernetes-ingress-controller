@@ -27,6 +27,7 @@ import (
 const (
 	knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
+	kongyaml    = "https://bit.ly/k4k8s"
 )
 
 func isKnativeReady(ctx context.Context, cluster kind.Cluster) bool {
@@ -74,6 +75,10 @@ func TestKnativeIngress(t *testing.T) {
 	assert.NoError(t, err)
 	knativeReady := isKnativeReady(ctx, cluster)
 	assert.Equal(t, knativeReady, true)
+
+	t.Log("Deploying kong ingress.")
+	err = deployManifest(kongyaml, ctx)
+	assert.NoError(t, err)
 
 	t.Log("Note down the ip address or public CNAME of kong-proxy service.")
 	proxy, err := retrieveProxyInfo(ctx)

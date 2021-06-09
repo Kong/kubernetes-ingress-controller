@@ -3,7 +3,6 @@ name: Test
 on: [push, pull_request]
 
 jobs:
-  environment: "Configure ci"
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -36,6 +35,7 @@ jobs:
       run: |
         make verify-manifests
   test:
+    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
     - name: Setup go

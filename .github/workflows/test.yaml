@@ -1,9 +1,19 @@
-name: Test
+# Linting, unit tests, and generated resource verification
+name: Common Tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - 'main'
+      - 'next'
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
 
 jobs:
-  lint:
+  lint-and-verify-generated:
     runs-on: ubuntu-latest
     steps:
     - name: Setup go
@@ -34,7 +44,7 @@ jobs:
     - name: Verify manifest consistency
       run: |
         make verify-manifests
-  test:
+  unit-test:
     runs-on: ubuntu-latest
     steps:
     - name: Setup go

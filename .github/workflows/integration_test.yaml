@@ -1,4 +1,4 @@
-name: Integration Tests
+name: 2.x Integration Tests
 
 on:
   pull_request:
@@ -7,10 +7,9 @@ on:
       - 'next'
   push:
     branches:
-      - 'main'
-      - 'next'
+      - '*'
     tags:
-      - 'v*.*.*'
+      - '2.*.*'
 
 jobs:
   integration-test-dbless:
@@ -50,23 +49,4 @@ jobs:
       uses: actions/checkout@v2
     - name: run railgun integration tests
       run: make test.integration.postgres
-      working-directory: ./railgun
-  integration-test-legacy:
-    runs-on: ubuntu-latest
-    steps:
-    - name: setup golang
-      uses: actions/setup-go@v2
-      with:
-        go-version: '^1.16'
-    - name: cache go modules
-      uses: actions/cache@v2.1.6
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go
-    - name: checkout repository
-      uses: actions/checkout@v2
-    - name: run railgun integration tests on legacy KIC
-      run: make test.integration.legacy
       working-directory: ./railgun

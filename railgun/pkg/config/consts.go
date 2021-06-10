@@ -16,3 +16,6 @@ const HealthzPort = 10254
 // Similar to HealthzPort, it may be used in existing user deployment configurations, and its
 // literal value is used in several stock manifests, which must be updated along with this value.
 const MetricsPort = 10255
+
+// DiagnosticsPort is the default port of the manager's diagnostics service listens on.
+const DiagnosticsPort = 10256

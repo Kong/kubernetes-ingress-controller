@@ -78,13 +78,15 @@ func TestKnativeIngress(t *testing.T) {
 	knativeReady := isKnativeReady(ctx, cluster)
 	assert.Equal(t, knativeReady, true)
 
-	t.Log("Deploying kong ingress.")
-	err = deployManifest(kongyaml, ctx)
-	assert.NoError(t, err)
+	// t.Log("Deploying kong ingress.")
+	// err = deployManifest(kongyaml, ctx)
+	// assert.NoError(t, err)
 
 	t.Log("Note down the ip address or public CNAME of kong-proxy service.")
 	proxy, err := retrieveProxyInfo(ctx)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("kong-proxy service ip/public name is not ready.")
+	}
 
 	t.Log("Configure Knative NetworkLayer as Kong")
 	err = configKnativeNetwork(ctx, cluster)
@@ -155,7 +157,7 @@ func checkIPAddress(ip string) bool {
 func retrieveProxyInfo(ctx context.Context) (string, error) {
 	cnt := 1
 	for cnt < 60 {
-		cmd := exec.CommandContext(ctx, "kubectl", "get", "service", "kong-proxy", "--namespace", "kong")
+		cmd := exec.CommandContext(ctx, "kubectl", "get", "service", "ingress-controller-kong-proxy", "--namespace", "kong-system")
 		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 		cmd.Stdout = stdout
 		cmd.Stderr = stderr
@@ -286,4 +288,16 @@ func accessKnativeSrv(ctx context.Context, proxy string) bool {
 	}
 	fmt.Println("knative service query ", resp)
 	return false
+}
+
+func listNameSpaces() {
+	pods, err := cluster.Client().CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
+
+	for pod := range pods.Items{
+		fmt.Println(" ", pod.Spec.)
+	}
 }

@@ -1,4 +1,4 @@
-name: Build and push Railgun images
+name: Build and push 2.x images
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: Build and push images
+name: Build and push 1.x images
 
 on:
   push:

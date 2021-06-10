@@ -9,7 +9,8 @@ on:
     branches:
       - '*'
     tags:
-      - '2.*.*'
+      - '2.*'
+      - 'v2.*'
 
 jobs:
   integration-test-dbless:

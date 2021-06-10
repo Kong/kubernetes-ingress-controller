@@ -9,7 +9,8 @@ on:
     branches:
       - '*'
     tags:
-      - '1.*.*'
+      - '1.*'
+      - 'v1.*'
 
 jobs:
   # Golang Integration tests, using the legacy manager/1.x CLI

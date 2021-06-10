@@ -96,9 +96,10 @@ type Store struct {
 
 	ingressClass string
 
-	ingressV1Beta1ClassMatching annotations.ClassMatching
-	ingressV1ClassMatching      annotations.ClassMatching
-	kongConsumerClassMatching   annotations.ClassMatching
+	ingressV1Beta1ClassMatching         annotations.ClassMatching
+	ingressV1ClassMatching              annotations.ClassMatching
+	kongConsumerClassMatching           annotations.ClassMatching
+	knativeIngressV1Alpha1ClassMatching annotations.ClassMatching
 
 	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, handling annotations.ClassMatching) bool
 	isValidIngressV1Class func(ingress *networkingv1.Ingress, handling annotations.ClassMatching) bool

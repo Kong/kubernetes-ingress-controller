@@ -55,10 +55,6 @@ func (r *KnativeIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&knative.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=knativeingresses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=knativeingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=knativeingresses/finalizers,verbs=update
-
 // Reconcile processes the watched objects
 func (r *KnativeIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("Knative V1alpha1 Ingress", req.NamespacedName)

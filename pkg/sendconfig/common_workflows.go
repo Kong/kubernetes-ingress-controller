@@ -43,9 +43,10 @@ func UpdateKongAdminSimple(ctx context.Context,
 		return nil, err
 	}
 
+	filterTags := getIngressControllerTags(kongConfig)
+
 	// generate the deck configuration to be applied to the admin API
-	targetConfig := deckgen.ToDeckContent(ctx, deprecatedLogger, kongstate, kongConfig.PluginSchemaStore,
-		kongConfig.FilterTags)
+	targetConfig := deckgen.ToDeckContent(ctx, deprecatedLogger, kongstate, kongConfig.PluginSchemaStore, filterTags)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -53,11 +54,21 @@ func UpdateKongAdminSimple(ctx context.Context,
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, nil, nil, lastConfigSHA,
+		targetConfig, filterTags, nil, lastConfigSHA,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return configSHA, nil
+}
+
+// getIngressControllerTags returns a tag to use if the current
+// Kong entity supports tagging.
+func getIngressControllerTags(kongConfig Kong) []string {
+	var res []string
+	if kongConfig.HasTagSupport {
+		res = append(res, kongConfig.FilterTags...)
+	}
+	return res
 }

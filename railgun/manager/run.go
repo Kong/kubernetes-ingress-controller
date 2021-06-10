@@ -91,12 +91,18 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
+	isTagExists, err := kongClient.Tags.Exists(ctx)
+	if err != nil {
+		setupLog.Error(err, "cannot able to get tags from Kong Admin API client")
+	}
+
 	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:               c.KongAdminURL,
 		FilterTags:        c.FilterTags,
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
+		HasTagSupport:     isTagExists,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
 	}
 

@@ -37,6 +37,8 @@ released and the release notes may change significantly before then.
 
 #### Added
 
+- support for selector tags in KIC 2.0.
+  [#1415](https://github.com/Kong/kubernetes-ingress-controller/pull/1415)
 - fix kongClusterPlugin handling for kic 2.0.
   [#1418](https://github.com/Kong/kubernetes-ingress-controller/pull/1418)
 - profiling using `pprof` is now a standalone HTTP server listening on port 10256.

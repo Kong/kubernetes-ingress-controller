@@ -271,7 +271,7 @@ func Run(ctx context.Context, c *config.Config) error {
 
 	diagnosticsServer := diagnostics.NewDiagnosticsServer(c.EnableProfiling, deprecatedLogger.WithField("component", "metadata-server"))
 	go func() {
-		setupLog.Info("staring diagnostics server")
+		setupLog.Info("starting diagnostics server")
 		if err := diagnosticsServer.Start(ctx); err != nil {
 			setupLog.Error(err, "unable to start diagnostics server")
 		}

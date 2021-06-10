@@ -246,6 +246,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--admission-webhook-listen=172.17.0.1:49023",
 				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
+				"--profiliing",
 			})
 			fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 

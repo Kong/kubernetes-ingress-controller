@@ -6,10 +6,9 @@ import (
 	"net/http"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 	"github.com/sirupsen/logrus"
 )
-
-const diagnosticsServerPort = 10254
 
 type diagnosticsServer struct {
 	logger logrus.FieldLogger
@@ -28,7 +27,7 @@ func NewDiagnosticsServer(enableProfiling bool, log logrus.FieldLogger) *diagnos
 }
 
 func (s *diagnosticsServer) Start(ctx context.Context) error {
-	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", diagnosticsServerPort), Handler: s.mux}
+	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", config.DiagnosticsPort), Handler: s.mux}
 	errChan := make(chan error)
 	go func() {
 		err := httpServer.ListenAndServe()
@@ -43,7 +42,7 @@ func (s *diagnosticsServer) Start(ctx context.Context) error {
 		}
 	}()
 
-	s.logger.Info("started diagonistics server at port ", diagnosticsServerPort)
+	s.logger.Info("started diagnostics server at port ", config.DiagnosticsPort)
 
 	select {
 	case <-ctx.Done():

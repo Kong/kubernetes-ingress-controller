@@ -40,7 +40,7 @@ const (
 	waitTick = time.Second * 1
 
 	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	ingressWait = time.Minute * 5
+	ingressWait = time.Minute * 3
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
@@ -119,10 +119,22 @@ func TestMain(m *testing.M) {
 	}
 
 	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
-	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllerNamespace); err != nil {
-		cluster.Cleanup()
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(13)
+	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
+		// technically if you're debugging you can override and "bring your own KIC"
+		go func() {
+			event := <-ready
+			if event.Err != nil {
+				panic(event.Err)
+			}
+			proxyReadyCh <- event
+		}()
+	} else {
+		// if you're not debugging with your own KIC, normal tests will simply run a copy of the controller manager
+		if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllerNamespace); err != nil {
+			cluster.Cleanup()
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(13)
+		}
 	}
 
 	code := m.Run()

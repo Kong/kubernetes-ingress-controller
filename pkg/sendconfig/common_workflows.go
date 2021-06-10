@@ -11,6 +11,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 )
 
+// -----------------------------------------------------------------------------
+// Sendconfig - Workflow Functions
+// -----------------------------------------------------------------------------
+
 // UpdateKongAdminSimple is a helper function for the most common usage of PerformUpdate() with only minimal
 // upfront configuration required. This function is specialized and highly opinionated.
 //

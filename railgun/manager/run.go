@@ -267,7 +267,6 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}
-
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
 }

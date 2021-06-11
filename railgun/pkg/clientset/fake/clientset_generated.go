@@ -78,7 +78,9 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+)
 
 // ConfigurationV1 retrieves the ConfigurationV1Client
 func (c *Clientset) ConfigurationV1() configurationv1.ConfigurationV1Interface {

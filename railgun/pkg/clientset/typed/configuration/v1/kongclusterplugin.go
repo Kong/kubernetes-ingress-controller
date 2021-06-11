@@ -33,7 +33,7 @@ import (
 // KongClusterPluginsGetter has a method to return a KongClusterPluginInterface.
 // A group's client should implement this interface.
 type KongClusterPluginsGetter interface {
-	KongClusterPlugins(namespace string) KongClusterPluginInterface
+	KongClusterPlugins() KongClusterPluginInterface
 }
 
 // KongClusterPluginInterface has methods to work with KongClusterPlugin resources.
@@ -52,14 +52,12 @@ type KongClusterPluginInterface interface {
 // kongClusterPlugins implements KongClusterPluginInterface
 type kongClusterPlugins struct {
 	client rest.Interface
-	ns     string
 }
 
 // newKongClusterPlugins returns a KongClusterPlugins
-func newKongClusterPlugins(c *ConfigurationV1Client, namespace string) *kongClusterPlugins {
+func newKongClusterPlugins(c *ConfigurationV1Client) *kongClusterPlugins {
 	return &kongClusterPlugins{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -67,7 +65,6 @@ func newKongClusterPlugins(c *ConfigurationV1Client, namespace string) *kongClus
 func (c *kongClusterPlugins) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -84,7 +81,6 @@ func (c *kongClusterPlugins) List(ctx context.Context, opts metav1.ListOptions) 
 	}
 	result = &v1.KongClusterPluginList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -101,7 +97,6 @@ func (c *kongClusterPlugins) Watch(ctx context.Context, opts metav1.ListOptions)
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -112,7 +107,6 @@ func (c *kongClusterPlugins) Watch(ctx context.Context, opts metav1.ListOptions)
 func (c *kongClusterPlugins) Create(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.CreateOptions) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongClusterPlugin).
@@ -125,7 +119,6 @@ func (c *kongClusterPlugins) Create(ctx context.Context, kongClusterPlugin *v1.K
 func (c *kongClusterPlugins) Update(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.UpdateOptions) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		Name(kongClusterPlugin.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -138,7 +131,6 @@ func (c *kongClusterPlugins) Update(ctx context.Context, kongClusterPlugin *v1.K
 // Delete takes name of the kongClusterPlugin and deletes it. Returns an error if one occurs.
 func (c *kongClusterPlugins) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		Name(name).
 		Body(&opts).
@@ -153,7 +145,6 @@ func (c *kongClusterPlugins) DeleteCollection(ctx context.Context, opts metav1.D
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -166,7 +157,6 @@ func (c *kongClusterPlugins) DeleteCollection(ctx context.Context, opts metav1.D
 func (c *kongClusterPlugins) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongClusterPlugin, err error) {
 	result = &v1.KongClusterPlugin{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("kongclusterplugins").
 		Name(name).
 		SubResource(subresources...).

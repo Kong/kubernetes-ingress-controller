@@ -37,8 +37,8 @@ type ConfigurationV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ConfigurationV1Client) KongClusterPlugins(namespace string) KongClusterPluginInterface {
-	return newKongClusterPlugins(c, namespace)
+func (c *ConfigurationV1Client) KongClusterPlugins() KongClusterPluginInterface {
+	return newKongClusterPlugins(c)
 }
 
 func (c *ConfigurationV1Client) KongConsumers(namespace string) KongConsumerInterface {

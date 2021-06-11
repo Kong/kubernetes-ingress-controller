@@ -10,13 +10,14 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
+// Server is an HTTP server running exposing the pprof profiling tool.
 type Server struct {
 	Logger logr.Logger
 }
 
+// Listen starts up the HTTP server and blocks until ctx expires.
 func (s *Server) Listen(ctx context.Context) error {
 	mux := http.NewServeMux()
-
 	installHandlers(mux)
 
 	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", config.DiagnosticsPort), Handler: mux}

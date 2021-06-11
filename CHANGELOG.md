@@ -46,6 +46,8 @@ released and the release notes may change significantly before then.
   `--watch-namespace "namespaceA,namespaceB"`).
 - support for the `konghq.com/host-aliases` annotation.
   [#1016](https://github.com/Kong/kubernetes-ingress-controller/pull/1016/)
+- Added `--proxy-timeout-seconds` flag to configure the kong client api timeout.
+  [#1401](https://github.com/Kong/kubernetes-ingress-controller/pull/1401)
 
 [kong-udp]:https://konghq.com/blog/kong-gateway-2-2-released/#UDP-Support
 

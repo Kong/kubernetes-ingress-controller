@@ -1,6 +1,7 @@
 # Table of Contents
 
  - [2.0.0-alpha.1](#200-alpha1---20210527)
+ - [1.3.1](#131---20210603)
  - [1.3.0](#130---20210527)
  - [1.2.0](#120---20210324)
  - [1.1.1](#111---20210107)
@@ -99,6 +100,17 @@ released and the release notes may change significantly before then.
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
 
+## [1.3.1] - 2021/06/03
+
+#### Fixed
+
+- fixed a bug that now stops `v1.3.x` releases from advertising themselves as `v2` if manually built with default configurations.
+
+#### Under the hood
+
+- Upgraded CI dependencies
+- Some cleanup iterations on RELEASE.md release process
+
 ## [1.3.0] - 2021/05/27
 
 #### Added
@@ -110,7 +122,7 @@ released and the release notes may change significantly before then.
 
 - Sort SNIs and certificates consistently to avoid an issue with unnecessary
   configuration re-syncs.
-  [#1268](https://github.com/Kong/kubernetes-ingress-controller/pull/1016/)
+  [#1268](https://github.com/Kong/kubernetes-ingress-controller/pull/1268/)
 
 #### Under the hood
 
@@ -1093,6 +1105,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
+[1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.1...1.2.0
 [1.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.0...1.1.1

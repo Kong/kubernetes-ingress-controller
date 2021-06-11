@@ -69,7 +69,7 @@ type Config struct {
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
 
-	// Performance
+	// Performance monitoring
 	EnableProfiling bool
 }
 
@@ -161,7 +161,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`admission server PEM private key value`)
 
 	// Misc
-	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, "Enable profiling via web interface host:port/debug/pprof/")
+	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, "Enable profiling via web interface host:10256/debug/pprof/")
 
 	return &flagSet.FlagSet
 }

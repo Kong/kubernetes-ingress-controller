@@ -12,5 +12,8 @@ func Run(ctx context.Context, c *config.Config) error {
 	if err := StartAdmissionServer(ctx, c); err != nil {
 		return fmt.Errorf("StartAdmissionServer: %w", err)
 	}
+	if err := StartProfilingServer(ctx, c); err != nil {
+		return fmt.Errorf("StartProfilingServer: %w", err)
+	}
 	return manager.Run(ctx, c)
 }

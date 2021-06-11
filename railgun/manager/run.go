@@ -23,7 +23,6 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
@@ -268,14 +267,6 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}
-
-	diagnosticsServer := diagnostics.NewDiagnosticsServer(c.EnableProfiling, deprecatedLogger.WithField("component", "metadata-server"))
-	go func() {
-		setupLog.Info("starting diagnostics server")
-		if err := diagnosticsServer.Start(ctx); err != nil {
-			setupLog.Error(err, "unable to start diagnostics server")
-		}
-	}()
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
 }

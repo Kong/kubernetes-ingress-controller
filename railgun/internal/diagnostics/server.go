@@ -4,51 +4,65 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
-	"github.com/sirupsen/logrus"
 )
 
-type diagnosticsServer struct {
-	logger logrus.FieldLogger
-	mux    *http.ServeMux
+type Server struct {
+	Logger logr.Logger
 }
 
-func NewDiagnosticsServer(enableProfiling bool, log logrus.FieldLogger) *diagnosticsServer {
+func (s *Server) Listen(ctx context.Context) error {
 	mux := http.NewServeMux()
-	if enableProfiling {
-		mgrutils.Install(mux)
-	}
-	return &diagnosticsServer{
-		logger: log,
-		mux:    mux,
-	}
-}
 
-func (s *diagnosticsServer) Start(ctx context.Context) error {
-	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", config.DiagnosticsPort), Handler: s.mux}
+	installHandlers(mux)
+
+	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", config.DiagnosticsPort), Handler: mux}
 	errChan := make(chan error)
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil {
 			switch err {
 			case http.ErrServerClosed:
-				s.logger.Info("shutting down diagnostics server")
+				s.Logger.Info("shutting down diagnostics server")
 			default:
-				s.logger.Error(err, "could not start a diagnostics server")
+				s.Logger.Error(err, "could not start diagnostics server")
 				errChan <- err
 			}
 		}
 	}()
 
-	s.logger.Info("started diagnostics server at port ", config.DiagnosticsPort)
+	s.Logger.Info("diagnostics server is starting to listen", "addr", config.DiagnosticsPort)
 
 	select {
 	case <-ctx.Done():
-		s.logger.Info("stopping down diagnostics server")
+		s.Logger.Info("shutting down diagnostics server")
 		return httpServer.Shutdown(context.Background())
 	case err := <-errChan:
 		return err
+	}
+}
+
+// installHandlers adds the Profiling webservice to the given mux.
+func installHandlers(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof", redirectTo("/debug/pprof/"))
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/heap", pprof.Index)
+	mux.HandleFunc("/debug/pprof/mutex", pprof.Index)
+	mux.HandleFunc("/debug/pprof/goroutine", pprof.Index)
+	mux.HandleFunc("/debug/pprof/threadcreate", pprof.Index)
+	mux.HandleFunc("/debug/pprof/block", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+}
+
+// redirectTo redirects request to a certain destination.
+func redirectTo(to string) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		http.Redirect(rw, req, to, http.StatusFound)
 	}
 }

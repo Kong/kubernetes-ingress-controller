@@ -36,8 +36,8 @@ released and the release notes may change significantly before then.
 
 #### Added
 
-- added support for profiling in KIC 2.0.
-  [#1408](https://github.com/Kong/kubernetes-ingress-controller/pull/1408)
+- profiling using `pprof` is now a standalone HTTP server listening on port 10256.
+  [#1417](https://github.com/Kong/kubernetes-ingress-controller/pull/1417)
 - support for [UDP][kong-udp] via the new `UDPIngress` API.
 - `--watch-namespace` now supports multiple distinct namespaces versus simply
   supporting all namespaces (the default) or a single namespace. To watch

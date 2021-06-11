@@ -201,16 +201,19 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 	for {
 		select {
 		case cobj := <-p.update:
+			p.logger.Info("%v", *cobj)
 			if err := p.cacheUpdate(cobj); err != nil {
 				p.logger.Error(err, "object could not be updated in the cache and will be discarded")
 				break
 			}
 		case cobj := <-p.del:
+			p.logger.Info("CR delete %v", cobj)
 			if err := p.cacheDelete(cobj); err != nil {
 				p.logger.Error(err, "object could not be deleted from the cache and will be discarded")
 				break
 			}
 		case <-p.syncTicker.C:
+			p.logger.Info("CR syncTicker %v", p.cache)
 			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")

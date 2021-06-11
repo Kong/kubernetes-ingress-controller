@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis"
+	knativev1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
@@ -58,6 +59,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
+	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
 
 	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
@@ -87,7 +89,6 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 
 	// setup scheme for all resources
-	logger.Info("setup scheme for all resources")
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error(err, "unable to add scheme to all resources.")
 		return err
@@ -261,6 +262,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 
 	for _, c := range controllers {
+		setupLog.Info("ctrl ", c.Name(), "setup with manager.")
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}

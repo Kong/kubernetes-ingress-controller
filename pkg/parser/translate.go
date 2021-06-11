@@ -441,7 +441,7 @@ func fromUDPIngressV1Alpha1(log logrus.FieldLogger, ingressList []*v1alpha1.UDPI
 }
 
 func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) ingressRules {
-
+	log.Errorf("fromKnativeIngress 11111")
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
@@ -449,7 +449,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 
 	services := map[string]kongstate.Service{}
 	secretToSNIs := newSecretNameToSNIs()
-
+	log.Errorf("fromKnativeIngress size %d", len(ingressList))
 	for _, ingress := range ingressList {
 		log = log.WithFields(logrus.Fields{
 			"knativeingress_namespace": ingress.Namespace,
@@ -542,7 +542,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 			}
 		}
 	}
-
+	log.Errorf("end of fromKnativeIngress size %v", services)
 	return ingressRules{
 		ServiceNameToServices: services,
 		SecretNameToSNIs:      secretToSNIs,

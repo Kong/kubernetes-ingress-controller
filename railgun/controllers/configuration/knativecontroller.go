@@ -55,9 +55,13 @@ func (r *KnativeIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&knative.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
+//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/finalizers,verbs=update
+
 // Reconcile processes the watched objects
 func (r *KnativeIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("Knative V1alpha1 Ingress", req.NamespacedName)
+	log := r.Log.WithValues("KnativeIngress", req.NamespacedName)
 
 	// get the relevant object
 	obj := new(knative.Ingress)
@@ -85,10 +89,10 @@ func (r *KnativeIngressReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
+	if !ctrlutils.HasFinalizer(obj, ctrlutils.KnativeIngressFinalizer) {
 		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
+		obj.SetFinalizers(append(finalizers, ctrlutils.KnativeIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {
 			return ctrl.Result{}, err
 		}

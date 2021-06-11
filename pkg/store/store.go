@@ -96,10 +96,9 @@ type Store struct {
 
 	ingressClass string
 
-	ingressV1Beta1ClassMatching         annotations.ClassMatching
-	ingressV1ClassMatching              annotations.ClassMatching
-	kongConsumerClassMatching           annotations.ClassMatching
-	knativeIngressV1Alpha1ClassMatching annotations.ClassMatching
+	ingressV1Beta1ClassMatching annotations.ClassMatching
+	ingressV1ClassMatching      annotations.ClassMatching
+	kongConsumerClassMatching   annotations.ClassMatching
 
 	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, handling annotations.ClassMatching) bool
 	isValidIngressV1Class func(ingress *networkingv1.Ingress, handling annotations.ClassMatching) bool
@@ -147,6 +146,7 @@ func NewCacheStores() (c CacheStores) {
 // NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
 // YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
 func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
+	fmt.Printf("[NewCacheStoresFromObjYAML] objs %v", objs)
 	kobjs := make([]runtime.Object, 0, len(objs))
 	sr := serializer.NewYAMLSerializer(
 		yamlserializer.DefaultMetaFactory,
@@ -170,6 +170,7 @@ func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
 	c := NewCacheStores()
 	for _, obj := range objs {
+		fmt.Printf("[NewCacheStoresFromObjs] obj %v", obj)
 		typedObj, err := mkObjFromGVK(obj.GetObjectKind().GroupVersionKind())
 		if err != nil {
 			return c, err
@@ -385,6 +386,7 @@ func (s Store) ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error) {
 		func(ob interface{}) {
 			ing, ok := ob.(*kongv1beta1.TCPIngress)
 			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
+				fmt.Printf("a Valid TCP Ingress listed %v", ing)
 				ingresses = append(ingresses, ing)
 			}
 		})
@@ -425,26 +427,33 @@ func (s Store) validKnativeIngressClass(objectMeta *metav1.ObjectMeta) bool {
 	return ingressAnnotationValue == s.ingressClass
 }
 
-// ListKnativeIngresses returns the list of TCP Ingresses from
-// configuration.konghq.com group.
+// ListKnativeIngresses returns the list of Knative Ingresses from
+// ingresses.networking.internal.knative.dev group.
 func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	var ingresses []*knative.Ingress
 	if s.stores.KnativeIngress == nil {
 		return ingresses, nil
 	}
-	err := cache.ListAll(s.stores.KnativeIngress, labels.NewSelector(),
+
+	err := cache.ListAll(
+		s.stores.KnativeIngress,
+		labels.NewSelector(),
 		func(ob interface{}) {
+			fmt.Println("[ListKnativeIngresses] object interface.")
 			ing, ok := ob.(*knative.Ingress)
 			// this is implemented directly in store as s.isValidIngressClass only checks the value of the
 			// kubernetes.io/ingress.class annotation (annotations.ingressClassKey), not
 			// networking.knative.dev/ingress.class (knativeIngressClassKey)
 			if ok && s.validKnativeIngressClass(&ing.ObjectMeta) {
+				fmt.Printf("[ListKnativeIngresses] a valid knative ingress %v", ing)
 				ingresses = append(ingresses, ing)
 			}
 		})
 	if err != nil {
+		fmt.Printf("[ListKnativeIngresses] err %v", err)
 		return nil, err
 	}
+
 	sort.SliceStable(ingresses, func(i, j int) bool {
 		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
 			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0

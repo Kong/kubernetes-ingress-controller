@@ -57,3 +57,20 @@ func TestMetricsEndpoint(t *testing.T) {
 		return len(v) > 0
 	}, ingressWait, waitTick)
 }
+
+func TestProfilingEndpoint(t *testing.T) {
+	if useLegacyKIC() {
+		t.Skip("profiling endpoint behaves differently in legacy KIC")
+	}
+	_ = proxyReady()
+	assert.Eventually(t, func() bool {
+		profilingURL := fmt.Sprintf("http://localhost:%v/debug/pprof/", config.DiagnosticsPort)
+		resp, err := httpc.Get(profilingURL)
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", profilingURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}, ingressWait, waitTick)
+}

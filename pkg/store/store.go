@@ -386,7 +386,6 @@ func (s Store) ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error) {
 		func(ob interface{}) {
 			ing, ok := ob.(*kongv1beta1.TCPIngress)
 			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
-				fmt.Printf("a Valid TCP Ingress listed %v", ing)
 				ingresses = append(ingresses, ing)
 			}
 		})
@@ -439,18 +438,15 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 		s.stores.KnativeIngress,
 		labels.NewSelector(),
 		func(ob interface{}) {
-			fmt.Println("[ListKnativeIngresses] object interface.")
 			ing, ok := ob.(*knative.Ingress)
 			// this is implemented directly in store as s.isValidIngressClass only checks the value of the
 			// kubernetes.io/ingress.class annotation (annotations.ingressClassKey), not
 			// networking.knative.dev/ingress.class (knativeIngressClassKey)
 			if ok && s.validKnativeIngressClass(&ing.ObjectMeta) {
-				fmt.Printf("[ListKnativeIngresses] a valid knative ingress %v", ing)
 				ingresses = append(ingresses, ing)
 			}
 		})
 	if err != nil {
-		fmt.Printf("[ListKnativeIngresses] err %v", err)
 		return nil, err
 	}
 

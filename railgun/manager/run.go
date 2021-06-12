@@ -213,12 +213,11 @@ func Run(ctx context.Context, c *config.Config) error {
 		},
 		{
 			IsEnabled: &c.KnativeIngressEnabled,
-			Controller: &kongctrl.KnativeIngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("KnativeIngress"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
+			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  prx,
 			},
 		},
 		{
@@ -262,7 +261,6 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 
 	for _, c := range controllers {
-		setupLog.Info("ctrl ", c.Name(), "setup with manager.")
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}

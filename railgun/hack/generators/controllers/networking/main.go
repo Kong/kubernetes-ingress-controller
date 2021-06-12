@@ -20,9 +20,10 @@ const (
 	netv1beta1 = "k8s.io/api/networking/v1beta1"
 	extv1beta1 = "k8s.io/api/extensions/v1beta1"
 
-	kongv1       = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	kongv1alpha1 = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1"
+	kongv1          = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1    = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	kongv1beta1     = "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1"
+	knativev1alpha1 = "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
 // inputControllersNeeded is a list of the supported Types for the
@@ -148,6 +149,17 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "tcpingresses",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "TCPIngress",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
+	},
+	typeNeeded{
+		PackageImportAlias:                "knativev1alpha1",
+		PackageAlias:                      "Knativev1alpha1",
+		Package:                           knativev1alpha1,
+		Type:                              "Ingress",
+		Plural:                            "ingresses",
+		URL:                               "networking.internal.knative.dev",
+		CacheType:                         "Ingresses",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 	},

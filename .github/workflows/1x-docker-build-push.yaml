@@ -1,11 +1,13 @@
-name: Build and push development images
+name: Build and push 1.x images
 
 on:
   push:
     branches:
-      - 'main-test'
+      - 'main'
+      - 'next'
     tags:
-      - '*'
+      - '1.*'
+      - 'v1.*'
 
 jobs:
   docker:

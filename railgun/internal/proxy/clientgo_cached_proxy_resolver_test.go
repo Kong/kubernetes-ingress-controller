@@ -2,12 +2,14 @@ package proxy
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/kong"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,7 +99,7 @@ func TestCaching(t *testing.T) {
 	defer cancel()
 
 	t.Log("configuring and starting a new proxy server")
-	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin)
+	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, time.Millisecond*300)
 	assert.NoError(t, err)
 
 	t.Log("ensuring the integrity of the proxy server")
@@ -133,4 +135,25 @@ func TestCaching(t *testing.T) {
 	previousUpdateCount := fakeKongAdminUpdateCount()
 	proxy.syncTicker.Reset(time.Millisecond * 200)
 	assert.Eventually(t, func() bool { return fakeKongAdminUpdateCount() == previousUpdateCount+1 }, time.Second*10, time.Millisecond*200)
+}
+
+func TestProxyTimeout(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	t.Log("configuring and starting a new proxy server")
+
+	// mock the next Admin API response (which will be / to get the root config) to ensure
+	// that it takes longer than the timeout we will set, in order to trigger the timeout.
+	fakeKongAdminAPI.MockNextResponse(kong.AdminAPIResponse{
+		Status:   http.StatusGatewayTimeout,
+		Body:     []byte{},
+		Callback: func() { time.Sleep(time.Millisecond * 30) },
+	})
+
+	// the timeout is shorter than the wait time for the http response, we should expect
+	// to see the the context deadline for the http response triggered.
+	timeout := time.Millisecond * 10
+
+	_, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, timeout)
+	assert.Contains(t, err.Error(), "context deadline exceeded")
 }

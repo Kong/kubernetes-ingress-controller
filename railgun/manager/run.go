@@ -107,6 +107,13 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
+	// determine the proxy timeout
+	timeoutDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxyTimeoutSeconds))
+	if err != nil {
+		setupLog.Error(err, "%s is not a valid number of seconds to the timeout config for the kong client")
+		return err
+	}
+
 	// start the proxy cache server
 	prx, err := proxy.NewCacheBasedProxyWithStagger(ctx,
 		// NOTE: logr-based loggers use the "logger" field instead of "subsystem". When replacing logrus with logr, replace
@@ -117,6 +124,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		c.IngressClassName,
 		c.EnableReverseSync,
 		syncTickDuration,
+		timeoutDuration,
 		sendconfig.UpdateKongAdminSimple,
 	)
 	if err != nil {
@@ -267,7 +275,6 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}
-
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
 }

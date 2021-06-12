@@ -43,6 +43,7 @@ type Config struct {
 	ProbeAddr                string
 	KongAdminURL             string
 	ProxySyncSeconds         float32
+	ProxyTimeoutSeconds      float32
 	KongCustomEntitiesSecret string
 
 	// Kubernetes configurations
@@ -68,6 +69,9 @@ type Config struct {
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
+
+	// Performance monitoring
+	EnableProfiling bool
 }
 
 // -----------------------------------------------------------------------------
@@ -117,6 +121,11 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds)",
 			proxy.DefaultSyncSeconds,
 		))
+	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", proxy.DefaultSyncSeconds,
+		fmt.Sprintf(
+			"Define the rate (in seconds) in which the timeout configuration will be applied to the Kong client. (default: %g seconds)",
+			proxy.DefaultSyncSeconds,
+		))
 	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `A Secret containing custom entities for DB-less mode, in "namespace/name" format`)
 
 	// Kubernetes configurations
@@ -156,6 +165,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`admission server PEM certificate value`)
 	flagSet.StringVar(&c.AdmissionServer.Key, "admission-webhook-key", "",
 		`admission server PEM private key value`)
+
+	// Misc
+	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, "Enable profiling via web interface host:10256/debug/pprof/")
 
 	return &flagSet.FlagSet
 }

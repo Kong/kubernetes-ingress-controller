@@ -445,7 +445,7 @@ func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*v1beta1.UDPIng
 
 			// generate the kong Service backend for the UDPIngress rules
 			host := fmt.Sprintf("%s.%s.%d.svc", rule.Backend.ServiceName, ingress.Namespace, rule.Backend.ServicePort)
-			serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
+			serviceName := fmt.Sprintf("%s.%s.%d.udp", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
 			service, ok := result.ServiceNameToServices[serviceName]
 			if !ok {
 				service = kongstate.Service{
@@ -454,7 +454,7 @@ func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*v1beta1.UDPIng
 						Name:     kong.String(serviceName),
 						Protocol: kong.String("udp"),
 						Host:     kong.String(host),
-						Port:     kong.Int(rule.Port),
+						Port:     kong.Int(rule.Backend.ServicePort),
 					},
 					Backend: kongstate.ServiceBackend{
 						Name: rule.Backend.ServiceName,

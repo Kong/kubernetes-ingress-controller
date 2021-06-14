@@ -51,7 +51,8 @@ func MakeDebugLoggerWithReducedRedudancy(writer io.Writer, formatter logrus.Form
 	log.Out = writer
 
 	// set up the reduced redudancy logging hook
-	log.Hooks.Add(newReducedRedundancyLogHook(redundantLogEntryBackoff, redudantLogEntryAllowedConsecutively, nilFormatter))
+	log.Hooks.Add(newReducedRedundancyLogHook(
+		redundantLogEntryBackoff, redudantLogEntryAllowedConsecutively, nilFormatter))
 	return log
 }
 

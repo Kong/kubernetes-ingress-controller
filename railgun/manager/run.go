@@ -217,10 +217,11 @@ func Run(ctx context.Context, c *config.Config) error {
 		{
 			IsEnabled: &c.KnativeIngressEnabled,
 			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  prx,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
 			},
 		},
 		{

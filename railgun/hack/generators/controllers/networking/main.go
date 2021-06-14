@@ -161,7 +161,7 @@ var inputControllersNeeded = &typesNeeded{
 		URL:                               "networking.internal.knative.dev",
 		CacheType:                         "KnativeIngress",
 		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
+		AcceptsIngressClassNameSpec:       true,
 	},
 }
 
@@ -273,6 +273,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"

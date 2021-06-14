@@ -36,16 +36,10 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // -----------------------------------------------------------------------------
@@ -831,37 +825,8 @@ type Knativev1alpha1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("knative-ingress", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter("kong", false, false)
-	//return ctrl.NewControllerManagedBy(mgr).For(&kongv1beta1.TCPIngress{}, builder.WithPredicates(preds)).Complete(r)
-	// Only enqueue Ingress objects that reference a Kong as IngressClass.
-	if err := c.Watch(&source.Kind{Type: &knativev1alpha1.Ingress{}}, r.enqueueRequestForKnativeIngress(), preds); err != nil {
-		return err
-	}
-	return err
-}
-
-func (r *Knativev1alpha1IngressReconciler) enqueueRequestForKnativeIngress() handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
-		ing, ok := a.(*knativev1alpha1.Ingress)
-		if ok {
-			if ing != nil {
-				return []reconcile.Request{
-					{
-						NamespacedName: types.NamespacedName{
-							Namespace: ing.Namespace,
-							Name:      ing.Name,
-						},
-					},
-				}
-			}
-		}
-		return []reconcile.Request{}
-	})
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&knativev1alpha1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch;create;update;patch;delete

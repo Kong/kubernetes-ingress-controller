@@ -30,9 +30,8 @@ _testmain.go
 .coverprofile
 /gover.coverprofile
 e2e-tests
-coverage.out
-coverage.out.tmp
-coverage.txt
+*.out
+*.out.*
 
 # for this repo only
 kong-ingress-controller

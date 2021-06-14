@@ -9,6 +9,8 @@ DB?=false
 RUN_VERSION?=20
 KUBE_VERSION?=v1.20.2
 
+PKG_LIST := ./...
+
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
 endif
@@ -20,11 +22,11 @@ test-all: lint test
 
 .PHONY: test
 test:
-	go test -race ./...
+	go test -race -covermode=atomic -coverpkg=$(PKG_LIST) $(PKG_LIST)
 
 .PHONY: coverage
 coverage:
-	go test -race -v -count=1 -coverprofile=coverage.out.tmp ./...
+	go test -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=coverage.out.tmp $(PKG_LIST)
 	# ignoring generated code for coverage
 	grep -E -v 'pkg/apis/|pkg/client/|generated.go|generated.deepcopy.go' coverage.out.tmp > coverage.out
 	rm -f coverage.out.tmp

@@ -159,7 +159,7 @@ var inputControllersNeeded = &typesNeeded{
 		Type:                              "Ingress",
 		Plural:                            "ingresses",
 		URL:                               "networking.internal.knative.dev",
-		CacheType:                         "Ingresses",
+		CacheType:                         "KnativeIngress",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 	},

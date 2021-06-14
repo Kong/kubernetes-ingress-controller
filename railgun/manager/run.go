@@ -116,6 +116,9 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
+	fmt.Printf("\nc.IngressClassName %s", c.IngressClassName)
+	fmt.Printf("\nkongConfig %v", kongConfig)
+
 	// start the proxy cache server
 	prx, err := proxy.NewCacheBasedProxyWithStagger(ctx,
 		// NOTE: logr-based loggers use the "logger" field instead of "subsystem". When replacing logrus with logr, replace
@@ -215,7 +218,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			IsEnabled: &c.KnativeIngressEnabled,
 			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
 				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
+				Log:    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme: mgr.GetScheme(),
 				Proxy:  prx,
 			},

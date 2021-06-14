@@ -2,6 +2,7 @@ package sendconfig
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -36,6 +37,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	kongConfig Kong,
 	enableReverseSync bool,
 ) ([]byte, error) {
+	fmt.Printf("\n#### UpdateKongAdminSimple 1111 ", cache.KnativeIngress.List()...)
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
 	kongstate, err := parser.Build(deprecatedLogger, storer)
@@ -43,13 +45,16 @@ func UpdateKongAdminSimple(ctx context.Context,
 		return nil, err
 	}
 
+	fmt.Printf("\n#### UpdateKongAdminSimple 2222 ")
 	// generate the deck configuration to be applied to the admin API
 	targetConfig := deckgen.ToDeckContent(ctx, deprecatedLogger, kongstate, kongConfig.PluginSchemaStore,
 		kongConfig.FilterTags)
 
+	fmt.Printf("\n#### UpdateKongAdminSimple 33333 ")
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	fmt.Printf("\n#### UpdateKongAdminSimple 4444 \n")
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,

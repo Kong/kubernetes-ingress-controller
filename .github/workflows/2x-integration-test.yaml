@@ -32,6 +32,12 @@ jobs:
     - name: run railgun integration tests
       run: make test.integration.dbless
       working-directory: ./railgun
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        directory: ./railgun
+        flags: integration-test
+        fail_ci_if_error: true
   integration-test-postgres:
     runs-on: ubuntu-latest
     steps:
@@ -51,3 +57,9 @@ jobs:
     - name: run railgun integration tests
       run: make test.integration.postgres
       working-directory: ./railgun
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        directory: ./railgun
+        flags: integration-test
+        fail_ci_if_error: true

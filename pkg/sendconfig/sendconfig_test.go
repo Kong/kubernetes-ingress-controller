@@ -142,8 +142,8 @@ func Test_getIngressControllerTags(t *testing.T) {
 			name: "configuration with tag support and filter tags",
 			args: args{
 				config: Kong{
-					HasTagSupport: true,
-					FilterTags:    []string{"foo-tag", "bar-tag"},
+					DeprecatedHasTagSupport: true,
+					FilterTags:              []string{"foo-tag", "bar-tag"},
 				},
 			},
 			want: []string{"foo-tag", "bar-tag"},
@@ -152,8 +152,8 @@ func Test_getIngressControllerTags(t *testing.T) {
 			name: "configuratiion with tag support and no filter tags",
 			args: args{
 				config: Kong{
-					HasTagSupport: true,
-					FilterTags:    []string{},
+					DeprecatedHasTagSupport: true,
+					FilterTags:              []string{},
 				},
 			},
 			want: nil,
@@ -161,7 +161,7 @@ func Test_getIngressControllerTags(t *testing.T) {
 			name: "configuration with no tag support",
 			args: args{
 				config: Kong{
-					HasTagSupport: false,
+					DeprecatedHasTagSupport: false,
 				},
 			},
 			want: nil,
@@ -169,7 +169,7 @@ func Test_getIngressControllerTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getIngressControllerTags(tt.args.config)
+			got := GetIngressControllerTags(tt.args.config)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getIngressControllerTags() = %v, want %v", got, tt.want)
 			}

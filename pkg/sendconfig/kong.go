@@ -15,9 +15,11 @@ type Kong struct {
 	Client            *kong.Client
 	PluginSchemaStore *util.PluginSchemaStore
 
-	InMemory      bool
-	HasTagSupport bool
-	Enterprise    bool
+	InMemory bool
+	// DeprecatedHasTagSupport is not used in KIC 2.x.
+	// If the gateway instance does not support tags, pass an empty FilterTags slice instead.
+	DeprecatedHasTagSupport bool
+	Enterprise              bool
 
 	Version semver.Version
 

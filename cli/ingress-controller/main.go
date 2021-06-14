@@ -239,7 +239,7 @@ func main() {
 		cliConfig.KongAdminURL+"/tags", nil)
 	res, err := kongClient.Do(ctx, req, nil)
 	if err == nil && res.StatusCode == 200 {
-		controllerConfig.Kong.HasTagSupport = true
+		controllerConfig.Kong.DeprecatedHasTagSupport = true
 	}
 
 	// setup workspace in Kong Enterprise

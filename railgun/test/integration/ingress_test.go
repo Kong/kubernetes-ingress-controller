@@ -46,7 +46,7 @@ func TestMinimalIngress(t *testing.T) {
 		assert.NoError(t, cluster.Client().CoreV1().Services(corev1.NamespaceDefault).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
-	t.Logf("creating an ingress for service %s without ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
@@ -219,7 +219,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 		assert.NoError(t, cluster.Client().CoreV1().Services(corev1.NamespaceDefault).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
-	t.Logf("creating an ingress for service %s without ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{"konghq.com/strip-path": "true"}, service)
 	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Create(ctx, ingress, metav1.CreateOptions{})

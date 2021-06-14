@@ -143,6 +143,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
+	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -162,6 +163,15 @@ func Run(ctx context.Context, c *config.Config) error {
 			Controller: &configuration.CoreV1EndpointsReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  prx,
+			},
+		},
+		{
+			IsEnabled: &alwaysEnabled,
+			Controller: &configuration.CoreV1SecretReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Secrets"),
 				Scheme: mgr.GetScheme(),
 				Proxy:  prx,
 			},

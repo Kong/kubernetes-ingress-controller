@@ -95,6 +95,9 @@ func TestMinimalPlugin(t *testing.T) {
 	kongclusterplugin := &kongv1.KongClusterPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "legal",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
 		},
 		PluginName: "request-termination",
 		Config: apiextensionsv1.JSON{
@@ -105,7 +108,7 @@ func TestMinimalPlugin(t *testing.T) {
 	assert.NoError(t, err)
 	kongplugin, err = c.ConfigurationV1().KongPlugins(corev1.NamespaceDefault).Create(ctx, kongplugin, metav1.CreateOptions{})
 	assert.NoError(t, err)
-	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins(corev1.NamespaceDefault).Create(ctx, kongclusterplugin, metav1.CreateOptions{})
+	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, ingress.Name, metav1.GetOptions{})
@@ -125,20 +128,19 @@ func TestMinimalPlugin(t *testing.T) {
 		return resp.StatusCode == http.StatusTeapot
 	}, ingressWait, waitTick)
 
-	// TODO as of yet, this does not work. The controller does not detect the plugin and cannot apply it.
-	// t.Logf("updating Ingress %s to use cluster plugin %s", ingress.Name, kongclusterplugin.Name)
-	// ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
-	// ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
-	// assert.NoError(t, err)
-	// assert.Eventually(t, func() bool {
-	// 	resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
-	// 	if err != nil {
-	// 		t.Logf("WARNING: error while waiting for %s: %v", p.ProxyURL.String(), err)
-	// 		return false
-	// 	}
-	// 	defer resp.Body.Close()
-	// 	return resp.StatusCode == http.StatusUnavailableForLegalReasons
-	// }, ingressWait, waitTick)
+	t.Logf("updating Ingress %s to use cluster plugin %s", ingress.Name, kongclusterplugin.Name)
+	ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
+	ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
+	assert.NoError(t, err)
+	assert.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", p.ProxyURL.String(), err)
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusUnavailableForLegalReasons
+	}, ingressWait, waitTick)
 
 	t.Logf("deleting Ingress %s and waiting for routes to be torn down", ingress.Name)
 	assert.NoError(t, cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Delete(ctx, ingress.Name, metav1.DeleteOptions{}))

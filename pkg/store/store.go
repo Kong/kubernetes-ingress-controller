@@ -128,7 +128,7 @@ type CacheStores struct {
 
 // NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores
 func NewCacheStores() (c CacheStores) {
-	c.ClusterPlugin = cache.NewStore(keyFunc)
+	c.ClusterPlugin = cache.NewStore(clusterResourceKeyFunc)
 	c.Consumer = cache.NewStore(keyFunc)
 	c.Endpoint = cache.NewStore(keyFunc)
 	c.IngressV1 = cache.NewStore(keyFunc)

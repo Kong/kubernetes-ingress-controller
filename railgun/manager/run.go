@@ -116,9 +116,6 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	fmt.Printf("\nc.IngressClassName %s", c.IngressClassName)
-	fmt.Printf("\nkongConfig %v", kongConfig)
-
 	// start the proxy cache server
 	prx, err := proxy.NewCacheBasedProxyWithStagger(ctx,
 		// NOTE: logr-based loggers use the "logger" field instead of "subsystem". When replacing logrus with logr, replace

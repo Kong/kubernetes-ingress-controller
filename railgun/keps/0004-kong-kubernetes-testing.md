@@ -2,6 +2,10 @@
 status: implementable
 ---
 
+**NOTE**: this will be considered `implemented` once [Milestone 1][m1] is completed.
+
+[m1]:https://github.com/Kong/kubernetes-testing-framework/milestone/1
+
 # Kong Kubernetes Testing Framework (KTF)
 
 <!-- toc -->
@@ -49,6 +53,12 @@ Historically the [Kong Kubernetes Ingress Controller (KIC)][kic] used bash scrip
 
 ### Goals
 
+- provide _provisioning functionality_ for testing clusters (e.g. `kind`, `minikube`, `GKE`, e.t.c.)
+- provide _deployment functionality_ for Kubernetes components to create complete testing environments (e.g. `helm`, `metallb`, e.t.c.)
+- provide _deployment functionality_ for Kong components (e.g. deploying Proxy only, deploying Proxy with KIC, version matrix, e.t.c.)
+- provide _generators_ to quickly generate default objects commonly used in testing (e.g. `Service`, `Deployment`, e.t.c.)
+- provide _mocking functionality_ for the Kong Admin API
+
 ### Non-Goals
 
 Due to incongruencies with one of our most prominent upstream tools ([Kind][kind]) we're going to need to skip on creating complete container images for testing environments in favor of writing setup logic aftermarket for existing default images. While being able to move runtime problems to build time would be helpful, we'll potentially need to look at migrating to new tools in some future iteration to follow up.
@@ -95,8 +105,7 @@ Integration tests written in the testing framework will also serve the purpose o
 
 - [X] Testing Framework Prototype
 - [X] Testing Framework plugged into KIC
-- [ ] KTF `v0.1.0` milestone completed
-- [ ] KTF `v0.1.0` released
+- [ ] KTF `v0.1.0` milestone completed & `v0.1.0` released
 
 ## Implementation History
 
@@ -106,6 +115,7 @@ Integration tests written in the testing framework will also serve the purpose o
 - A minimum test [was added to KIC][kic-pr1102] using the new KTF functionality, `v0.0.1` tagged.
 - The runbook concept was removed in favor of factory-style cluster provisioning
 - We remove the experimental image builder in favor of adding deployment tooling to the test framework, `v0.0.2` tagged.
+- Admin API mocking was added in `pkg/kong/fake_admin_api.go` and is now in use by KIC integration tests
 
 [kep1]:/keps/0001-single-kic-multi-gateway.md
 [ktf]:https://github.com/kong/kubernetes-testing-framework

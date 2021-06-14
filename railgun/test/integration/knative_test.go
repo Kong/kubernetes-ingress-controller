@@ -27,7 +27,6 @@ import (
 const (
 	knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
-	kongyaml    = "https://bit.ly/k4k8s"
 )
 
 func isKnativeReady(ctx context.Context, cluster kind.Cluster) bool {
@@ -78,10 +77,6 @@ func TestKnativeIngress(t *testing.T) {
 	knativeReady := isKnativeReady(ctx, cluster)
 	assert.Equal(t, knativeReady, true)
 
-	// t.Log("Deploying kong ingress.")
-	// err = deployManifest(kongyaml, ctx)
-	// assert.NoError(t, err)
-
 	t.Log("Note down the ip address or public CNAME of kong-proxy service.")
 	proxy, err := retrieveProxyInfo(ctx)
 	if err != nil {
@@ -97,12 +92,6 @@ func TestKnativeIngress(t *testing.T) {
 	t.Log("Install knative service")
 	err = installKnativeSrv(ctx)
 	assert.NoError(t, err)
-
-	t.Log("Check knative service readiness.")
-	err = ensureKnativeSrv(ctx)
-	if err != nil {
-		t.Fatalf("Knative Service is not ready.")
-	}
 
 	t.Log("Test knative service using kong.")
 	srvaccessable := accessKnativeSrv(ctx, proxy)
@@ -276,28 +265,20 @@ func accessKnativeSrv(ctx context.Context, proxy string) bool {
 	req.Header.Set("Host", "helloworld-go.default."+proxy)
 	req.Host = "helloworld-go.default." + proxy
 
-	resp, err := client.Do(req)
-	fmt.Println("resp {", resp, "}")
-	if err != nil {
-		fmt.Println("WARNING: error ", err)
-		return false
+	cnt := 1
+	for cnt < 120 {
+		resp, err := client.Do(req)
+		fmt.Println("resp {", resp, "}")
+		if err != nil {
+			fmt.Println("WARNING: error ", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if resp.StatusCode == http.StatusOK {
+			return true
+		}
+		fmt.Println("knative service query ", resp)
+		time.Sleep(1 * time.Second)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		return true
-	}
-	fmt.Println("knative service query ", resp)
 	return false
-}
-
-func listNameSpaces() {
-	pods, err := cluster.Client().CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
-
-	for pod := range pods.Items{
-		fmt.Println(" ", pod.Spec.)
-	}
 }

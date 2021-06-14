@@ -141,7 +141,29 @@ This re-architecture is focused on moving the existing APIs, controllers, and li
 
 These among other gains will bring us closer to how upstream works and will reduce the amount of maintenance we have to perform to keep up to date and add features.
 
-On top of transplanting our APIs and adding a new Go API, we also want to transplant the existing monolithic controller onto `controller-runtime` and align ourselves with other controller implementations throughout the community.
+On top of transplanting our APIs and adding a new Go API, we also want to transplant the existing monolithic controller onto `controller-runtime`, re-architect our controller code to fit better into a microservices pattern for better maintainability and scalability prospects, and ultimately align ourselves with other controller implementations throughout the community.
+
+### Proxy Caching
+
+In the previous `v1.x` versions of the KIC `client-go` caching was used as the interim spot for Kubernetes object updates in between parsing, translating and POSTing updates to the Kong Admin API. The functionality which supported this had some limitations in configurability, functionality, profiling, K8s status updates, and logging.
+
+Additionally from the caller perspective of the code responsible for this cache, there were several leaking abstractions wherein the caller had to have some awareness of the Kong DSL and use the library at several conversion points between K8s and Kong DSL before submitting the Kong DSL updates to the Kong Admin API.
+
+For `v2.x+` we've created a new implementation of the Proxy Cache under `railgun/internal/proxy` which runs as a discreet server (goroutine) alongside the manager routine and can be used by independent controllers to asynchronously cache updates to Kubernetes objects and do the parsing, translating and updates to the Kong Admin API as part of a single opaque service. this new architecture enables improved operations: the proxy cache server will log itself as an independent component of the KIC, and will have extensive logging particularly when problems from the Kong Admin API arise. This new architecture additionally makes a paradigm shift to start supporting status updates (from the cache server) on Kubernetes objects as reconcilation triggers where we had limited statuses or events available prior.
+
+### Architecture Overview
+
+The previous `v1.x` architecture was monolithic in nature, and the entire stack was run as a single runtime and unit:
+
+TODO: image
+
+For this iteration isn't not feasible to completely rebuild everything as a small and modular service, but we are focused on at least making our upfront Kubernetes controllers modular (and each type has an independent reconciler). The reasons for feasibility mostly have to do with time and scope, and timing with upcoming features from upstream Kong (e.g. RESTful API calls for DBLESS mode was not available at the time of writing).
+
+We intend to re-architect by adding further specificity to some problem domains such that we can separate those concerns into their own libraries or servers, with abstract interfaces and types used as the API between these "microservices":
+
+TODO: image
+
+**NOTE**: ideally in the future a lot of the backend code including the proxy cache and the parser libraries will cease to exist and/or be simplified such that each controller can send Kong updates for itself individually, however this will be done best when the REST API becomes ubiquitous.
 
 [kb]:https://github.com/kubernetes-sigs/kubebuilder
 [cr]:https://github.com/kubernetes-sigs/controller-runtime
@@ -168,7 +190,10 @@ Prior to these efforts only minimal testing for the controller and the API funct
 - [Established KIC 2.0 Preview release criteria][ms15]
 - KTF fully separated into it's [own repo][ktf]
 - integration tests [added][legacy-tests] to test `v1.x` and railgun controllers on every PR from now until release
-- First alpha release objectives defined in milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/15
+- first alpha release objectives defined in milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/15
+- research and an experimental revision of the proxy cache functionality undergone: https://github.com/Kong/kubernetes-ingress-controller/pull/1274
+- first alpha version was released: https://github.com/Kong/kubernetes-ingress-controller/releases/tag/2.0.0-alpha.1
+- `v1beta1.UDPIngress` published: https://github.com/Kong/kubernetes-ingress-controller/pull/1400
 
 [cr]:https://github.com/kubernetes-sigs/controller-runtime
 [kb]:https://github.com/kubernetes-sigs/kubebuilder

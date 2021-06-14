@@ -14,7 +14,7 @@ spec:
     listKind: KongClusterPluginList
     plural: kongclusterplugins
     singular: kongclusterplugin
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:

@@ -88,6 +88,8 @@ func TestKnativeIngress(t *testing.T) {
 	assert.NoError(t, err)
 	err = configKnativeDomain(ctx, proxy, cluster)
 	assert.NoError(t, err)
+	// cover webhook sync windows
+	time.Sleep(6 * time.Second)
 
 	t.Log("Install knative service")
 	err = installKnativeSrv(ctx)
@@ -102,7 +104,6 @@ func TestKnativeIngress(t *testing.T) {
 	t.Log("clean up test deployments.")
 	deleteManifest(knativeCrds, ctx)
 	deleteManifest(knativeCore, ctx)
-	deleteManifest(kongyaml, ctx)
 	deleteManifest("helloworldgo.yaml", ctx)
 	time.Sleep(5 * time.Second)
 }

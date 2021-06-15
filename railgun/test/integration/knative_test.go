@@ -89,7 +89,7 @@ func TestKnativeIngress(t *testing.T) {
 	err = configKnativeDomain(ctx, proxy, cluster)
 	assert.NoError(t, err)
 	// cover webhook sync windows
-	time.Sleep(6 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	t.Log("Install knative service")
 	err = installKnativeSrv(ctx)
@@ -267,7 +267,7 @@ func accessKnativeSrv(ctx context.Context, proxy string) bool {
 	req.Host = "helloworld-go.default." + proxy
 
 	cnt := 1
-	for cnt < 120 {
+	for cnt < 240 {
 		resp, err := client.Do(req)
 		fmt.Println("resp {", resp, "}")
 		if err != nil {
@@ -276,6 +276,7 @@ func accessKnativeSrv(ctx context.Context, proxy string) bool {
 			continue
 		}
 		if resp.StatusCode == http.StatusOK {
+			fmt.Println("service is successfully accessed through kong.")
 			return true
 		}
 		fmt.Println("knative service query ", resp)

@@ -67,6 +67,7 @@ func isKnativeReady(ctx context.Context, cluster kind.Cluster) bool {
 }
 
 func TestKnativeIngress(t *testing.T) {
+	t.Skip("please use the steps run the test separately. ")
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
@@ -279,7 +280,6 @@ func accessKnativeSrv(ctx context.Context, proxy string) bool {
 			fmt.Println("service is successfully accessed through kong.")
 			return true
 		}
-		fmt.Println("knative service query ", resp)
 		time.Sleep(1 * time.Second)
 	}
 	return false

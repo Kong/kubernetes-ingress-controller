@@ -559,7 +559,6 @@ func (s *statusSync) runUpdateTCPIngress(ctx context.Context,
 			return nil, nil
 		}
 
-		fmt.Println("runUpdateTCPIngress heheheh")
 		logger := s.Logger.WithFields(logrus.Fields{
 			"ingress_namespace": ing.Namespace,
 			"ingress_name":      ing.Name,

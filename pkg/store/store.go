@@ -436,9 +436,7 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 		s.stores.KnativeIngress,
 		labels.NewSelector(),
 		func(ob interface{}) {
-			fmt.Printf("\nwithin ListKnativeIngresses cache.ListAll")
 			ing, ok := ob.(*knative.Ingress)
-			fmt.Printf("\nwithin ListKnativeIngresses checking ing %v", ing)
 			// this is implemented directly in store as s.isValidIngressClass only checks the value of the
 			// kubernetes.io/ingress.class annotation (annotations.ingressClassKey), not
 			// networking.knative.dev/ingress.class (knativeIngressClassKey)

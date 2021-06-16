@@ -137,5 +137,3 @@ meeting invite and Zoom links to join the meeting.
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/
 [guides]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/overview/
-
-### migrate knative ingress supoort from v1.3.x to v2.0. 1

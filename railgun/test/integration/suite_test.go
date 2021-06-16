@@ -51,7 +51,7 @@ const (
 	httpBinImage = "kennethreitz/httpbin"
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
-	ingressClass = "kongtests"
+	ingressClass = "kong"
 
 	// elsewhere is the name of an alternative namespace
 	elsewhere = "elsewhere"

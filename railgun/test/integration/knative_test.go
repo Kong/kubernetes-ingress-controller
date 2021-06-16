@@ -29,45 +29,35 @@ const (
 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
 )
 
-func isKnativeReady(ctx context.Context, cluster kind.Cluster) bool {
-	timeout := 1
-	for timeout < 60 {
+func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) bool {
+	return assert.Eventually(t, func() bool {
 		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
 		if err != nil {
-			fmt.Println("failed retrieving knative pods.", err)
-			time.Sleep(1 * time.Second)
-			continue
+			t.Logf("failed retrieving knative pods. %v", err)
+			return false
 		}
 
-		ready := true
 		if len(podList.Items) != 4 {
 			fmt.Println("expected 4 pods, found ", len(podList.Items))
-			time.Sleep(1 * time.Second)
-			continue
+			return false
 		}
 
 		for _, pod := range podList.Items {
 			if pod.Status.Phase != v1.PodRunning {
-				ready = false
+				return false
 			}
 		}
-		if ready == true {
-			fmt.Println("All knative pods are up and ready.")
-			fmt.Println("Covering a window that webhook has been configured itself but not ready to receive traffic yet.")
-			time.Sleep(3 * time.Second)
-			return true
-		}
-		if ready == false {
-			time.Sleep(1 * time.Second)
-		}
-	}
 
-	fmt.Println("Failed to bring up knative resources within 60 seconds.")
-	return false
+		fmt.Println("All knative pods are up and ready.")
+		fmt.Println("Covering a window that webhook has been configured itself but not ready to receive traffic yet.")
+		time.Sleep(3 * time.Second)
+		return true
+
+	}, 60*time.Second, 1*time.Second, true)
 }
 
 func TestKnativeIngress(t *testing.T) {
-	t.Skip("please use the steps run the test separately. ")
+	_ = proxyReady()
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
@@ -75,7 +65,7 @@ func TestKnativeIngress(t *testing.T) {
 	assert.NoError(t, err)
 	err = deployManifest(knativeCore, ctx)
 	assert.NoError(t, err)
-	knativeReady := isKnativeReady(ctx, cluster)
+	knativeReady := isKnativeReady(ctx, cluster, t)
 	assert.Equal(t, knativeReady, true)
 
 	t.Log("Note down the ip address or public CNAME of kong-proxy service.")
@@ -97,7 +87,7 @@ func TestKnativeIngress(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Log("Test knative service using kong.")
-	srvaccessable := accessKnativeSrv(ctx, proxy)
+	srvaccessable := accessKnativeSrv(ctx, proxy, t)
 	if srvaccessable == false {
 		t.Fatalf("failed to access knative service.")
 	}
@@ -169,6 +159,7 @@ func retrieveProxyInfo(ctx context.Context) (string, error) {
 			continue
 		}
 	}
+
 	return "", nil
 }
 
@@ -248,7 +239,7 @@ func ensureKnativeSrv(ctx context.Context) error {
 	return fmt.Errorf("knative service failed to be up.")
 }
 
-func accessKnativeSrv(ctx context.Context, proxy string) bool {
+func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 	url := "http://" + proxy
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -267,20 +258,17 @@ func accessKnativeSrv(ctx context.Context, proxy string) bool {
 	req.Header.Set("Host", "helloworld-go.default."+proxy)
 	req.Host = "helloworld-go.default." + proxy
 
-	cnt := 1
-	for cnt < 240 {
+	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)
-		fmt.Println("resp {", resp, "}")
+		fmt.Println("resp {", resp.StatusCode, "}")
 		if err != nil {
-			fmt.Println("WARNING: error ", err)
-			time.Sleep(1 * time.Second)
-			continue
+			return false
 		}
 		if resp.StatusCode == http.StatusOK {
 			fmt.Println("service is successfully accessed through kong.")
 			return true
 		}
-		time.Sleep(1 * time.Second)
-	}
-	return false
+		return false
+
+	}, 120*time.Second, 1*time.Second)
 }

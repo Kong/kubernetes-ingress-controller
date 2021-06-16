@@ -20,8 +20,11 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
+	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
 )
 
 const (
@@ -92,19 +95,6 @@ func TestKnativeIngress(t *testing.T) {
 	}
 }
 
-func deleteManifest(yml string, ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "kubectl", "delete", "-f", yml)
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stdout, stdout.String())
-		return err
-	}
-	fmt.Println("successfully delete manifest " + yml)
-	return nil
-}
-
 func deployManifest(yml string, ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
@@ -168,15 +158,37 @@ func configKnativeNetwork(ctx context.Context, cluster kind.Cluster) error {
 }
 
 func installKnativeSrv(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx,
-		"kubectl", "apply", "-f", "helloworldgo.yaml")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stdout, stdout.String())
-		fmt.Fprintln(os.Stderr, stderr.String())
-		return err
+	tobeDeployedService := &knservingv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helloworld-go",
+			Namespace: "default",
+		},
+		Spec: knservingv1.ServiceSpec{
+			ConfigurationSpec: knservingv1.ConfigurationSpec{
+				Template: knservingv1.RevisionTemplateSpec{
+					Spec: knservingv1.RevisionSpec{
+						PodSpec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Image: "gcr.io/knative-samples/helloworld-go",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "TARGET",
+											Value: "Go Sample v1",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	knativeCli, err := knativeversioned.NewForConfig(cluster.Config())
+	_, err = knativeCli.ServingV1().Services("default").Create(ctx, tobeDeployedService, metav1.CreateOptions{})
+	if err != nil {
+		fmt.Errorf("failed to create knative service.")
 	}
 	fmt.Println("successfully installed knative service.")
 	return nil

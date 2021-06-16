@@ -32,7 +32,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.8.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.36.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1
 	gopkg.in/ini.v1 v1.62.0 // indirect
@@ -41,8 +40,9 @@ require (
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.21.1
 	k8s.io/klog v1.0.0
-	knative.dev/networking v0.0.0-20210216014426-94bfc013982b
-	knative.dev/pkg v0.0.0-20210216013737-584933f8280b
+	knative.dev/networking v0.0.0-20210512050647-ace2d3306f0b
+	knative.dev/pkg v0.0.0-20210510175900-4564797bf3b7
+	knative.dev/serving v0.23.1
 	sigs.k8s.io/controller-runtime v0.9.0
 	sigs.k8s.io/yaml v1.2.0
 )

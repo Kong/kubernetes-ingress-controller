@@ -4,11 +4,13 @@ package manager
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -36,9 +38,18 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *config.Config) error {
-	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
-	if err != nil {
-		return fmt.Errorf("failed to make logger: %w", err)
+	var deprecatedLogger logrus.FieldLogger
+	var err error
+
+	if v := os.Getenv("KONG_TEST_ENVIRONMENT"); v != "" {
+		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(os.Stdout, &logrus.TextFormatter{}, 3, time.Second*30)
+		deprecatedLogger.Info("detected that the controller is running in an automated testing environment: " +
+			"log stifling has been enabled")
+	} else {
+		deprecatedLogger, err = util.MakeLogger(c.LogLevel, c.LogFormat)
+		if err != nil {
+			return fmt.Errorf("failed to make logger: %w", err)
+		}
 	}
 	var logger logr.Logger = logrusr.NewLogger(deprecatedLogger)
 

@@ -30,7 +30,6 @@ func TestOverrideUpstream(t *testing.T) {
 					Name: kong.String("foo.com"),
 				},
 			},
-			annotations: nil,
 		},
 		{
 			inUpstream: Upstream{

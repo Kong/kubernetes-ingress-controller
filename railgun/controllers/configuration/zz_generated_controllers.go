@@ -825,7 +825,7 @@ type Knativev1alpha1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
 	return ctrl.NewControllerManagedBy(mgr).For(&knativev1alpha1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
@@ -854,7 +854,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+	if !ctrlutils.MatchesIngressClassName(obj, "kong") {
 		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err

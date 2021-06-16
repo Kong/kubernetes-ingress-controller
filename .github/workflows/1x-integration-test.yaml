@@ -27,7 +27,7 @@ jobs:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go
+          ${{ runner.os }}-build-codegen-
     - name: checkout repository
       uses: actions/checkout@v2
     - name: run railgun integration tests on legacy KIC
@@ -47,7 +47,7 @@ jobs:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go
+          ${{ runner.os }}-build-codegen-
 
     - name: 'Check out the repo'
       uses: actions/checkout@v2

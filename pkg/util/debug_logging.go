@@ -2,6 +2,7 @@ package util
 
 import (
 	"io"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -43,11 +44,14 @@ func MakeDebugLoggerWithReducedRedudancy(writer io.Writer, formatter logrus.Form
 	// setup the logger with debug level logging
 	log := logrus.New()
 	log.Level = logrus.DebugLevel
-	log.Formatter = formatter
+
+	// setup the nilFormatter to allow stifling log entries
+	nilFormatter := newNilFormatter(formatter)
+	log.Formatter = nilFormatter
 	log.Out = writer
 
 	// set up the reduced redudancy logging hook
-	log.Hooks.Add(newReducedRedundancyLogHook(redundantLogEntryBackoff, redudantLogEntryAllowedConsecutively, formatter))
+	log.Hooks.Add(newReducedRedundancyLogHook(redundantLogEntryBackoff, redudantLogEntryAllowedConsecutively, nilFormatter))
 	return log
 }
 
@@ -60,39 +64,43 @@ type reducedRedudancyLogHook struct {
 	backoff            time.Duration
 	consecutiveAllowed int
 	consecutivePosted  int
-	formatter          logrus.Formatter
 	lastMessage        string
+	nilFormatter       *nilFormatter
 	timeWindow         map[string]bool
 	timeWindowStart    time.Time
+	lock               *sync.RWMutex
 }
 
 func newReducedRedundancyLogHook(
 	backoff time.Duration,
 	consecutive int,
-	formatter logrus.Formatter,
+	nilFormatter *nilFormatter,
 ) *reducedRedudancyLogHook {
 	return &reducedRedudancyLogHook{
 		backoff:            backoff,
 		consecutiveAllowed: consecutive,
-		formatter:          formatter,
+		nilFormatter:       nilFormatter,
 		timeWindowStart:    time.Now(),
 		timeWindow:         map[string]bool{},
+		lock:               &sync.RWMutex{},
 	}
 }
 
 func (r *reducedRedudancyLogHook) Fire(entry *logrus.Entry) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	defer func() { r.lastMessage = entry.Message }()
 
 	// to make this hook work we override the logger formatter to the nilFormatter
 	// for some entries, but we also need to reset it here to ensure the default.
-	entry.Logger.Formatter = r.formatter
+	r.nilFormatter.off()
 
 	// if the current entry has the exact same message as the last entry, check the
 	// consecutive posting rules for this entry to see whether it should be dropped.
 	if r.consecutiveAllowed > 0 && entry.Message == r.lastMessage {
 		r.consecutivePosted++
 		if r.consecutivePosted >= r.consecutiveAllowed {
-			entry.Logger.SetFormatter(&nilFormatter{})
+			r.nilFormatter.on()
 			return nil
 		}
 	} else {
@@ -112,7 +120,7 @@ func (r *reducedRedudancyLogHook) Fire(entry *logrus.Entry) error {
 	// if the entry has not yet been seen during this time window, we record it so that
 	// future checks can find it.
 	if _, ok := r.timeWindow[entry.Message]; ok {
-		entry.Logger.SetFormatter(&nilFormatter{})
+		r.nilFormatter.on()
 	}
 	r.timeWindow[entry.Message] = true
 
@@ -127,8 +135,40 @@ func (r *reducedRedudancyLogHook) Levels() []logrus.Level {
 // Private - Nil Logging Formatter
 // -----------------------------------------------------------------------------
 
-type nilFormatter struct{}
+// nilFormatter is a logrus.Formatter that allowed "flipping a switch" that will
+// cause the logger to stop emitting output.
+type nilFormatter struct {
+	embeddedFormatter logrus.Formatter
+	drop              bool
+	lock              *sync.RWMutex
+}
+
+func newNilFormatter(embeddedFormatter logrus.Formatter) *nilFormatter {
+	return &nilFormatter{
+		embeddedFormatter: embeddedFormatter,
+		lock:              &sync.RWMutex{},
+	}
+}
 
 func (n *nilFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	return nil, nil
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
+	if n.drop {
+		return nil, nil
+	}
+
+	return n.embeddedFormatter.Format(entry)
+}
+
+func (n *nilFormatter) on() {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	n.drop = true
+}
+
+func (n *nilFormatter) off() {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	n.drop = false
 }

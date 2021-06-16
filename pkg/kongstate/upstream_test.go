@@ -14,31 +14,31 @@ func TestOverrideUpstream(t *testing.T) {
 
 	testTable := []struct {
 		inUpstream     Upstream
-		inKongIngresss configurationv1.KongIngress
+		inKongIngresss *configurationv1.KongIngress
 		outUpstream    Upstream
+		annotations    map[string]string
 	}{
 		{
-			Upstream{
+			inUpstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Upstream: &kong.Upstream{},
-			},
-			Upstream{
+			inKongIngresss: nil,
+			outUpstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo.com"),
 				},
 			},
+			annotations: nil,
 		},
 		{
-			Upstream{
+			inUpstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo.com"),
 				},
 			},
-			configurationv1.KongIngress{
+			inKongIngresss: &configurationv1.KongIngress{
 				Upstream: &kong.Upstream{
 					Name:               kong.String("wrong.com"),
 					HashOn:             kong.String("HashOn"),
@@ -50,7 +50,7 @@ func TestOverrideUpstream(t *testing.T) {
 					Slots:              kong.Int(42),
 				},
 			},
-			Upstream{
+			outUpstream: Upstream{
 				Upstream: kong.Upstream{
 					Name:               kong.String("foo.com"),
 					HashOn:             kong.String("HashOn"),
@@ -59,14 +59,18 @@ func TestOverrideUpstream(t *testing.T) {
 					HashOnHeader:       kong.String("HashOnHeader"),
 					HashFallback:       kong.String("HashFallback"),
 					HashFallbackHeader: kong.String("HashFallbackHeader"),
+					HostHeader:         kong.String("foo.com"),
 					Slots:              kong.Int(42),
 				},
+			},
+			annotations: map[string]string{
+				"konghq.com/host-header": "foo.com",
 			},
 		},
 	}
 
 	for _, testcase := range testTable {
-		testcase.inUpstream.override(&testcase.inKongIngresss, make(map[string]string))
+		testcase.inUpstream.override(testcase.inKongIngresss, testcase.annotations)
 		assert.Equal(testcase.inUpstream, testcase.outUpstream)
 	}
 

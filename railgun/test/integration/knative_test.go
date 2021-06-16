@@ -69,7 +69,8 @@ func TestKnativeIngress(t *testing.T) {
 	assert.Equal(t, knativeReady, true)
 
 	t.Log("Note down the ip address or public CNAME of kong-proxy service.")
-	proxy, err := retrieveProxyInfo(ctx)
+	proxy := retrieveProxyInfo(ctx, t)
+	assert.NotEmpty(t, proxy)
 	if err != nil {
 		t.Fatalf("kong-proxy service ip/public name is not ready.")
 	}
@@ -79,8 +80,6 @@ func TestKnativeIngress(t *testing.T) {
 	assert.NoError(t, err)
 	err = configKnativeDomain(ctx, proxy, cluster)
 	assert.NoError(t, err)
-	// cover webhook sync windows
-	time.Sleep(3 * time.Second)
 
 	t.Log("Install knative service")
 	err = installKnativeSrv(ctx)
@@ -91,12 +90,6 @@ func TestKnativeIngress(t *testing.T) {
 	if srvaccessable == false {
 		t.Fatalf("failed to access knative service.")
 	}
-
-	t.Log("clean up test deployments.")
-	deleteManifest(knativeCrds, ctx)
-	deleteManifest(knativeCore, ctx)
-	deleteManifest("helloworldgo.yaml", ctx)
-	time.Sleep(5 * time.Second)
 }
 
 func deleteManifest(yml string, ctx context.Context) error {
@@ -135,9 +128,9 @@ func checkIPAddress(ip string) bool {
 	}
 }
 
-func retrieveProxyInfo(ctx context.Context) (string, error) {
-	cnt := 1
-	for cnt < 60 {
+func retrieveProxyInfo(ctx context.Context, t assert.TestingT) string {
+	var proxy string
+	assert.Eventually(t, func() bool {
 		cmd := exec.CommandContext(ctx, "kubectl", "get", "service", "ingress-controller-kong-proxy", "--namespace", "kong-system")
 		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 		cmd.Stdout = stdout
@@ -145,22 +138,21 @@ func retrieveProxyInfo(ctx context.Context) (string, error) {
 		if err := cmd.Run(); err != nil {
 			fmt.Fprintln(os.Stdout, stdout.String())
 			fmt.Fprintln(os.Stderr, stderr.String())
-			return "", err
+			return false
 		}
 
 		if len(stdout.String()) > 0 {
 			info := strings.Split(stdout.String(), "\n")
-			proxy := strings.Fields(info[1])[3]
+			proxy = strings.Fields(info[1])[3]
 			fmt.Println("kong-proxy " + proxy)
 			if checkIPAddress(proxy) == true {
-				return proxy, nil
+				return true
 			}
-			time.Sleep(1 * time.Second)
-			continue
 		}
-	}
+		return false
+	}, 60*time.Second, 1*time.Second, true)
 
-	return "", nil
+	return proxy
 }
 
 func configKnativeNetwork(ctx context.Context, cluster kind.Cluster) error {
@@ -214,29 +206,6 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster
 	}
 	fmt.Println("successfully update knative config domain.")
 	return nil
-}
-
-func ensureKnativeSrv(ctx context.Context) error {
-	cnt := 1
-	for cnt < 120 {
-		cmd := exec.CommandContext(ctx, "kubectl", "get", "ksvc")
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			return err
-		}
-		if len(stdout.String()) > 0 {
-			if strings.Contains(stdout.String(), "True") {
-				fmt.Println("knative service has been up.")
-				return nil
-			}
-		}
-		time.Sleep(1 * time.Second)
-		cnt += 1
-	}
-	return fmt.Errorf("knative service failed to be up.")
 }
 
 func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {

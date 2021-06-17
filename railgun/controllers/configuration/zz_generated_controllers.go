@@ -70,7 +70,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// get the relevant object
 	obj := new(corev1.Service)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -133,7 +133,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// get the relevant object
 	obj := new(corev1.Endpoints)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -199,7 +199,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// get the relevant object
 	obj := new(netv1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -274,7 +274,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(netv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -349,7 +349,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(extv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -421,7 +421,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(kongv1.KongIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -484,7 +484,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// get the relevant object
 	obj := new(kongv1.KongPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -550,7 +550,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	// get the relevant object
 	obj := new(kongv1.KongClusterPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -625,7 +625,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// get the relevant object
 	obj := new(kongv1.KongConsumer)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -700,7 +700,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// get the relevant object
 	obj := new(kongv1beta1.TCPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -775,7 +775,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// get the relevant object
 	obj := new(kongv1beta1.UDPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Info("object was queued for reconcilation but no longer exists, ignoring", "namespace", req.Namespace, "name", req.Name)
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)

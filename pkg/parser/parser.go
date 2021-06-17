@@ -330,7 +330,10 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 	// check all protocols for associated endpoints
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		endpoints = append(endpoints, getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService)...)
+		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService)
+		if len(newEndpoints) > 0 {
+			endpoints = append(endpoints, newEndpoints...)
+		}
 	}
 	if len(endpoints) == 0 {
 		log.Warningf("no active endpoints")

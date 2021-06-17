@@ -33,13 +33,13 @@
 ## [2.0.0-alpha.2] - 2021/06
 
 #### Added
+
 - knative API - Full Feature Parity
  [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
+- `v1beta1.UDPIngress` API support added. Only supported on KIC `v2.0.0+` releases.
+- Integration tests for UDP/TCP ingress port collisions.
 
 ## [2.0.0-alpha.1] - 2021/05/27
-
-**NOTE**: This is a draft of release notes for the next major version to be
-released and the release notes may change significantly before then.
 
 #### Added
 

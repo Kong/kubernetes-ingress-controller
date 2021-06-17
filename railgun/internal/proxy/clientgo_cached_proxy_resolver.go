@@ -218,6 +218,7 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
+				break
 			}
 			p.lastConfigSHA = updateConfigSHA
 		case <-p.ctx.Done():

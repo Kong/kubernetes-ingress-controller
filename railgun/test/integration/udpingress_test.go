@@ -23,23 +23,30 @@ import (
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 )
 
-func TestMinimalUDPIngress(t *testing.T) {
+func TestUDPIngress(t *testing.T) {
 	// TODO: once KIC 2.0 lands and pre v2 is gone, we can remove this check
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
 	}
-	if dbmode != "" && dbmode != "off" {
-		t.Skip("v1beta1.UDPIngress is only supported on DBLESS backend proxies at this time")
-	}
+	p := proxyReady()
 
 	testName := "minudp"
-	namespace := corev1.NamespaceDefault
+	namespace := "udpingress"
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()
 
+	t.Logf("creating namespace %s for testing", namespace)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	ns, err := cluster.Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+
+	defer func() {
+		t.Logf("cleaning up namespace %s", namespace)
+		assert.NoError(t, cluster.Client().CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{}))
+	}()
+
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
-	_, err := cluster.Client().CoreV1().ConfigMaps(namespace).Create(ctx, cfgmap, metav1.CreateOptions{})
+	cfgmap, err = cluster.Client().CoreV1().ConfigMaps(namespace).Create(ctx, cfgmap, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
@@ -114,7 +121,6 @@ func TestMinimalUDPIngress(t *testing.T) {
 	}()
 
 	t.Log("configurating a net.Resolver to resolve DNS via the proxy")
-	p := proxyReady()
 	resolver := &net.Resolver{
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -129,7 +135,6 @@ func TestMinimalUDPIngress(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		if err != nil {
-			t.Logf("WARNING: failure to lookup kernel.org: %v", err)
 			return false
 		}
 		return true

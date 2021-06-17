@@ -162,7 +162,7 @@ test.integration: test.integration.dbless test.integration.postgres
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/setup-integration-tests.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/ -timeout 30m
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 30m -race -v ./test/integration/
 
 # Our integration tests using the postgres backend, with verbose output
 # TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
@@ -170,10 +170,10 @@ test.integration.dbless:
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/setup-integration-tests.sh
-	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v ./test/integration/
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 30m -v ./test/integration/
 
 # Our integration tests using the legacy v1 controller manager
 .PHONY: test.integration.legacy
 test.integration.legacy:
 	@./scripts/setup-integration-tests.sh
-	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -timeout 30m -race -v ./test/integration/

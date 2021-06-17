@@ -37,11 +37,23 @@ func TestPortCollisions(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
 	}
+	p := proxyReady()
 
 	testName := "collisionchk"
-	namespace := corev1.NamespaceDefault
+	namespace := testName
+	collisionPort := 80
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()
+
+	t.Logf("creating testing namespace %s", namespace)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	ns, err := cluster.Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up namespace %s", namespace)
+		assert.NoError(t, cluster.Client().CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{}))
+	}()
 
 	// -------------------------------------------------------------------------
 	// TCP & UDP Deployment
@@ -49,7 +61,7 @@ func TestPortCollisions(t *testing.T) {
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: testName}, Data: map[string]string{"Corefile": corefile}}
-	cfgmap, err := cluster.Client().CoreV1().ConfigMaps(namespace).Create(ctx, cfgmap, metav1.CreateOptions{})
+	cfgmap, err = cluster.Client().CoreV1().ConfigMaps(namespace).Create(ctx, cfgmap, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
@@ -58,7 +70,7 @@ func TestPortCollisions(t *testing.T) {
 	}()
 
 	t.Log("configuring TCP service container")
-	tcpContainer := k8sgen.NewContainer(fmt.Sprintf("%s-tcp", testName), httpBinImage, 80)
+	tcpContainer := k8sgen.NewContainer(fmt.Sprintf("%s-tcp", testName), httpBinImage, int32(collisionPort))
 
 	t.Log("configuring UDP service container")
 	udpContainer := k8sgen.NewContainer(fmt.Sprintf("%s-udp", testName), "coredns/coredns", 53)
@@ -126,14 +138,14 @@ func TestPortCollisions(t *testing.T) {
 				{
 					Name:     fmt.Sprintf("%s-tcp", testName),
 					Protocol: corev1.ProtocolTCP,
-					Port:     80,
+					Port:     int32(collisionPort),
 				},
 				{
 					Name:     fmt.Sprintf("%s-udp", testName),
 					Protocol: corev1.ProtocolUDP,
 					// intentionally using the same port (different proto) from the TCP listener
 					// to validate that this doesn't result in kong resource collisions.
-					Port:       80,
+					Port:       int32(collisionPort),
 					TargetPort: intstr.FromInt(53),
 				},
 			},
@@ -168,7 +180,7 @@ func TestPortCollisions(t *testing.T) {
 					Port: 8888,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: service.Name,
-						ServicePort: 80,
+						ServicePort: collisionPort,
 					},
 				},
 			},
@@ -202,7 +214,7 @@ func TestPortCollisions(t *testing.T) {
 					// again, the odd port number here is due to us intentionally validating that things
 					// work even when the port number between two different pods in a service are the same
 					// with a separate protocol between them.
-					ServicePort: 80,
+					ServicePort: collisionPort,
 				},
 			},
 		}},
@@ -243,7 +255,6 @@ func TestPortCollisions(t *testing.T) {
 	*/
 
 	t.Logf("pulling the kong admin apis /services endpoint data to validate the generated services")
-	p := proxyReady()
 	var servicesResponse *http.Response
 	var kongServices kongServiceList
 	assert.Eventually(t, func() bool {
@@ -254,10 +265,23 @@ func TestPortCollisions(t *testing.T) {
 		buf := new(bytes.Buffer)
 		_, err = buf.ReadFrom(servicesResponse.Body)
 		require.NoError(t, err)
-
 		require.NoError(t, json.Unmarshal(buf.Bytes(), &kongServices))
-		return len(kongServices.Data) == 2
+		return len(kongServices.Data) >= 2
 	}, ingressWait, waitTick)
+
+	t.Logf("locating the relevant services generated for TCP & UDP ingresses")
+	var udpsvc, tcpsvc *kong.Service
+	for _, svc := range kongServices.Data {
+		name := fmt.Sprintf("%s.%s.%d", service.Namespace, service.Name, collisionPort)
+		if *svc.Name == name {
+			tcpsvc = &svc
+		}
+		if *svc.Name == fmt.Sprintf("%s.udp", name) {
+			udpsvc = &svc
+		}
+	}
+	require.NotNil(t, udpsvc)
+	require.NotNil(t, tcpsvc)
 
 	t.Logf("validing that the resulting Kong services for same-named UDP and TCP ingress are not colliding")
 	assert.NotEqual(t, kongServices.Data[0].Name, kongServices.Data[1].Name)

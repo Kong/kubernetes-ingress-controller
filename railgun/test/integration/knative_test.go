@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	types "k8s.io/apimachinery/pkg/types"
@@ -32,33 +31,12 @@ const (
 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
 )
 
-func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) bool {
-	return assert.Eventually(t, func() bool {
-		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
-		if err != nil {
-			t.Logf("failed retrieving knative pods. %v", err)
-			return false
-		}
-
-		if len(podList.Items) != 4 {
-			t.Logf("expected 4 pods, found %d", len(podList.Items))
-			return false
-		}
-
-		for _, pod := range podList.Items {
-			if pod.Status.Phase != v1.PodRunning {
-				return false
-			}
-		}
-
-		t.Logf("All knative pods are up and ready.")
-		return true
-
-	}, 60*time.Second, 1*time.Second, true)
-}
-
 func TestKnativeIngress(t *testing.T) {
-	_ = proxyReady()
+	clusterInfo := proxyReady()
+	proxy := clusterInfo.ProxyURL.Hostname()
+	assert.NotEmpty(t, proxy)
+	fmt.Printf("proxy url %s", proxy)
+
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
@@ -68,13 +46,6 @@ func TestKnativeIngress(t *testing.T) {
 	assert.NoError(t, err)
 	knativeReady := isKnativeReady(ctx, cluster, t)
 	assert.Equal(t, knativeReady, true)
-
-	t.Log("Note down the ip address or public CNAME of kong-proxy service.")
-	proxy := retrieveProxyInfo(ctx, t)
-	assert.NotEmpty(t, proxy)
-	if err != nil {
-		t.Fatalf("kong-proxy service ip/public name is not ready.")
-	}
 
 	t.Log("Configure Knative NetworkLayer as Kong")
 	err = configKnativeNetwork(ctx, cluster, t)
@@ -121,34 +92,8 @@ func checkIPAddress(ip string, t *testing.T) bool {
 	}
 }
 
-func retrieveProxyInfo(ctx context.Context, t *testing.T) string {
-	var proxy string
-	assert.Eventually(t, func() bool {
-		cmd := exec.CommandContext(ctx, "kubectl", "get", "service", "ingress-controller-kong-proxy", "--namespace", "kong-system")
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			fmt.Fprintln(os.Stderr, stderr.String())
-			return false
-		}
-
-		if len(stdout.String()) > 0 {
-			info := strings.Split(stdout.String(), "\n")
-			proxy = strings.Fields(info[1])[3]
-			t.Logf("kong-proxy %s", proxy)
-			if checkIPAddress(proxy, t) == true {
-				return true
-			}
-		}
-		return false
-	}, 60*time.Second, 1*time.Second, true)
-	return proxy
-}
-
 func configKnativeNetwork(ctx context.Context, cluster kind.Cluster, t *testing.T) error {
-	payloadBytes := []byte("{\"data\": {\"ingress.class\": \"kong\"}}")
+	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", ingressClass))
 	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		t.Logf("failed updating config map %v", err)
@@ -254,4 +199,29 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 		return false
 
 	}, 120*time.Second, 1*time.Second)
+}
+
+func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) bool {
+	return assert.Eventually(t, func() bool {
+		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
+		if err != nil {
+			t.Logf("failed retrieving knative pods. %v", err)
+			return false
+		}
+
+		if len(podList.Items) != 4 {
+			t.Logf("expected 4 pods, found %d", len(podList.Items))
+			return false
+		}
+
+		for _, pod := range podList.Items {
+			if pod.Status.Phase != v1.PodRunning {
+				return false
+			}
+		}
+
+		t.Logf("All knative pods are up and ready.")
+		return true
+
+	}, 60*time.Second, 1*time.Second, true)
 }

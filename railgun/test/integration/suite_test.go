@@ -51,7 +51,7 @@ const (
 	httpBinImage = "kennethreitz/httpbin"
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
-	ingressClass = "kong"
+	ingressClass = "kongtests"
 
 	// elsewhere is the name of an alternative namespace
 	elsewhere = "elsewhere"
@@ -155,7 +155,6 @@ var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
-	"../../config/crd/bases/knative.yaml",
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.

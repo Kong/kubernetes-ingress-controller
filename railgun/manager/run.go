@@ -231,7 +231,7 @@ func Run(ctx context.Context, c *config.Config) error {
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:           mgr.GetScheme(),
 				Proxy:            prx,
-				IngressClassName: "kong",
+				IngressClassName: c.IngressClassName,
 			},
 		},
 		{

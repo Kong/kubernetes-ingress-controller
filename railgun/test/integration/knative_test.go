@@ -41,7 +41,7 @@ func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) boo
 		}
 
 		if len(podList.Items) != 4 {
-			fmt.Println("expected 4 pods, found ", len(podList.Items))
+			t.Logf("expected 4 pods, found %d", len(podList.Items))
 			return false
 		}
 
@@ -51,9 +51,7 @@ func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) boo
 			}
 		}
 
-		fmt.Println("All knative pods are up and ready.")
-		fmt.Println("Covering a window that webhook has been configured itself but not ready to receive traffic yet.")
-		time.Sleep(3 * time.Second)
+		t.Logf("All knative pods are up and ready.")
 		return true
 
 	}, 60*time.Second, 1*time.Second, true)
@@ -64,9 +62,9 @@ func TestKnativeIngress(t *testing.T) {
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
-	err := deployManifest(knativeCrds, ctx)
+	err := deployManifest(knativeCrds, ctx, t)
 	assert.NoError(t, err)
-	err = deployManifest(knativeCore, ctx)
+	err = deployManifest(knativeCore, ctx, t)
 	assert.NoError(t, err)
 	knativeReady := isKnativeReady(ctx, cluster, t)
 	assert.Equal(t, knativeReady, true)
@@ -79,23 +77,21 @@ func TestKnativeIngress(t *testing.T) {
 	}
 
 	t.Log("Configure Knative NetworkLayer as Kong")
-	err = configKnativeNetwork(ctx, cluster)
+	err = configKnativeNetwork(ctx, cluster, t)
 	assert.NoError(t, err)
-	err = configKnativeDomain(ctx, proxy, cluster)
+	err = configKnativeDomain(ctx, proxy, cluster, t)
 	assert.NoError(t, err)
 
 	t.Log("Install knative service")
-	err = installKnativeSrv(ctx)
+	err = installKnativeSrv(ctx, t)
 	assert.NoError(t, err)
 
 	t.Log("Test knative service using kong.")
 	srvaccessable := accessKnativeSrv(ctx, proxy, t)
-	if srvaccessable == false {
-		t.Fatalf("failed to access knative service.")
-	}
+	assert.EqualValues(t, true, srvaccessable)
 }
 
-func deployManifest(yml string, ctx context.Context) error {
+func deployManifest(yml string, ctx context.Context, t *testing.T) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
@@ -104,21 +100,21 @@ func deployManifest(yml string, ctx context.Context) error {
 		fmt.Fprintln(os.Stdout, stdout.String())
 		return err
 	}
-	fmt.Println("successfully deploy manifest " + yml)
+	t.Logf("successfully deploy manifest " + yml)
 	return nil
 }
 
-func checkIPAddress(ip string) bool {
+func checkIPAddress(ip string, t *testing.T) bool {
 	if net.ParseIP(ip) == nil {
-		fmt.Printf("IP Address: %s - Invalid\n", ip)
+		t.Logf("IP Address: %s - Invalid\n", ip)
 		return false
 	} else {
-		fmt.Printf("IP Address: %s - Valid\n", ip)
+		t.Logf("IP Address: %s - Valid\n", ip)
 		return true
 	}
 }
 
-func retrieveProxyInfo(ctx context.Context, t assert.TestingT) string {
+func retrieveProxyInfo(ctx context.Context, t *testing.T) string {
 	var proxy string
 	assert.Eventually(t, func() bool {
 		cmd := exec.CommandContext(ctx, "kubectl", "get", "service", "ingress-controller-kong-proxy", "--namespace", "kong-system")
@@ -134,30 +130,29 @@ func retrieveProxyInfo(ctx context.Context, t assert.TestingT) string {
 		if len(stdout.String()) > 0 {
 			info := strings.Split(stdout.String(), "\n")
 			proxy = strings.Fields(info[1])[3]
-			fmt.Println("kong-proxy " + proxy)
-			if checkIPAddress(proxy) == true {
+			t.Logf("kong-proxy %s", proxy)
+			if checkIPAddress(proxy, t) == true {
 				return true
 			}
 		}
 		return false
 	}, 60*time.Second, 1*time.Second, true)
-
 	return proxy
 }
 
-func configKnativeNetwork(ctx context.Context, cluster kind.Cluster) error {
+func configKnativeNetwork(ctx context.Context, cluster kind.Cluster, t *testing.T) error {
 	payloadBytes := []byte("{\"data\": {\"ingress.class\": \"kong\"}}")
 	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
-		fmt.Println("failed updating config map ", err)
+		t.Logf("failed updating config map %v", err)
 		return err
 	}
 
-	fmt.Println("successfully configured knative network.")
+	t.Logf("successfully configured knative network.")
 	return nil
 }
 
-func installKnativeSrv(ctx context.Context) error {
+func installKnativeSrv(ctx context.Context, t *testing.T) error {
 	tobeDeployedService := &knservingv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "helloworld-go",
@@ -188,13 +183,13 @@ func installKnativeSrv(ctx context.Context) error {
 	knativeCli, err := knativeversioned.NewForConfig(cluster.Config())
 	_, err = knativeCli.ServingV1().Services("default").Create(ctx, tobeDeployedService, metav1.CreateOptions{})
 	if err != nil {
-		fmt.Errorf("failed to create knative service.")
+		return fmt.Errorf("failed to create knative service. %v", err)
 	}
-	fmt.Println("successfully installed knative service.")
+	t.Logf("successfully installed knative service.")
 	return nil
 }
 
-func configKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster) error {
+func configKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster, t *testing.T) error {
 	configMapData := make(map[string]string, 0)
 	configMapData[proxy] = ""
 	labels := make(map[string]string)
@@ -213,10 +208,10 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster
 	}
 	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Update(ctx, &configMap, metav1.UpdateOptions{})
 	if err != nil {
-		fmt.Println("failed updating config map ", err)
+		t.Logf("failed updating config map %v", err)
 		return err
 	}
-	fmt.Println("successfully update knative config domain.")
+	t.Logf("successfully update knative config domain.")
 	return nil
 }
 
@@ -234,19 +229,19 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Println("failed generating httpquerst err ", err)
+		t.Logf("failed generating httpquerst err %v", err)
 	}
 	req.Header.Set("Host", "helloworld-go.default."+proxy)
 	req.Host = "helloworld-go.default." + proxy
 
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)
-		fmt.Println("resp {", resp.StatusCode, "}")
+		t.Logf("resp <%v>", resp.StatusCode)
 		if err != nil {
 			return false
 		}
 		if resp.StatusCode == http.StatusOK {
-			fmt.Println("service is successfully accessed through kong.")
+			t.Logf("service is successfully accessed through kong.")
 			return true
 		}
 		return false

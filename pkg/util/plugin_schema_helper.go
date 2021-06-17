@@ -38,13 +38,7 @@ func (p *PluginSchemaStore) Schema(ctx context.Context, pluginName string) (map[
 	}
 
 	// not present in cache, lookup
-	req, err := p.client.NewRequest("GET", "/plugins/schema/"+pluginName,
-		nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	schema := make(map[string]interface{})
-	_, err = p.client.Do(ctx, req, &schema)
+	schema, err := p.client.Plugins.GetSchema(ctx, &pluginName)
 	if err != nil {
 		return nil, err
 	}

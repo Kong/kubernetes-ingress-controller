@@ -235,13 +235,10 @@ func main() {
 			"you must migrate to a Postgres-backed or DB-less deployment")
 	}
 
-	req, _ := http.NewRequest("GET",
-		cliConfig.KongAdminURL+"/tags", nil)
-	res, err := kongClient.Do(ctx, req, nil)
-	if err == nil && res.StatusCode == 200 {
+	exists, err := kongClient.Tags.Exists(ctx)
+	if err == nil && exists {
 		controllerConfig.Kong.HasTagSupport = true
 	}
-
 	// setup workspace in Kong Enterprise
 	if cliConfig.KongWorkspace != "" {
 		// ensure the workspace exists or try creating it

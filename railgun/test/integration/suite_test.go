@@ -334,7 +334,7 @@ func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluste
 						break
 					}
 					addr := net.ParseIP(svc.Status.LoadBalancer.Ingress[0].IP)
-					proxyIP = &addr
+					proxyIP = proxyURL.Hostname()
 				} else if svc.Name == "ingress-controller-kong-udp" && len(svc.Status.LoadBalancer.Ingress) == 1 {
 					proxyUDPUrl, err = url.Parse(fmt.Sprintf("udp://%s:9999", svc.Status.LoadBalancer.Ingress[0].IP))
 					if err != nil {

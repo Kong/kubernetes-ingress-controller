@@ -83,8 +83,15 @@ func TestKnativeIngress(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Log("Install knative service")
-	err = installKnativeSrv(ctx, t)
-	assert.NoError(t, err)
+	srvInstall := assert.Eventually(t, func() bool {
+		err = installKnativeSrv(ctx, t)
+		if err != nil {
+			t.Logf("checking knativing webhook readiness.")
+			return false
+		}
+		return true
+	}, 30*time.Second, 2*time.Second, true)
+	assert.EqualValues(t, true, srvInstall)
 
 	t.Log("Test knative service using kong.")
 	srvaccessable := accessKnativeSrv(ctx, proxy, t)

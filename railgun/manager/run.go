@@ -352,8 +352,6 @@ func flipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *u
 		},
 	})
 	stopCh := signals.SetupSignalHandler()
-	fmt.Println("starting informer.")
 	knativeFactory.Start(stopCh)
-	fmt.Println("end of starting informer.")
 	return nil
 }

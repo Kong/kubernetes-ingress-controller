@@ -34,8 +34,8 @@ import (
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"knative.dev/pkg/signals"
 
+	"k8s.io/client-go/rest"
 	k8scache "k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeinformerexternal "knative.dev/networking/pkg/client/informers/externalversions"
 )
@@ -153,10 +153,6 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	if ctrlutils.KnativeCRDExist(mgr.GetClient()) == true {
-		setupLog.Info("ingresses.networking.internal.knative.dev crd exists. enable knative contorller.")
-		c.KnativeIngressEnabled = util.EnablementStatusEnabled
-	}
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -235,16 +231,6 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KnativeIngressEnabled,
-			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
 			IsEnabled: &c.KongIngressEnabled,
 			Controller: &kongctrl.KongV1KongIngressReconciler{
 				Client: mgr.GetClient(),
@@ -284,6 +270,22 @@ func Run(ctx context.Context, c *config.Config) error {
 		},
 	}
 
+	if ctrlutils.KnativeCRDExist(mgr.GetClient()) == true {
+		setupLog.Info("ingresses.networking.internal.knative.dev crd already deployed. enable knative contorller.")
+		c.KnativeIngressEnabled = util.EnablementStatusEnabled
+		controller := ControllerDef{
+			IsEnabled: &c.KnativeIngressEnabled,
+			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		}
+		controllers = append(controllers, controller)
+	}
+
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
@@ -321,7 +323,8 @@ func FlipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *u
 		log.Info("knative controller already enabled. skip flip process.\n")
 		return nil
 	}
-	kubeCfg, err := clientcmd.BuildConfigFromFlags("", cfg.KubeconfigPath)
+	//kubeCfg, err := cfg.GetKubeconfig()
+	kubeCfg, err := rest.InClusterConfig()
 	if err != nil || kubeCfg == nil {
 		return fmt.Errorf("failed to generate incluster configuration. err %v", err)
 	}

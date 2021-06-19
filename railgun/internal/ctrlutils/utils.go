@@ -2,8 +2,6 @@ package ctrlutils
 
 import (
 	"context"
-	"net"
-	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
@@ -11,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -148,24 +145,4 @@ func KnativeCRDExist(client client.Client) bool {
 		return false
 	}
 	return true
-}
-
-// k8s utilities: InClusterConfig defines incluster access
-func InClusterConfig() (*rest.Config, error) {
-	if len(os.Getenv("KUBERNETES_SERVICE_HOST")) == 0 {
-		addrs, err := net.LookupHost("kubernetes.default.svc")
-		if err != nil {
-			return nil, err
-		}
-		os.Setenv("KUBERNETES_SERVICE_HOST", addrs[0])
-	}
-
-	if len(os.Getenv("KUBERNETES_SERVICE_PORT")) == 0 {
-		os.Setenv("KUBERNETES_SERVICE_PORT", "443")
-	}
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	return cfg, err
 }

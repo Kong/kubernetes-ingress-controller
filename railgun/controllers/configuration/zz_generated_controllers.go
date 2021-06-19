@@ -854,7 +854,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, "kong") {
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
 		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err

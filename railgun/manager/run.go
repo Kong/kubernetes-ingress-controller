@@ -35,6 +35,7 @@ import (
 	"knative.dev/pkg/signals"
 
 	k8scache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeinformerexternal "knative.dev/networking/pkg/client/informers/externalversions"
 )
@@ -152,10 +153,9 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	enableKnative := util.EnablementStatusDisabled
 	if ctrlutils.KnativeCRDExist(mgr.GetClient()) == true {
 		setupLog.Info("ingresses.networking.internal.knative.dev crd exists. enable knative contorller.")
-		enableKnative = util.EnablementStatusEnabled
+		c.KnativeIngressEnabled = util.EnablementStatusEnabled
 	}
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &enableKnative,
+			IsEnabled: &c.KnativeIngressEnabled,
 			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
@@ -309,19 +309,20 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}
-	go flipKnativeController(mgr, prx, &enableKnative, c)
+
+	go FlipKnativeController(mgr, prx, &c.KnativeIngressEnabled, c, setupLog)
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
 }
 
 // wait for knative cr before register and starting knative controller
-func flipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config) error {
+func FlipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
 	if *enablestatus == util.EnablementStatusEnabled {
-		fmt.Printf("knative controller already enabled. skip flip process.\n")
+		log.Info("knative controller already enabled. skip flip process.\n")
 		return nil
 	}
-	kubeCfg, err := ctrlutils.InClusterConfig()
-	if err != nil {
+	kubeCfg, err := clientcmd.BuildConfigFromFlags("", cfg.KubeconfigPath)
+	if err != nil || kubeCfg == nil {
 		return fmt.Errorf("failed to generate incluster configuration. err %v", err)
 	}
 	knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
@@ -333,9 +334,9 @@ func flipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *u
 	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	knativeInformer.AddEventHandler(&k8scache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			fmt.Printf("knative networking customer resource added.\n")
+			log.Info("knative networking customer resource added.")
 			if *enablestatus == util.EnablementStatusDisabled {
-				fmt.Printf("knative controller does not exist. register one.")
+				log.Info("knative controller does not exist. register one.")
 				knative := configuration.Knativev1alpha1IngressReconciler{
 					Client:           mgr.GetClient(),
 					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
@@ -346,7 +347,7 @@ func flipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *u
 				knative.SetupWithManager(mgr)
 				*enablestatus = util.EnablementStatusEnabled
 			} else {
-				fmt.Printf("knative controller already exist. Skip registration.\n")
+				log.Info("knative controller already on. Skip registration.")
 			}
 			cancel()
 		},

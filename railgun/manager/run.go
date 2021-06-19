@@ -35,7 +35,6 @@ import (
 	"knative.dev/pkg/signals"
 
 	k8scache "k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeinformerexternal "knative.dev/networking/pkg/client/informers/externalversions"
 )
@@ -321,8 +320,7 @@ func flipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *u
 		fmt.Printf("knative controller already enabled. skip flip process.\n")
 		return nil
 	}
-	//kubeCfg, err := ctrlutils.InClusterConfig()
-	kubeCfg, err := clientcmd.BuildConfigFromFlags("", "/home/ec2-user/.kube/config")
+	kubeCfg, err := ctrlutils.InClusterConfig()
 	if err != nil {
 		return fmt.Errorf("failed to generate incluster configuration. err %v", err)
 	}

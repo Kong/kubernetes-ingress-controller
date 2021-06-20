@@ -34,7 +34,6 @@ import (
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"knative.dev/pkg/signals"
 
-	"k8s.io/client-go/rest"
 	k8scache "k8s.io/client-go/tools/cache"
 	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeinformerexternal "knative.dev/networking/pkg/client/informers/externalversions"
@@ -323,8 +322,7 @@ func FlipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *u
 		log.Info("knative controller already enabled. skip flip process.\n")
 		return nil
 	}
-	//kubeCfg, err := cfg.GetKubeconfig()
-	kubeCfg, err := rest.InClusterConfig()
+	kubeCfg, err := cfg.GetKubeconfig()
 	if err != nil || kubeCfg == nil {
 		return fmt.Errorf("failed to generate incluster configuration. err %v", err)
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,8 +33,7 @@ func PerformUpdate(ctx context.Context,
 	targetContent *file.Content,
 	selectorTags []string,
 	customEntities []byte,
-	oldSHA []byte,
-) ([]byte, error) {
+	oldSHA []byte) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
 		return oldSHA, err
@@ -58,6 +58,8 @@ func PerformUpdate(ctx context.Context,
 		return nil, err
 	}
 	log.Info("successfully synced configuration to kong")
+	//go ctrlutils.UpdateIngress(targetContent, log, ctx, kubeConfig)
+	kongConfig.configDone <- *targetContent
 	return newSHA, nil
 }
 

@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,38 +36,31 @@ func TestKnativeIngress(t *testing.T) {
 	clusterInfo := proxyReady()
 	proxy := clusterInfo.ProxyURL.Hostname()
 	assert.NotEmpty(t, proxy)
-	fmt.Printf("proxy url %s", proxy)
+	t.Logf("proxy url %s", proxy)
 
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
-	err := deployManifest(knativeCrds, ctx, t)
-	assert.NoError(t, err)
-	err = deployManifest(knativeCore, ctx, t)
-	assert.NoError(t, err)
-	knativeReady := isKnativeReady(ctx, cluster, t)
-	assert.Equal(t, knativeReady, true)
+	require.NoError(t, deployManifest(knativeCrds, ctx, t))
+	require.NoError(t, deployManifest(knativeCore, ctx, t))
+	require.True(t, isKnativeReady(ctx, cluster, t), true)
 
 	t.Log("Configure Knative NetworkLayer as Kong")
-	err = configKnativeNetwork(ctx, cluster, t)
-	assert.NoError(t, err)
-	err = configKnativeDomain(ctx, proxy, cluster, t)
-	assert.NoError(t, err)
+	require.NoError(t, configKnativeNetwork(ctx, cluster, t))
+	require.NoError(t, configKnativeDomain(ctx, proxy, cluster, t))
 
 	t.Log("Install knative service")
-	srvInstall := assert.Eventually(t, func() bool {
-		err = installKnativeSrv(ctx, t)
+	require.Eventually(t, func() bool {
+		err := installKnativeSrv(ctx, t)
 		if err != nil {
 			t.Logf("checking knativing webhook readiness.")
 			return false
 		}
 		return true
 	}, 30*time.Second, 2*time.Second, true)
-	assert.EqualValues(t, true, srvInstall)
 
 	t.Log("Test knative service using kong.")
-	srvaccessable := accessKnativeSrv(ctx, proxy, t)
-	assert.EqualValues(t, true, srvaccessable)
+	require.True(t, accessKnativeSrv(ctx, proxy, t), true)
 }
 
 func deployManifest(yml string, ctx context.Context, t *testing.T) error {

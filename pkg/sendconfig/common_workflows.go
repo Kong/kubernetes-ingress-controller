@@ -34,7 +34,8 @@ func UpdateKongAdminSimple(ctx context.Context,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig Kong,
-	enableReverseSync bool) ([]byte, error) {
+	enableReverseSync bool,
+) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
 	kongstate, err := parser.Build(deprecatedLogger, storer)
@@ -52,7 +53,8 @@ func UpdateKongAdminSimple(ctx context.Context,
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, nil, nil, lastConfigSHA)
+		targetConfig, nil, nil, lastConfigSHA,
+	)
 	if err != nil {
 		return nil, err
 	}

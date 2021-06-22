@@ -58,8 +58,9 @@ func PerformUpdate(ctx context.Context,
 		return nil, err
 	}
 	log.Info("successfully synced configuration to kong")
-	//go ctrlutils.UpdateIngress(targetContent, log, ctx, kubeConfig)
-	kongConfig.configDone <- *targetContent
+
+	fmt.Printf("updating customer resources status %s.", *targetContent)
+	kongConfig.ConfigDone <- *targetContent
 	return newSHA, nil
 }
 

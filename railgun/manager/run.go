@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -121,7 +121,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
-		configDone:        make(chan file.Content),
+		ConfigDone:        make(chan file.Content),
 	}
 
 	// determine the proxy synchronization strategy
@@ -155,7 +155,8 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	go pullConfigUpdate(kongConfig, logger)
+	go ctrlutils.PullConfigUpdate(kongConfig, logger, ctx, kubeconfig, signals.SetupSignalHandler())
+
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -360,16 +361,4 @@ func FlipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *u
 	stopCh := signals.SetupSignalHandler()
 	knativeFactory.Start(stopCh)
 	return nil
-}
-
-func pullConfigUpdate(configDone <-chan file.Content, log logr.Logger, ctx context.Context, kubeConfig *rest.Config) {
-	for {
-		select {
-		case updateDone := <-configDone:
-			ctrlutils.UpdateIngress(&updateDone, log, ctx, kubeConfig)
-		case <-stopCh:
-			fmt.Printf("stop monitoring channel.")
-			return
-		}
-	}
 }

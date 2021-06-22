@@ -25,5 +25,5 @@ type Kong struct {
 	Concurrency int
 
 	// configuration update
-	configDone chan file.Content
+	ConfigDone chan file.Content
 }

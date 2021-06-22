@@ -44,7 +44,6 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 			n.Logger.Errorf("failed to fetch custom entities: %v", err)
 		}
 	}
-	fmt.Printf("\n Catch Info %v \n", *state)
 	targetContent := deckgen.ToDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, n.getIngressControllerTags())
 
 	newSHA, err := sendconfig.PerformUpdate(ctx,

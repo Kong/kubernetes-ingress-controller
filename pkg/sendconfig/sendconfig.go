@@ -57,9 +57,7 @@ func PerformUpdate(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	log.Info("successfully synced configuration to kong")
-
-	fmt.Printf("updating customer resources status %s.", *targetContent)
+	log.Info("successfully synced configuration to kong. sync ingress status also.")
 	kongConfig.ConfigDone <- *targetContent
 	return newSHA, nil
 }

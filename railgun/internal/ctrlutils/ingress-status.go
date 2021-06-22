@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/prometheus/common/log"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,14 +23,14 @@ import (
 )
 
 func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.Context, kubeConfig *rest.Config, stopCh <-chan struct{}) {
-	fmt.Printf("Launching Customer Resource Update thread.\n")
+	log.Info("Launching Customer Resource Update thread.")
 	for {
 		select {
 		case updateDone := <-kongConfig.ConfigDone:
-			fmt.Printf("receive configuration information. Update ingress status \n%v\n \n", &updateDone)
+			log.Info("receive configuration information. Update ingress status \n%v\n \n", &updateDone)
 			go UpdateIngress(&updateDone, log, ctx, kubeConfig)
 		case <-stopCh:
-			fmt.Printf("stop status update channel.")
+			log.Info("stop status update channel.")
 			return
 		}
 	}
@@ -38,15 +39,14 @@ func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.C
 // update ingress status according to generated rules and specs
 func UpdateIngress(targetContent *file.Content, log logr.Logger, ctx context.Context, kubeconfig *rest.Config) error {
 	for _, svc := range targetContent.Services {
-		fmt.Printf("\n service host %s name %s\n ", *svc.Service.Host, *svc.Service.Name)
 		for _, plugin := range svc.Plugins {
-			fmt.Printf("\n plugin enablement %v\n", *svc.Plugins[0].Enabled)
+			log.Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
 			if *plugin.Enabled == true {
+				// filter the plugins (tcp/udp/tls/http) here
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
-						fmt.Printf("header %s", header.(string))
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
-							fmt.Printf("\n knative service updated. update knative CR condition and status..\n")
+							log.Info("knative service updated. update knative CR condition and status...")
 							err := UpdateKnativeIngress(ctx, log, svc, kubeconfig)
 							return fmt.Errorf("failed to update knative ingress err %v", err)
 						}
@@ -77,24 +77,21 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	routeInf := strings.Split(*(svc.Routes[0].Name), ".")
 	namespace = routeInf[0]
 	name = routeInf[1]
-
-	fmt.Printf("svc namespace <%s> name <%s>", namespace, name)
+	log.Info("svc namespace %s name %s", namespace, name)
 	if len(namespace) == 0 || len(name) == 0 {
 		return fmt.Errorf("configured route information is not completed which should not happen.")
 	}
-	fmt.Println("create knative cli.")
+
 	knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
 	if err != nil {
 		return fmt.Errorf("failed to generate knative client. err %v", err)
 	}
-
-	fmt.Println("create lister to retrieve CR.")
 	ingClient := knativeCli.NetworkingV1alpha1().Ingresses(namespace)
 	curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil || curIng == nil {
 		return fmt.Errorf("failed to fetch Knative Ingress %v/%v: %w", namespace, name, err)
 	}
-	fmt.Printf("\n able to retrieve existing CR <%v> \n", *curIng)
+	log.Info("retrieving existing CR <%v> ", *curIng)
 
 	// check if CR current status already updated
 	var status []apiv1.LoadBalancerIngress
@@ -104,24 +101,18 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	if err != nil {
 		return fmt.Errorf("failed to retrieve cluster loadbalancer.")
 	}
-
-	fmt.Printf("\n king ip %v cluster ip %v \n", curIPs, ips)
 	status = SliceToStatus(ips)
 	if IngressSliceEqual(status, curIPs) &&
 		curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-		fmt.Printf("no change in status, update skipped")
+		log.Info("no change in status, update skipped")
 		return nil
 	}
-	fmt.Printf("\n convert to corev1 lb status %v \n", status)
 
 	// updating current custom status
-	fmt.Printf("attempting to update Knative Ingress status")
+	log.Info("attempting to update Knative Ingress status")
 	lbStatus := toKnativeLBStatus(status)
-
-	//
-	//proxyNS, svcName, err := util.ParseNameNS("kong-system/ingress-controller-kong-proxy")
 	clusterDomain := network.GetClusterDomainName()
-	fmt.Printf("cluster domain %s\n", clusterDomain)
+	log.Info("cluster domain %s\n", clusterDomain)
 	if err != nil {
 		return err
 	}
@@ -152,7 +143,7 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config) ([]string, erro
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
 	if err != nil {
-		fmt.Printf("err %v", err)
+		log.Info("err %v", err)
 		return nil, err
 	}
 

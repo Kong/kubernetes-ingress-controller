@@ -30,7 +30,7 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0-beta] - 2021/06
+## [2.0.0-alpha.2] - 2021/06
 
 #### Added
 - knative API - Full Feature Parity

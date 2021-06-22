@@ -30,6 +30,12 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.0.0-alpha.2] - 2021/06
+
+#### Added
+- knative API - Full Feature Parity
+ [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
+
 ## [2.0.0-alpha.1] - 2021/05/27
 
 **NOTE**: This is a draft of release notes for the next major version to be

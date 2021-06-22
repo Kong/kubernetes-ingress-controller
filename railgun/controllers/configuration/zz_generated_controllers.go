@@ -36,6 +36,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
@@ -800,6 +801,80 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	// update the kong Admin API with the changes
 	log.Info("updating the proxy with new TCPIngress", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
+// Knativev1alpha1 Ingress
+// -----------------------------------------------------------------------------
+
+// Knativev1alpha1Ingress reconciles a Ingress object
+type Knativev1alpha1IngressReconciler struct {
+	client.Client
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+
+	IngressClassName string
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	return ctrl.NewControllerManagedBy(mgr).For(&knativev1alpha1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/finalizers,verbs=update
+
+// Reconcile processes the watched objects
+func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("Knativev1alpha1Ingress", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(knativev1alpha1.Ingress)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+	}
+
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		if err := r.Proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// before we store cache data for this object, ensure that it has our finalizer set
+	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
+		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		finalizers := obj.GetFinalizers()
+		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
+		if err := r.Client.Update(ctx, obj); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}

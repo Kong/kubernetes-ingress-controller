@@ -424,14 +424,17 @@ func (s Store) validKnativeIngressClass(objectMeta *metav1.ObjectMeta) bool {
 	return ingressAnnotationValue == s.ingressClass
 }
 
-// ListKnativeIngresses returns the list of TCP Ingresses from
-// configuration.konghq.com group.
+// ListKnativeIngresses returns the list of Knative Ingresses from
+// ingresses.networking.internal.knative.dev group.
 func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	var ingresses []*knative.Ingress
 	if s.stores.KnativeIngress == nil {
 		return ingresses, nil
 	}
-	err := cache.ListAll(s.stores.KnativeIngress, labels.NewSelector(),
+
+	err := cache.ListAll(
+		s.stores.KnativeIngress,
+		labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*knative.Ingress)
 			// this is implemented directly in store as s.isValidIngressClass only checks the value of the
@@ -444,6 +447,7 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	sort.SliceStable(ingresses, func(i, j int) bool {
 		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
 			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -300,7 +301,9 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluster, name string, ready chan ktfkind.ProxyReadinessEvent) {
 	var proxyAdminURL *url.URL
 	var proxyURL *url.URL
+	var proxyHTTPSURL *url.URL
 	var proxyUDPUrl *url.URL
+	var proxyIP *net.IP
 
 	for {
 		select {
@@ -326,6 +329,13 @@ func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluste
 						ready <- ktfkind.ProxyReadinessEvent{Err: err}
 						break
 					}
+					proxyHTTPSURL, err = url.Parse(fmt.Sprintf("https://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 443))
+					if err != nil {
+						ready <- ktfkind.ProxyReadinessEvent{Err: err}
+						break
+					}
+					addr := net.ParseIP(svc.Status.LoadBalancer.Ingress[0].IP)
+					proxyIP = &addr
 				} else if svc.Name == "ingress-controller-kong-udp" && len(svc.Status.LoadBalancer.Ingress) == 1 {
 					proxyUDPUrl, err = url.Parse(fmt.Sprintf("udp://%s:9999", svc.Status.LoadBalancer.Ingress[0].IP))
 					if err != nil {
@@ -339,6 +349,8 @@ func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluste
 			ready <- ktfkind.ProxyReadinessEvent{
 				ProxyAdminURL: proxyAdminURL,
 				ProxyURL:      proxyURL,
+				ProxyHTTPSURL: proxyHTTPSURL,
+				ProxyIP:       proxyIP,
 				ProxyUDPUrl:   proxyUDPUrl,
 			}
 			break

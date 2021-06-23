@@ -37,7 +37,12 @@
 - knative API - Full Feature Parity
  [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
 - `v1beta1.UDPIngress` API support added. Only supported on KIC `v2.0.0+` releases.
-- Integration tests for UDP/TCP ingress port collisions.
+- We added integration tests to check against UDP/TCP ingress port collisions, _however_ we
+  have them temporarily disabled: we found that these collisions **did actually occur**.
+  For this release `UDPIngress` does generally work properly, but in the case you want `UDPIngress`
+  and `TCPIngress` which both use the same backend service and the same port, this is not yet
+  supported and will be fixed in an upcoming release.
+  See: https://github.com/Kong/kubernetes-ingress-controller/issues/1446
 
 ## [2.0.0-alpha.1] - 2021/05/27
 

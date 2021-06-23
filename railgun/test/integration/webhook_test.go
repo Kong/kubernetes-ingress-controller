@@ -98,11 +98,19 @@ func TestValidationWebhook(t *testing.T) {
 
 	t.Log("waiting for proxy ready")
 	_ = proxyReady()
+
 	t.Log("waiting for proxy ready done")
 	assert.Eventually(t, func() bool {
 		_, err := net.DialTimeout("tcp", "172.17.0.1:49023", 1*time.Second)
 		return err == nil
 	}, ingressWait, waitTick, "waiting for the admission service to be up")
+
+	// TODO: flakes were occurring in this test because proxy readiness isn't a consistent gate mechanism
+	//       by which to determine readiness for the webhook validation tests. We will follow up on this by
+	//       improving these tests, but for now (for speed at the time of writing) we just sleep.
+	//
+	//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1442
+	time.Sleep(time.Second * 5)
 
 	for _, tt := range []struct {
 		name           string

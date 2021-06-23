@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -45,8 +45,8 @@ func DecodeObject(key string, value []byte) (client.Object, error) {
 		result = new(networkingv1.Ingress)
 	case isGV(configurationv1beta1.SchemeGroupVersion, group, version) && kind == "TCPIngress":
 		result = new(configurationv1beta1.TCPIngress)
-	case isGV(v1alpha1.GroupVersion, group, version) && kind == "UDPIngress":
-		result = new(v1alpha1.UDPIngress)
+	case isGV(v1beta1.GroupVersion, group, version) && kind == "UDPIngress":
+		result = new(v1beta1.UDPIngress)
 	case isGV(configurationv1beta1.SchemeGroupVersion, group, version) && kind == "KongPlugin":
 		result = new(configurationv1.KongPlugin)
 	case isGV(configurationv1beta1.SchemeGroupVersion, group, version) && kind == "KongClusterPlugin":

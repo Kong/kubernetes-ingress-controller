@@ -14,11 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func init() {
+	SchemeBuilder.Register(&UDPIngress{}, &UDPIngressList{})
+}
+
+//+kubebuilder:object:root=true
+
+// UDPIngressList contains a list of UDPIngress
+type UDPIngressList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []UDPIngress `json:"items"`
+}
 
 //+genclient
 //+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -35,33 +49,15 @@ type UDPIngress struct {
 	Status UDPIngressStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-
-// UDPIngressList contains a list of UDPIngress
-type UDPIngressList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []UDPIngress `json:"items"`
-}
-
 // UDPIngressSpec defines the desired state of UDPIngress
 type UDPIngressSpec struct {
-	// Host indicates where to send the UDP datagrams
-	Host string `json:"host,required" yaml:"host,required"`
-
-	// ListenPort indicates the Kong proxy port which will accept the ingress datagrams
-	ListenPort int `json:"listenPort,required" yaml:"listenPort,required"`
-
-	// TargetPort indicates the backend Host port which kong will proxy the UDP datagrams to
-	TargetPort int `json:"targetPort,required" yaml:"targetPort,required"`
+	// A list of rules used to configure the Ingress.
+	Rules []UDPIngressRule `json:"rules,omitempty"`
 }
 
 // UDPIngressStatus defines the observed state of UDPIngress
 type UDPIngressStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
-
-func init() {
-	SchemeBuilder.Register(&UDPIngress{}, &UDPIngressList{})
+	// LoadBalancer contains the current status of the load-balancer.
+	// +optional
+	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`
 }

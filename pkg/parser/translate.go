@@ -15,7 +15,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
@@ -403,7 +403,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 	return result
 }
 
-func fromUDPIngressV1Alpha1(log logrus.FieldLogger, ingressList []*v1alpha1.UDPIngress) ingressRules {
+func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*v1beta1.UDPIngress) ingressRules {
 	result := newIngressRules()
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
@@ -418,21 +418,52 @@ func fromUDPIngressV1Alpha1(log logrus.FieldLogger, ingressList []*v1alpha1.UDPI
 			"udpingress_name":      ingress.Name,
 		})
 
-		result.ServiceNameToServices[ingress.Namespace+"."+ingress.Name] = kongstate.Service{
-			Service: kong.Service{
-				Name:     kong.String(ingress.Namespace + "." + ingress.Name),
-				Protocol: kong.String("udp"),
-				Host:     kong.String(ingressSpec.Host),
-				Port:     kong.Int(ingress.Spec.TargetPort),
-			},
-			Routes: []kongstate.Route{
-				{
-					Route: kong.Route{
-						Protocols:    []*string{kong.String("udp")},
-						Destinations: []*kong.CIDRPort{{Port: kong.Int(ingressSpec.ListenPort)}},
-					},
+		for i, rule := range ingressSpec.Rules {
+			// validate the ports and servicenames for the rule
+			if !util.IsValidPort(rule.Port) {
+				log.Errorf("invalid UDPIngress: invalid port: %d", rule.Port)
+				continue
+			}
+			if rule.Backend.ServiceName == "" {
+				log.Errorf("invalid UDPIngress: empty serviceName")
+				continue
+			}
+			if !util.IsValidPort(rule.Backend.ServicePort) {
+				log.Errorf("invalid UDPIngress: invalid servicePort: %d", rule.Backend.ServicePort)
+				continue
+			}
+
+			// generate the kong Route based on the listen port
+			route := kongstate.Route{
+				Ingress: util.FromK8sObject(ingress),
+				Route: kong.Route{
+					Name:         kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + ".udp"),
+					Protocols:    kong.StringSlice("udp"),
+					Destinations: []*kong.CIDRPort{{Port: kong.Int(rule.Port)}},
 				},
-			},
+			}
+
+			// generate the kong Service backend for the UDPIngress rules
+			host := fmt.Sprintf("%s.%s.%d.svc", rule.Backend.ServiceName, ingress.Namespace, rule.Backend.ServicePort)
+			serviceName := fmt.Sprintf("%s.%s.%d.udp", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
+			service, ok := result.ServiceNameToServices[serviceName]
+			if !ok {
+				service = kongstate.Service{
+					Namespace: ingress.Namespace,
+					Service: kong.Service{
+						Name:     kong.String(serviceName),
+						Protocol: kong.String("udp"),
+						Host:     kong.String(host),
+						Port:     kong.Int(rule.Backend.ServicePort),
+					},
+					Backend: kongstate.ServiceBackend{
+						Name: rule.Backend.ServiceName,
+						Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
+					},
+				}
+			}
+			service.Routes = append(service.Routes, route)
+			result.ServiceNameToServices[serviceName] = service
 		}
 	}
 

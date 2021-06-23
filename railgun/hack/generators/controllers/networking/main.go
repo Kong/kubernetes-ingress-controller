@@ -21,7 +21,6 @@ const (
 	extv1beta1 = "k8s.io/api/extensions/v1beta1"
 
 	kongv1          = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	kongv1alpha1    = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1     = "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1"
 	knativev1alpha1 = "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
@@ -142,17 +141,6 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
-		PackageImportAlias:                "kongv1alpha1",
-		PackageAlias:                      "KongV1Alpha1",
-		Package:                           kongv1alpha1,
-		Type:                              "UDPIngress",
-		Plural:                            "udpingresses",
-		URL:                               "configuration.konghq.com",
-		CacheType:                         "UDPIngress",
-		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
-	},
-	typeNeeded{
 		PackageImportAlias:                "kongv1beta1",
 		PackageAlias:                      "KongV1Beta1",
 		Package:                           kongv1beta1,
@@ -160,6 +148,17 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "tcpingresses",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "TCPIngress",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
+	},
+	typeNeeded{
+		PackageImportAlias:                "kongv1beta1",
+		PackageAlias:                      "KongV1Beta1",
+		Package:                           kongv1beta1,
+		Type:                              "UDPIngress",
+		Plural:                            "udpingresses",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "UDPIngress",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 	},
@@ -282,7 +281,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 

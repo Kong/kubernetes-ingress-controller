@@ -32,6 +32,10 @@ func (c *FakeConfigurationV1beta1) TCPIngresses(namespace string) v1beta1.TCPIng
 	return &FakeTCPIngresses{c, namespace}
 }
 
+func (c *FakeConfigurationV1beta1) UDPIngresses(namespace string) v1beta1.UDPIngressInterface {
+	return &FakeUDPIngresses{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeConfigurationV1beta1) RESTClient() rest.Interface {

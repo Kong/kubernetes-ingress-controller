@@ -46,7 +46,8 @@
 #### Added
 - Profiling using `pprof` is now a standalone HTTP server listening on port 10256.
   [#1417](https://github.com/Kong/kubernetes-ingress-controller/pull/1417)
-
+- knative API - Full Feature Parity
+ [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
 
 ## [2.0.0-alpha.1] - 2021/05/27
 

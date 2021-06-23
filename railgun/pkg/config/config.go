@@ -62,6 +62,7 @@ type Config struct {
 	UDPIngressEnabled        util.EnablementStatus
 	TCPIngressEnabled        util.EnablementStatus
 	KongIngressEnabled       util.EnablementStatus
+	KnativeIngressEnabled    util.EnablementStatus
 	KongClusterPluginEnabled util.EnablementStatus
 	KongPluginEnabled        util.EnablementStatus
 	KongConsumerEnabled      util.EnablementStatus
@@ -146,6 +147,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.enablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusDisabled, "Enable or disable the Ingress controller (using API version extensions/v1beta1)."+onOffUsage)
 	flagSet.enablementStatusVar(&c.UDPIngressEnabled, "controller-udpingress", util.EnablementStatusDisabled, "Enable or disable the UDPIngress controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusEnabled, "Enable or disable the TCPIngress controller. "+onOffUsage)
+	flagSet.enablementStatusVar(&c.KnativeIngressEnabled, "controller-knativeingress", util.EnablementStatusDisabled, "Enable or disable the KnativeIngress controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusEnabled, "Enable or disable the KongIngress controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusEnabled, "Enable or disable the KongClusterPlugin controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusEnabled, "Enable or disable the KongPlugin controller. "+onOffUsage)

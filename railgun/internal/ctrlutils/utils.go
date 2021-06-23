@@ -6,7 +6,10 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	netv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -63,6 +66,11 @@ func MatchesIngressClassName(obj client.Object, ingressClassName string) bool {
 			return true
 		}
 	}
+
+	if _, ok := obj.(*knative.Ingress); ok {
+		return HasAnnotation(obj, annotations.KnativeIngressClassKey, ingressClassName)
+	}
+
 	return HasAnnotation(obj, annotations.IngressClassKey, ingressClassName)
 }
 
@@ -105,6 +113,13 @@ func IsIngressClassAnnotationConfigured(obj client.Object, expectedIngressClassN
 			return true
 		}
 	}
+
+	if foundIngressClassName, ok := obj.GetAnnotations()[annotations.KnativeIngressClassKey]; ok {
+		if foundIngressClassName == expectedIngressClassName {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -116,4 +131,18 @@ func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName st
 		return obj.Spec.IngressClassName != nil && *obj.Spec.IngressClassName == expectedIngressClassName
 	}
 	return false
+}
+
+// returns false if Knative CRDs do not exist
+func KnativeCRDExist(client client.Client) bool {
+	knativeGVR := schema.GroupVersionResource{
+		Group:    knative.SchemeGroupVersion.Group,
+		Version:  knative.SchemeGroupVersion.Version,
+		Resource: "ingresses",
+	}
+	_, err := client.RESTMapper().KindFor(knativeGVR)
+	if meta.IsNoMatchError(err) {
+		return false
+	}
+	return true
 }

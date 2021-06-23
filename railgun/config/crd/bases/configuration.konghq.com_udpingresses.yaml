@@ -16,7 +16,7 @@ spec:
     singular: udpingress
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1beta1
     schema:
       openAPIV3Schema:
         description: UDPIngress is the Schema for the udpingresses API
@@ -36,24 +36,99 @@ spec:
           spec:
             description: UDPIngressSpec defines the desired state of UDPIngress
             properties:
-              host:
-                description: Host indicates where to send the UDP datagrams
-                type: string
-              listenPort:
-                description: ListenPort indicates the Kong proxy port which will accept
-                  the ingress datagrams
-                type: integer
-              targetPort:
-                description: TargetPort indicates the backend Host port which kong
-                  will proxy the UDP datagrams to
-                type: integer
-            required:
-            - host
-            - listenPort
-            - targetPort
+              rules:
+                description: A list of rules used to configure the Ingress.
+                items:
+                  description: UDPIngressRule represents a rule to apply against incoming
+                    requests wherein no Host matching is available for request routing,
+                    only the port is used to match requests.
+                  properties:
+                    backend:
+                      description: Backend defines the Kubernetes service which accepts
+                        traffic from the listening Port defined above.
+                      properties:
+                        serviceName:
+                          description: Specifies the name of the referenced service.
+                          type: string
+                        servicePort:
+                          description: Specifies the port of the referenced service.
+                          type: integer
+                      required:
+                      - serviceName
+                      - servicePort
+                      type: object
+                    port:
+                      description: Port indicates the port for the Kong proxy to accept
+                        incoming traffic on, which will then be routed to the service
+                        Backend.
+                      type: integer
+                  required:
+                  - backend
+                  - port
+                  type: object
+                type: array
             type: object
           status:
             description: UDPIngressStatus defines the observed state of UDPIngress
+            properties:
+              loadBalancer:
+                description: LoadBalancer contains the current status of the load-balancer.
+                properties:
+                  ingress:
+                    description: Ingress is a list containing ingress points for the
+                      load-balancer. Traffic intended for the service should be sent
+                      to these ingress points.
+                    items:
+                      description: 'LoadBalancerIngress represents the status of a
+                        load-balancer ingress point: traffic intended for the service
+                        should be sent to an ingress point.'
+                      properties:
+                        hostname:
+                          description: Hostname is set for load-balancer ingress points
+                            that are DNS based (typically AWS load-balancers)
+                          type: string
+                        ip:
+                          description: IP is set for load-balancer ingress points
+                            that are IP based (typically GCE or OpenStack load-balancers)
+                          type: string
+                        ports:
+                          description: Ports is a list of records of service ports
+                            If used, every port defined in the service should have
+                            an entry in it
+                          items:
+                            properties:
+                              error:
+                                description: 'Error is to record the problem with
+                                  the service port The format of the error shall comply
+                                  with the following rules: - built-in error values
+                                  shall be specified in this file and those shall
+                                  use   CamelCase names - cloud provider specific
+                                  error values must have names that comply with the   format
+                                  foo.example.com/CamelCase. --- The regex it matches
+                                  is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
+                                maxLength: 316
+                                pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                                type: string
+                              port:
+                                description: Port is the port number of the service
+                                  port of which status is recorded here
+                                format: int32
+                                type: integer
+                              protocol:
+                                default: TCP
+                                description: 'Protocol is the protocol of the service
+                                  port of which status is recorded here The supported
+                                  values are: "TCP", "UDP", "SCTP"'
+                                type: string
+                            required:
+                            - port
+                            - protocol
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      type: object
+                    type: array
+                type: object
             type: object
         type: object
     served: true

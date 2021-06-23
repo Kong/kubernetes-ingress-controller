@@ -228,7 +228,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-admin-url=http://%s:8001", adminHost),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-				"--proxy-sync-seconds=0.05", // run the test updates at 50ms for high speed
 				"--controller-kongstate=enabled",
 				"--controller-ingress-networkingv1=enabled",
 				"--controller-ingress-networkingv1beta1=disabled",

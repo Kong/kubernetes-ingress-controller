@@ -115,9 +115,20 @@ func TestMinimalPlugin(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Logf("updating Ingress %s to use plugin %s", ingress.Name, kongplugin.Name)
-	ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
-	ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
-	assert.NoError(t, err)
+	require.Eventually(t, func() bool {
+		ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
+		ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
+		if err != nil {
+			return false
+		}
+		return true
+	}, ingressWait, waitTick)
+
+	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
 		if err != nil {
@@ -129,9 +140,20 @@ func TestMinimalPlugin(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("updating Ingress %s to use cluster plugin %s", ingress.Name, kongclusterplugin.Name)
-	ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
-	ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
-	assert.NoError(t, err)
+	require.Eventually(t, func() bool {
+		ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
+		ingress, err = cluster.Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
+		if err != nil {
+			return false
+		}
+		return true
+	}, ingressWait, waitTick)
+
+	t.Logf("validating that clusterplugin %s was successfully configured", kongclusterplugin.Name)
 	assert.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", p.ProxyURL.String()))
 		if err != nil {

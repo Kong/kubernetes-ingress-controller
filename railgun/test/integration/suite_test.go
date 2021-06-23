@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -75,7 +76,7 @@ var (
 	cluster ktfkind.Cluster
 
 	// watchNamespaces is a list of namespaces the controller watches
-	watchNamespaces = strings.Join([]string{elsewhere, corev1.NamespaceDefault}, ",")
+	watchNamespaces = strings.Join([]string{elsewhere, corev1.NamespaceDefault, testTCPIngressNamespace}, ",")
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
 	dbmode = os.Getenv("TEST_DATABASE_MODE")
@@ -227,7 +228,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			flags.Parse([]string{
 				fmt.Sprintf("--kong-admin-url=http://%s:8001", adminHost),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-				"--proxy-sync-seconds=0.05", // run the test updates at 50ms for high speed
 				"--controller-kongstate=enabled",
 				"--controller-ingress-networkingv1=enabled",
 				"--controller-ingress-networkingv1beta1=disabled",
@@ -300,7 +300,9 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluster, name string, ready chan ktfkind.ProxyReadinessEvent) {
 	var proxyAdminURL *url.URL
 	var proxyURL *url.URL
+	var proxyHTTPSURL *url.URL
 	var proxyUDPUrl *url.URL
+	var proxyIP *net.IP
 
 	for {
 		select {
@@ -326,6 +328,13 @@ func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluste
 						ready <- ktfkind.ProxyReadinessEvent{Err: err}
 						break
 					}
+					proxyHTTPSURL, err = url.Parse(fmt.Sprintf("https://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 443))
+					if err != nil {
+						ready <- ktfkind.ProxyReadinessEvent{Err: err}
+						break
+					}
+					addr := net.ParseIP(svc.Status.LoadBalancer.Ingress[0].IP)
+					proxyIP = &addr
 				} else if svc.Name == "ingress-controller-kong-udp" && len(svc.Status.LoadBalancer.Ingress) == 1 {
 					proxyUDPUrl, err = url.Parse(fmt.Sprintf("udp://%s:9999", svc.Status.LoadBalancer.Ingress[0].IP))
 					if err != nil {
@@ -339,6 +348,8 @@ func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluste
 			ready <- ktfkind.ProxyReadinessEvent{
 				ProxyAdminURL: proxyAdminURL,
 				ProxyURL:      proxyURL,
+				ProxyHTTPSURL: proxyHTTPSURL,
+				ProxyIP:       proxyIP,
 				ProxyUDPUrl:   proxyUDPUrl,
 			}
 			break

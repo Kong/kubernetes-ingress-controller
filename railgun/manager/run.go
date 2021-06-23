@@ -125,6 +125,12 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 
 	// determine the proxy synchronization strategy
+	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
+		setupLog.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
+			" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
+			c.ProxySyncSeconds, proxy.DefaultSyncSeconds,
+		))
+	}
 	syncTickDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxySyncSeconds))
 	if err != nil {
 		setupLog.Error(err, "%s is not a valid number of seconds to stagger the proxy server synchronization")
@@ -157,6 +163,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	stopCh := make(chan struct{})
 	go ctrlutils.PullConfigUpdate(kongConfig, logger, ctx, kubeconfig, stopCh)
 
+	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -176,6 +183,15 @@ func Run(ctx context.Context, c *config.Config) error {
 			Controller: &configuration.CoreV1EndpointsReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  prx,
+			},
+		},
+		{
+			IsEnabled: &alwaysEnabled,
+			Controller: &configuration.CoreV1SecretReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Secrets"),
 				Scheme: mgr.GetScheme(),
 				Proxy:  prx,
 			},

@@ -54,6 +54,17 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 	},
 	typeNeeded{
+		PackageImportAlias:                "corev1",
+		PackageAlias:                      "CoreV1",
+		Package:                           corev1,
+		Type:                              "Secret",
+		Plural:                            "secrets",
+		URL:                               "\"\"",
+		CacheType:                         "Secret",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
+	},
+	typeNeeded{
 		PackageImportAlias:                "netv1",
 		PackageAlias:                      "NetV1",
 		Package:                           netv1,

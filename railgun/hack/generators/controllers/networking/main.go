@@ -328,6 +328,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Type}})
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -352,7 +353,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 {{end}}
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {

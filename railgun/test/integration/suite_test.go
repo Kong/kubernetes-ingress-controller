@@ -76,7 +76,12 @@ var (
 	cluster ktfkind.Cluster
 
 	// watchNamespaces is a list of namespaces the controller watches
-	watchNamespaces = strings.Join([]string{elsewhere, corev1.NamespaceDefault, testTCPIngressNamespace}, ",")
+	watchNamespaces = strings.Join([]string{
+		elsewhere,
+		corev1.NamespaceDefault,
+		testTCPIngressNamespace,
+		testUDPIngressNamespace,
+	}, ",")
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
 	dbmode = os.Getenv("TEST_DATABASE_MODE")

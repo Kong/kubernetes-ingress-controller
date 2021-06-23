@@ -152,7 +152,7 @@ clean.test.proxy:
 test.integration.cluster:
 	@./scripts/setup-integration-tests.sh
 	@go clean -testcache
-	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
+	@KIND_CLUSTER="" KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
 # Our integration tests using all supported backends, with verbose output
 .PHONY: test.integration

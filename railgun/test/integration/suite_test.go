@@ -76,7 +76,12 @@ var (
 	cluster ktfkind.Cluster
 
 	// watchNamespaces is a list of namespaces the controller watches
-	watchNamespaces = strings.Join([]string{elsewhere, corev1.NamespaceDefault, testTCPIngressNamespace}, ",")
+	watchNamespaces = strings.Join([]string{
+		elsewhere,
+		corev1.NamespaceDefault,
+		testTCPIngressNamespace,
+		testUDPIngressNamespace,
+	}, ",")
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
 	dbmode = os.Getenv("TEST_DATABASE_MODE")
@@ -232,7 +237,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-ingress-networkingv1=enabled",
 				"--controller-ingress-networkingv1beta1=disabled",
 				"--controller-ingress-extensionsv1beta1=disabled",
-				"--controller-udpingress=enabled",
 				"--controller-tcpingress=enabled",
 				"--controller-kongingress=enabled",
 				"--controller-knativeingress=disabled",

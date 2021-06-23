@@ -19,7 +19,7 @@ import (
 // classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
 const classSpec = "IngressClassName"
 
-// CleanupFinalizer ensures that a deleted resource is no longer present in the object cache.
+// CleanupFinalizer removes an object finalizer from an object which is currently being deleted.
 func CleanupFinalizer(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
 	if HasFinalizer(obj, KongIngressFinalizer) {
 		log.Info("kong ingress finalizer needs to be removed from a resource which is deleting", "ingress", obj.GetName(), "finalizer", KongIngressFinalizer)

@@ -125,8 +125,8 @@ generate.clientsets:
 	@client-gen --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base github.com/kong/kubernetes-ingress-controller/railgun/apis/  \
-		--input configuration/v1,configuration/v1alpha1,configuration/v1beta1 \
-		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1/ \
+		--input configuration/v1,configuration/v1beta1 \
+		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
 		--output-package github.com/kong/kubernetes-ingress-controller/railgun/pkg/
 	@rm -rf pkg/clientset/
@@ -152,7 +152,7 @@ clean.test.proxy:
 test.integration.cluster:
 	@./scripts/setup-integration-tests.sh
 	@go clean -testcache
-	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
+	@KIND_CLUSTER="" KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
 # Our integration tests using all supported backends, with verbose output
 .PHONY: test.integration

@@ -25,7 +25,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
@@ -77,7 +76,6 @@ func Run(ctx context.Context, c *config.Config) error {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
-	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
 
@@ -232,7 +230,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		// ---------------------------------------------------------------------------
 		{
 			IsEnabled: &c.UDPIngressEnabled,
-			Controller: &kongctrl.KongV1Alpha1UDPIngressReconciler{
+			Controller: &kongctrl.KongV1Beta1UDPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 				Scheme:           mgr.GetScheme(),

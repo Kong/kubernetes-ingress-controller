@@ -27,6 +27,7 @@ import (
 type ConfigurationV1beta1Interface interface {
 	RESTClient() rest.Interface
 	TCPIngressesGetter
+	UDPIngressesGetter
 }
 
 // ConfigurationV1beta1Client is used to interact with features provided by the configuration group.
@@ -36,6 +37,10 @@ type ConfigurationV1beta1Client struct {
 
 func (c *ConfigurationV1beta1Client) TCPIngresses(namespace string) TCPIngressInterface {
 	return newTCPIngresses(c, namespace)
+}
+
+func (c *ConfigurationV1beta1Client) UDPIngresses(namespace string) UDPIngressInterface {
+	return newUDPIngresses(c, namespace)
 }
 
 // NewForConfig creates a new ConfigurationV1beta1Client for the given config.

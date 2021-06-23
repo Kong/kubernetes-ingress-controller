@@ -336,8 +336,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
 		for i, rule := range ingressSpec.Rules {
-
-			if rule.Port <= 0 {
+			if !util.IsValidPort(rule.Port) {
 				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
 				continue
 			}
@@ -369,7 +368,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 				log.Errorf("invalid TCPIngress: empty serviceName")
 				continue
 			}
-			if rule.Backend.ServicePort <= 0 {
+			if !util.IsValidPort(rule.Backend.ServicePort) {
 				log.Errorf("invalid TCPIngress: invalid servicePort: %v", rule.Backend.ServicePort)
 				continue
 			}

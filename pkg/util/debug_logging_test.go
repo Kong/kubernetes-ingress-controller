@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -124,4 +125,42 @@ func TestDebugLoggerStopsStiflingEntriesAfterBackoffExpires(t *testing.T) {
 	assert.Equal(t, "unique", entry["msg"])
 	require.NoError(t, json.Unmarshal([]byte(lines[1]), &entry))
 	assert.Equal(t, "second-unique", entry["msg"])
+}
+
+func TestDebugLoggerThreadSafety(t *testing.T) {
+	buf := &threadSafeBuffer{buf: new(bytes.Buffer), l: &sync.RWMutex{}}
+	log := MakeDebugLoggerWithReducedRedudancy(buf, &logrus.JSONFormatter{}, 0, time.Minute*30)
+
+	// spam the logger concurrently across several goroutines to ensure no dataraces
+	for i := 0; i < 100; i++ {
+		go func() { log.Debug("unique") }()
+	}
+	assert.Contains(t, buf.String(), "unique")
+}
+
+// -----------------------------------------------------------------------------
+// Private Types - Test Helpers
+// -----------------------------------------------------------------------------
+
+type threadSafeBuffer struct {
+	buf *bytes.Buffer
+	l   *sync.RWMutex
+}
+
+func (b *threadSafeBuffer) Read(p []byte) (n int, err error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	return b.buf.Read(p)
+}
+
+func (b *threadSafeBuffer) Write(p []byte) (n int, err error) {
+	b.l.Lock()
+	defer b.l.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *threadSafeBuffer) String() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	return b.buf.String()
 }

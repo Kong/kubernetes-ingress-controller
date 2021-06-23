@@ -57,6 +57,11 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		n.runningConfigHash,
 	)
 
+	if newSHA != nil {
+		fmt.Printf("drop the content silently coz legacy sync status using task queue.")
+		<-n.cfg.ConfigDone
+	}
+
 	if n.cfg.DumpConfig != util.ConfigDumpModeOff {
 		if n.cfg.DumpConfig == util.ConfigDumpModeEnabled {
 			targetContent = deckgen.ToDeckContent(ctx, n.Logger, state.SanitizedCopy(), &n.PluginSchemaStore,

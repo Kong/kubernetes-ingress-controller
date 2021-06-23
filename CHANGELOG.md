@@ -44,15 +44,14 @@
   [#1439](https://github.com/Kong/kubernetes-ingress-controller/pull/1439)
 
 #### Added
+
+- `v1beta1.UDPIngress` API support added. Only supported on KIC `v2.0.0+` releases.
 - Profiling using `pprof` is now a standalone HTTP server listening on port 10256.
   [#1417](https://github.com/Kong/kubernetes-ingress-controller/pull/1417)
 - knative API - Full Feature Parity
  [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
 
 ## [2.0.0-alpha.1] - 2021/05/27
-
-**NOTE**: This is a draft of release notes for the next major version to be
-released and the release notes may change significantly before then.
 
 #### Added
 

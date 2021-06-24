@@ -33,7 +33,8 @@ func PerformUpdate(ctx context.Context,
 	targetContent *file.Content,
 	selectorTags []string,
 	customEntities []byte,
-	oldSHA []byte) ([]byte, error) {
+	oldSHA []byte,
+	skipUpdateCR bool) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
 		return oldSHA, err
@@ -57,8 +58,13 @@ func PerformUpdate(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	log.Info("successfully synced configuration to kong. sync ingress status also.")
-	kongConfig.ConfigDone <- *targetContent
+
+	if newSHA != nil && !skipUpdateCR {
+		kongConfig.ConfigDone <- *targetContent
+		log.Info("sync ingress status also.")
+	}
+
+	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }
 

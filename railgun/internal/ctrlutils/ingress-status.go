@@ -12,6 +12,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/prometheus/common/log"
 
+	"sync"
+
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -24,11 +26,13 @@ import (
 
 func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.Context, kubeConfig *rest.Config, stopCh <-chan struct{}) {
 	log.Info("Launching Customer Resource Update thread.")
+	var wg sync.WaitGroup
 	for {
 		select {
 		case updateDone := <-kongConfig.ConfigDone:
 			log.Info("receive configuration information. Update ingress status \n%v\n \n", &updateDone)
-			go UpdateIngress(&updateDone, log, ctx, kubeConfig)
+			wg.Add(1)
+			go UpdateIngress(&updateDone, log, ctx, kubeConfig, wg)
 		case <-stopCh:
 			log.Info("stop status update channel.")
 			return
@@ -37,7 +41,8 @@ func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.C
 }
 
 // update ingress status according to generated rules and specs
-func UpdateIngress(targetContent *file.Content, log logr.Logger, ctx context.Context, kubeconfig *rest.Config) error {
+func UpdateIngress(targetContent *file.Content, log logr.Logger, ctx context.Context, kubeconfig *rest.Config, wg sync.WaitGroup) error {
+	defer wg.Done()
 	for _, svc := range targetContent.Services {
 		for _, plugin := range svc.Plugins {
 			log.Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)

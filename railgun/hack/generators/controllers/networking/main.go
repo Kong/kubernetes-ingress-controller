@@ -335,6 +335,9 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/finalizers,verbs=update
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

@@ -68,6 +68,8 @@ spec:
                         over TCP sessions and route. It is a required field. If a
                         Host is not specified, the requested are routed based only
                         on Port.
+                      maximum: 65535
+                      minimum: 1
                       type: integer
                   required:
                   - backend

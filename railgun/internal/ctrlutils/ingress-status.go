@@ -82,7 +82,6 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	routeInf := strings.Split(*(svc.Routes[0].Name), ".")
 	namespace = routeInf[0]
 	name = routeInf[1]
-	log.Info("svc namespace %s name %s", namespace, name)
 	if len(namespace) == 0 || len(name) == 0 {
 		return fmt.Errorf("configured route information is not completed which should not happen.")
 	}
@@ -96,7 +95,6 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	if err != nil || curIng == nil {
 		return fmt.Errorf("failed to fetch Knative Ingress %v/%v: %w", namespace, name, err)
 	}
-	log.Info("retrieving existing CR <%v> ", *curIng)
 
 	// check if CR current status already updated
 	var status []apiv1.LoadBalancerIngress
@@ -117,7 +115,6 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	log.Info("attempting to update Knative Ingress status")
 	lbStatus := toKnativeLBStatus(status)
 	clusterDomain := network.GetClusterDomainName()
-	log.Info("cluster domain %s\n", clusterDomain)
 	if err != nil {
 		return err
 	}
@@ -148,7 +145,7 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config) ([]string, erro
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
 	if err != nil {
-		log.Info("err %v", err)
+		log.Infof("running address err %v", err)
 		return nil, err
 	}
 

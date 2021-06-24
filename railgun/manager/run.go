@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -253,16 +254,6 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongClusterPluginEnabled,
-			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
 			IsEnabled: &c.KongPluginEnabled,
 			Controller: &kongctrl.KongV1KongPluginReconciler{
 				Client: mgr.GetClient(),
@@ -283,9 +274,36 @@ func Run(ctx context.Context, c *config.Config) error {
 		},
 	}
 
-	if ctrlutils.KnativeCRDExist(mgr.GetClient()) == true {
-		setupLog.Info("ingresses.networking.internal.knative.dev crd already deployed. enable knative contorller.")
-		c.KnativeIngressEnabled = util.EnablementStatusEnabled
+	kongClusterPluginGVR := schema.GroupVersionResource{
+		Group:    configurationv1beta1.SchemeGroupVersion.Group,
+		Version:  configurationv1beta1.SchemeGroupVersion.Version,
+		Resource: "kongclusterplugins",
+	}
+	if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) == true {
+		setupLog.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
+		controller := ControllerDef{
+			IsEnabled: &c.KongClusterPluginEnabled,
+			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		}
+		controllers = append(controllers, controller)
+	} else {
+		setupLog.Info(`kongclusterplugins.configuration.konghq.com v1beta1 CRD not available on cluster.
+		Disabling KongClusterPlugin controller`)
+	}
+
+	knativeGVR := schema.GroupVersionResource{
+		Group:    knativev1alpha1.SchemeGroupVersion.Group,
+		Version:  knativev1alpha1.SchemeGroupVersion.Version,
+		Resource: "ingresses",
+	}
+	if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) == true {
+		setupLog.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
 		controller := ControllerDef{
 			IsEnabled: &c.KnativeIngressEnabled,
 			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
@@ -297,6 +315,9 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		}
 		controllers = append(controllers, controller)
+	} else {
+		setupLog.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
+		Disabling Knative controller`)
 	}
 
 	for _, c := range controllers {

@@ -133,14 +133,9 @@ func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName st
 	return false
 }
 
-// returns false if Knative CRDs do not exist
-func KnativeCRDExist(client client.Client) bool {
-	knativeGVR := schema.GroupVersionResource{
-		Group:    knative.SchemeGroupVersion.Group,
-		Version:  knative.SchemeGroupVersion.Version,
-		Resource: "ingresses",
-	}
-	_, err := client.RESTMapper().KindFor(knativeGVR)
+// CRDExists returns false if CRD does not exist
+func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
+	_, err := client.RESTMapper().KindFor(gvr)
 	if meta.IsNoMatchError(err) {
 		return false
 	}

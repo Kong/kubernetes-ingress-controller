@@ -32,7 +32,7 @@ func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.C
 		case updateDone := <-kongConfig.ConfigDone:
 			log.Info("receive configuration information. Update ingress status \n%v\n \n", &updateDone)
 			wg.Add(1)
-			go UpdateIngress(&updateDone, log, ctx, kubeConfig, wg)
+			go UpdateIngress(&updateDone, log, ctx, kubeConfig, &wg)
 		case <-stopCh:
 			log.Info("stop status update channel.")
 			return
@@ -41,7 +41,7 @@ func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.C
 }
 
 // update ingress status according to generated rules and specs
-func UpdateIngress(targetContent *file.Content, log logr.Logger, ctx context.Context, kubeconfig *rest.Config, wg sync.WaitGroup) error {
+func UpdateIngress(targetContent *file.Content, log logr.Logger, ctx context.Context, kubeconfig *rest.Config, wg *sync.WaitGroup) error {
 	defer wg.Done()
 	for _, svc := range targetContent.Services {
 		for _, plugin := range svc.Plugins {

@@ -189,8 +189,30 @@ var inputControllersNeeded = &typesNeeded{
 	},
 }
 
+var inputRBACPermissionsNeeded = &rbacsNeeded{
+	rbacNeeded{
+		Plural:    "nodes",
+		URL:       "\"\"",
+		RBACVerbs: []string{"list", "watch"},
+	},
+	rbacNeeded{
+		Plural:    "pods",
+		URL:       "\"\"",
+		RBACVerbs: []string{"get", "list", "watch"},
+	},
+	rbacNeeded{
+		Plural:    "events",
+		URL:       "\"\"",
+		RBACVerbs: []string{"create", "patch"},
+	},
+}
+
 func main() {
-	if err := inputControllersNeeded.generate(); err != nil {
+	needed := necessary{
+		types: inputControllersNeeded,
+		rbacs: inputRBACPermissionsNeeded,
+	}
+	if err := needed.generate(); err != nil {
 		fmt.Fprintf(os.Stderr, "could not generate input controllers: %v", err)
 		os.Exit(1)
 	}
@@ -227,16 +249,32 @@ func header() (*bytes.Buffer, error) {
 // controllers generated for them.
 type typesNeeded []typeNeeded
 
+// rbacsNeeded is a list of Kubernetes API objects which the Kong
+// Kubernetes Ingress Controller interacts with, but does not need a
+// controller for, only permissions
+type rbacsNeeded []rbacNeeded
+
+type necessary struct {
+	types *typesNeeded
+	rbacs *rbacsNeeded
+}
+
 // generate generates a controller/input/<controller>.go Kubernetes controller
 // for every supported type populated in the list.
-func (types typesNeeded) generate() error {
+func (needed necessary) generate() error {
 	contents, err := header()
 	if err != nil {
 		return err
 	}
 
-	for _, t := range types {
+	for _, t := range *needed.types {
 		if err := t.generate(contents); err != nil {
+			return err
+		}
+	}
+
+	for _, r := range *needed.rbacs {
+		if err := r.generate(contents); err != nil {
 			return err
 		}
 	}
@@ -271,6 +309,21 @@ func (t *typeNeeded) generate(contents *bytes.Buffer) error {
 	return tmpl.Execute(contents, t)
 }
 
+// rbacNeeded represents a resource that we only require RBAC permissions for
+type rbacNeeded struct {
+	Plural    string
+	URL       string
+	RBACVerbs []string
+}
+
+func (r *rbacNeeded) generate(contents *bytes.Buffer) error {
+	tmpl, err := template.New("rbac").Funcs(sprig.TxtFuncMap()).Parse(rbacTemplate)
+	if err != nil {
+		return err
+	}
+	return tmpl.Execute(contents, r)
+}
+
 // -----------------------------------------------------------------------------
 // Templates
 // -----------------------------------------------------------------------------
@@ -302,6 +355,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
+`
+
+var rbacTemplate = `
+// -----------------------------------------------------------------------------
+// API Group {{.URL}} resource {{.Plural}}
+// -----------------------------------------------------------------------------
+
+//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 `
 
 var controllerTemplate = `

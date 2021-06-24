@@ -42,6 +42,9 @@
   and should address other Secret-based configuration (custom entities,
   `ConfigFrom` in KongPlugins, etc.)
   [#1439](https://github.com/Kong/kubernetes-ingress-controller/pull/1439)
+- The KongClusterPlugin controller disables itself automatically if the CRD is
+  not available, same as 1.x.
+  [#1458](https://github.com/Kong/kubernetes-ingress-controller/pull/1458)
 
 #### Added
 

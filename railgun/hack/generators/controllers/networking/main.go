@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/Masterminds/sprig"
 	"io/ioutil"
 	"os"
 	"text/template"
@@ -40,6 +41,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Service",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "corev1",
@@ -51,6 +53,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Endpoint",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "corev1",
@@ -62,6 +65,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Secret",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "netv1",
@@ -73,6 +77,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "IngressV1",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "netv1beta1",
@@ -84,6 +89,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "extv1beta1",
@@ -95,6 +101,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -106,6 +113,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "KongIngress",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -117,6 +125,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Plugin",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -128,6 +137,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "ClusterPlugin",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -139,6 +149,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Consumer",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1beta1",
@@ -150,6 +161,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "TCPIngress",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1beta1",
@@ -161,6 +173,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "UDPIngress",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "knativev1alpha1",
@@ -172,6 +185,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "KnativeIngress",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 }
 
@@ -238,6 +252,7 @@ type typeNeeded struct {
 	Plural             string
 	URL                string
 	CacheType          string
+	RBACVerbs          []string
 
 	// AcceptsIngressClassNameAnnotation indicates that the object accepts (and the controller will listen to)
 	// the "kubernetes.io/ingress.class" annotation to decide whether or not the object is supported.
@@ -249,7 +264,7 @@ type typeNeeded struct {
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
-	tmpl, err := template.New("controller").Parse(controllerTemplate)
+	tmpl, err := template.New("controller").Funcs(sprig.TxtFuncMap()).Parse(controllerTemplate)
 	if err != nil {
 		return err
 	}
@@ -317,7 +332,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 {{- end}}
 }
 
-//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/finalizers,verbs=update
 

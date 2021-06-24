@@ -3,6 +3,9 @@ module github.com/kong/kubernetes-ingress-controller
 go 1.16
 
 require (
+	github.com/Masterminds/goutils v1.1.1 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/docker/docker v20.10.5+incompatible // indirect
@@ -12,11 +15,13 @@ require (
 	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-uuid v1.0.2
+	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/kong/deck v1.7.0
 	github.com/kong/go-kong v0.19.0
 	github.com/kong/kubernetes-testing-framework v0.0.12
 	github.com/lithammer/dedent v1.1.0
 	github.com/magiconair/properties v1.8.4 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1

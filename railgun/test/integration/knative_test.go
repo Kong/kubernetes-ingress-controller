@@ -23,6 +23,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	knativenetworkingversioned "knative.dev/networking/pkg/client/clientset/versioned"
+	"knative.dev/pkg/apis"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
 )
@@ -165,6 +167,26 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster
 }
 
 func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
+	knativeCli, err := knativenetworkingversioned.NewForConfig(cluster.Config())
+	if err != nil {
+		return false
+	}
+	ingCli := knativeCli.NetworkingV1alpha1().Ingresses("default")
+	assert.Eventually(t, func() bool {
+		curIng, err := ingCli.Get(ctx, "helloworld-go", metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			return false
+		}
+		conds := curIng.Status.Status.GetConditions()
+		for _, cond := range conds {
+			if cond.Type == apis.ConditionReady && cond.Status == v1.ConditionTrue {
+				t.Logf("knative ingress status is ready.")
+				return true
+			}
+		}
+		return false
+	}, 120*time.Second, 1*time.Second, true)
+
 	url := "http://" + proxy
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{

@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/Masterminds/sprig"
 	"io/ioutil"
 	"os"
 	"text/template"
+
+	"github.com/Masterminds/sprig"
 )
 
 // -----------------------------------------------------------------------------

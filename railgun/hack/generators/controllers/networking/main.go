@@ -192,17 +192,17 @@ var inputControllersNeeded = &typesNeeded{
 var inputRBACPermissionsNeeded = &rbacsNeeded{
 	rbacNeeded{
 		Plural:    "nodes",
-		URL:       "\"\"",
+		URL:       `""`,
 		RBACVerbs: []string{"list", "watch"},
 	},
 	rbacNeeded{
 		Plural:    "pods",
-		URL:       "\"\"",
+		URL:       `""`,
 		RBACVerbs: []string{"get", "list", "watch"},
 	},
 	rbacNeeded{
 		Plural:    "events",
-		URL:       "\"\"",
+		URL:       `""`,
 		RBACVerbs: []string{"create", "patch"},
 	},
 }

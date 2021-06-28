@@ -65,17 +65,6 @@ Thus:
 - if the list includes `next` but no release tags: the fix/enhancement will come in the nearest minor release.
 - if the list includes `main` but no release tags: the fix/enhancement will come in the nearest patch release.
 
-## Proposing new changes
-
-If you want to add functionality and features that don't fall under an existing and accepted issue please add a [Kubernetes Enhancement Proposal (KEP)][keps] in a pull request to the `railgun/keps/` directory.
-
-To the best of your ability: take some time before you propose something new to search through some of the existing KEPs to make sure that your proposal isn't a duplicate nor is it colliding with anything others.
-
-Read our [KEP Documentation][kepstart] which provides some guidelines about how to get started and contributing to new or existing KEPs.
-
-[keps]:https://github.com/kubernetes/enhancements/blob/master/keps/README.md
-[kepstart]:https://github.com/Kong/kubernetes-ingress-controller/blob/next/railgun/keps/README.md
-
 ## Development environment
 
 ## Environment

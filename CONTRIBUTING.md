@@ -88,7 +88,7 @@ The build uses dependencies are managed by [go modules](https://blog.golang.org/
 
 Development of our [Kubernetes Controllers][ctrl] and [APIs][kapi] is managed through the [Kubebuilder SDK][kubebuilder].
 
-Prior to developing we recommend you run through the [Kubebuilder Quickstart Documentation][kbquick] documentation in order to familiarize yourself with how the command line works, how to add new APIs and controllers, and how to update existing APIs.
+Prior to developing we recommend you read through the [Makefile](/Makefile) directives related to generation of API configurations, and run through the [Kubebuilder Quickstart Documentation][kbquick] documentation in order to familiarize yourself with how the command line works, how to add new APIs and controllers, and how to update existing APIs.
 
 Make sure you're [generally familiar with Kubernetes Controllers as a concept, and how to build them][kbctrl].
 

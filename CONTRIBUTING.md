@@ -70,17 +70,15 @@ Thus:
 ## Environment
 
 - Golang version matching our [`Dockerfile`](./Dockerfile) installed
-- [Kubebuilder][kubebuilder] `v3.1.x`+
-- [GNU Make][make] `v4.x`+
-- [Docker][docker] (for building) `v20.10.x`+
-- Access to a k8s cluster, you can use [KIND][kind] [Minikube][minikube] or [GKE][gke]
+- [Kubebuilder][kubebuilder]
+- [GNU Make][make]
+- [Docker][docker] (for building)
+- Access to a Kubernetes cluster (we use [KIND][kind] for development)
 
 [kubebuilder]:https://kubebuilder.io/
 [make]:https://www.gnu.org/software/make/
 [docker]:https://docs.docker.com/
 [kind]:https://github.com/kubernetes-sigs/kind
-[minikube]:https://github.com/kubernetes-sigs/minikube
-[gke]:https://cloud.google.com/kubernetes-engine/
 
 ## Dependencies
 

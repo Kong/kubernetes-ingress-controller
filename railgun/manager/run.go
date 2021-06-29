@@ -190,36 +190,6 @@ func Run(ctx context.Context, c *config.Config) error {
 				Proxy:  prx,
 			},
 		},
-		{
-			IsEnabled: &c.IngressNetV1Enabled,
-			Controller: &configuration.NetV1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
-			IsEnabled: &c.IngressNetV1beta1Enabled,
-			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
-			IsEnabled: &c.IngressExtV1beta1Enabled,
-			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
 
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
@@ -274,9 +244,51 @@ func Run(ctx context.Context, c *config.Config) error {
 		},
 	}
 
+	// Negotiate Ingress version
+	ingressControllers := map[IngressAPI]ControllerDef{
+		NetworkingV1: {
+			IsEnabled: &c.IngressNetV1Enabled,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		NetworkingV1beta1: {
+			IsEnabled: &c.IngressNetV1beta1Enabled,
+			Controller: &configuration.NetV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		ExtensionsV1beta1: {
+			IsEnabled: &c.IngressExtV1beta1Enabled,
+			Controller: &configuration.ExtV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+	}
+
+	negotiatedIngressAPI, err := negotiateIngressAPI(c, mgr.GetClient())
+	if err == nil {
+		controllers = append(controllers, ingressControllers[negotiatedIngressAPI])
+	} else {
+		setupLog.Info(`no Ingress controllers enabled or no suitable Ingress version found.
+		Disabling Ingress controller`)
+	}
+
 	kongClusterPluginGVR := schema.GroupVersionResource{
-		Group:    configurationv1beta1.SchemeGroupVersion.Group,
-		Version:  configurationv1beta1.SchemeGroupVersion.Version,
+		Group:    konghqcomv1.SchemeGroupVersion.Group,
+		Version:  konghqcomv1.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
 	if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) == true {

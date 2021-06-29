@@ -44,7 +44,7 @@ func TestKnativeIngress(t *testing.T) {
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
-	require.NoError(t, deployManifest(knativeCrds, ctx, t))
+	//require.NoError(t, deployManifest(knativeCrds, ctx, t))
 	require.NoError(t, deployManifest(knativeCore, ctx, t))
 	require.True(t, isKnativeReady(ctx, cluster, t), true)
 

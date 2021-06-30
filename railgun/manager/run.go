@@ -17,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
@@ -29,6 +30,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"knative.dev/pkg/signals"
+
+	k8scache "k8s.io/client-go/tools/cache"
+	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
+	knativeinformerexternal "knative.dev/networking/pkg/client/informers/externalversions"
 )
 
 // -----------------------------------------------------------------------------
@@ -273,7 +279,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		},
 	}
 
-	// Negotiate Core Ingress Version
+	// Negotiate Ingress version
 	ingressControllers := map[IngressAPI]ControllerDef{
 		NetworkingV1: {
 			IsEnabled: &controllerConfig.IngressNetV1Enabled,
@@ -341,6 +347,49 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}
 
+	go FlipKnativeController(mgr, prx, &c.KnativeIngressEnabled, c, setupLog)
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
+}
+
+// wait for knative cr before register and starting knative controller
+func FlipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
+	if *enablestatus == util.EnablementStatusEnabled {
+		log.Info("knative controller already enabled. skip flip process.\n")
+		return nil
+	}
+	kubeCfg, err := cfg.GetKubeconfig()
+	if err != nil || kubeCfg == nil {
+		return fmt.Errorf("failed to generate incluster configuration. err %v", err)
+	}
+	knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
+	if err != nil {
+		return fmt.Errorf("failed to generate knative client. err %v", err)
+	}
+	knativeFactory := knativeinformerexternal.NewSharedInformerFactory(knativeCli, 0)
+	knativeInformer := knativeFactory.Networking().V1alpha1().Ingresses().Informer()
+	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	knativeInformer.AddEventHandler(&k8scache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			log.Info("knative networking customer resource added.")
+			if *enablestatus == util.EnablementStatusDisabled {
+				log.Info("knative controller does not exist. register one.")
+				knative := configuration.Knativev1alpha1IngressReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+					Scheme:           mgr.GetScheme(),
+					IngressClassName: cfg.IngressClassName,
+					Proxy:            prx,
+				}
+				knative.SetupWithManager(mgr)
+				*enablestatus = util.EnablementStatusEnabled
+			} else {
+				log.Info("knative controller already on. Skip registration.")
+			}
+			cancel()
+		},
+	})
+	stopCh := signals.SetupSignalHandler()
+	knativeFactory.Start(stopCh)
+	return nil
 }

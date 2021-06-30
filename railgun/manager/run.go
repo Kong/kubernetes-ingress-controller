@@ -153,7 +153,6 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers

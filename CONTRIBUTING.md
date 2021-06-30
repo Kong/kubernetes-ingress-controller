@@ -70,13 +70,33 @@ Thus:
 ## Environment
 
 - Golang version matching our [`Dockerfile`](./Dockerfile) installed
-- Access to a k8s cluster, you can use Minikube or GKE
-- make
-- Docker (for building)
+- [Kubebuilder][kubebuilder]
+- [GNU Make][make]
+- [Docker][docker] (for building)
+- Access to a Kubernetes cluster (we use [KIND][kind] for development)
+
+[kubebuilder]:https://kubebuilder.io/
+[make]:https://www.gnu.org/software/make/
+[docker]:https://docs.docker.com/
+[kind]:https://github.com/kubernetes-sigs/kind
 
 ## Dependencies
 
 The build uses dependencies are managed by [go modules](https://blog.golang.org/using-go-modules)
+
+## Developing
+
+Development of our [Kubernetes Controllers][ctrl] and [APIs][kapi] is managed through the [Kubebuilder SDK][kubebuilder].
+
+Prior to developing we recommend you read through the [Makefile](/Makefile) directives related to generation of API configurations, and run through the [Kubebuilder Quickstart Documentation][kbquick] documentation in order to familiarize yourself with how the command line works, how to add new APIs and controllers, and how to update existing APIs.
+
+Make sure you're [generally familiar with Kubernetes Controllers as a concept, and how to build them][kbctrl].
+
+[ctrl]:https://kubernetes.io/docs/concepts/architecture/controller/
+[kapi]:https://kubernetes.io/docs/concepts/overview/kubernetes-api/
+[kubebuilder]:https://kubebuilder.io/
+[kbquick]:https://kubebuilder.io/quick-start.html
+[kbctrl]:https://kubebuilder.io/cronjob-tutorial/controller-overview.html
 
 ## Running in dev mode
 

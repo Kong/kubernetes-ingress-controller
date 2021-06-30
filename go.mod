@@ -8,7 +8,6 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr v1.1.0
-	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.12.0
 	github.com/ghodss/yaml v1.0.0
@@ -23,7 +22,6 @@ require (
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
-	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.26.0
@@ -35,8 +33,6 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.8.0
-	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
-	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1
@@ -46,9 +42,9 @@ require (
 	k8s.io/apimachinery v0.21.2
 	k8s.io/client-go v0.21.2
 	k8s.io/klog v1.0.0
-	knative.dev/networking v0.0.0-20210512050647-ace2d3306f0b
-	knative.dev/pkg v0.0.0-20210510175900-4564797bf3b7
-	knative.dev/serving v0.23.1
+	knative.dev/networking v0.0.0-20210622182128-53f45d6d2cfa
+	knative.dev/pkg v0.0.0-20210622173328-dd0db4b05c80
+	knative.dev/serving v0.24.0
 	sigs.k8s.io/controller-runtime v0.9.2
 	sigs.k8s.io/yaml v1.2.0
 )

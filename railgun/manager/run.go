@@ -356,6 +356,8 @@ func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager,
 		seeder, err := seeder.NewBuilder(mgr.GetConfig(), prx).
 			WithFieldLogger(deprecatedLogger.WithField("subsystem", "kubernetes-object-seeder")).
 			WithIngressClass(c.IngressClassName).
+			WithControllerConfig(controllerConfig).
+			WithNamespaces(strings.Split(c.WatchNamespace, ",")...).
 			Build()
 		if err != nil {
 			return nil, nil, err

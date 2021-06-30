@@ -8,9 +8,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy/seeder"
-	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,6 +15,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy/seeder"
+	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 )
 
 func TestProxySeedRound(t *testing.T) {
@@ -80,12 +81,13 @@ func TestProxySeedRound(t *testing.T) {
 	seeder, err := seeder.NewBuilder(mgr.GetConfig(), fakePrx).
 		WithFieldLogger(logrus.New().WithField("component", "integration_tests")).
 		WithIngressClass(ingressClassName).
+		WithNamespaces(namespace).
 		Build()
 	require.NoError(t, err)
 	require.NoError(t, seeder.Seed(ctx))
 
 	t.Log("verifying that the seeded ingress, its service and endpoints were all seeded properly into the proxy cache")
-	require.True(t, len(fakePrx.objs) >= 3)
+	require.True(t, len(fakePrx.objs) == 3)
 }
 
 // -----------------------------------------------------------------------------

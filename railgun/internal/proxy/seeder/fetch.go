@@ -19,7 +19,7 @@ import (
 func (s *Seeder) fetchCore(ctx context.Context) ([]client.Object, error) {
 	objs := make([]client.Object, 0)
 
-	if s.controllerConfig.IngressExtV1beta1Enabled == util.EnablementStatusEnabled {
+	if s.controllerConfig != nil && s.controllerConfig.IngressExtV1beta1Enabled == util.EnablementStatusEnabled {
 		for _, namespace := range s.namespaces {
 			list, err := s.kc.ExtensionsV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 			if err != nil {
@@ -34,7 +34,7 @@ func (s *Seeder) fetchCore(ctx context.Context) ([]client.Object, error) {
 		}
 	}
 
-	if s.controllerConfig.IngressNetV1beta1Enabled == util.EnablementStatusEnabled {
+	if s.controllerConfig != nil && s.controllerConfig.IngressNetV1beta1Enabled == util.EnablementStatusEnabled {
 		for _, namespace := range s.namespaces {
 			v1beta1Ingresses, err := s.kc.NetworkingV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 			if err != nil {
@@ -49,7 +49,7 @@ func (s *Seeder) fetchCore(ctx context.Context) ([]client.Object, error) {
 		}
 	}
 
-	if s.controllerConfig.IngressNetV1Enabled == util.EnablementStatusEnabled {
+	if s.controllerConfig != nil && s.controllerConfig.IngressNetV1Enabled == util.EnablementStatusEnabled {
 		for _, namespace := range s.namespaces {
 			ingresses, err := s.kc.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 			if err != nil {
@@ -109,7 +109,7 @@ func (s *Seeder) fetchKong(ctx context.Context) ([]client.Object, error) {
 		}
 	}
 
-	if s.controllerConfig.KongClusterPluginEnabled == util.EnablementStatusEnabled {
+	if s.controllerConfig != nil && s.controllerConfig.KongClusterPluginEnabled == util.EnablementStatusEnabled {
 		kongClusterPlugins, err := s.kongc.ConfigurationV1().KongClusterPlugins().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return nil, err
@@ -180,7 +180,7 @@ func (s *Seeder) fetchKong(ctx context.Context) ([]client.Object, error) {
 func (s *Seeder) fetchOther(ctx context.Context) ([]client.Object, error) {
 	objs := make([]client.Object, 0)
 
-	if s.controllerConfig.KnativeIngressEnabled == util.EnablementStatusEnabled {
+	if s.controllerConfig != nil && s.controllerConfig.KnativeIngressEnabled == util.EnablementStatusEnabled {
 		for _, namespace := range s.namespaces {
 			knativeIngresses, err := s.knativec.NetworkingV1alpha1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 			if err != nil {

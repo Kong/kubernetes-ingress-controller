@@ -6,7 +6,7 @@ export CLUSTER_NAME="test-cluster"
 export REGISTRY_NAME="test-local-registry"
 
 export KIND_BINARY=./kind
-export KIND_URL=https://github.com/kubernetes-sigs/kind/releases/download/v0.9.0/kind-linux-amd64
+export KIND_URL=https://github.com/kubernetes-sigs/kind/releases/download/v0.11.1/kind-linux-amd64
 
 wget "$KIND_URL" -O "$KIND_BINARY" || exit 1
 chmod +x "$KIND_BINARY" || exit 1

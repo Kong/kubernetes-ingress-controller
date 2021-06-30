@@ -168,24 +168,30 @@ type objectTracker map[string]*cachedObject
 // Client Go Cached Proxy Resolver - Public Methods - Interface Implementation
 // -----------------------------------------------------------------------------
 
-func (p *clientgoCachedProxyResolver) UpdateObject(obj client.Object) error {
-	cobj := &cachedObject{action: updated, key: p.clientObjectKey(obj), runtimeObj: obj.DeepCopyObject()}
-	select {
-	case p.update <- cobj:
-		return nil
-	default:
-		return fmt.Errorf("the proxy is too busy to accept requests at this time, try again later")
+func (p *clientgoCachedProxyResolver) UpdateObjects(objs ...client.Object) error {
+	for _, obj := range objs {
+		cobj := &cachedObject{action: updated, key: p.clientObjectKey(obj), runtimeObj: obj.DeepCopyObject()}
+		select {
+		case p.update <- cobj:
+			return nil
+		default:
+			return fmt.Errorf("the proxy is too busy to accept requests at this time, try again later")
+		}
 	}
+	return nil
 }
 
-func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
-	cobj := &cachedObject{action: deleted, key: p.clientObjectKey(obj), runtimeObj: obj.DeepCopyObject()}
-	select {
-	case p.del <- cobj:
-		return nil
-	default:
-		return fmt.Errorf("the proxy is too busy to accept requests at this time, try again later")
+func (p *clientgoCachedProxyResolver) DeleteObjects(objs ...client.Object) error {
+	for _, obj := range objs {
+		cobj := &cachedObject{action: deleted, key: p.clientObjectKey(obj), runtimeObj: obj.DeepCopyObject()}
+		select {
+		case p.del <- cobj:
+			return nil
+		default:
+			return fmt.Errorf("the proxy is too busy to accept requests at this time, try again later")
+		}
 	}
+	return nil
 }
 
 // -----------------------------------------------------------------------------

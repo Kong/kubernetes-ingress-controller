@@ -185,6 +185,36 @@ func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager,
 		// ---------------------------------------------------------------------------
 
 		{
+			IsEnabled: &controllerConfig.IngressNetV1Enabled,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled: &controllerConfig.IngressNetV1beta1Enabled,
+			Controller: &configuration.NetV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled: &controllerConfig.IngressExtV1beta1Enabled,
+			Controller: &configuration.ExtV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
 			IsEnabled: &controllerConfig.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
@@ -289,48 +319,6 @@ func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager,
 				IngressClassName: c.IngressClassName,
 			},
 		},
-	}
-
-	// Negotiate Ingress version
-	ingressControllers := map[IngressAPI]ControllerDef{
-		NetworkingV1: {
-			IsEnabled: &controllerConfig.IngressNetV1Enabled,
-			Controller: &configuration.NetV1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		NetworkingV1beta1: {
-			IsEnabled: &controllerConfig.IngressNetV1beta1Enabled,
-			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		ExtensionsV1beta1: {
-			IsEnabled: &controllerConfig.IngressExtV1beta1Enabled,
-			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-	}
-
-	negotiatedIngressAPI, err := negotiateIngressAPI(c, mgr.GetClient())
-	if err == nil {
-		controllers = append(controllers, ingressControllers[negotiatedIngressAPI])
-	} else {
-		setupLog.Info(`no Ingress controllers enabled or no suitable Ingress version found.
-		Disabling Ingress controller`)
 	}
 
 	for _, c := range controllers {

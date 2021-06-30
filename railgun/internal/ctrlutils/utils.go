@@ -2,9 +2,11 @@ package ctrlutils
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	corev1 "k8s.io/api/core/v1"
+	netv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,6 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
 // classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
@@ -102,6 +108,20 @@ func GeneratePredicateFuncsForIngressClassFilter(name string, specCheckEnabled, 
 	return preds
 }
 
+// IsObjectSupported is a helper function to check if the object has any configuring that
+// indicates it is supported for a given ingress class name.
+func IsObjectSupported(obj client.Object, ingressClassName string) bool {
+	// currently we short circuit on services and endpoints, storing all that are found.
+	// See: https://github.com/Kong/kubernetes-ingress-controller/issues/1259
+	if _, ok := obj.(*corev1.Service); ok {
+		return true
+	}
+	if _, ok := obj.(*corev1.Endpoints); ok {
+		return true
+	}
+	return IsIngressClassAnnotationConfigured(obj, ingressClassName) || IsIngressClassSpecConfigured(obj, ingressClassName)
+}
+
 // IsIngressClassAnnotationConfigured determines whether an object has an ingress.class annotation configured that
 // matches the provide IngressClassName (and is therefore an object configured to be reconciled by that class).
 //
@@ -140,4 +160,62 @@ func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 		return false
 	}
 	return true
+}
+
+// Convert2ClientObject is a convenience method to convert normal Kubernetes objects into
+// controller-runtime's client.Object type for any of our supported APIs.
+func Convert2ClientObject(obj interface{}) (client.Object, error) {
+	var cobj client.Object
+	switch obj := obj.(type) {
+	// Kubernetes Core API Support
+	case *netv1beta1.Ingress:
+		cobj = obj
+	case netv1beta1.Ingress:
+		cobj = &obj
+	case *netv1.Ingress:
+		cobj = obj
+	case netv1.Ingress:
+		cobj = &obj
+	case *corev1.Service:
+		cobj = obj
+	case corev1.Service:
+		cobj = &obj
+	case *corev1.Endpoints:
+		cobj = obj
+	case corev1.Endpoints:
+		cobj = &obj
+	// Kong API Support
+	case *kongv1.KongPlugin:
+		cobj = obj
+	case kongv1.KongPlugin:
+		cobj = &obj
+	case *kongv1.KongClusterPlugin:
+		cobj = obj
+	case kongv1.KongClusterPlugin:
+		cobj = &obj
+	case *kongv1.KongConsumer:
+		cobj = obj
+	case kongv1.KongConsumer:
+		cobj = &obj
+	case *kongv1.KongIngress:
+		cobj = obj
+	case kongv1.KongIngress:
+		cobj = &obj
+	case *kongv1beta1.TCPIngress:
+		cobj = obj
+	case kongv1beta1.TCPIngress:
+		cobj = &obj
+	case *kongv1beta1.UDPIngress:
+		cobj = obj
+	case kongv1beta1.UDPIngress:
+		cobj = &obj
+	// 3rd Party API Support
+	case *knative.Ingress:
+		cobj = obj
+	case knative.Ingress:
+		cobj = &obj
+	default:
+		return nil, fmt.Errorf("unexpected object type found: %T", obj)
+	}
+	return cobj, nil
 }

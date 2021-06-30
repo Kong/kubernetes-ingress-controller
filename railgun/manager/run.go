@@ -361,6 +361,26 @@ func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager,
 
 	go FlipKnativeController(mgr, prx, &c.KnativeIngressEnabled, c, setupLog)
 	setupLog.Info("starting manager")
+
+	// if enabled an initial "seed round" which pre-populates the proxy cache with existing supported objects in the cluster occurs.
+	// this is required for consistency when the proxy container is restarted for any reason to ensure proxy state consistency.
+	if c.ProxySeedEnabled {
+		seeder, err := seeder.NewBuilder(mgr.GetConfig(), prx).
+			WithFieldLogger(deprecatedLogger.WithField("subsystem", "kubernetes-object-seeder")).
+			WithIngressClass(c.IngressClassName).
+			Build()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		setupLog.Info("proxy seed was enabled: doing an initial seed round to synchronize all Kubernetes API objects.")
+		if err := mgr.Add(seeder); err != nil {
+			return nil, nil, err
+		}
+	} else {
+		setupLog.Info("WARNING: --proxy-seed-enabled was set to \"false\", this can lead to inconsistent proxy state")
+	}
+
 	return prx, mgr, nil
 }
 

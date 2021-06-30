@@ -56,6 +56,17 @@
 - Reduced 2.x RBAC permissions to match 1.x permissions and added a generated
   single-namespace Role that matches the ClusterRole.
   [#1457](https://github.com/Kong/kubernetes-ingress-controller/pull/1457)
+- When starting the controller pod the controller manager container will now perform
+  a "seed round" during initialization wherein it will list, filter, and cache all
+  the API objects which the controller manager supports. This functionality is
+  required for consistency under failure conditions, but can be disabled by flagging
+  the controller manager with `--proxy-seed-enabled=false`.
+  [#1276](https://github.com/Kong/kubernetes-ingress-controller/issues/1276)
+
+#### Breaking Changes
+
+- the `--sync-period` flag has been removed, the underlying implementation going forward
+  with KIC 2.0+ no longer requires a regular synchronization interval for Kubernetes objects.
 
 ## [2.0.0-alpha.1] - 2021/05/27
 

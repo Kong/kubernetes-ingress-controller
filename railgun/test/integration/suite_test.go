@@ -17,15 +17,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/kind"
+	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/kind"
-	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/cmd/rootcmd"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
+	kicmanager "github.com/kong/kubernetes-ingress-controller/railgun/manager"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
@@ -85,6 +87,12 @@ var (
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
 	dbmode = os.Getenv("TEST_DATABASE_MODE")
+
+	// mgr gives direct access to the controller manager during tests
+	mgr manager.Manager
+
+	// prx gives direct access to the proxy cache server during tests
+	prx proxy.Proxy
 )
 
 // -----------------------------------------------------------------------------
@@ -184,11 +192,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			panic(event.Err)
 		}
 
-		// grab the admin hostname and pass the readiness event on to the tests
-		u := event.ProxyAdminURL
-		adminHost := u.Hostname()
-		proxyReadyCh <- event
-
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
 		if err != nil {
@@ -220,6 +223,11 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		// if set, allow running the legacy controller for the tests instead of the current controller
 		var cmd *exec.Cmd
 		if useLegacyKIC() {
+			// grab the admin hostname and pass the readiness event on to the tests
+			u := event.ProxyAdminURL
+			adminHost := u.Hostname()
+			proxyReadyCh <- event
+
 			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 			cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
@@ -229,6 +237,10 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				panic(fmt.Errorf("%s: %w", stderr.String(), err))
 			}
 		} else {
+			// grab the admin hostname
+			u := event.ProxyAdminURL
+			adminHost := u.Hostname()
+
 			config := config.Config{}
 			flags := config.FlagSet()
 			flags.Parse([]string{
@@ -256,8 +268,23 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			})
 			fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 
-			if err := rootcmd.Run(ctx, &config); err != nil {
-				panic(fmt.Errorf("controller manager exited with error: %w", err))
+			if err := rootcmd.StartAdmissionServer(ctx, &config); err != nil {
+				panic(fmt.Errorf("StartAdmissionServer: %w", err))
+			}
+			if err := rootcmd.StartProfilingServer(ctx, &config); err != nil {
+				panic(fmt.Errorf("StartProfilingServer: %w", err))
+			}
+
+			prx, mgr, err = kicmanager.Setup(ctx, &config)
+			if err != nil {
+				panic(err)
+			}
+
+			// now that setup is complete we can inform the tests the proxy is ready
+			proxyReadyCh <- event
+
+			if err := mgr.Start(ctx); err != nil {
+				panic(err)
 			}
 		}
 	}()

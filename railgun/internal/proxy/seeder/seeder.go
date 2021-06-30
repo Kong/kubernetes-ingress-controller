@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -22,6 +23,7 @@ import (
 type Seeder struct {
 	namespaces       []string
 	ingressClassName string
+	controllerConfig *config.ControllerConfig
 
 	logger logrus.FieldLogger
 	prx    proxy.Proxy
@@ -43,24 +45,21 @@ func New(restCFG *rest.Config, prx proxy.Proxy) (*Seeder, error) {
 // get lost by controllers due to networking failures, poorly timed controller
 // pod restarts, e.t.c.
 func (s *Seeder) Seed(ctx context.Context) error {
-	// FIXME - optionality/enablement for apis
+	s.logger.Info("fetching supported kubernetes objects for seed round")
 	objs := make([]client.Object, 0)
 
-	s.logger.Info("fetching supported core kubernetes objects")
 	coreObjs, err := s.fetchCore(ctx)
 	if err != nil {
 		return err
 	}
 	objs = append(objs, coreObjs...)
 
-	s.logger.Info("fetching supported kong kubernetes objects")
 	kongObjs, err := s.fetchKong(ctx)
 	if err != nil {
 		return err
 	}
 	objs = append(objs, kongObjs...)
 
-	s.logger.Info("fetching 3rd party kubernetes objects")
 	otherObjs, err := s.fetchOther(ctx)
 	if err != nil {
 		return err

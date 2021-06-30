@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 )
 
@@ -18,41 +19,47 @@ import (
 func (s *Seeder) fetchCore(ctx context.Context) ([]client.Object, error) {
 	objs := make([]client.Object, 0)
 
-	for _, namespace := range s.namespaces {
-		list, err := s.kc.ExtensionsV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range list.Items {
-			copyObj := obj
-			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
-				objs = append(objs, &copyObj)
+	if s.controllerConfig.IngressExtV1beta1Enabled == util.EnablementStatusEnabled {
+		for _, namespace := range s.namespaces {
+			list, err := s.kc.ExtensionsV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, obj := range list.Items {
+				copyObj := obj
+				if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
+					objs = append(objs, &copyObj)
+				}
 			}
 		}
 	}
 
-	for _, namespace := range s.namespaces {
-		v1beta1Ingresses, err := s.kc.NetworkingV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range v1beta1Ingresses.Items {
-			copyObj := obj
-			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
-				objs = append(objs, &copyObj)
+	if s.controllerConfig.IngressNetV1beta1Enabled == util.EnablementStatusEnabled {
+		for _, namespace := range s.namespaces {
+			v1beta1Ingresses, err := s.kc.NetworkingV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, obj := range v1beta1Ingresses.Items {
+				copyObj := obj
+				if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
+					objs = append(objs, &copyObj)
+				}
 			}
 		}
 	}
 
-	for _, namespace := range s.namespaces {
-		ingresses, err := s.kc.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range ingresses.Items {
-			copyObj := obj
-			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
-				objs = append(objs, &copyObj)
+	if s.controllerConfig.IngressNetV1Enabled == util.EnablementStatusEnabled {
+		for _, namespace := range s.namespaces {
+			ingresses, err := s.kc.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, obj := range ingresses.Items {
+				copyObj := obj
+				if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
+					objs = append(objs, &copyObj)
+				}
 			}
 		}
 	}
@@ -102,14 +109,16 @@ func (s *Seeder) fetchKong(ctx context.Context) ([]client.Object, error) {
 		}
 	}
 
-	kongClusterPlugins, err := s.kongc.ConfigurationV1().KongClusterPlugins().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	for _, obj := range kongClusterPlugins.Items {
-		copyObj := obj
-		if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
-			objs = append(objs, &copyObj)
+	if s.controllerConfig.KongClusterPluginEnabled == util.EnablementStatusEnabled {
+		kongClusterPlugins, err := s.kongc.ConfigurationV1().KongClusterPlugins().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, obj := range kongClusterPlugins.Items {
+			copyObj := obj
+			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
+				objs = append(objs, &copyObj)
+			}
 		}
 	}
 
@@ -171,15 +180,17 @@ func (s *Seeder) fetchKong(ctx context.Context) ([]client.Object, error) {
 func (s *Seeder) fetchOther(ctx context.Context) ([]client.Object, error) {
 	objs := make([]client.Object, 0)
 
-	for _, namespace := range s.namespaces {
-		knativeIngresses, err := s.knativec.NetworkingV1alpha1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range knativeIngresses.Items {
-			copyObj := obj
-			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
-				objs = append(objs, &copyObj)
+	if s.controllerConfig.KnativeIngressEnabled == util.EnablementStatusEnabled {
+		for _, namespace := range s.namespaces {
+			knativeIngresses, err := s.knativec.NetworkingV1alpha1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, obj := range knativeIngresses.Items {
+				copyObj := obj
+				if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
+					objs = append(objs, &copyObj)
+				}
 			}
 		}
 	}

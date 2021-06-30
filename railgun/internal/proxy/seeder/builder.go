@@ -10,6 +10,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -18,11 +19,14 @@ import (
 
 // Builder is a tool to configure and build Seeder objects.
 type Builder struct {
-	fieldLogger      logrus.FieldLogger
-	restCFG          *rest.Config
-	prx              proxy.Proxy
-	ingressClassName string
 	namespaces       []string
+	ingressClassName string
+	controllerConfig *config.ControllerConfig
+
+	fieldLogger logrus.FieldLogger
+
+	restCFG *rest.Config
+	prx     proxy.Proxy
 }
 
 // NewBuilder produces a new *Builder object to build Seeders.
@@ -53,6 +57,12 @@ func (b *Builder) WithNamespaces(namespaces ...string) *Builder {
 	return b
 }
 
+// WithControllerConfig enables filtering out APIs that are disabled
+func (b *Builder) WithControllerConfig(controllerConfig *config.ControllerConfig) *Builder {
+	b.controllerConfig = controllerConfig
+	return b
+}
+
 // Build generates the Seeder object based on the current configuration.
 func (b *Builder) Build() (*Seeder, error) {
 	kc, err := kubernetes.NewForConfig(b.restCFG)
@@ -78,6 +88,7 @@ func (b *Builder) Build() (*Seeder, error) {
 	return &Seeder{
 		namespaces:       b.namespaces,
 		ingressClassName: b.ingressClassName,
+		controllerConfig: b.controllerConfig,
 
 		logger: b.fieldLogger,
 		prx:    b.prx,

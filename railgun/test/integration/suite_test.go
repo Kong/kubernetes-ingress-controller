@@ -161,6 +161,7 @@ var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
+	knativeCrds,
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.
@@ -235,11 +236,11 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 				"--controller-kongstate=enabled",
 				"--controller-ingress-networkingv1=enabled",
-				"--controller-ingress-networkingv1beta1=disabled",
-				"--controller-ingress-extensionsv1beta1=disabled",
+				"--controller-ingress-networkingv1beta1=enabled",
+				"--controller-ingress-extensionsv1beta1=enabled",
 				"--controller-tcpingress=enabled",
 				"--controller-kongingress=enabled",
-				"--controller-knativeingress=disabled",
+				"--controller-knativeingress=enabled",
 				"--controller-kongclusterplugin=enabled",
 				"--controller-kongplugin=enabled",
 				"--controller-kongconsumer=disabled",

@@ -42,6 +42,9 @@
   and should address other Secret-based configuration (custom entities,
   `ConfigFrom` in KongPlugins, etc.)
   [#1439](https://github.com/Kong/kubernetes-ingress-controller/pull/1439)
+- The KongClusterPlugin controller disables itself automatically if the CRD is
+  not available, same as 1.x.
+  [#1458](https://github.com/Kong/kubernetes-ingress-controller/pull/1458)
 
 #### Added
 
@@ -49,7 +52,10 @@
 - Profiling using `pprof` is now a standalone HTTP server listening on port 10256.
   [#1417](https://github.com/Kong/kubernetes-ingress-controller/pull/1417)
 - knative API - Full Feature Parity
- [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
+  [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
+- Reduced 2.x RBAC permissions to match 1.x permissions and added a generated
+  single-namespace Role that matches the ClusterRole.
+  [#1457](https://github.com/Kong/kubernetes-ingress-controller/pull/1457)
 
 ## [2.0.0-alpha.1] - 2021/05/27
 

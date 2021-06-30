@@ -2,6 +2,7 @@ package seeder
 
 import (
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	knative "knative.dev/networking/pkg/client/clientset/versioned"
@@ -21,6 +22,7 @@ type Builder struct {
 	restCFG          *rest.Config
 	prx              proxy.Proxy
 	ingressClassName string
+	namespaces       []string
 }
 
 // NewBuilder produces a new *Builder object to build Seeders.
@@ -45,6 +47,12 @@ func (b *Builder) WithIngressClass(ingressClassName string) *Builder {
 	return b
 }
 
+// WithNamespaces configures which Kubernetes namespaces objects should be listed on.
+func (b *Builder) WithNamespaces(namespaces ...string) *Builder {
+	b.namespaces = append(b.namespaces, namespaces...)
+	return b
+}
+
 // Build generates the Seeder object based on the current configuration.
 func (b *Builder) Build() (*Seeder, error) {
 	kc, err := kubernetes.NewForConfig(b.restCFG)
@@ -62,7 +70,13 @@ func (b *Builder) Build() (*Seeder, error) {
 		return nil, err
 	}
 
+	if len(b.namespaces) == 0 {
+		b.fieldLogger.Info("no namespace was provided for object seeder: using all namespaces")
+		b.namespaces = []string{corev1.NamespaceAll}
+	}
+
 	return &Seeder{
+		namespaces:       b.namespaces,
 		ingressClassName: b.ingressClassName,
 
 		logger: b.fieldLogger,

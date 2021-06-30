@@ -123,7 +123,7 @@ func TestCaching(t *testing.T) {
 	t.Logf("adding %d new objects to the proxy cache server", len(testObjects))
 	assert.Len(t, proxy.cache.IngressV1.List(), 0)
 	for _, testObject := range testObjects {
-		proxy.UpdateObject(testObject)
+		proxy.UpdateObjects(testObject)
 	}
 
 	t.Log("ensuring the consistency of the underlying object cache (that objects were added properly)")

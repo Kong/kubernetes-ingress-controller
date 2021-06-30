@@ -28,7 +28,7 @@ const (
 	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
 	// before it starts rejecting new objects while it processes the originals.
 	// If you get to the point that objects are rejected, you'll find that the
-	// UpdateObject() and DeleteObject() methods will start throwing errors and you'll
+	// UpdateObjects() and DeleteObjects() methods will start throwing errors and you'll
 	// need to retry queing the object at a later time.
 	//
 	// NOTE: implementations of the Proxy interface should error, not block on full buffer.
@@ -53,15 +53,13 @@ const (
 //
 // NOTE: implementations of this interface are: threadsafe, non-blocking
 type Proxy interface {
-	// UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
+	// UpdateObjects accepts Kubernetes controller-runtime client.Objects and adds/updates them to the configuration cache.
 	// It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
-	// A status will later be added to the object whether the configuration update succeeds or fails.
-	UpdateObject(obj client.Object) error
+	UpdateObjects(objs ...client.Object) error
 
-	// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
+	// DeleteObjects accepts Kubernetes controller-runtime client.Objects and removes them from the configuration cache.
 	// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
-	// A status will later be added to the object whether the configuration update succeeds or fails.
-	DeleteObject(obj client.Object) error
+	DeleteObjects(obj ...client.Object) error
 }
 
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API

@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
+	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
 
 // -----------------------------------------------------------------------------
@@ -23,6 +24,8 @@ import (
 
 // Config collects all configuration that the controller manager takes from the environment.
 type Config struct {
+	ControllerConfig
+
 	// See flag definitions in RegisterFlags(...) for documentation of the fields defined here.
 
 	// Logging configurations
@@ -54,19 +57,6 @@ type Config struct {
 	Concurrency          int
 	FilterTags           []string
 	WatchNamespace       string
-
-	// Kubernetes API toggling
-	IngressExtV1beta1Enabled util.EnablementStatus
-	IngressNetV1beta1Enabled util.EnablementStatus
-	IngressNetV1Enabled      util.EnablementStatus
-	UDPIngressEnabled        util.EnablementStatus
-	TCPIngressEnabled        util.EnablementStatus
-	KongIngressEnabled       util.EnablementStatus
-	KnativeIngressEnabled    util.EnablementStatus
-	KongClusterPluginEnabled util.EnablementStatus
-	KongPluginEnabled        util.EnablementStatus
-	KongConsumerEnabled      util.EnablementStatus
-	ServiceEnabled           util.EnablementStatus
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig

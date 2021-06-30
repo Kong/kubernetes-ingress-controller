@@ -46,6 +46,7 @@ type Config struct {
 	ProbeAddr                string
 	KongAdminURL             string
 	ProxySyncSeconds         float32
+	ProxySeedEnabled         bool
 	ProxyTimeoutSeconds      float32
 	KongCustomEntitiesSecret string
 
@@ -112,6 +113,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds)",
 			proxy.DefaultSyncSeconds,
 		))
+	flagSet.BoolVar(&c.ProxySeedEnabled, "proxy-seed-enabled", true,
+		"synchronize all supported objects from the Kubernetes API once at startup.")
 	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", proxy.DefaultSyncSeconds,
 		fmt.Sprintf(
 			"Define the rate (in seconds) in which the timeout configuration will be applied to the Kong client. (default: %g seconds)",

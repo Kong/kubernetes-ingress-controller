@@ -193,6 +193,36 @@ func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager,
 		// ---------------------------------------------------------------------------
 
 		{
+			IsEnabled: &controllerConfig.IngressNetV1Enabled,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled: &controllerConfig.IngressNetV1beta1Enabled,
+			Controller: &configuration.NetV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled: &controllerConfig.IngressExtV1beta1Enabled,
+			Controller: &configuration.ExtV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
 			IsEnabled: &controllerConfig.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
@@ -299,48 +329,6 @@ func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager,
 		},
 	}
 
-	// Negotiate Ingress version
-	ingressControllers := map[IngressAPI]ControllerDef{
-		NetworkingV1: {
-			IsEnabled: &controllerConfig.IngressNetV1Enabled,
-			Controller: &configuration.NetV1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		NetworkingV1beta1: {
-			IsEnabled: &controllerConfig.IngressNetV1beta1Enabled,
-			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		ExtensionsV1beta1: {
-			IsEnabled: &controllerConfig.IngressExtV1beta1Enabled,
-			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-	}
-
-	negotiatedIngressAPI, err := negotiateIngressAPI(c, mgr.GetClient())
-	if err == nil {
-		controllers = append(controllers, ingressControllers[negotiatedIngressAPI])
-	} else {
-		setupLog.Info(`no Ingress controllers enabled or no suitable Ingress version found.
-		Disabling Ingress controller`)
-	}
-
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
 			return nil, nil, fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
@@ -369,6 +357,28 @@ func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager,
 
 	go FlipKnativeController(mgr, prx, &c.KnativeIngressEnabled, c, setupLog)
 	setupLog.Info("starting manager")
+
+	// if enabled an initial "seed round" which pre-populates the proxy cache with existing supported objects in the cluster occurs.
+	// this is required for consistency when the proxy container is restarted for any reason to ensure proxy state consistency.
+	if c.ProxySeedEnabled {
+		seeder, err := seeder.NewBuilder(mgr.GetConfig(), prx).
+			WithFieldLogger(deprecatedLogger.WithField("subsystem", "kubernetes-object-seeder")).
+			WithIngressClass(c.IngressClassName).
+			WithControllerConfig(controllerConfig).
+			WithNamespaces(strings.Split(c.WatchNamespace, ",")...).
+			Build()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		setupLog.Info("proxy seed was enabled: doing an initial seed round to synchronize all Kubernetes API objects.")
+		if err := mgr.Add(seeder); err != nil {
+			return nil, nil, err
+		}
+	} else {
+		setupLog.Info("WARNING: --proxy-seed-enabled was set to \"false\", this can lead to inconsistent proxy state")
+	}
+
 	return prx, mgr, nil
 }
 

@@ -28,6 +28,7 @@ import (
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy/seeder"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"knative.dev/pkg/signals"
@@ -43,6 +44,17 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *config.Config) error {
+	_, mgr, err := Setup(ctx, c)
+	if err != nil {
+		return err
+	}
+	return mgr.Start(ctx)
+}
+
+// Setup allows introspection of the manager.Manager and proxy.Proxy right before it would
+// otherwise be started with mgr.Start(ctx). This can be useful when running the controller
+// manager from Golang instead of command line, for instance during debugging/testing.
+func Setup(ctx context.Context, c *config.Config) (proxy.Proxy, manager.Manager, error) {
 	var deprecatedLogger logrus.FieldLogger
 	var err error
 
@@ -53,7 +65,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		deprecatedLogger, err = util.MakeLogger(c.LogLevel, c.LogFormat)
 		if err != nil {
-			return fmt.Errorf("failed to make logger: %w", err)
+			return nil, nil, fmt.Errorf("failed to make logger: %w", err)
 		}
 	}
 	var logger logr.Logger = logrusr.NewLogger(deprecatedLogger)
@@ -64,7 +76,7 @@ func Run(ctx context.Context, c *config.Config) error {
 
 	kubeconfig, err := c.GetKubeconfig()
 	if err != nil {
-		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+		return nil, nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 
 	// set "kubernetes.io/ingress.class" to be used by controllers (defaults to "kong")
@@ -100,14 +112,14 @@ func Run(ctx context.Context, c *config.Config) error {
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		return err
+		return nil, nil, err
 	}
 
 	// get a client obj to connect with the Kong Admin API
 	kongClient, err := c.GetKongClient(ctx)
 	if err != nil {
 		setupLog.Error(err, "cannot create a Kong Admin API client")
-		return err
+		return nil, nil, err
 	}
 
 	// configure the kong client
@@ -129,14 +141,14 @@ func Run(ctx context.Context, c *config.Config) error {
 	syncTickDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxySyncSeconds))
 	if err != nil {
 		setupLog.Error(err, "%s is not a valid number of seconds to stagger the proxy server synchronization")
-		return err
+		return nil, nil, err
 	}
 
 	// determine the proxy timeout
 	timeoutDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxyTimeoutSeconds))
 	if err != nil {
 		setupLog.Error(err, "%s is not a valid number of seconds to the timeout config for the kong client")
-		return err
+		return nil, nil, err
 	}
 
 	// start the proxy cache server
@@ -153,7 +165,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		sendconfig.UpdateKongAdminSimple)
 	if err != nil {
 		setupLog.Error(err, "unable to start proxy cache server")
-		return err
+		return nil, nil, err
 	}
 
 	// ---------------------------------------------------------------------------
@@ -323,7 +335,7 @@ func Run(ctx context.Context, c *config.Config) error {
 
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+			return nil, nil, fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
 	}
 
@@ -332,10 +344,10 @@ func Run(ctx context.Context, c *config.Config) error {
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		return fmt.Errorf("unable to setup healthz: %w", err)
+		return nil, nil, fmt.Errorf("unable to setup healthz: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		return fmt.Errorf("unable to setup readyz: %w", err)
+		return nil, nil, fmt.Errorf("unable to setup readyz: %w", err)
 	}
 
 	if c.AnonymousReports {
@@ -349,7 +361,7 @@ func Run(ctx context.Context, c *config.Config) error {
 
 	go FlipKnativeController(mgr, prx, &c.KnativeIngressEnabled, c, setupLog)
 	setupLog.Info("starting manager")
-	return mgr.Start(ctx)
+	return prx, mgr, nil
 }
 
 // wait for knative cr before register and starting knative controller

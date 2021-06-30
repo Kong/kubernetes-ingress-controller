@@ -88,6 +88,14 @@ func TestProxySeedRound(t *testing.T) {
 
 	t.Log("verifying that the seeded ingress, its service and endpoints were all seeded properly into the proxy cache")
 	require.True(t, len(fakePrx.objs) == 3)
+	assert.Equal(t,
+		fakePrx.objs[0].GetObjectKind().GroupVersionKind().Kind,
+		service.GetObjectKind().GroupVersionKind().Kind,
+	)
+	assert.Equal(t,
+		fakePrx.objs[2].GetObjectKind().GroupVersionKind().Kind,
+		ingress.GetObjectKind().GroupVersionKind().Kind,
+	)
 }
 
 // -----------------------------------------------------------------------------

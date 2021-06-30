@@ -19,6 +19,32 @@ import (
 func (s *Seeder) fetchCore(ctx context.Context) ([]client.Object, error) {
 	objs := make([]client.Object, 0)
 
+	for _, namespace := range s.namespaces {
+		services, err := s.kc.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, obj := range services.Items {
+			copyObj := obj
+			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
+				objs = append(objs, &copyObj)
+			}
+		}
+	}
+
+	for _, namespace := range s.namespaces {
+		endpoints, err := s.kc.CoreV1().Endpoints(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, obj := range endpoints.Items {
+			copyObj := obj
+			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
+				objs = append(objs, &copyObj)
+			}
+		}
+	}
+
 	if s.controllerConfig != nil && s.controllerConfig.IngressExtV1beta1Enabled == util.EnablementStatusEnabled {
 		for _, namespace := range s.namespaces {
 			list, err := s.kc.ExtensionsV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
@@ -60,32 +86,6 @@ func (s *Seeder) fetchCore(ctx context.Context) ([]client.Object, error) {
 				if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
 					objs = append(objs, &copyObj)
 				}
-			}
-		}
-	}
-
-	for _, namespace := range s.namespaces {
-		services, err := s.kc.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range services.Items {
-			copyObj := obj
-			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
-				objs = append(objs, &copyObj)
-			}
-		}
-	}
-
-	for _, namespace := range s.namespaces {
-		endpoints, err := s.kc.CoreV1().Endpoints(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range endpoints.Items {
-			copyObj := obj
-			if ctrlutils.IsObjectSupported(&copyObj, s.ingressClassName) {
-				objs = append(objs, &copyObj)
 			}
 		}
 	}

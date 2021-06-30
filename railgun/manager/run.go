@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,7 +26,6 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
@@ -105,6 +103,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
+	// get a client obj to connect with the Kong Admin API
 	kongClient, err := c.GetKongClient(ctx)
 	if err != nil {
 		setupLog.Error(err, "cannot create a Kong Admin API client")
@@ -165,14 +164,24 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	alwaysEnabled := util.EnablementStatusEnabled
+	// ---------------------------------------------------------------------------
+	// Controller Setup
+	// ---------------------------------------------------------------------------
+
+	// before we start any controllers we need to determine which controllers are
+	// enabled or disabled which is a factor of end-user flags as well as potential
+	// overrides from the environment (e.g. a controller will be disabled if the
+	// relevant CRD is not loaded in the Kubernetes API).
+	controllerConfig := config.NewControllerConfigFromManagerConfig(mgr, setupLog, c)
+
 	controllers := []ControllerDef{
+
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 
 		{
-			IsEnabled: &c.ServiceEnabled,
+			IsEnabled: &controllerConfig.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
@@ -181,7 +190,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.ServiceEnabled,
+			IsEnabled: &controllerConfig.ServiceEnabled,
 			Controller: &configuration.CoreV1EndpointsReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
@@ -202,8 +211,9 @@ func Run(ctx context.Context, c *config.Config) error {
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
+
 		{
-			IsEnabled: &c.UDPIngressEnabled,
+			IsEnabled: &controllerConfig.UDPIngressEnabled,
 			Controller: &kongctrl.KongV1Beta1UDPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
@@ -213,7 +223,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.TCPIngressEnabled,
+			IsEnabled: &controllerConfig.TCPIngressEnabled,
 			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
@@ -223,7 +233,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongIngressEnabled,
+			IsEnabled: &controllerConfig.KongIngressEnabled,
 			Controller: &kongctrl.KongV1KongIngressReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
@@ -232,7 +242,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongPluginEnabled,
+			IsEnabled: &controllerConfig.KongPluginEnabled,
 			Controller: &kongctrl.KongV1KongPluginReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
@@ -241,10 +251,35 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongConsumerEnabled,
+			IsEnabled: &controllerConfig.KongClusterPluginEnabled,
+			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled: &controllerConfig.KongConsumerEnabled,
 			Controller: &kongctrl.KongV1KongConsumerReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongConsumer"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+
+		// ---------------------------------------------------------------------------
+		// 3rd Party API Controllers
+		// ---------------------------------------------------------------------------
+
+		{
+			IsEnabled: &controllerConfig.KnativeIngressEnabled,
+			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:           mgr.GetScheme(),
 				Proxy:            prx,
 				IngressClassName: c.IngressClassName,
@@ -255,7 +290,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	// Negotiate Ingress version
 	ingressControllers := map[IngressAPI]ControllerDef{
 		NetworkingV1: {
-			IsEnabled: &c.IngressNetV1Enabled,
+			IsEnabled: &controllerConfig.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
@@ -265,7 +300,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		NetworkingV1beta1: {
-			IsEnabled: &c.IngressNetV1beta1Enabled,
+			IsEnabled: &controllerConfig.IngressNetV1beta1Enabled,
 			Controller: &configuration.NetV1Beta1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
@@ -275,7 +310,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		ExtensionsV1beta1: {
-			IsEnabled: &c.IngressExtV1beta1Enabled,
+			IsEnabled: &controllerConfig.IngressExtV1beta1Enabled,
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
@@ -292,52 +327,6 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info(`no Ingress controllers enabled or no suitable Ingress version found.
 		Disabling Ingress controller`)
-	}
-
-	kongClusterPluginGVR := schema.GroupVersionResource{
-		Group:    konghqcomv1.SchemeGroupVersion.Group,
-		Version:  konghqcomv1.SchemeGroupVersion.Version,
-		Resource: "kongclusterplugins",
-	}
-	if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) == true {
-		setupLog.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
-		controller := ControllerDef{
-			IsEnabled: &c.KongClusterPluginEnabled,
-			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		}
-		controllers = append(controllers, controller)
-	} else {
-		setupLog.Info(`kongclusterplugins.configuration.konghq.com v1beta1 CRD not available on cluster.
-		Disabling KongClusterPlugin controller`)
-	}
-
-	knativeGVR := schema.GroupVersionResource{
-		Group:    knativev1alpha1.SchemeGroupVersion.Group,
-		Version:  knativev1alpha1.SchemeGroupVersion.Version,
-		Resource: "ingresses",
-	}
-	if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) == true {
-		setupLog.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
-		controller := ControllerDef{
-			IsEnabled: &c.KnativeIngressEnabled,
-			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		}
-		controllers = append(controllers, controller)
-	} else {
-		setupLog.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
-		Disabling Knative controller`)
 	}
 
 	for _, c := range controllers {

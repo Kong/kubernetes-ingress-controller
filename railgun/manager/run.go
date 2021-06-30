@@ -97,9 +97,6 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	// automatically enable/disable controllers based on API availability
-	autoCTRL(mgr, setupLog, c)
-
 	// get a client obj to connect with the Kong Admin API
 	kongClient, err := c.GetKongClient(ctx)
 	if err != nil {
@@ -153,13 +150,24 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
+	// ---------------------------------------------------------------------------
+	// Controller Setup
+	// ---------------------------------------------------------------------------
+
+	// before we start any controllers we need to determine which controllers are
+	// enabled or disabled which is a factor of end-user flags as well as potential
+	// overrides from the environment (e.g. a controller will be disabled if the
+	// relevant CRD is not loaded in the Kubernetes API).
+	controllerConfig := config.NewControllerConfigFromManagerConfig(mgr, setupLog, c)
+
 	controllers := []ControllerDef{
+
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 
 		{
-			IsEnabled: &c.ServiceEnabled,
+			IsEnabled: &controllerConfig.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
@@ -168,7 +176,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.ServiceEnabled,
+			IsEnabled: &controllerConfig.ServiceEnabled,
 			Controller: &configuration.CoreV1EndpointsReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
@@ -191,7 +199,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		// ---------------------------------------------------------------------------
 
 		{
-			IsEnabled: &c.UDPIngressEnabled,
+			IsEnabled: &controllerConfig.UDPIngressEnabled,
 			Controller: &kongctrl.KongV1Beta1UDPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
@@ -201,7 +209,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.TCPIngressEnabled,
+			IsEnabled: &controllerConfig.TCPIngressEnabled,
 			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
@@ -211,7 +219,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongIngressEnabled,
+			IsEnabled: &controllerConfig.KongIngressEnabled,
 			Controller: &kongctrl.KongV1KongIngressReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
@@ -220,7 +228,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongPluginEnabled,
+			IsEnabled: &controllerConfig.KongPluginEnabled,
 			Controller: &kongctrl.KongV1KongPluginReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
@@ -229,7 +237,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongClusterPluginEnabled,
+			IsEnabled: &controllerConfig.KongClusterPluginEnabled,
 			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
@@ -239,7 +247,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongConsumerEnabled,
+			IsEnabled: &controllerConfig.KongConsumerEnabled,
 			Controller: &kongctrl.KongV1KongConsumerReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongConsumer"),
@@ -254,7 +262,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		// ---------------------------------------------------------------------------
 
 		{
-			IsEnabled: &c.KnativeIngressEnabled,
+			IsEnabled: &controllerConfig.KnativeIngressEnabled,
 			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
@@ -268,7 +276,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	// Negotiate Core Ingress Version
 	ingressControllers := map[IngressAPI]ControllerDef{
 		NetworkingV1: {
-			IsEnabled: &c.IngressNetV1Enabled,
+			IsEnabled: &controllerConfig.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
@@ -278,7 +286,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		NetworkingV1beta1: {
-			IsEnabled: &c.IngressNetV1beta1Enabled,
+			IsEnabled: &controllerConfig.IngressNetV1beta1Enabled,
 			Controller: &configuration.NetV1Beta1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
@@ -288,7 +296,7 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		ExtensionsV1beta1: {
-			IsEnabled: &c.IngressExtV1beta1Enabled,
+			IsEnabled: &controllerConfig.IngressExtV1beta1Enabled,
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),

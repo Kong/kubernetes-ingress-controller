@@ -343,6 +343,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
 		Disabling Knative controller`)
+		c.KnativeIngressEnabled = util.EnablementStatusDisabled
 	}
 
 	for _, c := range controllers {

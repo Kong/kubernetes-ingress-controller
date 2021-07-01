@@ -261,7 +261,6 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	}
 
 	// updating current custom status
-	log.Info("attempting to update Knative Ingress status")
 	lbStatus := toKnativeLBStatus(status)
 	clusterDomain := network.GetClusterDomainName()
 	if err != nil {

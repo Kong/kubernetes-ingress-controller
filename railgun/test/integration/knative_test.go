@@ -4,6 +4,7 @@ package integration
 
 import (
 	"crypto/tls"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -46,7 +47,7 @@ func TestKnativeIngress(t *testing.T) {
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
-	//require.NoError(t, deployManifest(knativeCrds, ctx, t))
+	require.NoError(t, deployManifest(knativeCrds, ctx, t))
 	require.NoError(t, deployManifest(knativeCore, ctx, t))
 	require.True(t, isKnativeReady(ctx, cluster, t), true)
 
@@ -207,11 +208,17 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)
-		t.Logf("resp <%v>", resp.StatusCode)
+		t.Logf("resp <%v> ", resp.StatusCode)
 		if err != nil {
 			return false
 		}
 		if resp.StatusCode == http.StatusOK {
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return false
+			}
+			bodyString := string(bodyBytes)
+			t.Logf(bodyString)
 			t.Logf("service is successfully accessed through kong.")
 			return true
 		}

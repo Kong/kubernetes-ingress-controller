@@ -9,6 +9,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - endpoints
   verbs:
   - list

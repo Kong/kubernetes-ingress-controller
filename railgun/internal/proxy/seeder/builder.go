@@ -23,19 +23,20 @@ type Builder struct {
 	ingressClassName string
 	controllerConfig *config.ControllerConfig
 
-	fieldLogger logrus.FieldLogger
+	prx proxy.Proxy
 
 	restCFG *rest.Config
-	prx     proxy.Proxy
+
+	fieldLogger logrus.FieldLogger
 }
 
 // NewBuilder produces a new *Builder object to build Seeders.
 func NewBuilder(restCFG *rest.Config, prx proxy.Proxy) *Builder {
 	return &Builder{
-		restCFG:          restCFG,
-		prx:              prx,
-		fieldLogger:      logrus.New(),
 		ingressClassName: annotations.DefaultIngressClass,
+		prx:              prx,
+		restCFG:          restCFG,
+		fieldLogger:      logrus.New(),
 	}
 }
 

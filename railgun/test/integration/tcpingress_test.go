@@ -87,7 +87,6 @@ func TestTCPIngress(t *testing.T) {
 	}
 	tcp, err = c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace).Create(ctx, tcp, metav1.CreateOptions{})
 	require.NoError(t, err)
-
 	defer func() {
 		t.Logf("ensuring that TCPIngress %s is cleaned up", tcp.Name)
 		if err := c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
@@ -97,7 +96,9 @@ func TestTCPIngress(t *testing.T) {
 		}
 	}()
 
+	ingCli := c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace)
 	t.Logf("waiting for routes from Ingress %s to be operational", tcp.Name)
+
 	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", p.ProxyURL.Hostname()))
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {

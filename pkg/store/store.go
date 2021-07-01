@@ -193,6 +193,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
 		return c.IngressV1beta1.Add(obj)
+	case *networkingv1beta1.Ingress:
+		return c.IngressV1beta1.Add(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Add(obj)
 	case *corev1.Service:

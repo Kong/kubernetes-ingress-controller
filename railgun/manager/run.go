@@ -93,7 +93,7 @@ func Run(ctx context.Context, c *config.Config) error {
 
 	var filterTags []string
 	if ok, err := kongClient.Tags.Exists(ctx); err != nil {
-		setupLog.Info(err, "tag filtering disabled because Kong Admin API does not support tags")
+		setupLog.Error(err, "tag filtering disabled because Kong Admin API does not support tags")
 	} else if ok {
 		setupLog.Info("tag filtering enabled", "tags", c.FilterTags)
 		filterTags = c.FilterTags

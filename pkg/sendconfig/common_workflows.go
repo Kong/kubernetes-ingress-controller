@@ -62,13 +62,3 @@ func UpdateKongAdminSimple(ctx context.Context,
 
 	return configSHA, nil
 }
-
-// GetIngressControllerTags returns a tag to use if the current
-// Kong entity supports tagging.
-func GetIngressControllerTags(kongConfig Kong) []string {
-	var res []string
-	if kongConfig.DeprecatedHasTagSupport {
-		res = append(res, kongConfig.FilterTags...)
-	}
-	return res
-}

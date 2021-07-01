@@ -45,7 +45,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		}
 	}
 
-	filterTags := sendconfig.GetIngressControllerTags(n.cfg.Kong)
+	filterTags := getIngressControllerTags(n.cfg.Kong)
 
 	targetContent := deckgen.ToDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, filterTags)
 
@@ -102,4 +102,14 @@ func (n *KongController) fetchCustomEntities() ([]byte, error) {
 			"custom entities secret '%v'", n.cfg.KongCustomEntitiesSecret)
 	}
 	return config, nil
+}
+
+// getIngressControllerTags returns a tag to use if the current
+// Kong entity supports tagging.
+func getIngressControllerTags(kongConfig sendconfig.Kong) []string {
+	var res []string
+	if kongConfig.DeprecatedHasTagSupport {
+		res = append(res, kongConfig.FilterTags...)
+	}
+	return res
 }

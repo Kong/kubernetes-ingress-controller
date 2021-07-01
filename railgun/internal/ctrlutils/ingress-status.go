@@ -25,7 +25,7 @@ import (
 
 // dedicated function that process ingress/customer resource status update after configuration is updated within kong.
 func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.Context, kubeConfig *rest.Config, stopCh <-chan struct{}) {
-	log.Info("Launching Customer Resource Update thread.")
+	log.Info("Launching Ingress Status Update Thread.")
 	var wg sync.WaitGroup
 	for {
 		select {
@@ -48,13 +48,11 @@ func UpdateIngress(targetContent *file.Content, log logr.Logger, ctx context.Con
 
 		for _, plugin := range svc.Plugins {
 			log.Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
-			fmt.Printf("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
 			if *plugin.Enabled == true {
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
 							log.Info("knative service updated. update knative CR condition and status...")
-							fmt.Printf("knative service updated. update knative CR condition and status...")
 							err := UpdateKnativeIngress(ctx, log, svc, kubeconfig)
 							return fmt.Errorf("failed to update knative ingress err %v", err)
 						}
@@ -100,8 +98,6 @@ func retrieveNSAndNM(svc file.FService) (string, string, error) {
 	if len(namespace) == 0 || len(name) == 0 {
 		return "", "", fmt.Errorf("configured route information is not completed which should not happen.")
 	}
-	fmt.Printf("name %s namespace %s", name, namespace)
-
 	return namespace, name, nil
 }
 
@@ -294,7 +290,8 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 // retrieve cluster loader balance IP or hostaddress using networking
 func RunningAddresses(ctx context.Context, kubeCfg *rest.Config) ([]string, error) {
 	addrs := []string{}
-
+	// loading ns from environment variable when https://github.com/Kong/kubernetes-ingress-controller/issues/1480
+	// is resolved
 	namespace := "kong-system"
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})

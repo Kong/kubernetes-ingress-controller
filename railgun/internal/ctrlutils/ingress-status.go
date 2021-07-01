@@ -6,27 +6,24 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	kicclientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 	"github.com/prometheus/common/log"
-
-	"sync"
-
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeApis "knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
-
-	kicclientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-
-	clientset "k8s.io/client-go/kubernetes"
 )
 
+// dedicated function that process ingress/customer resource status update after configuration is updated within kong.
 func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.Context, kubeConfig *rest.Config, stopCh <-chan struct{}) {
 	log.Info("Launching Customer Resource Update thread.")
 	var wg sync.WaitGroup
@@ -137,7 +134,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	}
 
 	status = SliceToStatus(ips)
-	if IngressSliceEqual(status, curIPs) {
+	if ingressSliceEqual(status, curIPs) {
 		fmt.Println("no change in status, update skipped")
 		return nil
 	}
@@ -177,7 +174,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	status = SliceToStatus(ips)
-	if IngressSliceEqual(status, curIPs) {
+	if ingressSliceEqual(status, curIPs) {
 		fmt.Println("no change in status, update skipped")
 		return nil
 	}
@@ -216,7 +213,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	status = SliceToStatus(ips)
-	if IngressSliceEqual(status, curIPs) {
+	if ingressSliceEqual(status, curIPs) {
 		fmt.Println("no change in status, update skipped")
 		return nil
 	}
@@ -257,7 +254,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		return fmt.Errorf("failed to retrieve cluster loadbalancer.")
 	}
 	status = SliceToStatus(ips)
-	if IngressSliceEqual(status, curIPs) &&
+	if ingressSliceEqual(status, curIPs) &&
 		curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
 		log.Info("no change in status, update skipped")
 		return nil
@@ -346,7 +343,7 @@ func InSlice(e string, arr []string) bool {
 	return false
 }
 
-func IngressSliceEqual(lhs, rhs []apiv1.LoadBalancerIngress) bool {
+func ingressSliceEqual(lhs, rhs []apiv1.LoadBalancerIngress) bool {
 	if len(lhs) != len(rhs) {
 		return false
 	}
@@ -386,20 +383,4 @@ func lessLoadBalancerIngress(addrs []apiv1.LoadBalancerIngress) func(int, int) b
 		}
 		return addrs[a].IP < addrs[b].IP
 	}
-}
-
-func ingressSliceEqual(lhs, rhs []apiv1.LoadBalancerIngress) bool {
-	if len(lhs) != len(rhs) {
-		return false
-	}
-
-	for i := range lhs {
-		if lhs[i].IP != rhs[i].IP {
-			return false
-		}
-		if lhs[i].Hostname != rhs[i].Hostname {
-			return false
-		}
-	}
-	return true
 }

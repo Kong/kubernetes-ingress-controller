@@ -48,7 +48,12 @@
 
 #### Added
 
+- fix kongClusterPlugin handling for kic 2.0.
+  [#1418](https://github.com/Kong/kubernetes-ingress-controller/pull/1418)
+- profiling using `pprof` is now a standalone HTTP server listening on port 10256.
 - `v1beta1.UDPIngress` API support added. Only supported on KIC `v2.0.0+` releases.
+- adds support for selector tags (filter) tags refractored work. KIC 1.x
+  [#1415](https://github.com/Kong/kubernetes-ingress-controller/pull/1415)
 - Profiling using `pprof` is now a standalone HTTP server listening on port 10256.
   [#1417](https://github.com/Kong/kubernetes-ingress-controller/pull/1417)
 - knative API - Full Feature Parity

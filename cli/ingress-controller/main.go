@@ -237,7 +237,7 @@ func main() {
 
 	exists, err := kongClient.Tags.Exists(ctx)
 	if err == nil && exists {
-		controllerConfig.Kong.HasTagSupport = true
+		controllerConfig.Kong.DeprecatedHasTagSupport = true
 	}
 	// setup workspace in Kong Enterprise
 	if cliConfig.KongWorkspace != "" {

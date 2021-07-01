@@ -11,6 +11,7 @@ import (
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
+	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -18,7 +19,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
@@ -32,11 +32,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	"knative.dev/pkg/signals"
-
-	k8scache "k8s.io/client-go/tools/cache"
-	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
-	knativeinformerexternal "knative.dev/networking/pkg/client/informers/externalversions"
 )
 
 // -----------------------------------------------------------------------------
@@ -77,6 +72,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiextv1beta1.AddToScheme(scheme))
 
 	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
@@ -317,27 +313,60 @@ func Run(ctx context.Context, c *config.Config) error {
 		Disabling KongClusterPlugin controller`)
 	}
 
-	knativeGVR := schema.GroupVersionResource{
-		Group:    knativev1alpha1.SchemeGroupVersion.Group,
-		Version:  knativev1alpha1.SchemeGroupVersion.Version,
-		Resource: "ingresses",
-	}
-	if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) == true {
-		setupLog.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
-		controller := ControllerDef{
-			IsEnabled: &c.KnativeIngressEnabled,
-			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
+	// -------------------------------------------------------------------------
+	// Knative Ingress Handling
+	// -------------------------------------------------------------------------
+
+	// if knative.Ingress has been specifically flagged as disabled, then we do nothing with it.
+	// otherwise we attempt to load the relevant controller, and if the controller can not be loaded
+	// during setup (e.g. the CRD is not present on the cluster) we will load our CRD controller which
+	// will dynamically load the controller if/when the CRD is loaded and the API becomes available.
+	if c.KnativeIngressEnabled != util.EnablementStatusDisabled {
+		knativeGVR := schema.GroupVersionResource{
+			Group:    knativev1alpha1.SchemeGroupVersion.Group,
+			Version:  knativev1alpha1.SchemeGroupVersion.Version,
+			Resource: "ingresses",
 		}
-		controllers = append(controllers, controller)
-	} else {
-		setupLog.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
-		Disabling Knative controller`)
+		knativeWasLoaded := false
+		if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) {
+			setupLog.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
+			controller := ControllerDef{
+				IsEnabled: &c.KnativeIngressEnabled,
+				Controller: &kongctrl.Knativev1alpha1IngressReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+					Scheme:           mgr.GetScheme(),
+					Proxy:            prx,
+					IngressClassName: c.IngressClassName,
+				},
+			}
+			controllers = append(controllers, controller)
+			knativeWasLoaded = true
+		}
+
+		// if knative is not explicitly disabled but was not previously loaded we will run a controller that will
+		// watch the cluster CRDs to determine if/when that API is loaded and when it becomes available we will
+		// dynamically load the knative.Ingress controller into the controller manager at runtime.
+		//
+		// In the future if we have other 3rd party APIs we would like to load controllers for dynamically
+		// we can expand this controller to include them.
+		if !knativeWasLoaded {
+			setupLog.Info(fmt.Sprintf("knative support set to %s, but the API is not yet available (CRD not found)",
+				c.KnativeIngressEnabled.String()))
+
+			setupLog.Info("starting the CRD controller to watch whether knative.Ingress becomes available later")
+			controllers = append(controllers, ControllerDef{
+				IsEnabled: &c.KnativeIngressEnabled,
+				Controller: &configuration.CustomResourceDefinitionReconciler{
+					Mgr:              mgr,
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("CustomResourceDefinition").WithName("extv1beta1"),
+					Scheme:           mgr.GetScheme(),
+					Proxy:            prx,
+					IngressClassName: c.IngressClassName,
+				},
+			})
+		}
 	}
 
 	for _, c := range controllers {
@@ -366,49 +395,6 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}
 
-	go FlipKnativeController(mgr, prx, &c.KnativeIngressEnabled, c, setupLog)
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
-}
-
-// wait for knative cr before register and starting knative controller
-func FlipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
-	if *enablestatus == util.EnablementStatusEnabled {
-		log.Info("knative controller already enabled. skip flip process.\n")
-		return nil
-	}
-	kubeCfg, err := cfg.GetKubeconfig()
-	if err != nil || kubeCfg == nil {
-		return fmt.Errorf("failed to generate incluster configuration. err %v", err)
-	}
-	knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to generate knative client. err %v", err)
-	}
-	knativeFactory := knativeinformerexternal.NewSharedInformerFactory(knativeCli, 0)
-	knativeInformer := knativeFactory.Networking().V1alpha1().Ingresses().Informer()
-	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	knativeInformer.AddEventHandler(&k8scache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			log.Info("knative networking customer resource added.")
-			if *enablestatus == util.EnablementStatusDisabled {
-				log.Info("knative controller does not exist. register one.")
-				knative := configuration.Knativev1alpha1IngressReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-					Scheme:           mgr.GetScheme(),
-					IngressClassName: cfg.IngressClassName,
-					Proxy:            prx,
-				}
-				knative.SetupWithManager(mgr)
-				*enablestatus = util.EnablementStatusEnabled
-			} else {
-				log.Info("knative controller already on. Skip registration.")
-			}
-			cancel()
-		},
-	})
-	stopCh := signals.SetupSignalHandler()
-	knativeFactory.Start(stopCh)
-	return nil
 }

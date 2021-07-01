@@ -44,7 +44,10 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 			n.Logger.Errorf("failed to fetch custom entities: %v", err)
 		}
 	}
-	targetContent := deckgen.ToDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, n.getIngressControllerTags())
+
+	filterTags := getIngressControllerTags(n.cfg.Kong)
+
+	targetContent := deckgen.ToDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, filterTags)
 
 	newSHA, err := sendconfig.PerformUpdate(ctx,
 		n.Logger,
@@ -52,7 +55,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		n.cfg.InMemory,
 		n.cfg.EnableReverseSync,
 		targetContent,
-		n.getIngressControllerTags(),
+		filterTags,
 		customEntities,
 		n.runningConfigHash,
 		true,
@@ -61,7 +64,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	if n.cfg.DumpConfig != util.ConfigDumpModeOff {
 		if n.cfg.DumpConfig == util.ConfigDumpModeEnabled {
 			targetContent = deckgen.ToDeckContent(ctx, n.Logger, state.SanitizedCopy(), &n.PluginSchemaStore,
-				n.getIngressControllerTags())
+				filterTags)
 		}
 		dumpErr := dumpConfig(err != nil, n.cfg.DumpDir, targetContent)
 		if dumpErr != nil {
@@ -104,10 +107,10 @@ func (n *KongController) fetchCustomEntities() ([]byte, error) {
 
 // getIngressControllerTags returns a tag to use if the current
 // Kong entity supports tagging.
-func (n *KongController) getIngressControllerTags() []string {
+func getIngressControllerTags(kongConfig sendconfig.Kong) []string {
 	var res []string
-	if n.cfg.Kong.HasTagSupport {
-		res = append(res, n.cfg.Kong.FilterTags...)
+	if kongConfig.DeprecatedHasTagSupport {
+		res = append(res, kongConfig.FilterTags...)
 	}
 	return res
 }

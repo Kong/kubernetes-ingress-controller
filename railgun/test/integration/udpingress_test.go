@@ -132,7 +132,24 @@ func TestUDPIngress(t *testing.T) {
 		},
 	}
 
-	t.Logf("waiting for DNS to resolve via UDPIngress %s", udp.Name)
+	t.Logf("checking udpingress %s status readiness.", udp.Name)
+	ingCli := c.ConfigurationV1beta1().UDPIngresses(testUDPIngressNamespace)
+	assert.Eventually(t, func() bool {
+		curIng, err := ingCli.Get(ctx, udp.Name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			return false
+		}
+		ingresses := curIng.Status.LoadBalancer.Ingress
+		for _, ingress := range ingresses {
+			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
+				t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
+				return true
+			}
+		}
+		return false
+	}, 120*time.Second, 1*time.Second, true)
+
+	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		if err != nil {

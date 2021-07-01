@@ -113,10 +113,18 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
+	var filterTags []string
+	if ok, err := kongClient.Tags.Exists(ctx); err != nil {
+		setupLog.Error(err, "tag filtering disabled because Kong Admin API does not support tags")
+	} else if ok {
+		setupLog.Info("tag filtering enabled", "tags", c.FilterTags)
+		filterTags = c.FilterTags
+	}
+
 	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:               c.KongAdminURL,
-		FilterTags:        c.FilterTags,
+		FilterTags:        filterTags,
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),

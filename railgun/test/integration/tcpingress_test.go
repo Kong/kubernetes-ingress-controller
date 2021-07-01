@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -96,9 +97,24 @@ func TestTCPIngress(t *testing.T) {
 		}
 	}()
 
+	t.Logf("checking tcpingress %s status readiness.", tcp.Name)
 	ingCli := c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace)
-	t.Logf("waiting for routes from Ingress %s to be operational", tcp.Name)
+	assert.Eventually(t, func() bool {
+		curIng, err := ingCli.Get(ctx, tcp.Name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			return false
+		}
+		ingresses := curIng.Status.LoadBalancer.Ingress
+		for _, ingress := range ingresses {
+			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
+				t.Logf("tcpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
+				return true
+			}
+		}
+		return false
+	}, 120*time.Second, 1*time.Second, true)
 
+	t.Logf("verifying TCP Ingress %s operationalable", tcp.Name)
 	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", p.ProxyURL.Hostname()))
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {

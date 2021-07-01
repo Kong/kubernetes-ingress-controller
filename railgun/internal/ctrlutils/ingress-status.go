@@ -132,7 +132,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		fmt.Println("no change in status, update skipped")
+		logger.Info("no change in status, update skipped")
 		return nil
 	}
 

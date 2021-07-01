@@ -61,7 +61,6 @@ func PerformUpdate(ctx context.Context,
 
 	if newSHA != nil && !skipUpdateCR {
 		kongConfig.ConfigDone <- *targetContent
-		log.Info("sync ingress status also.")
 	}
 
 	log.Info("successfully synced configuration to kong.")

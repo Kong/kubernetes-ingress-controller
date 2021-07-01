@@ -48,6 +48,15 @@
 
 #### Added
 
+- added a new controller to the controller manager which will watch for new CRDs
+  being added to the cluster, and will dynamically load controllers for them at
+  runtime if applicable. This was specifically added in support of knative.Ingress
+  (which is the only implementation at this time) so that if the 3rd party CRD becomes
+  available in the cluster later on, the manager does not need to be restarted in order
+  to load the controller.
+  Consequentially a new flag was added which allows end-users to disable this
+  functionality if they wish: `--controller-dynamic-loader`
+  [#1479](https://github.com/Kong/kubernetes-ingress-controller/pull/1479)
 - fix kongClusterPlugin handling for kic 2.0.
   [#1418](https://github.com/Kong/kubernetes-ingress-controller/pull/1418)
 - profiling using `pprof` is now a standalone HTTP server listening on port 10256.

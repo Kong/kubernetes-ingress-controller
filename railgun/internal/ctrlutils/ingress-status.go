@@ -256,7 +256,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) &&
 		curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-		log.Info("no change in status, update skipped")
+		log.Debug("no change in status, update skipped")
 		return nil
 	}
 

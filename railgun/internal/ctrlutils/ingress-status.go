@@ -105,6 +105,7 @@ func retrieveNSAndNM(svc file.FService) (string, string, error) {
 	return namespace, name, nil
 }
 
+// update networking v1 ingress status
 func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
@@ -149,6 +150,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 
 }
 
+// updagte udp ingress status
 func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
@@ -188,6 +190,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 }
 
+// update TCP ingress status
 func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
@@ -229,6 +232,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 var ingressCondSet = knativeApis.NewLivingConditionSet()
 
+// update knative ingress status
 func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
@@ -287,6 +291,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	return nil
 }
 
+// retrieve cluster loader balance IP or hostaddress using networking
 func RunningAddresses(ctx context.Context, kubeCfg *rest.Config) ([]string, error) {
 	addrs := []string{}
 

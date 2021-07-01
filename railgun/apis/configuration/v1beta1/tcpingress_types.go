@@ -72,35 +72,6 @@ type IngressTLS struct {
 	SecretName string `json:"secretName,omitempty"`
 }
 
-// IngressRule represents a rule to apply against incoming requests.
-// Matching is performed based on an (optional) SNI and port.
-type IngressRule struct {
-	// Host is the fully qualified domain name of a network host, as defined
-	// by RFC 3986.
-	// If a Host is specified, the protocol must be TLS over TCP.
-	// A plain-text TCP request cannot be routed based on Host. It can only
-	// be routed based on Port.
-	// +optional
-	Host string `json:"host,omitempty"`
-
-	// Port is the port on which to accept TCP or TLS over TCP sessions and
-	// route. It is a required field. If a Host is not specified, the requested
-	// are routed based only on Port.
-	Port int `json:"port,omitempty"`
-	// Backend defines the referenced service endpoint to which the traffic
-	// will be forwarded to.
-	Backend IngressBackend `json:"backend"`
-}
-
-// IngressBackend describes all endpoints for a given service and port.
-type IngressBackend struct {
-	// Specifies the name of the referenced service.
-	ServiceName string `json:"serviceName"`
-
-	// Specifies the port of the referenced service.
-	ServicePort int `json:"servicePort"`
-}
-
 // TCPIngressStatus defines the observed state of TCPIngress
 type TCPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.

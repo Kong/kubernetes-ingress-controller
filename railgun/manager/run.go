@@ -4,28 +4,39 @@ package manager
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
 	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
+	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"knative.dev/pkg/signals"
+
+	k8scache "k8s.io/client-go/tools/cache"
+	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
+	knativeinformerexternal "knative.dev/networking/pkg/client/informers/externalversions"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,9 +45,18 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *config.Config) error {
-	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
-	if err != nil {
-		return fmt.Errorf("failed to make logger: %w", err)
+	var deprecatedLogger logrus.FieldLogger
+	var err error
+
+	if v := os.Getenv("KONG_TEST_ENVIRONMENT"); v != "" {
+		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(os.Stdout, &logrus.TextFormatter{}, 3, time.Second*30)
+		deprecatedLogger.Info("detected that the controller is running in an automated testing environment: " +
+			"log stifling has been enabled")
+	} else {
+		deprecatedLogger, err = util.MakeLogger(c.LogLevel, c.LogFormat)
+		if err != nil {
+			return fmt.Errorf("failed to make logger: %w", err)
+		}
 	}
 	var logger logr.Logger = logrusr.NewLogger(deprecatedLogger)
 
@@ -55,8 +75,8 @@ func Run(ctx context.Context, c *config.Config) error {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
-	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
+	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
 
 	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
@@ -109,6 +129,12 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 
 	// determine the proxy synchronization strategy
+	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
+		setupLog.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
+			" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
+			c.ProxySyncSeconds, proxy.DefaultSyncSeconds,
+		))
+	}
 	syncTickDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxySyncSeconds))
 	if err != nil {
 		setupLog.Error(err, "%s is not a valid number of seconds to stagger the proxy server synchronization")
@@ -133,13 +159,13 @@ func Run(ctx context.Context, c *config.Config) error {
 		c.EnableReverseSync,
 		syncTickDuration,
 		timeoutDuration,
-		sendconfig.UpdateKongAdminSimple,
-	)
+		sendconfig.UpdateKongAdminSimple)
 	if err != nil {
 		setupLog.Error(err, "unable to start proxy cache server")
 		return err
 	}
 
+	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -164,43 +190,21 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.IngressNetV1Enabled,
-			Controller: &configuration.NetV1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
-			IsEnabled: &c.IngressNetV1beta1Enabled,
-			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
-			IsEnabled: &c.IngressExtV1beta1Enabled,
-			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
+			IsEnabled: &alwaysEnabled,
+			Controller: &configuration.CoreV1SecretReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Secrets"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  prx,
 			},
 		},
 
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
-
 		{
 			IsEnabled: &c.UDPIngressEnabled,
-			Controller: &kongctrl.KongV1Alpha1UDPIngressReconciler{
+			Controller: &kongctrl.KongV1Beta1UDPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 				Scheme:           mgr.GetScheme(),
@@ -228,16 +232,6 @@ func Run(ctx context.Context, c *config.Config) error {
 			},
 		},
 		{
-			IsEnabled: &c.KongClusterPluginEnabled,
-			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            prx,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
 			IsEnabled: &c.KongPluginEnabled,
 			Controller: &kongctrl.KongV1KongPluginReconciler{
 				Client: mgr.GetClient(),
@@ -256,6 +250,94 @@ func Run(ctx context.Context, c *config.Config) error {
 				IngressClassName: c.IngressClassName,
 			},
 		},
+	}
+
+	// Negotiate Ingress version
+	ingressControllers := map[IngressAPI]ControllerDef{
+		NetworkingV1: {
+			IsEnabled: &c.IngressNetV1Enabled,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		NetworkingV1beta1: {
+			IsEnabled: &c.IngressNetV1beta1Enabled,
+			Controller: &configuration.NetV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		ExtensionsV1beta1: {
+			IsEnabled: &c.IngressExtV1beta1Enabled,
+			Controller: &configuration.ExtV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+	}
+
+	negotiatedIngressAPI, err := negotiateIngressAPI(c, mgr.GetClient())
+	if err == nil {
+		controllers = append(controllers, ingressControllers[negotiatedIngressAPI])
+	} else {
+		setupLog.Info(`no Ingress controllers enabled or no suitable Ingress version found.
+		Disabling Ingress controller`)
+	}
+
+	kongClusterPluginGVR := schema.GroupVersionResource{
+		Group:    konghqcomv1.SchemeGroupVersion.Group,
+		Version:  konghqcomv1.SchemeGroupVersion.Version,
+		Resource: "kongclusterplugins",
+	}
+	if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) == true {
+		setupLog.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
+		controller := ControllerDef{
+			IsEnabled: &c.KongClusterPluginEnabled,
+			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		}
+		controllers = append(controllers, controller)
+	} else {
+		setupLog.Info(`kongclusterplugins.configuration.konghq.com v1beta1 CRD not available on cluster.
+		Disabling KongClusterPlugin controller`)
+	}
+
+	knativeGVR := schema.GroupVersionResource{
+		Group:    knativev1alpha1.SchemeGroupVersion.Group,
+		Version:  knativev1alpha1.SchemeGroupVersion.Version,
+		Resource: "ingresses",
+	}
+	if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) == true {
+		setupLog.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
+		controller := ControllerDef{
+			IsEnabled: &c.KnativeIngressEnabled,
+			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            prx,
+				IngressClassName: c.IngressClassName,
+			},
+		}
+		controllers = append(controllers, controller)
+	} else {
+		setupLog.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
+		Disabling Knative controller`)
 	}
 
 	for _, c := range controllers {
@@ -283,6 +365,50 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}
+
+	go FlipKnativeController(mgr, prx, &c.KnativeIngressEnabled, c, setupLog)
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
+}
+
+// wait for knative cr before register and starting knative controller
+func FlipKnativeController(mgr manager.Manager, prx proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
+	if *enablestatus == util.EnablementStatusEnabled {
+		log.Info("knative controller already enabled. skip flip process.\n")
+		return nil
+	}
+	kubeCfg, err := cfg.GetKubeconfig()
+	if err != nil || kubeCfg == nil {
+		return fmt.Errorf("failed to generate incluster configuration. err %v", err)
+	}
+	knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
+	if err != nil {
+		return fmt.Errorf("failed to generate knative client. err %v", err)
+	}
+	knativeFactory := knativeinformerexternal.NewSharedInformerFactory(knativeCli, 0)
+	knativeInformer := knativeFactory.Networking().V1alpha1().Ingresses().Informer()
+	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	knativeInformer.AddEventHandler(&k8scache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			log.Info("knative networking customer resource added.")
+			if *enablestatus == util.EnablementStatusDisabled {
+				log.Info("knative controller does not exist. register one.")
+				knative := configuration.Knativev1alpha1IngressReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+					Scheme:           mgr.GetScheme(),
+					IngressClassName: cfg.IngressClassName,
+					Proxy:            prx,
+				}
+				knative.SetupWithManager(mgr)
+				*enablestatus = util.EnablementStatusEnabled
+			} else {
+				log.Info("knative controller already on. Skip registration.")
+			}
+			cancel()
+		},
+	})
+	stopCh := signals.SetupSignalHandler()
+	knativeFactory.Start(stopCh)
+	return nil
 }

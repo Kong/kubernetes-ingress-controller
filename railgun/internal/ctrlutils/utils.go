@@ -6,7 +6,10 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	netv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -16,7 +19,7 @@ import (
 // classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
 const classSpec = "IngressClassName"
 
-// CleanupFinalizer ensures that a deleted resource is no longer present in the object cache.
+// CleanupFinalizer removes an object finalizer from an object which is currently being deleted.
 func CleanupFinalizer(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
 	if HasFinalizer(obj, KongIngressFinalizer) {
 		log.Info("kong ingress finalizer needs to be removed from a resource which is deleting", "ingress", obj.GetName(), "finalizer", KongIngressFinalizer)
@@ -63,6 +66,11 @@ func MatchesIngressClassName(obj client.Object, ingressClassName string) bool {
 			return true
 		}
 	}
+
+	if _, ok := obj.(*knative.Ingress); ok {
+		return HasAnnotation(obj, annotations.KnativeIngressClassKey, ingressClassName)
+	}
+
 	return HasAnnotation(obj, annotations.IngressClassKey, ingressClassName)
 }
 
@@ -105,6 +113,13 @@ func IsIngressClassAnnotationConfigured(obj client.Object, expectedIngressClassN
 			return true
 		}
 	}
+
+	if foundIngressClassName, ok := obj.GetAnnotations()[annotations.KnativeIngressClassKey]; ok {
+		if foundIngressClassName == expectedIngressClassName {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -116,4 +131,13 @@ func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName st
 		return obj.Spec.IngressClassName != nil && *obj.Spec.IngressClassName == expectedIngressClassName
 	}
 	return false
+}
+
+// CRDExists returns false if CRD does not exist
+func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
+	_, err := client.RESTMapper().KindFor(gvr)
+	if meta.IsNoMatchError(err) {
+		return false
+	}
+	return true
 }

@@ -42,8 +42,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
@@ -79,7 +78,7 @@ type Storer interface {
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
-	ListUDPIngresses() ([]*kongv1alpha1.UDPIngress, error)
+	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
 	ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
@@ -215,7 +214,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.KongIngress.Add(obj)
 	case *kongv1beta1.TCPIngress:
 		return c.TCPIngress.Add(obj)
-	case *kongv1alpha1.UDPIngress:
+	case *kongv1beta1.UDPIngress:
 		return c.UDPIngress.Add(obj)
 	// ----------------------------------------------------------------------------
 	// 3rd Party API Support
@@ -257,7 +256,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.KongIngress.Delete(obj)
 	case *kongv1beta1.TCPIngress:
 		return c.TCPIngress.Delete(obj)
-	case *kongv1alpha1.UDPIngress:
+	case *kongv1beta1.UDPIngress:
 		return c.UDPIngress.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// 3rd Party API Support
@@ -398,8 +397,8 @@ func (s Store) ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error) {
 }
 
 // ListUDPIngresses returns the list of UDP Ingresses
-func (s Store) ListUDPIngresses() ([]*v1alpha1.UDPIngress, error) {
-	ingresses := []*v1alpha1.UDPIngress{}
+func (s Store) ListUDPIngresses() ([]*v1beta1.UDPIngress, error) {
+	ingresses := []*v1beta1.UDPIngress{}
 	if s.stores.UDPIngress == nil {
 		// older versions of the KIC do not support UDPIngress so short circuit to maintain support with them
 		return ingresses, nil
@@ -407,7 +406,7 @@ func (s Store) ListUDPIngresses() ([]*v1alpha1.UDPIngress, error) {
 
 	err := cache.ListAll(s.stores.UDPIngress, labels.NewSelector(),
 		func(ob interface{}) {
-			ing, ok := ob.(*v1alpha1.UDPIngress)
+			ing, ok := ob.(*v1beta1.UDPIngress)
 			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
 				ingresses = append(ingresses, ing)
 			}
@@ -424,14 +423,17 @@ func (s Store) validKnativeIngressClass(objectMeta *metav1.ObjectMeta) bool {
 	return ingressAnnotationValue == s.ingressClass
 }
 
-// ListKnativeIngresses returns the list of TCP Ingresses from
-// configuration.konghq.com group.
+// ListKnativeIngresses returns the list of Knative Ingresses from
+// ingresses.networking.internal.knative.dev group.
 func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	var ingresses []*knative.Ingress
 	if s.stores.KnativeIngress == nil {
 		return ingresses, nil
 	}
-	err := cache.ListAll(s.stores.KnativeIngress, labels.NewSelector(),
+
+	err := cache.ListAll(
+		s.stores.KnativeIngress,
+		labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*knative.Ingress)
 			// this is implemented directly in store as s.isValidIngressClass only checks the value of the
@@ -444,6 +446,7 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	sort.SliceStable(ingresses, func(i, j int) bool {
 		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
 			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
@@ -666,8 +669,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1beta1.TCPIngress{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongIngress"):
 		return &kongv1.KongIngress{}, nil
-	case kongv1alpha1.SchemeGroupVersion.WithKind("UDPIngress"):
-		return &kongv1alpha1.UDPIngress{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
+		return &kongv1beta1.UDPIngress{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):

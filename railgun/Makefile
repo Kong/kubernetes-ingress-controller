@@ -125,8 +125,8 @@ generate.clientsets:
 	@client-gen --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base github.com/kong/kubernetes-ingress-controller/railgun/apis/  \
-		--input configuration/v1,configuration/v1alpha1,configuration/v1beta1 \
-		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1/ \
+		--input configuration/v1,configuration/v1beta1 \
+		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
 		--output-package github.com/kong/kubernetes-ingress-controller/railgun/pkg/
 	@rm -rf pkg/clientset/
@@ -152,7 +152,7 @@ clean.test.proxy:
 test.integration.cluster:
 	@./scripts/setup-integration-tests.sh
 	@go clean -testcache
-	@KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
+	@KIND_CLUSTER="" KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
 # Our integration tests using all supported backends, with verbose output
 .PHONY: test.integration
@@ -162,7 +162,7 @@ test.integration: test.integration.dbless test.integration.postgres
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/setup-integration-tests.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 20m -race -v ./test/integration/
 
 # Our integration tests using the postgres backend, with verbose output
 # TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
@@ -170,10 +170,10 @@ test.integration.dbless:
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/setup-integration-tests.sh
-	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v ./test/integration/
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 20m -v ./test/integration/
 
 # Our integration tests using the legacy v1 controller manager
 .PHONY: test.integration.legacy
 test.integration.legacy:
 	@./scripts/setup-integration-tests.sh
-	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/
+	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -timeout 20m -race -v ./test/integration/

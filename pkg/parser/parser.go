@@ -39,7 +39,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list UDPIngresses: %v", err)
 	}
-	parsedUDPIngresses := fromUDPIngressV1Alpha1(log, udpIngresses)
+	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
@@ -209,12 +209,6 @@ func getUpstreams(
 	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
 	var upstreams []kongstate.Upstream
 	for _, service := range serviceMap {
-		// TODO: for v1alpha1 of UDPIngress we don't support automated Kubernetes service resolution,
-		// See the following issue for follow-up: https://github.com/Kong/kubernetes-ingress-controller/issues/1080
-		if service.Protocol != nil && *service.Protocol == "udp" {
-			return nil
-		}
-
 		var targets []kongstate.Target
 		port, err := findPort(&service.K8sService, service.Backend.Port)
 		if err == nil {
@@ -321,8 +315,6 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 
 func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service,
 	servicePort *corev1.ServicePort) []kongstate.Target {
-	var targets []kongstate.Target
-	var endpoints []util.Endpoint
 
 	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
@@ -330,19 +322,24 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 		"service_port":      servicePort,
 	})
 
-	endpoints = getEndpoints(log, &svc, servicePort, corev1.ProtocolTCP, s.GetEndpointsForService)
+	// in theory a Service could have multiple port protocols, we need to ensure we gather
+	// endpoints based on all the protocols the service is configured for. We always check
+	// for TCP as this is the default protocol for service ports.
+	protocols := listProtocols(svc)
+
+	// check all protocols for associated endpoints
+	endpoints := []util.Endpoint{}
+	for protocol := range protocols {
+		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService)
+		if len(newEndpoints) > 0 {
+			endpoints = append(endpoints, newEndpoints...)
+		}
+	}
 	if len(endpoints) == 0 {
 		log.Warningf("no active endpoints")
 	}
-	for _, endpoint := range endpoints {
-		target := kongstate.Target{
-			Target: kong.Target{
-				Target: kong.String(endpoint.Address + ":" + endpoint.Port),
-			},
-		}
-		targets = append(targets, target)
-	}
-	return targets
+
+	return targetsForEndpoints(endpoints)
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
@@ -440,4 +437,35 @@ func getEndpoints(
 
 	log.Debugf("found endpoints: %v", upsServers)
 	return upsServers
+}
+
+// listProtocols is a helper function to map out all the in-use corev1.Protocols
+// for a service given a corev1.Service object.
+//
+// TODO: due to historical logic this function defaults to assuming TCP protocol
+//       is valid for the Service and its endpoints, however we need to follow up
+//       on this as this is not technically correct and causes waste.
+//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1429
+func listProtocols(svc corev1.Service) map[corev1.Protocol]bool {
+	protocols := map[corev1.Protocol]bool{corev1.ProtocolTCP: true}
+	for _, port := range svc.Spec.Ports {
+		if port.Protocol != "" {
+			protocols[port.Protocol] = true
+		}
+	}
+	return protocols
+}
+
+// targetsForEndpoints generates kongstate.Target objects for each util.Endpoint provided.
+func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
+	targets := []kongstate.Target{}
+	for _, endpoint := range endpoints {
+		target := kongstate.Target{
+			Target: kong.Target{
+				Target: kong.String(endpoint.Address + ":" + endpoint.Port),
+			},
+		}
+		targets = append(targets, target)
+	}
+	return targets
 }

@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.0.0-alpha.2](#200-alpha2---tbd)
  - [2.0.0-alpha.1](#200-alpha1---20210527)
  - [1.3.1](#131---20210603)
  - [1.3.0](#130---20210527)
@@ -30,19 +31,41 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0-alpha.1] - 2021/05/27
+## [2.0.0-alpha.2] - TBD
 
-**NOTE**: This is a draft of release notes for the next major version to be
-released and the release notes may change significantly before then.
+#### Fixed
+
+- KongClusterPlugins are properly treated as cluster resources and apply
+  properly in 2.x.
+  [#1418](https://github.com/Kong/kubernetes-ingress-controller/pull/1418)
+- 2.x now loads Secrets properly. This fixes certificate support on Ingress,
+  and should address other Secret-based configuration (custom entities,
+  `ConfigFrom` in KongPlugins, etc.)
+  [#1439](https://github.com/Kong/kubernetes-ingress-controller/pull/1439)
+- The KongClusterPlugin controller disables itself automatically if the CRD is
+  not available, same as 1.x.
+  [#1458](https://github.com/Kong/kubernetes-ingress-controller/pull/1458)
 
 #### Added
 
-- adds support for selector tags (filter) tags refractored work. KIC 1.x
-  [#1415](https://github.com/Kong/kubernetes-ingress-controller/pull/1415)
 - fix kongClusterPlugin handling for kic 2.0.
   [#1418](https://github.com/Kong/kubernetes-ingress-controller/pull/1418)
 - profiling using `pprof` is now a standalone HTTP server listening on port 10256.
+- `v1beta1.UDPIngress` API support added. Only supported on KIC `v2.0.0+` releases.
+- adds support for selector tags (filter) tags refractored work. KIC 1.x
+  [#1415](https://github.com/Kong/kubernetes-ingress-controller/pull/1415)
+- Profiling using `pprof` is now a standalone HTTP server listening on port 10256.
   [#1417](https://github.com/Kong/kubernetes-ingress-controller/pull/1417)
+- knative API - Full Feature Parity
+  [#1148] (https://github.com/Kong/kubernetes-ingress-controller/pull/1396)
+- Reduced 2.x RBAC permissions to match 1.x permissions and added a generated
+  single-namespace Role that matches the ClusterRole.
+  [#1457](https://github.com/Kong/kubernetes-ingress-controller/pull/1457)
+
+## [2.0.0-alpha.1] - 2021/05/27
+
+#### Added
+
 - support for [UDP][kong-udp] via the new `UDPIngress` API.
 - `--watch-namespace` now supports multiple distinct namespaces versus simply
   supporting all namespaces (the default) or a single namespace. To watch
@@ -1112,6 +1135,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0

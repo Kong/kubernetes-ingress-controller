@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"text/template"
+
+	"github.com/Masterminds/sprig"
 )
 
 // -----------------------------------------------------------------------------
@@ -20,9 +22,9 @@ const (
 	netv1beta1 = "k8s.io/api/networking/v1beta1"
 	extv1beta1 = "k8s.io/api/extensions/v1beta1"
 
-	kongv1       = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	kongv1alpha1 = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
-	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1"
+	kongv1          = "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1beta1     = "github.com/kong/kubernetes-ingress-controller/railgun/api/configuration/v1beta1"
+	knativev1alpha1 = "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
 // inputControllersNeeded is a list of the supported Types for the
@@ -40,6 +42,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Service",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "corev1",
@@ -51,6 +54,19 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Endpoint",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"list", "watch"},
+	},
+	typeNeeded{
+		PackageImportAlias:                "corev1",
+		PackageAlias:                      "CoreV1",
+		Package:                           corev1,
+		Type:                              "Secret",
+		Plural:                            "secrets",
+		URL:                               "\"\"",
+		CacheType:                         "Secret",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "netv1",
@@ -62,6 +78,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "IngressV1",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "netv1beta1",
@@ -73,6 +90,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "extv1beta1",
@@ -84,6 +102,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -95,6 +114,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "KongIngress",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -106,6 +126,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Plugin",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -117,6 +138,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "ClusterPlugin",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1",
@@ -128,17 +150,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "Consumer",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
-	},
-	typeNeeded{
-		PackageImportAlias:                "kongv1alpha1",
-		PackageAlias:                      "KongV1Alpha1",
-		Package:                           kongv1alpha1,
-		Type:                              "UDPIngress",
-		Plural:                            "udpingresses",
-		URL:                               "configuration.konghq.com",
-		CacheType:                         "UDPIngress",
-		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
 		PackageImportAlias:                "kongv1beta1",
@@ -150,11 +162,58 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "TCPIngress",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
+		PackageImportAlias:                "kongv1beta1",
+		PackageAlias:                      "KongV1Beta1",
+		Package:                           kongv1beta1,
+		Type:                              "UDPIngress",
+		Plural:                            "udpingresses",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "UDPIngress",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
+		PackageImportAlias:                "knativev1alpha1",
+		PackageAlias:                      "Knativev1alpha1",
+		Package:                           knativev1alpha1,
+		Type:                              "Ingress",
+		Plural:                            "ingresses",
+		URL:                               "networking.internal.knative.dev",
+		CacheType:                         "KnativeIngress",
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+}
+
+var inputRBACPermissionsNeeded = &rbacsNeeded{
+	rbacNeeded{
+		Plural:    "nodes",
+		URL:       `""`,
+		RBACVerbs: []string{"list", "watch"},
+	},
+	rbacNeeded{
+		Plural:    "pods",
+		URL:       `""`,
+		RBACVerbs: []string{"get", "list", "watch"},
+	},
+	rbacNeeded{
+		Plural:    "events",
+		URL:       `""`,
+		RBACVerbs: []string{"create", "patch"},
 	},
 }
 
 func main() {
-	if err := inputControllersNeeded.generate(); err != nil {
+	needed := necessary{
+		types: inputControllersNeeded,
+		rbacs: inputRBACPermissionsNeeded,
+	}
+	if err := needed.generate(); err != nil {
 		fmt.Fprintf(os.Stderr, "could not generate input controllers: %v", err)
 		os.Exit(1)
 	}
@@ -191,16 +250,32 @@ func header() (*bytes.Buffer, error) {
 // controllers generated for them.
 type typesNeeded []typeNeeded
 
+// rbacsNeeded is a list of Kubernetes API objects which the Kong
+// Kubernetes Ingress Controller interacts with, but does not need a
+// controller for, only permissions
+type rbacsNeeded []rbacNeeded
+
+type necessary struct {
+	types *typesNeeded
+	rbacs *rbacsNeeded
+}
+
 // generate generates a controller/input/<controller>.go Kubernetes controller
 // for every supported type populated in the list.
-func (types typesNeeded) generate() error {
+func (needed necessary) generate() error {
 	contents, err := header()
 	if err != nil {
 		return err
 	}
 
-	for _, t := range types {
+	for _, t := range *needed.types {
 		if err := t.generate(contents); err != nil {
+			return err
+		}
+	}
+
+	for _, r := range *needed.rbacs {
+		if err := r.generate(contents); err != nil {
 			return err
 		}
 	}
@@ -216,6 +291,7 @@ type typeNeeded struct {
 	Plural             string
 	URL                string
 	CacheType          string
+	RBACVerbs          []string
 
 	// AcceptsIngressClassNameAnnotation indicates that the object accepts (and the controller will listen to)
 	// the "kubernetes.io/ingress.class" annotation to decide whether or not the object is supported.
@@ -227,11 +303,26 @@ type typeNeeded struct {
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
-	tmpl, err := template.New("controller").Parse(controllerTemplate)
+	tmpl, err := template.New("controller").Funcs(sprig.TxtFuncMap()).Parse(controllerTemplate)
 	if err != nil {
 		return err
 	}
 	return tmpl.Execute(contents, t)
+}
+
+// rbacNeeded represents a resource that we only require RBAC permissions for
+type rbacNeeded struct {
+	Plural    string
+	URL       string
+	RBACVerbs []string
+}
+
+func (r *rbacNeeded) generate(contents *bytes.Buffer) error {
+	tmpl, err := template.New("rbac").Funcs(sprig.TxtFuncMap()).Parse(rbacTemplate)
+	if err != nil {
+		return err
+	}
+	return tmpl.Execute(contents, r)
 }
 
 // -----------------------------------------------------------------------------
@@ -259,12 +350,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
+`
+
+var rbacTemplate = `
+// -----------------------------------------------------------------------------
+// API Group {{.URL}} resource {{.Plural}}
+// -----------------------------------------------------------------------------
+
+//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 `
 
 var controllerTemplate = `
@@ -295,9 +395,12 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 {{- end}}
 }
 
-//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/finalizers,verbs=update
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -306,6 +409,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Type}})
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -330,7 +434,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 {{end}}
 	// before we store cache data for this object, ensure that it has our finalizer set
 	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for ingress object, setting it", req.Namespace, req.Name)
+		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
 		if err := r.Client.Update(ctx, obj); err != nil {

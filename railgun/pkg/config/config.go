@@ -56,17 +56,18 @@ type Config struct {
 	WatchNamespace       string
 
 	// Kubernetes API toggling
-	IngressExtV1beta1Enabled util.EnablementStatus
-	IngressNetV1beta1Enabled util.EnablementStatus
-	IngressNetV1Enabled      util.EnablementStatus
-	UDPIngressEnabled        util.EnablementStatus
-	TCPIngressEnabled        util.EnablementStatus
-	KongIngressEnabled       util.EnablementStatus
-	KnativeIngressEnabled    util.EnablementStatus
-	KongClusterPluginEnabled util.EnablementStatus
-	KongPluginEnabled        util.EnablementStatus
-	KongConsumerEnabled      util.EnablementStatus
-	ServiceEnabled           util.EnablementStatus
+	DynamicControllerLoaderEnabled util.EnablementStatus
+	IngressExtV1beta1Enabled       util.EnablementStatus
+	IngressNetV1beta1Enabled       util.EnablementStatus
+	IngressNetV1Enabled            util.EnablementStatus
+	UDPIngressEnabled              util.EnablementStatus
+	TCPIngressEnabled              util.EnablementStatus
+	KongIngressEnabled             util.EnablementStatus
+	KnativeIngressEnabled          util.EnablementStatus
+	KongClusterPluginEnabled       util.EnablementStatus
+	KongPluginEnabled              util.EnablementStatus
+	KongConsumerEnabled            util.EnablementStatus
+	ServiceEnabled                 util.EnablementStatus
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -141,6 +142,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		a comma-separated list of namespaces.`)
 
 	// Kubernetes API toggling
+	flagSet.enablementStatusVar(&c.DynamicControllerLoaderEnabled, "controller-dynamic-loader", util.EnablementStatusEnabled, `Enable or disable the controller which will dynamically load other
+		 controllers as the relevant supported APIs become available in the cluster.`+onOffUsage)
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
 	// TODO the other Ingress versions remain disabled for now. 2.x does not yet support version negotiation
 	flagSet.enablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusDisabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1beta1)."+onOffUsage)

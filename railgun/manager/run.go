@@ -344,13 +344,17 @@ func Run(ctx context.Context, c *config.Config) error {
 			knativeWasLoaded = true
 		}
 
-		// if knative is not explicitly disabled but was not previously loaded we will run a controller that will
-		// watch the cluster CRDs to determine if/when that API is loaded and when it becomes available we will
-		// dynamically load the knative.Ingress controller into the controller manager at runtime.
-		//
-		// In the future if we have other 3rd party APIs we would like to load controllers for dynamically
-		// we can expand this controller to include them.
-		if !knativeWasLoaded {
+		if c.DynamicControllerLoaderEnabled == util.EnablementStatusDisabled {
+			// if the end-user explicitly disabled dynamic controller loading, then let them be but warn them that
+			// a restart will be required in order for the relevant controller to be started.
+			setupLog.Info(`WARNING: the dynamic controller loader was explicitly disabled: knative support can not be
+				 dynamically added to the cluster and if the knative.Ingress CRD later becomes available, the manager
+				 will need to be restarted in order to pick it up and start the relevant controller(s).`)
+
+		} else if !knativeWasLoaded {
+			// if knative is not explicitly disabled but was not previously loaded we will run a controller that will
+			// watch the cluster CRDs to determine if/when that API is loaded and when it becomes available we will
+			// dynamically load the knative.Ingress controller into the controller manager at runtime.
 			setupLog.Info(fmt.Sprintf("knative support set to %s, but the API is not yet available (CRD not found)",
 				c.KnativeIngressEnabled.String()))
 

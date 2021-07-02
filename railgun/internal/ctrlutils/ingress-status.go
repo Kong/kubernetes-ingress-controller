@@ -174,7 +174,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		log.Info("no change in status, update skipped")
+		log.Debugf("no change in status, update skipped")
 		return nil
 	}
 
@@ -214,7 +214,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		log.Info("no change in status, update skipped")
+		log.Debugf("no change in status, update skipped")
 		return nil
 	}
 
@@ -257,7 +257,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) &&
 		curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-		log.Debug("no change in status, update skipped")
+		log.Debugf("no change in status, update skipped")
 		return nil
 	}
 

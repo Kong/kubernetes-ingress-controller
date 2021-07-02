@@ -16,7 +16,6 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
-
 	"github.com/sirupsen/logrus"
 )
 

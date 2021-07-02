@@ -25,7 +25,7 @@ import (
 )
 
 // dedicated function that process ingress/customer resource status update after configuration is updated within kong.
-func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.Context, kubeConfig *rest.Config, stopCh <-chan struct{}) {
+func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.Context, kubeConfig *rest.Config) {
 	log.Info("Launching Ingress Status Update Thread.")
 	var wg sync.WaitGroup
 	for {
@@ -35,7 +35,7 @@ func PullConfigUpdate(kongConfig sendconfig.Kong, log logr.Logger, ctx context.C
 			wg.Add(1)
 			go UpdateIngress(&updateDone, log, ctx, kubeConfig, &wg)
 			wg.Wait()
-		case <-stopCh:
+		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			return
 		}

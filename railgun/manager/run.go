@@ -167,8 +167,8 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Error(err, "unable to start proxy cache server")
 		return err
 	}
-	stopCh := make(chan struct{})
-	go ctrlutils.PullConfigUpdate(kongConfig, logger, ctx, kubeconfig, stopCh)
+
+	go ctrlutils.PullConfigUpdate(kongConfig, logger, ctx, kubeconfig)
 
 	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{

@@ -47,6 +47,7 @@
   [#1458](https://github.com/Kong/kubernetes-ingress-controller/pull/1458)
 
 #### Added
+- collect performance data of KIC
 
 - fix kongClusterPlugin handling for kic 2.0.
   [#1418](https://github.com/Kong/kubernetes-ingress-controller/pull/1418)

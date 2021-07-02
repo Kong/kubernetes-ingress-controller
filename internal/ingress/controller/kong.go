@@ -58,6 +58,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		filterTags,
 		customEntities,
 		n.runningConfigHash,
+		true,
 	)
 
 	if n.cfg.DumpConfig != util.ConfigDumpModeOff {

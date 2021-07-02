@@ -55,6 +55,10 @@ type Config struct {
 	FilterTags           []string
 	WatchNamespace       string
 
+	// Ingress status
+	PublishService       string
+	PublishStatusAddress string
+
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
 	IngressNetV1beta1Enabled util.EnablementStatus
@@ -139,6 +143,13 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.WatchNamespace, "watch-namespace", corev1.NamespaceAll,
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
 		a comma-separated list of namespaces.`)
+
+	// Ingress status
+	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
+			format. The controller will update Ingress status information with this Service's endpoints.`)
+	flagSet.StringVar(&c.PublishStatusAddress, "publish-status-address", "", `User-provided addresses in
+			comma-separated string format, for use in lieu of "publish-service" when that Service lacks useful address
+			information (for example, in bare-metal environments).`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)

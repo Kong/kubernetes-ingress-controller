@@ -21,19 +21,20 @@ import (
 	"knative.dev/pkg/network"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	kicclientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 )
 
 // dedicated function that process ingress/customer resource status update after configuration is updated within kong.
-func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config) {
+func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService, publishAddresses string) {
 	log.Info("Launching Ingress Status Update Thread.")
 	var wg sync.WaitGroup
 	for {
 		select {
 		case updateDone := <-kongConfig.ConfigDone:
-			log.Info("receive configuration information. Update ingress status %v \n", updateDone)
+			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
-			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg)
+			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg, publishService, publishAddresses)
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
@@ -43,8 +44,13 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 }
 
 // update ingress status according to generated rules and specs
-func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, kubeconfig *rest.Config, wg *sync.WaitGroup) error {
+func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, kubeconfig *rest.Config, wg *sync.WaitGroup, publishService, publishAddresses string) error {
 	defer wg.Done()
+
+	ips, hostname, err := RunningAddresses(ctx, kubeconfig, publishService, publishAddresses)
+	if err != nil {
+		return fmt.Errorf("failed to determine addresses for status")
+	}
 
 	for _, svc := range targetContent.Services {
 
@@ -55,7 +61,7 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
 							log.Info("knative service updated. update knative CR condition and status...")
-							err := UpdateKnativeIngress(ctx, log, svc, kubeconfig)
+							err := UpdateKnativeIngress(ctx, log, svc, kubeconfig, ips, hostname)
 							return fmt.Errorf("failed to update knative ingress err %v", err)
 						}
 					}
@@ -65,13 +71,13 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
-			err := UpdateTCPIngress(ctx, log, svc, kubeconfig)
+			err := UpdateTCPIngress(ctx, log, svc, kubeconfig, ips)
 			return fmt.Errorf("failed to update tcp ingress. err %v", err)
 		case "udp":
-			err := UpdateUDPIngress(ctx, log, svc, kubeconfig)
+			err := UpdateUDPIngress(ctx, log, svc, kubeconfig, ips)
 			return fmt.Errorf("failed to update udp ingress. err %v", err)
 		case "http":
-			err := UpdateIngressV1(ctx, log, svc, kubeconfig)
+			err := UpdateIngressV1(ctx, log, svc, kubeconfig, ips)
 			return fmt.Errorf("failed to update ingressv1. err %v", err)
 		default:
 			log.Info("other 3rd party ingress not supported yet.")
@@ -104,7 +110,8 @@ func retrieveNSAndNM(svc file.FService) (string, string, error) {
 }
 
 // update networking v1 ingress status
-func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
+func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
@@ -127,10 +134,6 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	var status []apiv1.LoadBalancerIngress
 	sort.SliceStable(status, lessLoadBalancerIngress(status))
 	curIPs := curIng.Status.LoadBalancer.Ingress
-	ips, err := RunningAddresses(ctx, kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve cluster loadbalancer.")
-	}
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
@@ -149,7 +152,8 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 }
 
 // updagte udp ingress status
-func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
+func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
@@ -168,10 +172,6 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	var status []apiv1.LoadBalancerIngress
 	sort.SliceStable(status, lessLoadBalancerIngress(status))
 	curIPs := curIng.Status.LoadBalancer.Ingress
-	ips, err := RunningAddresses(ctx, kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve cluster loadbalancer.")
-	}
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
@@ -189,7 +189,8 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 }
 
 // update TCP ingress status
-func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
+func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
@@ -208,10 +209,6 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	var status []apiv1.LoadBalancerIngress
 	sort.SliceStable(status, lessLoadBalancerIngress(status))
 	curIPs := curIng.Status.LoadBalancer.Ingress
-	ips, err := RunningAddresses(ctx, kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve cluster loadbalancer.")
-	}
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
@@ -231,7 +228,8 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 var ingressCondSet = knativeApis.NewLivingConditionSet()
 
 // update knative ingress status
-func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config) error {
+func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+	ips []string, hostname string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
@@ -251,10 +249,6 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	var status []apiv1.LoadBalancerIngress
 	sort.SliceStable(status, lessLoadBalancerIngress(status))
 	curIPs := toCoreLBStatus(curIng.Status.PublicLoadBalancer)
-	ips, err := RunningAddresses(ctx, kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve cluster loadbalancer.")
-	}
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) &&
 		curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
@@ -264,14 +258,9 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 
 	// updating current custom status
 	lbStatus := toKnativeLBStatus(status)
-	clusterDomain := network.GetClusterDomainName()
-	if err != nil {
-		return err
-	}
 
 	for i := 0; i < len(lbStatus); i++ {
-		lbStatus[i].DomainInternal = fmt.Sprintf("%s.%s.svc.%s",
-			"ingress-controller-kong-proxy", "kong-system", clusterDomain)
+		lbStatus[i].DomainInternal = hostname
 	}
 
 	curIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus)
@@ -289,17 +278,26 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 }
 
 // retrieve cluster loader balance IP or hostaddress using networking
-func RunningAddresses(ctx context.Context, kubeCfg *rest.Config) ([]string, error) {
+func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService, publishAddresses string) ([]string, string, error) {
 	addrs := []string{}
-	// loading ns from environment variable when https://github.com/Kong/kubernetes-ingress-controller/issues/1480
-	// is resolved
-	namespace := "kong-system"
+	if publishAddresses != "" {
+		addrs = append(addrs, strings.Split(",", publishAddresses)...)
+		return addrs, "", nil
+	}
+	namespace, name, err := util.ParseNameNS(publishService)
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to retrieve service for status: %w", err)
+	}
+
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
-	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
+	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Infof("running address err %v", err)
-		return nil, err
+		return nil, "", err
 	}
+
+	clusterDomain := network.GetClusterDomainName()
+	hostname := fmt.Sprintf("%s.%s.svc.%s", name, namespace, clusterDomain)
 
 	switch svc.Spec.Type {
 	case apiv1.ServiceTypeLoadBalancer:
@@ -312,9 +310,9 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config) ([]string, erro
 		}
 
 		addrs = append(addrs, svc.Spec.ExternalIPs...)
-		return addrs, nil
+		return addrs, hostname, nil
 	default:
-		return addrs, nil
+		return addrs, hostname, nil
 	}
 }
 

@@ -168,7 +168,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig)
+	go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
 
 	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{

@@ -34,9 +34,9 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 			log.Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
 			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg)
-			wg.Wait()
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
+			wg.Wait()
 			return
 		}
 	}

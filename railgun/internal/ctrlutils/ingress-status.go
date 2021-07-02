@@ -72,7 +72,7 @@ func UpdateIngress(targetContent *file.Content, log logr.Logger, ctx context.Con
 			err := UpdateIngressV1(ctx, log, svc, kubeconfig)
 			return fmt.Errorf("failed to update ingressv1. err %v", err)
 		default:
-			fmt.Println("checking 3rd party ingress.")
+			log.Info("other 3rd party ingress not supported yet.")
 		}
 	}
 
@@ -173,7 +173,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		fmt.Println("no change in status, update skipped")
+		log.Info("no change in status, update skipped")
 		return nil
 	}
 
@@ -213,7 +213,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		fmt.Println("no change in status, update skipped")
+		log.Info("no change in status, update skipped")
 		return nil
 	}
 

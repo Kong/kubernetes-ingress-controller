@@ -121,7 +121,6 @@ func Run(ctx context.Context, c *config.Config) error {
 		filterTags = c.FilterTags
 	}
 
-	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:               c.KongAdminURL,
 		FilterTags:        filterTags,
@@ -168,7 +167,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
+	go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService)
 
 	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{

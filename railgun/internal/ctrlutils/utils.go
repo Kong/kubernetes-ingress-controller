@@ -2,13 +2,18 @@ package ctrlutils
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -140,4 +145,32 @@ func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 		return false
 	}
 	return true
+}
+
+// retrieve Kong Admin API URL from configured name/namespace service
+func RetrievePublishStatusAddress(ctx context.Context, KongAdminAPI string, kubeCfg *rest.Config) (string, error) {
+	namespace, name, err := util.ParseNameNS(KongAdminAPI)
+	if err != nil {
+		return "", fmt.Errorf("failed to pars kong admin api namespace and name. err %v", err)
+	}
+	CoreClient, _ := clientset.NewForConfig(kubeCfg)
+	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to creating kubernetes client")
+	}
+	ingresses := svc.Status.LoadBalancer.Ingress
+	adminIP := ""
+	for _, ingress := range ingresses {
+		adminIP = ingress.IP
+	}
+
+	ports := svc.Spec.Ports
+	var adminPort int32
+	for _, port := range ports {
+		if port.Name == "kong-admin" {
+			adminPort = port.Port
+		}
+	}
+	kongAdminURL := fmt.Sprintf("http://%s:%d", adminIP, adminPort)
+	return kongAdminURL, nil
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -56,8 +57,8 @@ type Config struct {
 	WatchNamespace       string
 
 	// Ingress status
-	PublishService       string
-	PublishStatusAddress string
+	PublishService string
+	KongAdminAPI   string
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -115,6 +116,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
+	// the hardcod only for development debug purpose
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
 		fmt.Sprintf(
@@ -147,9 +149,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Ingress status
 	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
 			format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringVar(&c.PublishStatusAddress, "publish-status-address", "", `User-provided addresses in
-			comma-separated string format, for use in lieu of "publish-service" when that Service lacks useful address
-			information (for example, in bare-metal environments).`)
+	flagSet.StringVar(&c.KongAdminAPI, "kong-admin-api", "", `Service fronting Ingress resources in "namespace/name"
+			format. The controller will contact Kongs Admin API for configuration update.`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
@@ -183,6 +184,21 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, "Enable profiling via web interface host:10256/debug/pprof/")
 
 	return &flagSet.FlagSet
+}
+
+func (c *Config) UpdateKongAdminURL(ctx context.Context) error {
+	kubeCfg, err := c.GetKubeconfig()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve kubeconfig. err %v", err)
+	}
+	adminApi := os.Getenv("KONG_TEST_ENVIRONMENT"); 
+	v != "" {
+	kongadminurl, err := ctrlutils.RetrievePublishStatusAddress(ctx, c.KongAdminAPI, kubeCfg)
+	if err != nil {
+		return fmt.Errorf("failed to generating kong admin url. err %v", err)
+	}
+	c.KongAdminURL = kongadminurl
+	return nil
 }
 
 func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {

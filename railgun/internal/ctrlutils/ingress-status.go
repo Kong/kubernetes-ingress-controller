@@ -26,7 +26,7 @@ import (
 )
 
 // dedicated function that process ingress/customer resource status update after configuration is updated within kong.
-func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService, publishAddresses string) {
+func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService string) {
 	log.Info("Launching Ingress Status Update Thread.")
 	var wg sync.WaitGroup
 	for {
@@ -34,7 +34,7 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 		case updateDone := <-kongConfig.ConfigDone:
 			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
-			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg, publishService, publishAddresses)
+			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg, publishService)
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
@@ -44,12 +44,12 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 }
 
 // update ingress status according to generated rules and specs
-func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, kubeconfig *rest.Config, wg *sync.WaitGroup, publishService, publishAddresses string) error {
+func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, kubeconfig *rest.Config, wg *sync.WaitGroup, publishService string) error {
 	defer wg.Done()
 
-	ips, hostname, err := RunningAddresses(ctx, kubeconfig, publishService, publishAddresses)
+	ips, hostname, err := RunningAddresses(ctx, kubeconfig, publishService)
 	if err != nil {
-		return fmt.Errorf("failed to determine addresses for status")
+		return fmt.Errorf("failed to determine addresses for status. err %v", err)
 	}
 
 	for _, svc := range targetContent.Services {
@@ -278,12 +278,8 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 }
 
 // retrieve cluster loader balance IP or hostaddress using networking
-func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService, publishAddresses string) ([]string, string, error) {
+func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string) ([]string, string, error) {
 	addrs := []string{}
-	if publishAddresses != "" {
-		addrs = append(addrs, strings.Split(",", publishAddresses)...)
-		return addrs, "", nil
-	}
 	namespace, name, err := util.ParseNameNS(publishService)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to retrieve service for status: %w", err)
@@ -298,7 +294,6 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService,
 
 	clusterDomain := network.GetClusterDomainName()
 	hostname := fmt.Sprintf("%s.%s.svc.%s", name, namespace, clusterDomain)
-
 	switch svc.Spec.Type {
 	case apiv1.ServiceTypeLoadBalancer:
 		for _, ip := range svc.Status.LoadBalancer.Ingress {
@@ -308,7 +303,6 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService,
 				addrs = append(addrs, ip.IP)
 			}
 		}
-
 		addrs = append(addrs, svc.Spec.ExternalIPs...)
 		return addrs, hostname, nil
 	default:

@@ -58,8 +58,8 @@ spec:
     spec:
       containers:
       - env:
-        - name: CONTROLLER_KONG_ADMIN_URL
-          value: http://172.18.0.240:8001
+        - name: CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE
+          value: kong-system/ingress-controller-kong-admin
         - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
           value: "true"
         - name: CONTROLLER_PUBLISH_SERVICE

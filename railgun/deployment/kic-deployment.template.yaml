@@ -9,14 +9,26 @@ metadata:
   name: kong-serviceaccount
   namespace: kong
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kong-ingress-clusterrole
+  creationTimestamp: null
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+- nonResourceURLs: ['*']
+  verbs: ['*']
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kong-ingress-clusterrole-nisa-binding
 roleRef:
   apiGroup: 'rbac.authorization.k8s.io'
   kind: ClusterRole
-  name: cluster-admin
+  name: kong-ingress-clusterrole
 subjects:
 - kind: ServiceAccount
   name: kong-serviceaccount
@@ -47,7 +59,7 @@ spec:
       containers:
       - env:
         - name: CONTROLLER_KONG_ADMIN_URL
-          value: http://172.18.0.241:8001
+          value: http://172.18.0.240:8001
         - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
           value: "true"
         - name: CONTROLLER_PUBLISH_SERVICE

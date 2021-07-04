@@ -1,0 +1,382 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kong-serviceaccount
+  namespace: kong
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kong-ingress-clusterrole
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - endpoints/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - ingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongclusterplugins
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongclusterplugins/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongclusterplugins/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongconsumers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongconsumers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongconsumers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongplugins
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongplugins/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongplugins/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - tcpingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - tcpingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - tcpingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - udpingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - udpingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - udpingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.internal.knative.dev
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.internal.knative.dev
+  resources:
+  - ingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networking.internal.knative.dev
+  resources:
+  - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kong-ingress-clusterrole-nisa-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kong-ingress-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: kong-ingress-controller
+  name: kong-ingress-controller
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong-ingress-controller
+  template:
+    metadata:
+      annotations:
+        kuma.io/gateway: enabled
+        prometheus.io/port: "8100"
+        prometheus.io/scrape: "true"
+        traffic.sidecar.istio.io/includeInboundPorts: ""
+      labels:
+        app: kong-ingress-controller
+    spec:
+      containers:
+      - env:
+        - name: CONTROLLER_KONG_ADMIN_URL
+          value: http://172.18.0.240:8001
+        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
+          value: "true"
+        - name: CONTROLLER_PUBLISH_SERVICE
+          value: kong-system/ingress-controller-kong-proxy
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: jimin1/kic-release:finish-2.0run
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: ingress-controller-kong-controller
+        ports:
+        - containerPort: 8080
+          name: webhook
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+      serviceAccountName: kong-serviceaccount

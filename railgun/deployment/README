@@ -1,0 +1,15 @@
+kong ingress controller deployment (kic2.0-release)
+
+Dependencies:
+
+apiextensions.k8s.io/v1 CRD 
+- kongclusterplugins.configuration.konghq.com
+- kongconsumers.configuration.konghq.com
+- kongingresses.configuration.konghq.com
+- kongplugins.configuration.konghq.com
+- tcpingresses.configuration.konghq.com
+- udpingresses.configuration.konghq.com
+
+services
+- kong admin url and ports
+- kong proxy namespace and service name

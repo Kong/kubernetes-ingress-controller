@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
@@ -187,14 +188,23 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 }
 
 func (c *Config) UpdateKongAdminURL(ctx context.Context) error {
+	if len(c.KongAdminURL) > 0 {
+		return nil
+	}
 	kubeCfg, err := c.GetKubeconfig()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve kubeconfig. err %v", err)
 	}
-	adminApi := os.Getenv("KONG_TEST_ENVIRONMENT"); 
-	v != "" {
-	kongadminurl, err := ctrlutils.RetrievePublishStatusAddress(ctx, c.KongAdminAPI, kubeCfg)
-	if err != nil {
+	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")
+	if adminApiService == "" {
+		if len(c.KongAdminAPI) > 0 {
+			adminApiService = c.KongAdminAPI
+		} else {
+			return fmt.Errorf("could not find kong admin api service namespace and name information.")
+		}
+	}
+	kongadminurl, err := ctrlutils.RetrievePublishStatusAddress(ctx, adminApiService, kubeCfg)
+	if err != nil || len(kongadminurl) == 0 {
 		return fmt.Errorf("failed to generating kong admin url. err %v", err)
 	}
 	c.KongAdminURL = kongadminurl

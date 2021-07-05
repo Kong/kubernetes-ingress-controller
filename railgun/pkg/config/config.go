@@ -3,14 +3,12 @@ package config
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -59,7 +57,6 @@ type Config struct {
 
 	// Ingress status
 	PublishService string
-	KongAdminAPI   string
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -150,8 +147,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Ingress status
 	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
 			format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringVar(&c.KongAdminAPI, "kong-admin-api", "", `Service fronting Ingress resources in "namespace/name"
-			format. The controller will contact Kongs Admin API for configuration update.`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
@@ -185,30 +180,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, "Enable profiling via web interface host:10256/debug/pprof/")
 
 	return &flagSet.FlagSet
-}
-
-func (c *Config) UpdateKongAdminURL(ctx context.Context) error {
-	if len(c.KongAdminURL) > 0 {
-		return nil
-	}
-	kubeCfg, err := c.GetKubeconfig()
-	if err != nil {
-		return fmt.Errorf("failed to retrieve kubeconfig. err %v", err)
-	}
-	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")
-	if adminApiService == "" {
-		if len(c.KongAdminAPI) > 0 {
-			adminApiService = c.KongAdminAPI
-		} else {
-			return fmt.Errorf("could not find kong admin api service namespace and name information.")
-		}
-	}
-	kongadminurl, err := ctrlutils.RetrievePublishStatusAddress(ctx, adminApiService, kubeCfg)
-	if err != nil || len(kongadminurl) == 0 {
-		return fmt.Errorf("failed to generating kong admin url. err %v", err)
-	}
-	c.KongAdminURL = kongadminurl
-	return nil
 }
 
 func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {

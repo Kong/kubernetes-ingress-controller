@@ -15,9 +15,5 @@ func Run(ctx context.Context, c *config.Config) error {
 	if err := StartProfilingServer(ctx, c); err != nil {
 		return fmt.Errorf("StartProfilingServer: %w", err)
 	}
-	err := c.UpdateKongAdminURL(ctx)
-	if err != nil {
-		return fmt.Errorf("failed retrieving kong admin URL. err %v", err)
-	}
 	return manager.Run(ctx, c)
 }

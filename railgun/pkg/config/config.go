@@ -3,12 +3,14 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -54,6 +56,9 @@ type Config struct {
 	Concurrency          int
 	FilterTags           []string
 	WatchNamespace       string
+
+	PublishService string
+	KongAdminAPI   string
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -140,6 +145,11 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
 		a comma-separated list of namespaces.`)
 
+	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
+		format. The controller will update Ingress status information with this Service's endpoints.`)
+	flagSet.StringVar(&c.KongAdminAPI, "kong-admin-api", "", `Service fronting Ingress resources in "namespace/name"
+		format. The controller will contact Kongs Admin API for configuration update.`)
+
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
 	// TODO the other Ingress versions remain disabled for now. 2.x does not yet support version negotiation
@@ -196,4 +206,33 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 		return nil, err
 	}
 	return client.New(conf, client.Options{})
+}
+
+func (c *Config) ConfigKongService(ctx context.Context) error {
+	kubeCfg, err := c.GetKubeconfig()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve kubeconfig. err %v", err)
+	}
+
+	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")
+	if adminApiService == "" {
+		if len(c.KongAdminAPI) > 0 {
+			adminApiService = c.KongAdminAPI
+		} else {
+			return fmt.Errorf("could not find kong admin api service namespace and name information.")
+		}
+	}
+	kongadminurl, err := ctrlutils.RetrieveKongAdminAPIURL(ctx, adminApiService, kubeCfg)
+	if err != nil || len(kongadminurl) == 0 {
+		return fmt.Errorf("failed to generating kong admin url. err %v", err)
+	}
+	c.KongAdminURL = kongadminurl
+
+	if len(c.PublishService) == 0 {
+		kongService := os.Getenv("CONTROLLER_PUBLISH_SERVICE")
+		if len(kongService) > 0 {
+			c.PublishService = kongService
+		}
+	}
+	return nil
 }

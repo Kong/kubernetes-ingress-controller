@@ -25,13 +25,14 @@ import (
 func TestIngressPerf(t *testing.T) {
 	t.Log("setting up the TestIngressPerf")
 	proxyReady()
+
 	ctx := context.Background()
 
 	cnt := 1
 	cost := 0
-	for cnt < 5 {
-		namespace := fmt.Sprintf("ingress-%d", cnt)
+	for cnt < 1 {
 
+		namespace := fmt.Sprintf("ingress-%d", cnt)
 		nsName := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,

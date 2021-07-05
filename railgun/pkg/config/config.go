@@ -209,13 +209,23 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 }
 
 func (c *Config) ConfigKongService(ctx context.Context) error {
+	// deployment configuration
+	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")
+	if adminApiService == "" {
+		// parameter configuration
+		if len(c.KongAdminURL) > 0 && c.KongAdminURL != "http://localhost:8001" {
+			return nil
+		}
+		return fmt.Errorf(" kong admin api url %s should not be localhost.", c.KongAdminURL)
+	}
+
 	kubeCfg, err := c.GetKubeconfig()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve kubeconfig. err %v", err)
 	}
 
-	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")
 	if adminApiService == "" {
+		// parameter configuration
 		if len(c.KongAdminAPI) > 0 {
 			adminApiService = c.KongAdminAPI
 		} else {

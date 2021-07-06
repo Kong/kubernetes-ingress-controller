@@ -234,7 +234,7 @@ func (c *Config) ConfigKongService(ctx context.Context) error {
 	}
 	kongadminurl, err := ctrlutils.RetrieveKongAdminAPIURL(ctx, adminApiService, kubeCfg)
 	if err != nil || len(kongadminurl) == 0 {
-		return fmt.Errorf("failed to generating kong admin url. err %v", err)
+		return fmt.Errorf("failed to generating kong admin url: %w", err)
 	}
 	c.KongAdminURL = kongadminurl
 

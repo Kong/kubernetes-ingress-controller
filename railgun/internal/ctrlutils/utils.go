@@ -156,7 +156,7 @@ func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to creating kubernetes client")
+		return "", fmt.Errorf("failed retrieve service object %s/%s: %w", namespace, name, err)
 	}
 	ingresses := svc.Status.LoadBalancer.Ingress
 	adminIP := ""

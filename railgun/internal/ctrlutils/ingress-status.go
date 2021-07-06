@@ -22,7 +22,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	kicclientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 )
 
 // dedicated function that process ingress/customer resource status update after configuration is updated within kong.
@@ -30,6 +29,12 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService)
 	if err != nil {
 		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
+		return
+	}
+
+	cli, err := clientset.NewForConfig(kubeConfig)
+	if err != nil {
+		log.Error(err, "failed to generate UDP client.")
 		return
 	}
 
@@ -41,7 +46,7 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 		case updateDone := <-kongConfig.ConfigDone:
 			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
-			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg, ips, hostname)
+			go UpdateIngress(ctx, &updateDone, log, cli, &wg, ips, hostname, kubeConfig)
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
@@ -51,7 +56,9 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 }
 
 // update ingress status according to generated rules and specs
-func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, kubeconfig *rest.Config, wg *sync.WaitGroup, ips []string, hostname string) error {
+func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, cli *clientset.Clientset,
+	wg *sync.WaitGroup, ips []string, hostname string,
+	kubeConfig *rest.Config) error {
 	defer wg.Done()
 
 	for _, svc := range targetContent.Services {
@@ -63,7 +70,7 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
 							log.Info("knative service updated. update knative CR condition and status...")
-							err := UpdateKnativeIngress(ctx, log, svc, kubeconfig, ips, hostname)
+							err := UpdateKnativeIngress(ctx, log, svc, kubeConfig, ips, hostname)
 							return fmt.Errorf("failed to update knative ingress err %v", err)
 						}
 					}
@@ -73,13 +80,13 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
-			err := UpdateTCPIngress(ctx, log, svc, kubeconfig, ips)
+			err := UpdateTCPIngress(ctx, log, svc, cli, ips)
 			return fmt.Errorf("failed to update tcp ingress. err %v", err)
 		case "udp":
-			err := UpdateUDPIngress(ctx, log, svc, kubeconfig, ips)
+			err := UpdateUDPIngress(ctx, log, svc, cli, ips)
 			return fmt.Errorf("failed to update udp ingress. err %v", err)
 		case "http":
-			err := UpdateIngressV1(ctx, log, svc, kubeconfig, ips)
+			err := UpdateIngressV1(ctx, log, svc, cli, ips)
 			return fmt.Errorf("failed to update ingressv1. err %v", err)
 		default:
 			log.Info("other 3rd party ingress not supported yet.")
@@ -111,18 +118,14 @@ func retrieveNSAndNM(svc file.FService) (string, string, error) {
 	return namespace, name, nil
 }
 
-// update networking v1 ingress status
-func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+// Update networking v1 ingress status
+func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService, cli *clientset.Clientset,
 	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
 
-	cli, err := clientset.NewForConfig(kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to generate UDP client. err %v", err)
-	}
 	ingCli := cli.NetworkingV1().Ingresses(namespace)
 	cli.NetworkingV1beta1()
 	if err != nil {
@@ -139,7 +142,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		logger.Info("no change in status, update skipped")
+		log.Debugf("no change in status, update ingress v1 skipped")
 		return nil
 	}
 
@@ -154,17 +157,13 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 }
 
 // updagte udp ingress status
-func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, cli *clientset.Clientset,
 	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
 
-	cli, err := kicclientset.NewForConfig(kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to generate UDP client. err %v", err)
-	}
 	ingCli := cli.ConfigurationV1beta1().UDPIngresses(namespace)
 	curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 	if err != nil || curIng == nil {
@@ -177,7 +176,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		log.Debugf("no change in status, update skipped")
+		log.Debugf("no change in status, update udp ingress skipped")
 		return nil
 	}
 
@@ -191,17 +190,13 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 }
 
 // update TCP ingress status
-func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, cli *clientset.Clientset,
 	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
 
-	cli, err := kicclientset.NewForConfig(kubeCfg)
-	if err != nil {
-		return fmt.Errorf("failed to generate TCP client. err %v", err)
-	}
 	ingCli := cli.ConfigurationV1beta1().TCPIngresses(namespace)
 	curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 	if err != nil || curIng == nil {
@@ -214,7 +209,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
-		log.Debugf("no change in status, update skipped")
+		log.Debugf("no change in status, update tcp ingress skipped")
 		return nil
 	}
 
@@ -254,7 +249,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) &&
 		curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-		log.Debugf("no change in status, update skipped")
+		log.Debugf("no change in status, update knative ingress skipped")
 		return nil
 	}
 
@@ -330,6 +325,7 @@ func SliceToStatus(endpoints []string) []apiv1.LoadBalancerIngress {
 	return lbi
 }
 
+// InSlice checks whether a string is present in a list of strings.
 func InSlice(e string, arr []string) bool {
 	for _, v := range arr {
 		if v == e {

@@ -34,7 +34,7 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 
 	cli, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
-		log.Error(err, "failed to generate UDP client.")
+		log.Error(err, "failed to generate k8s client.")
 		return
 	}
 

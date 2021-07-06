@@ -330,6 +330,7 @@ func SliceToStatus(endpoints []string) []apiv1.LoadBalancerIngress {
 	return lbi
 }
 
+// InSlice checks whether a string is present in a list of strings.
 func InSlice(e string, arr []string) bool {
 	for _, v := range arr {
 		if v == e {

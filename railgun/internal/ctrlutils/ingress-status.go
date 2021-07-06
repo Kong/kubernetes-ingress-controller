@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
@@ -143,29 +144,35 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
-	curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
-	if err != nil || curIng == nil {
-		return fmt.Errorf("failed to fetch Ingress %v/%v: %w", namespace, name, err)
-	}
 
-	var status []apiv1.LoadBalancerIngress
-	sort.SliceStable(status, lessLoadBalancerIngress(status))
-	curIPs := curIng.Status.LoadBalancer.Ingress
-
-	status = SliceToStatus(ips)
-	if ingressSliceEqual(status, curIPs) {
-		log.Debugf("no change in status, update ingress v1 skipped")
-		return nil
-	}
-
-	curIng.Status.LoadBalancer.Ingress = status
 	retry := 0
 	for retry < status_update_retry {
+		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			log.Errorf("failed to fetch Ingress %v/%v: %w. retrying...", namespace, name, err)
+			retry++
+			time.Sleep(time.Second)
+			continue
+		}
+
+		var status []apiv1.LoadBalancerIngress
+		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		curIPs := curIng.Status.LoadBalancer.Ingress
+
+		status = SliceToStatus(ips)
+		if ingressSliceEqual(status, curIPs) {
+			log.Debugf("no change in status, update ingress v1 skipped")
+			return nil
+		}
+
+		curIng.Status.LoadBalancer.Ingress = status
+
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			break
 		}
 		log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
+		time.Sleep(time.Second)
 		retry++
 	}
 
@@ -182,30 +189,34 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
-	curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
-	if err != nil || curIng == nil {
-		return fmt.Errorf("failed to fetch UDP Ingress %v/%v: %w", namespace, name, err)
-	}
-
-	var status []apiv1.LoadBalancerIngress
-	sort.SliceStable(status, lessLoadBalancerIngress(status))
-	curIPs := curIng.Status.LoadBalancer.Ingress
-
-	status = SliceToStatus(ips)
-	if ingressSliceEqual(status, curIPs) {
-		log.Debugf("no change in status, update udp ingress skipped")
-		return nil
-	}
-
-	curIng.Status.LoadBalancer.Ingress = status
-
 	retry := 0
 	for retry < status_update_retry {
+		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			log.Errorf("failed to fetch UDP Ingress %v/%v: %w", namespace, name, err)
+			time.Sleep(time.Second)
+			retry++
+			continue
+		}
+
+		var status []apiv1.LoadBalancerIngress
+		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		curIPs := curIng.Status.LoadBalancer.Ingress
+
+		status = SliceToStatus(ips)
+		if ingressSliceEqual(status, curIPs) {
+			log.Debugf("no change in status, update udp ingress skipped")
+			return nil
+		}
+
+		curIng.Status.LoadBalancer.Ingress = status
+
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			break
 		}
 		log.Errorf("failed to update UDPIngress status: %v. retry...", err)
+		time.Sleep(time.Second)
 		retry++
 	}
 	return fmt.Errorf("ingress_status successfully updated UDPIngress status")
@@ -259,41 +270,46 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		return fmt.Errorf("failed to generate knative client. err %v", err)
 	}
 	ingClient := knativeCli.NetworkingV1alpha1().Ingresses(namespace)
-	curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
-	if err != nil || curIng == nil {
-		return fmt.Errorf("failed to fetch Knative Ingress %v/%v: %w", namespace, name, err)
-	}
-
-	// check if CR current status already updated
-	var status []apiv1.LoadBalancerIngress
-	sort.SliceStable(status, lessLoadBalancerIngress(status))
-	curIPs := toCoreLBStatus(curIng.Status.PublicLoadBalancer)
-	status = SliceToStatus(ips)
-	if ingressSliceEqual(status, curIPs) &&
-		curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-		log.Debugf("no change in status, update knative ingress skipped")
-		return nil
-	}
-
-	// updating current custom status
-	lbStatus := toKnativeLBStatus(status)
-
-	for i := 0; i < len(lbStatus); i++ {
-		lbStatus[i].DomainInternal = hostname
-	}
-
-	curIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus)
-	ingressCondSet.Manage(&curIng.Status).MarkTrue(knative.IngressConditionReady)
-	ingressCondSet.Manage(&curIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
-	curIng.Status.ObservedGeneration = curIng.GetObjectMeta().GetGeneration()
 
 	retry := 0
 	for retry < status_update_retry {
+		curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			log.Errorf("failed to fetch Knative Ingress %v/%v: %w", namespace, name, err)
+			time.Sleep(time.Second)
+			retry++
+			continue
+		}
+
+		// check if CR current status already updated
+		var status []apiv1.LoadBalancerIngress
+		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		curIPs := toCoreLBStatus(curIng.Status.PublicLoadBalancer)
+		status = SliceToStatus(ips)
+		if ingressSliceEqual(status, curIPs) &&
+			curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
+			log.Debugf("no change in status, update knative ingress skipped")
+			return nil
+		}
+
+		// updating current custom status
+		lbStatus := toKnativeLBStatus(status)
+
+		for i := 0; i < len(lbStatus); i++ {
+			lbStatus[i].DomainInternal = hostname
+		}
+
+		curIng.Status.MarkLoadBalancerReady(lbStatus, lbStatus)
+		ingressCondSet.Manage(&curIng.Status).MarkTrue(knative.IngressConditionReady)
+		ingressCondSet.Manage(&curIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
+		curIng.Status.ObservedGeneration = curIng.GetObjectMeta().GetGeneration()
+
 		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			break
 		}
 		log.Errorf("failed to update ingress status: %v. retrying...", err)
+		time.Sleep(time.Second)
 		retry++
 	}
 

@@ -221,7 +221,7 @@ func (c *Config) ConfigKongService(ctx context.Context) error {
 
 	kubeCfg, err := c.GetKubeconfig()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve kubeconfig. err %v", err)
+		return fmt.Errorf("failed to retrieve kubeconfig: %w", err)
 	}
 
 	if adminApiService == "" {

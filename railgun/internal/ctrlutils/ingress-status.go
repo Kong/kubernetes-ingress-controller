@@ -24,6 +24,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
+const (
+	status_update_retry = 3
+)
+
 // dedicated function that process ingress/customer resource status update after configuration is updated within kong.
 func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService string) {
 	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService)
@@ -147,12 +151,17 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	}
 
 	curIng.Status.LoadBalancer.Ingress = status
-	_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to update UDPIngress status: %v", err)
-	} else {
-		return fmt.Errorf("ingress_status successfully updated UDPIngress status")
+	retry := 0
+	for retry < status_update_retry {
+		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		if err == nil {
+			break
+		}
+		log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
+		retry++
 	}
+
+	return fmt.Errorf("ingress_status successfully updated UDPIngress status")
 
 }
 
@@ -181,12 +190,17 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	curIng.Status.LoadBalancer.Ingress = status
-	_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to update UDPIngress status: %v", err)
-	} else {
-		return fmt.Errorf("ingress_status successfully updated UDPIngress status")
+
+	retry := 0
+	for retry < status_update_retry {
+		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		if err == nil {
+			break
+		}
+		log.Errorf("failed to update UDPIngress status: %v. retry...", err)
+		retry++
 	}
+	return fmt.Errorf("ingress_status successfully updated UDPIngress status")
 }
 
 // update TCP ingress status
@@ -265,12 +279,17 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	ingressCondSet.Manage(&curIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
 	curIng.Status.ObservedGeneration = curIng.GetObjectMeta().GetGeneration()
 
-	_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to update ingress status: %v", err)
-	} else {
-		logger.Info("successfully updated ingress status")
+	retry := 0
+	for retry < status_update_retry {
+		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		if err == nil {
+			break
+		}
+		log.Errorf("failed to update ingress status: %v. retrying...", err)
+		retry++
 	}
+
+	logger.Info("successfully updated ingress status")
 	return nil
 }
 

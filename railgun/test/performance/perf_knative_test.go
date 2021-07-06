@@ -30,39 +30,56 @@ import (
 )
 
 const (
-// knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
-// knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
+	knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
+	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
 )
 
-func TestPerfKnativeIngress(t *testing.T) {
+func TestPerfKnativePerformance(t *testing.T) {
 
-	proxy := "172.18.0.241"
+	proxy := KongInfo.ProxyURL.Hostname()
+	assert.NotEmpty(t, proxy)
 	t.Logf("proxy url %s", proxy)
 
 	ctx := context.Background()
 
-	// t.Log("Deploying all resources that are required to run knative")
-	// require.NoError(t, deployManifest(knativeCrds, ctx, t))
-	// require.NoError(t, deployManifest(knativeCore, ctx, t))
-	// require.True(t, isKnativeReady(ctx, cluster, t), true)
+	t.Log("Deploying all resources that are required to run knative")
+	require.NoError(t, deployManifest(knativeCrds, ctx, t))
+	require.NoError(t, deployManifest(knativeCore, ctx, t))
+	require.True(t, isKnativeReady(ctx, cluster, t), true)
 
-	// t.Log("Configure Knative NetworkLayer as Kong")
-	// require.NoError(t, perfconfigKnativeNetwork(ctx, cluster, t))
-	// require.NoError(t, perfconfigKnativeDomain(ctx, proxy, cluster, t))
+	t.Log("Configure Knative NetworkLayer as Kong")
+	require.NoError(t, perfconfigKnativeNetwork(ctx, cluster, t))
+	require.NoError(t, perfconfigKnativeDomain(ctx, proxy, cluster, t))
 
-	t.Log("Install knative service")
-	namespace := "knative-2"
-	require.Eventually(t, func() bool {
-		err := perfInstallKnativeSrv(ctx, t, namespace)
-		if err != nil {
-			t.Logf("checking knativing webhook readiness.")
-			return false
+	cnt := 1
+	cost := 0
+	for cnt <= max_ingress {
+		namespace := fmt.Sprintf("knative-%d", cnt)
+		nsName := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
 		}
-		return true
-	}, 30*time.Second, 2*time.Second, true)
+		_, err := cluster.Client().CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
+		assert.NoError(t, err)
 
-	t.Log("Test knative service using kong.")
-	require.True(t, perfaccessKnativeSrv(ctx, proxy, t, namespace), true)
+		t.Logf("Install knative service into namespace %s", namespace)
+		require.Eventually(t, func() bool {
+			err := perfInstallKnativeSrv(ctx, t, namespace)
+			if err != nil {
+				t.Logf("checking knativing webhook readiness.")
+				return false
+			}
+			return true
+		}, 30*time.Second, 2*time.Second, true)
+
+		t.Logf("Test knative service using kong within namespace %s.", namespace)
+		require.True(t, perfaccessKnativeSrv(ctx, proxy, t, namespace, &cost), true)
+		cnt++
+	}
+	t.Logf("knative ingress cost %d", cost/max_ingress)
+
+	// cleanup clean ingress also to continueally repeat
 }
 
 func deployManifest(yml string, ctx context.Context, t *testing.T) error {
@@ -163,13 +180,13 @@ func perfconfigKnativeDomain(ctx context.Context, proxy string, cluster kind.Clu
 	return nil
 }
 
-func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, namesapce string) bool {
+func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, namesapce string, cost *int) bool {
 	knativeCli, err := knativenetworkingversioned.NewForConfig(cluster.Config())
 	if err != nil {
 		return false
 	}
 	ingCli := knativeCli.NetworkingV1alpha1().Ingresses(namesapce)
-	s := time.Now().Nanosecond()
+	s := time.Now().Second()
 	assert.Eventually(t, func() bool {
 		curIng, err := ingCli.Get(ctx, "helloworld-go", metav1.GetOptions{})
 		if err != nil || curIng == nil {
@@ -178,8 +195,9 @@ func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, names
 		conds := curIng.Status.Status.GetConditions()
 		for _, cond := range conds {
 			if cond.Type == apis.ConditionReady && cond.Status == v1.ConditionTrue {
-				e := time.Now().Nanosecond()
-				t.Logf("knative ingress status is ready. cost %d seconds ", (e-s)/1000000)
+				e := time.Now().Second()
+				t.Logf("knative ingress status is ready. cost %d seconds ", (e - s))
+				*cost += (e - s)
 				return true
 			}
 		}

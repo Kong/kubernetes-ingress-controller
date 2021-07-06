@@ -22,6 +22,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	kicclientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 )
 
 const (
@@ -38,7 +39,13 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 
 	cli, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
-		log.Error(err, "failed to generate k8s client.")
+		log.Error(err, "failed to create k8s client.")
+		return
+	}
+
+	kiccli, err := kicclientset.NewForConfig(kubeConfig)
+	if err != nil {
+		log.Error(err, "failed to create kong ingress client.")
 		return
 	}
 
@@ -50,7 +57,7 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 		case updateDone := <-kongConfig.ConfigDone:
 			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
-			go UpdateIngress(ctx, &updateDone, log, cli, &wg, ips, hostname, kubeConfig)
+			go UpdateIngress(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig)
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
@@ -61,6 +68,7 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 
 // update ingress status according to generated rules and specs
 func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, cli *clientset.Clientset,
+	kiccli *kicclientset.Clientset,
 	wg *sync.WaitGroup, ips []string, hostname string,
 	kubeConfig *rest.Config) error {
 	defer wg.Done()
@@ -84,10 +92,10 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
-			err := UpdateTCPIngress(ctx, log, svc, cli, ips)
+			err := UpdateTCPIngress(ctx, log, svc, kiccli, ips)
 			return fmt.Errorf("failed to update tcp ingress. err %v", err)
 		case "udp":
-			err := UpdateUDPIngress(ctx, log, svc, cli, ips)
+			err := UpdateUDPIngress(ctx, log, svc, kiccli, ips)
 			return fmt.Errorf("failed to update udp ingress. err %v", err)
 		case "http":
 			err := UpdateIngressV1(ctx, log, svc, cli, ips)
@@ -166,14 +174,14 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 }
 
 // updagte udp ingress status
-func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, cli *clientset.Clientset,
+func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
 	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
 
-	ingCli := cli.ConfigurationV1beta1().UDPIngresses(namespace)
+	ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
 	curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 	if err != nil || curIng == nil {
 		return fmt.Errorf("failed to fetch UDP Ingress %v/%v: %w", namespace, name, err)
@@ -204,14 +212,14 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 }
 
 // update TCP ingress status
-func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, cli *clientset.Clientset,
+func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
 	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
 
-	ingCli := cli.ConfigurationV1beta1().TCPIngresses(namespace)
+	ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
 	curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 	if err != nil || curIng == nil {
 		return fmt.Errorf("failed to fetch TCP Ingress %v/%v: %w", namespace, name, err)

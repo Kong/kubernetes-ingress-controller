@@ -153,7 +153,12 @@ func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *
 	if err != nil {
 		return "", fmt.Errorf("failed to parse kong admin api namespace and name: %w", err)
 	}
-	CoreClient, _ := clientset.NewForConfig(kubeCfg)
+
+	CoreClient, err := clientset.NewForConfig(kubeCfg)
+	if err != nil {
+		return "", fmt.Errorf("failed creating k8s client %v", err)
+	}
+
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed retrieve service object %s/%s: %w", namespace, name, err)
@@ -161,7 +166,10 @@ func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *
 	ingresses := svc.Status.LoadBalancer.Ingress
 	adminIP := ""
 	for _, ingress := range ingresses {
-		adminIP = ingress.IP
+		if len(ingress.IP) > 0 {
+			adminIP = ingress.IP
+			break
+		}
 	}
 
 	ports := svc.Spec.Ports

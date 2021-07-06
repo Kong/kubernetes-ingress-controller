@@ -29,14 +29,14 @@ import (
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
 )
 
-// const (
-// 	knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
-// 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
-// )
+const (
+// knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
+// knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
+)
 
 func TestPerfKnativeIngress(t *testing.T) {
 
-	proxy := "172.18.0.240"
+	proxy := "172.18.0.241"
 	t.Logf("proxy url %s", proxy)
 
 	ctx := context.Background()
@@ -46,12 +46,12 @@ func TestPerfKnativeIngress(t *testing.T) {
 	// require.NoError(t, deployManifest(knativeCore, ctx, t))
 	// require.True(t, isKnativeReady(ctx, cluster, t), true)
 
-	t.Log("Configure Knative NetworkLayer as Kong")
-	require.NoError(t, perfconfigKnativeNetwork(ctx, cluster, t))
-	require.NoError(t, perfconfigKnativeDomain(ctx, proxy, cluster, t))
+	// t.Log("Configure Knative NetworkLayer as Kong")
+	// require.NoError(t, perfconfigKnativeNetwork(ctx, cluster, t))
+	// require.NoError(t, perfconfigKnativeDomain(ctx, proxy, cluster, t))
 
 	t.Log("Install knative service")
-	namespace := "knative-1"
+	namespace := "knative-2"
 	require.Eventually(t, func() bool {
 		err := perfInstallKnativeSrv(ctx, t, namespace)
 		if err != nil {
@@ -65,7 +65,7 @@ func TestPerfKnativeIngress(t *testing.T) {
 	require.True(t, perfaccessKnativeSrv(ctx, proxy, t, namespace), true)
 }
 
-func perfdeployManifest(yml string, ctx context.Context, t *testing.T) error {
+func deployManifest(yml string, ctx context.Context, t *testing.T) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
@@ -219,7 +219,7 @@ func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, names
 	}, 120*time.Second, 1*time.Second)
 }
 
-func perfisKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) bool {
+func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) bool {
 	return assert.Eventually(t, func() bool {
 		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
 		if err != nil {

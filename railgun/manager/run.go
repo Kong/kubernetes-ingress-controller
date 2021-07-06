@@ -48,10 +48,9 @@ func Run(ctx context.Context, c *config.Config) error {
 	var deprecatedLogger logrus.FieldLogger
 	var err error
 
-	if v := os.Getenv("KONG_TEST_ENVIRONMENT"); v != "" {
+	if c.LogReduceRedundancy {
 		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(os.Stdout, &logrus.TextFormatter{}, 3, time.Second*30)
-		deprecatedLogger.Info("detected that the controller is running in an automated testing environment: " +
-			"log stifling has been enabled")
+		deprecatedLogger.Info("log stifling has been enabled")
 	} else {
 		deprecatedLogger, err = util.MakeLogger(c.LogLevel, c.LogFormat)
 		if err != nil {

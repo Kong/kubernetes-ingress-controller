@@ -151,7 +151,7 @@ func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *rest.Config) (string, error) {
 	namespace, name, err := util.ParseNameNS(KongAdminAPI)
 	if err != nil {
-		return "", fmt.Errorf("failed to pars kong admin api namespace and name. err %v", err)
+		return "", fmt.Errorf("failed to parse kong admin api namespace and name: %w", err)
 	}
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})

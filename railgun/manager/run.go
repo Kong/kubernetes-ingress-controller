@@ -5,12 +5,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -88,14 +88,19 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 
 	// determine how to configure namespace watchers
-	if strings.Contains(c.WatchNamespace, ",") {
-		setupLog.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespace)
+	switch len(c.WatchNamespaces) {
+	case 0:
+		// watch all namespaces
+		controllerOpts.Namespace = corev1.NamespaceAll
+	case 1:
+		// watch one namespace
+		controllerOpts.Namespace = c.WatchNamespaces[0]
+	default:
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
-		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(c.WatchNamespace, ","))
-	} else {
-		controllerOpts.Namespace = c.WatchNamespace
+		setupLog.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespace)
+		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(c.WatchNamespaces)
 	}
 
 	// build the controller manager

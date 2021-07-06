@@ -27,14 +27,21 @@ import (
 
 // dedicated function that process ingress/customer resource status update after configuration is updated within kong.
 func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService string) {
+	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService)
+	if err != nil {
+		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
+		return
+	}
+
 	log.Info("Launching Ingress Status Update Thread.")
+
 	var wg sync.WaitGroup
 	for {
 		select {
 		case updateDone := <-kongConfig.ConfigDone:
 			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
-			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg, publishService)
+			go UpdateIngress(ctx, &updateDone, log, kubeConfig, &wg, ips, hostname)
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
@@ -44,19 +51,14 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 }
 
 // update ingress status according to generated rules and specs
-func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, kubeconfig *rest.Config, wg *sync.WaitGroup, publishService string) error {
+func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, kubeconfig *rest.Config, wg *sync.WaitGroup, ips []string, hostname string) error {
 	defer wg.Done()
-
-	ips, hostname, err := RunningAddresses(ctx, kubeconfig, publishService)
-	if err != nil {
-		return fmt.Errorf("failed to determine addresses for status. err %v", err)
-	}
 
 	for _, svc := range targetContent.Services {
 
 		for _, plugin := range svc.Plugins {
 			log.Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
-			if *plugin.Enabled == true {
+			if *plugin.Enabled {
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {

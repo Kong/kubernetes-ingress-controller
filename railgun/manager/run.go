@@ -99,7 +99,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
-		setupLog.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespace)
+		setupLog.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespaces)
 		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(c.WatchNamespaces)
 	}
 

@@ -179,6 +179,5 @@ func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *
 			adminPort = port.Port
 		}
 	}
-	kongAdminURL := fmt.Sprintf("http://%s:%d", adminIP, adminPort)
-	return kongAdminURL, nil
+	return fmt.Sprintf("http://%s:%d", adminIP, adminPort), nil
 }

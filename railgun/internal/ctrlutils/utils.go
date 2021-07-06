@@ -147,7 +147,7 @@ func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 	return true
 }
 
-// retrieve Kong Admin API URL from configured name/namespace service
+// RetrieveKongAdminAPIURL retrieves the Kong Admin API URL from configured name/namespace service
 func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *rest.Config) (string, error) {
 	namespace, name, err := util.ParseNameNS(KongAdminAPI)
 	if err != nil {

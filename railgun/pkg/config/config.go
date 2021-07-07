@@ -60,7 +60,6 @@ type Config struct {
 
 	// kong proxy and admin api namespace and service name description string
 	PublishService string
-	KongAdminAPI   string
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -152,8 +151,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
 		format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringVar(&c.KongAdminAPI, "kong-admin-api", "", `Service fronting Ingress resources in "namespace/name"
-		format. The controller will contact Kongs Admin API for configuration update.`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
@@ -215,14 +212,11 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 
 // ConfigKongService pass kong proxy URL and kong admin API URL from environment variable
 func (c *Config) ConfigKongService(ctx context.Context) error {
-	// deployment configuration
+
+	// incluster deployment configuration, over write default configuration
 	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")
 	if adminApiService == "" {
-		// parameter configuration
-		if len(c.KongAdminURL) > 0 && c.KongAdminURL != "http://localhost:8001" {
-			return nil
-		}
-		return fmt.Errorf(" kong admin api url %s should not be localhost.", c.KongAdminURL)
+		return fmt.Errorf("coudl not retrieve kong admin api information from environment varialbe. using %s", c.KongAdminURL)
 	}
 
 	kubeCfg, err := c.GetKubeconfig()
@@ -230,14 +224,6 @@ func (c *Config) ConfigKongService(ctx context.Context) error {
 		return fmt.Errorf("failed to retrieve kubeconfig: %w", err)
 	}
 
-	if adminApiService == "" {
-		// parameter configuration
-		if len(c.KongAdminAPI) > 0 {
-			adminApiService = c.KongAdminAPI
-		} else {
-			return fmt.Errorf("could not find kong admin api service namespace and name information.")
-		}
-	}
 	kongadminurl, err := ctrlutils.RetrieveKongAdminAPIURL(ctx, adminApiService, kubeCfg)
 	if err != nil || len(kongadminurl) == 0 {
 		return fmt.Errorf("failed to generating kong admin url: %w", err)
@@ -245,6 +231,7 @@ func (c *Config) ConfigKongService(ctx context.Context) error {
 	c.KongAdminURL = kongadminurl
 
 	if len(c.PublishService) == 0 {
+		// incluster configuration
 		kongService := os.Getenv("CONTROLLER_PUBLISH_SERVICE")
 		if len(kongService) > 0 {
 			c.PublishService = kongService

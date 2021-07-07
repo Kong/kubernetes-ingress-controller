@@ -155,7 +155,7 @@ func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *
 	}
 
 	CoreClient, err := clientset.NewForConfig(kubeCfg)
-	if err != nil {
+	if err != nil || CoreClient == nil {
 		return "", fmt.Errorf("failed creating k8s client %v", err)
 	}
 

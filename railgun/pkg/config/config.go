@@ -208,6 +208,7 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 	return client.New(conf, client.Options{})
 }
 
+// ConfigKongService pass kong proxy URL and kong admin API URL from environment variable
 func (c *Config) ConfigKongService(ctx context.Context) error {
 	// deployment configuration
 	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")

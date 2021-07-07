@@ -133,8 +133,8 @@ func TestCaching(t *testing.T) {
 
 	t.Log("flushing the cache state to kong admin api")
 	previousUpdateCount := fakeKongAdminUpdateCount()
-	proxy.syncTicker.Reset(time.Millisecond * 200)
-	assert.Eventually(t, func() bool { return fakeKongAdminUpdateCount() == previousUpdateCount+1 }, time.Second*10, time.Millisecond*200)
+	proxy.syncTicker.Reset(time.Millisecond * 400)
+	assert.Eventually(t, func() bool { return fakeKongAdminUpdateCount() == previousUpdateCount+1 }, time.Second*10, time.Millisecond*400)
 }
 
 func TestProxyTimeout(t *testing.T) {

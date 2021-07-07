@@ -30,7 +30,7 @@ const (
 	status_update_retry = 3
 )
 
-// dedicated function that process ingress/customer resource status update after configuration is updated within kong.
+// PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
 func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService string) {
 	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService)
 	if err != nil {

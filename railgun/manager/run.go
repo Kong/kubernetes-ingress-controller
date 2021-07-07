@@ -15,11 +15,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/kong/deck/file"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 
@@ -118,13 +120,13 @@ func Run(ctx context.Context, c *config.Config) error {
 		filterTags = c.FilterTags
 	}
 
-	// configure the kong client
 	kongConfig := sendconfig.Kong{
 		URL:               c.KongAdminURL,
 		FilterTags:        filterTags,
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
+		ConfigDone:        make(chan file.Content),
 	}
 
 	// determine the proxy synchronization strategy
@@ -163,6 +165,8 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Error(err, "unable to start proxy cache server")
 		return err
 	}
+
+	go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService)
 
 	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{
@@ -337,6 +341,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
 		Disabling Knative controller`)
+		c.KnativeIngressEnabled = util.EnablementStatusDisabled
 	}
 
 	for _, c := range controllers {

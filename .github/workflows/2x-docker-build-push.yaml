@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta (railgun)
         id: meta_railgun
-        uses: docker/metadata-action@v3.3.0
+        uses: docker/metadata-action@v3.4.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |

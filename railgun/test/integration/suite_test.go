@@ -245,6 +245,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-kongplugin=enabled",
 				"--controller-kongconsumer=disabled",
 				"--election-id=integrationtests.konghq.com",
+				"--publish-service=kong-system/ingress-controller-kong-proxy",
 				fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
 				fmt.Sprintf("--ingress-class=%s", ingressClass),
 				"--log-level=trace",

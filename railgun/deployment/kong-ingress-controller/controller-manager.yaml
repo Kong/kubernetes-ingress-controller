@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: kong-ingress-controller
+  name: kong-ingress-controller
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong-ingress-controller
+  template:
+    metadata:
+      annotations:
+        kuma.io/gateway: enabled
+        prometheus.io/port: "8100"
+        prometheus.io/scrape: "true"
+        traffic.sidecar.istio.io/includeInboundPorts: ""
+      labels:
+        app: kong-ingress-controller
+    spec:
+      containers:
+      - env:
+        - name: CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE
+          value: "{{namespace/kong-admin-api-service-name}}"
+          # example value: kong-system/ingress-controller-kong-admin
+        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
+          value: "true"
+        - name: CONTROLLER_PUBLISH_SERVICE
+          value: "{{namespace/kong-proxy-service-name}}"
+          # example value: kong-system/ingress-controller-kong-admin
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: "{{kong-ingress-controller-imageurl}}"
+        # example "jimin1/kic-release:verify-fix"
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: ingress-controller-kong-controller
+        ports:
+        - containerPort: 8080
+          name: webhook
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+      serviceAccountName: kong-serviceaccount

@@ -1,0 +1,5 @@
+resources:
+- namespace.yaml
+- custom-types.yaml
+- rbac.yaml
+- controller-manager.yaml

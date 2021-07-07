@@ -31,8 +31,9 @@ const (
 )
 
 // PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
-func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService string) {
-	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService)
+func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config,
+	publishService string, publishAddresses []string) {
+	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
 	if err != nil {
 		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
 		return
@@ -317,8 +318,13 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 }
 
 // RunningAddresses retrieve cluster loader balance IP or hostaddress using networking
-func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string) ([]string, string, error) {
+func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string,
+	publishAddresses []string) ([]string, string, error) {
 	addrs := []string{}
+	if len(publishAddresses) > 0 {
+		addrs = append(addrs, publishAddresses...)
+		return addrs, "", nil
+	}
 	namespace, name, err := util.ParseNameNS(publishService)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to retrieve service for status: %w", err)
@@ -333,6 +339,7 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 
 	clusterDomain := network.GetClusterDomainName()
 	hostname := fmt.Sprintf("%s.%s.svc.%s", name, namespace, clusterDomain)
+
 	switch svc.Spec.Type {
 	case apiv1.ServiceTypeLoadBalancer:
 		for _, ip := range svc.Status.LoadBalancer.Ingress {
@@ -342,6 +349,7 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 				addrs = append(addrs, ip.IP)
 			}
 		}
+
 		addrs = append(addrs, svc.Spec.ExternalIPs...)
 		return addrs, hostname, nil
 	default:

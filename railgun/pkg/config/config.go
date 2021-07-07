@@ -58,8 +58,9 @@ type Config struct {
 	FilterTags           []string
 	WatchNamespace       string
 
-	// kong proxy and admin api namespace and service name description string
-	PublishService string
+	// Ingress status
+	PublishService       string
+	PublishStatusAddress []string
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -119,7 +120,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
-	// the hardcod only for development debug purpose
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
 		fmt.Sprintf(
@@ -150,7 +150,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		a comma-separated list of namespaces.`)
 
 	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
-		format. The controller will update Ingress status information with this Service's endpoints.`)
+			format. The controller will update Ingress status information with this Service's endpoints.`)
+	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{}, `User-provided addresses in
+			comma-separated string format, for use in lieu of "publish-service" when that Service lacks useful address
+			information (for example, in bare-metal environments).`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
@@ -216,7 +219,7 @@ func (c *Config) ConfigKongService(ctx context.Context) error {
 	// incluster deployment configuration, over write default configuration
 	adminApiService := os.Getenv("CONTROLLER_KONG_ADMIN_PUBLISH_SERVICE")
 	if adminApiService == "" {
-		return fmt.Errorf("coudl not retrieve kong admin api information from environment varialbe. using %s", c.KongAdminURL)
+		return nil
 	}
 
 	kubeCfg, err := c.GetKubeconfig()

@@ -56,6 +56,9 @@ type Config struct {
 	FilterTags           []string
 	WatchNamespace       string
 
+	// Ingress status
+	PublishService string
+
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
 	IngressNetV1beta1Enabled util.EnablementStatus
@@ -114,6 +117,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
+	// the hardcod only for development debug purpose
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
 		fmt.Sprintf(
@@ -142,6 +146,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.WatchNamespace, "watch-namespace", corev1.NamespaceAll,
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
 		a comma-separated list of namespaces.`)
+
+	// Ingress status
+	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
+			format. The controller will update Ingress status information with this Service's endpoints.`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)

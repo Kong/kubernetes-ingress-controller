@@ -67,7 +67,7 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 	}
 }
 
-// update ingress status according to generated rules and specs
+// UpdateIngress update ingress status according to generated rules and specs
 func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, cli *clientset.Clientset,
 	kiccli *kicclientset.Clientset,
 	wg *sync.WaitGroup, ips []string, hostname string,
@@ -75,9 +75,8 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 	defer wg.Done()
 
 	for _, svc := range targetContent.Services {
-
 		for _, plugin := range svc.Plugins {
-			log.Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
+			log.V(5).Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
 			if *plugin.Enabled {
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
@@ -131,7 +130,7 @@ func retrieveNSAndNM(svc file.FService) (string, string, error) {
 	return namespace, name, nil
 }
 
-// Update networking v1 ingress status
+// UpdateIngressV1 networking v1 ingress status
 func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService, cli *clientset.Clientset,
 	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
@@ -180,7 +179,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 
 }
 
-// updagte udp ingress status
+// UpdateUDPIngress update udp ingress status
 func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
 	ips []string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
@@ -257,7 +256,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 var ingressCondSet = knativeApis.NewLivingConditionSet()
 
-// update knative ingress status
+// UpdateKnativeIngress update knative ingress status
 func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
 	ips []string, hostname string) error {
 	namespace, name, err := retrieveNSAndNM(svc)
@@ -317,7 +316,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	return nil
 }
 
-// retrieve cluster loader balance IP or hostaddress using networking
+// RunningAddresses retrieve cluster loader balance IP or hostaddress using networking
 func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string) ([]string, string, error) {
 	addrs := []string{}
 	namespace, name, err := util.ParseNameNS(publishService)

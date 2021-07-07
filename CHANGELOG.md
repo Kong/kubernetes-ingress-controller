@@ -1,6 +1,7 @@
 # Table of Contents
 
- - [2.0.0-alpha.2](#200-alpha2---tbd)
+ - [2.0.0-alpha.3](#200-alpha3---tbd)
+ - [2.0.0-alpha.2](#200-alpha2---20210707)
  - [2.0.0-alpha.1](#200-alpha1---20210527)
  - [1.3.1](#131---20210603)
  - [1.3.0](#130---20210527)
@@ -31,7 +32,17 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0-alpha.2] - TBD
+## [2.0.0-alpha.3] - TBD
+
+#### Added
+
+- Implemented Ingress status updates in 2.x.
+  [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
+- Added `--publish-status-address` and `--publish-service` flags to 2.x.
+  [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
+  [#1509](https://github.com/Kong/kubernetes-ingress-controller/pull/1509)
+
+## [2.0.0-alpha.2] - 2021/07/07
 
 #### Fixed
 
@@ -1135,6 +1146,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-alpha.3
 [2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1

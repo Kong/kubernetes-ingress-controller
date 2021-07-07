@@ -149,7 +149,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	for retry < status_update_retry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
-			log.Errorf("failed to fetch Ingress %v/%v: %w. retrying...", namespace, name, err)
+			log.Errorf("failed to fetch Ingress %v/%v: %v. retrying...", namespace, name, err)
 			retry++
 			time.Sleep(time.Second)
 			continue
@@ -193,7 +193,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	for retry < status_update_retry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
-			log.Errorf("failed to fetch UDP Ingress %v/%v: %w", namespace, name, err)
+			log.Errorf("failed to fetch UDP Ingress %v/%v: %v", namespace, name, err)
 			time.Sleep(time.Second)
 			retry++
 			continue
@@ -275,7 +275,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	for retry < status_update_retry {
 		curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
-			log.Errorf("failed to fetch Knative Ingress %v/%v: %w", namespace, name, err)
+			log.Errorf("failed to fetch Knative Ingress %v/%v: %v", namespace, name, err)
 			time.Sleep(time.Second)
 			retry++
 			continue

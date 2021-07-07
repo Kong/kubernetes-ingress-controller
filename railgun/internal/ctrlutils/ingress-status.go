@@ -31,8 +31,9 @@ const (
 )
 
 // PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
-func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config, publishService, publishAddresses string) {
-	ips, hostname, err := RunningAddresses(ctx, kubeconfig, publishService, publishAddresses)
+func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config,
+	publishService string, publishAddresses []string) {
+	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
 	if err != nil {
 		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
 		return
@@ -317,10 +318,11 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 }
 
 // RunningAddresses retrieve cluster loader balance IP or hostaddress using networking
-func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService, publishAddresses string) ([]string, string, error) {
+func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string,
+	publishAddresses []string) ([]string, string, error) {
 	addrs := []string{}
-	if publishAddresses != "" {
-		addrs = append(addrs, strings.Split(",", publishAddresses)...)
+	if len(publishAddresses) > 0 {
+		addrs = append(addrs, publishAddresses...)
 		return addrs, "", nil
 	}
 	namespace, name, err := util.ParseNameNS(publishService)

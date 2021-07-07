@@ -58,7 +58,7 @@ type Config struct {
 
 	// Ingress status
 	PublishService       string
-	PublishStatusAddress string
+	PublishStatusAddress []string
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -150,7 +150,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Ingress status
 	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
 			format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringVar(&c.PublishStatusAddress, "publish-status-address", "", `User-provided addresses in
+	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{}, `User-provided addresses in
 			comma-separated string format, for use in lieu of "publish-service" when that Service lacks useful address
 			information (for example, in bare-metal environments).`)
 

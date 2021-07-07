@@ -223,7 +223,7 @@ func (c *Config) ConfigKongService(ctx context.Context) error {
 
 	kubeCfg, err := c.GetKubeconfig()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve kubeconfig. err %v", err)
+		return fmt.Errorf("failed to retrieve kubeconfig: %w", err)
 	}
 
 	if adminApiService == "" {
@@ -236,7 +236,7 @@ func (c *Config) ConfigKongService(ctx context.Context) error {
 	}
 	kongadminurl, err := ctrlutils.RetrieveKongAdminAPIURL(ctx, adminApiService, kubeCfg)
 	if err != nil || len(kongadminurl) == 0 {
-		return fmt.Errorf("failed to generating kong admin url. err %v", err)
+		return fmt.Errorf("failed to generating kong admin url: %w", err)
 	}
 	c.KongAdminURL = kongadminurl
 

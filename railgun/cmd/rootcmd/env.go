@@ -22,6 +22,15 @@ func bindEnvVars(cmd *cobra.Command, _ []string) {
 		}
 
 		if envValue, envSet := os.LookupEnv(envKey); envSet {
+			// for convenience, any EnablementStatus type variable we need to translate "false" into "disabled"
+			if f.Value.Type() == "EnablementStatus" {
+				if envValue == "false" {
+					envValue = "disabled"
+				}
+				if envValue == "true" {
+					envValue = "enabled"
+				}
+			}
 			cmd.Flags().Set(f.Name, envValue)
 		}
 	})

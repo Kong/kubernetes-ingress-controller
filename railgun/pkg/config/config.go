@@ -57,6 +57,7 @@ type Config struct {
 	FilterTags           []string
 	WatchNamespace       string
 
+	// kong proxy and admin api namespace and service name description string
 	PublishService string
 	KongAdminAPI   string
 

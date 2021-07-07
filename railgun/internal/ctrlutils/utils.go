@@ -3,6 +3,7 @@ package ctrlutils
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
@@ -166,18 +167,27 @@ func RetrieveKongAdminAPIURL(ctx context.Context, KongAdminAPI string, kubeCfg *
 	ingresses := svc.Status.LoadBalancer.Ingress
 	adminIP := ""
 	for _, ingress := range ingresses {
-		if len(ingress.IP) > 0 {
+		if net.ParseIP(ingress.IP) != nil {
 			adminIP = ingress.IP
 			break
 		}
+	}
+
+	if len(adminIP) == 0 || net.ParseIP(adminIP) == nil {
+		return "", fmt.Errorf("failed retrieve admin api ip : %v", err)
 	}
 
 	ports := svc.Spec.Ports
 	var adminPort int32
 	for _, port := range ports {
 		if port.Name == "kong-admin" {
-			adminPort = port.Port
+			if util.IsValidPort(int(port.Port)) {
+				adminPort = port.Port
+			}
 		}
+	}
+	if !util.IsValidPort(int(adminPort)) {
+		return "", fmt.Errorf("failed retrieve admin api ip port : %d", adminPort)
 	}
 	return fmt.Sprintf("http://%s:%d", adminIP, adminPort), nil
 }

@@ -249,6 +249,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				fmt.Sprintf("--ingress-class=%s", ingressClass),
 				"--log-level=trace",
 				"--log-format=text",
+				"--debug-log-reduce-redundancy",
 				"--admission-webhook-listen=172.17.0.1:49023",
 				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),

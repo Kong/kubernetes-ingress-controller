@@ -15,8 +15,6 @@ on:
 jobs:
   integration-test-dbless:
     runs-on: ubuntu-latest
-    env:
-      KONG_TEST_ENVIRONMENT: true
     steps:
     - name: setup golang
       uses: actions/setup-go@v2
@@ -36,8 +34,6 @@ jobs:
       working-directory: ./railgun
   integration-test-postgres:
     runs-on: ubuntu-latest
-    env:
-      KONG_TEST_ENVIRONMENT: true
     steps:
     - name: setup golang
       uses: actions/setup-go@v2

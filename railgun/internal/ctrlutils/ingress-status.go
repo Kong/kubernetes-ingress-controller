@@ -350,7 +350,7 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 	}
 }
 
-// sliceToStatus converts a slice of IP and/or hostnames to LoadBalancerIngress
+// SliceToStatus converts a slice of IP and/or hostnames to LoadBalancerIngress
 func SliceToStatus(endpoints []string) []apiv1.LoadBalancerIngress {
 	lbi := []apiv1.LoadBalancerIngress{}
 	for _, ep := range endpoints {

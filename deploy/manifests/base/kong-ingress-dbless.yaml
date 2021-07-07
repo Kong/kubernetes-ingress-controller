@@ -14,6 +14,10 @@ spec:
   template:
     metadata:
       annotations:
+        # Only Kong Gateway metrics are exposed here.
+        # There is a second container in the pod - the ingress controller - that
+        # exposes metrics (on port 10255) as well.
+        # https://github.com/Kong/kubernetes-ingress-controller/issues/1497
         prometheus.io/port: "8100"
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
@@ -92,6 +96,8 @@ spec:
           value: "true"
         - name: CONTROLLER_PUBLISH_SERVICE
           value: "kong/kong-proxy"
+        - name: CONTROLLER_CONTROLLER_UDPINGRESS
+          value: "false"
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -102,7 +108,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:1.3
+        image: kong/kubernetes-ingress-controller:2.0
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook
@@ -120,7 +126,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /healthz
+            path: /readyz
             port: 10254
             scheme: HTTP
           initialDelaySeconds: 5

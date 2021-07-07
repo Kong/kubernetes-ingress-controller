@@ -54,7 +54,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA,
+		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false,
 	)
 	if err != nil {
 		return nil, err

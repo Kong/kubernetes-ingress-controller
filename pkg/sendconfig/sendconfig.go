@@ -33,7 +33,7 @@ func PerformUpdate(ctx context.Context,
 	selectorTags []string,
 	customEntities []byte,
 	oldSHA []byte,
-) ([]byte, error) {
+	skipUpdateCR bool) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
 		return oldSHA, err
@@ -57,7 +57,12 @@ func PerformUpdate(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	log.Info("successfully synced configuration to kong")
+
+	if newSHA != nil && !skipUpdateCR {
+		kongConfig.ConfigDone <- *targetContent
+	}
+
+	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }
 

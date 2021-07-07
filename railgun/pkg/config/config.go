@@ -28,8 +28,9 @@ type Config struct {
 	// See flag definitions in RegisterFlags(...) for documentation of the fields defined here.
 
 	// Logging configurations
-	LogLevel  string
-	LogFormat string
+	LogLevel            string
+	LogFormat           string
+	LogReduceRedundancy bool
 
 	// Kong high-level controller manager configurations
 	KongAdminAPIConfig adminapi.HTTPClientOpts
@@ -100,6 +101,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Logging configurations
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
 	flagSet.StringVar(&c.LogFormat, "log-format", "text", `Format of logs of the controller. Allowed values are text and json.`)
+	flagSet.BoolVar(&c.LogReduceRedundancy, "debug-log-reduce-redundancy", false, `If enabled, repetitive log entries are suppressed. Built for testing environments - production use not recommended.`)
+	flagSet.MarkHidden("debug-log-reduce-redundancy")
 
 	// Kong high-level controller manager configurations
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false, "Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -117,6 +120,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
+	// the hardcod only for development debug purpose
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
 		fmt.Sprintf(

@@ -143,6 +143,7 @@ func TestDebugLoggerThreadSafety(t *testing.T) {
 	wg.Wait()
 	assert.Contains(t, buf.String(), "unique")
 	lines := strings.Split(buf.String(), "\n")
+	// Ensure that _some_ lines have been stifled. The actual number is not deterministic.
 	assert.True(t, len(lines) < 100)
 }
 

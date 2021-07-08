@@ -12,7 +12,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 	"github.com/spf13/pflag"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,7 +55,7 @@ type Config struct {
 	LeaderElectionID     string
 	Concurrency          int
 	FilterTags           []string
-	WatchNamespace       string
+	WatchNamespaces      []string
 
 	// Ingress status
 	PublishService       string
@@ -141,7 +140,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
-	flagSet.StringVar(&c.WatchNamespace, "watch-namespace", corev1.NamespaceAll,
+	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
 		a comma-separated list of namespaces.`)
 

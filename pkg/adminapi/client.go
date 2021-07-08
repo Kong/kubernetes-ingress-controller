@@ -79,6 +79,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 // If the workspace does not already exist, GetKongClientForWorkspace will create it.
 func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
 	httpclient *http.Client) (*kong.Client, error) {
+	// create the base client, and if no workspace was provided then return that.
 	client, err := kong.NewClient(kong.String(adminURL), httpclient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
@@ -87,10 +88,13 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 		return client, nil
 	}
 
+	// if a workspace was provided, verify whether or not it exists.
 	exists, err := client.Workspaces.Exists(ctx, kong.String(wsName))
 	if err != nil {
 		return nil, fmt.Errorf("looking up workspace: %w", err)
 	}
+
+	// if the provided workspace does not exist, for convenience we create it.
 	if !exists {
 		workspace := kong.Workspace{
 			Name: kong.String(wsName),
@@ -100,9 +104,9 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 			return nil, fmt.Errorf("creating workspace: %w", err)
 		}
 	}
-	client, err = kong.NewClient(kong.String(adminURL+"/"+wsName), httpclient)
-	if err != nil {
-		return nil, fmt.Errorf("creating Kong client: %w", err)
-	}
+
+	// ensure that we set the workspace appropriately
+	client.SetWorkspace(wsName)
+
 	return client, nil
 }

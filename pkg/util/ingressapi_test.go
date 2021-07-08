@@ -102,7 +102,7 @@ func TestServerHasGVK(t *testing.T) {
 }
 
 func TestNegotiateResourceAPI(t *testing.T) {
-	client := &fakeDiscoveryClient{
+	okClient := &fakeDiscoveryClient{
 		results: map[string]metav1.APIResourceList{
 			ExtensionsV1beta1.String(): {APIResources: []metav1.APIResource{{Kind: "Carrot"}}},
 			NetworkingV1beta1.String(): {APIResources: []metav1.APIResource{{Kind: "Carrot"}, {Kind: "Potato"}}},
@@ -110,8 +110,13 @@ func TestNegotiateResourceAPI(t *testing.T) {
 		},
 	}
 
+	errClient := &fakeDiscoveryClient{
+		err: errors.New("some fake error"),
+	}
+
 	for _, tt := range []struct {
 		name            string
+		client          discovery.ServerResourcesInterface
 		allowedVersions []IngressAPI
 		kind            string
 
@@ -120,12 +125,14 @@ func TestNegotiateResourceAPI(t *testing.T) {
 	}{
 		{
 			name:    "no allowed versions",
+			client:  okClient,
 			kind:    "Banana",
 			wantRes: OtherAPI,
 			wantErr: true,
 		},
 		{
 			name:            "none of allowed versions has GVK",
+			client:          okClient,
 			kind:            "Banana",
 			allowedVersions: []IngressAPI{NetworkingV1, NetworkingV1beta1, ExtensionsV1beta1},
 			wantRes:         OtherAPI,
@@ -133,25 +140,36 @@ func TestNegotiateResourceAPI(t *testing.T) {
 		},
 		{
 			name:            "API gets deleted in latest version",
+			client:          okClient,
 			kind:            "Carrot",
 			allowedVersions: []IngressAPI{NetworkingV1, NetworkingV1beta1, ExtensionsV1beta1},
 			wantRes:         NetworkingV1beta1,
 		},
 		{
 			name:            "API gets introduced in version later than first",
+			client:          okClient,
 			kind:            "Potato",
 			allowedVersions: []IngressAPI{NetworkingV1, NetworkingV1beta1, ExtensionsV1beta1},
 			wantRes:         NetworkingV1,
 		},
 		{
 			name:            "Newest allowedVersion not in the allowed list",
+			client:          okClient,
 			kind:            "Potato",
 			allowedVersions: []IngressAPI{NetworkingV1beta1, ExtensionsV1beta1},
 			wantRes:         NetworkingV1beta1,
 		},
+		{
+			name:            "error",
+			client:          errClient,
+			kind:            "Potato",
+			allowedVersions: []IngressAPI{NetworkingV1beta1, ExtensionsV1beta1},
+			wantRes:         OtherAPI,
+			wantErr:         true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRes, gotErr := NegotiateResourceAPI(client, tt.kind, tt.allowedVersions)
+			gotRes, gotErr := NegotiateResourceAPI(tt.client, tt.kind, tt.allowedVersions)
 			if tt.wantErr {
 				require.Error(t, gotErr)
 			} else {

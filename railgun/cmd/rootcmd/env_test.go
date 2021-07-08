@@ -1,7 +1,10 @@
 package rootcmd
 
 import (
+	"fmt"
+	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -12,7 +15,7 @@ import (
 func TestBindEnvVars(t *testing.T) {
 	commandHasRun := false
 	cmd := &cobra.Command{
-		PreRun: bindEnvVars,
+		PreRunE: bindEnvVars,
 		Run: func(cmd *cobra.Command, args []string) {
 			got1, _ := cmd.Flags().GetString("flag-1")
 			got2, _ := cmd.Flags().GetString("flag-2")
@@ -46,4 +49,46 @@ func TestBindEnvVars(t *testing.T) {
 
 	assert.True(t, commandHasRun)
 	assert.NoError(t, err)
+}
+
+func TestBindEnvVarsValidation(t *testing.T) {
+	cmd := &cobra.Command{
+		PreRunE: bindEnvVars,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Flags().Parse(nil)
+		},
+	}
+
+	cmd.Flags().Var(testvar("validation_test"), "validation_test", "")
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	_ = os.Setenv("CONTROLLER_VALIDATION_TEST", "intentionally_fail")
+	defer os.Unsetenv("CONTROLLER_VALIDATION_TEST")
+
+	err := cmd.Execute()
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "bad value for var type testvar"))
+}
+
+// -----------------------------------------------------------------------------
+// Test Utilities
+// -----------------------------------------------------------------------------
+
+type testvar string
+
+func (t testvar) String() string {
+	return string(t)
+}
+
+func (t testvar) Set(newstr string) error {
+	if newstr == "intentionally_fail" {
+		return fmt.Errorf("bad value for var type %s", t.Type())
+	}
+	t = testvar(newstr)
+	return nil
+}
+
+func (t testvar) Type() string {
+	return "testvar"
 }

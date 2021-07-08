@@ -8,10 +8,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
-	"github.com/kong/kubernetes-testing-framework/pkg/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -108,15 +110,15 @@ func TestCaching(t *testing.T) {
 	assert.NotNil(t, proxy.cache)
 
 	t.Log("intentionally freezing async updates to inspect cache state during tests")
-	proxy.syncTicker.Reset(time.Minute * 1)
+	proxy.syncTicker.Reset(time.Minute * 3)
 
 	t.Log("generating 10 new objects to the proxy cache server")
 	testObjects := make([]client.Object, 10)
 	for i := 0; i < 10; i++ {
 		name := uuid.New().String()
-		deployment := k8s.NewDeploymentForContainer(k8s.NewContainer(name, name, 8080))
-		service := k8s.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-		ingress := k8s.NewIngressForService("/testing", nil, service)
+		deployment := generators.NewDeploymentForContainer(generators.NewContainer(name, name, 8080))
+		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+		ingress := generators.NewIngressForService("/testing", nil, service)
 		testObjects[i] = ingress
 	}
 
@@ -131,10 +133,24 @@ func TestCaching(t *testing.T) {
 		return len(proxy.cache.IngressV1.List()) == len(testObjects)
 	}, time.Second*10, time.Millisecond*200)
 
+	t.Log("verifying the integrity of the object cache items")
+	matches := 0
+	for _, testObj := range testObjects {
+		for _, obj := range proxy.cache.IngressV1.List() {
+			ing, ok := obj.(*netv1.Ingress)
+			require.True(t, ok)
+			if ing.Namespace == testObj.GetNamespace() && ing.Name == testObj.GetName() {
+				matches++
+			}
+		}
+	}
+	require.Equal(t, len(testObjects), matches)
+
 	t.Log("flushing the cache state to kong admin api")
-	previousUpdateCount := fakeKongAdminUpdateCount()
-	proxy.syncTicker.Reset(time.Millisecond * 200)
-	assert.Eventually(t, func() bool { return fakeKongAdminUpdateCount() == previousUpdateCount+1 }, time.Second*10, time.Millisecond*200)
+	proxy.syncTicker.Reset(time.Millisecond * 50)
+
+	t.Logf("waiting for kong admin api updates to synchronize")
+	assert.Eventually(t, func() bool { return fakeKongAdminUpdateCount() == len(testObjects) }, time.Second*5, time.Millisecond*50)
 }
 
 func TestProxyTimeout(t *testing.T) {

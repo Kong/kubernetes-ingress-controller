@@ -3,28 +3,30 @@
 package integration
 
 import (
+	"bytes"
+	"context"
 	"crypto/tls"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"testing"
 	"time"
 
-	"bytes"
-	"context"
-	"fmt"
-	"testing"
-
-	types "k8s.io/apimachinery/pkg/types"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	types "k8s.io/apimachinery/pkg/types"
+	knativenetworkingversioned "knative.dev/networking/pkg/client/clientset/versioned"
+	"knative.dev/pkg/apis"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 )
 
 const (
@@ -36,15 +38,16 @@ func TestKnativeIngress(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("knative is supported in KIC 1.3.x and skip in legacy KIC")
 	}
-	clusterInfo := proxyReady()
-	proxy := clusterInfo.ProxyURL.Hostname()
+
+	cluster := env.Cluster()
+	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)
 	t.Logf("proxy url %s", proxy)
 
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
-	//require.NoError(t, deployManifest(knativeCrds, ctx, t))
+	require.NoError(t, deployManifest(knativeCrds, ctx, t))
 	require.NoError(t, deployManifest(knativeCore, ctx, t))
 	require.True(t, isKnativeReady(ctx, cluster, t), true)
 
@@ -89,7 +92,7 @@ func checkIPAddress(ip string, t *testing.T) bool {
 	}
 }
 
-func configKnativeNetwork(ctx context.Context, cluster kind.Cluster, t *testing.T) error {
+func configKnativeNetwork(ctx context.Context, cluster clusters.Cluster, t *testing.T) error {
 	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", ingressClass))
 	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
@@ -129,7 +132,7 @@ func installKnativeSrv(ctx context.Context, t *testing.T) error {
 			},
 		},
 	}
-	knativeCli, err := knativeversioned.NewForConfig(cluster.Config())
+	knativeCli, err := knativeversioned.NewForConfig(env.Cluster().Config())
 	_, err = knativeCli.ServingV1().Services("default").Create(ctx, tobeDeployedService, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create knative service. %v", err)
@@ -138,7 +141,7 @@ func installKnativeSrv(ctx context.Context, t *testing.T) error {
 	return nil
 }
 
-func configKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster, t *testing.T) error {
+func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Cluster, t *testing.T) error {
 	configMapData := make(map[string]string, 0)
 	configMapData[proxy] = ""
 	labels := make(map[string]string)
@@ -165,6 +168,26 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster
 }
 
 func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
+	knativeCli, err := knativenetworkingversioned.NewForConfig(env.Cluster().Config())
+	if err != nil {
+		return false
+	}
+	ingCli := knativeCli.NetworkingV1alpha1().Ingresses("default")
+	assert.Eventually(t, func() bool {
+		curIng, err := ingCli.Get(ctx, "helloworld-go", metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			return false
+		}
+		conds := curIng.Status.Status.GetConditions()
+		for _, cond := range conds {
+			if cond.Type == apis.ConditionReady && cond.Status == v1.ConditionTrue {
+				t.Logf("knative ingress status is ready.")
+				return true
+			}
+		}
+		return false
+	}, 120*time.Second, 1*time.Second, true)
+
 	url := "http://" + proxy
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -185,11 +208,17 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)
-		t.Logf("resp <%v>", resp.StatusCode)
+		t.Logf("resp <%v> ", resp.StatusCode)
 		if err != nil {
 			return false
 		}
 		if resp.StatusCode == http.StatusOK {
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return false
+			}
+			bodyString := string(bodyBytes)
+			t.Logf(bodyString)
 			t.Logf("service is successfully accessed through kong.")
 			return true
 		}
@@ -198,7 +227,7 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 	}, 120*time.Second, 1*time.Second)
 }
 
-func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) bool {
+func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T) bool {
 	return assert.Eventually(t, func() bool {
 		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
 		if err != nil {

@@ -11,6 +11,7 @@ on:
 
 jobs:
   docker:
+    environment: 'Docker Push'
     runs-on: ubuntu-latest
     steps:
       - name: Parse semver string
@@ -59,13 +60,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
       - name: Login to DockerHub
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta (alpine)
         id: meta_alpine
-        uses: docker/metadata-action@v3.3.0
+        uses: docker/metadata-action@v3.4.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -73,7 +74,7 @@ jobs:
           tags: ${{ env.ALPINE_STANDARD }}${{ env.ALPINE_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.3.0
+        uses: docker/metadata-action@v3.4.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |

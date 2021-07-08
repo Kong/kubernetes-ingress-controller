@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -20,13 +19,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/kind"
-	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 
 	"github.com/kong/kubernetes-ingress-controller/railgun/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 )
 
 // -----------------------------------------------------------------------------
@@ -72,9 +71,6 @@ var (
 	// httpc is the default HTTP client to use for tests
 	httpc = http.Client{Timeout: httpcTimeout}
 
-	// cluster is the object which contains a Kubernetes client for the testing cluster
-	cluster ktfkind.Cluster
-
 	// watchNamespaces is a list of namespaces the controller watches
 	watchNamespaces = strings.Join([]string{
 		elsewhere,
@@ -85,6 +81,19 @@ var (
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
 	dbmode = os.Getenv("TEST_DATABASE_MODE")
+
+	// env is the primary testing environment object which includes access to the Kubernetes cluster
+	// and all the addons deployed in support of the tests.
+	env environments.Environment
+
+	// proxyURL provides access to the proxy endpoint for the Kong Addon which is deployed to the test environment's cluster.
+	proxyURL *url.URL
+
+	// proxyAdminURL provides access to the Admin API endpoint for the Kong Addon which is deployed to the test environment's cluster.
+	proxyAdminURL *url.URL
+
+	// proxyUDPURL provides access to the UDP API endpoint for the Kong Addon which is deployed to the test environment's cluster.
+	proxyUDPURL *url.URL
 )
 
 // -----------------------------------------------------------------------------
@@ -92,62 +101,79 @@ var (
 // -----------------------------------------------------------------------------
 
 func TestMain(m *testing.M) {
+	var err error
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(clusterDeployWait))
 	defer cancel()
 
-	var err error
-	var existingClusterInUse bool
-	ready := make(chan ktfkind.ProxyReadinessEvent)
+	fmt.Println("INFO: configuring testing environment")
+	kongAddon := kong.New()
+	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 	if existingClusterName := os.Getenv("KIND_CLUSTER"); existingClusterName != "" {
-		existingClusterInUse = true
-		cluster, err = ktfkind.GetExistingCluster(existingClusterName)
+		fmt.Printf("INFO: using existing cluster %s\n", existingClusterName)
+		cluster, err := kind.NewFromExisting(existingClusterName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
-			os.Exit(10)
+			fmt.Fprintf(os.Stderr, "Error: could not use existing cluster for test env: %s", err.Error())
+			os.Exit(24)
 		}
-		go waitForExistingClusterReadiness(ctx, cluster, existingClusterName, ready)
-	} else {
-		// configure and deploy a new cluster for tests
-		config := ktfkind.ClusterConfigurationWithKongProxy{
-			EnableMetalLB: true,
-			DBMode:        dbmode,
-		}
-		if name := os.Getenv("KIND_CLUSTER_NAME"); name != "" {
-			cluster, ready, err = config.DeployWithName(ctx, name)
-		} else {
-			cluster, ready, err = config.Deploy(ctx)
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
-			os.Exit(12)
-		}
-		defer cluster.Cleanup()
+		builder = builder.WithExistingCluster(cluster)
 	}
 
-	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
+	fmt.Println("INFO: building test environment (note: can take some time)")
+	env, err = builder.Build(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not create testing environment: %s", err.Error())
+		os.Exit(25)
+	}
+	fmt.Printf(
+		"INFO: environment built CLUSTER_NAME=(%s) CLUSTER_TYPE=(%s) ADDONS=(metallb, kong)\n",
+		env.Cluster().Name(), env.Cluster().Type(),
+	)
+	defer env.Cleanup(ctx)
+
+	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
+	if err := <-env.WaitForReady(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: testing environment never became ready: %s", err.Error())
+		os.Exit(26)
+	}
+
+	fmt.Printf("INFO: collecting Kong Proxy URLs from cluster %s for tests to make HTTP calls\n", env.Cluster().Name())
+	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
+		os.Exit(27)
+	}
+	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
+		os.Exit(28)
+	}
+	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
+		os.Exit(29)
+	}
+
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
-		// technically if you're debugging you can override and "bring your own KIC"
-		go func() {
-			event := <-ready
-			if event.Err != nil {
-				panic(event.Err)
-			}
-			proxyReadyCh <- event
-		}()
+		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		// if you're not debugging with your own KIC, normal tests will simply run a copy of the controller manager
-		if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllerNamespace); err != nil {
-			cluster.Cleanup()
+		fmt.Println("INFO: deploying controller manager")
+		if err := deployControllers(ctx, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllerNamespace); err != nil {
 			fmt.Fprintf(os.Stderr, err.Error())
 			os.Exit(13)
 		}
 	}
 
+	fmt.Println("INFO: testing environment is ready, running tests")
 	code := m.Run()
-	if !existingClusterInUse {
-		cluster.Cleanup()
-	}
 	os.Exit(code)
+}
+
+// -----------------------------------------------------------------------------
+// Testing Helper Functions
+// -----------------------------------------------------------------------------
+
+func useLegacyKIC() bool {
+	return os.Getenv(LegacyControllerEnvVar) != ""
 }
 
 // -----------------------------------------------------------------------------
@@ -165,10 +191,10 @@ var crds = []string{
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.
-func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEvent, cluster kind.Cluster, containerImage, namespace string) error {
+func deployControllers(ctx context.Context, containerImage, namespace string) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	if _, err := cluster.Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
+	if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
 		if !errors.IsAlreadyExists(err) {
 			return err
 		}
@@ -176,19 +202,6 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 
 	// run the controller in the background
 	go func() {
-		// pull the readiness event for the proxy
-		event := <-ready
-
-		// if there's an error, all tests fail here
-		if event.Err != nil {
-			panic(event.Err)
-		}
-
-		// grab the admin hostname and pass the readiness event on to the tests
-		u := event.ProxyAdminURL
-		adminHost := u.Hostname()
-		proxyReadyCh <- event
-
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
 		if err != nil {
@@ -197,7 +210,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		defer os.Remove(kubeconfig.Name())
 
 		// dump the kubeconfig from kind into the tempfile
-		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", cluster.Name())
+		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", env.Cluster().Name())
 		generateKubeconfig.Stdout = kubeconfig
 		generateKubeconfig.Stderr = os.Stderr
 		if err := generateKubeconfig.Run(); err != nil {
@@ -220,7 +233,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 		// if set, allow running the legacy controller for the tests instead of the current controller
 		var cmd *exec.Cmd
 		if useLegacyKIC() {
-			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
+			cmd = buildLegacyCommand(ctx, kubeconfig.Name())
 			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 			cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
 			cmd.Stderr = io.MultiWriter(stderr, os.Stderr)
@@ -232,7 +245,7 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			config := config.Config{}
 			flags := config.FlagSet()
 			flags.Parse([]string{
-				fmt.Sprintf("--kong-admin-url=http://%s:8001", adminHost),
+				fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 				"--controller-kongstate=enabled",
 				"--controller-ingress-networkingv1=enabled",
@@ -245,10 +258,12 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 				"--controller-kongplugin=enabled",
 				"--controller-kongconsumer=disabled",
 				"--election-id=integrationtests.konghq.com",
+				"--publish-service=kong-system/ingress-controller-kong-proxy",
 				fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
 				fmt.Sprintf("--ingress-class=%s", ingressClass),
 				"--log-level=trace",
 				"--log-format=text",
+				"--debug-log-reduce-redundancy",
 				"--admission-webhook-listen=172.17.0.1:49023",
 				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
@@ -265,17 +280,11 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 	return nil
 }
 
-func useLegacyKIC() bool {
-	return os.Getenv(LegacyControllerEnvVar) != ""
-}
-
-// TODO: this will be removed as part of KIC 2.0, where the legacy controller will be replaced.
-//       for more details see the relevant milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/12
-func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, kc *kubernetes.Clientset) *exec.Cmd {
+func buildLegacyCommand(ctx context.Context, kubeconfigPath string) *exec.Cmd {
 	fmt.Fprintln(os.Stdout, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
 
 	// get the proxy pod
-	podList, err := kc.CoreV1().Pods("kong-system").List(ctx, metav1.ListOptions{
+	podList, err := env.Cluster().Client().CoreV1().Pods("kong-system").List(ctx, metav1.ListOptions{
 		LabelSelector: "app.kubernetes.io/component=app,app.kubernetes.io/instance=ingress-controller,app.kubernetes.io/name=kong",
 	})
 	if err != nil {
@@ -290,7 +299,7 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	cmd := exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
 		"--publish-service", "kong-system/ingress-controller-kong-proxy",
 		"--kubeconfig", kubeconfigPath,
-		"--kong-admin-url", fmt.Sprintf("http://%s:8001", adminHost),
+		"--kong-admin-url", fmt.Sprintf("http://%s:8001", proxyAdminURL.Hostname()),
 		"--ingress-class", ingressClass)
 
 	// set the environment according to the legacy controller's needs
@@ -300,65 +309,4 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	)
 
 	return cmd
-}
-
-func waitForExistingClusterReadiness(ctx context.Context, cluster ktfkind.Cluster, name string, ready chan ktfkind.ProxyReadinessEvent) {
-	var proxyAdminURL *url.URL
-	var proxyURL *url.URL
-	var proxyHTTPSURL *url.URL
-	var proxyUDPUrl *url.URL
-	var proxyIP *net.IP
-
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Fprintf(os.Stderr, "ERROR: timed out waiting for readiness from existing cluster %s", name)
-			os.Exit(11)
-		default:
-			svcs, err := cluster.Client().CoreV1().Services(controllerNamespace).List(ctx, metav1.ListOptions{})
-			if err != nil {
-				ready <- ktfkind.ProxyReadinessEvent{Err: err}
-				break
-			}
-			for _, svc := range svcs.Items {
-				if svc.Name == "ingress-controller-kong-admin" && len(svc.Status.LoadBalancer.Ingress) == 1 {
-					proxyAdminURL, err = url.Parse(fmt.Sprintf("http://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 8001))
-					if err != nil {
-						ready <- ktfkind.ProxyReadinessEvent{Err: err}
-						break
-					}
-				} else if svc.Name == "ingress-controller-kong-proxy" && len(svc.Status.LoadBalancer.Ingress) == 1 {
-					proxyURL, err = url.Parse(fmt.Sprintf("http://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 80))
-					if err != nil {
-						ready <- ktfkind.ProxyReadinessEvent{Err: err}
-						break
-					}
-					proxyHTTPSURL, err = url.Parse(fmt.Sprintf("https://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 443))
-					if err != nil {
-						ready <- ktfkind.ProxyReadinessEvent{Err: err}
-						break
-					}
-					addr := net.ParseIP(svc.Status.LoadBalancer.Ingress[0].IP)
-					proxyIP = &addr
-				} else if svc.Name == "ingress-controller-kong-udp" && len(svc.Status.LoadBalancer.Ingress) == 1 {
-					proxyUDPUrl, err = url.Parse(fmt.Sprintf("udp://%s:9999", svc.Status.LoadBalancer.Ingress[0].IP))
-					if err != nil {
-						ready <- ktfkind.ProxyReadinessEvent{Err: err}
-						break
-					}
-				}
-			}
-		}
-		if proxyAdminURL != nil && proxyURL != nil {
-			ready <- ktfkind.ProxyReadinessEvent{
-				ProxyAdminURL: proxyAdminURL,
-				ProxyURL:      proxyURL,
-				ProxyHTTPSURL: proxyHTTPSURL,
-				ProxyIP:       proxyIP,
-				ProxyUDPUrl:   proxyUDPUrl,
-			}
-			break
-		}
-		time.Sleep(time.Millisecond * 200)
-	}
 }

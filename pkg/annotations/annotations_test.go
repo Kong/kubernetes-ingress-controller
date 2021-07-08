@@ -50,6 +50,7 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		{"", ExactOrEmptyClassMatch, "killer", true},
 		{"custom", ExactOrEmptyClassMatch, "kozel", false},
 		{"custom", ExactClassMatch, "kozel", false},
+		{"custom", IgnoreClassMatch, "custom", true},
 	}
 
 	ing := &extensions.Ingress{

@@ -15,11 +15,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/kong/deck/file"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 
@@ -48,10 +50,9 @@ func Run(ctx context.Context, c *config.Config) error {
 	var deprecatedLogger logrus.FieldLogger
 	var err error
 
-	if v := os.Getenv("KONG_TEST_ENVIRONMENT"); v != "" {
+	if c.LogReduceRedundancy {
 		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(os.Stdout, &logrus.TextFormatter{}, 3, time.Second*30)
-		deprecatedLogger.Info("detected that the controller is running in an automated testing environment: " +
-			"log stifling has been enabled")
+		deprecatedLogger.Info("log stifling has been enabled")
 	} else {
 		deprecatedLogger, err = util.MakeLogger(c.LogLevel, c.LogFormat)
 		if err != nil {
@@ -85,6 +86,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		HealthProbeBindAddress: c.ProbeAddr,
 		LeaderElection:         c.EnableLeaderElection,
 		LeaderElectionID:       c.LeaderElectionID,
+		SyncPeriod:             &c.SyncPeriod,
 	}
 
 	// determine how to configure namespace watchers
@@ -131,6 +133,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
+		ConfigDone:        make(chan file.Content),
 	}
 
 	// determine the proxy synchronization strategy
@@ -169,6 +172,8 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Error(err, "unable to start proxy cache server")
 		return err
 	}
+
+	go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
 
 	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{
@@ -343,6 +348,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	} else {
 		setupLog.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
 		Disabling Knative controller`)
+		c.KnativeIngressEnabled = util.EnablementStatusDisabled
 	}
 
 	for _, c := range controllers {

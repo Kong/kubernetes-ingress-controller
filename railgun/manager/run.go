@@ -86,6 +86,7 @@ func Run(ctx context.Context, c *config.Config) error {
 		HealthProbeBindAddress: c.ProbeAddr,
 		LeaderElection:         c.EnableLeaderElection,
 		LeaderElectionID:       c.LeaderElectionID,
+		SyncPeriod:             &c.SyncPeriod,
 	}
 
 	// determine how to configure namespace watchers

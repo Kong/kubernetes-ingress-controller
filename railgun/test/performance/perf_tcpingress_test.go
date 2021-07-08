@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +22,7 @@ import (
 	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 )
 
-func TestTCPPerformance(t *testing.T) {
+func TestTCPIngressPerformance(t *testing.T) {
 
 	t.Log("setting up the TestTCPPerformance tests")
 	c, err := clientset.NewForConfig(cluster.Config())
@@ -35,14 +34,8 @@ func TestTCPPerformance(t *testing.T) {
 	cost := 0
 	for cnt <= max_ingress {
 		namespace := fmt.Sprintf("tcpingress-%d", cnt)
-		nsName := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-		}
-		t.Logf("creating namespace %s for testing TCPIngress", namespace)
-		_, err := cluster.Client().CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
-		assert.NoError(t, err)
+		err := CreateNamespace(ctx, namespace, t)
+		require.NoError(t, err)
 
 		t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 		testName := "tcpingress"
@@ -104,5 +97,5 @@ func TestTCPPerformance(t *testing.T) {
 		}, ingressWait, waitTick)
 		cnt += 1
 	}
-	t.Logf("tcp ingress cost %d millisecond", cost/cnt/1000)
+	t.Logf("tcp ingress average cost %d millisecond", cost/cnt/1000)
 }

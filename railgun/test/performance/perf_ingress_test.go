@@ -27,12 +27,7 @@ func TestIngressPerformance(t *testing.T) {
 	cost := 0
 	for cnt <= max_ingress {
 		namespace := fmt.Sprintf("ingress-%d", cnt)
-		nsName := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-		}
-		_, err := cluster.Client().CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
+		err := CreateNamespace(ctx, namespace, t)
 		assert.NoError(t, err)
 
 		t.Log("deploying a minimal HTTP container deployment to test Ingress routes")

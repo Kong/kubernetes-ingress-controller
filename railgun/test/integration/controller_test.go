@@ -14,7 +14,6 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
-	_ = proxyReady()
 	assert.Eventually(t, func() bool {
 		healthzURL := fmt.Sprintf("http://localhost:%v/healthz", config.HealthzPort)
 		resp, err := httpc.Get(healthzURL)
@@ -31,7 +30,6 @@ func TestMetricsEndpoint(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("metrics endpoint test does not apply to legacy KIC")
 	}
-	_ = proxyReady()
 	assert.Eventually(t, func() bool {
 		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", config.MetricsPort)
 		resp, err := httpc.Get(metricsURL)
@@ -62,7 +60,6 @@ func TestProfilingEndpoint(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("profiling endpoint behaves differently in legacy KIC")
 	}
-	_ = proxyReady()
 	assert.Eventually(t, func() bool {
 		profilingURL := fmt.Sprintf("http://localhost:%v/debug/pprof/", config.DiagnosticsPort)
 		resp, err := httpc.Get(profilingURL)

@@ -21,48 +21,47 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 const testTCPIngressNamespace = "tcpingress"
 
 func TestTCPIngress(t *testing.T) {
 	t.Log("setting up the TCPIngress tests")
-	p := proxyReady()
 	testName := "tcpingress"
-	c, err := clientset.NewForConfig(cluster.Config())
+	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()
 
 	t.Logf("creating namespace %s for testing TCPIngress", testTCPIngressNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testTCPIngressNamespace}}
-	ns, err = cluster.Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	ns, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up namespace %s", testTCPIngressNamespace)
-		assert.NoError(t, cluster.Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	deployment := k8sgen.NewDeploymentForContainer(k8sgen.NewContainer(testName, httpBinImage, 80))
-	deployment, err = cluster.Client().AppsV1().Deployments(testTCPIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, httpBinImage, 80))
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(testTCPIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, cluster.Client().AppsV1().Deployments(testTCPIngressNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(testTCPIngressNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service, err = cluster.Client().CoreV1().Services(testTCPIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service, err = env.Cluster().Client().CoreV1().Services(testTCPIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, cluster.Client().CoreV1().Services(testTCPIngressNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(testTCPIngressNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("routing to service %s via TCPIngress", service.Name)
@@ -115,7 +114,7 @@ func TestTCPIngress(t *testing.T) {
 	}, 120*time.Second, 1*time.Second, true)
 
 	t.Logf("verifying TCP Ingress %s operationalable", tcp.Name)
-	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", p.ProxyURL.Hostname()))
+	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", proxyURL.Hostname()))
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(tcpProxyURL.String())

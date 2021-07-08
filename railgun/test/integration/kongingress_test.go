@@ -19,49 +19,49 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
-func TestMinimalKongIngress(t *testing.T) {
+func TestKongIngressEssentials(t *testing.T) {
 	namespace := "default"
 	testName := "minking"
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	deployment := k8sgen.NewDeploymentForContainer(k8sgen.NewContainer(testName, httpBinImage, 80))
-	_, err := cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, httpBinImage, 80))
+	_, err := env.Cluster().Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, cluster.Client().AppsV1().Deployments(namespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(namespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
-	c, err := clientset.NewForConfig(cluster.Config())
+	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
-	service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service.Annotations = map[string]string{"konghq.com/override": testName}
-	service, err = cluster.Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, cluster.Client().CoreV1().Services(namespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(namespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("routing to service %s via Ingress", service.Name)
-	ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
+	ingress := generators.NewIngressForService("/httpbin", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
-	ingress, err = cluster.Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("ensuring that Ingress %s is cleaned up", ingress.Name)
-		assert.NoError(t, cluster.Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("applying service overrides to Service %s via KongIngress", service.Name)
@@ -92,8 +92,7 @@ func TestMinimalKongIngress(t *testing.T) {
 	t.Logf("waiting for routes from Ingress %s to be operational and that overrides are in place", ingress.Name)
 	httpc := http.Client{Timeout: time.Second * 10} // this timeout should never be hit, we expect a 504 from the proxy within 1000ms
 	assert.Eventually(t, func() bool {
-		p := proxyReady()
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin/delay/5", p.ProxyURL.String()))
+		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin/delay/5", proxyURL))
 		if err != nil {
 			return false
 		}
@@ -102,18 +101,17 @@ func TestMinimalKongIngress(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("removing Service %s overrides", service.Name)
-	svc, err := cluster.Client().CoreV1().Services(namespace).Get(ctx, service.Name, metav1.GetOptions{})
+	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, service.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
 	anns := svc.GetAnnotations()
 	delete(anns, "konghq.com/override")
 	svc.SetAnnotations(anns)
-	_, err = cluster.Client().CoreV1().Services(namespace).Update(ctx, svc, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(namespace).Update(ctx, svc, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
 	t.Logf("ensuring that Service %s overrides are eventually removed", service.Name)
 	assert.Eventually(t, func() bool {
-		p := proxyReady()
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin/delay/5", p.ProxyURL.String()))
+		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin/delay/5", proxyURL))
 		if err != nil {
 			return false
 		}

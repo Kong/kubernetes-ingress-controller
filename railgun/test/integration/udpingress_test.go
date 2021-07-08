@@ -20,7 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 const testUDPIngressNamespace = "udpingress"
@@ -30,7 +30,6 @@ func TestUDPIngress(t *testing.T) {
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
 	}
-	p := proxyReady()
 
 	testName := "minudp"
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
@@ -38,29 +37,29 @@ func TestUDPIngress(t *testing.T) {
 
 	t.Logf("creating namespace %s for testing", testUDPIngressNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testUDPIngressNamespace}}
-	ns, err := cluster.Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 
 	defer func() {
 		t.Logf("cleaning up namespace %s", testUDPIngressNamespace)
-		assert.NoError(t, cluster.Client().CoreV1().Namespaces().Delete(ctx, testUDPIngressNamespace, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, testUDPIngressNamespace, metav1.DeleteOptions{}))
 	}()
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
-	cfgmap, err = cluster.Client().CoreV1().ConfigMaps(testUDPIngressNamespace).Create(ctx, cfgmap, metav1.CreateOptions{})
+	cfgmap, err = env.Cluster().Client().CoreV1().ConfigMaps(testUDPIngressNamespace).Create(ctx, cfgmap, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the coredns corefile %s", cfgmap.Name)
-		assert.NoError(t, cluster.Client().CoreV1().ConfigMaps(testUDPIngressNamespace).Delete(ctx, cfgmap.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().ConfigMaps(testUDPIngressNamespace).Delete(ctx, cfgmap.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
-	container := k8sgen.NewContainer("coredns", "coredns/coredns", 53)
+	container := generators.NewContainer("coredns", "coredns/coredns", 53)
 	container.Ports[0].Protocol = corev1.ProtocolUDP
 	container.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
 	container.Args = []string{"-conf", "/etc/coredns/Corefile"}
-	deployment := k8sgen.NewDeploymentForContainer(container)
+	deployment := generators.NewDeploymentForContainer(container)
 
 	t.Log("configuring the coredns pod with a custom corefile")
 	configVolume := corev1.Volume{
@@ -71,22 +70,22 @@ func TestUDPIngress(t *testing.T) {
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolume)
 
 	t.Log("deploying coredns")
-	deployment, err = cluster.Client().AppsV1().Deployments(testUDPIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(testUDPIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up deployment %s", deployment.Name)
-		assert.NoError(t, cluster.Client().AppsV1().Deployments(testUDPIngressNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(testUDPIngressNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service, err = cluster.Client().CoreV1().Services(testUDPIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service, err = env.Cluster().Client().CoreV1().Services(testUDPIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, cluster.Client().CoreV1().Services(testUDPIngressNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(testUDPIngressNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Log("exposing DNS service via UDPIngress")
@@ -107,7 +106,7 @@ func TestUDPIngress(t *testing.T) {
 			},
 		}},
 	}
-	c, err := clientset.NewForConfig(cluster.Config())
+	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	udp, err = c.ConfigurationV1beta1().UDPIngresses(testUDPIngressNamespace).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -128,7 +127,7 @@ func TestUDPIngress(t *testing.T) {
 			d := net.Dialer{
 				Timeout: time.Second * 5,
 			}
-			return d.DialContext(ctx, network, fmt.Sprintf("%s:9999", p.ProxyUDPUrl.Hostname()))
+			return d.DialContext(ctx, network, fmt.Sprintf("%s:9999", proxyUDPURL.Hostname()))
 		},
 	}
 

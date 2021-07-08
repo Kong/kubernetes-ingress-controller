@@ -60,6 +60,7 @@ type Config struct {
 	// Ingress status
 	PublishService       string
 	PublishStatusAddress []string
+	UpdateStatus         bool
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled util.EnablementStatus
@@ -150,6 +151,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{}, `User-provided addresses in
 			comma-separated string format, for use in lieu of "publish-service" when that Service lacks useful address
 			information (for example, in bare-metal environments).`)
+	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
+		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 
 	// Kubernetes API toggling
 	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
@@ -189,6 +192,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			proxy.DefaultSyncSeconds,
 		))
 	flagSet.Int("stderrthreshold", 0, "DEPRECATED: has no effect and will be removed in future releases (see github issue #1297)")
+	flagSet.Bool("update-status-on-shutdown", false, `DEPRECATED: no longer has any effect and will be removed in a later release (see github issue #1304)`)
 
 	return &flagSet.FlagSet
 }

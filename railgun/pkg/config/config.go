@@ -119,11 +119,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
-	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
-		fmt.Sprintf(
-			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds) (DEPRECATED, use --proxy-sync-seconds instead)",
-			proxy.DefaultSyncSeconds,
-		))
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", proxy.DefaultSyncSeconds,
 		fmt.Sprintf(
 			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds)",
@@ -184,6 +179,14 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Misc
 	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, "Enable profiling via web interface host:10256/debug/pprof/")
+
+	// Deprecated (to be removed in future releases)
+	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
+		fmt.Sprintf(
+			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds) (DEPRECATED, use --proxy-sync-seconds instead)",
+			proxy.DefaultSyncSeconds,
+		))
+	flagSet.Int("stderrthreshold", 0, "DEPRECATED: has no effect and will be removed in future releases (see github issue #1297)")
 
 	return &flagSet.FlagSet
 }

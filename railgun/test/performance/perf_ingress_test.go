@@ -75,7 +75,7 @@ func TestIngressPerformance(t *testing.T) {
 				return strings.Contains(b.String(), "<title>httpbin.org</title>")
 			}
 			return false
-		}, ingressWait, waitTick)
+		}, ingressWait, time.Millisecond * 1)
 		cnt += 1
 	}
 	t.Logf("ingress processing time %d nanosecond", cost/cnt)

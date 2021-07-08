@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
-	"github.com/kong/kubernetes-testing-framework/pkg/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -116,9 +116,9 @@ func TestCaching(t *testing.T) {
 	testObjects := make([]client.Object, 10)
 	for i := 0; i < 10; i++ {
 		name := uuid.New().String()
-		deployment := k8s.NewDeploymentForContainer(k8s.NewContainer(name, name, 8080))
-		service := k8s.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-		ingress := k8s.NewIngressForService("/testing", nil, service)
+		deployment := generators.NewDeploymentForContainer(generators.NewContainer(name, name, 8080))
+		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+		ingress := generators.NewIngressForService("/testing", nil, service)
 		testObjects[i] = ingress
 	}
 

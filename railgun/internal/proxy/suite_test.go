@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	kongt "github.com/kong/kubernetes-testing-framework/pkg/kong"
+	kongt "github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"

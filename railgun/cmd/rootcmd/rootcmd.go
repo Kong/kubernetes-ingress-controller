@@ -16,7 +16,7 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-	PersistentPreRun: bindEnvVars,
+	PersistentPreRunE: bindEnvVars,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return Run(cmd.Context(), &cfg)
 	},

@@ -33,9 +33,6 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// clusterDeployWait is the timeout duration for deploying the kind cluster for testing
-	clusterDeployWait = time.Minute * 5
-
 	// waitTick is the default timeout tick interval for checking on ingress resources.
 	waitTick = time.Second * 1
 
@@ -103,7 +100,7 @@ var (
 
 func TestMain(m *testing.M) {
 	var err error
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(clusterDeployWait))
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	fmt.Println("INFO: configuring testing environment")

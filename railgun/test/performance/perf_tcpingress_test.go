@@ -3,15 +3,12 @@
 package performance
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,29 +69,26 @@ func TestTCPIngressPerformance(t *testing.T) {
 		tcp, err = c.ConfigurationV1beta1().TCPIngresses(namespace).Create(ctx, tcp, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		t.Logf("waiting for routes from Ingress %s to be operational", tcp.Name)
-		s := time.Now().Nanosecond()
-		tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", KongInfo.ProxyURL.Hostname()))
-		require.NoError(t, err)
-		require.Eventually(t, func() bool {
-			resp, err := httpc.Get(tcpProxyURL.String())
-			if err != nil {
+		start_time := time.Now().Nanosecond()
+		t.Logf("checking tcpingress %s status readiness.", tcp.Name)
+		ingCli := c.ConfigurationV1beta1().TCPIngresses(namespace)
+		assert.Eventually(t, func() bool {
+			curIng, err := ingCli.Get(ctx, tcp.Name, metav1.GetOptions{})
+			if err != nil || curIng == nil {
 				return false
 			}
-			defer resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-				// Expected: "<title>httpbin.org</title>"
-				b := new(bytes.Buffer)
-				b.ReadFrom(resp.Body)
-				e := time.Now().Nanosecond()
-				loop := e - s
-				t.Logf("tcp ingress loop cost %d nanosecond", loop)
-				cost += loop
-				return strings.Contains(b.String(), "<title>httpbin.org</title>")
+			ingresses := curIng.Status.LoadBalancer.Ingress
+			for _, ingress := range ingresses {
+				if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
+					end_time := time.Now().Nanosecond()
+					loop := end_time - start_time
+					t.Logf("tcpingress hostname %s or ip %s is ready to redirect traffic after %d nanoseconds .", ingress.Hostname, ingress.IP, loop)
+					cost += loop
+					return true
+				}
 			}
 			return false
-		}, ingressWait, waitTick)
+		}, 120*time.Second, 1*time.Second, true)
 		cnt += 1
 	}
 	t.Logf("tcp ingress average cost %d millisecond", cost/cnt/1000)

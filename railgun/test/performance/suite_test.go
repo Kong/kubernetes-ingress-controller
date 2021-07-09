@@ -139,5 +139,25 @@ func CreateNamespace(ctx context.Context, namespace string, t *testing.T) error 
 }
 
 func CleanUpNamespace(ctx context.Context, namespace string, t *testing.T) error {
+	nsList, err := cluster.Client().CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
 
+	needDelete := false
+	for _, item := range nsList.Items {
+		if item.Name == namespace {
+			if item.Status.Phase == corev1.NamespaceActive {
+				t.Logf("namespace %s exists. removing it.", namespace)
+				needDelete = true
+				break
+			}
+		}
+	}
+
+	if needDelete {
+		cluster.Client().CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+		return nil
+	}
+	return nil
 }

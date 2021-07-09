@@ -54,6 +54,7 @@ func TestIngressPerformance(t *testing.T) {
 			if err != nil || ingress == nil {
 				return false
 			}
+			t.Logf("debug ingress %v", ingress.Status.LoadBalancer.Ingress)
 			if len(ingress.Status.LoadBalancer.Ingress) > 0 {
 				return true
 			}
@@ -63,7 +64,7 @@ func TestIngressPerformance(t *testing.T) {
 		t.Logf("ingress %v", ingress.Status.LoadBalancer.Ingress)
 		end_time := time.Now().Nanosecond()
 		loop := end_time - start_time
-		t.Logf("networkingv1 hostname is ready to redirect traffic after %d.", loop)
+		t.Logf("networkingv1 hostname is ready to redirect traffic after %d nanosecond.", loop)
 		cost += loop
 		cnt += 1
 	}

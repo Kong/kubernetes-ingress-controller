@@ -5,7 +5,6 @@ package performance
 import (
 	"context"
 	"fmt"
-	"net"
 	"testing"
 	"time"
 
@@ -84,30 +83,27 @@ func TestUDPIngressPerformance(t *testing.T) {
 		assert.NoError(t, err)
 		udp, err = c.ConfigurationV1beta1().UDPIngresses(testUDPIngressNamespace).Create(ctx, udp, metav1.CreateOptions{})
 		assert.NoError(t, err)
-		s := time.Now().Nanosecond()
-		t.Log("configurating a net.Resolver to resolve DNS via the proxy")
-		resolver := &net.Resolver{
-			PreferGo: true,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				d := net.Dialer{
-					Timeout: time.Second * 5,
-				}
-				return d.DialContext(ctx, network, fmt.Sprintf("%s:9999", KongInfo.ProxyUDPUrl.Hostname()))
-			},
-		}
+		start_time := time.Now().Nanosecond()
 
-		t.Logf("waiting for DNS to resolve via UDPIngress %s", udp.Name)
+		t.Logf("checking udpingress %s status readiness.", udp.Name)
+		ingCli := c.ConfigurationV1beta1().UDPIngresses(testUDPIngressNamespace)
 		assert.Eventually(t, func() bool {
-			_, err := resolver.LookupHost(ctx, "kernel.org")
-			if err != nil {
+			curIng, err := ingCli.Get(ctx, udp.Name, metav1.GetOptions{})
+			if err != nil || curIng == nil {
 				return false
 			}
-			e := time.Now().Nanosecond()
-			loop := e - s
-			t.Logf("udp ingress loop cost %d nanosecond", loop)
-			cost += loop
-			return true
-		}, ingressWait, waitTick)
+			ingresses := curIng.Status.LoadBalancer.Ingress
+			for _, ingress := range ingresses {
+				if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
+					end_time := time.Now().Nanosecond()
+					loop := end_time - start_time
+					t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic after %d nanoseconds.", ingress.Hostname, ingress.IP, loop)
+					cost += loop
+					return true
+				}
+			}
+			return false
+		}, 120*time.Second, 1*time.Second, true)
 		cnt += 1
 	}
 	t.Logf("udp ingress average cost %d millisecond", cost/cnt/1000)

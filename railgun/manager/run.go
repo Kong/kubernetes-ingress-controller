@@ -173,7 +173,12 @@ func Run(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
+	if c.UpdateStatus {
+		setupLog.Info("status updates enabled, status update routine is being started in the background.")
+		go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
+	} else {
+		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
+	}
 
 	alwaysEnabled := util.EnablementStatusEnabled
 	controllers := []ControllerDef{

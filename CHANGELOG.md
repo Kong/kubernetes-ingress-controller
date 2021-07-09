@@ -47,6 +47,10 @@
 - The historical `--stderrthreshold` flag is now deprecated: it no longer has
   any effect when used and will be removed in a later release.
   [#1297](https://github.com/Kong/kubernetes-ingress-controller/issues/1297)
+- The `--update-status-on-shutdown` flag which supplements the `--update-status`
+  flag has been deprecated and will no longer have any effect, it will be removed
+  in a later release.
+  [#1304](https://github.com/Kong/kubernetes-ingress-controller/issues/1304)
 
 ## [2.0.0-alpha.2] - 2021/07/07
 

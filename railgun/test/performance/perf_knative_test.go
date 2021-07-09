@@ -35,7 +35,6 @@ const (
 )
 
 func TestPerfKnativePerformance(t *testing.T) {
-
 	proxy := KongInfo.ProxyURL.Hostname()
 	assert.NotEmpty(t, proxy)
 	t.Logf("proxy url %s", proxy)

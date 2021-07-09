@@ -3,15 +3,13 @@
 package performance
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -50,27 +48,23 @@ func TestIngressPerformance(t *testing.T) {
 		assert.NoError(t, err)
 		start_time := time.Now().Nanosecond()
 
-		t.Logf("checking routes from Ingress %s to be operational", ingress.Name)
-		assert.Eventually(t, func() bool {
-			resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", KongInfo.ProxyURL.String()))
-			if err != nil {
-				t.Logf("WARNING: error while waiting for %s: %v", KongInfo.ProxyURL.String(), err)
+		t.Logf("waiting for updated ingress status to include IP")
+		require.Eventually(t, func() bool {
+			ingress, err = cluster.Client().NetworkingV1().Ingresses(namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
+			if err != nil || ingress == nil {
 				return false
 			}
-			defer resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-				// Expected: "<title>httpbin.org</title>"
-				b := new(bytes.Buffer)
-				b.ReadFrom(resp.Body)
-				end_time := time.Now().Nanosecond()
-				loop := end_time - start_time
-				t.Logf("networkingv1 hostname is ready to redirect traffic after %d.", loop)
-				cost += loop
-				return strings.Contains(b.String(), "<title>httpbin.org</title>")
+			if len(ingress.Status.LoadBalancer.Ingress) > 0 {
+				return true
 			}
 			return false
-		}, ingressWait, time.Millisecond * 1)
+		}, ingressWait, waitTick, true)
+
+		t.Logf("ingress %v", ingress.Status.LoadBalancer.Ingress)
+		end_time := time.Now().Nanosecond()
+		loop := end_time - start_time
+		t.Logf("networkingv1 hostname is ready to redirect traffic after %d.", loop)
+		cost += loop
 		cnt += 1
 	}
 	t.Logf("ingress processing time %d nanosecond", cost/cnt)

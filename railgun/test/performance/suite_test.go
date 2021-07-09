@@ -137,3 +137,7 @@ func CreateNamespace(ctx context.Context, namespace string, t *testing.T) error 
 
 	return fmt.Errorf("failed creating namespace %s", namespace)
 }
+
+func CleanUpNamespace(ctx context.Context, namespace string, t *testing.T) error {
+
+}

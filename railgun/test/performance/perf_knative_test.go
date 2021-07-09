@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -25,8 +26,6 @@ import (
 	"knative.dev/pkg/apis"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 )
 
 const (
@@ -35,11 +34,12 @@ const (
 )
 
 func TestPerfKnativePerformance(t *testing.T) {
-	proxy := KongInfo.ProxyURL.Hostname()
+	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)
 	t.Logf("proxy url %s", proxy)
 
 	ctx := context.Background()
+	cluster := env.Cluster()
 
 	t.Log("Deploying all resources that are required to run knative")
 	require.NoError(t, deployManifest(knativeCrds, ctx, t))
@@ -59,7 +59,7 @@ func TestPerfKnativePerformance(t *testing.T) {
 
 		t.Logf("Install knative service into namespace %s", namespace)
 		require.Eventually(t, func() bool {
-			err := perfInstallKnativeSrv(ctx, t, namespace)
+			err := perfInstallKnativeSrv(ctx, t, namespace, cluster)
 			if err != nil {
 				t.Logf("checking knativing webhook readiness.")
 				return false
@@ -68,7 +68,7 @@ func TestPerfKnativePerformance(t *testing.T) {
 		}, 30*time.Second, 2*time.Second, true)
 
 		t.Logf("Test knative service using kong within namespace %s.", namespace)
-		require.True(t, perfaccessKnativeSrv(ctx, proxy, t, namespace, &cost), true)
+		require.True(t, perfaccessKnativeSrv(ctx, proxy, t, namespace, &cost, cluster), true)
 		cnt++
 	}
 	t.Logf("knative ingress cost %d", cost/max_ingress)
@@ -98,7 +98,7 @@ func perfcheckIPAddress(ip string, t *testing.T) bool {
 	}
 }
 
-func perfconfigKnativeNetwork(ctx context.Context, cluster kind.Cluster, t *testing.T) error {
+func perfconfigKnativeNetwork(ctx context.Context, cluster clusters.Cluster, t *testing.T) error {
 	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", "kong"))
 	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
@@ -110,7 +110,7 @@ func perfconfigKnativeNetwork(ctx context.Context, cluster kind.Cluster, t *test
 	return nil
 }
 
-func perfInstallKnativeSrv(ctx context.Context, t *testing.T, namespace string) error {
+func perfInstallKnativeSrv(ctx context.Context, t *testing.T, namespace string, cluster clusters.Cluster) error {
 	tobeDeployedService := &knservingv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "helloworld-go",
@@ -147,7 +147,7 @@ func perfInstallKnativeSrv(ctx context.Context, t *testing.T, namespace string) 
 	return nil
 }
 
-func perfconfigKnativeDomain(ctx context.Context, proxy string, cluster kind.Cluster, t *testing.T) error {
+func perfconfigKnativeDomain(ctx context.Context, proxy string, cluster clusters.Cluster, t *testing.T) error {
 	configMapData := make(map[string]string, 0)
 	configMapData[proxy] = ""
 	labels := make(map[string]string)
@@ -173,7 +173,7 @@ func perfconfigKnativeDomain(ctx context.Context, proxy string, cluster kind.Clu
 	return nil
 }
 
-func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, namesapce string, cost *int) bool {
+func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, namesapce string, cost *int, cluster clusters.Cluster) bool {
 	knativeCli, err := knativenetworkingversioned.NewForConfig(cluster.Config())
 	if err != nil {
 		return false
@@ -230,7 +230,7 @@ func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, names
 	}, 120*time.Second, 1*time.Second)
 }
 
-func isKnativeReady(ctx context.Context, cluster kind.Cluster, t *testing.T) bool {
+func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T) bool {
 	return assert.Eventually(t, func() bool {
 		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
 		if err != nil {

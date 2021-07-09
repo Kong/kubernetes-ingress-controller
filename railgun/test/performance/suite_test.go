@@ -11,74 +11,96 @@ import (
 	"testing"
 	"time"
 
-	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
-	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
-	controllerNamespace = "kong-system"
-	clusterDeployWait   = time.Minute * 5
-	max_ingress         = 500
-	httpBinImage        = "kennethreitz/httpbin"
-	ingressClass        = "kong"
-	ingressWait         = time.Minute * 3
-	waitTick            = time.Second * 1
-	httpcTimeout        = time.Second * 3
+	clusterDeployWait = time.Minute * 5
+	waitTick          = time.Second * 1
+	ingressWait       = time.Minute * 3
+	httpcTimeout      = time.Second * 3
+	httpBinImage      = "kennethreitz/httpbin"
+	ingressClass      = "kongtests"
+	max_ingress       = 500
 )
 
 var (
-	cluster  ktfkind.Cluster
-	KongInfo *ktfkind.ProxyReadinessEvent
-	httpc    = http.Client{Timeout: httpcTimeout}
+	httpc         = http.Client{Timeout: httpcTimeout}
+	env           environments.Environment
+	proxyURL      *url.URL
+	proxyAdminURL *url.URL
+	proxyUDPURL   *url.URL
 )
 
 func TestMain(m *testing.M) {
+	var err error
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(clusterDeployWait))
 	defer cancel()
 
-	var err error
-	var existingClusterInUse bool
+	fmt.Println("INFO: configuring testing environment")
+	kongAddon := kong.New()
+	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 	if existingClusterName := os.Getenv("KIND_CLUSTER"); existingClusterName != "" {
-		existingClusterInUse = true
-		cluster, err = ktfkind.GetExistingCluster(existingClusterName)
+		fmt.Printf("INFO: using existing cluster %s\n", existingClusterName)
+		cluster, err := kind.NewFromExisting(existingClusterName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
-			os.Exit(10)
+			fmt.Fprintf(os.Stderr, "Error: could not use existing cluster for test env: %s", err.Error())
+			os.Exit(24)
 		}
-		KongInfo = &ktfkind.ProxyReadinessEvent{}
-		svcs, err := cluster.Client().CoreV1().Services(controllerNamespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return
-		}
-		for _, svc := range svcs.Items {
-			if svc.Name == "ingress-controller-kong-proxy" && len(svc.Status.LoadBalancer.Ingress) == 1 {
-				proxyURL, _ := url.Parse(fmt.Sprintf("http://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 80))
-				KongInfo.ProxyURL = proxyURL
-			}
-			if svc.Name == "ingress-controller-kong-admin" && len(svc.Status.LoadBalancer.Ingress) == 1 {
-				proxyAdminURL, _ := url.Parse(fmt.Sprintf("http://%s:%d", svc.Status.LoadBalancer.Ingress[0].IP, 8001))
-				KongInfo.ProxyAdminURL = proxyAdminURL
-			}
-			if svc.Name == "ingress-controller-kong-udp" && len(svc.Status.LoadBalancer.Ingress) == 1 {
-				proxyUDPUrl, _ := url.Parse(fmt.Sprintf("udp://%s:9999", svc.Status.LoadBalancer.Ingress[0].IP))
-				KongInfo.ProxyUDPUrl = proxyUDPUrl
-			}
-		}
+		builder = builder.WithExistingCluster(cluster)
 	}
 
-	code := m.Run()
-	if !existingClusterInUse {
-		cluster.Cleanup()
+	fmt.Println("INFO: building test environment (note: can take some time)")
+	env, err = builder.Build(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not create testing environment: %s", err.Error())
+		os.Exit(25)
 	}
+	fmt.Printf(
+		"INFO: environment built CLUSTER_NAME=(%s) CLUSTER_TYPE=(%s) ADDONS=(metallb, kong)\n",
+		env.Cluster().Name(), env.Cluster().Type(),
+	)
+	defer env.Cleanup(ctx)
+
+	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
+	if err := <-env.WaitForReady(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: testing environment never became ready: %s", err.Error())
+		os.Exit(26)
+	}
+
+	fmt.Printf("INFO: collecting Kong Proxy URLs from cluster %s for tests to make HTTP calls\n", env.Cluster().Name())
+	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
+		os.Exit(27)
+	}
+	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
+		os.Exit(28)
+	}
+	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
+		os.Exit(29)
+	}
+
+	fmt.Println("INFO: testing environment is ready, running tests")
+	code := m.Run()
 	os.Exit(code)
 }
 
 // CreateNamespace create customized namespace
 func CreateNamespace(ctx context.Context, namespace string, t *testing.T) error {
 	assert.Eventually(t, func() bool {
-		nsList, err := cluster.Client().CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+		nsList, err := env.Cluster().Client().CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return false
 		}
@@ -106,7 +128,7 @@ func CreateNamespace(ctx context.Context, namespace string, t *testing.T) error 
 		}
 
 		if needDelete {
-			cluster.Client().CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+			env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
 			return false
 
 		}
@@ -121,12 +143,12 @@ func CreateNamespace(ctx context.Context, namespace string, t *testing.T) error 
 	}
 
 	t.Logf("creating namespace %s.", namespace)
-	_, err := cluster.Client().CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
+	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed creating namespace %s, err %v", namespace, err)
 	}
 
-	nsList, err := cluster.Client().CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	nsList, err := env.Cluster().Client().CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	assert.NoError(t, err)
 	for _, item := range nsList.Items {
 		if item.Name == namespace && item.Status.Phase == corev1.NamespaceActive {
@@ -139,7 +161,7 @@ func CreateNamespace(ctx context.Context, namespace string, t *testing.T) error 
 }
 
 func CleanUpNamespace(ctx context.Context, namespace string, t *testing.T) error {
-	nsList, err := cluster.Client().CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	nsList, err := env.Cluster().Client().CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -156,7 +178,7 @@ func CleanUpNamespace(ctx context.Context, namespace string, t *testing.T) error
 	}
 
 	if needDelete {
-		cluster.Client().CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+		env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
 		return nil
 	}
 	return nil

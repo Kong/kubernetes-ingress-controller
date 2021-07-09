@@ -16,12 +16,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-	generators "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 func TestTCPIngressPerformance(t *testing.T) {
 
 	t.Log("setting up the TestTCPPerformance tests")
+	cluster := env.Cluster()
 	c, err := clientset.NewForConfig(cluster.Config())
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)

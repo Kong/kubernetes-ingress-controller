@@ -16,11 +16,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-	generators "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 func TestUDPIngressPerformance(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
+	cluster := env.Cluster()
 	defer cancel()
 
 	cnt := 1

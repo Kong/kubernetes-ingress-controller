@@ -14,13 +14,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	generators "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 func TestIngressPerformance(t *testing.T) {
 	t.Log("setting up the TestIngressPerf")
 
 	ctx := context.Background()
+	cluster := env.Cluster()
 	cnt := 1
 	cost := 0
 	for cnt <= max_ingress {

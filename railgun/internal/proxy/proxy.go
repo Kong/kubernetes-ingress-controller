@@ -63,7 +63,7 @@ type Proxy interface {
 	// A status will later be added to the object whether the configuration update succeeds or fails.
 	DeleteObject(obj client.Object) error
 
-	// ObjectExists indicates whether or not any version of the provided object is already present in the cache.
+	// ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
 	ObjectExists(obj client.Object) (bool, error)
 }
 

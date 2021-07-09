@@ -75,6 +75,7 @@ var (
 	watchNamespaces = strings.Join([]string{
 		elsewhere,
 		corev1.NamespaceDefault,
+		testIngressNamespace,
 		testTCPIngressNamespace,
 		testUDPIngressNamespace,
 	}, ",")

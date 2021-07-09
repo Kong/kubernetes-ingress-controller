@@ -21,14 +21,34 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
+var testIngressNamespace = "ingress"
+
 func TestIngressEssentials(t *testing.T) {
 	ctx := context.Background()
-	testIngressNamespace := corev1.NamespaceDefault
+
+	t.Logf("creating namespace %s for testing", testIngressNamespace)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressNamespace}}
+	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up namespace %s", testIngressNamespace)
+		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
+		require.Eventually(t, func() bool {
+			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return true
+				}
+			}
+			return false
+		}, ingressWait, waitTick)
+	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(testIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(testIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
@@ -148,12 +168,30 @@ func TestIngressEssentials(t *testing.T) {
 
 func TestIngressClassNameSpec(t *testing.T) {
 	ctx := context.Background()
-	testIngressNamespace := corev1.NamespaceDefault
+
+	t.Logf("creating namespace %s for testing", testIngressNamespace)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressNamespace}}
+	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up namespace %s", testIngressNamespace)
+		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
+		require.Eventually(t, func() bool {
+			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return true
+				}
+			}
+			return false
+		}, ingressWait, waitTick)
+	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(testIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(testIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {

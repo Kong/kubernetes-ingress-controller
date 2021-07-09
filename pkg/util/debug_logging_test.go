@@ -132,10 +132,19 @@ func TestDebugLoggerThreadSafety(t *testing.T) {
 	log := MakeDebugLoggerWithReducedRedudancy(buf, &logrus.JSONFormatter{}, 0, time.Minute*30)
 
 	// spam the logger concurrently across several goroutines to ensure no dataraces
+	wg := &sync.WaitGroup{}
 	for i := 0; i < 100; i++ {
-		go func() { log.Debug("unique") }()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			log.Debug("unique")
+		}()
 	}
+	wg.Wait()
 	assert.Contains(t, buf.String(), "unique")
+	lines := strings.Split(buf.String(), "\n")
+	// Ensure that _some_ lines have been stifled. The actual number is not deterministic.
+	assert.True(t, len(lines) < 100)
 }
 
 // -----------------------------------------------------------------------------

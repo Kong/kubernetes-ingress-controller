@@ -15,11 +15,9 @@ import (
 	"fmt"
 	"testing"
 
-	types "k8s.io/apimachinery/pkg/types"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	types "k8s.io/apimachinery/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +25,8 @@ import (
 	"knative.dev/pkg/apis"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
+	
+	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 )
 
 const (

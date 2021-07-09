@@ -74,7 +74,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	obj := new(corev1.Service)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -92,7 +92,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -147,7 +147,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	obj := new(corev1.Endpoints)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -165,7 +165,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Endpoints", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -220,7 +220,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	obj := new(corev1.Secret)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -238,7 +238,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -296,7 +296,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	obj := new(netv1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -314,7 +314,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -392,7 +392,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	obj := new(netv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -410,7 +410,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -488,7 +488,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	obj := new(extv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -506,7 +506,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -581,7 +581,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	obj := new(kongv1.KongIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -599,7 +599,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -654,7 +654,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	obj := new(kongv1.KongPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -672,7 +672,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -730,7 +730,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	obj := new(kongv1.KongClusterPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -748,7 +748,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -826,7 +826,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	obj := new(kongv1.KongConsumer)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -844,7 +844,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -922,7 +922,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	obj := new(kongv1beta1.TCPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -940,7 +940,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1018,7 +1018,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	obj := new(kongv1beta1.UDPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1036,7 +1036,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1114,7 +1114,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	obj := new(knativev1alpha1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1132,7 +1132,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

@@ -413,6 +413,17 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	obj := new({{.PackageImportAlias}}.{{.Type}})
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -420,8 +431,15 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
-		if err := r.Proxy.DeleteObject(obj); err != nil {
+		objectExistsInCache, err := p.Proxy.ObjectExists(obj)
+		if err != nil {
 			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
 {{- if .AcceptsIngressClassNameAnnotation}}
 		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)

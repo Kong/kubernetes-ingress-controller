@@ -184,6 +184,46 @@ func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
 	return c, nil
 }
 
+// Get checks whether or not there's already some version of the provided object present in the cache.
+func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err error) {
+	switch obj := obj.(type) {
+	// ----------------------------------------------------------------------------
+	// Kubernetes Core API Support
+	// ----------------------------------------------------------------------------
+	case *extensions.Ingress:
+		return c.IngressV1beta1.Get(obj)
+	case *networkingv1.Ingress:
+		return c.IngressV1.Get(obj)
+	case *corev1.Service:
+		return c.Service.Get(obj)
+	case *corev1.Secret:
+		return c.Secret.Get(obj)
+	case *corev1.Endpoints:
+		return c.Endpoint.Get(obj)
+	// ----------------------------------------------------------------------------
+	// Kong API Support
+	// ----------------------------------------------------------------------------
+	case *kongv1.KongPlugin:
+		return c.Plugin.Get(obj)
+	case *kongv1.KongClusterPlugin:
+		return c.ClusterPlugin.Get(obj)
+	case *kongv1.KongConsumer:
+		return c.Consumer.Get(obj)
+	case *kongv1.KongIngress:
+		return c.KongIngress.Get(obj)
+	case *kongv1beta1.TCPIngress:
+		return c.TCPIngress.Get(obj)
+	case *kongv1beta1.UDPIngress:
+		return c.UDPIngress.Get(obj)
+	// ----------------------------------------------------------------------------
+	// 3rd Party API Support
+	// ----------------------------------------------------------------------------
+	case *knative.Ingress:
+		return c.KnativeIngress.Get(obj)
+	}
+	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
+}
+
 // Add stores a provided runtime.Object into the CacheStore if it's of a supported type.
 // The CacheStore must be initialized (see NewCacheStores()) or this will panic.
 func (c CacheStores) Add(obj runtime.Object) error {

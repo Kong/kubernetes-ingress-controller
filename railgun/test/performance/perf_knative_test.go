@@ -17,15 +17,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	types "k8s.io/apimachinery/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	types "k8s.io/apimachinery/pkg/types"
 	knativenetworkingversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	"knative.dev/pkg/apis"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
-	
+
 	"github.com/kong/kubernetes-testing-framework/pkg/kind"
 )
 
@@ -72,10 +72,9 @@ func TestPerfKnativePerformance(t *testing.T) {
 		cnt++
 	}
 	t.Logf("knative ingress cost %d", cost/max_ingress)
-
-	// cleanup clean ingress also to continueally repeat
 }
 
+// TODO: move to common utility functions
 func deployManifest(yml string, ctx context.Context, t *testing.T) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)

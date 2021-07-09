@@ -133,8 +133,9 @@ func TestDebugLoggerThreadSafety(t *testing.T) {
 
 	// spam the logger concurrently across several goroutines to ensure no dataraces
 	wg := &sync.WaitGroup{}
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
+	total := 100
+	wg.Add(total)
+	for i := 0; i < total; i++ {
 		go func() {
 			defer wg.Done()
 			log.Debug("unique")
@@ -142,9 +143,10 @@ func TestDebugLoggerThreadSafety(t *testing.T) {
 	}
 	wg.Wait()
 	assert.Contains(t, buf.String(), "unique")
-	lines := strings.Split(buf.String(), "\n")
+
 	// Ensure that _some_ lines have been stifled. The actual number is not deterministic.
-	assert.True(t, len(lines) < 100)
+	lines := strings.Split(buf.String(), "\n")
+	assert.True(t, len(lines) < total)
 }
 
 // -----------------------------------------------------------------------------

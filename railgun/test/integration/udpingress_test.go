@@ -25,7 +25,7 @@ import (
 
 const testUDPIngressNamespace = "udpingress"
 
-func TestUDPIngress(t *testing.T) {
+func TestUDPIngressEssentials(t *testing.T) {
 	// TODO: once KIC 2.0 lands and pre v2 is gone, we can remove this check
 	if useLegacyKIC() {
 		t.Skip("legacy KIC does not support UDPIngress, skipping")
@@ -38,10 +38,20 @@ func TestUDPIngress(t *testing.T) {
 	t.Logf("creating namespace %s for testing", testUDPIngressNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testUDPIngressNamespace}}
 	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up namespace %s", testUDPIngressNamespace)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, testUDPIngressNamespace, metav1.DeleteOptions{}))
+		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
+		require.Eventually(t, func() bool {
+			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return true
+				}
+			}
+			return false
+		}, ingressWait, waitTick)
 	}()
 
 	t.Log("configuring coredns corefile")

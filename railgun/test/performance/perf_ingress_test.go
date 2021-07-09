@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	generators "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 )
 
 func TestIngressPerformance(t *testing.T) {
@@ -29,18 +29,18 @@ func TestIngressPerformance(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-		container := k8sgen.NewContainer("httpbin", httpBinImage, 80)
-		deployment := k8sgen.NewDeploymentForContainer(container)
+		container := generators.NewContainer("httpbin", httpBinImage, 80)
+		deployment := generators.NewDeploymentForContainer(container)
 		deployment, err = cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 		assert.NoError(t, err)
 
 		t.Logf("exposing deployment %s via service", deployment.Name)
-		service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 		_, err = cluster.Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 		assert.NoError(t, err)
 
 		t.Logf("[%s] creating an ingress for service httpbin with ingress.class %s", namespace, ingressClass)
-		ingress := k8sgen.NewIngressForService("/httpbin", map[string]string{
+		ingress := generators.NewIngressForService("/httpbin", map[string]string{
 			annotations.IngressClassKey: ingressClass,
 			"konghq.com/strip-path":     "true",
 		}, service)

@@ -16,7 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	generators "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 )
 
 func TestUDPIngressPerformance(t *testing.T) {
@@ -38,11 +38,11 @@ func TestUDPIngressPerformance(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Log("configuring a coredns deployent to deploy for UDP testing")
-		container := k8sgen.NewContainer("coredns", "coredns/coredns", 53)
+		container := generators.NewContainer("coredns", "coredns/coredns", 53)
 		container.Ports[0].Protocol = corev1.ProtocolUDP
 		container.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
 		container.Args = []string{"-conf", "/etc/coredns/Corefile"}
-		deployment := k8sgen.NewDeploymentForContainer(container)
+		deployment := generators.NewDeploymentForContainer(container)
 
 		t.Log("configuring the coredns pod with a custom corefile")
 		configVolume := corev1.Volume{
@@ -57,7 +57,7 @@ func TestUDPIngressPerformance(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Logf("exposing deployment %s via service", deployment.Name)
-		service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 		service, err = cluster.Client().CoreV1().Services(testUDPIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
 		assert.NoError(t, err)
 

@@ -16,7 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
-	k8sgen "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
+	generators "github.com/kong/kubernetes-testing-framework/pkg/generators/k8s"
 )
 
 func TestTCPIngressPerformance(t *testing.T) {
@@ -36,12 +36,12 @@ func TestTCPIngressPerformance(t *testing.T) {
 
 		t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 		testName := "tcpingress"
-		deployment := k8sgen.NewDeploymentForContainer(k8sgen.NewContainer(testName, httpBinImage, 80))
+		deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, httpBinImage, 80))
 		deployment, err = cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		t.Logf("exposing deployment %s via service", deployment.Name)
-		service := k8sgen.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 		service, err = cluster.Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 		require.NoError(t, err)
 

@@ -1,16 +1,11 @@
 package ctrlutils
 
 import (
-	"context"
-
-	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -18,39 +13,6 @@ import (
 
 // classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
 const classSpec = "IngressClassName"
-
-// CleanupFinalizer removes an object finalizer from an object which is currently being deleted.
-func CleanupFinalizer(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
-	if HasFinalizer(obj, KongIngressFinalizer) {
-		log.Info("kong ingress finalizer needs to be removed from a resource which is deleting", "ingress", obj.GetName(), "finalizer", KongIngressFinalizer)
-		finalizers := []string{}
-		for _, finalizer := range obj.GetFinalizers() {
-			if finalizer != KongIngressFinalizer {
-				finalizers = append(finalizers, finalizer)
-			}
-		}
-		obj.SetFinalizers(finalizers)
-		if err := c.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		log.Info("the kong ingress finalizer was removed from an a resource which is deleting", "ingress", obj.GetName(), "finalizer", KongIngressFinalizer)
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	return ctrl.Result{}, nil
-}
-
-// HasFinalizer is a helper function to check whether a client.Object
-// already has a specific finalizer set.
-func HasFinalizer(obj client.Object, finalizer string) bool {
-	hasFinalizer := false
-	for _, foundFinalizer := range obj.GetFinalizers() {
-		if foundFinalizer == finalizer {
-			hasFinalizer = true
-		}
-	}
-	return hasFinalizer
-}
 
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
 // to the value provided.

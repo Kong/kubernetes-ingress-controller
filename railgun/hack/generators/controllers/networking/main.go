@@ -295,9 +295,6 @@ type typeNeeded struct {
 
 	// AcceptsIngressClassNameAnnotation indicates that the object accepts (and the controller will listen to)
 	// the "kubernetes.io/ingress.class" annotation to decide whether or not the object is supported.
-	//
-	// This setting will also indicate whether or not a generated controller will employ a teardown finalizer
-	// to indicate that we need to wait for cache deletion to succeed before allowing Kubernetes GC to remove the obj.
 	AcceptsIngressClassNameAnnotation bool
 
 	// AcceptsIngressClassNameSpec indicates the the object indicates the ingress.class that should support it via
@@ -400,10 +397,8 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/finalizers,verbs=update
 //+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -441,11 +436,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-{{- if .AcceptsIngressClassNameAnnotation}}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
-{{- else}}
 		return ctrl.Result{}, nil
-{{- end}}
 	}
 {{if .AcceptsIngressClassNameAnnotation}}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -455,17 +446,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 {{end}}
 	// update the kong Admin API with the changes

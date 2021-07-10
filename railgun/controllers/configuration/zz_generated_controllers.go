@@ -61,10 +61,8 @@ func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=services/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",resources=services/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=services,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=services/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=services/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -134,10 +132,8 @@ func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups="",resources=endpoints,verbs=list;watch
 //+kubebuilder:rbac:groups="",resources=endpoints/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",resources=endpoints/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=endpoints,verbs=list;watch
 //+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=endpoints/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=endpoints/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -207,10 +203,8 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch
 //+kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",resources=secrets/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=secrets,verbs=list;watch
 //+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=secrets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=secrets/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -283,10 +277,8 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -324,7 +316,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -334,17 +326,6 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes
@@ -379,10 +360,8 @@ func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -420,7 +399,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -430,17 +409,6 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes
@@ -475,10 +443,8 @@ func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apiextensions.k8s.io,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apiextensions.k8s.io,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apiextensions.k8s.io,namespace=CHANGEME,resources=ingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -516,7 +482,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -526,17 +492,6 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes
@@ -568,10 +523,8 @@ func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -641,10 +594,8 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins/finalizers,verbs=update
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongplugins/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongplugins/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -717,10 +668,8 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins/finalizers,verbs=update
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongclusterplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongclusterplugins/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongclusterplugins/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -758,7 +707,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -768,17 +717,6 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes
@@ -813,10 +751,8 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongconsumers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongconsumers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongconsumers/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -854,7 +790,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -864,17 +800,6 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes
@@ -909,10 +834,8 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=tcpingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=tcpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=tcpingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -950,7 +873,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -960,17 +883,6 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes
@@ -1005,10 +917,8 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=udpingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=udpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=udpingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1046,7 +956,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -1056,17 +966,6 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes
@@ -1101,10 +1000,8 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.internal.knative.dev,namespace=CHANGEME,resources=ingresses/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1142,7 +1039,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		return ctrl.Result{}, nil
 	}
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -1152,17 +1049,6 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// update the kong Admin API with the changes

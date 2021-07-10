@@ -16,12 +16,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - endpoints/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
   - endpoints/status
   verbs:
   - get
@@ -59,12 +53,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - secrets/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
   - secrets/status
   verbs:
   - get
@@ -78,12 +66,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - ""
-  resources:
-  - services/finalizers
-  verbs:
-  - update
 - apiGroups:
   - ""
   resources:
@@ -103,12 +85,6 @@ rules:
 - apiGroups:
   - apiextensions.k8s.io
   resources:
-  - ingresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apiextensions.k8s.io
-  resources:
   - ingresses/status
   verbs:
   - get
@@ -122,12 +98,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongclusterplugins/finalizers
-  verbs:
-  - update
 - apiGroups:
   - configuration.konghq.com
   resources:
@@ -147,12 +117,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongconsumers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongconsumers/status
   verbs:
   - get
@@ -166,12 +130,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongingresses/finalizers
-  verbs:
-  - update
 - apiGroups:
   - configuration.konghq.com
   resources:
@@ -191,12 +149,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongplugins/status
   verbs:
   - get
@@ -210,12 +162,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - tcpingresses/finalizers
-  verbs:
-  - update
 - apiGroups:
   - configuration.konghq.com
   resources:
@@ -235,12 +181,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - udpingresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - udpingresses/status
   verbs:
   - get
@@ -257,12 +197,6 @@ rules:
 - apiGroups:
   - networking.internal.knative.dev
   resources:
-  - ingresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - networking.internal.knative.dev
-  resources:
   - ingresses/status
   verbs:
   - get
@@ -276,12 +210,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingresses/finalizers
-  verbs:
-  - update
 - apiGroups:
   - networking.k8s.io
   resources:
@@ -309,12 +237,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - endpoints/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
   - endpoints/status
   verbs:
   - get
@@ -352,12 +274,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - secrets/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
   - secrets/status
   verbs:
   - get
@@ -371,12 +287,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - ""
-  resources:
-  - services/finalizers
-  verbs:
-  - update
 - apiGroups:
   - ""
   resources:
@@ -396,12 +306,6 @@ rules:
 - apiGroups:
   - apiextensions.k8s.io
   resources:
-  - ingresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apiextensions.k8s.io
-  resources:
   - ingresses/status
   verbs:
   - get
@@ -415,12 +319,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongclusterplugins/finalizers
-  verbs:
-  - update
 - apiGroups:
   - configuration.konghq.com
   resources:
@@ -440,12 +338,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongconsumers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongconsumers/status
   verbs:
   - get
@@ -459,12 +351,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongingresses/finalizers
-  verbs:
-  - update
 - apiGroups:
   - configuration.konghq.com
   resources:
@@ -484,12 +370,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongplugins/status
   verbs:
   - get
@@ -503,12 +383,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - tcpingresses/finalizers
-  verbs:
-  - update
 - apiGroups:
   - configuration.konghq.com
   resources:
@@ -528,12 +402,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - udpingresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - udpingresses/status
   verbs:
   - get
@@ -550,12 +418,6 @@ rules:
 - apiGroups:
   - networking.internal.knative.dev
   resources:
-  - ingresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - networking.internal.knative.dev
-  resources:
   - ingresses/status
   verbs:
   - get
@@ -569,12 +431,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingresses/finalizers
-  verbs:
-  - update
 - apiGroups:
   - networking.k8s.io
   resources:

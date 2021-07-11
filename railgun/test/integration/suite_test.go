@@ -75,6 +75,7 @@ var (
 		testIngressNamespace,
 		testTCPIngressNamespace,
 		testUDPIngressNamespace,
+		testPluginsNamespace,
 	}, ",")
 
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)

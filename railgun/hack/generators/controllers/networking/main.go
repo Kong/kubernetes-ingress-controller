@@ -372,7 +372,7 @@ var controllerTemplate = `
 // {{.PackageAlias}} {{.Type}}
 // -----------------------------------------------------------------------------
 
-// {{.PackageAlias}}{{.Type}} reconciles a Ingress object
+// {{.PackageAlias}}{{.Type}} reconciles {{.Type}} resources
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 
@@ -407,13 +407,14 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Type}})
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted {{.Type}} object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}

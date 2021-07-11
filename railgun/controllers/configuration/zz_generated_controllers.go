@@ -45,7 +45,7 @@ import (
 // CoreV1 Service
 // -----------------------------------------------------------------------------
 
-// CoreV1Service reconciles a Ingress object
+// CoreV1Service reconciles Service resources
 type CoreV1ServiceReconciler struct {
 	client.Client
 
@@ -71,13 +71,14 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// get the relevant object
 	obj := new(corev1.Service)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted Service object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -116,7 +117,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // CoreV1 Endpoints
 // -----------------------------------------------------------------------------
 
-// CoreV1Endpoints reconciles a Ingress object
+// CoreV1Endpoints reconciles Endpoints resources
 type CoreV1EndpointsReconciler struct {
 	client.Client
 
@@ -142,13 +143,14 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// get the relevant object
 	obj := new(corev1.Endpoints)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted Endpoints object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -187,7 +189,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // CoreV1 Secret
 // -----------------------------------------------------------------------------
 
-// CoreV1Secret reconciles a Ingress object
+// CoreV1Secret reconciles Secret resources
 type CoreV1SecretReconciler struct {
 	client.Client
 
@@ -213,13 +215,14 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// get the relevant object
 	obj := new(corev1.Secret)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted Secret object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -258,7 +261,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // NetV1 Ingress
 // -----------------------------------------------------------------------------
 
-// NetV1Ingress reconciles a Ingress object
+// NetV1Ingress reconciles Ingress resources
 type NetV1IngressReconciler struct {
 	client.Client
 
@@ -287,13 +290,14 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// get the relevant object
 	obj := new(netv1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -341,7 +345,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // NetV1Beta1 Ingress
 // -----------------------------------------------------------------------------
 
-// NetV1Beta1Ingress reconciles a Ingress object
+// NetV1Beta1Ingress reconciles Ingress resources
 type NetV1Beta1IngressReconciler struct {
 	client.Client
 
@@ -370,13 +374,14 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(netv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -424,7 +429,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // ExtV1Beta1 Ingress
 // -----------------------------------------------------------------------------
 
-// ExtV1Beta1Ingress reconciles a Ingress object
+// ExtV1Beta1Ingress reconciles Ingress resources
 type ExtV1Beta1IngressReconciler struct {
 	client.Client
 
@@ -453,13 +458,14 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(extv1beta1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -507,7 +513,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // KongV1 KongIngress
 // -----------------------------------------------------------------------------
 
-// KongV1KongIngress reconciles a Ingress object
+// KongV1KongIngress reconciles KongIngress resources
 type KongV1KongIngressReconciler struct {
 	client.Client
 
@@ -533,13 +539,14 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// get the relevant object
 	obj := new(kongv1.KongIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted KongIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -578,7 +585,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // KongV1 KongPlugin
 // -----------------------------------------------------------------------------
 
-// KongV1KongPlugin reconciles a Ingress object
+// KongV1KongPlugin reconciles KongPlugin resources
 type KongV1KongPluginReconciler struct {
 	client.Client
 
@@ -604,13 +611,14 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// get the relevant object
 	obj := new(kongv1.KongPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted KongPlugin object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -649,7 +657,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 // KongV1 KongClusterPlugin
 // -----------------------------------------------------------------------------
 
-// KongV1KongClusterPlugin reconciles a Ingress object
+// KongV1KongClusterPlugin reconciles KongClusterPlugin resources
 type KongV1KongClusterPluginReconciler struct {
 	client.Client
 
@@ -678,13 +686,14 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	// get the relevant object
 	obj := new(kongv1.KongClusterPlugin)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted KongClusterPlugin object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -732,7 +741,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 // KongV1 KongConsumer
 // -----------------------------------------------------------------------------
 
-// KongV1KongConsumer reconciles a Ingress object
+// KongV1KongConsumer reconciles KongConsumer resources
 type KongV1KongConsumerReconciler struct {
 	client.Client
 
@@ -761,13 +770,14 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// get the relevant object
 	obj := new(kongv1.KongConsumer)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted KongConsumer object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -815,7 +825,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 // KongV1Beta1 TCPIngress
 // -----------------------------------------------------------------------------
 
-// KongV1Beta1TCPIngress reconciles a Ingress object
+// KongV1Beta1TCPIngress reconciles TCPIngress resources
 type KongV1Beta1TCPIngressReconciler struct {
 	client.Client
 
@@ -844,13 +854,14 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// get the relevant object
 	obj := new(kongv1beta1.TCPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted TCPIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -898,7 +909,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 // KongV1Beta1 UDPIngress
 // -----------------------------------------------------------------------------
 
-// KongV1Beta1UDPIngress reconciles a Ingress object
+// KongV1Beta1UDPIngress reconciles UDPIngress resources
 type KongV1Beta1UDPIngressReconciler struct {
 	client.Client
 
@@ -927,13 +938,14 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// get the relevant object
 	obj := new(kongv1beta1.UDPIngress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted UDPIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -981,7 +993,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 // Knativev1alpha1 Ingress
 // -----------------------------------------------------------------------------
 
-// Knativev1alpha1Ingress reconciles a Ingress object
+// Knativev1alpha1Ingress reconciles Ingress resources
 type Knativev1alpha1IngressReconciler struct {
 	client.Client
 
@@ -1010,13 +1022,14 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	// get the relevant object
 	obj := new(knativev1alpha1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Error(err, "object which wasn't found in the Kubernetes API still exists in the cache, deleting", "namespace", req.Namespace, "name", req.Name)
+			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}

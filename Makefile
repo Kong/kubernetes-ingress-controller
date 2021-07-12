@@ -7,7 +7,7 @@ IMAGE = $(REGISTRY)/$(IMGNAME)
 # only for dev
 DB?=false
 RUN_VERSION?=20
-KUBE_VERSION?=v1.20.2
+KUBE_VERSION?=v1.20.7
 
 PKG_LIST := ./...
 

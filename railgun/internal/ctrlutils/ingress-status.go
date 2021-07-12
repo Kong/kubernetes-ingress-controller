@@ -256,7 +256,8 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
 	}
 
-	return fmt.Errorf("ingress_status successfully updated TCPIngress status")
+	log.Info("ingress_status successfully updated TCPIngress status")
+	return nil
 }
 
 var ingressCondSet = knativeApis.NewLivingConditionSet()

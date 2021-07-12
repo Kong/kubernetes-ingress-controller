@@ -7,7 +7,8 @@ on:
       - 'next'
   push:
     branches:
-      - '*'
+      - 'main'
+      - 'next'
     tags:
       - '2.*'
       - 'v2.*'

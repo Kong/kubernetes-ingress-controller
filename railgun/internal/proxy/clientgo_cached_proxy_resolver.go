@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -74,6 +75,8 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		stagger:    stagger,
 		timeout:    timeout,
 		syncTicker: time.NewTicker(stagger),
+
+		internalCacheLock: &sync.RWMutex{},
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -139,6 +142,9 @@ type clientgoCachedProxyResolver struct {
 	// channels
 	update chan *cachedObject
 	del    chan *cachedObject
+
+	// locks
+	internalCacheLock *sync.RWMutex
 }
 
 // cacheAction indicates what caching action (update, delete) was taken for any particular runtime.Object.
@@ -186,6 +192,13 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 	default:
 		return fmt.Errorf("the proxy is too busy to accept requests at this time, try again later")
 	}
+}
+
+func (p *clientgoCachedProxyResolver) ObjectExists(obj client.Object) (bool, error) {
+	p.internalCacheLock.RLock()
+	defer p.internalCacheLock.RUnlock()
+	_, exists, err := p.cache.Get(obj)
+	return exists, err
 }
 
 // -----------------------------------------------------------------------------

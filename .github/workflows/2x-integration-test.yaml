@@ -3,11 +3,11 @@ name: 2.x Integration Tests
 on:
   pull_request:
     branches:
-      - 'main'
-      - 'next'
+      - '*'
   push:
     branches:
-      - '*'
+      - 'main'
+      - 'next'
     tags:
       - '2.*'
       - 'v2.*'

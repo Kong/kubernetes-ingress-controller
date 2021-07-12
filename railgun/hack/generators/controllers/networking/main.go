@@ -372,7 +372,7 @@ var controllerTemplate = `
 // {{.PackageAlias}} {{.Type}}
 // -----------------------------------------------------------------------------
 
-// {{.PackageAlias}}{{.Type}} reconciles a Ingress object
+// {{.PackageAlias}}{{.Type}} reconciles {{.Type}} resources
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 
@@ -397,10 +397,8 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/finalizers,verbs=update
 //+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/finalizers,verbs=update
 
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -409,7 +407,19 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Type}})
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		log.Error(err, "object was queued for reconcilation but could not be retrieved", "namespace", req.Namespace, "name", req.Name)
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			log.Info("deleted {{.Type}} object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
@@ -417,10 +427,17 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
-		if err := r.Proxy.DeleteObject(obj); err != nil {
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrlutils.CleanupFinalizer(ctx, r.Client, log, req.NamespacedName, obj)
+		if objectExistsInCache {
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
 	}
 {{if .AcceptsIngressClassNameAnnotation}}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -432,17 +449,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, nil
 	}
 {{end}}
-	// before we store cache data for this object, ensure that it has our finalizer set
-	if !ctrlutils.HasFinalizer(obj, ctrlutils.KongIngressFinalizer) {
-		log.Info("finalizer is not set for resource, setting it", req.Namespace, req.Name)
-		finalizers := obj.GetFinalizers()
-		obj.SetFinalizers(append(finalizers, ctrlutils.KongIngressFinalizer))
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
-	}
-
 	// update the kong Admin API with the changes
 	log.Info("updating the proxy with new {{.Type}}", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {

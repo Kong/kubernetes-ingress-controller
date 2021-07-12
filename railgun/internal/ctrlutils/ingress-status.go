@@ -130,7 +130,7 @@ func retrieveNSAndNM(svc file.FService) (string, string, error) {
 	namespace = routeInf[0]
 	name = routeInf[1]
 	if len(namespace) == 0 || len(name) == 0 {
-		return "", "", fmt.Errorf("configured route information is not completed which should not happen")
+		return "", "", fmt.Errorf("configured route information is not completed which should not have happened")
 	}
 	return namespace, name, nil
 }

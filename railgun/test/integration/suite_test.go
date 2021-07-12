@@ -186,7 +186,6 @@ var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
-	knativeCrds,
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.

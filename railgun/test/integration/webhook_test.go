@@ -134,7 +134,9 @@ func TestValidationWebhook(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := env.Cluster().Client().CoreV1().Secrets(defaultNs).Create(ctx, &tt.obj, metav1.CreateOptions{})
-			defer env.Cluster().Client().CoreV1().Secrets(defaultNs).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{})
+			defer func() {
+				assert.NoError(t, env.Cluster().Client().CoreV1().Secrets(defaultNs).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{}))
+			}()
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.True(t, strings.Contains(err.Error(), tt.wantPartialErr),

@@ -103,7 +103,6 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 // This object's attributes are immutable (private), and it is threadsafe.
 type clientgoCachedProxyResolver struct {
 	// kubernetes configuration
-	k8s   client.Client
 	cache *store.CacheStores
 
 	// lastConfigSHA indicates the last SHA sum for the last configuration
@@ -112,8 +111,6 @@ type clientgoCachedProxyResolver struct {
 
 	// kong configuration
 	kongConfig        sendconfig.Kong
-	kongRootConfig    map[string]interface{}
-	kongProxyConfig   map[string]interface{}
 	enableReverseSync bool
 	dbmode            string
 	version           semver.Version
@@ -166,9 +163,6 @@ type cachedObject struct {
 	key        string
 	runtimeObj runtime.Object
 }
-
-// objectTracker is a secondary cache used to track objects that have been updated/deleted between successful updates of the Kong Admin API.
-type objectTracker map[string]*cachedObject
 
 // -----------------------------------------------------------------------------
 // Client Go Cached Proxy Resolver - Public Methods - Interface Implementation

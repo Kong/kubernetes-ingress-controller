@@ -4,12 +4,11 @@ package rootcmd
 import (
 	"context"
 
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
 	"github.com/spf13/cobra"
-
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
-var cfg config.Config
+var cfg manager.Config
 
 func init() {
 	rootCmd.Flags().AddFlagSet(cfg.FlagSet())

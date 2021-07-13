@@ -15,7 +15,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "controllers/configuration/zz_generated_controllers.go"
+	outputFile = "internal/controllers/configuration/zz_generated_controllers.go"
 
 	corev1     = "k8s.io/api/core/v1"
 	netv1      = "k8s.io/api/networking/v1"

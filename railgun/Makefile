@@ -1,3 +1,9 @@
+.PHONY: clean
+clean:
+	@rm -rf testbin/
+	@rm -rf bin/*
+	@rm -f coverage.out
+
 ##@ Versioning
 
 ifndef COMMIT
@@ -73,9 +79,9 @@ test: manifests generate fmt vet ## Run tests.
 
 build: generate fmt vet ## Build manager binary.
 	go build -a -o bin/manager -ldflags "-s -w \
-		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Release=$(TAG) \
-		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Repo=$(REPO_INFO)" main.go
+		-X github.com/kong/kubernetes-ingress-controller/railgun/internal/manager.Release=$(TAG) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/internal/manager.Commit=$(COMMIT) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/internal/manager.Repo=$(REPO_INFO)" main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go

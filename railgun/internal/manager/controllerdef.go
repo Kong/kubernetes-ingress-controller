@@ -13,11 +13,9 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
-	kongctrl "github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -70,7 +68,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *config.Config) []ControllerDef {
+func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) []ControllerDef {
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -107,7 +105,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		// ---------------------------------------------------------------------------
 		{
 			IsEnabled: &c.UDPIngressEnabled,
-			Controller: &kongctrl.KongV1Beta1UDPIngressReconciler{
+			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 				Scheme:           mgr.GetScheme(),
@@ -117,7 +115,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		},
 		{
 			IsEnabled: &c.TCPIngressEnabled,
-			Controller: &kongctrl.KongV1Beta1TCPIngressReconciler{
+			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
 				Scheme:           mgr.GetScheme(),
@@ -127,7 +125,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		},
 		{
 			IsEnabled: &c.KongIngressEnabled,
-			Controller: &kongctrl.KongV1KongIngressReconciler{
+			Controller: &configuration.KongV1KongIngressReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
 				Scheme: mgr.GetScheme(),
@@ -136,7 +134,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		},
 		{
 			IsEnabled: &c.KongPluginEnabled,
-			Controller: &kongctrl.KongV1KongPluginReconciler{
+			Controller: &configuration.KongV1KongPluginReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
 				Scheme: mgr.GetScheme(),
@@ -145,7 +143,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		},
 		{
 			IsEnabled: &c.KongConsumerEnabled,
-			Controller: &kongctrl.KongV1KongConsumerReconciler{
+			Controller: &configuration.KongV1KongConsumerReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongConsumer"),
 				Scheme:           mgr.GetScheme(),
@@ -210,7 +208,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		logger.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
 		controller := ControllerDef{
 			IsEnabled: &c.KongClusterPluginEnabled,
-			Controller: &kongctrl.KongV1KongClusterPluginReconciler{
+			Controller: &configuration.KongV1KongClusterPluginReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme:           mgr.GetScheme(),
@@ -233,7 +231,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		logger.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
 		controller := ControllerDef{
 			IsEnabled: &c.KnativeIngressEnabled,
-			Controller: &kongctrl.Knativev1alpha1IngressReconciler{
+			Controller: &configuration.Knativev1alpha1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:           mgr.GetScheme(),

@@ -2,14 +2,23 @@ package deckgen
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/mitchellh/hashstructure"
 	"github.com/tidwall/gjson"
 )
+
+// helper function convert from uint63 to byte
+func i64tob(val uint64) []byte {
+	r := make([]byte, 8)
+	for i := uint64(0); i < 8; i++ {
+		r[i] = byte((val >> (i * 8)) & 0xff)
+	}
+	return r
+}
 
 // GenerateSHA generates a SHA256 checksum of the (targetContent, customEntities) tuple, with the purpose of change
 // detection.
@@ -28,8 +37,11 @@ func GenerateSHA(targetContent *file.Content,
 		buffer.Write(customEntities)
 	}
 
-	shaSum := sha256.Sum256(buffer.Bytes())
-	return shaSum[:], nil
+	hash, err := hashstructure.Hash(targetContent, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed generating hash for %v, err %v", targetContent,err)
+
+	return i64tob(hash), nil
 }
 
 // CleanUpNullsInPluginConfigs modifies `state` by deleting plugin config map keys that have nil as their value.

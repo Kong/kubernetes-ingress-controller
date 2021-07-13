@@ -25,17 +25,17 @@ const (
 func negotiateIngressAPI(config *config.Config, client client.Client) (IngressAPI, error) {
 	var allowedAPIs []IngressAPI
 	candidateAPIs := map[IngressAPI]schema.GroupVersionResource{
-		NetworkingV1: schema.GroupVersionResource{
+		NetworkingV1: {
 			Group:    networkingv1.SchemeGroupVersion.Group,
 			Version:  networkingv1.SchemeGroupVersion.Version,
 			Resource: "ingresses",
 		},
-		NetworkingV1beta1: schema.GroupVersionResource{
+		NetworkingV1beta1: {
 			Group:    networkingv1beta1.SchemeGroupVersion.Group,
 			Version:  networkingv1beta1.SchemeGroupVersion.Version,
 			Resource: "ingresses",
 		},
-		ExtensionsV1beta1: schema.GroupVersionResource{
+		ExtensionsV1beta1: {
 			Group:    extensionsv1beta1.SchemeGroupVersion.Group,
 			Version:  extensionsv1beta1.SchemeGroupVersion.Version,
 			Resource: "ingresses",

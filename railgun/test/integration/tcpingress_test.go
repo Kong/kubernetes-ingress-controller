@@ -26,7 +26,7 @@ import (
 
 const testTCPIngressNamespace = "tcpingress"
 
-func TestTCPIngress(t *testing.T) {
+func TestTCPIngressEssentials(t *testing.T) {
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress"
 	c, err := clientset.NewForConfig(env.Cluster().Config())
@@ -34,14 +34,23 @@ func TestTCPIngress(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()
 
-	t.Logf("creating namespace %s for testing TCPIngress", testTCPIngressNamespace)
+	t.Logf("creating namespace %s for testing", testTCPIngressNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testTCPIngressNamespace}}
 	ns, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up namespace %s", testTCPIngressNamespace)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
+		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
+		require.Eventually(t, func() bool {
+			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return true
+				}
+			}
+			return false
+		}, ingressWait, waitTick)
 	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")

@@ -62,6 +62,9 @@ type Proxy interface {
 	// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
 	// A status will later be added to the object whether the configuration update succeeds or fails.
 	DeleteObject(obj client.Object) error
+
+	// ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
+	ObjectExists(obj client.Object) (bool, error)
 }
 
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API

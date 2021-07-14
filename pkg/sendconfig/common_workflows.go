@@ -30,7 +30,7 @@ import (
 // Treat this function as a very specific "workflow" to update the Kong Admin API,
 // and use it as a reference to implement the workflow you need.
 func UpdateKongAdminSimple(ctx context.Context,
-	lastConfigSHA []byte,
+	lastConfigSHA *[]byte,
 	cache *store.CacheStores,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
@@ -56,7 +56,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, &lastConfigSHA, false, m,
+		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, m,
 	)
 	if err != nil {
 		return nil, err

@@ -130,6 +130,9 @@ func NewOauth2Credential(config interface{}) (*Oauth2Credential, error) {
 	if res.ClientID == nil {
 		return nil, fmt.Errorf("oauth2 is invalid: no client_id")
 	}
+	if res.Name == nil {
+		return nil, fmt.Errorf("oauth2 is invalid: no name")
+	}
 	return &res, nil
 }
 

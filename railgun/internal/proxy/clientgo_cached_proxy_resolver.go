@@ -77,6 +77,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		syncTicker: time.NewTicker(stagger),
 
 		internalCacheLock: &sync.RWMutex{},
+		m:                 &sync.Mutex{},
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and

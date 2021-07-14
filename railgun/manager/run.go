@@ -119,8 +119,8 @@ func Run(ctx context.Context, c *config.Config) error {
 
 // wait for knative cr before register and starting knative controller
 func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
-	if *enablestatus == util.EnablementStatusEnabled {
-		log.Info("knative controller already enabled. skip flip process.\n")
+	if *enablestatus == util.EnablementStatusDisabled {
+		log.Info("knative ingress feature disabled. skip.")
 		return nil
 	}
 	kubeCfg, err := cfg.GetKubeconfig()
@@ -134,11 +134,12 @@ func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus 
 	knativeFactory := knativeinformerexternal.NewSharedInformerFactory(knativeCli, 0)
 	knativeInformer := knativeFactory.Networking().V1alpha1().Ingresses().Informer()
 	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	knativeControolerUp := false
 	knativeInformer.AddEventHandler(&k8scache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			log.Info("knative networking customer resource added.")
-			if *enablestatus == util.EnablementStatusDisabled {
-				log.Info("knative controller does not exist. register one.")
+			if !knativeControolerUp {
+				log.Info("knative controller is down. registering...")
 				knative := configuration.Knativev1alpha1IngressReconciler{
 					Client:           mgr.GetClient(),
 					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
@@ -147,9 +148,9 @@ func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus 
 					Proxy:            proxy,
 				}
 				knative.SetupWithManager(mgr)
-				*enablestatus = util.EnablementStatusEnabled
+				knativeControolerUp = true
 			} else {
-				log.Info("knative controller already on. Skip registration.")
+				log.Info("knative controller already up. Skip registration.")
 			}
 			cancel()
 		},

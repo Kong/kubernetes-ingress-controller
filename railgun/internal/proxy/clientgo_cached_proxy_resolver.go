@@ -77,6 +77,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		syncTicker: time.NewTicker(stagger),
 
 		internalCacheLock: &sync.RWMutex{},
+		m:                 &sync.Mutex{},
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -145,6 +146,7 @@ type clientgoCachedProxyResolver struct {
 
 	// locks
 	internalCacheLock *sync.RWMutex
+	m                 *sync.Mutex
 }
 
 // cacheAction indicates what caching action (update, delete) was taken for any particular runtime.Object.
@@ -228,12 +230,11 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				break
 			}
 		case <-p.syncTicker.C:
-			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
+			_, err := p.kongUpdater(p.ctx, &p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.m)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 				break
 			}
-			p.lastConfigSHA = updateConfigSHA
 		case <-p.ctx.Done():
 			p.logger.Info("the proxy cache server's context is done, shutting down")
 			if err := p.ctx.Err(); err != nil {

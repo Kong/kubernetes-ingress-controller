@@ -33,21 +33,22 @@ func PerformUpdate(ctx context.Context,
 	targetContent *file.Content,
 	selectorTags []string,
 	customEntities []byte,
-	oldSHA []byte,
-	skipUpdateCR bool) ([]byte, error) {
+	oldSHA *[]byte,
+	skipUpdateCR bool,
+	m *sync.Mutex) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		return oldSHA, err
+		return *oldSHA, err
 	}
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
 		// use the previous SHA to determine whether or not to perform an update
-		if equalSHA(oldSHA, newSHA) {
+		if equalSHA(*oldSHA, newSHA) {
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
 				log.Info("sha %s has been reported", hex.EncodeToString(newSHA))
 			}
 			log.Info("no configuration change, skipping sync to kong")
-			return oldSHA, nil
+			return *oldSHA, nil
 		}
 	}
 
@@ -62,6 +63,9 @@ func PerformUpdate(ctx context.Context,
 
 	if newSHA != nil && !skipUpdateCR {
 		kongConfig.ConfigDone <- *targetContent
+		m.Lock()
+		*oldSHA = newSHA
+		m.Unlock()
 	}
 
 	log.Info("successfully synced configuration to kong.")

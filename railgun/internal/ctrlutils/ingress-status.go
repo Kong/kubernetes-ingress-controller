@@ -156,7 +156,6 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		}
 
 		var status []apiv1.LoadBalancerIngress
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
 		curIPs := curIng.Status.LoadBalancer.Ingress
 
 		status = SliceToStatus(ips)
@@ -200,7 +199,6 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		}
 
 		var status []apiv1.LoadBalancerIngress
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
 		curIPs := curIng.Status.LoadBalancer.Ingress
 
 		status = SliceToStatus(ips)
@@ -219,7 +217,9 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		time.Sleep(time.Second)
 		retry++
 	}
-	return fmt.Errorf("ingress_status successfully updated UDPIngress status")
+
+	log.Info("successfully updated UDPIngress status.")
+	return nil
 }
 
 // update TCP ingress status
@@ -237,9 +237,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	var status []apiv1.LoadBalancerIngress
-	sort.SliceStable(status, lessLoadBalancerIngress(status))
 	curIPs := curIng.Status.LoadBalancer.Ingress
-
 	status = SliceToStatus(ips)
 	if ingressSliceEqual(status, curIPs) {
 		log.Debugf("no change in status, update tcp ingress skipped")
@@ -250,9 +248,9 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
-	} else {
-		return fmt.Errorf("ingress_status successfully updated TCPIngress status")
 	}
+	log.Info("successfully updated TCPIngress status.")
+	return nil
 }
 
 var ingressCondSet = knativeApis.NewLivingConditionSet()
@@ -283,7 +281,6 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 
 		// check if CR current status already updated
 		var status []apiv1.LoadBalancerIngress
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
 		curIPs := toCoreLBStatus(curIng.Status.PublicLoadBalancer)
 		status = SliceToStatus(ips)
 		if ingressSliceEqual(status, curIPs) &&

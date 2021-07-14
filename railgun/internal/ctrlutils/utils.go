@@ -11,8 +11,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
-const classSpec = "IngressClassName"
+const (
+	// classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
+	classSpec  = "IngressClassName"
+	PROMTHPORT = 10257
+)
 
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
 // to the value provided.

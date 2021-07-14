@@ -39,8 +39,8 @@ func GenerateSHA(targetContent *file.Content,
 
 	hash, err := hashstructure.Hash(targetContent, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed generating hash for %v, err %v", targetContent,err)
-
+		return nil, fmt.Errorf("failed generating hash for %v, err %v", targetContent, err)
+	}
 	return i64tob(hash), nil
 }
 

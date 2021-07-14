@@ -112,6 +112,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 
 	go FlipKnativeController(mgr, proxy, &c.KnativeIngressEnabled, c, setupLog)
+	go RunHTTP(setupLog)
 
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)

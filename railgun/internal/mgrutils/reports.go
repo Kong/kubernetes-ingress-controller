@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/hashicorp/go-uuid"
 	"k8s.io/client-go/kubernetes"
@@ -11,6 +12,10 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+)
+
+const (
+	KICREPO = "github.com/kong/kubernetes-ingress-controller"
 )
 
 // RunReport runs the anonymous data report and reports any errors that have occurred.
@@ -76,4 +81,17 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 	go reporter.Run(ctx.Done())
 
 	return nil
+}
+
+// Version returns information about the release.
+// long term cli/ingress-controller/version.go
+func Version(RELEASE, COMMIT, REPO interface{}) string {
+	return fmt.Sprintf(`-------------------------------------------------------------------------------
+Kong Ingress controller
+  Release:    %v
+  Build:      %v
+  Repository: %v
+  Go:         %v
+-------------------------------------------------------------------------------
+`, RELEASE, COMMIT, REPO, runtime.Version())
 }

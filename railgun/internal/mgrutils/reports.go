@@ -27,7 +27,7 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 		return fmt.Errorf("failed to fetch hostname: %w", err)
 	}
 
-	// create a universal unique identifer for this system
+	// create a universal unique identifier for this system
 	uuid, err := uuid.GenerateUUID()
 	if err != nil {
 		return fmt.Errorf("failed to generate a random uuid: %w", err)

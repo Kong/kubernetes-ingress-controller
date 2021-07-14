@@ -161,10 +161,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
-		if err != nil {
-			return false
-		}
-		return true
+		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)

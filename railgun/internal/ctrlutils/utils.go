@@ -11,9 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
-const classSpec = "IngressClassName"
-
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
 // to the value provided.
 func HasAnnotation(obj client.Object, key, expectedValue string) bool {
@@ -36,11 +33,7 @@ func MatchesIngressClassName(obj client.Object, ingressClassName string) bool {
 	return HasAnnotation(obj, annotations.IngressClassKey, ingressClassName)
 }
 
-type objWithIngressClassNameSpec struct {
-	Spec struct{ IngressClassName *string }
-}
-
-// GeneratePredicateFuncsForIngressClassFilter builds a controller-runtime reconcilation predicate function which filters out objects
+// GeneratePredicateFuncsForIngressClassFilter builds a controller-runtime reconciliation predicate function which filters out objects
 // which do not have the "kubernetes.io/ingress.class" annotation configured and set to the provided value or in their .spec.
 func GeneratePredicateFuncsForIngressClassFilter(name string, specCheckEnabled, annotationCheckEnabled bool) predicate.Funcs {
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -98,8 +91,5 @@ func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName st
 // CRDExists returns false if CRD does not exist
 func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 	_, err := client.RESTMapper().KindFor(gvr)
-	if meta.IsNoMatchError(err) {
-		return false
-	}
-	return true
+	return !meta.IsNoMatchError(err)
 }

@@ -96,7 +96,9 @@ func TestPluginEssentials(t *testing.T) {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -142,10 +144,7 @@ func TestPluginEssentials(t *testing.T) {
 		}
 		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
 		ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(testPluginsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
-		if err != nil {
-			return false
-		}
-		return true
+		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
@@ -167,10 +166,7 @@ func TestPluginEssentials(t *testing.T) {
 		}
 		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
 		ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(testPluginsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
-		if err != nil {
-			return false
-		}
-		return true
+		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("validating that clusterplugin %s was successfully configured", kongclusterplugin.Name)

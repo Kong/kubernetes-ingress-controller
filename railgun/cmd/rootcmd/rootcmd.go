@@ -25,5 +25,5 @@ var rootCmd = &cobra.Command{
 
 // Execute is the entry point to the controller manager.
 func Execute(ctx context.Context) {
-	rootCmd.ExecuteContext(ctx)
+	cobra.CheckErr(rootCmd.ExecuteContext(ctx))
 }

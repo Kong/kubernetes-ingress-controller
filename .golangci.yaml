@@ -3,7 +3,6 @@ run:
   skip-dirs:
   - pkg/client
   - pkg/apis
-  - railgun
 linters:
   enable:
   - deadcode
@@ -26,7 +25,6 @@ linters:
   - errcheck
   - dogsled
   - depguard
-  - lll
   - unparam
 issues:
   exclude-rules:

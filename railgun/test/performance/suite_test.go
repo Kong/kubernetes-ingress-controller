@@ -27,7 +27,7 @@ const (
 	ingressWait       = time.Minute * 3
 	httpcTimeout      = time.Second * 3
 	httpBinImage      = "kennethreitz/httpbin"
-	ingressClass      = "kongtests"
+	ingressClass      = "kong"
 	max_ingress       = 500
 )
 

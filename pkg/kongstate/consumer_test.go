@@ -310,10 +310,25 @@ func TestConsumer_SetCredential(t *testing.T) {
 		{
 			name: "oauth2 without client_id",
 			args: args{
-				credType:   "oauth2",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
-				credConfig: map[string]string{},
-				version:    standardVersion,
+				credType: "oauth2",
+				consumer: &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{
+					"client_id": "bar",
+				},
+				version: standardVersion,
+			},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			wantErr: true,
+		},
+		{
+			name: "oauth2 without client_id",
+			args: args{
+				credType: "oauth2",
+				consumer: &Consumer{Consumer: kong.Consumer{Username: &username}},
+				credConfig: map[string]interface{}{
+					"name": "bar",
+				},
+				version: standardVersion,
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
 			wantErr: true,

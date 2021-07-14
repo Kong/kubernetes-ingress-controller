@@ -256,7 +256,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
 	}
 
-	log.Info("ingress_status successfully updated TCPIngress status")
+	log.Info("Successfully updated TCPIngress status")
 	return nil
 }
 

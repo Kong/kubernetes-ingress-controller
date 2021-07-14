@@ -7,15 +7,16 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
 )
 
 func TestHealthEndpoint(t *testing.T) {
 	assert.Eventually(t, func() bool {
-		healthzURL := fmt.Sprintf("http://localhost:%v/healthz", config.HealthzPort)
+		healthzURL := fmt.Sprintf("http://localhost:%v/healthz", manager.HealthzPort)
 		resp, err := httpc.Get(healthzURL)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", healthzURL, err)
@@ -31,7 +32,7 @@ func TestMetricsEndpoint(t *testing.T) {
 		t.Skip("metrics endpoint test does not apply to legacy KIC")
 	}
 	assert.Eventually(t, func() bool {
-		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", config.MetricsPort)
+		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
 		resp, err := httpc.Get(metricsURL)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", metricsURL, err)
@@ -61,7 +62,7 @@ func TestProfilingEndpoint(t *testing.T) {
 		t.Skip("profiling endpoint behaves differently in legacy KIC")
 	}
 	assert.Eventually(t, func() bool {
-		profilingURL := fmt.Sprintf("http://localhost:%v/debug/pprof/", config.DiagnosticsPort)
+		profilingURL := fmt.Sprintf("http://localhost:%v/debug/pprof/", manager.DiagnosticsPort)
 		resp, err := httpc.Get(profilingURL)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", profilingURL, err)

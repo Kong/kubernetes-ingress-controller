@@ -7,7 +7,7 @@ import (
 	"net/http/pprof"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
 )
 
 // Server is an HTTP server running exposing the pprof profiling tool.
@@ -20,7 +20,7 @@ func (s *Server) Listen(ctx context.Context) error {
 	mux := http.NewServeMux()
 	installHandlers(mux)
 
-	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", config.DiagnosticsPort), Handler: mux}
+	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", manager.DiagnosticsPort), Handler: mux}
 	errChan := make(chan error)
 	go func() {
 		err := httpServer.ListenAndServe()
@@ -35,7 +35,7 @@ func (s *Server) Listen(ctx context.Context) error {
 		}
 	}()
 
-	s.Logger.Info("diagnostics server is starting to listen", "addr", config.DiagnosticsPort)
+	s.Logger.Info("diagnostics server is starting to listen", "addr", manager.DiagnosticsPort)
 
 	select {
 	case <-ctx.Done():

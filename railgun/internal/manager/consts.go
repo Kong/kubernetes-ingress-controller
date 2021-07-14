@@ -1,4 +1,4 @@
-package config
+package manager
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Constants & Vars

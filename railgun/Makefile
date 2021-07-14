@@ -1,3 +1,9 @@
+.PHONY: clean
+clean:
+	@rm -rf testbin/
+	@rm -rf bin/*
+	@rm -f coverage.out
+
 ##@ Versioning
 
 ifndef COMMIT
@@ -73,9 +79,9 @@ test: manifests generate fmt vet ## Run tests.
 
 build: generate fmt vet ## Build manager binary.
 	go build -a -o bin/manager -ldflags "-s -w \
-		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Release=$(TAG) \
-		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/railgun/manager.Repo=$(REPO_INFO)" main.go
+		-X github.com/kong/kubernetes-ingress-controller/railgun/internal/manager.Release=$(TAG) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/internal/manager.Commit=$(COMMIT) \
+		-X github.com/kong/kubernetes-ingress-controller/railgun/internal/manager.Repo=$(REPO_INFO)" main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
@@ -154,7 +160,7 @@ clean.test.proxy:
 #   $ go test -v -run 'TestTCPIngress' ./test/integration/
 .PHONY: test.integration.cluster
 test.integration.cluster:
-	@./scripts/setup-integration-tests.sh
+	@./scripts/check-container-environment.sh
 	@go clean -testcache
 	@KIND_CLUSTER="" KIND_CLUSTER_NAME="$(KIND_CLUSTER_NAME)" KIND_KEEP_CLUSTER="true" GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/
 
@@ -165,7 +171,7 @@ test.integration: test.integration.dbless test.integration.postgres
 # Our integration tests using the dbless backend, with verbose output
 .PHONY: test.integration.dbless
 test.integration.dbless:
-	@./scripts/setup-integration-tests.sh
+	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
 
 # Our integration tests using the postgres backend, with verbose output
@@ -173,11 +179,11 @@ test.integration.dbless:
 #       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
 .PHONY: test.integration.postgres
 test.integration.postgres:
-	@./scripts/setup-integration-tests.sh
+	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 15m -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
 
 # Our integration tests using the legacy v1 controller manager
 .PHONY: test.integration.legacy
 test.integration.legacy:
-	@./scripts/setup-integration-tests.sh
+	@./scripts/check-container-environment.sh
 	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/

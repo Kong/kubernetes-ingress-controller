@@ -22,11 +22,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,7 +33,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *config.Config) error {
+func Run(ctx context.Context, c *Config) error {
 	deprecatedLogger, logger, err := setupLoggers(c)
 	if err != nil {
 		return err
@@ -118,7 +117,7 @@ func Run(ctx context.Context, c *config.Config) error {
 }
 
 // wait for knative cr before register and starting knative controller
-func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
+func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus *util.EnablementStatus, cfg *Config, log logr.Logger) error {
 	if *enablestatus == util.EnablementStatusEnabled {
 		log.Info("knative controller already enabled. skip flip process.\n")
 		return nil

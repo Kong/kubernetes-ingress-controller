@@ -7,10 +7,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/diagnostics"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
 )
 
-func StartAdmissionServer(ctx context.Context, c *config.Config) error {
+func StartAdmissionServer(ctx context.Context, c *manager.Config) error {
 	log, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func StartAdmissionServer(ctx context.Context, c *config.Config) error {
 	return nil
 }
 
-func StartProfilingServer(ctx context.Context, c *config.Config) error {
+func StartProfilingServer(ctx context.Context, c *manager.Config) error {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
 		return err

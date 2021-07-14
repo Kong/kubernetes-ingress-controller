@@ -1,4 +1,4 @@
-package config
+package manager
 
 import (
 	"context"
@@ -6,15 +6,16 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/spf13/pflag"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	"github.com/spf13/pflag"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // -----------------------------------------------------------------------------

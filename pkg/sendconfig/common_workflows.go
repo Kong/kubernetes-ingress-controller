@@ -2,6 +2,7 @@ package sendconfig
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -35,6 +36,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig Kong,
 	enableReverseSync bool,
+	m *sync.Mutex,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
@@ -54,7 +56,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false,
+		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, m,
 	)
 	if err != nil {
 		return nil, err

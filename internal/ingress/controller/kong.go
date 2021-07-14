@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sync"
 
 	"github.com/kong/deck/file"
 	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
@@ -48,7 +49,7 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 	filterTags := getIngressControllerTags(n.cfg.Kong)
 
 	targetContent := deckgen.ToDeckContent(ctx, n.Logger, state, &n.PluginSchemaStore, filterTags)
-
+	var m *sync.Mutex
 	newSHA, err := sendconfig.PerformUpdate(ctx,
 		n.Logger,
 		&n.cfg.Kong,
@@ -57,8 +58,9 @@ func (n *KongController) OnUpdate(ctx context.Context, state *kongstate.KongStat
 		targetContent,
 		filterTags,
 		customEntities,
-		n.runningConfigHash,
+		&n.runningConfigHash,
 		true,
+		m,
 	)
 
 	if n.cfg.DumpConfig != util.ConfigDumpModeOff {

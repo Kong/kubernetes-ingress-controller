@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +24,7 @@ const (
 	// for improvements we still need to investigate upstream.
 	//
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
-	DefaultSyncSeconds float32 = 3.0
+	DefaultSyncSeconds float32 = 4.0
 
 	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
 	// before it starts rejecting new objects while it processes the originals.
@@ -70,9 +71,10 @@ type Proxy interface {
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API
 // and implementations will report the configuration SHA that results from any update performed.
 type KongUpdater func(ctx context.Context,
-	lastConfigSHA []byte,
+	lastConfigSHA *[]byte,
 	cache *store.CacheStores,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool) ([]byte, error)
+	enableReverseSync bool,
+	m *sync.Mutex) ([]byte, error)

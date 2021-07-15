@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -87,6 +88,53 @@ func TestIngressBulk(t *testing.T) {
 	t.Log("verifying that all 50 ingresses route properly")
 	for i := 0; i < 50; i++ {
 		name := fmt.Sprintf("bulk-httpbin-%d", i)
+		path := fmt.Sprintf("/%s", name)
+
+		require.Eventually(t, func() bool {
+			resp, err := httpc.Get(fmt.Sprintf("%s/%s", proxyURL, path))
+			if err != nil {
+				t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+				return false
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				b := new(bytes.Buffer)
+				n, err := b.ReadFrom(resp.Body)
+				require.NoError(t, err)
+				require.True(t, n > 0)
+				return strings.Contains(b.String(), "<title>httpbin.org</title>")
+			}
+			return false
+		}, ingressWait, waitTick)
+	}
+
+	t.Log("staggering deployment: 10 new ingress resources every second for the next 10 seconds (total 100)")
+	for i := 0; i < 100; i++ {
+		name := fmt.Sprintf("bulk-staggered-httpbin-%d", i)
+		path := fmt.Sprintf("/%s", name)
+
+		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+		service.Name = name
+		service.Spec.Type = corev1.ServiceTypeClusterIP
+		_, err = env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		ingress := generators.NewIngressForService(path, map[string]string{
+			annotations.IngressClassKey: ingressClass,
+			"konghq.com/strip-path":     "true",
+		}, service)
+		ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(testBulkIngressNamespace).Create(ctx, ingress, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		// every 10 items sleep for 1 second to stagger the updates to ~10/s
+		if (i + 1%10) == 0 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
+	t.Log("verifying that all 100 staggered ingresses route properly")
+	for i := 0; i < 100; i++ {
+		name := fmt.Sprintf("bulk-staggered-httpbin-%d", i)
 		path := fmt.Sprintf("/%s", name)
 
 		require.Eventually(t, func() bool {

@@ -20,7 +20,10 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
-const testBulkIngressNamespace = "ingress-bulk-testing"
+const (
+	maxBatchSize             = 50
+	testBulkIngressNamespace = "ingress-bulk-testing"
+)
 
 // TestIngressBulk attempts to validate functionality at scale by rapidly deploying a large number of ingress resources.
 func TestIngressBulk(t *testing.T) {
@@ -51,8 +54,8 @@ func TestIngressBulk(t *testing.T) {
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(testBulkIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	t.Logf("exposing deployment %s via ingress 50 times", deployment.Name)
-	for i := 0; i < 50; i++ {
+	t.Logf("exposing deployment %s via ingress %d times", deployment.Name, maxBatchSize)
+	for i := 0; i < maxBatchSize; i++ {
 		name := fmt.Sprintf("bulk-httpbin-%d", i)
 		path := fmt.Sprintf("/%s", name)
 
@@ -70,24 +73,8 @@ func TestIngressBulk(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	/*
-		t.Log("verifying that all 50 ingresses receive status updates properly")
-		for i := 0; i < 50; i++ {
-			name := fmt.Sprintf("bulk-httpbin-%d", i)
-			path := fmt.Sprintf("/%s", name)
-
-			require.Eventually(t, func() bool {
-				ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Get(ctx, name, metav1.GetOptions{})
-				if err != nil {
-					return false
-				}
-				return len(ingress.Status.LoadBalancer.Ingress) > 0
-			}, ingressWait, waitTick)
-		}
-	*/
-
-	t.Log("verifying that all 50 ingresses route properly")
-	for i := 0; i < 50; i++ {
+	t.Logf("verifying that all %d ingresses route properly", maxBatchSize)
+	for i := 0; i < maxBatchSize; i++ {
 		name := fmt.Sprintf("bulk-httpbin-%d", i)
 		path := fmt.Sprintf("/%s", name)
 

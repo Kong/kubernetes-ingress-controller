@@ -225,7 +225,7 @@ func TestHTTPSIngress(t *testing.T) {
 			}
 			return dialer.DialContext(ctx, network, addr)
 		},
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 	}
 	httpcStatic := http.Client{
 		Timeout:   httpcTimeout,
@@ -365,7 +365,9 @@ func TestHTTPSIngress(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>") && resp.TLS.PeerCertificates[0].Subject.CommonName == "secure-foo-bar"
 		}
 		return false
@@ -381,7 +383,9 @@ func TestHTTPSIngress(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>") && resp.TLS.PeerCertificates[0].Subject.CommonName == "foo.com"
 		}
 		return false
@@ -400,7 +404,9 @@ func TestHTTPSIngress(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -419,6 +425,7 @@ func TestHTTPSIngress(t *testing.T) {
 			t.Logf("WARNING: error while waiting for https://baz.example:443/bar: %v", err)
 			return false
 		}
+		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusNotFound
 	}, ingressWait, waitTick)
 
@@ -432,7 +439,9 @@ func TestHTTPSIngress(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false

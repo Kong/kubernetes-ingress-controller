@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -48,8 +47,8 @@ func TestKnativeIngress(t *testing.T) {
 	ctx := context.Background()
 
 	t.Log("Deploying all resources that are required to run knative")
-	require.NoError(t, deployManifest(knativeCrds, ctx, t))
-	require.NoError(t, deployManifest(knativeCore, ctx, t))
+	require.NoError(t, deployManifest(ctx, knativeCrds, t))
+	require.NoError(t, deployManifest(ctx, knativeCore, t))
 	require.True(t, isKnativeReady(ctx, cluster, t), true)
 
 	t.Log("Configure Knative NetworkLayer as Kong")
@@ -70,7 +69,7 @@ func TestKnativeIngress(t *testing.T) {
 	require.True(t, accessKnativeSrv(ctx, proxy, t), true)
 }
 
-func deployManifest(yml string, ctx context.Context, t *testing.T) error {
+func deployManifest(ctx context.Context, yml string, t *testing.T) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
@@ -81,16 +80,6 @@ func deployManifest(yml string, ctx context.Context, t *testing.T) error {
 	}
 	t.Logf("successfully deploy manifest " + yml)
 	return nil
-}
-
-func checkIPAddress(ip string, t *testing.T) bool {
-	if net.ParseIP(ip) == nil {
-		t.Logf("IP Address: %s - Invalid\n", ip)
-		return false
-	} else {
-		t.Logf("IP Address: %s - Valid\n", ip)
-		return true
-	}
 }
 
 func configKnativeNetwork(ctx context.Context, cluster clusters.Cluster, t *testing.T) error {
@@ -143,7 +132,7 @@ func installKnativeSrv(ctx context.Context, t *testing.T) error {
 }
 
 func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Cluster, t *testing.T) error {
-	configMapData := make(map[string]string, 0)
+	configMapData := make(map[string]string)
 	configMapData[proxy] = ""
 	labels := make(map[string]string)
 	labels["serving.knative.dev/release"] = "v0.13.0"
@@ -192,7 +181,7 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 	url := "http://" + proxy
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, //nolint:gosec
 		},
 	}
 	client := http.Client{
@@ -213,6 +202,7 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 		if err != nil {
 			return false
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			bodyBytes, err := ioutil.ReadAll(resp.Body)
 			if err != nil {

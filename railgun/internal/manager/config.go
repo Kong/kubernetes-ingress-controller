@@ -1,4 +1,4 @@
-package config
+package manager
 
 import (
 	"context"
@@ -6,15 +6,16 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/spf13/pflag"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	"github.com/spf13/pflag"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // -----------------------------------------------------------------------------
@@ -102,7 +103,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
 	flagSet.StringVar(&c.LogFormat, "log-format", "text", `Format of logs of the controller. Allowed values are text and json.`)
 	flagSet.BoolVar(&c.LogReduceRedundancy, "debug-log-reduce-redundancy", false, `If enabled, repetitive log entries are suppressed. Built for testing environments - production use not recommended.`)
-	flagSet.MarkHidden("debug-log-reduce-redundancy")
+	flagSet.MarkHidden("debug-log-reduce-redundancy") //nolint:errcheck
 
 	// Kong high-level controller manager configurations
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false, "Disable verification of TLS certificate of Kong's Admin endpoint.")

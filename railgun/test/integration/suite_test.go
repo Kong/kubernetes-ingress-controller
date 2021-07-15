@@ -20,8 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/cmd/rootcmd"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/cmd/rootcmd"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
@@ -47,7 +47,7 @@ const (
 	// See: https://github.com/postmanlabs/httpbin
 	httpBinImage = "kennethreitz/httpbin"
 
-	// ingressClass indicates the ingress class name which the tests will use for supported object reconcilation
+	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
 	ingressClass = "kongtests"
 
 	// elsewhere is the name of an alternative namespace
@@ -105,7 +105,11 @@ func TestMain(m *testing.M) {
 	defer cancel()
 
 	fmt.Println("INFO: configuring testing environment")
-	kongAddon := kong.New()
+	kongbuilder := kong.NewBuilder()
+	if dbmode == "postgres" {
+		kongbuilder = kongbuilder.WithPostgreSQL()
+	}
+	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 	if existingClusterName := os.Getenv("KIND_CLUSTER"); existingClusterName != "" {
 		fmt.Printf("INFO: using existing cluster %s\n", existingClusterName)
@@ -127,7 +131,12 @@ func TestMain(m *testing.M) {
 		"INFO: environment built CLUSTER_NAME=(%s) CLUSTER_TYPE=(%s) ADDONS=(metallb, kong)\n",
 		env.Cluster().Name(), env.Cluster().Type(),
 	)
-	defer env.Cleanup(ctx)
+	defer func() {
+		if err := env.Cleanup(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: could not cleanup testing environment: %s", err.Error())
+			os.Exit(30)
+		}
+	}()
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	if err := <-env.WaitForReady(ctx); err != nil {
@@ -156,8 +165,8 @@ func TestMain(m *testing.M) {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
 		fmt.Println("INFO: deploying controller manager")
-		if err := deployControllers(ctx, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllerNamespace); err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
+		if err := deployControllers(ctx, controllerNamespace); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(13)
 		}
 	}
@@ -190,7 +199,7 @@ var crds = []string{
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.
-func deployControllers(ctx context.Context, containerImage, namespace string) error {
+func deployControllers(ctx context.Context, namespace string) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
@@ -209,7 +218,7 @@ func deployControllers(ctx context.Context, containerImage, namespace string) er
 		defer os.Remove(kubeconfig.Name())
 
 		// dump the kubeconfig from kind into the tempfile
-		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", env.Cluster().Name())
+		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", env.Cluster().Name()) //nolint:gosec
 		generateKubeconfig.Stdout = kubeconfig
 		generateKubeconfig.Stderr = os.Stderr
 		if err := generateKubeconfig.Run(); err != nil {
@@ -219,7 +228,7 @@ func deployControllers(ctx context.Context, containerImage, namespace string) er
 
 		// deploy our CRDs to the cluster
 		for _, crd := range crds {
-			cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", crd)
+			cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", crd) //nolint:gosec
 			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 			cmd.Stdout = stdout
 			cmd.Stderr = stderr
@@ -241,9 +250,9 @@ func deployControllers(ctx context.Context, containerImage, namespace string) er
 				panic(fmt.Errorf("%s: %w", stderr.String(), err))
 			}
 		} else {
-			config := config.Config{}
+			config := manager.Config{}
 			flags := config.FlagSet()
-			flags.Parse([]string{
+			if err := flags.Parse([]string{
 				fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 				"--controller-kongstate=enabled",
@@ -267,7 +276,9 @@ func deployControllers(ctx context.Context, containerImage, namespace string) er
 				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 				"--profiling",
-			})
+			}); err != nil {
+				panic(fmt.Errorf("could not parse controller manager flags: %w", err))
+			}
 			fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 
 			if err := rootcmd.Run(ctx, &config); err != nil {

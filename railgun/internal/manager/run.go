@@ -22,11 +22,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,7 +33,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *config.Config) error {
+func Run(ctx context.Context, c *Config) error {
 	deprecatedLogger, logger, err := setupLoggers(c)
 	if err != nil {
 		return err
@@ -111,14 +110,18 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
-	go FlipKnativeController(mgr, proxy, &c.KnativeIngressEnabled, c, setupLog)
+	go func() {
+		if err := FlipKnativeController(mgr, proxy, &c.KnativeIngressEnabled, c, setupLog); err != nil {
+			panic(err)
+		}
+	}()
 
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
 }
 
 // wait for knative cr before register and starting knative controller
-func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
+func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus *util.EnablementStatus, cfg *Config, log logr.Logger) error {
 	if *enablestatus == util.EnablementStatusEnabled {
 		log.Info("knative controller already enabled. skip flip process.\n")
 		return nil
@@ -146,7 +149,9 @@ func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus 
 					IngressClassName: cfg.IngressClassName,
 					Proxy:            proxy,
 				}
-				knative.SetupWithManager(mgr)
+				if err := knative.SetupWithManager(mgr); err != nil {
+					panic(err)
+				}
 				*enablestatus = util.EnablementStatusEnabled
 			} else {
 				log.Info("knative controller already on. Skip registration.")

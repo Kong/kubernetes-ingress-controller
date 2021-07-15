@@ -15,7 +15,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "controllers/configuration/zz_generated_controllers.go"
+	outputFile = "internal/controllers/configuration/zz_generated_controllers.go"
 
 	corev1     = "k8s.io/api/core/v1"
 	netv1      = "k8s.io/api/networking/v1"
@@ -280,7 +280,7 @@ func (needed necessary) generate() error {
 		}
 	}
 
-	return ioutil.WriteFile(outputFile, contents.Bytes(), 0644)
+	return ioutil.WriteFile(outputFile, contents.Bytes(), 0600)
 }
 
 type typeNeeded struct {

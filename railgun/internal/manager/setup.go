@@ -19,14 +19,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Setup Utility Functions
 // -----------------------------------------------------------------------------
 
-func setupLoggers(c *config.Config) (logrus.FieldLogger, logr.Logger, error) {
+func setupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to make logger: %w", err)
@@ -43,7 +42,7 @@ func setupLoggers(c *config.Config) (logrus.FieldLogger, logr.Logger, error) {
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *config.Config, scheme *runtime.Scheme) ctrl.Options {
+func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme) ctrl.Options {
 	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
@@ -72,7 +71,7 @@ func setupControllerOptions(logger logr.Logger, c *config.Config, scheme *runtim
 	return controllerOpts
 }
 
-func setupKongConfig(ctx context.Context, logger logr.Logger, c *config.Config) (sendconfig.Kong, error) {
+func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendconfig.Kong, error) {
 	kongClient, err := c.GetKongClient(ctx)
 	if err != nil {
 		return sendconfig.Kong{}, fmt.Errorf("unable to build kong api client: %w", err)
@@ -100,7 +99,7 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *config.Config) 
 
 func setupProxyServer(ctx context.Context,
 	logger logr.Logger, fieldLogger logrus.FieldLogger,
-	mgr manager.Manager, kongConfig sendconfig.Kong, c *config.Config,
+	mgr manager.Manager, kongConfig sendconfig.Kong, c *Config,
 ) (proxy.Proxy, error) {
 	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+

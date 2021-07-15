@@ -1,0 +1,25 @@
+name: 2.x Image Build
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - 'main'
+      - 'next'
+    tags:
+      - '2.*'
+      - 'v2.*'
+
+jobs:
+  verify-docker-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Verify Railgun Docker Build
+      uses: docker/build-push-action@v2
+      with:
+        push: false
+        file: Dockerfile.railgun
+        tags: latest
+        cache-from: type=local,src=/tmp/.buildx-cache

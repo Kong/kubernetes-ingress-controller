@@ -420,15 +420,3 @@ func toCoreLBStatus(knativeLBStatus *knative.LoadBalancerStatus) []apiv1.LoadBal
 	}
 	return res
 }
-
-func lessLoadBalancerIngress(addrs []apiv1.LoadBalancerIngress) func(int, int) bool {
-	return func(a, b int) bool {
-		switch strings.Compare(addrs[a].Hostname, addrs[b].Hostname) {
-		case -1:
-			return true
-		case 1:
-			return false
-		}
-		return addrs[a].IP < addrs[b].IP
-	}
-}

@@ -22,6 +22,7 @@ import (
 
 const testBulkIngressNamespace = "ingress-bulk-testing"
 
+// TestIngressBulk attempts to validate functionality at scale by rapidly deploying a large number of ingress resources.
 func TestIngressBulk(t *testing.T) {
 	ctx := context.Background()
 

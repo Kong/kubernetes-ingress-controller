@@ -80,18 +80,6 @@ var (
 		testPluginsNamespace,
 	}, ",")
 
-	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
-	dbmode = os.Getenv("TEST_DATABASE_MODE")
-
-	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
-	maxBatchSize = determineMaxBatchSize()
-
-	// ClusterVersionEnvVar indicates the environment variable used to configure the Kubernetes cluster version.
-	ClusterVersionEnvVar = "KONG_CLUSTER_VERSION"
-
-	// clusterVersion indicates the version of Kubernetes to use for the tests (if the cluster was not provided by the caller)
-	clusterVersionStr = os.Getenv(ClusterVersionEnvVar)
-
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
 	env environments.Environment
@@ -104,6 +92,25 @@ var (
 
 	// proxyUDPURL provides access to the UDP API endpoint for the Kong Addon which is deployed to the test environment's cluster.
 	proxyUDPURL *url.URL
+)
+
+// -----------------------------------------------------------------------------
+// Testing Variables - Environment Overrides
+// -----------------------------------------------------------------------------
+
+var (
+	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
+	dbmode = os.Getenv("TEST_DATABASE_MODE")
+
+	// clusterVersion indicates the version of Kubernetes to use for the tests (if the cluster was not provided by the caller)
+	clusterVersionStr = os.Getenv("KONG_CLUSTER_VERSION")
+
+	// existingClusterName indicates whether or not the caller is providing their own kind cluster for running the tests,
+	// and if so what the name of that cluster is.
+	existingClusterName = os.Getenv("KIND_CLUSTER")
+
+	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
+	maxBatchSize = determineMaxBatchSize()
 )
 
 // -----------------------------------------------------------------------------
@@ -124,16 +131,16 @@ func TestMain(m *testing.M) {
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 
 	fmt.Println("INFO: checking for reusable environment components")
-	if existingClusterName := os.Getenv("KIND_CLUSTER"); existingClusterName != "" {
+	if existingClusterName != "" {
 		if clusterVersionStr != "" {
-			fmt.Fprintf(os.Stderr, "Error: cant use both %s and KONG_CLUSTER at the same time", ClusterVersionEnvVar)
-			os.Exit(33)
+			fmt.Fprintf(os.Stderr, "Error: can't flag cluster version and provide an existing cluster at the same time")
+			os.Exit(ExitCodeIncompatibleOptions)
 		}
 		fmt.Printf("INFO: using existing cluster %s\n", existingClusterName)
 		cluster, err := kind.NewFromExisting(existingClusterName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: could not use existing cluster for test env: %s", err.Error())
-			os.Exit(24)
+			fmt.Fprintf(os.Stderr, "Error: could not use existing cluster for test env: %s", err)
+			os.Exit(ExitCodeCantUseExistingCluster)
 		}
 		builder = builder.WithExistingCluster(cluster)
 	}
@@ -142,13 +149,13 @@ func TestMain(m *testing.M) {
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: invalid %s provided (%s): %s", ClusterVersionEnvVar, clusterVersionStr, err.Error())
-			os.Exit(31)
+			fmt.Fprintf(os.Stderr, "Error: invalid cluster version provided (%s): %s", clusterVersionStr, err)
+			os.Exit(ExitCodeInvalidOptions)
 		}
 		cluster, err := kind.NewBuilder().WithClusterVersion(clusterVersion).Build(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to build kind cluster with version %s: %s", clusterVersion, err.Error())
-			os.Exit(32)
+			fmt.Fprintf(os.Stderr, "Error: failed to build kind cluster with version %s: %s", clusterVersion, err)
+			os.Exit(ExitCodeCantCreateCluster)
 		}
 		builder.WithExistingCluster(cluster)
 	}
@@ -156,8 +163,8 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: building test environment (note: can take some time)")
 	env, err = builder.Build(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not create testing environment: %s", err.Error())
-		os.Exit(25)
+		fmt.Fprintf(os.Stderr, "Error: could not create testing environment: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
 	}
 	fmt.Printf(
 		"INFO: environment built CLUSTER_NAME=(%s) CLUSTER_TYPE=(%s) ADDONS=(metallb, kong)\n",
@@ -165,32 +172,32 @@ func TestMain(m *testing.M) {
 	)
 	defer func() {
 		if err := env.Cleanup(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: could not cleanup testing environment: %s", err.Error())
-			os.Exit(30)
+			fmt.Fprintf(os.Stderr, "Error: could not cleanup testing environment: %s", err)
+			os.Exit(ExitCodeCleanupFailed)
 		}
 	}()
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	if err := <-env.WaitForReady(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: testing environment never became ready: %s", err.Error())
-		os.Exit(26)
+		fmt.Fprintf(os.Stderr, "Error: testing environment never became ready: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
 	}
 
 	fmt.Printf("INFO: collecting Kong Proxy URLs from cluster %s for tests to make HTTP calls\n", env.Cluster().Name())
 	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
-		os.Exit(27)
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
 	}
 	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
-		os.Exit(28)
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
 	}
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
-		os.Exit(29)
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
 	}
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
@@ -198,19 +205,19 @@ func TestMain(m *testing.M) {
 	} else {
 		fmt.Println("INFO: deploying controller manager")
 		if err := deployControllers(ctx, controllerNamespace); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(13)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(ExitCodeCantCreateCluster)
 		}
 	}
 
 	fmt.Printf("INFO: running final testing environment checks")
 	serverVersion, err := env.Cluster().Client().ServerVersion()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not retrieve server version for cluster: %s", err.Error())
-		os.Exit(34)
+		fmt.Fprintf(os.Stderr, "Error: could not retrieve server version for cluster: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
 	}
 
-	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%s): running tests\n", serverVersion.String())
+	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", serverVersion)
 	code := m.Run()
 	os.Exit(code)
 }
@@ -330,7 +337,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 }
 
 func buildLegacyCommand(ctx context.Context, kubeconfigPath string) *exec.Cmd {
-	fmt.Fprintln(os.Stdout, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
+	fmt.Fprintln(os.Stderr, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
 
 	// get the proxy pod
 	podList, err := env.Cluster().Client().CoreV1().Pods("kong-system").List(ctx, metav1.ListOptions{

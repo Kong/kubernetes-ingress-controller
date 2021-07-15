@@ -111,7 +111,11 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
-	go FlipKnativeController(mgr, proxy, &c.KnativeIngressEnabled, c, setupLog)
+	go func() {
+		if err := FlipKnativeController(mgr, proxy, &c.KnativeIngressEnabled, c, setupLog); err != nil {
+			panic(err)
+		}
+	}()
 
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
@@ -146,7 +150,9 @@ func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus 
 					IngressClassName: cfg.IngressClassName,
 					Proxy:            proxy,
 				}
-				knative.SetupWithManager(mgr)
+				if err := knative.SetupWithManager(mgr); err != nil {
+					panic(err)
+				}
 				*enablestatus = util.EnablementStatusEnabled
 			} else {
 				log.Info("knative controller already on. Skip registration.")

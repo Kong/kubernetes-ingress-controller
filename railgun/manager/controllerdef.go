@@ -206,7 +206,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		Version:  konghqcomv1.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
-	if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) == true {
+	if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) {
 		logger.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
 		controller := ControllerDef{
 			IsEnabled: &c.KongClusterPluginEnabled,
@@ -229,7 +229,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		Version:  knativev1alpha1.SchemeGroupVersion.Version,
 		Resource: "ingresses",
 	}
-	if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) == true {
+	if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) {
 		logger.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
 		controller := ControllerDef{
 			IsEnabled: &c.KnativeIngressEnabled,

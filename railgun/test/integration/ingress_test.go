@@ -104,7 +104,9 @@ func TestIngressEssentials(t *testing.T) {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -147,7 +149,9 @@ func TestIngressEssentials(t *testing.T) {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -236,7 +240,9 @@ func TestIngressClassNameSpec(t *testing.T) {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -279,7 +285,9 @@ func TestIngressClassNameSpec(t *testing.T) {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -387,7 +395,9 @@ func TestIngressNamespaces(t *testing.T) {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
-			b.ReadFrom(resp.Body)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false

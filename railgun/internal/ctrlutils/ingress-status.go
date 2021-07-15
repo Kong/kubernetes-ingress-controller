@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	status_update_retry = 3
+	statusUpdateRetry = 3
 )
 
 // PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
@@ -59,7 +59,11 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 		case updateDone := <-kongConfig.ConfigDone:
 			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
-			go UpdateIngress(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig)
+			go func() {
+				if err := UpdateIngress(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig); err != nil {
+					log.Error(err, "failed to update resource statuses")
+				}
+			}()
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
@@ -126,7 +130,7 @@ func retrieveNSAndNM(svc file.FService) (string, string, error) {
 	namespace = routeInf[0]
 	name = routeInf[1]
 	if len(namespace) == 0 || len(name) == 0 {
-		return "", "", fmt.Errorf("configured route information is not completed which should not happen.")
+		return "", "", fmt.Errorf("configured route information is not completed which should not have happened")
 	}
 	return namespace, name, nil
 }
@@ -146,7 +150,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	}
 
 	retry := 0
-	for retry < status_update_retry {
+	for retry < statusUpdateRetry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
 			log.Errorf("failed to fetch Ingress %v/%v: %v. retrying...", namespace, name, err)
@@ -190,7 +194,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 	ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
 	retry := 0
-	for retry < status_update_retry {
+	for retry < statusUpdateRetry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
 			log.Errorf("failed to fetch UDP Ingress %v/%v: %v", namespace, name, err)
@@ -250,9 +254,10 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
-	} else {
-		return fmt.Errorf("ingress_status successfully updated TCPIngress status")
 	}
+
+	log.Info("Successfully updated TCPIngress status")
+	return nil
 }
 
 var ingressCondSet = knativeApis.NewLivingConditionSet()
@@ -272,7 +277,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	ingClient := knativeCli.NetworkingV1alpha1().Ingresses(namespace)
 
 	retry := 0
-	for retry < status_update_retry {
+	for retry < statusUpdateRetry {
 		curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
 			log.Errorf("failed to fetch Knative Ingress %v/%v: %v", namespace, name, err)

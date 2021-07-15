@@ -280,7 +280,7 @@ func (needed necessary) generate() error {
 		}
 	}
 
-	return ioutil.WriteFile(outputFile, contents.Bytes(), 0644)
+	return ioutil.WriteFile(outputFile, contents.Bytes(), 0600)
 }
 
 type typeNeeded struct {

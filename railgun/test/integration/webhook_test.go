@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	admregv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -134,7 +135,13 @@ func TestValidationWebhook(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := env.Cluster().Client().CoreV1().Secrets(defaultNs).Create(ctx, &tt.obj, metav1.CreateOptions{})
-			defer env.Cluster().Client().CoreV1().Secrets(defaultNs).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{})
+			defer func() {
+				if err := env.Cluster().Client().CoreV1().Secrets(defaultNs).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{}); err != nil {
+					if !errors.IsNotFound(err) {
+						assert.NoError(t, err)
+					}
+				}
+			}()
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.True(t, strings.Contains(err.Error(), tt.wantPartialErr),

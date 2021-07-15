@@ -73,6 +73,7 @@ var (
 		elsewhere,
 		corev1.NamespaceDefault,
 		testIngressNamespace,
+		testBulkIngressNamespace,
 		testTCPIngressNamespace,
 		testUDPIngressNamespace,
 		testPluginsNamespace,

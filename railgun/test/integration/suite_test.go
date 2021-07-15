@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,6 +86,12 @@ var (
 	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
 	maxBatchSize = determineMaxBatchSize()
 
+	// ClusterVersionEnvVar indicates the environment variable used to configure the Kubernetes cluster version.
+	ClusterVersionEnvVar = "KONG_CLUSTER_VERSION"
+
+	// clusterVersion indicates the version of Kubernetes to use for the tests (if the cluster was not provided by the caller)
+	clusterVersionStr = os.Getenv(ClusterVersionEnvVar)
+
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
 	env environments.Environment
@@ -115,7 +122,13 @@ func TestMain(m *testing.M) {
 	}
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
+
+	fmt.Println("INFO: checking for reusable environment components")
 	if existingClusterName := os.Getenv("KIND_CLUSTER"); existingClusterName != "" {
+		if clusterVersionStr != "" {
+			fmt.Fprintf(os.Stderr, "Error: cant use both %s and KONG_CLUSTER at the same time", ClusterVersionEnvVar)
+			os.Exit(33)
+		}
 		fmt.Printf("INFO: using existing cluster %s\n", existingClusterName)
 		cluster, err := kind.NewFromExisting(existingClusterName)
 		if err != nil {
@@ -123,6 +136,21 @@ func TestMain(m *testing.M) {
 			os.Exit(24)
 		}
 		builder = builder.WithExistingCluster(cluster)
+	}
+
+	fmt.Println("INFO: configuring kubernetes cluster")
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid %s provided (%s): %s", ClusterVersionEnvVar, clusterVersionStr, err.Error())
+			os.Exit(31)
+		}
+		cluster, err := kind.NewBuilder().WithClusterVersion(clusterVersion).Build(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to build kind cluster with version %s: %s", clusterVersion, err.Error())
+			os.Exit(32)
+		}
+		builder.WithExistingCluster(cluster)
 	}
 
 	fmt.Println("INFO: building test environment (note: can take some time)")
@@ -175,7 +203,14 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	fmt.Println("INFO: testing environment is ready, running tests")
+	fmt.Printf("INFO: running final testing environment checks")
+	serverVersion, err := env.Cluster().Client().ServerVersion()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not retrieve server version for cluster: %s", err.Error())
+		os.Exit(34)
+	}
+
+	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%s): running tests\n", serverVersion.String())
 	code := m.Run()
 	os.Exit(code)
 }

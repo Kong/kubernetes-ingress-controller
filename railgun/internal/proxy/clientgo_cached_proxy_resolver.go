@@ -230,11 +230,13 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				break
 			}
 		case <-p.syncTicker.C:
-			_, err := p.kongUpdater(p.ctx, &p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.m)
-			if err != nil {
-				p.logger.Error(err, "could not update kong admin")
-				break
-			}
+			go func() {
+				_, err := p.kongUpdater(p.ctx, &p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.m)
+				if err != nil {
+					p.logger.Error(err, "could not update kong admin")
+
+				}
+			}()
 		case <-p.ctx.Done():
 			p.logger.Info("the proxy cache server's context is done, shutting down")
 			if err := p.ctx.Err(); err != nil {

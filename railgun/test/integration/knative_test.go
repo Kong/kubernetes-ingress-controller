@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -219,6 +220,7 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 			}
 			bodyString := string(bodyBytes)
 			t.Logf(bodyString)
+			require.True(t, strings.Contains(bodyString, "Hello Go Sample v1!"))
 			t.Logf("service is successfully accessed through kong.")
 			return true
 		}

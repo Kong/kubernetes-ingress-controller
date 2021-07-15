@@ -83,8 +83,9 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
 							log.Info("knative service updated. update knative CR condition and status...")
-							err := UpdateKnativeIngress(ctx, log, svc, kubeConfig, ips, hostname)
-							return fmt.Errorf("failed to update knative ingress err %v", err)
+							if err := UpdateKnativeIngress(ctx, log, svc, kubeConfig, ips, hostname); err != nil {
+								panic(err)
+							}
 						}
 					}
 				}
@@ -93,14 +94,17 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
-			err := UpdateTCPIngress(ctx, log, svc, kiccli, ips)
-			return fmt.Errorf("failed to update tcp ingress. err %v", err)
+			if err := UpdateTCPIngress(ctx, log, svc, kiccli, ips); err != nil {
+				panic(err)
+			}
 		case "udp":
-			err := UpdateUDPIngress(ctx, log, svc, kiccli, ips)
-			return fmt.Errorf("failed to update udp ingress. err %v", err)
+			if err := UpdateUDPIngress(ctx, log, svc, kiccli, ips); err != nil {
+				panic(err)
+			}
 		case "http":
-			err := UpdateIngressV1(ctx, log, svc, cli, ips)
-			return fmt.Errorf("failed to update ingressv1. err %v", err)
+			if err := UpdateIngressV1(ctx, log, svc, cli, ips); err != nil {
+				panic(err)
+			}
 		default:
 			log.Info("other 3rd party ingress not supported yet.")
 		}

@@ -178,8 +178,8 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		time.Sleep(time.Second)
 		retry++
 	}
-
-	return fmt.Errorf("ingress_status successfully updated UDPIngress status")
+	log.Info("successfully updated UDPIngress status")
+	return nil
 
 }
 

@@ -3,14 +3,14 @@ package manager
 import (
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 )
 
 type IngressAPI int
@@ -22,7 +22,7 @@ const (
 	ExtensionsV1beta1 IngressAPI = iota
 )
 
-func negotiateIngressAPI(config *config.Config, client client.Client) (IngressAPI, error) {
+func negotiateIngressAPI(config *Config, client client.Client) (IngressAPI, error) {
 	var allowedAPIs []IngressAPI
 	candidateAPIs := map[IngressAPI]schema.GroupVersionResource{
 		NetworkingV1: {

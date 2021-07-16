@@ -69,7 +69,8 @@ type Proxy interface {
 
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API
 // and implementations will report the configuration SHA that results from any update performed.
-type KongUpdater func(ctx context.Context,
+type KongUpdater func(
+	ctx context.Context,
 	cache *store.CacheStores,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,

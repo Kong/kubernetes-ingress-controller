@@ -25,6 +25,20 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
+func filterProcessedIngress(tcpingresses []*configurationv1beta1.TCPIngress) []*configurationv1beta1.TCPIngress {
+	var res []*configurationv1beta1.TCPIngress
+	for _, ingress := range tcpingresses {
+		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
+		if util.Get(ingressKey) {
+			fmt.Printf("[filterProcessedIngress] ingress %s already processed. removing it from list.", ingressKey)
+		} else {
+			fmt.Printf("[filterProcessedIngress] ingress %s not processed yet. ", ingressKey)
+			res = append(res, ingress)
+		}
+	}
+	return res
+}
+
 func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
 	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
@@ -33,6 +47,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list TCPIngresses: %v", err)
 	}
+	tcpIngresses = filterProcessedIngress(tcpIngresses)
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 
 	udpIngresses, err := s.ListUDPIngresses()

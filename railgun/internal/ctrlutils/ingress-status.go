@@ -51,6 +51,11 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 		return
 	}
 
+	if err := util.InitRedis(); err != nil {
+		log.Error(err, "failed to create kong ingress client.")
+		return
+	}
+
 	log.Info("Launching Ingress Status Update Thread.")
 
 	var wg sync.WaitGroup
@@ -256,6 +261,10 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
+	}
+	ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+	if err = util.Set(ingresKey); err != nil {
+		log.Error("failed to persist ingress %s status into cache.", ingresKey)
 	}
 	log.Info("successfully updated TCPIngress status.")
 	return nil

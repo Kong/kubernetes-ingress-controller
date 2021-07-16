@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
@@ -176,34 +175,4 @@ func onUpdateDBMode(ctx context.Context,
 		return deckutils.ErrArray{Errors: errs}
 	}
 	return nil
-}
-
-// -----------------------------------------------------------------------------
-// Sendconfig - Logging & Reporting Helper Functions
-// -----------------------------------------------------------------------------
-
-var (
-	latestReportedSHA []byte
-	shaLock           sync.RWMutex
-)
-
-// hasSHAUpdateAlreadyBeenReported is a helper function to allow
-// sendconfig internals to be aware of the last logged/reported
-// update to the Kong Admin API. Given the most recent update SHA,
-// it will return true/false whether or not that SHA has previously
-// been reported (logged, e.t.c.) so that the caller can make
-// decisions (such as staggering or stifling duplicate log lines).
-//
-// TODO: This is a bit of a hack for now to keep backwards compat,
-//       but in the future we might configure rolling this into
-//       some object/interface which has this functionality as an
-//       inherent behavior.
-func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
-	shaLock.Lock()
-	defer shaLock.Unlock()
-	if equalSHA(latestReportedSHA, latestUpdateSHA) {
-		return true
-	}
-	latestReportedSHA = latestUpdateSHA
-	return false
 }

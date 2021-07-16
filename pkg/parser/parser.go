@@ -39,9 +39,9 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range tcpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 		if util.Get(ingressKey) {
-			log.Info("tcpingress %s already processed.", ingressKey)
+			log.Infof("tcpingress %s already processed.", ingressKey)
 		} else {
-			log.Info("tcpingress %s not processed yet. ", ingressKey)
+			log.Infof("tcpingress %s not processed yet. ", ingressKey)
 			restcp = append(restcp, ingress)
 		}
 	}
@@ -50,9 +50,9 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range udpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 		if util.Get(ingressKey) {
-			log.Info("udpingress %s already processed.", ingressKey)
+			log.Infof("udpingress %s already processed.", ingressKey)
 		} else {
-			log.Info("udpingress %s not processed yet. ", ingressKey)
+			log.Infof("udpingress %s not processed yet. ", ingressKey)
 			resudp = append(resudp, ingress)
 		}
 	}
@@ -61,9 +61,9 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range v1Ingresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 		if util.Get(ingressKey) {
-			log.Info("v1ingress %s already processed.", ingressKey)
+			log.Infof("v1ingress %s already processed.", ingressKey)
 		} else {
-			log.Info("v1ingress %s not processed yet. ", ingressKey)
+			log.Infof("v1ingress %s not processed yet. ", ingressKey)
 			resv1 = append(resv1, ingress)
 		}
 	}
@@ -72,9 +72,9 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range knativeIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 		if util.Get(ingressKey) {
-			log.Info("knativeingress %s already processed.", ingressKey)
+			log.Infof("knativeingress %s already processed.", ingressKey)
 		} else {
-			log.Info("knativeingress %s not processed yet. ", ingressKey)
+			log.Infof("knativeingress %s not processed yet. ", ingressKey)
 			resknative = append(resknative, ingress)
 		}
 	}

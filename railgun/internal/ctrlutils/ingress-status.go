@@ -151,6 +151,8 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
+	ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+	log.Info("Updating IngressV1 " + ingresKey + " status.")
 
 	ingCli := cli.NetworkingV1().Ingresses(namespace)
 	cli.NetworkingV1beta1()
@@ -181,13 +183,16 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
+			if err = util.Set(ingresKey); err != nil {
+				log.Error("failed to persist ingress v1 %s status into mem cache. err %v", ingresKey, err)
+			}
 			break
 		}
 		log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
 		time.Sleep(time.Second)
 		retry++
 	}
-	log.Info("successfully updated UDPIngress status")
+	log.Info("successfully updated IngressV1 " + ingresKey + " status")
 	return nil
 
 }
@@ -199,6 +204,8 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
+	ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+	log.Info("Updating UDPIngress " + ingresKey + " status.")
 
 	ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
 	retry := 0
@@ -224,6 +231,9 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
+			if err = util.Set(ingresKey); err != nil {
+				log.Error("failed to persist udp ingress %s status into mem cache. err %v", ingresKey, err)
+			}
 			break
 		}
 		log.Errorf("failed to update UDPIngress status: %v. retry...", err)
@@ -231,7 +241,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		retry++
 	}
 
-	log.Info("successfully updated UDPIngress status.")
+	log.Info("successfully updated UDPIngress " + ingresKey + " status.")
 	return nil
 }
 
@@ -266,7 +276,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	if err = util.Set(ingresKey); err != nil {
-		log.Error("failed to persist ingress %s status into cache.", ingresKey)
+		log.Error("failed to persist ingress %s status into cache. err %v", ingresKey, err)
 	}
 	log.Info("Successfully updated TCPIngress " + ingresKey + " status.")
 	return nil
@@ -281,6 +291,8 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
+	ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+	log.Info("Updating KnativeIngress " + ingresKey + " status.")
 
 	knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
 	if err != nil {
@@ -322,6 +334,9 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 
 		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
+			if err = util.Set(ingresKey); err != nil {
+				log.Error("failed to persist knative ingress %s status into cache. err %v", ingresKey, err)
+			}
 			break
 		}
 		log.Errorf("failed to update ingress status: %v. retrying...", err)
@@ -329,7 +344,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		retry++
 	}
 
-	logger.Info("successfully updated ingress status")
+	logger.Info("successfully updated knative ingress" + ingresKey + " status")
 	return nil
 }
 

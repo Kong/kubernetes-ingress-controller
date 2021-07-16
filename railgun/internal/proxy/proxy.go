@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"sync"
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,10 +70,8 @@ type Proxy interface {
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API
 // and implementations will report the configuration SHA that results from any update performed.
 type KongUpdater func(ctx context.Context,
-	lastConfigSHA *[]byte,
 	cache *store.CacheStores,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool,
-	m *sync.Mutex) ([]byte, error)
+	enableReverseSync bool) error

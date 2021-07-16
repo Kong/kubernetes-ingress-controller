@@ -25,8 +25,7 @@ func TestTCPIngressPerformance(t *testing.T) {
 	cluster := env.Cluster()
 	c, err := clientset.NewForConfig(cluster.Config())
 	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
-	defer cancel()
+	ctx := context.TODO()
 
 	cnt := 1
 	cost := 0

@@ -30,7 +30,7 @@ func filterProcessedIngress(tcpingresses []*configurationv1beta1.TCPIngress) []*
 	for _, ingress := range tcpingresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 		if util.Get(ingressKey) {
-			fmt.Printf("[filterProcessedIngress] ingress %s already processed. removing it from list.", ingressKey)
+			fmt.Printf("[filterProcessedIngress] ingress %s already processed.", ingressKey)
 		} else {
 			fmt.Printf("[filterProcessedIngress] ingress %s not processed yet. ", ingressKey)
 			res = append(res, ingress)

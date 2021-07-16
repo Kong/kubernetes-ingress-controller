@@ -20,9 +20,8 @@ import (
 )
 
 func TestUDPIngressPerformance(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
+	ctx := context.TODO()
 	cluster := env.Cluster()
-	defer cancel()
 
 	cnt := 1
 	cost := 0

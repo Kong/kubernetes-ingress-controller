@@ -86,7 +86,7 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 
 	for _, svc := range targetContent.Services {
 		for _, plugin := range svc.Plugins {
-			log.V(5).Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
+			log.V(5).Info("service host %s name %s plugin enablement %v", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
 			if *plugin.Enabled {
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
@@ -242,6 +242,8 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	if err != nil {
 		return fmt.Errorf("failed to generate UDP client. err %v", err)
 	}
+	ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+	log.Info("Updating TCPIngress " + ingresKey + " status.")
 
 	ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
 	curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
@@ -262,11 +264,11 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	if err != nil {
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
 	}
-	ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+
 	if err = util.Set(ingresKey); err != nil {
 		log.Error("failed to persist ingress %s status into cache.", ingresKey)
 	}
-	log.Info("successfully updated TCPIngress status.")
+	log.Info("Successfully updated TCPIngress " + ingresKey + " status.")
 	return nil
 }
 

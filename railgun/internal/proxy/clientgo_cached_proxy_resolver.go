@@ -77,7 +77,6 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		syncTicker: time.NewTicker(stagger),
 
 		internalCacheLock: &sync.RWMutex{},
-		m:                 &sync.Mutex{},
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -105,10 +104,6 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 type clientgoCachedProxyResolver struct {
 	// kubernetes configuration
 	cache *store.CacheStores
-
-	// lastConfigSHA indicates the last SHA sum for the last configuration
-	// updated in the Kong Proxy and is used to avoid making unnecessary updates.
-	lastConfigSHA []byte
 
 	// kong configuration
 	kongConfig        sendconfig.Kong
@@ -143,7 +138,6 @@ type clientgoCachedProxyResolver struct {
 
 	// locks
 	internalCacheLock *sync.RWMutex
-	m                 *sync.Mutex
 }
 
 // cacheAction indicates what caching action (update, delete) was taken for any particular runtime.Object.
@@ -225,10 +219,9 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 			}
 		case <-p.syncTicker.C:
 			go func() {
-				_, err := p.kongUpdater(p.ctx, &p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.m)
+				err := p.kongUpdater(p.ctx, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
 				if err != nil {
 					p.logger.Error(err, "could not update kong admin")
-
 				}
 			}()
 		case <-p.ctx.Done():

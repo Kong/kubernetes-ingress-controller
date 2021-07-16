@@ -37,12 +37,12 @@ func UpdateKongAdminSimple(ctx context.Context,
 	kongConfig Kong,
 	enableReverseSync bool,
 	m *sync.Mutex,
-) ([]byte, error) {
+) error {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
 	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// generate the deck configuration to be applied to the admin API
@@ -53,14 +53,14 @@ func UpdateKongAdminSimple(ctx context.Context,
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	configSHA, err := PerformUpdate(timedCtx,
+	err = PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, m,
+		targetConfig, kongConfig.FilterTags, nil, false,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return configSHA, nil
+	return nil
 }

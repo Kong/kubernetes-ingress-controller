@@ -20,7 +20,7 @@ import (
 func TestIngressPerformance(t *testing.T) {
 	t.Log("setting up the TestIngressPerf")
 
-	ctx := context.Background()
+	ctx := context.TODO()
 	cluster := env.Cluster()
 	cnt := 1
 	cost := 0

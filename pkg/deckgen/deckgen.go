@@ -7,7 +7,6 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/mitchellh/hashstructure"
 	"github.com/tidwall/gjson"
 )
 
@@ -23,13 +22,13 @@ func i64tob(val uint64) []byte {
 // GenerateSHA generates a SHA256 checksum of the (targetContent, customEntities) tuple, with the purpose of change
 // detection.
 func GenerateSHA(targetContent *file.Content,
-	customEntities []byte) ([]byte, error) {
+	customEntities []byte) error {
 
 	var buffer bytes.Buffer
 
 	jsonConfig, err := json.Marshal(targetContent)
 	if err != nil {
-		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
+		return fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
 	}
 	buffer.Write(jsonConfig)
 
@@ -37,11 +36,7 @@ func GenerateSHA(targetContent *file.Content,
 		buffer.Write(customEntities)
 	}
 
-	hash, err := hashstructure.Hash(targetContent, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed generating hash for %v, err %v", targetContent, err)
-	}
-	return i64tob(hash), nil
+	return nil
 }
 
 // CleanUpNullsInPluginConfigs modifies `state` by deleting plugin config map keys that have nil as their value.

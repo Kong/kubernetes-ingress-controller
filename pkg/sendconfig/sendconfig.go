@@ -3,11 +3,9 @@ package sendconfig
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"sync"
 
 	"github.com/kong/deck/diff"
@@ -20,10 +18,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func equalSHA(a, b []byte) bool {
-	return reflect.DeepEqual(a, b)
-}
-
 // PerformUpdate writes `targetContent` and `customEntities` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
@@ -33,23 +27,10 @@ func PerformUpdate(ctx context.Context,
 	targetContent *file.Content,
 	selectorTags []string,
 	customEntities []byte,
-	oldSHA *[]byte,
-	skipUpdateCR bool,
-	m *sync.Mutex) ([]byte, error) {
-	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
+	skipUpdateCR bool) error {
+	err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		return *oldSHA, err
-	}
-	// disable optimization if reverse sync is enabled
-	if !reverseSync {
-		// use the previous SHA to determine whether or not to perform an update
-		if equalSHA(*oldSHA, newSHA) {
-			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Info("sha %s has been reported", hex.EncodeToString(newSHA))
-			}
-			log.Info("no configuration change, skipping sync to kong")
-			return *oldSHA, nil
-		}
+		return err
 	}
 
 	if inMemory {
@@ -58,18 +39,15 @@ func PerformUpdate(ctx context.Context,
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if newSHA != nil && !skipUpdateCR {
+	if !skipUpdateCR {
 		kongConfig.ConfigDone <- *targetContent
-		m.Lock()
-		*oldSHA = newSHA
-		m.Unlock()
 	}
 
 	log.Info("successfully synced configuration to kong.")
-	return newSHA, nil
+	return nil
 }
 
 func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,

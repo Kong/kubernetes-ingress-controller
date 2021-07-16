@@ -38,7 +38,7 @@ func TestPerfKnativePerformance(t *testing.T) {
 	assert.NotEmpty(t, proxy)
 	t.Logf("proxy url %s", proxy)
 
-	ctx := context.Background()
+	ctx := context.TODO()
 	cluster := env.Cluster()
 
 	t.Log("Deploying all resources that are required to run knative")

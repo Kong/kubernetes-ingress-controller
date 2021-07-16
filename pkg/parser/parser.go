@@ -13,6 +13,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/networking/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -25,42 +26,86 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
-func filterProcessedIngress(tcpingresses []*configurationv1beta1.TCPIngress) []*configurationv1beta1.TCPIngress {
-	var res []*configurationv1beta1.TCPIngress
-	for _, ingress := range tcpingresses {
+func filterProcessedIngress(log logrus.FieldLogger,
+	tcpIngresses []*configurationv1beta1.TCPIngress,
+	udpIngresses []*configurationv1beta1.UDPIngress,
+	v1Ingresses []*v1.Ingress,
+	knativeIngresses []*knative.Ingress) ([]*configurationv1beta1.TCPIngress,
+	[]*configurationv1beta1.UDPIngress,
+	[]*v1.Ingress,
+	[]*knative.Ingress) {
+
+	var restcp []*configurationv1beta1.TCPIngress
+	for _, ingress := range tcpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 		if util.Get(ingressKey) {
-			fmt.Printf("[filterProcessedIngress] ingress %s already processed.", ingressKey)
+			log.Info("tcpingress %s already processed.", ingressKey)
 		} else {
-			fmt.Printf("[filterProcessedIngress] ingress %s not processed yet. ", ingressKey)
-			res = append(res, ingress)
+			log.Info("tcpingress %s not processed yet. ", ingressKey)
+			restcp = append(restcp, ingress)
 		}
 	}
-	return res
+
+	var resudp []*configurationv1beta1.UDPIngress
+	for _, ingress := range udpIngresses {
+		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
+		if util.Get(ingressKey) {
+			log.Info("udpingress %s already processed.", ingressKey)
+		} else {
+			log.Info("udpingress %s not processed yet. ", ingressKey)
+			resudp = append(resudp, ingress)
+		}
+	}
+
+	var resv1 []*v1.Ingress
+	for _, ingress := range v1Ingresses {
+		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
+		if util.Get(ingressKey) {
+			log.Info("v1ingress %s already processed.", ingressKey)
+		} else {
+			log.Info("v1ingress %s not processed yet. ", ingressKey)
+			resv1 = append(resv1, ingress)
+		}
+	}
+
+	var resknative []*knative.Ingress
+	for _, ingress := range knativeIngresses {
+		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
+		if util.Get(ingressKey) {
+			log.Info("knativeingress %s already processed.", ingressKey)
+		} else {
+			log.Info("knativeingress %s not processed yet. ", ingressKey)
+			resknative = append(resknative, ingress)
+		}
+	}
+	return restcp, resudp, resv1, resknative
 }
 
 func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
-	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
-	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
-
 	tcpIngresses, err := s.ListTCPIngresses()
 	if err != nil {
 		log.Errorf("failed to list TCPIngresses: %v", err)
 	}
-	tcpIngresses = filterProcessedIngress(tcpIngresses)
-	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 
 	udpIngresses, err := s.ListUDPIngresses()
 	if err != nil {
 		log.Errorf("failed to list UDPIngresses: %v", err)
 	}
-	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
+
+	v1Ingresses := s.ListIngressesV1()
 
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
+
+	log.Infof("Filters unprocessed ingresses atm.")
+	tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses = filterProcessedIngress(log, tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses)
+	parsedIngressV1 := fromIngressV1(log, v1Ingresses)
+	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
+	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
+	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
 
 	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)
 }

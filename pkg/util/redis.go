@@ -15,7 +15,29 @@ var lock sync.RWMutex
 // Redis initialization
 func InitRedis() error {
 	lock = sync.RWMutex{}
-	return initPool()
+	if err := initPool(); err != nil {
+		log.Fatalf("failed initialize db pool. err %v", err)
+		return nil
+	}
+	if err := resetDB(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func resetDB() error {
+	conn := pool.Get()
+	defer conn.Close()
+
+	lock.Lock()
+	_, err := conn.Do("flushall")
+	if err != nil {
+		log.Fatalf("failed reset redis db within the environment. err %v", err)
+		return err
+	}
+	lock.Unlock()
+	log.Printf("Successfully flush residue data.")
+	return nil
 }
 
 func initPool() error {

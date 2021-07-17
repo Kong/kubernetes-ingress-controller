@@ -186,13 +186,14 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 			if err = util.Set(ingresKey); err != nil {
 				log.Errorf("failed to persist ingress v1 %s status into mem cache. err %v", ingresKey, err)
 			}
+			log.Info("successfully updated IngressV1 " + ingresKey + " status")
 			break
 		}
 		log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
 		time.Sleep(time.Second)
 		retry++
 	}
-	log.Info("successfully updated IngressV1 " + ingresKey + " status")
+
 	return nil
 
 }
@@ -234,6 +235,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 			if err = util.Set(ingresKey); err != nil {
 				log.Errorf("failed to persist udp ingress %s status into mem cache. err %v", ingresKey, err)
 			}
+			log.Info("successfully updated UDPIngress " + ingresKey + " status.")
 			break
 		}
 		log.Errorf("failed to update UDPIngress status: %v. retry...", err)
@@ -241,7 +243,6 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		retry++
 	}
 
-	log.Info("successfully updated UDPIngress " + ingresKey + " status.")
 	return nil
 }
 
@@ -337,6 +338,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 			if err = util.Set(ingresKey); err != nil {
 				log.Errorf("failed to persist knative ingress %s status into cache. err %v", ingresKey, err)
 			}
+			logger.Info("successfully updated knative ingress" + ingresKey + " status")
 			break
 		}
 		log.Errorf("failed to update ingress status: %v. retrying...", err)
@@ -344,7 +346,6 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		retry++
 	}
 
-	logger.Info("successfully updated knative ingress" + ingresKey + " status")
 	return nil
 }
 

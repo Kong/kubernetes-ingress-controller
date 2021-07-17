@@ -35,6 +35,7 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	[]*v1.Ingress,
 	[]*knative.Ingress) {
 
+	log.Infof("Filtering unprocessed ingresses.")
 	var restcp []*configurationv1beta1.TCPIngress
 	for _, ingress := range tcpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
@@ -99,7 +100,6 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 
-	log.Infof("Filtering unprocessed ingresses.")
 	tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses = filterProcessedIngress(log, tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses)
 	parsedIngressV1 := fromIngressV1(log, v1Ingresses)
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)

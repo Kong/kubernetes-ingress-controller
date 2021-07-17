@@ -188,4 +188,5 @@ test.integration.postgres:
 .PHONY: test.integration.legacy
 test.integration.legacy:
 	@./scripts/check-container-environment.sh
+	@./scripts/redis-ubuntu.sh
 	@KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/

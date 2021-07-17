@@ -31,6 +31,11 @@ func resetDB() error {
 	conn := pool.Get()
 	defer conn.Close()
 
+	if conn == nil {
+		log.Printf("Error: failed connect to redis pool. possibly redis is not setup.")
+		return fmt.Errorf("failed to connect redis poll")
+	}
+
 	lock.Lock()
 	_, err := conn.Do("flushall")
 	if err != nil {
@@ -62,9 +67,18 @@ func initPool() error {
 }
 
 func Set(key string) error {
+	if pool == nil {
+		log.Printf("redis pool is not initialized yet.")
+		return fmt.Errorf("redis pool is not initialized yet")
+	}
 	// get conn and put back when exit from method
 	conn := pool.Get()
 	defer conn.Close()
+
+	if conn == nil {
+		log.Printf("Error: failed connect to redis pool. possibly redis is not setup.")
+		return fmt.Errorf("failed to connect redis poll")
+	}
 
 	lock.Lock()
 	_, err := conn.Do("SET", key, true)
@@ -80,8 +94,18 @@ func Set(key string) error {
 
 func Get(key string) bool {
 	// get conn and put back when exit from method
+	if pool == nil {
+		log.Printf("redis pool is not initialized yet.")
+		return false
+	}
 	conn := pool.Get()
 	defer conn.Close()
+
+	if conn == nil {
+		log.Printf("failed connect to redis pool. possibly redis is not setup.")
+		return false
+	}
+
 	lock.RLock()
 	_, err := redis.String(conn.Do("GET", key))
 	lock.RUnlock()

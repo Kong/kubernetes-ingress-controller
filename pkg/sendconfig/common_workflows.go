@@ -51,11 +51,10 @@ func UpdateKongAdminSimple(
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	err = PerformUpdate(timedCtx,
+	_, err = PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, false,
-	)
+		targetConfig, kongConfig.FilterTags, nil, nil, false)
 	if err != nil {
 		return err
 	}

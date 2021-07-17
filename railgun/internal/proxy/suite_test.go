@@ -75,15 +75,13 @@ func setupVars() {
 //       mock out the requests (this is used above to ensure that tests can properly initialize a Proxy instance)
 //       instead of the always-succeed functionality we use currently.
 var mockKongAdmin KongUpdater = func(ctx context.Context,
-	lastConfigSHA *[]byte,
 	cache *store.CacheStores,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool,
-	m *sync.Mutex) ([]byte, error) {
+	enableReverseSync bool) error {
 	fakeKongAdminUpdateCount(1)
-	return *lastConfigSHA, nil
+	return nil
 }
 
 // these globs are for threadsafety and tracking of the fakeKongAdminUpdateCount() function,

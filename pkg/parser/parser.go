@@ -99,7 +99,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 
-	log.Infof("Filters unprocessed ingresses atm.")
+	log.Infof("Filtering unprocessed ingresses.")
 	tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses = filterProcessedIngress(log, tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses)
 	parsedIngressV1 := fromIngressV1(log, v1Ingresses)
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)

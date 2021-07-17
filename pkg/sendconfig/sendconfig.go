@@ -3,9 +3,12 @@ package sendconfig
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
+	"sync"
 
 	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
@@ -17,6 +20,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func equalSHA(a, b []byte) bool {
+	return reflect.DeepEqual(a, b)
+}
+
 // PerformUpdate writes `targetContent` and `customEntities` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
@@ -26,27 +33,50 @@ func PerformUpdate(ctx context.Context,
 	targetContent *file.Content,
 	selectorTags []string,
 	customEntities []byte,
-	skipUpdateCR bool) error {
-	err := deckgen.GenerateSHA(targetContent, customEntities)
-	if err != nil {
-		return err
-	}
-
-	if inMemory {
-		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
-	} else {
-		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
-	}
-	if err != nil {
-		return err
-	}
-
+	oldSHA []byte,
+	skipUpdateCR bool) ([]byte, error) {
+	// KIC 2.0
 	if !skipUpdateCR {
+		var err error
+		if inMemory {
+			err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
+		} else {
+			err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
+		}
+		if err != nil {
+			return nil, err
+		}
 		kongConfig.ConfigDone <- *targetContent
-	}
+		log.Info("successfully synced configuration to kong.")
+		return nil, nil
+	} else {
+		newSHA, err := deckgen.GenerateSHA(targetContent, customEntities, false)
+		if err != nil {
+			return oldSHA, err
+		}
+		// disable optimization if reverse sync is enabled
+		if !reverseSync {
+			// use the previous SHA to determine whether or not to perform an update
+			if equalSHA(oldSHA, newSHA) {
+				if !hasSHAUpdateAlreadyBeenReported(newSHA) {
+					log.Info("sha %s has been reported", hex.EncodeToString(newSHA))
+				}
+				log.Info("no configuration change, skipping sync to kong")
+				return oldSHA, nil
+			}
+		}
 
-	log.Info("successfully synced configuration to kong.")
-	return nil
+		if inMemory {
+			err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
+		} else {
+			err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
+		}
+		if err != nil {
+			return nil, err
+		}
+		log.Info("successfully synced configuration to kong.")
+		return newSHA, nil
+	}
 }
 
 func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
@@ -175,4 +205,34 @@ func onUpdateDBMode(ctx context.Context,
 		return deckutils.ErrArray{Errors: errs}
 	}
 	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Sendconfig - Logging & Reporting Helper Functions
+// -----------------------------------------------------------------------------
+
+var (
+	latestReportedSHA []byte
+	shaLock           sync.RWMutex
+)
+
+// hasSHAUpdateAlreadyBeenReported is a helper function to allow
+// sendconfig internals to be aware of the last logged/reported
+// update to the Kong Admin API. Given the most recent update SHA,
+// it will return true/false whether or not that SHA has previously
+// been reported (logged, e.t.c.) so that the caller can make
+// decisions (such as staggering or stifling duplicate log lines).
+//
+// TODO: This is a bit of a hack for now to keep backwards compat,
+//       but in the future we might configure rolling this into
+//       some object/interface which has this functionality as an
+//       inherent behavior.
+func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
+	shaLock.Lock()
+	defer shaLock.Unlock()
+	if equalSHA(latestReportedSHA, latestUpdateSHA) {
+		return true
+	}
+	latestReportedSHA = latestUpdateSHA
+	return false
 }

@@ -184,7 +184,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			if err = util.Set(ingresKey); err != nil {
-				log.Error("failed to persist ingress v1 %s status into mem cache. err %v", ingresKey, err)
+				log.Errorf("failed to persist ingress v1 %s status into mem cache. err %v", ingresKey, err)
 			}
 			break
 		}
@@ -232,7 +232,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			if err = util.Set(ingresKey); err != nil {
-				log.Error("failed to persist udp ingress %s status into mem cache. err %v", ingresKey, err)
+				log.Errorf("failed to persist udp ingress %s status into mem cache. err %v", ingresKey, err)
 			}
 			break
 		}
@@ -276,7 +276,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	if err = util.Set(ingresKey); err != nil {
-		log.Error("failed to persist ingress %s status into cache. err %v", ingresKey, err)
+		log.Errorf("failed to persist ingress %s status into cache. err %v", ingresKey, err)
 	}
 	log.Info("Successfully updated TCPIngress " + ingresKey + " status.")
 	return nil
@@ -335,7 +335,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			if err = util.Set(ingresKey); err != nil {
-				log.Error("failed to persist knative ingress %s status into cache. err %v", ingresKey, err)
+				log.Errorf("failed to persist knative ingress %s status into cache. err %v", ingresKey, err)
 			}
 			break
 		}

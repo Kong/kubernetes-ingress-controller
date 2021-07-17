@@ -56,17 +56,9 @@ func initPool() error {
 		},
 	}
 	if pool == nil {
-		return fmt.Errorf("failed to initialize redis pool connection.")
+		return fmt.Errorf("failed to initialize redis pool connection")
 	}
 	return nil
-}
-
-func ping(conn redis.Conn) {
-	_, err := redis.String(conn.Do("PING"))
-	if err != nil {
-		log.Printf("ERROR: fail ping redis conn: %s", err.Error())
-		os.Exit(1)
-	}
 }
 
 func Set(key string) error {
@@ -99,32 +91,4 @@ func Get(key string) bool {
 	}
 
 	return true
-}
-
-func sadd(key string, val string) error {
-	// get conn and put back when exit from method
-	conn := pool.Get()
-	defer conn.Close()
-
-	_, err := conn.Do("SADD", key, val)
-	if err != nil {
-		log.Printf("ERROR: fail add val %s to set %s, error %s", val, key, err.Error())
-		return err
-	}
-
-	return nil
-}
-
-func smembers(key string) ([]string, error) {
-	// get conn and put back when exit from method
-	conn := pool.Get()
-	defer conn.Close()
-
-	s, err := redis.Strings(conn.Do("SMEMBERS", key))
-	if err != nil {
-		log.Printf("ERROR: fail get set %s , error %s", key, err.Error())
-		return nil, err
-	}
-
-	return s, nil
 }

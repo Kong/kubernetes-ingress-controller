@@ -35,6 +35,7 @@ func PerformUpdate(ctx context.Context,
 	customEntities []byte,
 	oldSHA []byte,
 	skipUpdateCR bool) ([]byte, error) {
+
 	// KIC 2.0
 	if !skipUpdateCR {
 		var err error
@@ -49,34 +50,35 @@ func PerformUpdate(ctx context.Context,
 		kongConfig.ConfigDone <- *targetContent
 		log.Info("successfully synced configuration to kong.")
 		return nil, nil
-	} else {
-		newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
-		if err != nil {
-			return oldSHA, err
-		}
-		// disable optimization if reverse sync is enabled
-		if !reverseSync {
-			// use the previous SHA to determine whether or not to perform an update
-			if equalSHA(oldSHA, newSHA) {
-				if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-					log.Info("sha %s has been reported", hex.EncodeToString(newSHA))
-				}
-				log.Info("no configuration change, skipping sync to kong")
-				return oldSHA, nil
-			}
-		}
-
-		if inMemory {
-			err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
-		} else {
-			err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
-		}
-		if err != nil {
-			return nil, err
-		}
-		log.Info("successfully synced configuration to kong.")
-		return newSHA, nil
 	}
+
+	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
+	if err != nil {
+		return oldSHA, err
+	}
+	// disable optimization if reverse sync is enabled
+	if !reverseSync {
+		// use the previous SHA to determine whether or not to perform an update
+		if equalSHA(oldSHA, newSHA) {
+			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
+				log.Info("sha %s has been reported", hex.EncodeToString(newSHA))
+			}
+			log.Info("no configuration change, skipping sync to kong")
+			return oldSHA, nil
+		}
+	}
+
+	if inMemory {
+		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
+	} else {
+		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
+	}
+	if err != nil {
+		return nil, err
+	}
+	log.Info("successfully synced configuration to kong.")
+	return newSHA, nil
+
 }
 
 func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,

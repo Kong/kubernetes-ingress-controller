@@ -2,6 +2,7 @@ package deckgen
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
@@ -10,25 +11,16 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// helper function convert from uint63 to byte
-func i64tob(val uint64) []byte {
-	r := make([]byte, 8)
-	for i := uint64(0); i < 8; i++ {
-		r[i] = byte((val >> (i * 8)) & 0xff)
-	}
-	return r
-}
-
 // GenerateSHA generates a SHA256 checksum of the (targetContent, customEntities) tuple, with the purpose of change
 // detection.
 func GenerateSHA(targetContent *file.Content,
-	customEntities []byte) error {
+	customEntities []byte) ([]byte, error) {
 
 	var buffer bytes.Buffer
 
 	jsonConfig, err := json.Marshal(targetContent)
 	if err != nil {
-		return fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
+		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
 	}
 	buffer.Write(jsonConfig)
 
@@ -36,7 +28,8 @@ func GenerateSHA(targetContent *file.Content,
 		buffer.Write(customEntities)
 	}
 
-	return nil
+	shaSum := sha256.Sum256(buffer.Bytes())
+	return shaSum[:], nil
 }
 
 // CleanUpNullsInPluginConfigs modifies `state` by deleting plugin config map keys that have nil as their value.

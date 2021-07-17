@@ -19,8 +19,10 @@ func InitRedis() error {
 		log.Fatalf("failed initialize db pool. err %v", err)
 		return nil
 	}
-	if err := resetDB(); err != nil {
-		return err
+	if os.Getenv("TEST_MODE") == "true" {
+		if err := resetDB(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/gomodule/redigo/redis"
@@ -66,7 +67,7 @@ func initPool() error {
 	return nil
 }
 
-func Set(key string) error {
+func Set(key string, value uint64) error {
 	if pool == nil {
 		log.Printf("redis pool is not initialized yet.")
 		return fmt.Errorf("redis pool is not initialized yet")
@@ -81,38 +82,38 @@ func Set(key string) error {
 	}
 
 	lock.Lock()
-	_, err := conn.Do("SET", key, true)
+	_, err := conn.Do("SET", key, strconv.FormatUint(value, 10))
 	lock.Unlock()
 
 	if err != nil {
-		log.Printf("ERROR: fail set key %s, error %s", key, err.Error())
+		log.Printf("ERROR: fail set key %s value %v, error %s", key, value, err.Error())
 		return err
 	}
 
 	return nil
 }
 
-func Get(key string) bool {
+func Get(key string) (string, bool) {
 	// get conn and put back when exit from method
 	if pool == nil {
 		log.Printf("redis pool is not initialized yet.")
-		return false
+		return "", false
 	}
 	conn := pool.Get()
 	defer conn.Close()
 
 	if conn == nil {
 		log.Printf("failed connect to redis pool. possibly redis is not setup.")
-		return false
+		return "", false
 	}
 
 	lock.RLock()
-	_, err := redis.String(conn.Do("GET", key))
+	v, err := redis.String(conn.Do("GET", key))
 	lock.RUnlock()
 	if err != nil {
 		log.Printf("ERROR: fail get key %s, error %s", key, err.Error())
-		return false
+		return "", false
 	}
 
-	return true
+	return v, true
 }

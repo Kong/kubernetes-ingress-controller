@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -40,44 +42,87 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	var restcp []*configurationv1beta1.TCPIngress
 	for _, ingress := range tcpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		if util.Get(ingressKey) {
-			log.Infof("tcpingress %s already processed.", ingressKey)
-		} else {
+
+		existingHash, ok := util.Get(ingressKey)
+		if !ok {
 			log.Infof("tcpingress %s not processed yet. ", ingressKey)
 			restcp = append(restcp, ingress)
+		} else {
+			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+			if err != nil {
+				panic(err)
+			}
+			if existingHash != strconv.FormatUint(curHash, 10) {
+				log.Infof("tcpingress %s configured. ", ingressKey)
+				restcp = append(restcp, ingress)
+			} else {
+				log.Infof("tcpingress %s already processed.", ingressKey)
+			}
 		}
 	}
 
 	var resudp []*configurationv1beta1.UDPIngress
 	for _, ingress := range udpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		if util.Get(ingressKey) {
-			log.Infof("udpingress %s already processed.", ingressKey)
-		} else {
+
+		existingHash, ok := util.Get(ingressKey)
+		if !ok {
 			log.Infof("udpingress %s not processed yet. ", ingressKey)
 			resudp = append(resudp, ingress)
+		} else {
+			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+			if err != nil {
+				panic(err)
+			}
+			if existingHash != strconv.FormatUint(curHash, 10) {
+				log.Infof("udpingress %s configured. ", ingressKey)
+				resudp = append(resudp, ingress)
+			} else {
+				log.Infof("udpingress %s already processed.", ingressKey)
+			}
 		}
 	}
 
 	var resv1 []*networkingv1.Ingress
 	for _, ingress := range v1Ingresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		if util.Get(ingressKey) {
-			log.Infof("v1ingress %s already processed.", ingressKey)
-		} else {
+
+		existingHash, ok := util.Get(ingressKey)
+		if !ok {
 			log.Infof("v1ingress %s not processed yet. ", ingressKey)
 			resv1 = append(resv1, ingress)
+		} else {
+			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+			if err != nil {
+				panic(err)
+			}
+			if existingHash != strconv.FormatUint(curHash, 10) {
+				log.Infof("v1ingress %s configured. ", ingressKey)
+				resv1 = append(resv1, ingress)
+			} else {
+				log.Infof("v1ingress %s already processed.", ingressKey)
+			}
 		}
 	}
 
 	var resknative []*knative.Ingress
 	for _, ingress := range knativeIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		if util.Get(ingressKey) {
-			log.Infof("knativeingress %s already processed.", ingressKey)
-		} else {
+		existingHash, ok := util.Get(ingressKey)
+		if !ok {
 			log.Infof("knativeingress %s not processed yet. ", ingressKey)
 			resknative = append(resknative, ingress)
+		} else {
+			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+			if err != nil {
+				panic(err)
+			}
+			if existingHash != strconv.FormatUint(curHash, 10) {
+				log.Infof("knativeingress %s configured. ", ingressKey)
+				resknative = append(resknative, ingress)
+			} else {
+				log.Infof("knativeingress %s already processed.", ingressKey)
+			}
 		}
 	}
 	return restcp, resudp, resv1, resknative
@@ -102,7 +147,8 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 
 	tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses = filterProcessedIngress(log, tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses)
 	log.Infof("\n checking v1Ingresses %d \n", len(v1Ingresses))
-	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
+	//parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
+	parsedIngressV1 := fromIngressV1(log, v1Ingresses)
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)

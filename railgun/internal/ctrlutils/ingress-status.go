@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/prometheus/common/log"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -183,7 +184,11 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
-			if err = util.Set(ingresKey); err != nil {
+			hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+			if err != nil {
+				panic(err)
+			}
+			if err = util.Set(ingresKey, hash); err != nil {
 				log.Errorf("failed to persist ingress v1 %s status into mem cache. err %v", ingresKey, err)
 			}
 			log.Info("successfully updated IngressV1 " + ingresKey + " status")
@@ -232,7 +237,11 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
-			if err = util.Set(ingresKey); err != nil {
+			hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+			if err != nil {
+				panic(err)
+			}
+			if err = util.Set(ingresKey, hash); err != nil {
 				log.Errorf("failed to persist udp ingress %s status into mem cache. err %v", ingresKey, err)
 			}
 			log.Info("successfully updated UDPIngress " + ingresKey + " status.")
@@ -276,7 +285,11 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
 	}
 
-	if err = util.Set(ingresKey); err != nil {
+	hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+	if err != nil {
+		panic(err)
+	}
+	if err = util.Set(ingresKey, hash); err != nil {
 		log.Errorf("failed to persist ingress %s status into cache. err %v", ingresKey, err)
 	}
 	log.Info("Successfully updated TCPIngress " + ingresKey + " status.")
@@ -335,7 +348,11 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 
 		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
-			if err = util.Set(ingresKey); err != nil {
+			hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+			if err != nil {
+				panic(err)
+			}
+			if err = util.Set(ingresKey, hash); err != nil {
 				log.Errorf("failed to persist knative ingress %s status into cache. err %v", ingresKey, err)
 			}
 			logger.Info("successfully updated knative ingress" + ingresKey + " status")

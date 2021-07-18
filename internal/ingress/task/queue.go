@@ -27,9 +27,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-var (
-	keyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
-)
+var keyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
 
 // Queue manages a time work queue through an independent worker that invokes the
 // given sync function for every work item inserted.

@@ -33,6 +33,7 @@ jobs:
       uses: golangci/golangci-lint-action@v2.5.2
       with:
         version: v1.40.1
+        args: --issues-exit-code=0
     - name: Verify Codegen
       run: |
         export GOPATH=$(go env GOPATH)

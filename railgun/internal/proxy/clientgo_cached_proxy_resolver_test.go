@@ -150,7 +150,10 @@ func TestCaching(t *testing.T) {
 	proxy.syncTicker.Reset(time.Millisecond * 50)
 
 	t.Logf("waiting for kong admin api updates to synchronize")
-	assert.Eventually(t, func() bool { return fakeKongAdminUpdateCount() == len(testObjects) }, time.Second*5, time.Millisecond*50)
+	assert.Eventually(t, func() bool {
+		t.Logf("flaky tests update count %d.", fakeKongAdminUpdateCount())
+		return fakeKongAdminUpdateCount() == len(testObjects)
+	}, time.Second*5, time.Millisecond*50)
 }
 
 func TestProxyTimeout(t *testing.T) {

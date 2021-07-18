@@ -29,7 +29,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
     - name: Checkout repository
       uses: actions/checkout@v2
-    - name: Setup golangci-lint
+    - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v2.5.2
       with:
         version: v1.40.1

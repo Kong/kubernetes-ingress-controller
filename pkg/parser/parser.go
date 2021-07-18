@@ -13,7 +13,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/networking/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -29,10 +30,10 @@ import (
 func filterProcessedIngress(log logrus.FieldLogger,
 	tcpIngresses []*configurationv1beta1.TCPIngress,
 	udpIngresses []*configurationv1beta1.UDPIngress,
-	v1Ingresses []*v1.Ingress,
+	v1Ingresses []*networkingv1.Ingress,
 	knativeIngresses []*knative.Ingress) ([]*configurationv1beta1.TCPIngress,
 	[]*configurationv1beta1.UDPIngress,
-	[]*v1.Ingress,
+	[]*networkingv1.Ingress,
 	[]*knative.Ingress) {
 
 	log.Infof("Filtering unprocessed ingresses.")
@@ -58,7 +59,7 @@ func filterProcessedIngress(log logrus.FieldLogger,
 		}
 	}
 
-	var resv1 []*v1.Ingress
+	var resv1 []*networkingv1.Ingress
 	for _, ingress := range v1Ingresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 		if util.Get(ingressKey) {
@@ -94,14 +95,14 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	}
 
 	v1Ingresses := s.ListIngressesV1()
-
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 
 	tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses = filterProcessedIngress(log, tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses)
-	parsedIngressV1 := fromIngressV1(log, v1Ingresses)
+	log.Infof("\n checking v1Ingresses %d \n", len(v1Ingresses))
+	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)

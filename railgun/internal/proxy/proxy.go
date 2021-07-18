@@ -23,7 +23,7 @@ const (
 	// for improvements we still need to investigate upstream.
 	//
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
-	DefaultSyncSeconds float32 = 4.0
+	DefaultSyncSeconds float32 = 3.0
 
 	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
 	// before it starts rejecting new objects while it processes the originals.

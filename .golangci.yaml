@@ -5,27 +5,39 @@ run:
   - pkg/apis
 linters:
   enable:
-  - deadcode
-  - typecheck
-  - structcheck
-  - varcheck
-  - megacheck
-  - gofmt
-  - unconvert
-  - nakedret
-  - misspell
-  - golint
+  - asciicheck
   - bodyclose
-  - govet
+  - deadcode
+  - depguard
+  - dogsled
+  - durationcheck
+  - errcheck
+  - exhaustive
+  - exportloopref
+  - gci
+  - gochecknoinits
+  - gofmt
+  - goimports
+  - gomnd
   - gosec
   - gosimple
-  - goimports
-  - staticcheck
+  - govet
+  - importas
   - ineffassign
-  - errcheck
-  - dogsled
-  - depguard
+  - megacheck
+  - misspell
+  - nakedret
+  - nilerr
+  - nolintlint
+  - predeclared
+  - revive
+  - staticcheck
+  - structcheck
+  - typecheck
+  - unconvert
   - unparam
+  - varcheck
+  - wastedassign
 issues:
   exclude-rules:
   - linters:

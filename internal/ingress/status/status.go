@@ -416,7 +416,6 @@ func (s *statusSync) runUpdateIngressV1beta1(ctx context.Context, ing *networkin
 			return nil, fmt.Errorf("unknown IngressAPI: %v", s.IngressAPI)
 		}
 		return true, nil
-
 	}
 }
 
@@ -459,7 +458,6 @@ func (s *statusSync) runUpdateIngressV1(ctx context.Context, ing *networkingv1.I
 		}
 
 		return true, nil
-
 	}
 }
 

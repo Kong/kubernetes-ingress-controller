@@ -173,7 +173,8 @@ func buildSimpleClientSet(extraObjects ...runtime.Object) *testclient.Clientset 
 					Namespace: apiv1.NamespaceDefault,
 					SelfLink:  "/api/v1/namespaces/default/endpoints/ingress-controller-leader",
 				},
-			}}},
+			},
+		}},
 	}
 
 	return testclient.NewSimpleClientset(append(objects, extraObjects...)...)
@@ -516,7 +517,6 @@ func TestKeyfunc(t *testing.T) {
 
 	i := "foo_base_pod"
 	r, err := fk.keyfunc(i)
-
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}

@@ -42,17 +42,22 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	var restcp []*configurationv1beta1.TCPIngress
 	for _, ingress := range tcpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-
-		existingHash, ok := util.Get(ingressKey)
+		existingHashString, ok := util.Get(ingressKey)
 		if !ok {
 			log.Infof("tcpingress %s not processed yet. ", ingressKey)
 			restcp = append(restcp, ingress)
 		} else {
-			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+			tcpCopy := configurationv1beta1.TCPIngress{}
+			tcpCopy.ObjectMeta = (*ingress).ObjectMeta
+			tcpCopy.Spec = (*ingress).Spec
+			tcpCopy.Status = (*ingress).Status
+			curHash, err := hashstructure.Hash(&tcpCopy, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)
 			}
-			if existingHash != strconv.FormatUint(curHash, 10) {
+			curHashString := strconv.FormatUint(curHash, 10)
+			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
+			if strings.Compare(existingHashString, curHashString) != 0 {
 				log.Infof("tcpingress %s configured. ", ingressKey)
 				restcp = append(restcp, ingress)
 			} else {
@@ -65,16 +70,24 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range udpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 
-		existingHash, ok := util.Get(ingressKey)
+		existingHashString, ok := util.Get(ingressKey)
 		if !ok {
 			log.Infof("udpingress %s not processed yet. ", ingressKey)
 			resudp = append(resudp, ingress)
 		} else {
-			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+
+			udpCopy := configurationv1beta1.UDPIngress{}
+			udpCopy.ObjectMeta = (*ingress).ObjectMeta
+			udpCopy.Spec = (*ingress).Spec
+			udpCopy.Status = (*ingress).Status
+
+			curHash, err := hashstructure.Hash(&udpCopy, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)
 			}
-			if existingHash != strconv.FormatUint(curHash, 10) {
+			curHashString := strconv.FormatUint(curHash, 10)
+			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
+			if strings.Compare(existingHashString, curHashString) != 0 {
 				log.Infof("udpingress %s configured. ", ingressKey)
 				resudp = append(resudp, ingress)
 			} else {
@@ -87,16 +100,23 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range v1Ingresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 
-		existingHash, ok := util.Get(ingressKey)
+		existingHashString, ok := util.Get(ingressKey)
 		if !ok {
 			log.Infof("v1ingress %s not processed yet. ", ingressKey)
 			resv1 = append(resv1, ingress)
 		} else {
-			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+			v1ingressCopy := networkingv1.Ingress{}
+			v1ingressCopy.ObjectMeta = (*ingress).ObjectMeta
+			v1ingressCopy.Spec = (*ingress).Spec
+			v1ingressCopy.Status = (*ingress).Status
+
+			curHash, err := hashstructure.Hash(&v1ingressCopy, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)
 			}
-			if existingHash != strconv.FormatUint(curHash, 10) {
+			curHashString := strconv.FormatUint(curHash, 10)
+			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
+			if strings.Compare(existingHashString, curHashString) != 0 {
 				log.Infof("v1ingress %s configured. ", ingressKey)
 				resv1 = append(resv1, ingress)
 			} else {
@@ -108,16 +128,23 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	var resknative []*knative.Ingress
 	for _, ingress := range knativeIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		existingHash, ok := util.Get(ingressKey)
+		existingHashString, ok := util.Get(ingressKey)
 		if !ok {
 			log.Infof("knativeingress %s not processed yet. ", ingressKey)
 			resknative = append(resknative, ingress)
 		} else {
-			curHash, err := hashstructure.Hash(*ingress, hashstructure.FormatV2, nil)
+			knativeingressCopy := knative.Ingress{}
+			knativeingressCopy.ObjectMeta = (*ingress).ObjectMeta
+			knativeingressCopy.Spec = (*ingress).Spec
+			knativeingressCopy.Status = (*ingress).Status
+
+			curHash, err := hashstructure.Hash(&knativeingressCopy, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)
 			}
-			if existingHash != strconv.FormatUint(curHash, 10) {
+			curHashString := strconv.FormatUint(curHash, 10)
+			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
+			if strings.Compare(existingHashString, curHashString) != 0 {
 				log.Infof("knativeingress %s configured. ", ingressKey)
 				resknative = append(resknative, ingress)
 			} else {
@@ -146,8 +173,8 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	}
 
 	tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses = filterProcessedIngress(log, tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses)
-	log.Infof("\n checking v1Ingresses %d \n", len(v1Ingresses))
-	//parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
+	log.Infof("\n debug tcpIngresses %d udpIngresses %d v1Ingresses %d  knativeIngresses %d\n",
+		len(tcpIngresses), len(udpIngresses), len(v1Ingresses), len(knativeIngresses))
 	parsedIngressV1 := fromIngressV1(log, v1Ingresses)
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)

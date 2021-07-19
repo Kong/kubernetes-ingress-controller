@@ -82,7 +82,8 @@ func Set(key string, value uint64) error {
 	}
 
 	lock.Lock()
-	_, err := conn.Do("SET", key, strconv.FormatUint(value, 10))
+	valueString := strconv.FormatUint(value, 10)
+	_, err := conn.Do("SET", key, valueString)
 	lock.Unlock()
 
 	if err != nil {
@@ -90,6 +91,7 @@ func Set(key string, value uint64) error {
 		return err
 	}
 
+	log.Printf("[Redis][Set]OK: set key %s value uint64 %v string %s", key, value, valueString)
 	return nil
 }
 

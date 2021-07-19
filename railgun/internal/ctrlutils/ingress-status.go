@@ -182,9 +182,9 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 
 		curIng.Status.LoadBalancer.Ingress = status
 
-		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		configuredV1Ingress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
-			hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+			hash, err := hashstructure.Hash(*configuredV1Ingress, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)
 			}
@@ -235,9 +235,9 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 		curIng.Status.LoadBalancer.Ingress = status
 
-		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		configuredUdpIngress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
-			hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+			hash, err := hashstructure.Hash(*configuredUdpIngress, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)
 			}
@@ -280,12 +280,13 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	}
 
 	curIng.Status.LoadBalancer.Ingress = status
-	_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+	configuredTCPIngress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update TCPIngress status: %v", err)
 	}
+	log.Infof("configured tcp ingress %v", *configuredTCPIngress)
 
-	hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+	hash, err := hashstructure.Hash(*configuredTCPIngress, hashstructure.FormatV2, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -346,9 +347,9 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		ingressCondSet.Manage(&curIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
 		curIng.Status.ObservedGeneration = curIng.GetObjectMeta().GetGeneration()
 
-		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		configuredKnativeIngress, err := ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
-			hash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+			hash, err := hashstructure.Hash(*configuredKnativeIngress, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)
 			}

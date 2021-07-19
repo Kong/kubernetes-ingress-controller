@@ -38,6 +38,7 @@ func PerformUpdate(ctx context.Context,
 
 	// KIC 2.0
 	if !skipUpdateCR {
+
 		var err error
 		if inMemory {
 			err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
@@ -48,7 +49,7 @@ func PerformUpdate(ctx context.Context,
 			return nil, err
 		}
 		kongConfig.ConfigDone <- *targetContent
-		log.Info("successfully synced configuration to kong.")
+		log.Infof("successfully synced configuration ### %v ### to kong.", *targetContent)
 		return nil, nil
 	}
 

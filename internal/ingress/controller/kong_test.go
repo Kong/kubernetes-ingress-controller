@@ -35,7 +35,8 @@ func Test_getIngressControllerTags(t *testing.T) {
 				},
 			},
 			want: nil,
-		}, {
+		},
+		{
 			name: "configuration with no tag support",
 			args: args{
 				config: sendconfig.Kong{

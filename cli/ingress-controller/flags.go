@@ -239,7 +239,6 @@ Ingress API with Kubernetes.`)
 }
 
 func parseFlags() (cliConfig, error) {
-
 	flagSet := flagSet()
 
 	flagSet.AddGoFlagSet(flag.CommandLine)

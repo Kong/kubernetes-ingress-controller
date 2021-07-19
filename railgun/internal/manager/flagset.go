@@ -1,4 +1,4 @@
-package config
+package manager
 
 import (
 	"github.com/spf13/pflag"

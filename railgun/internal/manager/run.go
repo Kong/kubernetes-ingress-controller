@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"honnef.co/go/tools/config"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -22,11 +23,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/railgun/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,7 +34,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *config.Config) error {
+func Run(ctx context.Context, c *Config) error {
 	deprecatedLogger, logger, err := setupLoggers(c)
 	if err != nil {
 		return err
@@ -111,7 +111,11 @@ func Run(ctx context.Context, c *config.Config) error {
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
-	go FlipKnativeController(mgr, proxy, &c.KnativeIngressEnabled, c, setupLog)
+	go func() {
+		if err := FlipKnativeController(mgr, proxy, &c.KnativeIngressEnabled, c, setupLog); err != nil {
+			panic(err)
+		}
+	}()
 
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
@@ -147,7 +151,10 @@ func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus 
 					IngressClassName: cfg.IngressClassName,
 					Proxy:            proxy,
 				}
-				knative.SetupWithManager(mgr)
+
+				if err := knative.SetupWithManager(mgr); err != nil {
+					panic(err)
+				}
 				knativeControolerUp = true
 			} else {
 				log.Info("knative controller already up. Skip registration.")

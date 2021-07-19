@@ -34,6 +34,17 @@
 
 ## [2.0.0-alpha.3] - TBD
 
+#### Breaking changes
+
+- Removed finalizers from resources due to challenges with the Kubernetes
+  side of their implementation and lack of a need for them in the controller
+  reconcilers. Because of the way Kubernetes handles finalizers, you will need
+  to either manually edit resources to remove "configuration.konghq.com/ingress"
+  from their finalizer list or use `kubectl delete --force` to remove them.
+  Kubernetes will prevent deletion of resources with finalizers, and alpha.3
+  will not automatically remove the finalizers previously added by alpha.2.
+  [#1522](https://github.com/Kong/kubernetes-ingress-controller/pull/1522)
+
 #### Added
 
 - Implemented Ingress status updates in 2.x.

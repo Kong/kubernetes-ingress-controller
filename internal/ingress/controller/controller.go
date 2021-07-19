@@ -179,7 +179,6 @@ func NewKongController(ctx context.Context,
 		}
 		electionConfig.Callbacks = n.syncStatus.Callbacks()
 	} else {
-
 		n.Logger.Warnf("ingress status updates is disabled, flag --update-status=false was specified")
 	}
 

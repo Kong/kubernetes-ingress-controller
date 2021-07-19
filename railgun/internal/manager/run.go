@@ -121,7 +121,7 @@ func Run(ctx context.Context, c *Config) error {
 }
 
 // wait for knative cr before register and starting knative controller
-func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus *util.EnablementStatus, cfg *config.Config, log logr.Logger) error {
+func FlipKnativeController(mgr manager.Manager, proxy proxy.Proxy, enablestatus *util.EnablementStatus, cfg *Config, log logr.Logger) error {
 	if *enablestatus == util.EnablementStatusDisabled {
 		log.Info("knative ingress feature disabled. skip.")
 		return nil

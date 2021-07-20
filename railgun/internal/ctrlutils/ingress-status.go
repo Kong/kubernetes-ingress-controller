@@ -156,10 +156,6 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	log.Info("Updating IngressV1 " + ingresKey + " status.")
 
 	ingCli := cli.NetworkingV1().Ingresses(namespace)
-	cli.NetworkingV1beta1()
-	if err != nil {
-		return fmt.Errorf("failed to generate UDP client. err %v", err)
-	}
 
 	retry := 0
 	for retry < statusUpdateRetry {
@@ -181,9 +177,9 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		}
 
 		curIng.Status.LoadBalancer.Ingress = status
-
 		configuredV1Ingress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
+			log.Infof("configured v1ingress %v ", *configuredV1Ingress)
 			hash, err := hashstructure.Hash(*configuredV1Ingress, hashstructure.FormatV2, nil)
 			if err != nil {
 				panic(err)

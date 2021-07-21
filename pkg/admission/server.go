@@ -22,8 +22,10 @@ var (
 	codecs = serializer.NewCodecFactory(scheme)
 )
 
-const DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
-const DefaultAdmissionWebhookKeyPath = "/admission-webhook/tls.key"
+const (
+	DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
+	DefaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
+)
 
 type ServerConfig struct {
 	ListenAddr string
@@ -149,15 +151,18 @@ var (
 	consumerGVResource = meta.GroupVersionResource{
 		Group:    configuration.SchemeGroupVersion.Group,
 		Version:  configuration.SchemeGroupVersion.Version,
-		Resource: "kongconsumers"}
+		Resource: "kongconsumers",
+	}
 	pluginGVResource = meta.GroupVersionResource{
 		Group:    configuration.SchemeGroupVersion.Group,
 		Version:  configuration.SchemeGroupVersion.Version,
-		Resource: "kongplugins"}
+		Resource: "kongplugins",
+	}
 	secretGVResource = meta.GroupVersionResource{
 		Group:    corev1.SchemeGroupVersion.Group,
 		Version:  corev1.SchemeGroupVersion.Version,
-		Resource: "secrets"}
+		Resource: "secrets",
+	}
 )
 
 func (a RequestHandler) handleValidation(ctx context.Context, request admission.AdmissionRequest) (

@@ -89,8 +89,10 @@ func NewElector(ctx context.Context, config Config) Elector {
 	})
 
 	lock := resourcelock.ConfigMapLock{
-		ConfigMapMeta: metav1.ObjectMeta{Namespace: pod.Namespace,
-			Name: config.ElectionID},
+		ConfigMapMeta: metav1.ObjectMeta{
+			Namespace: pod.Namespace,
+			Name:      config.ElectionID,
+		},
 		Client: config.Client.CoreV1(),
 		LockConfig: resourcelock.ResourceLockConfig{
 			Identity:      pod.Name,
@@ -108,7 +110,6 @@ func NewElector(ctx context.Context, config Config) Elector {
 			Callbacks:       config.Callbacks,
 			ReleaseOnCancel: true,
 		})
-
 	if err != nil {
 		es.Logger.Fatalf("failed to start elector: %v", err)
 	}

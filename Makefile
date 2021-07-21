@@ -1,5 +1,5 @@
 TAG?=1.3.1
-RG_TAG?=2.0.0-alpha.1
+RG_TAG?=2.0.0-alpha.2
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
 IMGNAME?=kubernetes-ingress-controller

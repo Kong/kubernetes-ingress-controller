@@ -112,7 +112,7 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 				return fmt.Errorf("failed to update ingressv1. err %v", err)
 			}
 		default:
-			log.Info("unsupported " + proto + "yet.")
+			log.Infof("protocol %s is not supported", proto)
 		}
 	}
 

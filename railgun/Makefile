@@ -114,7 +114,7 @@ kustomize: ## Download kustomize locally if necessary.
 
 ##@ Single manifests
 
-allinones: ## Compose single-file deployment manifests from building blocks
+manifests.single: ## Compose single-file deployment manifests from building blocks
 	./hack/deploy/build-single-manifests.sh
 
 

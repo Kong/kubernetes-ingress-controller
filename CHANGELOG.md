@@ -52,6 +52,8 @@
 - Added `--publish-status-address` and `--publish-service` flags to 2.x.
   [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
   [#1509](https://github.com/Kong/kubernetes-ingress-controller/pull/1509)
+- Added scripts to generate 2.x manifests.
+  [#1563](https://github.com/Kong/kubernetes-ingress-controller/pull/1563)
 
 #### Under the hood
 

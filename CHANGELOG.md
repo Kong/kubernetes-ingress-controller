@@ -56,7 +56,8 @@
 #### Under the hood
 
 - New `v1` versions of `CustomResourceDefinitions` introduced for KIC 2.0 are now
-  backwards compatible with the previous `v1beta1` CRD definitions. In practice
+  backwards compatible with the previous `v1beta1` CRD definitions (i.e. `v1beta1 -> v1`
+  upgrades of KIC's CustomResourceDefinitions now work fully automatically). In practice
   the upgrade process should be seamless for end-users (e.g. `kubectl apply -f <NEW CRDS>`).
   If you're interested in better understanding the differences and what's going on
   under the hood, please see the relevant PR which includes the user facing changes.

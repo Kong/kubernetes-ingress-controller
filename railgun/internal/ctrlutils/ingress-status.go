@@ -116,7 +116,7 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 				panic(err)
 			}
 		default:
-			log.Info("unsupported " + proto + "yet.")
+			log.Info("protocol " + proto + " is not supported")
 		}
 	}
 
@@ -141,7 +141,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("route name %s namespace %s", name, namespace)
+		log.Infof("updating status for v1.Ingress route: name %s namespace %s", name, namespace)
 
 		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
 		log.Info("Updating Networking V1 Ingress " + ingresKey + " status.")
@@ -200,11 +200,9 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("route name %s namespace %s", name, namespace)
 
 		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
-		log.Info("Updating UDP ingress " + ingresKey + " status.")
-
+		log.Infof("updating UDP ingress route namespace-name %s", ingresKey)
 		ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
 		retry := 0
 		for retry < statusUpdateRetry {
@@ -260,7 +258,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("route name %s namespace %s", name, namespace)
+		log.Infof("Updating TCP ingress route name %s namespace %s", name, namespace)
 
 		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
 		log.Info("Updating TCP Ingress " + ingresKey + " status.")
@@ -325,9 +323,8 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("route name %s namespace %s", name, namespace)
 		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
-		log.Info("Updating KnativeIngress " + ingresKey + " status.")
+		log.Infof("Updating Knative route namespace-name %s", ingresKey)
 
 		knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
 		if err != nil {

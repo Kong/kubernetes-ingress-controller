@@ -20,10 +20,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
-const (
-	maxBatchSize             = 50
-	testBulkIngressNamespace = "ingress-bulk-testing"
-)
+const testBulkIngressNamespace = "ingress-bulk-testing"
 
 // TestIngressBulk attempts to validate functionality at scale by rapidly deploying a large number of ingress resources.
 func TestIngressBulk(t *testing.T) {

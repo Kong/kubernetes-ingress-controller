@@ -82,6 +82,9 @@ var (
 	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
 	dbmode = os.Getenv("TEST_DATABASE_MODE")
 
+	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
+	maxBatchSize = determineMaxBatchSize()
+
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
 	env environments.Environment

@@ -10,6 +10,12 @@ import (
 var goCache gcache.Cache
 
 func InitCache() error {
+	if goCache != nil {
+		msg := "memory cache already initialized."
+		fmt.Println(msg)
+		return nil
+	}
+
 	goCache = gcache.New(1000).
 		LRU().
 		Build()

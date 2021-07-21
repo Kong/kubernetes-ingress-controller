@@ -22,6 +22,7 @@ require (
 	github.com/kong/kubernetes-testing-framework v0.1.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/prometheus/client_golang v1.11.0

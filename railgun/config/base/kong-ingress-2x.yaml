@@ -9,3 +9,6 @@ spec:
       containers:
       - name: ingress-controller
         image: kong/kubernetes-ingress-controller:2.0.0-alpha.2
+        readinessProbe:
+          httpGet:
+            path: /readyz

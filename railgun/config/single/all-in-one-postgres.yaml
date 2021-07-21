@@ -1442,7 +1442,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /healthz
+            path: /readyz
             port: 10254
             scheme: HTTP
           initialDelaySeconds: 5

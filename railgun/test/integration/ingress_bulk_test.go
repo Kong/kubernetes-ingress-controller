@@ -93,8 +93,9 @@ func TestIngressBulk(t *testing.T) {
 		}, ingressWait, waitTick)
 	}
 
-	t.Log("staggering deployment: 10 new ingress resources every second for the next 10 seconds (total 100)")
-	for i := 0; i < 100; i++ {
+	t.Log("staggering ingress deployments over several seconds")
+	maxStaggeredBatchSize := maxBatchSize * 2
+	for i := 0; i < maxStaggeredBatchSize; i++ {
 		name := fmt.Sprintf("bulk-staggered-httpbin-%d", i)
 		path := fmt.Sprintf("/%s", name)
 
@@ -117,8 +118,8 @@ func TestIngressBulk(t *testing.T) {
 		}
 	}
 
-	t.Log("verifying that all 100 staggered ingresses route properly")
-	for i := 0; i < 100; i++ {
+	t.Logf("verifying that all %d staggered ingresses route properly", maxStaggeredBatchSize)
+	for i := 0; i < maxStaggeredBatchSize; i++ {
 		name := fmt.Sprintf("bulk-staggered-httpbin-%d", i)
 		path := fmt.Sprintf("/%s", name)
 

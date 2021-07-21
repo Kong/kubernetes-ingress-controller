@@ -356,7 +356,7 @@ func TestHTTPSIngress(t *testing.T) {
 	}()
 
 	t.Logf("checking ingress %s status readiness.", ingress1.Name)
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		curIng, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, ingress1.Name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
 			return false

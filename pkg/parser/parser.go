@@ -42,8 +42,8 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	var restcp []*configurationv1beta1.TCPIngress
 	for _, ingress := range tcpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		existingHashString, ok := util.Get(ingressKey)
-		if !ok {
+		existingHashString, err := util.GetValue(ingressKey)
+		if err != nil {
 			log.Infof("tcpingress %s not processed yet. ", ingressKey)
 			restcp = append(restcp, ingress)
 		} else {
@@ -56,8 +56,8 @@ func filterProcessedIngress(log logrus.FieldLogger,
 				panic(err)
 			}
 			curHashString := strconv.FormatUint(curHash, 10)
-			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
-			if strings.Compare(existingHashString, curHashString) != 0 {
+			log.Infof("persisted ingress %v hash %s cur ingress hash %s ", tcpCopy, existingHashString, curHashString)
+			if strings.Compare(existingHashString.(string), curHashString) != 0 {
 				log.Infof("tcpingress %s configured. ", ingressKey)
 				restcp = append(restcp, ingress)
 			} else {
@@ -70,8 +70,8 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range udpIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 
-		existingHashString, ok := util.Get(ingressKey)
-		if !ok {
+		existingHashString, err := util.GetValue(ingressKey)
+		if err != nil {
 			log.Infof("udpingress %s not processed yet. ", ingressKey)
 			resudp = append(resudp, ingress)
 		} else {
@@ -86,8 +86,8 @@ func filterProcessedIngress(log logrus.FieldLogger,
 				panic(err)
 			}
 			curHashString := strconv.FormatUint(curHash, 10)
-			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
-			if strings.Compare(existingHashString, curHashString) != 0 {
+			log.Infof("persisted ingress %v hash %s cur ingress hash %s ", ingress, existingHashString, curHashString)
+			if strings.Compare(existingHashString.(string), curHashString) != 0 {
 				log.Infof("udpingress %s configured. ", ingressKey)
 				resudp = append(resudp, ingress)
 			} else {
@@ -100,8 +100,8 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	for _, ingress := range v1Ingresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
 
-		existingHashString, ok := util.Get(ingressKey)
-		if !ok {
+		existingHashString, err := util.GetValue(ingressKey)
+		if err != nil {
 			log.Infof("v1ingress %s not processed yet. ", ingressKey)
 			resv1 = append(resv1, ingress)
 		} else {
@@ -116,7 +116,7 @@ func filterProcessedIngress(log logrus.FieldLogger,
 			}
 			curHashString := strconv.FormatUint(curHash, 10)
 			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
-			if strings.Compare(existingHashString, curHashString) != 0 {
+			if strings.Compare(existingHashString.(string), curHashString) != 0 {
 				log.Infof("v1ingress %s configured. ", ingressKey)
 				resv1 = append(resv1, ingress)
 			} else {
@@ -128,8 +128,8 @@ func filterProcessedIngress(log logrus.FieldLogger,
 	var resknative []*knative.Ingress
 	for _, ingress := range knativeIngresses {
 		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		existingHashString, ok := util.Get(ingressKey)
-		if !ok {
+		existingHashString, err := util.GetValue(ingressKey)
+		if err != nil {
 			log.Infof("knativeingress %s not processed yet. ", ingressKey)
 			resknative = append(resknative, ingress)
 		} else {
@@ -144,7 +144,7 @@ func filterProcessedIngress(log logrus.FieldLogger,
 			}
 			curHashString := strconv.FormatUint(curHash, 10)
 			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHashString, curHashString)
-			if strings.Compare(existingHashString, curHashString) != 0 {
+			if strings.Compare(existingHashString.(string), curHashString) != 0 {
 				log.Infof("knativeingress %s configured. ", ingressKey)
 				resknative = append(resknative, ingress)
 			} else {

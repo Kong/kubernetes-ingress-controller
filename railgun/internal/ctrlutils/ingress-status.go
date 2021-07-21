@@ -52,8 +52,8 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 		return
 	}
 
-	if err := util.InitRedis(); err != nil {
-		log.Error(err, "failed to create kong ingress client.")
+	if err := util.InitCache(); err != nil {
+		log.Error(err, "failed to initialize memory cache.")
 		return
 	}
 
@@ -174,7 +174,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 				if err != nil {
 					panic(err)
 				}
-				if err = util.Set(ingresKey, hash); err != nil {
+				if err = util.SetValue(ingresKey, hash); err != nil {
 					log.Errorf("failed to persist ingress v1 %s status into mem cache. err %v", ingresKey, err)
 					time.Sleep(time.Second)
 					retry++
@@ -232,7 +232,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				if err != nil {
 					panic(err)
 				}
-				if err = util.Set(ingresKey, hash); err != nil {
+				if err = util.SetValue(ingresKey, hash); err != nil {
 					log.Errorf("failed to persist udp ingress %s status into mem cache. err %v", ingresKey, err)
 					time.Sleep(time.Second)
 					retry++
@@ -300,7 +300,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				retry++
 				continue
 			}
-			if err = util.Set(ingresKey, hash); err != nil {
+			if err = util.SetValue(ingresKey, hash); err != nil {
 				log.Errorf("failed to persist ingress %s status into cache. err %v", ingresKey, err)
 				time.Sleep(time.Second)
 				retry++
@@ -374,7 +374,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 				if err != nil {
 					panic(err)
 				}
-				if err = util.Set(ingresKey, hash); err != nil {
+				if err = util.SetValue(ingresKey, hash); err != nil {
 					log.Errorf("failed to persist knative ingress %s status into cache. err %v", ingresKey, err)
 					time.Sleep(time.Second)
 					retry++

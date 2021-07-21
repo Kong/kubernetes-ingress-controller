@@ -7,6 +7,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver/v4 v4.0.0
+	github.com/bluele/gcache v0.0.2 // indirect
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/eapache/channels v1.1.0
 	github.com/fatih/color v1.12.0

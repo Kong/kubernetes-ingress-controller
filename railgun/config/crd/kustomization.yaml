@@ -2,6 +2,10 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
+- bases/configuration.konghq.com_kongclusterplugins.yaml
+- bases/configuration.konghq.com_kongplugins.yaml
+- bases/configuration.konghq.com_kongconsumers.yaml
+- bases/configuration.konghq.com_kongingresses.yaml
 - bases/configuration.konghq.com_tcpingresses.yaml
 - bases/configuration.konghq.com_udpingresses.yaml
 #+kubebuilder:scaffold:crdkustomizeresource

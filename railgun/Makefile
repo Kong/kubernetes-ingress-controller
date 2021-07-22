@@ -172,7 +172,6 @@ test.integration: test.integration.dbless test.integration.postgres
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
-	@./scripts/redis-ubuntu.sh
 	@TEST_MODE="true" TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
 
 # Our integration tests using the postgres backend, with verbose output
@@ -181,12 +180,10 @@ test.integration.dbless:
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
-	@./scripts/redis-ubuntu.sh
 	@TEST_MODE="true" TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 15m -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
 
 # Our integration tests using the legacy v1 controller manager
 .PHONY: test.integration.legacy
 test.integration.legacy:
 	@./scripts/check-container-environment.sh
-	@./scripts/redis-ubuntu.sh
 	@TEST_MODE="true" KONG_LEGACY_CONTROLLER=1 GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/

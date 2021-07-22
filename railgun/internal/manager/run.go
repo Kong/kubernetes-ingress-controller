@@ -65,7 +65,10 @@ func Run(ctx context.Context, c *Config) error {
 	}
 
 	setupLog.Info("deploying all enabled controllers")
-	controllers := setupControllers(setupLog, mgr, proxy, c)
+	controllers, err := setupControllers(setupLog, mgr, proxy, c)
+	if err != nil {
+		return fmt.Errorf("unable to setup controller as expected %w", err)
+	}
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)

@@ -166,7 +166,7 @@ func TestCaching(t *testing.T) {
 	t.Log("flushing the cache state to kong admin api again")
 	proxy.syncTicker.Reset(time.Millisecond * 50)
 
-	t.Logf("ensuring that only a single update to the backend was performed, but that all cache objects were removed")
+	t.Logf("ensuring that only a single update to the backend was performed when the cache is settled and not receiving further updates. verifying that all cache objects were removed")
 	assert.Eventually(t, func() bool {
 		return fakeKongAdminUpdateCount() == 1 && len(proxy.cache.IngressV1.List()) == 0
 	}, time.Second*5, time.Millisecond*50)

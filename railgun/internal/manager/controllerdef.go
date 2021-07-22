@@ -68,7 +68,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) []ControllerDef {
+func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -220,8 +220,8 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			}
 			controllers = append(controllers, controller)
 		} else {
-			logger.Info(`kongclusterplugins.configuration.konghq.com v1beta1 CRD not available on cluster.
-		Disabling KongClusterPlugin controller`)
+			message := fmt.Sprintf("%s CRD not available on the cluster", kongClusterPluginGVR.String())
+			return nil, fmt.Errorf(message)
 		}
 	} else {
 		logger.Info(`kong cluster plugin is disabled.
@@ -248,13 +248,13 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			}
 			controllers = append(controllers, controller)
 		} else {
-			logger.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
-		Disabling Knative controller`)
+			message := fmt.Sprintf("%s CRD not available on the cluster", knativeGVR.String())
+			return nil, fmt.Errorf(message)
 		}
 	} else {
 		logger.Info(`knative v1alpha1 ingress is disabled.
 		Disabling Knative controller`)
 	}
 
-	return controllers
+	return controllers, nil
 }

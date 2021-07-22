@@ -11,5 +11,4 @@ resources:
 - kong-ingress-dbless.yaml
 patchesStrategicMerge:
 - kong-ingress-2x.yaml
-- tmp-bindings.yaml
 namespace: kong

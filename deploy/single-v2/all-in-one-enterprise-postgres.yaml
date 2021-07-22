@@ -17,6 +17,7 @@ spec:
     listKind: KongClusterPluginList
     plural: kongclusterplugins
     singular: kongclusterplugin
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -126,6 +127,7 @@ spec:
     listKind: KongConsumerList
     plural: kongconsumers
     singular: kongconsumer
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -184,6 +186,7 @@ spec:
     listKind: KongIngressList
     plural: kongingresses
     singular: kongingress
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -583,6 +586,7 @@ spec:
     listKind: KongPluginList
     plural: kongplugins
     singular: kongplugin
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -689,6 +693,7 @@ spec:
     listKind: TCPIngressList
     plural: tcpingresses
     singular: tcpingress
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1beta1
@@ -862,6 +867,7 @@ spec:
     listKind: UDPIngressList
     plural: udpingresses
     singular: udpingress
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1beta1

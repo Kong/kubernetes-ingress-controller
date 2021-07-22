@@ -4,6 +4,10 @@
 resources:
 - bases/configuration.konghq.com_tcpingresses.yaml
 - bases/configuration.konghq.com_udpingresses.yaml
+- bases/configuration.konghq.com_kongclusterplugins.yaml
+- bases/configuration.konghq.com_kongconsumers.yaml
+- bases/configuration.konghq.com_kongingresses.yaml
+- bases/configuration.konghq.com_kongplugins.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

@@ -4,11 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/kong/deck/file"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/internal/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -35,6 +37,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig Kong,
 	enableReverseSync bool,
+	diagnostic util.ConfigDumpDiagnostic,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
@@ -42,11 +45,22 @@ func UpdateKongAdminSimple(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+	var diagConfig *file.Content
 
 	// generate the deck configuration to be applied to the admin API
 	targetConfig := deckgen.ToDeckContent(ctx,
 		deprecatedLogger, kongstate,
 		kongConfig.PluginSchemaStore, kongConfig.FilterTags)
+	if diagnostic != (util.ConfigDumpDiagnostic{}) {
+		if !diagnostic.DumpsIncludeSensitive {
+			redactedConfig := deckgen.ToDeckContent(ctx,
+				deprecatedLogger, kongstate,
+				kongConfig.PluginSchemaStore, kongConfig.FilterTags)
+			diagConfig = redactedConfig
+		} else {
+			diagConfig = targetConfig
+		}
+	}
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -57,7 +71,13 @@ func UpdateKongAdminSimple(ctx context.Context,
 		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false,
 	)
 	if err != nil {
+		if diagnostic != (util.ConfigDumpDiagnostic{}) {
+			diagnostic.FailedConfigs <- *diagConfig
+		}
 		return nil, err
+	}
+	if diagnostic != (util.ConfigDumpDiagnostic{}) {
+		diagnostic.SuccessfulConfigs <- *diagConfig
 	}
 
 	return configSHA, nil

@@ -80,7 +80,8 @@ var mockKongAdmin KongUpdater = func(ctx context.Context,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool) ([]byte, error) {
+	enableReverseSync bool,
+	diagnostic util.ConfigDumpDiagnostic) ([]byte, error) {
 	fakeKongAdminUpdateCount(1)
 	return lastConfigSHA, nil
 }

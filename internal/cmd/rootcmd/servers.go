@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/bombsimon/logrusr"
+	"github.com/kong/deck/file"
+
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
@@ -45,23 +47,33 @@ func StartAdmissionServer(ctx context.Context, c *manager.Config) error {
 	return nil
 }
 
-func StartProfilingServer(ctx context.Context, c *manager.Config) error {
+func StartDiagnosticsServer(ctx context.Context, port int, c *manager.Config) (diagnostics.Server, error) {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
-		return err
+		return diagnostics.Server{}, err
 	}
 	logger := logrusr.NewLogger(deprecatedLogger)
 
-	if !c.EnableProfiling {
-		logger.Info("profiling server disabled")
-		return nil
+	if !c.EnableProfiling && !c.EnableConfigDumps {
+		logger.Info("diagnostics server disabled")
+		return diagnostics.Server{}, nil
 	}
 
-	s := diagnostics.Server{Logger: logger}
+	s := diagnostics.Server{
+		Logger:           logger,
+		ProfilingEnabled: c.EnableProfiling,
+	}
+	if c.EnableConfigDumps {
+		s.ConfigDumps = util.ConfigDumpDiagnostic{
+			DumpsIncludeSensitive: c.DumpSensitiveConfig,
+			SuccessfulConfigs:     make(chan file.Content),
+			FailedConfigs:         make(chan file.Content),
+		}
+	}
 	go func() {
-		if err := s.Listen(ctx); err != nil {
+		if err := s.Listen(ctx, port); err != nil {
 			logger.Error(err, "unable to start diagnostics server")
 		}
 	}()
-	return nil
+	return s, nil
 }

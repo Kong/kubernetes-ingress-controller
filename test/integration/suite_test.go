@@ -312,6 +312,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 				"--controller-kongclusterplugin=enabled",
 				"--controller-kongplugin=enabled",
 				"--controller-kongconsumer=disabled",
+				"--dump-config",
 				"--election-id=integrationtests.konghq.com",
 				"--publish-service=kong-system/ingress-controller-kong-proxy",
 				fmt.Sprintf("--watch-namespace=%s", watchNamespaces),

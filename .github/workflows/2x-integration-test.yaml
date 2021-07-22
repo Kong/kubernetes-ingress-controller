@@ -33,7 +33,7 @@ jobs:
       run: make test.integration.dbless
       working-directory: ./railgun
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v2.0.1
       with:
         directory: ./railgun
         flags: integration-test
@@ -58,7 +58,7 @@ jobs:
       run: make test.integration.postgres
       working-directory: ./railgun
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v2.0.1
       with:
         directory: ./railgun
         flags: integration-test

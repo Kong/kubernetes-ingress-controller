@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -22,6 +23,7 @@ import (
 )
 
 var testIngressNamespace = "ingress"
+var ingressClassName = "kongtests"
 
 func TestIngressEssentials(t *testing.T) {
 	ctx := context.Background()
@@ -170,6 +172,45 @@ func TestIngressEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
+func ComposeNetworkingV1Ingress(path string, annotations map[string]string, s *corev1.Service, ingressClass *string) *netv1.Ingress {
+	pathPrefix := netv1.PathTypePrefix
+	return &netv1.Ingress{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ingress",
+			APIVersion: "networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        s.Name,
+			Annotations: annotations,
+		},
+		Spec: netv1.IngressSpec{
+			IngressClassName: ingressClass,
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     path,
+									PathType: &pathPrefix,
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: s.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: s.Spec.Ports[0].Port,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestIngressClassNameSpec(t *testing.T) {
 	ctx := context.Background()
 
@@ -214,9 +255,12 @@ func TestIngressClassNameSpec(t *testing.T) {
 	}()
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
-	ingress := generators.NewIngressForService("/httpbin", map[string]string{"konghq.com/strip-path": "true"}, service)
-	ingress.Spec.IngressClassName = kong.String(ingressClass)
+	ingress := ComposeNetworkingV1Ingress("/httpbin", map[string]string{
+		"konghq.com/strip-path": "true"}, service, &ingressClassName)
+	fmt.Printf("\n [debug] composed NetworkingV1 ingress %v \n", *ingress)
+
 	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(testIngressNamespace).Create(ctx, ingress, metav1.CreateOptions{})
+	fmt.Printf("\n [debug] created NetworkingV1 ingress %v \n", *ingress)
 	require.NoError(t, err)
 
 	defer func() {
@@ -236,6 +280,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
+		fmt.Printf("\n [debug] networkingV1 ingress failure resp %v \n", resp)
 		if resp.StatusCode == http.StatusOK {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
@@ -253,6 +298,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	require.NoError(t, err)
 	ingress.Spec.IngressClassName = nil
 	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(testIngressNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+	fmt.Printf("\n [debug] updated NetworkingV1 ingress %v \n", *ingress)
 	require.NoError(t, err)
 
 	t.Logf("verifying that removing the IngressClassName %q from ingress %s causes routes to disconnect", ingressClass, ingress.Name)
@@ -271,6 +317,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	require.NoError(t, err)
 	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(testIngressNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+	fmt.Printf("\n [debug] added ingressclass name back NetworkingV1 ingress %v \n", *ingress)
 	require.NoError(t, err)
 
 	t.Logf("waiting for routes from Ingress %s to be operational after reintroducing ingress class annotation", ingress.Name)

@@ -47,7 +47,7 @@ func SetValue(key, value interface{}) error {
 		return fmt.Errorf(errMsg)
 	}
 
-	okMsg := fmt.Sprintf("sucessfully cached key %s value %s", key, value)
+	okMsg := fmt.Sprintf("sucessfully cached key %s value %d", key, value)
 	fmt.Println(okMsg)
 	return nil
 }
@@ -64,7 +64,7 @@ func GetValue(key interface{}) (interface{}, error) {
 		fmt.Println(errMsg)
 		return nil, fmt.Errorf(errMsg)
 	}
-	okMsg := fmt.Sprintf("successfully get cache key %s value %s", key, value)
+	okMsg := fmt.Sprintf("successfully get cache key %s value %d", key, value)
 	fmt.Println(okMsg)
 	return value, nil
 }

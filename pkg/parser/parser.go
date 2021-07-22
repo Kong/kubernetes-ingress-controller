@@ -114,7 +114,7 @@ func filterProcessedIngress(log logrus.FieldLogger,
 				panic(err)
 			}
 
-			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHash, curHash)
+			log.Infof("persisted ingress hash %d cur ingress hash %d ", existingHash, curHash)
 			if existingHash != curHash {
 				log.Infof("v1ingress %s configured. ", ingressKey)
 				resv1 = append(resv1, ingress)
@@ -142,7 +142,7 @@ func filterProcessedIngress(log logrus.FieldLogger,
 				panic(err)
 			}
 
-			log.Infof("persisted ingress hash %s cur ingress hash %s ", existingHash, curHash)
+			log.Infof(" %d cur ingress hash %d ", existingHash, curHash)
 			if existingHash != curHash {
 				log.Infof("knativeingress %s configured. ", ingressKey)
 				resknative = append(resknative, ingress)

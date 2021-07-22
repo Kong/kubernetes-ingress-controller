@@ -5,7 +5,10 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,4 +32,16 @@ func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bo
 		return body.Message == "no Route matched with those values"
 	}
 	return false
+}
+
+// determineMaxBatchSize provides a size limit for the number of resources to POST in a single second during tests, and can be overridden with an ENV var if desired.
+func determineMaxBatchSize() int {
+	if v := os.Getenv("KONG_BULK_TESTING_BATCH_SIZE"); v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			panic(fmt.Sprintf("Error: invalid batch size %s: %s", v, err))
+		}
+		return i
+	}
+	return 50
 }

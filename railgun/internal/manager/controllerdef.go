@@ -68,7 +68,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) []ControllerDef {
+func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -199,51 +199,62 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		Disabling Ingress controller`)
 	}
 
-	kongClusterPluginGVR := schema.GroupVersionResource{
-		Group:    konghqcomv1.SchemeGroupVersion.Group,
-		Version:  konghqcomv1.SchemeGroupVersion.Version,
-		Resource: "kongclusterplugins",
-	}
-	if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) {
-		logger.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
-		controller := ControllerDef{
-			IsEnabled: &c.KongClusterPluginEnabled,
-			Controller: &configuration.KongV1KongClusterPluginReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
-				IngressClassName: c.IngressClassName,
-			},
+	if c.KongClusterPluginEnabled == util.EnablementStatusEnabled {
+		kongClusterPluginGVR := schema.GroupVersionResource{
+			Group:    konghqcomv1.SchemeGroupVersion.Group,
+			Version:  konghqcomv1.SchemeGroupVersion.Version,
+			Resource: "kongclusterplugins",
 		}
-		controllers = append(controllers, controller)
+
+		if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) {
+			logger.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
+			controller := ControllerDef{
+				IsEnabled: &c.KongClusterPluginEnabled,
+				Controller: &configuration.KongV1KongClusterPluginReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+					Scheme:           mgr.GetScheme(),
+					Proxy:            proxy,
+					IngressClassName: c.IngressClassName,
+				},
+			}
+			controllers = append(controllers, controller)
+		} else {
+			message := fmt.Sprintf("%s CRD not available on the cluster", kongClusterPluginGVR.String())
+			return nil, fmt.Errorf(message)
+		}
 	} else {
-		logger.Info(`kongclusterplugins.configuration.konghq.com v1beta1 CRD not available on cluster.
+		logger.Info(`kong cluster plugin is disabled.
 		Disabling KongClusterPlugin controller`)
 	}
-
-	knativeGVR := schema.GroupVersionResource{
-		Group:    knativev1alpha1.SchemeGroupVersion.Group,
-		Version:  knativev1alpha1.SchemeGroupVersion.Version,
-		Resource: "ingresses",
-	}
-	if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) {
-		logger.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
-		controller := ControllerDef{
-			IsEnabled: &c.KnativeIngressEnabled,
-			Controller: &configuration.Knativev1alpha1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
-				IngressClassName: c.IngressClassName,
-			},
+	if c.KnativeIngressEnabled == util.EnablementStatusEnabled {
+		knativeGVR := schema.GroupVersionResource{
+			Group:    knativev1alpha1.SchemeGroupVersion.Group,
+			Version:  knativev1alpha1.SchemeGroupVersion.Version,
+			Resource: "ingresses",
 		}
-		controllers = append(controllers, controller)
+
+		if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) {
+			logger.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
+			controller := ControllerDef{
+				IsEnabled: &c.KnativeIngressEnabled,
+				Controller: &configuration.Knativev1alpha1IngressReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+					Scheme:           mgr.GetScheme(),
+					Proxy:            proxy,
+					IngressClassName: c.IngressClassName,
+				},
+			}
+			controllers = append(controllers, controller)
+		} else {
+			message := fmt.Sprintf("%s CRD not available on the cluster", knativeGVR.String())
+			return nil, fmt.Errorf(message)
+		}
 	} else {
-		logger.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
+		logger.Info(`knative v1alpha1 ingress is disabled.
 		Disabling Knative controller`)
 	}
 
-	return controllers
+	return controllers, nil
 }

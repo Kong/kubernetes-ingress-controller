@@ -14,6 +14,7 @@ spec:
     listKind: KongClusterPluginList
     plural: kongclusterplugins
     singular: kongclusterplugin
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1

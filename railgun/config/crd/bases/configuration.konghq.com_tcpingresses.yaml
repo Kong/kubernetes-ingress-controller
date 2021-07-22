@@ -14,6 +14,7 @@ spec:
     listKind: TCPIngressList
     plural: tcpingresses
     singular: tcpingress
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1beta1

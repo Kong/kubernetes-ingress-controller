@@ -149,8 +149,27 @@ func TestCaching(t *testing.T) {
 	t.Log("flushing the cache state to kong admin api")
 	proxy.syncTicker.Reset(time.Millisecond * 50)
 
-	t.Logf("waiting for kong admin api updates to synchronize")
-	assert.Eventually(t, func() bool { return fakeKongAdminUpdateCount() == len(testObjects) }, time.Second*5, time.Millisecond*50)
+	t.Logf("ensuring that only a single update to the backend was performed, but that all cache objects are accounted for")
+	assert.Eventually(t, func() bool {
+		return fakeKongAdminUpdateCount() == 1 && len(proxy.cache.IngressV1.List()) == len(testObjects)
+	}, time.Second*5, time.Millisecond*50)
+
+	t.Log("freezing updates to the cache again")
+	fakeKongAdminUpdateCount(0) // reset the test counter
+	proxy.syncTicker.Reset(time.Minute * 3)
+
+	t.Log("deleting all the objects from the cache")
+	for _, testObj := range testObjects {
+		require.NoError(t, proxy.DeleteObject(testObj))
+	}
+
+	t.Log("flushing the cache state to kong admin api again")
+	proxy.syncTicker.Reset(time.Millisecond * 50)
+
+	t.Logf("ensuring that only a single update to the backend was performed when the cache is settled and not receiving further updates. verifying that all cache objects were removed")
+	assert.Eventually(t, func() bool {
+		return fakeKongAdminUpdateCount() == 1 && len(proxy.cache.IngressV1.List()) == 0
+	}, time.Second*5, time.Millisecond*50)
 }
 
 func TestProxyTimeout(t *testing.T) {

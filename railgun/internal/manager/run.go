@@ -70,8 +70,10 @@ func Run(ctx context.Context, c *Config) error {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}
 	for _, c := range controllers {
-		if err := c.MaybeSetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+		if c.IsEnabled {
+			if err := c.Controller.SetupWithManager(mgr); err != nil {
+				return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+			}
 		}
 	}
 

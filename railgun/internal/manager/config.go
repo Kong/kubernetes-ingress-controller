@@ -14,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/proxy"
 )
 
@@ -34,7 +33,7 @@ type Config struct {
 	// Kong high-level controller manager configurations
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 	KongAdminToken     string
-	KongStateEnabled   util.EnablementStatus
+	KongStateEnabled   bool
 	KongWorkspace      string
 	AnonymousReports   bool
 	EnableReverseSync  bool
@@ -64,17 +63,15 @@ type Config struct {
 	UpdateStatus         bool
 
 	// Kubernetes API toggling
-	IngressExtV1beta1Enabled util.EnablementStatus
-	IngressNetV1beta1Enabled util.EnablementStatus
-	IngressNetV1Enabled      util.EnablementStatus
-	UDPIngressEnabled        util.EnablementStatus
-	TCPIngressEnabled        util.EnablementStatus
-	KongIngressEnabled       util.EnablementStatus
-	KnativeIngressEnabled    util.EnablementStatus
-	KongClusterPluginEnabled util.EnablementStatus
-	KongPluginEnabled        util.EnablementStatus
-	KongConsumerEnabled      util.EnablementStatus
-	ServiceEnabled           util.EnablementStatus
+	IngressEnabled           bool
+	UDPIngressEnabled        bool
+	TCPIngressEnabled        bool
+	KongIngressEnabled       bool
+	KnativeIngressEnabled    bool
+	KongClusterPluginEnabled bool
+	KongPluginEnabled        bool
+	KongConsumerEnabled      bool
+	ServiceEnabled           bool
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -82,13 +79,6 @@ type Config struct {
 	// Performance monitoring
 	EnableProfiling bool
 }
-
-// -----------------------------------------------------------------------------
-// Controller Manager - Config - Constants & Vars
-// -----------------------------------------------------------------------------
-
-// onOffUsage is used to indicate what textual options are used to enable or disable a feature.
-const onOffUsage = "Can be one of [enabled, disabled]."
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config - Methods
@@ -112,7 +102,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "", `PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
 	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil, `add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
 	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "", `The Kong Enterprise RBAC token used by the controller.`)
-	flagSet.enablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled, "Enable or disable the KongState controller. "+onOffUsage)
+	flagSet.BoolVar(&c.KongStateEnabled, "controller-kongstate", true, "Enable or disable the KongState controller. ")
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
@@ -156,18 +146,15 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 
 	// Kubernetes API toggling
-	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusEnabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
-	// TODO the other Ingress versions remain disabled for now. 2.x does not yet support version negotiation
-	flagSet.enablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusDisabled, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1beta1)."+onOffUsage)
-	flagSet.enablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusDisabled, "Enable or disable the Ingress controller (using API version extensions/v1beta1)."+onOffUsage)
-	flagSet.enablementStatusVar(&c.UDPIngressEnabled, "controller-udpingress", util.EnablementStatusEnabled, "Enable or disable the UDPIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusEnabled, "Enable or disable the TCPIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KnativeIngressEnabled, "controller-knativeingress", util.EnablementStatusEnabled, "Enable or disable the KnativeIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusEnabled, "Enable or disable the KongIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusEnabled, "Enable or disable the KongClusterPlugin controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusEnabled, "Enable or disable the KongPlugin controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusEnabled, "Enable or disable the KongConsumer controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled, "Enable or disable the Service controller. "+onOffUsage)
+	flagSet.BoolVar(&c.IngressEnabled, "controller-ingress", true, "Enable or disable the Ingress controller (using latest API version available).")
+	flagSet.BoolVar(&c.UDPIngressEnabled, "controller-udpingress", true, "Enable or disable the UDPIngress controller. ")
+	flagSet.BoolVar(&c.TCPIngressEnabled, "controller-tcpingress", true, "Enable or disable the TCPIngress controller. ")
+	flagSet.BoolVar(&c.KnativeIngressEnabled, "controller-knativeingress", true, "Enable or disable the KnativeIngress controller. ")
+	flagSet.BoolVar(&c.KongIngressEnabled, "controller-kongingress", true, "Enable or disable the KongIngress controller. ")
+	flagSet.BoolVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", true, "Enable or disable the KongClusterPlugin controller. ")
+	flagSet.BoolVar(&c.KongPluginEnabled, "controller-kongplugin", true, "Enable or disable the KongPlugin controller. ")
+	flagSet.BoolVar(&c.KongConsumerEnabled, "controller-kongconsumer", true, "Enable or disable the KongConsumer controller. ")
+	flagSet.BoolVar(&c.ServiceEnabled, "controller-service", true, "Enable or disable the Service controller. ")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",

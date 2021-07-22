@@ -14,6 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// -----------------------------------------------------------------------------
+// Testing Utility Functions
+// -----------------------------------------------------------------------------
+
 // expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
 func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bool {
 	if resp.StatusCode == http.StatusNotFound {
@@ -45,3 +49,29 @@ func determineMaxBatchSize() int {
 	}
 	return 50
 }
+
+// -----------------------------------------------------------------------------
+// Test Suite Exit Codes
+// -----------------------------------------------------------------------------
+
+const (
+	// ExitCodeIncompatibleOptions is a POSIX compliant exit code for the test suite to
+	// indicate that some combination of provided configurations were not compatible.
+	ExitCodeIncompatibleOptions = 100
+
+	// ExitCodeInvalidOptions is a POSIX compliant exit code for the test suite to indicate
+	// that some of the provided runtime options were not valid and the tests could not run.
+	ExitCodeInvalidOptions = 101
+
+	// ExitCodeCantUseExistingCluster is a POSIX compliant exit code for the test suite to
+	// indicate that an existing cluster provided for the tests was not usable.
+	ExitCodeCantUseExistingCluster = 101
+
+	// ExitCodeCantCreateCluster is a POSIX compliant exit code for the test suite to indicate
+	// that a failure occurred when trying to create a Kubernetes cluster to run the tests.
+	ExitCodeCantCreateCluster = 102
+
+	// ExitCodeCleanupFailed is a POSIX compliant exit code for the test suite to indicate
+	// that a failure occurred during cluster cleanup.
+	ExitCodeCleanupFailed = 103
+)

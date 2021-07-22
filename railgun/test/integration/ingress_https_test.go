@@ -355,6 +355,38 @@ func TestHTTPSIngress(t *testing.T) {
 		}
 	}()
 
+	t.Logf("checking ingress %s status readiness.", ingress1.Name)
+	require.Eventually(t, func() bool {
+		curIng, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, ingress1.Name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			return false
+		}
+		ingresses := curIng.Status.LoadBalancer.Ingress
+		for _, ingress := range ingresses {
+			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
+				t.Logf("networkingv1 ingress1 hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
+				return true
+			}
+		}
+		return false
+	}, 120*time.Second, 1*time.Second, true)
+
+	t.Logf("checking ingress %s status readiness.", ingress2.Name)
+	assert.Eventually(t, func() bool {
+		curIng, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, ingress2.Name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
+			return false
+		}
+		ingresses := curIng.Status.LoadBalancer.Ingress
+		for _, ingress := range ingresses {
+			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
+				t.Logf("networkingv1 ingress2 hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
+				return true
+			}
+		}
+		return false
+	}, 120*time.Second, 1*time.Second, true)
+
 	t.Logf("waiting for routes from Ingress %s to be operational with expected certificate", ingress1.Name)
 	assert.Eventually(t, func() bool {
 		resp, err := httpcStatic.Get("https://foo.example:443/foo")
@@ -371,7 +403,7 @@ func TestHTTPSIngress(t *testing.T) {
 			return strings.Contains(b.String(), "<title>httpbin.org</title>") && resp.TLS.PeerCertificates[0].Subject.CommonName == "secure-foo-bar"
 		}
 		return false
-	}, ingressWait, waitTick)
+	}, ingressWait, waitTick, true)
 
 	t.Logf("waiting for routes from Ingress %s to be operational with expected certificate", ingress2.Name)
 	assert.Eventually(t, func() bool {
@@ -389,7 +421,7 @@ func TestHTTPSIngress(t *testing.T) {
 			return strings.Contains(b.String(), "<title>httpbin.org</title>") && resp.TLS.PeerCertificates[0].Subject.CommonName == "foo.com"
 		}
 		return false
-	}, ingressWait, waitTick)
+	}, ingressWait, waitTick, true)
 
 	// This should work currently. generators.NewIngressForService() only creates path rules by default, so while we don't
 	// do anything for baz.example other than add fake DNS for it, the /bar still routes it through ingress2's route.
@@ -398,7 +430,7 @@ func TestHTTPSIngress(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		resp, err := httpcStatic.Get("https://baz.example:443/bar")
 		if err != nil {
-			t.Logf("WARNING: error while waiting for https://bar.example:443/bar: %v", err)
+			t.Logf("WARNING: error while waiting for https://bar.example:443/baz: %v", err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -425,6 +457,7 @@ func TestHTTPSIngress(t *testing.T) {
 			t.Logf("WARNING: error while waiting for https://baz.example:443/bar: %v", err)
 			return false
 		}
+
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusNotFound
 	}, ingressWait, waitTick)

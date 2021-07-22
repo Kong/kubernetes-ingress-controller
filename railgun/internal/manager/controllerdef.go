@@ -243,7 +243,6 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 	} else {
 		logger.Info(`ingresses.networking.internal.knative.dev v1alpha1 CRD not available on cluster.
 		Disabling Knative controller`)
-		c.KnativeIngressEnabled = util.EnablementStatusDisabled
 	}
 
 	return controllers

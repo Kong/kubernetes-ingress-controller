@@ -38,7 +38,6 @@ func PerformUpdate(ctx context.Context,
 
 	// KIC 2.0
 	if !skipUpdateCR {
-
 		var err error
 		if inMemory {
 			err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
@@ -62,7 +61,7 @@ func PerformUpdate(ctx context.Context,
 		// use the previous SHA to determine whether or not to perform an update
 		if equalSHA(oldSHA, newSHA) {
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Info("sha %s has been reported", hex.EncodeToString(newSHA))
+				log.Infof("sha %s has been reported", hex.EncodeToString(newSHA))
 			}
 			log.Info("no configuration change, skipping sync to kong")
 			return oldSHA, nil
@@ -147,6 +146,7 @@ func onUpdateInMemoryMode(ctx context.Context,
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
+	
 
 	req, err := http.NewRequest("POST", kongConfig.URL+"/config",
 		bytes.NewReader(config))

@@ -104,6 +104,10 @@ func fakeKongAdminUpdateCount(newcounts ...int) int {
 	if len(newcounts) < 1 {
 		return updateCount
 	}
+	if len(newcounts) == 1 && newcounts[0] == 0 {
+		updateCount = 0
+		return 0
+	}
 	for _, count := range newcounts {
 		updateCount = updateCount + count
 	}

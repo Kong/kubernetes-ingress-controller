@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      containers:
+      - name: ingress-controller
+        image: kong/kubernetes-ingress-controller:2.0.0-alpha.2
+        readinessProbe:
+          httpGet:
+            path: /readyz

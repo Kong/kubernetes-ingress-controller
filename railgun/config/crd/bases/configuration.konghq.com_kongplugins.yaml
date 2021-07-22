@@ -14,6 +14,7 @@ spec:
     listKind: KongPluginList
     plural: kongplugins
     singular: kongplugin
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1

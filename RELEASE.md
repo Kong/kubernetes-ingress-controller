@@ -33,6 +33,7 @@ For this step we're going to start with the `next` branch and merge in `main` to
 
 **For all releases**
 
+- [ ] verify that CI is passing for `main` first: if there are CI errors on main they must be investigated and fixed
 - [ ] draft a new [release](https://github.com/Kong/kubernetes-ingress-controller/releases), using a title and body similar to previous releases. Use your existing tag.
 - [ ] for new `major` version releases create a new branch (e.g. `1.3.x`) from the release tag and push it
 - [ ] for `minor` and `patch` version releases rebase the release tag onto the release branch: `git checkout 1.3.x && git rebase 1.3.1 && git push`

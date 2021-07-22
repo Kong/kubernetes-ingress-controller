@@ -250,7 +250,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 	return nil
 }
 
-// update TCP ingress status
+// UpdateTCPIngress TCP ingress status
 func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
 	ips []string) error {
 

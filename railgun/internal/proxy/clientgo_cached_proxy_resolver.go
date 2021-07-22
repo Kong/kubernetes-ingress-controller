@@ -204,6 +204,7 @@ func (p *clientgoCachedProxyResolver) ObjectExists(obj client.Object) (bool, err
 // While processing objects the cacheServer will (synchronously) convert the objects to kong DSL and
 // submit POST updates to the Kong Admin API with the new configuration.
 func (p *clientgoCachedProxyResolver) startCacheServer() {
+	backendNeedsSync := false
 	p.logger.Info("the proxy cache server has been started")
 	for {
 		select {
@@ -212,18 +213,24 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				p.logger.Error(err, "object could not be updated in the cache and will be discarded")
 				break
 			}
+			backendNeedsSync = true
 		case cobj := <-p.del:
 			if err := p.cacheDelete(cobj); err != nil {
 				p.logger.Error(err, "object could not be deleted from the cache and will be discarded")
 				break
 			}
+			backendNeedsSync = true
 		case <-p.syncTicker.C:
-			go func() {
-				err := p.kongUpdater(p.ctx, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
-				if err != nil {
-					p.logger.Error(err, "could not update kong admin")
-				}
-			}()
+			if !p.enableReverseSync && !backendNeedsSync {
+				break
+			}
+
+			err := p.kongUpdater(p.ctx, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
+			if err != nil {
+				p.logger.Error(err, "could not update kong admin")
+				break
+			}
+			backendNeedsSync = false
 		case <-p.ctx.Done():
 			p.logger.Info("the proxy cache server's context is done, shutting down")
 			if err := p.ctx.Err(); err != nil {

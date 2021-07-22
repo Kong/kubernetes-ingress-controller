@@ -2,6 +2,7 @@ package sendconfig
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -41,6 +42,17 @@ func UpdateKongAdminSimple(
 	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
 		return err
+	}
+
+	//{[] [] [] [] [] [] 0.0.0}
+	if len(kongstate.Services) == 0 &&
+		len(kongstate.Plugins) == 0 &&
+		len(kongstate.Upstreams) == 0 &&
+		len(kongstate.Consumers) == 0 &&
+		len(kongstate.Certificates) == 0 &&
+		len(kongstate.CACertificates) == 0 {
+		fmt.Printf("nothing to update. skip.")
+		return nil
 	}
 
 	// generate the deck configuration to be applied to the admin API

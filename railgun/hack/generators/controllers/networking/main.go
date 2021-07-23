@@ -98,7 +98,7 @@ var inputControllersNeeded = &typesNeeded{
 		Package:                           extv1beta1,
 		Type:                              "Ingress",
 		Plural:                            "ingresses",
-		URL:                               "apiextensions.k8s.io",
+		URL:                               "extensions",
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,

@@ -69,10 +69,48 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
+	var ingressPicker ingressControllerStrategy
+	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
+		return nil, fmt.Errorf("ingress version picker failed: %w", err)
+	}
+
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
+		{
+			IsEnabled:   &c.IngressNetV1Enabled,
+			AutoHandler: ingressPicker.IsNetV1,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            proxy,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled:   &c.IngressNetV1beta1Enabled,
+			AutoHandler: ingressPicker.IsNetV1beta1,
+			Controller: &configuration.NetV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            proxy,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			IsEnabled:   &c.IngressExtV1beta1Enabled,
+			AutoHandler: ingressPicker.IsExtV1beta1,
+			Controller: &configuration.ExtV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            proxy,
+				IngressClassName: c.IngressClassName,
+			},
+		},
 		{
 			IsEnabled: &c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
@@ -166,81 +204,21 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 				IngressClassName: c.IngressClassName,
 			},
 		},
-	}
-
-	// ---------------------------------------------------------------------------
-	// Dynamic Controller Configurations
-	// ---------------------------------------------------------------------------
-
-	// Negotiate Ingress version
-	ingressControllers := map[IngressAPI]ControllerDef{
-		NetworkingV1: {
-			IsEnabled: &c.IngressNetV1Enabled,
-			Controller: &configuration.NetV1IngressReconciler{
+		{
+			IsEnabled: &c.KnativeIngressEnabled,
+			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
+				Group:    knativev1alpha1.SchemeGroupVersion.Group,
+				Version:  knativev1alpha1.SchemeGroupVersion.Version,
+				Resource: "ingresses",
+			}}.CRDExists,
+			Controller: &configuration.Knativev1alpha1IngressReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:           mgr.GetScheme(),
 				Proxy:            proxy,
 				IngressClassName: c.IngressClassName,
 			},
 		},
-		NetworkingV1beta1: {
-			IsEnabled: &c.IngressNetV1beta1Enabled,
-			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		ExtensionsV1beta1: {
-			IsEnabled: &c.IngressExtV1beta1Enabled,
-			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-	}
-
-	negotiatedIngressAPI, err := negotiateIngressAPI(c, mgr.GetClient())
-	if err == nil {
-		controllers = append(controllers, ingressControllers[negotiatedIngressAPI])
-	} else {
-		logger.Info(`no Ingress controllers enabled or no suitable Ingress version found.
-		Disabling Ingress controller`)
-	}
-
-	if c.KnativeIngressEnabled == util.EnablementStatusEnabled {
-		knativeGVR := schema.GroupVersionResource{
-			Group:    knativev1alpha1.SchemeGroupVersion.Group,
-			Version:  knativev1alpha1.SchemeGroupVersion.Version,
-			Resource: "ingresses",
-		}
-
-		if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) {
-			logger.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
-			controller := ControllerDef{
-				IsEnabled: &c.KnativeIngressEnabled,
-				Controller: &configuration.Knativev1alpha1IngressReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-					Scheme:           mgr.GetScheme(),
-					Proxy:            proxy,
-					IngressClassName: c.IngressClassName,
-				},
-			}
-			controllers = append(controllers, controller)
-		} else {
-			message := fmt.Sprintf("%s CRD not available on the cluster", knativeGVR.String())
-			return nil, fmt.Errorf(message)
-		}
-	} else {
-		logger.Info(`knative v1alpha1 ingress is disabled.
-		Disabling Knative controller`)
 	}
 
 	return controllers, nil
@@ -252,4 +230,26 @@ type crdExistsChecker struct {
 
 func (c crdExistsChecker) CRDExists(r client.Client) bool {
 	return ctrlutils.CRDExists(r, c.GVR)
+}
+
+type ingressControllerStrategy struct {
+	chosenVersion IngressAPI
+}
+
+func (s ingressControllerStrategy) Initialize(cfg *Config, cl client.Client) error {
+	var err error
+	s.chosenVersion, err = negotiateIngressAPI(cfg, cl)
+	return err
+}
+
+func (s ingressControllerStrategy) IsExtV1beta1(_ client.Client) bool {
+	return s.chosenVersion == ExtensionsV1beta1
+}
+
+func (s ingressControllerStrategy) IsNetV1beta1(_ client.Client) bool {
+	return s.chosenVersion == NetworkingV1beta1
+}
+
+func (s ingressControllerStrategy) IsNetV1(_ client.Client) bool {
+	return s.chosenVersion == NetworkingV1
 }

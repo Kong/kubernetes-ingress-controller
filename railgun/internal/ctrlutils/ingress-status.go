@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/prometheus/common/log"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +52,11 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 		return
 	}
 
+	if err := util.InitCache(); err != nil {
+		log.Error(err, "failed to initialize memory cache.")
+		return
+	}
+
 	log.Info("Launching Ingress Status Update Thread.")
 
 	var wg sync.WaitGroup
@@ -81,16 +87,15 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 
 	for _, svc := range targetContent.Services {
 		for _, plugin := range svc.Plugins {
-			log.V(5).Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
+			log.V(5).Info("service host %s name %s plugin enablement %v", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
 			if *plugin.Enabled {
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
 							log.Info("knative service updated. update knative CR condition and status...")
 							if err := UpdateKnativeIngress(ctx, log, svc, kubeConfig, ips, hostname); err != nil {
-								return fmt.Errorf("failed to update knative ingress err %v", err)
+								panic(err)
 							}
-
 						}
 					}
 				}
@@ -100,16 +105,15 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
 			if err := UpdateTCPIngress(ctx, log, svc, kiccli, ips); err != nil {
-				return fmt.Errorf("failed to update tcp ingress. err %v", err)
+				panic(err)
 			}
 		case "udp":
 			if err := UpdateUDPIngress(ctx, log, svc, kiccli, ips); err != nil {
-				return fmt.Errorf("failed to update udp ingress. err %v", err)
+				panic(err)
 			}
-
 		case "http":
 			if err := UpdateIngressV1(ctx, log, svc, cli, ips); err != nil {
-				return fmt.Errorf("failed to update ingressv1. err %v", err)
+				panic(err)
 			}
 		default:
 			log.Info("protocol " + proto + " is not supported")
@@ -139,6 +143,9 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		name := routeInf[1]
 		log.Infof("updating status for v1.Ingress route: name %s namespace %s", name, namespace)
 
+		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+		log.Info("Updating Networking V1 Ingress " + ingresKey + " status.")
+
 		ingCli := cli.NetworkingV1().Ingresses(namespace)
 		retry := 0
 		for retry < statusUpdateRetry {
@@ -150,29 +157,45 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 				continue
 			}
 
-			var status []apiv1.LoadBalancerIngress
-			sort.SliceStable(status, lessLoadBalancerIngress(status))
-			curIPs := curIng.Status.LoadBalancer.Ingress
-
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update ingress v1 skipped")
-				return nil
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("v1ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in v1 ingress %s, skip updating.", ingresKey)
+					return nil
+				}
 			}
 
+			status := SliceToStatus(ips)
 			curIng.Status.LoadBalancer.Ingress = status
-
-			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			configuredV1Ingress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err == nil {
+				log.Infof("configured v1ingress %v ", *configuredV1Ingress)
+				hash, err := hashstructure.Hash(*configuredV1Ingress, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if err = util.SetValue(ingresKey, hash); err != nil {
+					log.Errorf("failed to persist ingress v1 %s status into mem cache. err %v", ingresKey, err)
+					time.Sleep(time.Second)
+					retry++
+					continue
+				}
+				log.Info("successfully updated " + ingresKey + " status")
 				break
+			} else {
+				time.Sleep(time.Second)
+				retry++
+				continue
 			}
-			log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
-			time.Sleep(time.Second)
-			retry++
 		}
 	}
-
-	log.Info("successfully updated networkingv1 Ingress status")
+	log.Info("successfully updated networkingv1 ingresses status")
 	return nil
 }
 
@@ -183,7 +206,9 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("updating UDP ingress route name %s namespace %s", name, namespace)
+
+		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+		log.Infof("updating UDP ingress route namespace-name %s", ingresKey)
 		ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
 		retry := 0
 		for retry < statusUpdateRetry {
@@ -195,64 +220,116 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				continue
 			}
 
-			var status []apiv1.LoadBalancerIngress
-			sort.SliceStable(status, lessLoadBalancerIngress(status))
-			curIPs := curIng.Status.LoadBalancer.Ingress
-
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update udp ingress skipped")
-				return nil
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("udp ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in udp ingress %s, skip updating.", ingresKey)
+					return nil
+				}
 			}
 
+			status := SliceToStatus(ips)
 			curIng.Status.LoadBalancer.Ingress = status
-
-			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			configuredUdpIngress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err == nil {
+				hash, err := hashstructure.Hash(*configuredUdpIngress, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if err = util.SetValue(ingresKey, hash); err != nil {
+					log.Errorf("failed to persist udp ingress %s status into mem cache. err %v", ingresKey, err)
+					time.Sleep(time.Second)
+					retry++
+					continue
+				}
+				log.Info("successfully updated " + ingresKey + " status.")
 				break
+			} else {
+				log.Errorf("failed to update UDPIngress status: %v. retry...", err)
+				time.Sleep(time.Second)
+				retry++
+				continue
 			}
-			log.Errorf("failed to update UDPIngress status: %v. retry...", err)
-			time.Sleep(time.Second)
-			retry++
 		}
 	}
-	log.Info("successfully updated UDPIngress status")
+	log.Info("successfully update udp ingresses status.")
 	return nil
 }
 
 // UpdateTCPIngress TCP ingress status
 func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
 	ips []string) error {
+
 	for _, route := range svc.Routes {
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
 		log.Infof("Updating TCP ingress route name %s namespace %s", name, namespace)
 
-		ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
-		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
-		if err != nil || curIng == nil {
-			return fmt.Errorf("failed to fetch TCP Ingress %v/%v: %w", namespace, name, err)
+		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+		log.Info("Updating TCP Ingress " + ingresKey + " status.")
+
+		retry := 0
+		for retry < statusUpdateRetry {
+			ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
+			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+			if err != nil || curIng == nil {
+				log.Error("failed to fetch TCP Ingress %v/%v: %w", namespace, name, err)
+				time.Sleep(time.Second)
+				retry++
+				continue
+			}
+
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("tcp ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in tcp ingress %s, skip updating.", ingresKey)
+					return nil
+				}
+			}
+
+			status := SliceToStatus(ips)
+			curIng.Status.LoadBalancer.Ingress = status
+			configuredTCPIngress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			if err != nil {
+				log.Errorf("failed to update TCPIngress status: %v", err)
+				time.Sleep(time.Second)
+				retry++
+				continue
+			}
+			log.Infof("configured tcp ingress %v", *configuredTCPIngress)
+			hash, err := hashstructure.Hash(*configuredTCPIngress, hashstructure.FormatV2, nil)
+			if err != nil {
+				log.Errorf("failed to generate ingress %s hash. err %v", ingresKey, err)
+				time.Sleep(time.Second)
+				retry++
+				continue
+			}
+			if err = util.SetValue(ingresKey, hash); err != nil {
+				log.Errorf("failed to persist ingress %s status into cache. err %v", ingresKey, err)
+				time.Sleep(time.Second)
+				retry++
+				continue
+			}
+			log.Info("Successfully updated TCPIngress " + ingresKey + " status.")
+			break
 		}
 
-		var status []apiv1.LoadBalancerIngress
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
-		curIPs := curIng.Status.LoadBalancer.Ingress
-
-		status = SliceToStatus(ips)
-		if ingressSliceEqual(status, curIPs) {
-			log.Debugf("no change in status, update tcp ingress skipped")
-			return nil
-		}
-
-		curIng.Status.LoadBalancer.Ingress = status
-		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to update TCPIngress status: %v", err)
-		}
 	}
 
-	log.Info("Successfully updated TCPIngress status")
+	log.Info("Successfully updated TCP ingresses status.")
 	return nil
 }
 
@@ -265,7 +342,8 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("Updating Knative route name %s namespace %s", name, namespace)
+		ingresKey := fmt.Sprintf("%s-%s", namespace, name)
+		log.Infof("Updating Knative route namespace-name %s", ingresKey)
 
 		knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
 		if err != nil {
@@ -282,17 +360,24 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 				retry++
 				continue
 			}
+			ingClient := knativeCli.NetworkingV1alpha1().Ingresses(namespace)
+
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("knative ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in knative ingress %s, skip updating.", ingresKey)
+					return nil
+				}
+			}
 
 			// check if CR current status already updated
-			var status []apiv1.LoadBalancerIngress
-			sort.SliceStable(status, lessLoadBalancerIngress(status))
-			curIPs := toCoreLBStatus(curIng.Status.PublicLoadBalancer)
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) &&
-				curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-				log.Debugf("no change in status, update knative ingress skipped")
-				return nil
-			}
+			status := SliceToStatus(ips)
 
 			// updating current custom status
 			lbStatus := toKnativeLBStatus(status)
@@ -306,17 +391,29 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 			ingressCondSet.Manage(&curIng.Status).MarkTrue(knative.IngressConditionNetworkConfigured)
 			curIng.Status.ObservedGeneration = curIng.GetObjectMeta().GetGeneration()
 
-			_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			configuredKnativeIngress, err := ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err == nil {
+				hash, err := hashstructure.Hash(*configuredKnativeIngress, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if err = util.SetValue(ingresKey, hash); err != nil {
+					log.Errorf("failed to persist knative ingress %s status into cache. err %v", ingresKey, err)
+					time.Sleep(time.Second)
+					retry++
+					continue
+				}
+				logger.Info("successfully updated knative ingress" + ingresKey + " status")
 				break
+			} else {
+				log.Errorf("failed to update Knative Ingress %v/%v: %v", namespace, name, err)
+				time.Sleep(time.Second)
+				retry++
+				continue
 			}
-			log.Errorf("failed to update ingress status: %v. retrying...", err)
-			time.Sleep(time.Second)
-			retry++
 		}
 	}
-
-	logger.Info("successfully updated knative ingress status")
+	logger.Info("successfully updated knative ingresses status")
 	return nil
 }
 
@@ -417,16 +514,4 @@ func toCoreLBStatus(knativeLBStatus *knative.LoadBalancerStatus) []apiv1.LoadBal
 		})
 	}
 	return res
-}
-
-func lessLoadBalancerIngress(addrs []apiv1.LoadBalancerIngress) func(int, int) bool {
-	return func(a, b int) bool {
-		switch strings.Compare(addrs[a].Hostname, addrs[b].Hostname) {
-		case -1:
-			return true
-		case 1:
-			return false
-		}
-		return addrs[a].IP < addrs[b].IP
-	}
 }

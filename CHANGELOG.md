@@ -55,6 +55,11 @@
 - Added scripts to generate 2.x manifests.
   [#1563](https://github.com/Kong/kubernetes-ingress-controller/pull/1563)
 
+#### Fixed
+
+- Corrected the old Ingress v1beta1 API group.
+  [#1584](https://github.com/Kong/kubernetes-ingress-controller/pull/1584)
+
 #### Under the hood
 
 - New `v1` versions of `CustomResourceDefinitions` introduced for KIC 2.0 are now

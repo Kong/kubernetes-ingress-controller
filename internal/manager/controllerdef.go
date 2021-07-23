@@ -28,7 +28,7 @@ type Controller interface {
 }
 
 // AutoHandler decides whether the specific controller shall be enabled (true) or disabled (false).
-type AutoHandler func(client.Reader) bool
+type AutoHandler func(client.Client) bool
 
 // ControllerDef is a specification of a Controller that can be conditionally registered with Manager.
 type ControllerDef struct {
@@ -54,7 +54,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 			return fmt.Errorf("'auto' enablement not supported for controller %q", c.Name())
 		}
 
-		if enable := c.AutoHandler(mgr.GetAPIReader()); !enable {
+		if enable := c.AutoHandler(mgr.GetClient()); !enable {
 			return nil
 		}
 		fallthrough
@@ -151,6 +151,21 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 				IngressClassName: c.IngressClassName,
 			},
 		},
+		{
+			IsEnabled: &c.KongClusterPluginEnabled,
+			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
+				Group:    konghqcomv1.SchemeGroupVersion.Group,
+				Version:  konghqcomv1.SchemeGroupVersion.Version,
+				Resource: "kongclusterplugins",
+			}}.CRDExists,
+			Controller: &configuration.KongV1KongClusterPluginReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            proxy,
+				IngressClassName: c.IngressClassName,
+			},
+		},
 	}
 
 	// ---------------------------------------------------------------------------
@@ -199,34 +214,6 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		Disabling Ingress controller`)
 	}
 
-	if c.KongClusterPluginEnabled == util.EnablementStatusEnabled {
-		kongClusterPluginGVR := schema.GroupVersionResource{
-			Group:    konghqcomv1.SchemeGroupVersion.Group,
-			Version:  konghqcomv1.SchemeGroupVersion.Version,
-			Resource: "kongclusterplugins",
-		}
-
-		if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) {
-			logger.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
-			controller := ControllerDef{
-				IsEnabled: &c.KongClusterPluginEnabled,
-				Controller: &configuration.KongV1KongClusterPluginReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-					Scheme:           mgr.GetScheme(),
-					Proxy:            proxy,
-					IngressClassName: c.IngressClassName,
-				},
-			}
-			controllers = append(controllers, controller)
-		} else {
-			message := fmt.Sprintf("%s CRD not available on the cluster", kongClusterPluginGVR.String())
-			return nil, fmt.Errorf(message)
-		}
-	} else {
-		logger.Info(`kong cluster plugin is disabled.
-		Disabling KongClusterPlugin controller`)
-	}
 	if c.KnativeIngressEnabled == util.EnablementStatusEnabled {
 		knativeGVR := schema.GroupVersionResource{
 			Group:    knativev1alpha1.SchemeGroupVersion.Group,
@@ -257,4 +244,12 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 	}
 
 	return controllers, nil
+}
+
+type crdExistsChecker struct {
+	GVR schema.GroupVersionResource
+}
+
+func (c crdExistsChecker) CRDExists(r client.Client) bool {
+	return ctrlutils.CRDExists(r, c.GVR)
 }

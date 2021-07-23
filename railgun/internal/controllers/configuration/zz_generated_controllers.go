@@ -446,10 +446,10 @@ func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&extv1beta1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
-//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apiextensions.k8s.io,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=apiextensions.k8s.io,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=extensions,resources=ingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=extensions,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=extensions,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

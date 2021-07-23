@@ -485,33 +485,3 @@ func InSlice(e string, arr []string) bool {
 
 	return false
 }
-
-func ingressSliceEqual(lhs, rhs []apiv1.LoadBalancerIngress) bool {
-	if len(lhs) != len(rhs) {
-		return false
-	}
-
-	for i := range lhs {
-		if lhs[i].IP != rhs[i].IP {
-			return false
-		}
-		if lhs[i].Hostname != rhs[i].Hostname {
-			return false
-		}
-	}
-	return true
-}
-
-func toCoreLBStatus(knativeLBStatus *knative.LoadBalancerStatus) []apiv1.LoadBalancerIngress {
-	var res []apiv1.LoadBalancerIngress
-	if knativeLBStatus == nil {
-		return res
-	}
-	for _, status := range knativeLBStatus.Ingress {
-		res = append(res, apiv1.LoadBalancerIngress{
-			IP:       status.IP,
-			Hostname: status.Domain,
-		})
-	}
-	return res
-}

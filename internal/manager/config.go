@@ -89,6 +89,8 @@ type Config struct {
 
 // onOffUsage is used to indicate what textual options are used to enable or disable a feature.
 const onOffUsage = "Can be one of [enabled, disabled]."
+const onOffAutoIngressUsage = "Can be one of [enabled, disabled, auto]. If multiple ingress API versions are set to 'auto', then the newest out of these will be used."
+const onOffAutoCRDUsage = "Can be one of [enabled, disabled, auto]. 'auto' means that enablement will depend on the detected presence of the appropriate CRD in the cluster."
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config - Methods
@@ -156,15 +158,15 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 
 	// Kubernetes API toggling
-	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffUsage)
+	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffAutoIngressUsage)
 	// TODO the other Ingress versions remain disabled for now. 2.x does not yet support version negotiation
-	flagSet.enablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1beta1)."+onOffUsage)
-	flagSet.enablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version extensions/v1beta1)."+onOffUsage)
+	flagSet.enablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1beta1)."+onOffAutoIngressUsage)
+	flagSet.enablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version extensions/v1beta1)."+onOffAutoIngressUsage)
 	flagSet.enablementStatusVar(&c.UDPIngressEnabled, "controller-udpingress", util.EnablementStatusEnabled, "Enable or disable the UDPIngress controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusEnabled, "Enable or disable the TCPIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KnativeIngressEnabled, "controller-knativeingress", util.EnablementStatusAuto, "Enable or disable the KnativeIngress controller. "+onOffUsage)
+	flagSet.enablementStatusVar(&c.KnativeIngressEnabled, "controller-knativeingress", util.EnablementStatusAuto, "Enable or disable the KnativeIngress controller. "+onOffAutoCRDUsage)
 	flagSet.enablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusEnabled, "Enable or disable the KongIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusAuto, "Enable or disable the KongClusterPlugin controller. "+onOffUsage)
+	flagSet.enablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusAuto, "Enable or disable the KongClusterPlugin controller. "+onOffAutoCRDUsage)
 	flagSet.enablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusEnabled, "Enable or disable the KongPlugin controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusEnabled, "Enable or disable the KongConsumer controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled, "Enable or disable the Service controller. "+onOffUsage)

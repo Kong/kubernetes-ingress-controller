@@ -68,7 +68,23 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
+// validateIngressEnablement ensures that no Ingress API is 'enabled' when at least one is 'auto'.
+func validateIngressEnablement(cfg *Config) error {
+	switch util.EnablementStatusAuto {
+	case cfg.IngressExtV1beta1Enabled, cfg.IngressNetV1beta1Enabled, cfg.IngressNetV1Enabled:
+		switch util.EnablementStatusEnabled {
+		case cfg.IngressExtV1beta1Enabled, cfg.IngressNetV1beta1Enabled, cfg.IngressNetV1Enabled:
+			return fmt.Errorf("cannot mark core ingress APIs as enabled if another version is auto")
+		}
+	}
+	return nil
+}
+
 func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
+	// Choose the best API version of Ingress to inform which ingress controller to enable.
+	if err := validateIngressEnablement(c); err != nil {
+		return nil, err
+	}
 	var ingressPicker ingressControllerStrategy
 	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
 		return nil, fmt.Errorf("ingress version picker failed: %w", err)
@@ -224,32 +240,39 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 	return controllers, nil
 }
 
+// crdExistsChecker verifies whether the resource type defined by GVR is supported by the k8s apiserver.
 type crdExistsChecker struct {
 	GVR schema.GroupVersionResource
 }
 
+// CRDExists returns true iff the apiserver supports the specified group/version/resource.
 func (c crdExistsChecker) CRDExists(r client.Client) bool {
 	return ctrlutils.CRDExists(r, c.GVR)
 }
 
+// ingressControllerStrategy picks the best Ingress API supported by k8s apiserver.
 type ingressControllerStrategy struct {
 	chosenVersion IngressAPI
 }
 
+// Initialize negotiates the best Ingress API version supported by both KIC and the k8s apiserver.
 func (s ingressControllerStrategy) Initialize(cfg *Config, cl client.Client) error {
 	var err error
 	s.chosenVersion, err = negotiateIngressAPI(cfg, cl)
 	return err
 }
 
+// IsExtV1beta1 returns true iff the best supported API version is extensions/v1beta1.
 func (s ingressControllerStrategy) IsExtV1beta1(_ client.Client) bool {
 	return s.chosenVersion == ExtensionsV1beta1
 }
 
+// IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1beta1.
 func (s ingressControllerStrategy) IsNetV1beta1(_ client.Client) bool {
 	return s.chosenVersion == NetworkingV1beta1
 }
 
+// IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1.
 func (s ingressControllerStrategy) IsNetV1(_ client.Client) bool {
 	return s.chosenVersion == NetworkingV1
 }

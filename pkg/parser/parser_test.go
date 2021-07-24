@@ -3706,6 +3706,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			&corev1.ServicePort{
 				Name:       "default",
+				Port:       80,
 				TargetPort: intstr.FromInt(2080),
 			},
 			corev1.ProtocolTCP,
@@ -3716,12 +3717,12 @@ func TestGetEndpoints(t *testing.T) {
 			[]util.Endpoint{
 				{
 					Address: "foo.bar.svc",
-					Port:    "2080",
+					Port:    "80",
 				},
 			},
 		},
 		{
-			"when serviceUpstream is set to true in the IngressClassParameters, the service should return one endpoint",
+			"when serviceUpstream is set to true in the IngressClassParameters",
 			&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3739,6 +3740,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			&corev1.ServicePort{
 				Name:       "default",
+				Port:       80,
 				TargetPort: intstr.FromInt(2080),
 			},
 			corev1.ProtocolTCP,
@@ -3751,7 +3753,7 @@ func TestGetEndpoints(t *testing.T) {
 			[]util.Endpoint{
 				{
 					Address: "foo.bar.svc",
-					Port:    "2080",
+					Port:    "80",
 				},
 			},
 		},
@@ -4018,6 +4020,12 @@ func TestGetEndpoints(t *testing.T) {
 			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.params)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
+			}
+
+			for i := range result {
+				if result[i] != testCase.result[i] {
+					t.Errorf("expected %v to be equal to %v", result[i], testCase.result[i])
+				}
 			}
 		})
 	}

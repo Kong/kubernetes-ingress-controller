@@ -30,7 +30,7 @@ const (
 // inputControllersNeeded is a list of the supported Types for the
 // Kong Kubernetes Ingress Controller. If you need to add a new type
 // for support, add it here and a new controller will be generated
-// when you run `make controllers`.
+// when you run `make generate.controllers`.
 var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "corev1",
@@ -101,6 +101,18 @@ var inputControllersNeeded = &typesNeeded{
 		URL:                               "apiextensions.k8s.io",
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
+		PackageImportAlias:                "netv1",
+		PackageAlias:                      "NetV1",
+		Package:                           netv1,
+		Type:                              "IngressClass",
+		Plural:                            "ingressClasses",
+		URL:                               "networking.k8s.io",
+		CacheType:                         "IngressClassV1",
+		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
@@ -297,7 +309,7 @@ type typeNeeded struct {
 	// the "kubernetes.io/ingress.class" annotation to decide whether or not the object is supported.
 	AcceptsIngressClassNameAnnotation bool
 
-	// AcceptsIngressClassNameSpec indicates the the object indicates the ingress.class that should support it via
+	// AcceptsIngressClassNameSpec indicates that the object points to an IngressClass resource via
 	// an attribute in its specification named .IngressClassName
 	AcceptsIngressClassNameSpec bool
 }

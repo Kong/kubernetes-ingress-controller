@@ -31,6 +31,7 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
+	IngressClassesV1   []*networkingv1.IngressClass
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*v1beta1.UDPIngress
 	Services           []*apiv1.Service
@@ -59,6 +60,13 @@ func NewFakeStore(
 	ingressV1Store := cache.NewStore(keyFunc)
 	for _, ingress := range objects.IngressesV1 {
 		err := ingressV1Store.Add(ingress)
+		if err != nil {
+			return nil, err
+		}
+	}
+	ingressClassV1Store := cache.NewStore(clusterResourceKeyFunc)
+	for _, ingressClass := range objects.IngressClassesV1 {
+		err := ingressClassV1Store.Add(ingressClass)
 		if err != nil {
 			return nil, err
 		}
@@ -137,6 +145,7 @@ func NewFakeStore(
 		stores: CacheStores{
 			IngressV1beta1: ingressV1beta1Store,
 			IngressV1:      ingressV1Store,
+			IngressClassV1: ingressClassV1Store,
 			TCPIngress:     tcpIngressStore,
 			UDPIngress:     udpIngressStore,
 			Service:        serviceStore,

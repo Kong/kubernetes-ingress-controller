@@ -263,6 +263,33 @@ func TestFakeStoreIngressV1(t *testing.T) {
 	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 
+func TestFakeStoreIngressClassV1(t *testing.T) {
+	assert := assert.New(t)
+
+	ingressClasses := []*networkingv1.IngressClass{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: "some/controller",
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{IngressClassesV1: ingressClasses})
+	assert.Nil(err)
+	assert.NotNil(store)
+
+	ingressClass, err := store.GetIngressClass("foo")
+	assert.NotNil(ingressClass)
+	assert.Nil(err)
+
+	ingressClass, err = store.GetIngressClass("does-not-exist")
+	assert.Nil(ingressClass)
+	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
+}
+
 func TestFakeStoreListTCPIngress(t *testing.T) {
 	assert := assert.New(t)
 
@@ -424,7 +451,7 @@ func TestFakeStoreService(t *testing.T) {
 	assert.NotNil(service)
 	assert.Nil(err)
 
-	service, err = store.GetService("default", "does-not-exists")
+	service, err = store.GetService("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(service)

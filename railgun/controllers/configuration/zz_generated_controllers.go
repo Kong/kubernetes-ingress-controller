@@ -510,6 +510,78 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 // -----------------------------------------------------------------------------
+// NetV1 IngressClass
+// -----------------------------------------------------------------------------
+
+// NetV1IngressClass reconciles IngressClass resources
+type NetV1IngressClassReconciler struct {
+	client.Client
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&netv1.IngressClass{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressClasses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressClasses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingressClasses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingressClasses/status,verbs=get;update;patch
+
+// Reconcile processes the watched objects
+func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("NetV1IngressClass", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(netv1.IngressClass)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			log.Info("deleted IngressClass object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "IngressClass", "namespace", req.Namespace, "name", req.Name)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new IngressClass", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
 // KongV1 KongIngress
 // -----------------------------------------------------------------------------
 

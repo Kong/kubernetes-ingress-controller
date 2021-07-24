@@ -201,3 +201,36 @@ spec:
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
+
+func TestCacheStoresGetIngressClass(t *testing.T) {
+	t.Log("configuring some yaml objects to store in the cache")
+	yaml := []byte(`---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: foo
+spec:
+  controller: "some/controller"
+`)
+
+	t.Log("creating a new cache store from object yaml files")
+	cs, err := NewCacheStoresFromObjYAML(yaml)
+	require.NoError(t, err)
+
+	t.Log("verifying the the object has been stored in the cache store")
+	assert.Len(t, cs.IngressV1.List(), 0)
+	assert.Len(t, cs.IngressClassV1.List(), 1)
+
+	ingressClass, exists, err := cs.IngressClassV1.GetByKey("foo")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+	assert.NotNil(t, ingressClass)
+
+	err = cs.IngressClassV1.Delete(ingressClass)
+	assert.NoError(t, err)
+
+	ingressClass, exists, err = cs.IngressClassV1.GetByKey("foo")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+	assert.Nil(t, ingressClass)
+}

@@ -102,6 +102,15 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 				Proxy:  proxy,
 			},
 		},
+		{
+			IsEnabled: &alwaysEnabled,
+			Controller: &configuration.NetV1IngressClassReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("IngressClass"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------

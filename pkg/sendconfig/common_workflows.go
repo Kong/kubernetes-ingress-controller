@@ -18,7 +18,7 @@ import (
 // UpdateKongAdminSimple is a helper function for the most common usage of PerformUpdate() with only minimal
 // upfront configuration required. This function is specialized and highly opinionated.
 //
-// If you're implementation needs to expand on the configuration and usage of the following inner components:
+// If your implementation needs to expand on the configuration and usage of the following inner components:
 //
 //   - store.Storer
 //   - kongstate.Kong

@@ -264,58 +264,191 @@ func TestFakeStoreIngressV1(t *testing.T) {
 	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 
-func TestFakeStoreIngressClass(t *testing.T) {
-	assert := assert.New(t)
-
-	ingressClasses := []*networkingv1.IngressClass{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-			Spec: networkingv1.IngressClassSpec{
-				Controller: "some/controller",
-			},
-		},
-	}
-	store, err := NewFakeStore(FakeObjects{IngressClasses: ingressClasses})
-	assert.Nil(err)
-	assert.NotNil(store)
-
-	ingressClass, err := store.GetIngressClass("foo")
-	assert.NotNil(ingressClass)
-	assert.Nil(err)
-
-	ingressClass, err = store.GetIngressClass("does-not-exist")
-	assert.Nil(ingressClass)
-	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
-}
-
 func TestFakeStoreIngressClassParams(t *testing.T) {
 	assert := assert.New(t)
+	apiGroup := ingressClassParamsAPIGroup
+	unrelatedAPIGroup := "unrelated.com"
 
-	ingressClassParams := []*kongv1alpha1.IngressClassParams{
+	cases := []struct {
+		name               string
+		ingressClassParams []*kongv1alpha1.IngressClassParams
+		ingressClasses     []*networkingv1.IngressClass
+		shouldExist        bool
+	}{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
+			name:               "When there are no ingress classes defined",
+			ingressClassParams: []*kongv1alpha1.IngressClassParams{},
+			ingressClasses:     []*networkingv1.IngressClass{},
+			shouldExist:        false,
+		},
+		{
+			name:               "When there is an ingress class but the name doesn't match the controller's",
+			ingressClassParams: []*kongv1alpha1.IngressClassParams{},
+			ingressClasses: []*networkingv1.IngressClass{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "meant-for-a-different-ingress-controller",
+					},
+					Spec: networkingv1.IngressClassSpec{
+						Controller: "some/ingress-controller",
+					},
+				},
 			},
-			Spec: kongv1alpha1.IngressClassParamsSpec{
-				ServiceUpstream: true,
+			shouldExist: false,
+		},
+		{
+			name:               "When there is an ingress class but it isn't associated with any parameters",
+			ingressClassParams: []*kongv1alpha1.IngressClassParams{},
+			ingressClasses: []*networkingv1.IngressClass{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: annotations.DefaultIngressClass,
+					},
+					Spec: networkingv1.IngressClassSpec{
+						Controller: annotations.KongIngressClassKey,
+					},
+				},
 			},
+			shouldExist: false,
+		},
+		{
+			name: "When there is an ingress class but it references a resource with the wrong apiGroup",
+			ingressClassParams: []*kongv1alpha1.IngressClassParams{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+					Spec: kongv1alpha1.IngressClassParamsSpec{
+						ServiceUpstream: true,
+					},
+				},
+			},
+			ingressClasses: []*networkingv1.IngressClass{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: annotations.DefaultIngressClass,
+					},
+					Spec: networkingv1.IngressClassSpec{
+						Controller: annotations.KongIngressClassKey,
+						Parameters: &networkingv1.IngressClassParametersReference{
+							APIGroup: &unrelatedAPIGroup,
+							Kind:     "IngressClassParams",
+							Name:     "foo",
+						},
+					},
+				},
+			},
+			shouldExist: false,
+		},
+		{
+			name: "When there is an ingress class but it references a resource with the wrong kind",
+			ingressClassParams: []*kongv1alpha1.IngressClassParams{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+					Spec: kongv1alpha1.IngressClassParamsSpec{
+						ServiceUpstream: true,
+					},
+				},
+			},
+			ingressClasses: []*networkingv1.IngressClass{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: annotations.DefaultIngressClass,
+					},
+					Spec: networkingv1.IngressClassSpec{
+						Controller: annotations.KongIngressClassKey,
+						Parameters: &networkingv1.IngressClassParametersReference{
+							APIGroup: &apiGroup,
+							Kind:     "WrongKind",
+							Name:     "foo",
+						},
+					},
+				},
+			},
+			shouldExist: false,
+		},
+		{
+			name: "When there is an ingress class but it references a resource that doesn't exist",
+			ingressClassParams: []*kongv1alpha1.IngressClassParams{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+					Spec: kongv1alpha1.IngressClassParamsSpec{
+						ServiceUpstream: true,
+					},
+				},
+			},
+			ingressClasses: []*networkingv1.IngressClass{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: annotations.DefaultIngressClass,
+					},
+					Spec: networkingv1.IngressClassSpec{
+						Controller: annotations.KongIngressClassKey,
+						Parameters: &networkingv1.IngressClassParametersReference{
+							APIGroup: &apiGroup,
+							Kind:     "IngressClassParams",
+							Name:     "non-existent",
+						},
+					},
+				},
+			},
+			shouldExist: false,
+		},
+		{
+			name: "When there is an ingress class and it references a valid set of parameters",
+			ingressClassParams: []*kongv1alpha1.IngressClassParams{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+					Spec: kongv1alpha1.IngressClassParamsSpec{
+						ServiceUpstream: true,
+					},
+				},
+			},
+			ingressClasses: []*networkingv1.IngressClass{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: annotations.DefaultIngressClass,
+					},
+					Spec: networkingv1.IngressClassSpec{
+						Controller: annotations.KongIngressClassKey,
+						Parameters: &networkingv1.IngressClassParametersReference{
+							APIGroup: &apiGroup,
+							Kind:     "IngressClassParams",
+							Name:     "foo",
+						},
+					},
+				},
+			},
+			shouldExist: true,
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{IngressClassParams: ingressClassParams})
-	assert.Nil(err)
-	assert.NotNil(store)
 
-	params, err := store.GetIngressClassParams("foo")
-	assert.NotNil(params)
-	assert.Nil(err)
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			store, err := NewFakeStore(FakeObjects{
+				IngressClassParams: tt.ingressClassParams,
+				IngressClasses:     tt.ingressClasses,
+			})
+			assert.Nil(err)
+			assert.NotNil(store)
 
-	params, err = store.GetIngressClassParams("does-not-exist")
-	assert.Nil(params)
-	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+			params, err := store.GetIngressClassParams()
+			if tt.shouldExist {
+				assert.NotNil(params)
+				assert.Nil(err)
+			} else {
+				assert.Nil(params)
+				assert.NotNil(err)
+				assert.True(errors.As(err, &ErrNotFound{}))
+			}
+		})
+	}
 }
 
 func TestFakeStoreListTCPIngress(t *testing.T) {

@@ -48,8 +48,10 @@ import (
 )
 
 const (
-	knativeIngressClassKey = "networking.knative.dev/ingress.class"
-	caCertKey              = "konghq.com/ca-cert"
+	knativeIngressClassKey     = "networking.knative.dev/ingress.class"
+	caCertKey                  = "konghq.com/ca-cert"
+	ingressClassParamsAPIGroup = "configuration.konghq.com"
+	ingressClassParamsKind     = "IngressClassParams"
 )
 
 // ErrNotFound error is returned when a lookup results in no resource.
@@ -68,8 +70,7 @@ func (e ErrNotFound) Error() string {
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
-	GetIngressClass(name string) (*networkingv1.IngressClass, error)
-	GetIngressClassParams(name string) (*kongv1alpha1.IngressClassParams, error)
+	GetIngressClassParams() (*kongv1alpha1.IngressClassParams, error)
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
@@ -385,16 +386,47 @@ func (s Store) GetIngressClass(name string) (*networkingv1.IngressClass, error) 
 	return p.(*networkingv1.IngressClass), nil
 }
 
-// GetIngressClassParams returns the IngressClassParams resource named 'name', if it exists; Otherwise, it returns an error
-func (s Store) GetIngressClassParams(name string) (*kongv1alpha1.IngressClassParams, error) {
-	p, exists, err := s.stores.IngressClassParams.GetByKey(name)
+// GetIngressClassParams returns the IngressClassParams resource referenced
+// by the IngressClass resource associated with this controller, if it exists.
+// Otherwise, it returns an error
+func (s Store) GetIngressClassParams() (*kongv1alpha1.IngressClassParams, error) {
+	class, exists, err := s.stores.IngressClass.GetByKey(s.ingressClass)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
+		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s not found", s.ingressClass)}
 	}
-	return p.(*kongv1alpha1.IngressClassParams), nil
+
+	ingressClass := class.(*networkingv1.IngressClass)
+	if ingressClass.Spec.Parameters == nil {
+		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s doesn't reference any parameters", s.ingressClass)}
+	}
+
+	if *ingressClass.Spec.Parameters.APIGroup != ingressClassParamsAPIGroup {
+		return nil, ErrNotFound{fmt.Sprintf(
+			"IngressClass %s should reference parameters in apiGroup:%s",
+			s.ingressClass,
+			ingressClassParamsAPIGroup,
+		)}
+	}
+
+	if ingressClass.Spec.Parameters.Kind != ingressClassParamsKind {
+		return nil, ErrNotFound{fmt.Sprintf(
+			"IngressClass %s should reference parameters with kind:%s",
+			s.ingressClass,
+			ingressClassParamsKind,
+		)}
+	}
+
+	params, exists, err := s.stores.IngressClassParams.GetByKey(ingressClass.Spec.Parameters.Name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("IngressClassParams %v not found", ingressClass.Spec.Parameters.Name)}
+	}
+	return params.(*kongv1alpha1.IngressClassParams), nil
 }
 
 // GetService returns a Service using the namespace and name as key

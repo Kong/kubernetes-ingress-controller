@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 )
 
 type TLSPair struct {
@@ -3602,6 +3603,7 @@ func TestGetEndpoints(t *testing.T) {
 		port   *corev1.ServicePort
 		proto  corev1.Protocol
 		fn     func(string, string) (*corev1.Endpoints, error)
+		params *configurationv1alpha1.IngressClassParamsSpec
 		result []util.Endpoint
 	}{
 		{
@@ -3612,6 +3614,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3622,6 +3625,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return nil, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3632,6 +3636,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3646,6 +3651,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3670,6 +3676,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{
 				{
 					Address: "10.0.0.1.xip.io",
@@ -3705,6 +3712,42 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
+			[]util.Endpoint{
+				{
+					Address: "foo.bar.svc",
+					Port:    "2080",
+				},
+			},
+		},
+		{
+			"when serviceUpstream is set to true in the IngressClassParameters, the service should return one endpoint",
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			&corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(2080),
+			},
+			corev1.ProtocolTCP,
+			func(string, string) (*corev1.Endpoints, error) {
+				return &corev1.Endpoints{}, nil
+			},
+			&configurationv1alpha1.IngressClassParamsSpec{
+				ServiceUpstream: true,
+			},
 			[]util.Endpoint{
 				{
 					Address: "foo.bar.svc",
@@ -3734,6 +3777,7 @@ func TestGetEndpoints(t *testing.T) {
 			func(string, string) (*corev1.Endpoints, error) {
 				return nil, fmt.Errorf("unexpected error")
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3775,6 +3819,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3816,6 +3861,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3859,6 +3905,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{},
 		},
 		{
@@ -3902,6 +3949,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{
 				{
 					Address: "1.1.1.1",
@@ -3955,6 +4003,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
+			&configurationv1alpha1.IngressClassParamsSpec{},
 			[]util.Endpoint{
 				{
 					Address: "1.1.1.1",
@@ -3966,7 +4015,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn)
+			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.params)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
 			}

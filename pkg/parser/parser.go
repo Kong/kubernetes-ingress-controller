@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
@@ -330,7 +331,8 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 	// check all protocols for associated endpoints
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService)
+		ingressClassParams := getIngressClassParamsOrDefault(s)
+		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService, ingressClassParams)
 		if len(newEndpoints) > 0 {
 			endpoints = append(endpoints, newEndpoints...)
 		}
@@ -342,6 +344,18 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 	return targetsForEndpoints(endpoints)
 }
 
+// getIngressClassParamsOrDefault returns the parameters for the current ingress class.
+// If the cluster operators have specified a set of parameters explicitly, it returns those.
+// Otherwise, it returns a default set of parameters.
+func getIngressClassParamsOrDefault(s store.Storer) *configurationv1alpha1.IngressClassParamsSpec {
+	params, err := s.GetIngressClassParams()
+	if err != nil {
+		return &configurationv1alpha1.IngressClassParamsSpec{}
+	}
+
+	return &params.Spec
+}
+
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
 func getEndpoints(
 	log logrus.FieldLogger,
@@ -349,6 +363,7 @@ func getEndpoints(
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
+	ingressClassParams *configurationv1alpha1.IngressClassParamsSpec,
 ) []util.Endpoint {
 
 	upsServers := []util.Endpoint{}
@@ -384,12 +399,11 @@ func getEndpoints(
 			Port:    fmt.Sprintf("%v", targetPort),
 		})
 	}
-	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {
+	if annotations.HasServiceUpstreamAnnotation(s.Annotations) || ingressClassParams.ServiceUpstream {
 		return append(upsServers, util.Endpoint{
 			Address: s.Name + "." + s.Namespace + ".svc",
 			Port:    fmt.Sprintf("%v", port.Port),
 		})
-
 	}
 
 	log.Debugf("fetching endpoints")

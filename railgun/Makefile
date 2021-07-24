@@ -20,6 +20,7 @@ COVERAGE_PROFILE=coverage.out
 COVERAGE_INTEGRATION_PROFILE=coverage-integration.out
 
 KIND_CLUSTER_NAME ?= "integration-tests"
+TEST_SELECTOR ?= ".*"
 
 ##@ Build Vars
 
@@ -166,7 +167,7 @@ test.integration: test.integration.dbless test.integration.postgres
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/setup-integration-tests.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) -run $(TEST_SELECTOR) ./test/integration/
 
 # Our integration tests using the postgres backend, with verbose output
 # TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.

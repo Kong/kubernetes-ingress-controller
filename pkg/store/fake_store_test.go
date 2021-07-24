@@ -14,6 +14,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
@@ -263,7 +264,7 @@ func TestFakeStoreIngressV1(t *testing.T) {
 	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 
-func TestFakeStoreIngressClassV1(t *testing.T) {
+func TestFakeStoreIngressClass(t *testing.T) {
 	assert := assert.New(t)
 
 	ingressClasses := []*networkingv1.IngressClass{
@@ -276,7 +277,7 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 			},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{IngressClassesV1: ingressClasses})
+	store, err := NewFakeStore(FakeObjects{IngressClasses: ingressClasses})
 	assert.Nil(err)
 	assert.NotNil(store)
 
@@ -286,6 +287,33 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 
 	ingressClass, err = store.GetIngressClass("does-not-exist")
 	assert.Nil(ingressClass)
+	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
+}
+
+func TestFakeStoreIngressClassParams(t *testing.T) {
+	assert := assert.New(t)
+
+	ingressClassParams := []*kongv1alpha1.IngressClassParams{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: kongv1alpha1.IngressClassParamsSpec{
+				ServiceUpstream: true,
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{IngressClassParams: ingressClassParams})
+	assert.Nil(err)
+	assert.NotNil(store)
+
+	params, err := store.GetIngressClassParams("foo")
+	assert.NotNil(params)
+	assert.Nil(err)
+
+	params, err = store.GetIngressClassParams("does-not-exist")
+	assert.Nil(params)
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 }

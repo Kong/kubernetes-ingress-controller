@@ -218,19 +218,50 @@ spec:
 	require.NoError(t, err)
 
 	t.Log("verifying the the object has been stored in the cache store")
-	assert.Len(t, cs.IngressV1.List(), 0)
-	assert.Len(t, cs.IngressClassV1.List(), 1)
+	assert.Len(t, cs.IngressClass.List(), 1)
 
-	ingressClass, exists, err := cs.IngressClassV1.GetByKey("foo")
+	ingressClass, exists, err := cs.IngressClass.GetByKey("foo")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 	assert.NotNil(t, ingressClass)
 
-	err = cs.IngressClassV1.Delete(ingressClass)
+	err = cs.IngressClass.Delete(ingressClass)
 	assert.NoError(t, err)
 
-	ingressClass, exists, err = cs.IngressClassV1.GetByKey("foo")
+	ingressClass, exists, err = cs.IngressClass.GetByKey("foo")
 	assert.NoError(t, err)
 	assert.False(t, exists)
 	assert.Nil(t, ingressClass)
+}
+
+func TestCacheStoresGetIngressClassParams(t *testing.T) {
+	t.Log("configuring some yaml objects to store in the cache")
+	yaml := []byte(`---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: IngressClassParams
+metadata:
+  name: foo
+spec:
+  serviceUpstream: true
+`)
+
+	t.Log("creating a new cache store from object yaml files")
+	cs, err := NewCacheStoresFromObjYAML(yaml)
+	require.NoError(t, err)
+
+	t.Log("verifying the the object has been stored in the cache store")
+	assert.Len(t, cs.IngressClassParams.List(), 1)
+
+	params, exists, err := cs.IngressClassParams.GetByKey("foo")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+	assert.NotNil(t, params)
+
+	err = cs.IngressClassParams.Delete(params)
+	assert.NoError(t, err)
+
+	params, exists, err = cs.IngressClassParams.GetByKey("foo")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+	assert.Nil(t, params)
 }

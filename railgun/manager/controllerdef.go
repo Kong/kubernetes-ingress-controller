@@ -162,6 +162,15 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 				IngressClassName: c.IngressClassName,
 			},
 		},
+		{
+			IsEnabled: &c.IngressClassParamsEnabled,
+			Controller: &kongctrl.KongV1Alpha1IngressClassParamsReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("IngressClassParams"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
+			},
+		},
 	}
 
 	// ---------------------------------------------------------------------------

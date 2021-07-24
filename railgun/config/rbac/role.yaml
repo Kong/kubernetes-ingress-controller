@@ -93,6 +93,22 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - IngressClassParams
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - IngressClassParams/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - kongclusterplugins
   verbs:
   - get
@@ -198,6 +214,22 @@ rules:
   - networking.internal.knative.dev
   resources:
   - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressClasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressClasses/status
   verbs:
   - get
   - patch
@@ -314,6 +346,22 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - IngressClassParams
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - IngressClassParams/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - kongclusterplugins
   verbs:
   - get
@@ -419,6 +467,22 @@ rules:
   - networking.internal.knative.dev
   resources:
   - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressClasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressClasses/status
   verbs:
   - get
   - patch

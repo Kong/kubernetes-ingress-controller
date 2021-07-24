@@ -63,17 +63,18 @@ type Config struct {
 	UpdateStatus         bool
 
 	// Kubernetes API toggling
-	IngressExtV1beta1Enabled util.EnablementStatus
-	IngressNetV1beta1Enabled util.EnablementStatus
-	IngressNetV1Enabled      util.EnablementStatus
-	UDPIngressEnabled        util.EnablementStatus
-	TCPIngressEnabled        util.EnablementStatus
-	KongIngressEnabled       util.EnablementStatus
-	KnativeIngressEnabled    util.EnablementStatus
-	KongClusterPluginEnabled util.EnablementStatus
-	KongPluginEnabled        util.EnablementStatus
-	KongConsumerEnabled      util.EnablementStatus
-	ServiceEnabled           util.EnablementStatus
+	IngressExtV1beta1Enabled  util.EnablementStatus
+	IngressNetV1beta1Enabled  util.EnablementStatus
+	IngressNetV1Enabled       util.EnablementStatus
+	UDPIngressEnabled         util.EnablementStatus
+	TCPIngressEnabled         util.EnablementStatus
+	KongIngressEnabled        util.EnablementStatus
+	KnativeIngressEnabled     util.EnablementStatus
+	KongClusterPluginEnabled  util.EnablementStatus
+	KongPluginEnabled         util.EnablementStatus
+	KongConsumerEnabled       util.EnablementStatus
+	IngressClassParamsEnabled util.EnablementStatus
+	ServiceEnabled            util.EnablementStatus
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -166,6 +167,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.enablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusEnabled, "Enable or disable the KongClusterPlugin controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusEnabled, "Enable or disable the KongPlugin controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusEnabled, "Enable or disable the KongConsumer controller. "+onOffUsage)
+	flagSet.enablementStatusVar(&c.IngressClassParamsEnabled, "controller-ingress-class-params", util.EnablementStatusEnabled, "Enable or disable the IngressClassParams controller. "+onOffUsage)
 	flagSet.enablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled, "Enable or disable the Service controller. "+onOffUsage)
 
 	// Admission Webhook server config

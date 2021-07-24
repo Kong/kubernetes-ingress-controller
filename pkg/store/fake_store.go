@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
@@ -31,7 +32,8 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
-	IngressClassesV1   []*networkingv1.IngressClass
+	IngressClasses     []*networkingv1.IngressClass
+	IngressClassParams []*kongv1alpha1.IngressClassParams
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*v1beta1.UDPIngress
 	Services           []*apiv1.Service
@@ -64,9 +66,16 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	ingressClassV1Store := cache.NewStore(clusterResourceKeyFunc)
-	for _, ingressClass := range objects.IngressClassesV1 {
-		err := ingressClassV1Store.Add(ingressClass)
+	ingressClassStore := cache.NewStore(clusterResourceKeyFunc)
+	for _, ingressClass := range objects.IngressClasses {
+		err := ingressClassStore.Add(ingressClass)
+		if err != nil {
+			return nil, err
+		}
+	}
+	ingressClassParamsStore := cache.NewStore(clusterResourceKeyFunc)
+	for _, ingressClassParams := range objects.IngressClassParams {
+		err := ingressClassParamsStore.Add(ingressClassParams)
 		if err != nil {
 			return nil, err
 		}
@@ -143,14 +152,15 @@ func NewFakeStore(
 	}
 	s = Store{
 		stores: CacheStores{
-			IngressV1beta1: ingressV1beta1Store,
-			IngressV1:      ingressV1Store,
-			IngressClassV1: ingressClassV1Store,
-			TCPIngress:     tcpIngressStore,
-			UDPIngress:     udpIngressStore,
-			Service:        serviceStore,
-			Endpoint:       endpointStore,
-			Secret:         secretsStore,
+			IngressV1beta1:     ingressV1beta1Store,
+			IngressV1:          ingressV1Store,
+			IngressClass:       ingressClassStore,
+			IngressClassParams: ingressClassParamsStore,
+			TCPIngress:         tcpIngressStore,
+			UDPIngress:         udpIngressStore,
+			Service:            serviceStore,
+			Endpoint:           endpointStore,
+			Secret:             secretsStore,
 
 			Plugin:        kongPluginsStore,
 			ClusterPlugin: kongClusterPluginsStore,

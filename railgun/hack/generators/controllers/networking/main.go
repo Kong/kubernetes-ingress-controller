@@ -117,6 +117,18 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
+		PackageImportAlias:                "kongv1alpha1",
+		PackageAlias:                      "KongV1Alpha1",
+		Package:                           kongv1,
+		Type:                              "IngressClassParams",
+		Plural:                            "IngressClassParams",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "IngressClassParams",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
 		PackageImportAlias:                "kongv1",
 		PackageAlias:                      "KongV1",
 		Package:                           kongv1,
@@ -362,6 +374,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 

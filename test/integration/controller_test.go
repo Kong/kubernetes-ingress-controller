@@ -92,6 +92,6 @@ func TestConfigEndpoint(t *testing.T) {
 			return false
 		}
 		defer failResp.Body.Close()
-		return successResp == failResp.StatusCode == http.StatusOK
+		return successResp.StatusCode == http.StatusOK && failResp.StatusCode == http.StatusOK
 	}, ingressWait, waitTick)
 }

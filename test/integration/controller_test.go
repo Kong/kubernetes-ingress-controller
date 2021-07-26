@@ -82,13 +82,13 @@ func TestConfigEndpoint(t *testing.T) {
 		failURL := fmt.Sprintf("http://localhost:%v/debug/config/failed", manager.DiagnosticsPort)
 		successResp, err := httpc.Get(successURL)
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", profilingURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", successURL, err)
 			return false
 		}
 		defer successResp.Body.Close()
 		failResp, err := httpc.Get(failURL)
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", profilingURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", failURL, err)
 			return false
 		}
 		defer failResp.Body.Close()

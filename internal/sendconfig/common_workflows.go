@@ -54,7 +54,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	if diagnostic != (util.ConfigDumpDiagnostic{}) {
 		if !diagnostic.DumpsIncludeSensitive {
 			redactedConfig := deckgen.ToDeckContent(ctx,
-				deprecatedLogger, kongstate,
+				deprecatedLogger, kongstate.SanitizedCopy(),
 				kongConfig.PluginSchemaStore, kongConfig.FilterTags)
 			diagConfig = redactedConfig
 		} else {

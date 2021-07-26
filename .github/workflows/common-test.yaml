@@ -67,7 +67,7 @@ jobs:
     - name: Run tests with Coverage
       run: make coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2.0.1
+      uses: codecov/codecov-action@v2.0.2
       with:
         flags: unit-test
         fail_ci_if_error: true

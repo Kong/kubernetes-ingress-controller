@@ -72,3 +72,26 @@ func TestProfilingEndpoint(t *testing.T) {
 		return resp.StatusCode == http.StatusOK
 	}, ingressWait, waitTick)
 }
+
+func TestConfigEndpoint(t *testing.T) {
+	if useLegacyKIC() {
+		t.Skip("config endpoint not available in legacy KIC")
+	}
+	assert.Eventually(t, func() bool {
+		successURL := fmt.Sprintf("http://localhost:%v/debug/config/successful", manager.DiagnosticsPort)
+		failURL := fmt.Sprintf("http://localhost:%v/debug/config/failed", manager.DiagnosticsPort)
+		successResp, err := httpc.Get(successURL)
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", profilingURL, err)
+			return false
+		}
+		defer successResp.Body.Close()
+		failResp, err := httpc.Get(failURL)
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", profilingURL, err)
+			return false
+		}
+		defer failResp.Body.Close()
+		return successResp == failResp.StatusCode == http.StatusOK
+	}, ingressWait, waitTick)
+}

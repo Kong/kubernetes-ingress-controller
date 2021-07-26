@@ -73,6 +73,10 @@ func (s *Server) receiveConfig(ctx context.Context) {
 		case dump := <-s.ConfigDumps.FailedConfigs:
 			failedConfigDump = dump
 		case <-ctx.Done():
+			if err := ctx.Err(); err != nil {
+				s.Logger.Error(err, "error received while stopping diagnostic config collection")
+			}
+			s.Logger.V(3).Info("shutting down diagnostic config collection")
 			return
 		}
 	}

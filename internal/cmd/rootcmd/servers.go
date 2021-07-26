@@ -66,8 +66,8 @@ func StartDiagnosticsServer(ctx context.Context, port int, c *manager.Config) (d
 	if c.EnableConfigDumps {
 		s.ConfigDumps = util.ConfigDumpDiagnostic{
 			DumpsIncludeSensitive: c.DumpSensitiveConfig,
-			SuccessfulConfigs:     make(chan file.Content),
-			FailedConfigs:         make(chan file.Content),
+			SuccessfulConfigs:     make(chan file.Content, 3),
+			FailedConfigs:         make(chan file.Content, 3),
 		}
 	}
 	go func() {

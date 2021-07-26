@@ -68,10 +68,12 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
-		case dump := <-s.ConfigDumps.SuccessfulConfigs:
-			successfulConfigDump = dump
-		case dump := <-s.ConfigDumps.FailedConfigs:
-			failedConfigDump = dump
+		case dump := <-s.ConfigDumps.Configs:
+			if dump.Failed {
+				successfulConfigDump = dump.Config
+			} else {
+				failedConfigDump = dump.Config
+			}
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
 				s.Logger.Error(err, "error received while stopping diagnostic config collection")

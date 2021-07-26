@@ -73,7 +73,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	if err != nil {
 		if diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {
-			case diagnostic.FailedConfigs <- *diagConfig:
+			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagConfig}:
 				deprecatedLogger.Debug("shipping config to diagnostic server")
 			default:
 				deprecatedLogger.Debug("config diagnostic buffer full, dropping diagnostic config")
@@ -83,7 +83,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	}
 	if diagnostic != (util.ConfigDumpDiagnostic{}) {
 		select {
-		case diagnostic.SuccessfulConfigs <- *diagConfig:
+		case diagnostic.Configs <- util.ConfigDump{Failed: false, Config: *diagConfig}:
 			deprecatedLogger.Debug("shipping config to diagnostic server")
 		default:
 			deprecatedLogger.Debug("config diagnostic buffer full, dropping diagnostic config")

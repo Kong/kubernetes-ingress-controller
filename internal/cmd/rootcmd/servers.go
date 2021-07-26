@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/bombsimon/logrusr"
-	"github.com/kong/deck/file"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/diagnostics"
@@ -66,8 +65,7 @@ func StartDiagnosticsServer(ctx context.Context, port int, c *manager.Config) (d
 	if c.EnableConfigDumps {
 		s.ConfigDumps = util.ConfigDumpDiagnostic{
 			DumpsIncludeSensitive: c.DumpSensitiveConfig,
-			SuccessfulConfigs:     make(chan file.Content, 3),
-			FailedConfigs:         make(chan file.Content, 3),
+			Configs:               make(chan util.ConfigDump, 3),
 		}
 	}
 	go func() {

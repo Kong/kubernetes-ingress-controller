@@ -22,7 +22,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/prometheus/client_golang v1.11.0
-	github.com/prometheus/common v0.26.0
+	github.com/prometheus/common v0.30.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/assertions v1.0.0 // indirect
 	github.com/spf13/cobra v1.2.1

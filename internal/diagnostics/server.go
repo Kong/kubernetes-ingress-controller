@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
-// Server is an HTTP server running exposing the pprof profiling tool.
+// Server is an HTTP server running exposing the pprof profiling tool, and processing diagnostic dumps of Kong configurations.
 type Server struct {
 	Logger           logr.Logger
 	ProfilingEnabled bool
@@ -36,9 +36,7 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
 	errChan := make(chan error)
 
-	go func() {
-		s.receiveConfig(ctx)
-	}()
+	go s.receiveConfig(ctx)
 
 	go func() {
 		err := httpServer.ListenAndServe()
@@ -69,16 +67,16 @@ func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
 		case dump := <-s.ConfigDumps.Configs:
-			if !dump.Failed {
-				successfulConfigDump = dump.Config
-			} else {
+			if dump.Failed {
 				failedConfigDump = dump.Config
+			} else {
+				successfulConfigDump = dump.Config
 			}
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
-				s.Logger.Error(err, "error received while stopping diagnostic config collection")
+				s.Logger.Error(err, "shutting down diagnostic config collection: context completed with error")
 			}
-			s.Logger.V(3).Info("shutting down diagnostic config collection")
+			s.Logger.V(3).Info("shutting down diagnostic config collection: context completed")
 			return
 		}
 	}

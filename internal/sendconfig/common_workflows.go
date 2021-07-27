@@ -45,20 +45,23 @@ func UpdateKongAdminSimple(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	var diagConfig *file.Content
+	var diagnosticConfig *file.Content
 
 	// generate the deck configuration to be applied to the admin API
 	targetConfig := deckgen.ToDeckContent(ctx,
 		deprecatedLogger, kongstate,
 		kongConfig.PluginSchemaStore, kongConfig.FilterTags)
+
+	// generate diagnostic configuration if enabled
+	// "diagnostic" will be empty if --dump-config is not set
 	if diagnostic != (util.ConfigDumpDiagnostic{}) {
 		if !diagnostic.DumpsIncludeSensitive {
 			redactedConfig := deckgen.ToDeckContent(ctx,
 				deprecatedLogger, kongstate.SanitizedCopy(),
 				kongConfig.PluginSchemaStore, kongConfig.FilterTags)
-			diagConfig = redactedConfig
+			diagnosticConfig = redactedConfig
 		} else {
-			diagConfig = targetConfig
+			diagnosticConfig = targetConfig
 		}
 	}
 
@@ -73,7 +76,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	if err != nil {
 		if diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {
-			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagConfig}:
+			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagnosticConfig}:
 				deprecatedLogger.Debug("shipping config to diagnostic server")
 			default:
 				deprecatedLogger.Debug("config diagnostic buffer full, dropping diagnostic config")
@@ -83,7 +86,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	}
 	if diagnostic != (util.ConfigDumpDiagnostic{}) {
 		select {
-		case diagnostic.Configs <- util.ConfigDump{Failed: false, Config: *diagConfig}:
+		case diagnostic.Configs <- util.ConfigDump{Failed: false, Config: *diagnosticConfig}:
 			deprecatedLogger.Debug("shipping config to diagnostic server")
 		default:
 			deprecatedLogger.Debug("config diagnostic buffer full, dropping diagnostic config")

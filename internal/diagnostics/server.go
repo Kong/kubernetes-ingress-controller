@@ -69,7 +69,7 @@ func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
 		case dump := <-s.ConfigDumps.Configs:
-			if dump.Failed {
+			if !dump.Failed {
 				successfulConfigDump = dump.Config
 			} else {
 				failedConfigDump = dump.Config

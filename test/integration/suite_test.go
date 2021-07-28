@@ -127,6 +127,7 @@ func TestMain(m *testing.M) {
 	if dbmode == "postgres" {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
+	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 

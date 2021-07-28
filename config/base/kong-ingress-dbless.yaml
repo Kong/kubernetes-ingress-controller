@@ -1,1 +1,1 @@
-../../../deploy/manifests/base/kong-ingress-dbless.yaml
+../../deploy/manifests/base/kong-ingress-dbless.yaml

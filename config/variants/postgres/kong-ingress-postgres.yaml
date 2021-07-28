@@ -1,1 +1,1 @@
-../../../../deploy/manifests/postgres/kong-ingress-postgres.yaml
+../../../deploy/manifests/postgres/kong-ingress-postgres.yaml

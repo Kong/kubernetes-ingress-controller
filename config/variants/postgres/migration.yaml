@@ -1,1 +1,1 @@
-../../../../deploy/manifests/postgres/migration.yaml
+../../../deploy/manifests/postgres/migration.yaml

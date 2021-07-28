@@ -14,10 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 func Test_FetchCustomEntities(t *testing.T) {

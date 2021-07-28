@@ -35,6 +35,6 @@ func TestSecretGetter(t *testing.T) {
 
 	t.Log("should return error if it is not found")
 
-	res, err = secretGetter.GetSecret("default", "valid-secret-old")
+	_, err = secretGetter.GetSecret("default", "valid-secret-old")
 	assert.Error(t, err)
 }

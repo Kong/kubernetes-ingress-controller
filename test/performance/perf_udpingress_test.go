@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +17,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 func TestUDPIngressPerformance(t *testing.T) {

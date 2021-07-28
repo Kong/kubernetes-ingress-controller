@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -24,8 +25,6 @@ import (
 	"knative.dev/pkg/apis"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 )
 
 const (

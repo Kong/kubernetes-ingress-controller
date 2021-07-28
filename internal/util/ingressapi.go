@@ -26,6 +26,8 @@ func (ia IngressAPI) String() string {
 		return networkingv1beta1.SchemeGroupVersion.String()
 	case ExtensionsV1beta1:
 		return extensionsv1beta1.SchemeGroupVersion.String()
+	case OtherAPI:
+		return "unknown API"
 	}
 	return "unknown API"
 }

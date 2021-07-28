@@ -343,6 +343,7 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 	clusterDomain := network.GetClusterDomainName()
 	hostname := fmt.Sprintf("%s.%s.svc.%s", name, namespace, clusterDomain)
 
+	//nolint:exhaustive
 	switch svc.Spec.Type {
 	case apiv1.ServiceTypeLoadBalancer:
 		for _, ip := range svc.Status.LoadBalancer.Ingress {

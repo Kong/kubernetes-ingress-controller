@@ -9,17 +9,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 func TestKongIngressEssentials(t *testing.T) {

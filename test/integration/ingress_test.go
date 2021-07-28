@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 var testIngressNamespace = "ingress"

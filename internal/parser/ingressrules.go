@@ -2,12 +2,13 @@ package parser
 
 import (
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/internal/store"
 )
 
 type ingressRules struct {

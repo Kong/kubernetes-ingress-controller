@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/pprof"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
@@ -18,6 +19,7 @@ type Server struct {
 	Logger           logr.Logger
 	ProfilingEnabled bool
 	ConfigDumps      util.ConfigDumpDiagnostic
+	lock1            sync.RWMutex
 }
 
 var successfulConfigDump file.Content
@@ -27,7 +29,7 @@ var failedConfigDump file.Content
 func (s *Server) Listen(ctx context.Context, port int) error {
 	mux := http.NewServeMux()
 	if s.ConfigDumps != (util.ConfigDumpDiagnostic{}) {
-		installDumpHandlers(mux)
+		s.installDumpHandlers(mux)
 	}
 	if s.ProfilingEnabled {
 		installProfilingHandlers(mux)
@@ -68,9 +70,13 @@ func (s *Server) receiveConfig(ctx context.Context) {
 		select {
 		case dump := <-s.ConfigDumps.Configs:
 			if dump.Failed {
+				s.lock1.Lock()
 				failedConfigDump = dump.Config
+				s.lock1.Unlock()
 			} else {
+				s.lock1.Lock()
 				successfulConfigDump = dump.Config
+				s.lock1.Unlock()
 			}
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
@@ -98,9 +104,9 @@ func installProfilingHandlers(mux *http.ServeMux) {
 }
 
 // installDumpHandlers adds the config dump webservice to the given mux.
-func installDumpHandlers(mux *http.ServeMux) {
-	mux.HandleFunc("/debug/config/successful", lastConfig(&successfulConfigDump))
-	mux.HandleFunc("/debug/config/failed", lastConfig(&failedConfigDump))
+func (s *Server) installDumpHandlers(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/config/successful", s.lastConfig(&successfulConfigDump))
+	mux.HandleFunc("/debug/config/failed", s.lastConfig(&failedConfigDump))
 }
 
 // redirectTo redirects request to a certain destination.
@@ -110,9 +116,12 @@ func redirectTo(to string) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func lastConfig(config *file.Content) func(rw http.ResponseWriter, req *http.Request) {
+func (s *Server) lastConfig(config *file.Content) func(rw http.ResponseWriter, req *http.Request) {
+	s.lock1.RLock()
+	defer s.lock1.RLock()
+	tmp := *config
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(rw).Encode(*config)
+		json.NewEncoder(rw).Encode(tmp)
 	}
 }

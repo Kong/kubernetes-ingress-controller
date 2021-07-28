@@ -2,7 +2,6 @@ package kongstate
 
 import (
 	"github.com/kong/go-kong/kong"
-
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 )

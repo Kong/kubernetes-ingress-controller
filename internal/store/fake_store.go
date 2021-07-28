@@ -3,16 +3,14 @@ package store
 import (
 	"reflect"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
 func keyFunc(obj interface{}) (string, error) {
@@ -32,7 +30,7 @@ type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
 	TCPIngresses       []*configurationv1beta1.TCPIngress
-	UDPIngresses       []*v1beta1.UDPIngress
+	UDPIngresses       []*configurationv1beta1.UDPIngress
 	Services           []*apiv1.Service
 	Endpoints          []*apiv1.Endpoints
 	Secrets            []*apiv1.Secret

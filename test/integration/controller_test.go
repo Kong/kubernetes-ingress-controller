@@ -7,11 +7,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 
 func TestHealthEndpoint(t *testing.T) {

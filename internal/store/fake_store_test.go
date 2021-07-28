@@ -4,6 +4,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -11,10 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
 func Test_keyFunc(t *testing.T) {
@@ -509,6 +508,7 @@ func TestFakeStorePlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	plugins, err = store.ListGlobalKongPlugins()
+	assert.NoError(err)
 	assert.Len(plugins, 0)
 
 	plugin, err := store.GetKongPlugin("default", "does-not-exist")
@@ -531,6 +531,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	plugins, err = store.ListGlobalKongClusterPlugins()
+	assert.NoError(err)
 	assert.Len(plugins, 0)
 
 	plugins = []*configurationv1.KongClusterPlugin{
@@ -564,6 +565,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 	plugins, err = store.ListGlobalKongClusterPlugins()
+	assert.NoError(err)
 	assert.Len(plugins, 1)
 
 	plugin, err := store.GetKongClusterPlugin("foo")

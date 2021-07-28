@@ -173,6 +173,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 	var message string
 	var err error
 
+	//nolint:exhaustive
 	switch request.Resource {
 	case consumerGVResource:
 		consumer := configuration.KongConsumer{}

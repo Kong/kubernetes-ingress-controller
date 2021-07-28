@@ -3,17 +3,16 @@
 package performance
 
 import (
+	"bytes"
+	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"time"
-
-	"bytes"
-	"context"
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"

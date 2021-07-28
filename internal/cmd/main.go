@@ -1,9 +1,8 @@
 package main
 
 import (
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	"github.com/kong/kubernetes-ingress-controller/internal/cmd/rootcmd"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 //go:generate go run github.com/kong/kubernetes-ingress-controller/hack/generators/controllers/networking

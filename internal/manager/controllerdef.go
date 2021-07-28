@@ -5,17 +5,16 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
 	"github.com/kong/kubernetes-ingress-controller/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // -----------------------------------------------------------------------------
@@ -45,6 +44,7 @@ func (c *ControllerDef) Name() string {
 // MaybeSetupWithManager runs SetupWithManager on the controller if its EnablementStatus is either "enabled", or "auto"
 // and AutoHandler says that it should be enabled.
 func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
+	//nolint:exhaustive
 	switch *c.IsEnabled {
 	case util.EnablementStatusDisabled:
 		return nil

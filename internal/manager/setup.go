@@ -9,16 +9,15 @@ import (
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
+	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------

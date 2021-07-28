@@ -6,16 +6,15 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/spf13/pflag"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/kong/kubernetes-ingress-controller/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/spf13/pflag"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // -----------------------------------------------------------------------------

@@ -11,8 +11,9 @@ func Run(ctx context.Context, c *manager.Config) error {
 	if err := StartAdmissionServer(ctx, c); err != nil {
 		return fmt.Errorf("StartAdmissionServer: %w", err)
 	}
-	if err := StartProfilingServer(ctx, c); err != nil {
-		return fmt.Errorf("StartProfilingServer: %w", err)
+	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c)
+	if err != nil {
+		return fmt.Errorf("failed to start diagnostics server: %w", err)
 	}
-	return manager.Run(ctx, c)
+	return manager.Run(ctx, c, diag.ConfigDumps)
 }

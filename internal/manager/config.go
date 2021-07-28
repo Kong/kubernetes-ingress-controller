@@ -79,8 +79,10 @@ type Config struct {
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
 
-	// Performance monitoring
-	EnableProfiling bool
+	// Diagnostics and performance
+	EnableProfiling     bool
+	EnableConfigDumps   bool
+	DumpSensitiveConfig bool
 }
 
 // -----------------------------------------------------------------------------
@@ -183,8 +185,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.AdmissionServer.Key, "admission-webhook-key", "",
 		`admission server PEM private key value`)
 
-	// Misc
-	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, "Enable profiling via web interface host:10256/debug/pprof/")
+	// Diagnostics
+	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/", DiagnosticsPort))
+	flagSet.BoolVar(&c.EnableConfigDumps, "dump-config", false, fmt.Sprintf("Enable config dumps via web interface host:%v/debug/config", DiagnosticsPort))
+	flagSet.BoolVar(&c.DumpSensitiveConfig, "dump-sensitive-config", false, "Include credentials and TLS secrets in configs exposed with --dump-config")
 
 	// Deprecated (to be removed in future releases)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,

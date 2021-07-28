@@ -14,6 +14,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
@@ -23,7 +24,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *Config) error {
+func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) error {
 	deprecatedLogger, logger, err := setupLoggers(c)
 	if err != nil {
 		return err
@@ -59,7 +60,7 @@ func Run(ctx context.Context, c *Config) error {
 	}
 
 	setupLog.Info("configuring and building the proxy cache server")
-	proxy, err := setupProxyServer(ctx, setupLog, deprecatedLogger, mgr, kongConfig, c)
+	proxy, err := setupProxyServer(ctx, setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
 	if err != nil {
 		return fmt.Errorf("unable to start proxy cache server: %w", err)
 	}

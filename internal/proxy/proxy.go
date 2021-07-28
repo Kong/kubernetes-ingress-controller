@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -75,4 +76,5 @@ type KongUpdater func(ctx context.Context,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool) ([]byte, error)
+	enableReverseSync bool,
+	diagnostic util.ConfigDumpDiagnostic) ([]byte, error)

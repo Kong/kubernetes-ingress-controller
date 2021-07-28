@@ -21,8 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/cmd/rootcmd"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/internal/cmd/rootcmd"
+	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"

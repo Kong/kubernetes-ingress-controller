@@ -4,7 +4,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
 )
 
 // Upstream is a wrapper around Upstream object in Kong.

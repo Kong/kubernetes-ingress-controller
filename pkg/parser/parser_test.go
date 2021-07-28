@@ -24,7 +24,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
 )
 
 type TLSPair struct {

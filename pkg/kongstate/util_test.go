@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
 )
 
 func TestKongPluginFromK8SClusterPlugin(t *testing.T) {

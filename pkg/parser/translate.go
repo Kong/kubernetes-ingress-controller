@@ -15,8 +15,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
 )
 
 func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
 )
 
 func TestOverrideRoute(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
 )
 
 var (

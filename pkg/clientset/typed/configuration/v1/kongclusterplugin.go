@@ -22,8 +22,8 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	scheme "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/scheme"
+	v1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
+	scheme "github.com/kong/kubernetes-ingress-controller/pkg/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

@@ -23,7 +23,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	kicclientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
+	kicclientset "github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 )
 
 const (

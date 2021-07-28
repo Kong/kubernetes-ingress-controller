@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 
 func TestHealthEndpoint(t *testing.T) {

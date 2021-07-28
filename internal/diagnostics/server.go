@@ -7,7 +7,7 @@ import (
 	"net/http/pprof"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 
 // Server is an HTTP server running exposing the pprof profiling tool.

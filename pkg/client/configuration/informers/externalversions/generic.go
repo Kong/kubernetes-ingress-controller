@@ -21,8 +21,8 @@ package externalversions
 import (
 	"fmt"
 
-	v1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	v1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	v1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )

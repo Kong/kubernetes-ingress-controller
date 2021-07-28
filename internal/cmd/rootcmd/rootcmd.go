@@ -4,7 +4,7 @@ package rootcmd
 import (
 	"context"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 	"github.com/spf13/cobra"
 )
 

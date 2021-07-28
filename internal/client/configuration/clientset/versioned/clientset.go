@@ -21,11 +21,12 @@ package versioned
 import (
 	"fmt"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
+
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/typed/configuration/v1beta1"
 )
 
 type Interface interface {

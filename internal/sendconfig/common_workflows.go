@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/internal/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
-	"github.com/sirupsen/logrus"
 )
 
 // -----------------------------------------------------------------------------

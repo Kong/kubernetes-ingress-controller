@@ -5,16 +5,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/internal/mgrutils"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
+	"github.com/kong/kubernetes-ingress-controller/internal/mgrutils"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
 // -----------------------------------------------------------------------------

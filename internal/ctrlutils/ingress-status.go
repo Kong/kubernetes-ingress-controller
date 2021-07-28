@@ -11,9 +11,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
-	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
-	kicclientset "github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 	"github.com/prometheus/common/log"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +20,10 @@ import (
 	knativeversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	knativeApis "knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	kicclientset "github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 )
 
 const (

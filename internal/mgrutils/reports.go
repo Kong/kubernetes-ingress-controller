@@ -6,10 +6,11 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // RunReport runs the anonymous data report and reports any errors that have occurred.

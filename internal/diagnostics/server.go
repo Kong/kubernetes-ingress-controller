@@ -7,6 +7,7 @@ import (
 	"net/http/pprof"
 
 	"github.com/go-logr/logr"
+
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 

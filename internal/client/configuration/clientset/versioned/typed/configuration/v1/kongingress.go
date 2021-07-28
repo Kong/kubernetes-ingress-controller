@@ -22,12 +22,13 @@ import (
 	"context"
 	"time"
 
-	scheme "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
-	v1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+
+	scheme "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
+	v1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 )
 
 // KongIngressesGetter has a method to return a KongIngressInterface.

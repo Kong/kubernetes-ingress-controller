@@ -23,13 +23,14 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
-	configuration "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions/configuration"
-	internalinterfaces "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
+
+	versioned "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	configuration "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions/configuration"
+	internalinterfaces "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions/internalinterfaces"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.

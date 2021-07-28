@@ -19,9 +19,10 @@ limitations under the License.
 package v1
 
 import (
+	rest "k8s.io/client-go/rest"
+
 	"github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
 	v1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	rest "k8s.io/client-go/rest"
 )
 
 type ConfigurationV1Interface interface {

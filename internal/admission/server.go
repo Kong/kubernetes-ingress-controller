@@ -8,13 +8,14 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/sirupsen/logrus"
 	admission "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+
+	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 )
 
 var (

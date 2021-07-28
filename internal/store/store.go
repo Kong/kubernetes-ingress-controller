@@ -23,9 +23,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -42,6 +39,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
 const (

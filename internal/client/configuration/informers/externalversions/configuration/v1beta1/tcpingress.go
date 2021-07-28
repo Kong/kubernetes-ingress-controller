@@ -22,14 +22,15 @@ import (
 	"context"
 	time "time"
 
-	versioned "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
-	internalinterfaces "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions/internalinterfaces"
-	v1beta1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/listers/configuration/v1beta1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+
+	versioned "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
+	internalinterfaces "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/informers/externalversions/internalinterfaces"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/listers/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
 // TCPIngressInformer provides access to a shared informer and lister for

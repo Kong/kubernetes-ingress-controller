@@ -22,12 +22,13 @@ import (
 	"context"
 	"time"
 
-	scheme "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
-	v1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+
+	scheme "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned/scheme"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
 // TCPIngressesGetter has a method to return a TCPIngressInterface.

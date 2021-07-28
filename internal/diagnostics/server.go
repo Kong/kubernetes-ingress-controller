@@ -120,7 +120,7 @@ func (s *Server) lastConfig(config *file.Content) func(rw http.ResponseWriter, r
 		rw.Header().Set("Content-Type", "application/json")
 		s.ConfigLock.RLock()
 		if err := json.NewEncoder(rw).Encode(*config); err != nil {
-			rw.WriteHeader(500)
+			rw.WriteHeader(http.StatusInternalServerError)
 		}
 		s.ConfigLock.RUnlock()
 	}

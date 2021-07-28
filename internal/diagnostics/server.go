@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/pprof"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
@@ -18,6 +19,7 @@ type Server struct {
 	Logger           logr.Logger
 	ProfilingEnabled bool
 	ConfigDumps      util.ConfigDumpDiagnostic
+	ConfigLock       sync.RWMutex
 }
 
 var successfulConfigDump file.Content
@@ -68,11 +70,13 @@ func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
 		case dump := <-s.ConfigDumps.Configs:
+			s.ConfigLock.Lock()
 			if dump.Failed {
 				failedConfigDump = dump.Config
 			} else {
 				successfulConfigDump = dump.Config
 			}
+			s.ConfigLock.Unlock()
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
 				s.Logger.Error(err, "shutting down diagnostic config collection: context completed with error")
@@ -114,6 +118,8 @@ func redirectTo(to string) func(http.ResponseWriter, *http.Request) {
 func (s *Server) lastConfig(config *file.Content) func(rw http.ResponseWriter, req *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
+		s.ConfigLock.RLock()
 		json.NewEncoder(rw).Encode(*config)
+		s.ConfigLock.RUnlock()
 	}
 }

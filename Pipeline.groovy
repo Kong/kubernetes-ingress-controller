@@ -12,6 +12,11 @@ nodesByLabel('master').each {
         dir('/home/centos/go/src/github.com/kong/kubernetes-ingress-controller') {
             checkout scm
         }
+        
+        sh('export GOPATH=/home/centos/go 
+            && export GOBIN="/home/centos/go/bin" 
+            && export GOROOT="/usr/local/go" 
+            && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/')
 
         sh('sudo chmod -R 777 /home/centos/go/src/github.com/kong/kubernetes-ingress-controller')
         sh(' creating test cluster ...')

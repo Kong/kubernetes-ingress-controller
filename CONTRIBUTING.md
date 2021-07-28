@@ -119,7 +119,7 @@ kubectl proxy --port=8002 2>&1 > /dev/null &
 export POD_NAME=`kubectl get po -n kong -o json | jq ".items[] | .metadata.name" -r | grep ingress`
 export POD_NAMESPACE=kong
 
-go run -tags gcp ./cli/ingress-controller/ \
+go run -tags gcp ./internal/ingress/controller/cli/ \
 --default-backend-service kong/kong-proxy \
 --kubeconfig ~/.kube/config \
 --publish-service=kong/kong-proxy \

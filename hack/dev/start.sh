@@ -42,7 +42,7 @@ kubectl port-forward -n $POD_NAMESPACE $POD_NAME \
   8000:8000 8443:8443 8001:8001 1> /dev/null &
 
 # run rabbit run
-go run ./cli/ingress-controller \
+go run ./internal/ingress/controller/cli \
   --apiserver-host http://127.0.0.1:8002 \
   --publish-service kong-dev/kong-fake-publish-proxy \
   --kong-admin-url=http://127.0.0.1:8001

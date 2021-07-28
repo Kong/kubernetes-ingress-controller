@@ -352,7 +352,7 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath string) *exec.Cmd {
 	proxyPod := podList.Items[0].Name
 
 	// custom command for the legacy controller as there are several differences in flags.
-	cmd := exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
+	cmd := exec.CommandContext(ctx, "go", "run", "../../../internal/ingress/controller/cli/",
 		"--publish-service", "kong-system/ingress-controller-kong-proxy",
 		"--kubeconfig", kubeconfigPath,
 		"--kong-admin-url", fmt.Sprintf("http://%s:8001", proxyAdminURL.Hostname()),

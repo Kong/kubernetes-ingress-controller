@@ -37,7 +37,7 @@ lint: verify-tidy
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build -o kong-ingress-controller ./cli/ingress-controller
+	CGO_ENABLED=0 go build -o kong-ingress-controller ./internal/ingress/controller/cli
 
 .PHONY: verify-manifests
 verify-manifests:

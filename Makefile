@@ -5,6 +5,7 @@
 TAG?=2.0.0-alpha.3
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
+REPO_URL=github.com/kong/kubernetes-ingress-controller
 IMGNAME?=kubernetes-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 IMG ?= controller:latest
@@ -68,6 +69,10 @@ build: generate fmt vet lint
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Release=$(TAG) \
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Commit=$(COMMIT) \
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Repo=$(REPO_INFO)" internal/cmd/main.go
+
+.PHONY: imports
+imports:
+	@find ./ -type f -name '*.go' -exec goimports -local $(REPO_URL) -w {} \;
 
 .PHONY: fmt
 fmt:

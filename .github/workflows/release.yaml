@@ -1,4 +1,4 @@
-name: kubernetes version matrix tests
+name: release
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'next'
 
 jobs:
-  test-dbless:
+  kubernetes-version-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -39,3 +39,5 @@ jobs:
 
       - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
+
+  # TODO: right now the release is not fully automated, but the above tests must pass before a release is made manually. See RELEASE.md for more information.

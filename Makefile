@@ -78,8 +78,12 @@ vet:
 	go vet ./...
 
 .PHONY: lint
-lint:
+lint: verify-tidy
 	golangci-lint run ./...
+
+.PHONY: verify-tidy
+verify-tidy:
+	./hack/verify-tidy.sh
 
 # ------------------------------------------------------------------------------
 # Build - Manifests

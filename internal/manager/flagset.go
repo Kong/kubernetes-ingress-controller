@@ -3,7 +3,7 @@ package manager
 import (
 	"github.com/spf13/pflag"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------

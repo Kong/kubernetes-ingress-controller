@@ -1,4 +1,4 @@
-// Package manager implements the controller manager for all controllers in Railgun.
+// Package manager implements the controller manager for all controllers
 package manager
 
 import (

@@ -2,7 +2,7 @@ domain: konghq.com
 layout:
 - go.kubebuilder.io/v3
 multigroup: true
-projectName: railgun
+projectName: kubernetes-ingress-controller
 repo: github.com/kong/kubernetes-ingress-controller
 resources:
 - api:

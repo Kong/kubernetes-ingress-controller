@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------

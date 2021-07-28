@@ -28,9 +28,9 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 const (

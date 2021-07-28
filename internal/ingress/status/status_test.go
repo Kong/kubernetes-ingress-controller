@@ -33,7 +33,7 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 func buildLoadBalancerIngressByIP() []apiv1.LoadBalancerIngress {

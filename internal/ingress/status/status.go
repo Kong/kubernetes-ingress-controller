@@ -40,9 +40,9 @@ import (
 	knativeApis "knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
 
+	configClientSet "github.com/kong/kubernetes-ingress-controller/internal/client/configuration/clientset/versioned"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/task"
-	configClientSet "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 

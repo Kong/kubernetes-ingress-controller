@@ -25,7 +25,7 @@ import (
 
 	"github.com/eapache/channels"
 	"github.com/kong/kubernetes-ingress-controller/internal/ingress/controller"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/sirupsen/logrus"
 )
 

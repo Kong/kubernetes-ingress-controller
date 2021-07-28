@@ -24,10 +24,10 @@ import (
 	"path/filepath"
 
 	"github.com/kong/deck/file"
-	"github.com/kong/kubernetes-ingress-controller/pkg/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.

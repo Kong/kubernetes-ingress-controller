@@ -1,7 +1,7 @@
 package ctrlutils
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"

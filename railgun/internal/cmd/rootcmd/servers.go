@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/bombsimon/logrusr"
-	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
 )

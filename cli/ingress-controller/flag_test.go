@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	"github.com/stretchr/testify/assert"
 )
 

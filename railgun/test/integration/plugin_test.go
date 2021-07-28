@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"

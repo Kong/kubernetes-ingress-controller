@@ -21,8 +21,8 @@ import (
 	knativeApis "knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	kicclientset "github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset"
 )
 

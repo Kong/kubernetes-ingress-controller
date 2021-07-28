@@ -1,6 +1,6 @@
 package manager
 
-import "github.com/kong/kubernetes-ingress-controller/pkg/util"
+import "github.com/kong/kubernetes-ingress-controller/internal/util"
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Versioning Information

@@ -17,7 +17,6 @@ linters:
   - exhaustive
   - exportloopref
   - gci
-  - gochecknoinits
   - gofmt
   - goimports
   - gosec

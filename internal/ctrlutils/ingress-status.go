@@ -137,7 +137,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("updating status for v1.Ingress route: name %s namespace %s", name, namespace)
+		log.Debugf("updating status for v1.Ingress route: name %s namespace %s", name, namespace)
 
 		ingCli := cli.NetworkingV1().Ingresses(namespace)
 		retry := 0

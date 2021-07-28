@@ -10,9 +10,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 )
 
 // KongState holds the configuration that should be applied to Kong.

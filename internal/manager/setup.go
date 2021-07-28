@@ -16,9 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
-	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
 )
 
 // -----------------------------------------------------------------------------

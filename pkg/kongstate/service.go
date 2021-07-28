@@ -7,8 +7,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 // Service represents a service in Kong and holds routes associated with the

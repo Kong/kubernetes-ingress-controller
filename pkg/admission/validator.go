@@ -8,8 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 )
 
 // KongValidator validates Kong entities.

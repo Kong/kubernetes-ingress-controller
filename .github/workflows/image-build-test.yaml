@@ -1,4 +1,4 @@
-name: 2.x Image Build
+name: image build test
 
 on:
   pull_request:
@@ -9,8 +9,7 @@ on:
       - 'main'
       - 'next'
     tags:
-      - '2.*'
-      - 'v2.*'
+      - '*'
 
 jobs:
   verify-docker-build:
@@ -25,11 +24,11 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-      - name: Verify Railgun Docker Build
+      - name: Verify Docker Build
         uses: docker/build-push-action@v2
         with:
           push: false
-          file: Dockerfile.railgun
+          file: Dockerfile
           tags: latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache

@@ -1,4 +1,4 @@
-name: 2.x Integration Tests
+name: integration tests
 
 on:
   pull_request:
@@ -9,8 +9,7 @@ on:
       - 'main'
       - 'next'
     tags:
-      - '2.*'
-      - 'v2.*'
+      - '*'
 
 jobs:
   integration-test-dbless:
@@ -29,13 +28,11 @@ jobs:
           ${{ runner.os }}-build-codegen-
     - name: checkout repository
       uses: actions/checkout@v2
-    - name: run railgun integration tests
+    - name: run integration tests
       run: make test.integration.dbless
-      working-directory: ./railgun
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.0.2
       with:
-        directory: ./railgun
         flags: integration-test
         fail_ci_if_error: true
   integration-test-postgres:
@@ -54,12 +51,10 @@ jobs:
           ${{ runner.os }}-build-codegen-
     - name: checkout repository
       uses: actions/checkout@v2
-    - name: run railgun integration tests
+    - name: run integration tests
       run: make test.integration.postgres
-      working-directory: ./railgun
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.0.2
       with:
-        directory: ./railgun
         flags: integration-test
         fail_ci_if_error: true

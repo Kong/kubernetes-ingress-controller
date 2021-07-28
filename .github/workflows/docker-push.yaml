@@ -1,4 +1,4 @@
-name: Build and push 1.x images
+name: build and push images
 
 on:
   push:
@@ -6,8 +6,7 @@ on:
       - 'main'
       - 'next'
     tags:
-      - '1.*'
-      - 'v1.*'
+      - 'v*'
 
 jobs:
   docker:
@@ -66,7 +65,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta (alpine)
         id: meta_alpine
-        uses: docker/metadata-action@v3.4.1
+        uses: docker/metadata-action@v3.3.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -74,7 +73,7 @@ jobs:
           tags: ${{ env.ALPINE_STANDARD }}${{ env.ALPINE_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.4.1
+        uses: docker/metadata-action@v3.3.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |

@@ -1,4 +1,4 @@
-name: 2.x Kubernetes Version Matrix Tests
+name: kubernetes version matrix tests
 
 on:
   push:
@@ -39,4 +39,3 @@ jobs:
 
       - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
-        working-directory: ./railgun

@@ -10,9 +10,9 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
 )
 
 func keyFunc(obj interface{}) (string, error) {

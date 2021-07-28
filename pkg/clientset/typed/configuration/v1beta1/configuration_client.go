@@ -19,8 +19,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	v1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/pkg/clientset/scheme"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

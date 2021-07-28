@@ -22,7 +22,7 @@ import (
 	"context"
 	time "time"
 
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
 	versioned "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/clientset/versioned"
 	internalinterfaces "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/client/configuration/listers/configuration/v1beta1"

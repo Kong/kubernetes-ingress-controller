@@ -12,10 +12,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/mgrutils"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
+	"github.com/kong/kubernetes-ingress-controller/internal/mgrutils"
 )
 
 // -----------------------------------------------------------------------------

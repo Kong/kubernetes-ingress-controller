@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/railgun/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 
 func Run(ctx context.Context, c *manager.Config) error {

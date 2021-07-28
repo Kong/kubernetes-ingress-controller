@@ -24,9 +24,9 @@ cp -Lr ./config/base $STAGE_DIR
 cp -Lr ./config/crd $STAGE_DIR/base/
 cp -Lr ./config/variants $STAGE_DIR
 
-kustomize build $STAGE_DIR/base > ../deploy/single-v2/all-in-one-dbless.yaml
-kustomize build $STAGE_DIR/variants/postgres > ../deploy/single-v2/all-in-one-postgres.yaml
-kustomize build $STAGE_DIR/variants/enterprise > ../deploy/single-v2/all-in-one-enterprise-dbless.yaml
-kustomize build $STAGE_DIR/variants/enterprise-postgres > ../deploy/single-v2/all-in-one-enterprise-postgres.yaml
+kustomize build $STAGE_DIR/base > deploy/single-v2/all-in-one-dbless.yaml
+kustomize build $STAGE_DIR/variants/postgres > deploy/single-v2/all-in-one-postgres.yaml
+kustomize build $STAGE_DIR/variants/enterprise > deploy/single-v2/all-in-one-enterprise-dbless.yaml
+kustomize build $STAGE_DIR/variants/enterprise-postgres > deploy/single-v2/all-in-one-enterprise-postgres.yaml
 
 rm -rf $STAGE_DIR

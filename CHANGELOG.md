@@ -36,6 +36,14 @@
 
 #### Breaking changes
 
+- Golang packages that were previously public in `pkg/` and some other places
+  throughout the codebase have now been moved to `internal/`. For users this
+  will have no effect. This will only affect Golang developers that have other
+  projects that are linking to the KIC as a library: much of these internals
+  were never meant to be publicly accessible, and this change solidifies that.
+  The things that are intended to be public remain public: API Types, Kubernetes
+  Clients.
+  ([#1591](https://github.com/Kong/kubernetes-ingress-controller/issues/1591))
 - Removed finalizers from resources due to challenges with the Kubernetes
   side of their implementation and lack of a need for them in the controller
   reconcilers. Because of the way Kubernetes handles finalizers, you will need

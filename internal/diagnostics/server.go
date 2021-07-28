@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/pprof"
-	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
@@ -19,7 +18,6 @@ type Server struct {
 	Logger           logr.Logger
 	ProfilingEnabled bool
 	ConfigDumps      util.ConfigDumpDiagnostic
-	lock1            sync.RWMutex
 }
 
 var successfulConfigDump file.Content
@@ -27,7 +25,6 @@ var failedConfigDump file.Content
 
 // Listen starts up the HTTP server and blocks until ctx expires.
 func (s *Server) Listen(ctx context.Context, port int) error {
-	s.lock1 = sync.RWMutex{}
 
 	mux := http.NewServeMux()
 	if s.ConfigDumps != (util.ConfigDumpDiagnostic{}) {
@@ -71,13 +68,11 @@ func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
 		case dump := <-s.ConfigDumps.Configs:
-			s.lock1.Lock()
 			if dump.Failed {
 				failedConfigDump = dump.Config
 			} else {
 				successfulConfigDump = dump.Config
 			}
-			s.lock1.Unlock()
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
 				s.Logger.Error(err, "shutting down diagnostic config collection: context completed with error")
@@ -105,9 +100,6 @@ func installProfilingHandlers(mux *http.ServeMux) {
 
 // installDumpHandlers adds the config dump webservice to the given mux.
 func (s *Server) installDumpHandlers(mux *http.ServeMux) {
-	s.lock1.RLock()
-	defer s.lock1.RLock()
-
 	mux.HandleFunc("/debug/config/successful", s.lastConfig(&successfulConfigDump))
 	mux.HandleFunc("/debug/config/failed", s.lastConfig(&failedConfigDump))
 }

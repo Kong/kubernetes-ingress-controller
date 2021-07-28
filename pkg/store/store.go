@@ -41,9 +41,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
 const (

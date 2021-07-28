@@ -17,7 +17,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )

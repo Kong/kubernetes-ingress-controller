@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 )
 
 // KongValidator validates Kong entities.

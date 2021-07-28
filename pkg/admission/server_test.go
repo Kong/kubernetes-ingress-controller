@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1"
+	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	"github.com/lithammer/dedent"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

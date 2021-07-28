@@ -67,7 +67,7 @@ build: generate fmt vet lint
 	go build -a -o bin/manager -ldflags "-s -w \
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Release=$(TAG) \
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Repo=$(REPO_INFO)" main.go
+		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Repo=$(REPO_INFO)" internal/cmd/main.go
 
 .PHONY: fmt
 fmt:
@@ -117,9 +117,9 @@ generate.controllers:
 generate.clientsets:
 	@client-gen --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
-		--input-base github.com/kong/kubernetes-ingress-controller/apis/  \
+		--input-base github.com/kong/kubernetes-ingress-controller/pkg/apis/  \
 		--input configuration/v1,configuration/v1beta1 \
-		--input-dirs github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/apis/configuration/v1/ \
+		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
 		--output-package github.com/kong/kubernetes-ingress-controller/pkg/
 	@rm -rf pkg/clientset/
@@ -178,7 +178,7 @@ test.integration.postgres:
 # ------------------------------------------------------------------------------
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run ./internal/cmd/main.go
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -

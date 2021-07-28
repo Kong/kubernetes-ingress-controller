@@ -10,13 +10,11 @@ COPY go.sum go.sum
 RUN go mod download
 
 COPY pkg/ pkg/
-COPY railgun/pkg/ railgun/pkg/
-COPY railgun/apis/ railgun/apis/
-COPY railgun/internal/ railgun/internal/
-COPY railgun/main.go railgun/main.go
+COPY pkg/ pkg/
+COPY internal/ internal/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X manager.Release=$TAG -X manager.Commit=$COMMIT -X manager.Repo=$REPO_INFO" ./railgun/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X manager.Release=$TAG -X manager.Commit=$COMMIT -X manager.Repo=$REPO_INFO" ./internal/cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

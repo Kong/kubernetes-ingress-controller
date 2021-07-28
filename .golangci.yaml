@@ -20,7 +20,6 @@ linters:
   - gochecknoinits
   - gofmt
   - goimports
-  - gomnd
   - gosec
   - gosimple
   - govet

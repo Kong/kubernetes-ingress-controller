@@ -1,5 +1,7 @@
 ## E2E test
 
+**WARNING**: these tests are deprecated and will be replaced with go tests.
+
 The end-to-end (E2E) integration test performs the following:
 
 1. Start up an ephemeral Kubernetes cluster (KIND)

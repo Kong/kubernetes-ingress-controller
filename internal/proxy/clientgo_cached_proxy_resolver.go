@@ -32,13 +32,14 @@ func NewCacheBasedProxy(ctx context.Context,
 	ingressClassName string,
 	enableReverseSync bool,
 	kongUpdater KongUpdater,
+	diagnostic util.ConfigDumpDiagnostic,
 	timeout time.Duration,
 ) (Proxy, error) {
 	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
 	if err != nil {
 		return nil, err
 	}
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, timeout, kongUpdater)
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, timeout, diagnostic, kongUpdater)
 }
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
@@ -52,6 +53,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	enableReverseSync bool,
 	stagger time.Duration,
 	timeout time.Duration,
+	diagnostic util.ConfigDumpDiagnostic,
 	kongUpdater KongUpdater,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
@@ -61,6 +63,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 
 		kongConfig:        kongConfig,
 		kongUpdater:       kongUpdater,
+		diagnostic:        diagnostic,
 		enableReverseSync: enableReverseSync,
 
 		deprecatedLogger: logger,
@@ -121,7 +124,9 @@ type clientgoCachedProxyResolver struct {
 
 	// kongUpdater is the function that will be used by the cache server to ultimately make the API
 	// call to resolve the current cache to the Kong Admin API configuration endpoint.
+	// It may ship diagnostic information through diagnostic
 	kongUpdater KongUpdater
+	diagnostic  util.ConfigDumpDiagnostic
 
 	// cache server configuration, flow control, channels and utility attributes
 	ingressClassName string
@@ -229,7 +234,8 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				break
 			}
 
-			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
+			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache,
+				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 				break

@@ -54,6 +54,8 @@
   [#1509](https://github.com/Kong/kubernetes-ingress-controller/pull/1509)
 - Added scripts to generate 2.x manifests.
   [#1563](https://github.com/Kong/kubernetes-ingress-controller/pull/1563)
+- Added support for --dump-config to 2.x.
+  [#1589](https://github.com/Kong/kubernetes-ingress-controller/pull/1589)
 
 #### Fixed
 

@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 func Test_FetchCustomEntities(t *testing.T) {
@@ -102,7 +103,8 @@ func TestCaching(t *testing.T) {
 	defer cancel()
 
 	t.Log("configuring and starting a new proxy server")
-	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, time.Millisecond*300)
+	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig,
+		"kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, time.Millisecond*300)
 	assert.NoError(t, err)
 
 	t.Log("ensuring the integrity of the proxy server")
@@ -190,6 +192,6 @@ func TestProxyTimeout(t *testing.T) {
 	// to see the the context deadline for the http response triggered.
 	timeout := time.Millisecond * 10
 
-	_, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, timeout)
+	_, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, timeout)
 	assert.Contains(t, err.Error(), "context deadline exceeded")
 }

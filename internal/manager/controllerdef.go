@@ -14,8 +14,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 // -----------------------------------------------------------------------------

@@ -6,8 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/pkg/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/internal/store"
 )
 
 // -----------------------------------------------------------------------------

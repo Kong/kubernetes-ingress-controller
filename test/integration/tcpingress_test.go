@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/apis/configuration/v1beta1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )

@@ -1,4 +1,4 @@
-name: integration tests
+name: tests
 
 on:
   pull_request:
@@ -12,13 +12,44 @@ on:
       - '*'
 
 jobs:
-  integration-test-dbless:
+  image-tests:
     runs-on: ubuntu-latest
     steps:
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2.1.6
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Verify Docker Build
+        uses: docker/build-push-action@v2
+        with:
+          push: false
+          file: Dockerfile
+          tags: latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+
     - name: setup golang
       uses: actions/setup-go@v2
       with:
         go-version: '^1.16'
+
     - name: cache go modules
       uses: actions/cache@v2.1.6
       with:
@@ -26,22 +57,55 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
+
     - name: checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: run unit tests
+      run: make test
+
+  integration-test-dbless:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.16'
+
+    - name: cache go modules
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
     - name: run integration tests
       run: make test.integration.dbless
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.0.2
       with:
         flags: integration-test
         fail_ci_if_error: true
+
   integration-test-postgres:
     runs-on: ubuntu-latest
     steps:
+
     - name: setup golang
       uses: actions/setup-go@v2
       with:
         go-version: '^1.16'
+
     - name: cache go modules
       uses: actions/cache@v2.1.6
       with:
@@ -49,10 +113,15 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
+
     - name: checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
     - name: run integration tests
       run: make test.integration.postgres
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.0.2
       with:

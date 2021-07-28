@@ -14,8 +14,8 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/annotations"
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
 )
 
 func TestFromIngressV1beta1(t *testing.T) {

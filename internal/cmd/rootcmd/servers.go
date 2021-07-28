@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/bombsimon/logrusr"
-	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/pkg/admission"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 func StartAdmissionServer(ctx context.Context, c *manager.Config) error {

@@ -13,10 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
-	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/pkg/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 )
 
 func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {

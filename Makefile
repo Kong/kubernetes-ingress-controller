@@ -130,7 +130,7 @@ generate.clientsets:
 		--input configuration/v1,configuration/v1beta1 \
 		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
-		--output-package github.com/kong/kubernetes-ingress-controller/internal/
+		--output-package github.com/kong/kubernetes-ingress-controller/pkg/
 	@rm -rf pkg/clientset/
 	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/pkg/clientset pkg/
 	@rm -rf client-gen-tmp/

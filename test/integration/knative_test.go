@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -24,8 +25,6 @@ import (
 	"knative.dev/pkg/apis"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 )
 
 const (
@@ -34,10 +33,6 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
-	if useLegacyKIC() {
-		t.Skip("knative is supported in KIC 1.3.x and skip in legacy KIC")
-	}
-
 	cluster := env.Cluster()
 	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)

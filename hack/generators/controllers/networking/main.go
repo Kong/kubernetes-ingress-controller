@@ -15,7 +15,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "internal/controllers/configuration/zz_generated_controllers.go"
+	outputFile = "../../internal/controllers/configuration/zz_generated_controllers.go"
 
 	corev1     = "k8s.io/api/core/v1"
 	netv1      = "k8s.io/api/networking/v1"
@@ -227,7 +227,7 @@ func main() {
 func header() (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 
-	boilerPlate, err := ioutil.ReadFile("hack/boilerplate.go.txt")
+	boilerPlate, err := ioutil.ReadFile("../../hack/boilerplate.go.txt")
 	if err != nil {
 		return nil, err
 	}
@@ -339,22 +339,20 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
-
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 `
 

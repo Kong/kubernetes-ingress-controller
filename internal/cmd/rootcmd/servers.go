@@ -2,6 +2,7 @@ package rootcmd
 
 import (
 	"context"
+	"sync"
 
 	"github.com/bombsimon/logrusr"
 
@@ -70,6 +71,7 @@ func StartDiagnosticsServer(ctx context.Context, port int, c *manager.Config) (d
 	s := diagnostics.Server{
 		Logger:           logger,
 		ProfilingEnabled: c.EnableProfiling,
+		ConfigLock:       &sync.RWMutex{},
 	}
 	if c.EnableConfigDumps {
 		s.ConfigDumps = util.ConfigDumpDiagnostic{

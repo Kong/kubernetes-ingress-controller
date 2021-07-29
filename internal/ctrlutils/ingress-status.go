@@ -172,7 +172,7 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		}
 	}
 
-	log.Info("successfully updated networkingv1 Ingress status")
+	log.Debugf("successfully updated networkingv1 Ingress status")
 	return nil
 }
 
@@ -183,7 +183,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("updating UDP ingress route name %s namespace %s", name, namespace)
+		log.Debugf("updating UDP ingress route name", name, "namespace", namespace)
 		ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
 		retry := 0
 		for retry < statusUpdateRetry {
@@ -216,7 +216,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 			retry++
 		}
 	}
-	log.Info("successfully updated UDPIngress status")
+	log.Debugf("successfully updated UDPIngress status")
 	return nil
 }
 
@@ -227,7 +227,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("Updating TCP ingress route name %s namespace %s", name, namespace)
+		log.Debugf("Updating TCP ingress route name", name, "namespace", namespace)
 
 		ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
@@ -252,7 +252,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		}
 	}
 
-	log.Info("Successfully updated TCPIngress status")
+	log.Debugf("Successfully updated TCPIngress status")
 	return nil
 }
 
@@ -265,7 +265,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Infof("Updating Knative route name %s namespace %s", name, namespace)
+		log.Debugf("Updating Knative route name", name, "namespace", namespace)
 
 		knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
 		if err != nil {
@@ -316,7 +316,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		}
 	}
 
-	logger.Info("successfully updated knative ingress status")
+	log.Debugf("successfully updated knative ingress status")
 	return nil
 }
 

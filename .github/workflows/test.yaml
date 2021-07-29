@@ -41,8 +41,10 @@ jobs:
       run: make lint
 
     - name: Verify manifest consistency
-      run: |
-        make verify.manifests
+      run: make verify.manifests
+
+    - name: Verify generators consistency
+      run: make generate
 
   image-tests:
     runs-on: ubuntu-latest

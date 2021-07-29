@@ -12,6 +12,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 )
 
+const (
+	// classSpec indicates the fieldName for objects which support indicating their Ingress Class by spec
+	classSpec  = "IngressClassName"
+	PROMTHPORT = 10257
+)
+
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
 // to the value provided.
 func HasAnnotation(obj client.Object, key, expectedValue string) bool {

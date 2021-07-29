@@ -104,6 +104,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
+	go RunHTTP(setupLog)
+
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
 }

@@ -29,6 +29,10 @@ KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
 
+CLIENT_GEN = $(shell pwd)/bin/client-gen
+client-gen: ## Download client-gen locally if necessary.
+	$(call go-get-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen@v0.21.3)
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -123,8 +127,8 @@ generate.controllers:
 # TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
 #       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1254
 .PHONY: generate.clientsets
-generate.clientsets:
-	@client-gen --go-header-file ./hack/boilerplate.go.txt \
+generate.clientsets: client-gen
+	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base github.com/kong/kubernetes-ingress-controller/pkg/apis/  \
 		--input configuration/v1,configuration/v1beta1 \

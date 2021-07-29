@@ -57,6 +57,7 @@ type Config struct {
 	Concurrency          int
 	FilterTags           []string
 	WatchNamespaces      []string
+	UseEndpointSlices    bool
 
 	// Ingress status
 	PublishService       string
@@ -147,6 +148,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
 		a comma-separated list of namespaces.`)
+	flagSet.BoolVar(&c.UseEndpointSlices, "use-endpoint-slices", false,
+		`Use EndpointSlice resource as opposed to Endpoint resource (availalbe in Kuberetes 1.17+).`)
 
 	// Ingress status
 	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"

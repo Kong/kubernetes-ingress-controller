@@ -6,15 +6,15 @@ set -o pipefail
 
 DIFFROOT="$(dirname "${BASH_SOURCE}")/.."
 
-cleanup() {
-  git checkout "${DIFFROOT}"
-}
-trap "cleanup" EXIT SIGINT
-
 if ! git status --porcelain --untracked-files=no "$DIFFROOT" ; then
     echo "error: please run this script on a clean working copy"
     exit 1
 fi
+
+cleanup() {
+  git checkout "${DIFFROOT}"
+}
+trap "cleanup" EXIT SIGINT
 
 cd "${DIFFROOT}"
 make generate

@@ -8,16 +8,15 @@ SCRIPT_ROOT="$(dirname "${BASH_SOURCE}")/.."
 
 DIFFROOT="${SCRIPT_ROOT}/deploy/single-v2/"
 
-cleanup() {
-  git checkout "${DIFFROOT}"
-}
-trap "cleanup" EXIT SIGINT
-
 if ! git status --porcelain --untracked-files=no "$DIFFROOT" ; then
     echo "error: please run this script on a clean working copy"
     exit 1
 fi
 
+cleanup() {
+  git checkout "${DIFFROOT}"
+}
+trap "cleanup" EXIT SIGINT
 
 "${SCRIPT_ROOT}/hack/deploy/build-single-manifests.sh"
 

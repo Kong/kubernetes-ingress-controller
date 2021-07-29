@@ -15,7 +15,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "internal/controllers/configuration/zz_generated_controllers.go"
+	outputFile = "../../internal/controllers/configuration/zz_generated_controllers.go"
 
 	corev1     = "k8s.io/api/core/v1"
 	netv1      = "k8s.io/api/networking/v1"
@@ -227,7 +227,7 @@ func main() {
 func header() (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 
-	boilerPlate, err := ioutil.ReadFile("hack/boilerplate.go.txt")
+	boilerPlate, err := ioutil.ReadFile("../../hack/boilerplate.go.txt")
 	if err != nil {
 		return nil, err
 	}

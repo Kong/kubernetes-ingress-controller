@@ -1,0 +1,47 @@
+run:
+  timeout: 5m
+  skip-dirs:
+  - pkg/client
+  - pkg/apis
+linters:
+  enable:
+  - asciicheck
+  - bodyclose
+  - deadcode
+  - depguard
+  - dogsled
+  - durationcheck
+  - errcheck
+  - exhaustive
+  - exportloopref
+  - gofmt
+  - goimports
+  - gosec
+  - gosimple
+  - govet
+  - importas
+  - ineffassign
+  - megacheck
+  - misspell
+  - nakedret
+  - nilerr
+  - nolintlint
+  - predeclared
+  - revive
+  - staticcheck
+  - structcheck
+  - typecheck
+  - unconvert
+  - unparam
+  - varcheck
+  - wastedassign
+issues:
+  exclude-rules:
+  - linters:
+    - staticcheck
+    text:  "SA4006" # ignore err not checked in test files
+    path: _test\.go
+  - linters:
+    - ineffassign
+    text:  "ineffectual assignment" # ignore err not checked in test files
+    path: _test\.go

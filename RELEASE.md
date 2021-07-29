@@ -33,6 +33,7 @@ For this step we're going to start with the `next` branch and merge in `main` to
 
 **For all releases**
 
+- [ ] verify that CI is passing for `main` first: if there are CI errors on main they must be investigated and fixed
 - [ ] draft a new [release](https://github.com/Kong/kubernetes-ingress-controller/releases), using a title and body similar to previous releases. Use your existing tag.
 - [ ] for new `major` version releases create a new branch (e.g. `1.3.x`) from the release tag and push it
 - [ ] for `minor` and `patch` version releases rebase the release tag onto the release branch: `git checkout 1.3.x && git rebase 1.3.1 && git push`
@@ -56,7 +57,7 @@ For this step we're going to start with the `next` branch and merge in `main` to
 If the "Build and push development images" Github action is not appropriate for your release, or is not operating properly, you can build and push Docker images manually:
 
 - [ ] Check out your release tag.
-- [ ] Run `make container` (legacy) or `make railgun-container` (Railgun/2.x). Note that you can set the `TAG` environment variable if you need to override the current tag in Makefile.
+- [ ] Run `make container`. Note that you can set the `TAG` environment variable if you need to override the current tag in Makefile.
 - [ ] Add additional tags for your container (e.g. `docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2.0; docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2`)
 - [ ] Create a temporary token for the `kongbot` user (see 1Password) and log in using it.
 - [ ] Push each of your tags (e.g. `docker push kong/kubernetes-ingress-controller:1.2.0-alpine`)

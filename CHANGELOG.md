@@ -34,6 +34,17 @@
 
 ## [2.0.0-alpha.3] - TBD
 
+#### Breaking changes
+
+- Removed finalizers from resources due to challenges with the Kubernetes
+  side of their implementation and lack of a need for them in the controller
+  reconcilers. Because of the way Kubernetes handles finalizers, you will need
+  to either manually edit resources to remove "configuration.konghq.com/ingress"
+  from their finalizer list or use `kubectl delete --force` to remove them.
+  Kubernetes will prevent deletion of resources with finalizers, and alpha.3
+  will not automatically remove the finalizers previously added by alpha.2.
+  [#1522](https://github.com/Kong/kubernetes-ingress-controller/pull/1522)
+
 #### Added
 
 - Implemented Ingress status updates in 2.x.
@@ -41,9 +52,30 @@
 - Added `--publish-status-address` and `--publish-service` flags to 2.x.
   [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
   [#1509](https://github.com/Kong/kubernetes-ingress-controller/pull/1509)
+- Added scripts to generate 2.x manifests.
+  [#1563](https://github.com/Kong/kubernetes-ingress-controller/pull/1563)
+- Added support for --dump-config to 2.x.
+  [#1589](https://github.com/Kong/kubernetes-ingress-controller/pull/1589)
+
+#### Fixed
+
+- Corrected the old Ingress v1beta1 API group.
+  [#1584](https://github.com/Kong/kubernetes-ingress-controller/pull/1584)
 
 #### Under the hood
 
+- Code for the previous v1.x releases of the Kubernetes Ingress Controller
+  have been removed. Maintenance of the v1.x era codebase lives on in the
+  `1.3.x` and related branches going forward.
+  [#1591](https://github.com/Kong/kubernetes-ingress-controller/issues/1591)
+- New `v1` versions of `CustomResourceDefinitions` introduced for KIC 2.0 are now
+  backwards compatible with the previous `v1beta1` CRD definitions (i.e. `v1beta1 -> v1`
+  upgrades of KIC's CustomResourceDefinitions now work fully automatically). In practice
+  the upgrade process should be seamless for end-users (e.g. `kubectl apply -f <NEW CRDS>`).
+  If you're interested in better understanding the differences and what's going on
+  under the hood, please see the relevant PR which includes the user facing changes.
+  [Kubernetes#79604](https://github.com/kubernetes/kubernetes/pull/79604)
+  [#1133](https://github.com/Kong/kubernetes-ingress-controller/issues/1133)
 - The historical `--stderrthreshold` flag is now deprecated: it no longer has
   any effect when used and will be removed in a later release.
   [#1297](https://github.com/Kong/kubernetes-ingress-controller/issues/1297)

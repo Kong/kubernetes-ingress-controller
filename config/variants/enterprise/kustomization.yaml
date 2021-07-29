@@ -1,0 +1,8 @@
+resources:
+- ../../base/
+patchesStrategicMerge:
+- kong-enterprise.yaml
+images:
+- name: kong
+  newName: kong/kong-gateway
+  newTag: 2.4.1.0-alpine

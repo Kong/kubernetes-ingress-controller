@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'next'
+
+jobs:
+  kubernetes-version-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kubernetes-version:
+          - 'v1.19.11'
+          - 'v1.20.7'
+          - 'v1.21.2'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16'
+
+      - name: cache go modules
+        uses: actions/cache@v2.1.6
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - name: checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
+
+  # TODO: right now the release is not fully automated, but the above tests must pass before a release is made manually. See RELEASE.md for more information.

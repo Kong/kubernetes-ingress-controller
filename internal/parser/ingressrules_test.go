@@ -3,9 +3,10 @@ package parser
 import (
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
 	"github.com/stretchr/testify/assert"
 	networking "k8s.io/api/networking/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
 )
 
 func TestMergeIngressRules(t *testing.T) {

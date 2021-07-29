@@ -65,7 +65,7 @@ all: build
 clean:
 	@rm -rf testbin/
 	@rm -rf bin/*
-	@rm -f coverage.out
+	@rm -f coverage*.out
 
 .PHONY: build
 build: generate fmt vet lint

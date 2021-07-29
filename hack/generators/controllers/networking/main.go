@@ -339,7 +339,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"

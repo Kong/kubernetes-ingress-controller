@@ -120,8 +120,8 @@ generate: generate.controllers generate.clientsets
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
-	go generate ./...
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	go generate ./...
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 # TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
@@ -205,4 +205,3 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-

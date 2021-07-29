@@ -33,10 +33,6 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
-	if useLegacyKIC() {
-		t.Skip("knative is supported in KIC 1.3.x and skip in legacy KIC")
-	}
-
 	cluster := env.Cluster()
 	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)

@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -63,9 +62,6 @@ const (
 // -----------------------------------------------------------------------------
 
 var (
-	// LegacyControllerEnvVar indicates the environment variable which can be used to trigger tests against the legacy KIC controller-manager
-	LegacyControllerEnvVar = "KONG_LEGACY_CONTROLLER"
-
 	// httpc is the default HTTP client to use for tests
 	httpc = http.Client{Timeout: httpcTimeout}
 
@@ -224,14 +220,6 @@ func TestMain(m *testing.M) {
 }
 
 // -----------------------------------------------------------------------------
-// Testing Helper Functions
-// -----------------------------------------------------------------------------
-
-func useLegacyKIC() bool {
-	return os.Getenv(LegacyControllerEnvVar) != ""
-}
-
-// -----------------------------------------------------------------------------
 // Testing Main - Controller Deployment
 // -----------------------------------------------------------------------------
 
@@ -245,7 +233,7 @@ var crds = []string{
 	knativeCrds,
 }
 
-// deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster and supports legacy (KIC 1.x) clusters as well.
+// deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster
 func deployControllers(ctx context.Context, namespace string) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
@@ -285,86 +273,42 @@ func deployControllers(ctx context.Context, namespace string) error {
 			}
 		}
 
-		// if set, allow running the legacy controller for the tests instead of the current controller
-		var cmd *exec.Cmd
-		if useLegacyKIC() {
-			cmd = buildLegacyCommand(ctx, kubeconfig.Name())
-			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-			cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
-			cmd.Stderr = io.MultiWriter(stderr, os.Stderr)
-			if err := cmd.Run(); err != nil {
-				fmt.Fprintln(os.Stdout, stdout.String())
-				panic(fmt.Errorf("%s: %w", stderr.String(), err))
-			}
-		} else {
-			config := manager.Config{}
-			flags := config.FlagSet()
-			if err := flags.Parse([]string{
-				fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
-				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-				"--controller-kongstate=enabled",
-				"--controller-ingress-networkingv1=enabled",
-				"--controller-ingress-networkingv1beta1=enabled",
-				"--controller-ingress-extensionsv1beta1=enabled",
-				"--controller-tcpingress=enabled",
-				"--controller-kongingress=enabled",
-				"--controller-knativeingress=enabled",
-				"--controller-kongclusterplugin=enabled",
-				"--controller-kongplugin=enabled",
-				"--controller-kongconsumer=disabled",
-				"--dump-config",
-				"--election-id=integrationtests.konghq.com",
-				"--publish-service=kong-system/ingress-controller-kong-proxy",
-				fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
-				fmt.Sprintf("--ingress-class=%s", ingressClass),
-				"--log-level=trace",
-				"--log-format=text",
-				"--debug-log-reduce-redundancy",
-				"--admission-webhook-listen=172.17.0.1:49023",
-				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
-				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
-				"--profiling",
-			}); err != nil {
-				panic(fmt.Errorf("could not parse controller manager flags: %w", err))
-			}
-			fmt.Fprintf(os.Stderr, "config: %+v\n", config)
+		config := manager.Config{}
+		flags := config.FlagSet()
+		if err := flags.Parse([]string{
+			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
+			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
+			"--controller-kongstate=enabled",
+			"--controller-ingress-networkingv1=enabled",
+			"--controller-ingress-networkingv1beta1=enabled",
+			"--controller-ingress-extensionsv1beta1=enabled",
+			"--controller-tcpingress=enabled",
+			"--controller-kongingress=enabled",
+			"--controller-knativeingress=enabled",
+			"--controller-kongclusterplugin=enabled",
+			"--controller-kongplugin=enabled",
+			"--controller-kongconsumer=disabled",
+			"--dump-config",
+			"--election-id=integrationtests.konghq.com",
+			"--publish-service=kong-system/ingress-controller-kong-proxy",
+			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
+			fmt.Sprintf("--ingress-class=%s", ingressClass),
+			"--log-level=trace",
+			"--log-format=text",
+			"--debug-log-reduce-redundancy",
+			"--admission-webhook-listen=172.17.0.1:49023",
+			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
+			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
+			"--profiling",
+		}); err != nil {
+			panic(fmt.Errorf("could not parse controller manager flags: %w", err))
+		}
+		fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 
-			if err := rootcmd.Run(ctx, &config); err != nil {
-				panic(fmt.Errorf("controller manager exited with error: %w", err))
-			}
+		if err := rootcmd.Run(ctx, &config); err != nil {
+			panic(fmt.Errorf("controller manager exited with error: %w", err))
 		}
 	}()
 
 	return nil
-}
-
-func buildLegacyCommand(ctx context.Context, kubeconfigPath string) *exec.Cmd {
-	fmt.Fprintln(os.Stderr, "WARNING: deploying legacy Kong Kubernetes Ingress Controller (KIC)")
-
-	// get the proxy pod
-	podList, err := env.Cluster().Client().CoreV1().Pods("kong-system").List(ctx, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/component=app,app.kubernetes.io/instance=ingress-controller,app.kubernetes.io/name=kong",
-	})
-	if err != nil {
-		panic(err)
-	}
-	if len(podList.Items) != 1 {
-		panic(fmt.Errorf("expected 1 result, found %d", len(podList.Items)))
-	}
-	proxyPod := podList.Items[0].Name
-
-	// custom command for the legacy controller as there are several differences in flags.
-	cmd := exec.CommandContext(ctx, "go", "run", "../../../cli/ingress-controller/",
-		"--publish-service", "kong-system/ingress-controller-kong-proxy",
-		"--kubeconfig", kubeconfigPath,
-		"--kong-admin-url", fmt.Sprintf("http://%s:8001", proxyAdminURL.Hostname()),
-		"--ingress-class", ingressClass)
-
-	// set the environment according to the legacy controller's needs
-	cmd.Env = append(os.Environ(),
-		"POD_NAMESPACE=kong-system",
-		fmt.Sprintf("POD_NAME=%s", proxyPod),
-	)
-
-	return cmd
 }

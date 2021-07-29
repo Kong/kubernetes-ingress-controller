@@ -52,29 +52,29 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
-	for _, kConsumer := range s.ListKongConsumers() {
+	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
-		if kConsumer.Username == "" && kConsumer.CustomID == "" {
+		if consumer.Username == "" && consumer.CustomID == "" {
 			continue
 		}
-		if kConsumer.Username != "" {
-			c.Username = kong.String(kConsumer.Username)
+		if consumer.Username != "" {
+			c.Username = kong.String(consumer.Username)
 		}
-		if kConsumer.CustomID != "" {
-			c.CustomID = kong.String(kConsumer.CustomID)
+		if consumer.CustomID != "" {
+			c.CustomID = kong.String(consumer.CustomID)
 		}
-		c.K8sKongConsumer = *kConsumer
+		c.K8sKongConsumer = *consumer
 
 		log = log.WithFields(logrus.Fields{
-			"kongconsumer_name":      kConsumer.Name,
-			"kongconsumer_namespace": kConsumer.Namespace,
+			"kongconsumer_name":      consumer.Name,
+			"kongconsumer_namespace": consumer.Namespace,
 		})
-		for _, cred := range kConsumer.Credentials {
+		for _, cred := range consumer.Credentials {
 			log = log.WithFields(logrus.Fields{
 				"secret_name":      cred,
-				"secret_namespace": kConsumer.Namespace,
+				"secret_namespace": consumer.Namespace,
 			})
-			secret, err := s.GetSecret(kConsumer.Namespace, cred)
+			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
 				log.Errorf("failed to fetch secret: %v", err)
 				continue
@@ -108,7 +108,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			}
 		}
 
-		consumerIndex[kConsumer.Namespace+"/"+kConsumer.Name] = c
+		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
 	}
 
 	// populate the consumer in the state

@@ -42,7 +42,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
@@ -437,8 +436,8 @@ func (s Store) ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error) {
 }
 
 // ListUDPIngresses returns the list of UDP Ingresses
-func (s Store) ListUDPIngresses() ([]*v1beta1.UDPIngress, error) {
-	ingresses := []*v1beta1.UDPIngress{}
+func (s Store) ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error) {
+	ingresses := []*kongv1beta1.UDPIngress{}
 	if s.stores.UDPIngress == nil {
 		// older versions of the KIC do not support UDPIngress so short circuit to maintain support with them
 		return ingresses, nil
@@ -446,7 +445,7 @@ func (s Store) ListUDPIngresses() ([]*v1beta1.UDPIngress, error) {
 
 	err := cache.ListAll(s.stores.UDPIngress, labels.NewSelector(),
 		func(ob interface{}) {
-			ing, ok := ob.(*v1beta1.UDPIngress)
+			ing, ok := ob.(*kongv1beta1.UDPIngress)
 			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.ExactClassMatch) {
 				ingresses = append(ingresses, ing)
 			}

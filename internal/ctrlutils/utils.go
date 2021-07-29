@@ -1,7 +1,6 @@
 package ctrlutils
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -9,6 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 )
 
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's

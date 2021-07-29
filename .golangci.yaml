@@ -3,8 +3,6 @@ run:
   skip-dirs:
   - pkg/client
   - pkg/apis
-  - internal/ # TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/1597
-  - hack/ # TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/1597
 linters:
   enable:
   - asciicheck
@@ -16,11 +14,8 @@ linters:
   - errcheck
   - exhaustive
   - exportloopref
-  - gci
-  - gochecknoinits
   - gofmt
   - goimports
-  - gomnd
   - gosec
   - gosimple
   - govet

@@ -15,7 +15,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
@@ -403,7 +402,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 	return result
 }
 
-func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*v1beta1.UDPIngress) ingressRules {
+func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*configurationv1beta1.UDPIngress) ingressRules {
 	result := newIngressRules()
 
 	sort.SliceStable(ingressList, func(i, j int) bool {

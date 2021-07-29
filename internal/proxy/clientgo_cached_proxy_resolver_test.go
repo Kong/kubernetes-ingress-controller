@@ -119,7 +119,7 @@ func TestCaching(t *testing.T) {
 	t.Log("generating 10 new objects to the proxy cache server")
 	testObjects := make([]client.Object, 10)
 	for i := 0; i < 10; i++ {
-		name := uuid.New().String()
+		name := uuid.NewString()
 		deployment := generators.NewDeploymentForContainer(generators.NewContainer(name, name, 8080))
 		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 		ingress := generators.NewIngressForService("/testing", nil, service)

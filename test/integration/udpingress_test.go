@@ -26,11 +26,6 @@ import (
 const testUDPIngressNamespace = "udpingress"
 
 func TestUDPIngressEssentials(t *testing.T) {
-	// TODO: once KIC 2.0 lands and pre v2 is gone, we can remove this check
-	if useLegacyKIC() {
-		t.Skip("legacy KIC does not support UDPIngress, skipping")
-	}
-
 	testName := "minudp"
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()

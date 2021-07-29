@@ -308,9 +308,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 }
 
 func TestIngressNamespaces(t *testing.T) {
-	if useLegacyKIC() {
-		t.Skip("support for distinct namespace watches is not supported in legacy KIC")
-	}
 	ctx := context.Background()
 
 	// ensure the alternative namespace is created

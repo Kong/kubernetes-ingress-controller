@@ -20,9 +20,6 @@ import (
 const defaultNs = "default"
 
 func TestValidationWebhook(t *testing.T) {
-	if useLegacyKIC() {
-		t.Skip("not testing validation webhook for KIC 1.x")
-	}
 	ctx := context.Background()
 
 	const webhookSvcName = "validations"

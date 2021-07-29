@@ -4,8 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-SCRIPT_ROOT="$(dirname "${BASH_SOURCE}")/.."
-DIFFROOT="${SCRIPT_ROOT}"
+DIFFROOT="$(dirname "${BASH_SOURCE}")/.."
 
 cleanup() {
   git checkout "${DIFFROOT}"
@@ -17,7 +16,7 @@ if ! git status --porcelain --untracked-files=no "$DIFFROOT" ; then
     exit 1
 fi
 
-cd "${SCRIPT_ROOT}"
+cd "${DIFFROOT}"
 make generate
 
 if git diff --quiet "${DIFFROOT}"

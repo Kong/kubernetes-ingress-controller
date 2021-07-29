@@ -112,7 +112,7 @@ manifests.single: ## Compose single-file deployment manifests from building bloc
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets controller-gen 
+generate: generate.controllers generate.clientsets
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: generate.controllers

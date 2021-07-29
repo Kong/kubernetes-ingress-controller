@@ -19,17 +19,16 @@ limitations under the License.
 package fake
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/discovery"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/testing"
-
 	clientset "github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/clientset/typed/configuration/v1"
 	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/clientset/typed/configuration/v1/fake"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/clientset/typed/configuration/v1beta1"
 	fakeconfigurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/clientset/typed/configuration/v1beta1/fake"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/discovery"
+	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/testing"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.

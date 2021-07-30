@@ -38,13 +38,13 @@ func UpdateKongAdminSimple(ctx context.Context,
 	kongConfig Kong,
 	enableReverseSync bool,
 	diagnostic util.ConfigDumpDiagnostic,
-	promMetrics *util.ControllerMetrics,
+	promMetrics *util.ControllerFunctionalPrometheusMetrics,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
 	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
-		promMetrics.IncCounter(&promMetrics.ConfigPass)
+		promMetrics.ConfigPassCounter.Inc()
 		return nil, err
 	}
 	var diagnosticConfig *file.Content
@@ -77,7 +77,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false,
 	)
 	if err != nil {
-		promMetrics.IncCounter(&promMetrics.ConfigFailure)
+		promMetrics.ConfigPassCounter.Inc()
 		if diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {
 			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagnosticConfig}:
@@ -96,7 +96,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 			deprecatedLogger.Error("config diagnostic buffer full, dropping diagnostic config")
 		}
 	}
-	promMetrics.SetCounter(&promMetrics.ConfigureDuration, uint64(time.Since(start)))
-	promMetrics.IncCounter(&promMetrics.ConfigPass)
+
+	promMetrics.ConfigureDurationHistogram.Observe(float64(time.Since(start)))
 	return configSHA, nil
 }

@@ -54,6 +54,33 @@ func TestMetricsEndpoint(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
+func TestControllerFunctionMetrics(t *testing.T) {
+	assert.Eventually(t, func() bool {
+		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
+		resp, err := httpc.Get(metricsURL)
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", metricsURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return false
+		}
+		decoder := expfmt.SampleDecoder{
+			Dec:  expfmt.NewDecoder(resp.Body, expfmt.FmtText),
+			Opts: &expfmt.DecodeOptions{},
+		}
+
+		var v model.Vector
+		if err := decoder.Decode(&v); err != nil {
+			t.Logf("decoder failed: %v", err)
+			return false
+		}
+
+		return len(v) > 0
+	}, ingressWait, waitTick)
+}
+
 func TestProfilingEndpoint(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		profilingURL := fmt.Sprintf("http://localhost:%v/debug/pprof/", manager.DiagnosticsPort)

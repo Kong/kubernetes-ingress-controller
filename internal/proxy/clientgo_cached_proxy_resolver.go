@@ -146,7 +146,7 @@ type clientgoCachedProxyResolver struct {
 	del    chan *cachedObject
 
 	// kong ingress controller function metrics
-	promMetrics *util.ControllerMetrics
+	promMetrics *util.ControllerFunctionalPrometheusMetrics
 
 	// locks
 	internalCacheLock *sync.RWMutex

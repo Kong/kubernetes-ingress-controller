@@ -85,4 +85,4 @@ type KongUpdater func(ctx context.Context,
 	kongConfig sendconfig.Kong,
 	enableReverseSync bool,
 	diagnostic util.ConfigDumpDiagnostic,
-	promMetrics *util.ControllerMetrics) ([]byte, error)
+	promMetrics *util.ControllerFunctionalPrometheusMetrics) ([]byte, error)

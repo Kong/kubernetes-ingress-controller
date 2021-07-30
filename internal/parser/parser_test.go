@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -3597,19 +3598,25 @@ func TestPluginAnnotations(t *testing.T) {
 
 func TestGetEndpoints(t *testing.T) {
 	tests := []struct {
-		name   string
-		svc    *corev1.Service
-		port   *corev1.ServicePort
-		proto  corev1.Protocol
-		fn     func(string, string) (*corev1.Endpoints, error)
-		result []util.Endpoint
+		name              string
+		svc               *corev1.Service
+		port              *corev1.ServicePort
+		proto             corev1.Protocol
+		useEndpointSlices bool
+		epfn              func(string, string) (*corev1.Endpoints, error)
+		epsfn             func(string, string) (*discoveryv1.EndpointSlice, error)
+		result            []util.Endpoint
 	}{
 		{
 			"no service should return 0 endpoints",
 			nil,
 			nil,
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
+				return nil, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
 				return nil, nil
 			},
 			[]util.Endpoint{},
@@ -3619,7 +3626,11 @@ func TestGetEndpoints(t *testing.T) {
 			&corev1.Service{},
 			nil,
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
+				return nil, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
 				return nil, nil
 			},
 			[]util.Endpoint{},
@@ -3629,8 +3640,12 @@ func TestGetEndpoints(t *testing.T) {
 			&corev1.Service{},
 			&corev1.ServicePort{Name: "default"},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
 			},
 			[]util.Endpoint{},
 		},
@@ -3643,8 +3658,12 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			&corev1.ServicePort{Name: "default"},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
 			},
 			[]util.Endpoint{},
 		},
@@ -3667,8 +3686,12 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
 			},
 			[]util.Endpoint{
 				{
@@ -3702,8 +3725,12 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(2080),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
 			},
 			[]util.Endpoint{
 				{
@@ -3731,8 +3758,12 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				return nil, fmt.Errorf("unexpected error")
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
 			},
 			[]util.Endpoint{},
 		},
@@ -3755,6 +3786,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
@@ -3774,6 +3806,9 @@ func TestGetEndpoints(t *testing.T) {
 						},
 					},
 				}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
 			},
 			[]util.Endpoint{},
 		},
@@ -3796,6 +3831,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
@@ -3814,6 +3850,45 @@ func TestGetEndpoints(t *testing.T) {
 							},
 						},
 					},
+				}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
+			},
+			[]util.Endpoint{},
+		},
+		{
+			"should return no endpoints when there is no ready Addresses when using endpoint slices",
+			&corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			&corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			corev1.ProtocolTCP,
+			true,
+			func(string, string) (*corev1.Endpoints, error) {
+				return nil, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				protocol := corev1.ProtocolTCP
+				return &discoveryv1.EndpointSlice{
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Protocol: &protocol,
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{},
 				}, nil
 			},
 			[]util.Endpoint{},
@@ -3837,6 +3912,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
@@ -3854,6 +3930,55 @@ func TestGetEndpoints(t *testing.T) {
 									Port:     int32(80),
 									Name:     "another-name",
 								},
+							},
+						},
+					},
+				}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
+			},
+			[]util.Endpoint{},
+		},
+		{
+			"should return no endpoints when the name of the port name do not match any port in the endpoint slice",
+			&corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			&corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			corev1.ProtocolTCP,
+			true,
+			func(string, string) (*corev1.Endpoints, error) {
+				return nil, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				protocol := corev1.ProtocolTCP
+				port := int32(80)
+				name := "another-name"
+				return &discoveryv1.EndpointSlice{
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Protocol: &protocol,
+							Port:     &port,
+							Name:     &name,
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"1.1.1.1",
 							},
 						},
 					},
@@ -3880,6 +4005,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
@@ -3897,6 +4023,60 @@ func TestGetEndpoints(t *testing.T) {
 									Port:     int32(80),
 									Name:     "default",
 								},
+							},
+						},
+					},
+				}, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
+			},
+			[]util.Endpoint{
+				{
+					Address: "1.1.1.1",
+					Port:    "80",
+				},
+			},
+		},
+		{
+			"should return one endpoint when the name of the port name match a port in the endpoint slice",
+			&corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			&corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			corev1.ProtocolTCP,
+			true,
+			func(string, string) (*corev1.Endpoints, error) {
+				return nil, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				protocol := corev1.ProtocolTCP
+				port := int32(80)
+				name := "default"
+				return &discoveryv1.EndpointSlice{
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Protocol: &protocol,
+							Port:     &port,
+							Name:     &name,
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"1.1.1.1",
 							},
 						},
 					},
@@ -3928,6 +4108,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromString("port-1"),
 			},
 			corev1.ProtocolTCP,
+			false,
 			func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
@@ -3955,6 +4136,65 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				return nil, nil
+			},
+			[]util.Endpoint{
+				{
+					Address: "1.1.1.1",
+					Port:    "80",
+				},
+			},
+		},
+		{
+			"should return one endpoint when the name of the port name match more than one port in the endpoint slices",
+			&corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromString("port-1"),
+						},
+					},
+				},
+			},
+			&corev1.ServicePort{
+				Name:       "port-1",
+				TargetPort: intstr.FromString("port-1"),
+			},
+			corev1.ProtocolTCP,
+			true,
+			func(string, string) (*corev1.Endpoints, error) {
+				return nil, nil
+			},
+			func(string, string) (*discoveryv1.EndpointSlice, error) {
+				protocol := corev1.ProtocolTCP
+				port := int32(80)
+				name := "port-1"
+				return &discoveryv1.EndpointSlice{
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Protocol: &protocol,
+							Port:     &port,
+							Name:     &name,
+						},
+						{
+							Protocol: &protocol,
+							Port:     &port,
+							Name:     &name,
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"1.1.1.1",
+							},
+						},
+					},
+				}, nil
+			},
 			[]util.Endpoint{
 				{
 					Address: "1.1.1.1",
@@ -3966,7 +4206,8 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn)
+			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto,
+				testCase.useEndpointSlices, testCase.epfn, testCase.epsfn)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
 			}

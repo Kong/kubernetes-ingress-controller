@@ -78,7 +78,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false,
 	)
 	if err != nil {
-		promMetrics.ConfigPassCounter.Inc()
+		promMetrics.ConfigFailureCounter.Inc()
 		if diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {
 			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagnosticConfig}:

@@ -13,6 +13,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -330,7 +331,7 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 	// check all protocols for associated endpoints
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService)
+		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.UseEndpointSlices(), s.GetEndpointsForService, s.GetEndpointSlicesForService)
 		if len(newEndpoints) > 0 {
 			endpoints = append(endpoints, newEndpoints...)
 		}
@@ -348,7 +349,9 @@ func getEndpoints(
 	s *corev1.Service,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
+	useEndpointSlices bool,
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
+	getEndpointSlices func(string, string) (*discoveryv1.EndpointSlice, error),
 ) []util.Endpoint {
 
 	upsServers := []util.Endpoint{}
@@ -362,11 +365,6 @@ func getEndpoints(
 		"service_namespace": s.Namespace,
 		"service_port":      port.String(),
 	})
-
-	// avoid duplicated upstream servers when the service
-	// contains multiple port definitions sharing the same
-	// targetport.
-	adus := make(map[string]bool)
 
 	// ExternalName services
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
@@ -393,11 +391,61 @@ func getEndpoints(
 	}
 
 	log.Debugf("fetching endpoints")
-	ep, err := getEndpoints(s.Namespace, s.Name)
-	if err != nil {
-		log.Errorf("failed to fetch endpoints: %v", err)
-		return upsServers
+	var eps []util.Endpoint
+	if useEndpointSlices {
+		ep, err := getEndpointSlices(s.Namespace, s.Name)
+		if err != nil {
+			log.Errorf("failed to fetch endpoints: %v", err)
+			return upsServers
+		}
+
+		eps = convertEndpointSlices(ep, port, proto)
+	} else {
+		ep, err := getEndpoints(s.Namespace, s.Name)
+		if err != nil {
+			log.Errorf("failed to fetch endpoints: %v", err)
+			return upsServers
+		}
+
+		eps = convertEndpoints(ep, port, proto)
 	}
+
+	for _, server := range eps {
+		upsServers = append(upsServers, server)
+	}
+
+	log.Debugf("found endpoints: %v", upsServers)
+	return upsServers
+}
+
+// normalizePort normalizes the port from an endpoint or endpoint slice
+func normalizePort(
+	servicePort *corev1.ServicePort,
+	endpointPort *corev1.EndpointPort,
+) int32 {
+	var targetPort int32
+
+	if servicePort.Name == "" {
+		// port.Name is optional if there is only one port
+		targetPort = endpointPort.Port
+	} else if servicePort.Name == endpointPort.Name {
+		targetPort = endpointPort.Port
+	}
+
+	return targetPort
+}
+
+// convertEndpoints converts proper kubernetes endpoints into internal util.Endpoints
+func convertEndpoints(
+	ep *corev1.Endpoints,
+	port *corev1.ServicePort,
+	proto corev1.Protocol,
+) []util.Endpoint {
+	// avoid duplicated upstream servers when the service
+	// contains multiple port definitions sharing the same
+	// targetport.
+	adus := make(map[string]bool)
+	upsServers := []util.Endpoint{}
 
 	for _, ss := range ep.Subsets {
 		for _, epPort := range ss.Ports {
@@ -421,8 +469,8 @@ func getEndpoints(
 			}
 
 			for _, epAddress := range ss.Addresses {
-				ep := fmt.Sprintf("%v:%v", epAddress.IP, targetPort)
-				if _, exists := adus[ep]; exists {
+				e := fmt.Sprintf("%v:%v", epAddress, targetPort)
+				if _, exists := adus[e]; exists {
 					continue
 				}
 				ups := util.Endpoint{
@@ -430,12 +478,49 @@ func getEndpoints(
 					Port:    fmt.Sprintf("%v", targetPort),
 				}
 				upsServers = append(upsServers, ups)
-				adus[ep] = true
+				adus[e] = true
 			}
 		}
 	}
 
-	log.Debugf("found endpoints: %v", upsServers)
+	return upsServers
+}
+
+// convertEndpointSlices converts endpoint slices into internal util.Endpoints
+func convertEndpointSlices(
+	ep *discoveryv1.EndpointSlice,
+	port *corev1.ServicePort,
+	proto corev1.Protocol,
+) []util.Endpoint {
+	// avoid duplicated upstream servers when the service
+	// contains multiple port definitions sharing the same
+	// targetport.
+	adus := make(map[string]bool)
+
+	upsServers := []util.Endpoint{}
+
+	for _, endpoint := range ep.Endpoints {
+		for _, epPort := range ep.Ports {
+
+			if !reflect.DeepEqual(epPort.Protocol, proto) || *epPort.Port <= 0 {
+				continue
+			}
+
+			for _, epAddress := range endpoint.Addresses {
+				e := fmt.Sprintf("%v:%v", epAddress, *epPort.Port)
+				if _, exists := adus[e]; exists {
+					continue
+				}
+				ups := util.Endpoint{
+					Address: epAddress,
+					Port:    fmt.Sprintf("%v", &epPort.Port),
+				}
+				upsServers = append(upsServers, ups)
+				adus[e] = true
+			}
+		}
+	}
+
 	return upsServers
 }
 

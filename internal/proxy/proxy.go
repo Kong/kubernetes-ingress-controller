@@ -77,4 +77,5 @@ type KongUpdater func(ctx context.Context,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
 	enableReverseSync bool,
-	diagnostic util.ConfigDumpDiagnostic) ([]byte, error)
+	diagnostic util.ConfigDumpDiagnostic,
+	promMetrics *util.ControllerMetrics) ([]byte, error)

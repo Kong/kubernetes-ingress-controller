@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,4 +69,6 @@ type KongUpdater func(ctx context.Context,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
 	enableReverseSync bool,
-	diagnostic util.ConfigDumpDiagnostic) ([]byte, error)
+	diagnostic util.ConfigDumpDiagnostic,
+	proxyRequestTimeout time.Duration,
+) ([]byte, error)

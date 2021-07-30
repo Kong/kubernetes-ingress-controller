@@ -38,6 +38,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	kongConfig Kong,
 	enableReverseSync bool,
 	diagnostic util.ConfigDumpDiagnostic,
+	proxyRequestTimeout time.Duration,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
@@ -66,7 +67,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	}
 
 	// apply the configuration update in Kong
-	timedCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	timedCtx, cancel := context.WithTimeout(ctx, proxyRequestTimeout)
 	defer cancel()
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,

@@ -45,7 +45,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
 	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
-		promMetrics.ConfigPassCounter.Inc()
+		promMetrics.ParseFailureCounter.Inc()
 		return nil, err
 	}
 	var diagnosticConfig *file.Content

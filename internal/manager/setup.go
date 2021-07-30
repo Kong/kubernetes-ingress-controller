@@ -99,6 +99,27 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 	return cfg, nil
 }
 
+func validateVersionForEndpointSlices(major, minor string) error {
+	intMajor, err := strconv.Atoi(major)
+	if err != nil {
+		return fmt.Errorf("%s; %s is not a valid major version", err.Error(), major)
+	}
+
+	intMinor, err := strconv.Atoi(minor)
+	if err != nil {
+		return fmt.Errorf("%s; %s is not a valid minor version", err.Error(), minor)
+	}
+
+	switch {
+	case intMajor > 1:
+		return nil
+	case intMajor == 1 && intMinor >= 17:
+		return nil
+	}
+
+	return fmt.Errorf("%s.%s is not a compatible version for using endpoint slices", major, minor)
+}
+
 func setupProxyServer(ctx context.Context,
 	logger logr.Logger, fieldLogger logrus.FieldLogger,
 	mgr manager.Manager, kongConfig sendconfig.Kong,
@@ -124,26 +145,8 @@ func setupProxyServer(ctx context.Context,
 	}
 
 	if c.UseEndpointSlices {
-		kubernetesVersion := version.Get()
-		major, err := strconv.Atoi(kubernetesVersion.Major)
-		if err != nil {
-			logger.Error(err, fmt.Sprintf("%d is not a valid major version", major))
-			return nil, err
-		}
-
-		minor, err := strconv.Atoi(kubernetesVersion.Minor)
-		if err != nil {
-			logger.Error(err, fmt.Sprintf("%d is not a valid minor version", minor))
-			return nil, err
-		}
-
-		if major >= 1 {
-			if minor >= 17 {
-				logger.Error(err, fmt.Sprintf("%d.%d is not a compatible version for using endpoint slices", major, minor))
-				return nil, err
-			}
-		} else {
-			logger.Error(err, fmt.Sprintf("%d is not a compatible major version for using endpoint slices", minor))
+		if err := validateVersionForEndpointSlices(version.Get().Major, version.Get().Minor); err != nil {
+			logger.Error(err, "failed validating kubernetes version for endpoint slices")
 			return nil, err
 		}
 	}

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +34,10 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
+	if env.Cluster().Type() != kind.KindClusterType {
+		t.Skip("TODO: knative tests are only supported on KIND based environments right now")
+	}
+
 	cluster := env.Cluster()
 	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)

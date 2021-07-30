@@ -420,16 +420,17 @@ func getEndpoints(
 
 // normalizePort normalizes the port from an endpoint or endpoint slice
 func normalizePort(
-	servicePort *corev1.ServicePort,
-	endpointPort *corev1.EndpointPort,
+	servicePortName string,
+	endpointPortName string,
+	endpointPort int32,
 ) int32 {
 	var targetPort int32
 
-	if servicePort.Name == "" {
+	if servicePortName == "" {
 		// port.Name is optional if there is only one port
-		targetPort = endpointPort.Port
-	} else if servicePort.Name == endpointPort.Name {
-		targetPort = endpointPort.Port
+		targetPort = endpointPort
+	} else if servicePortName == endpointPortName {
+		targetPort = endpointPort
 	}
 
 	return targetPort
@@ -454,14 +455,7 @@ func convertEndpoints(
 				continue
 			}
 
-			var targetPort int32
-
-			if port.Name == "" {
-				// port.Name is optional if there is only one port
-				targetPort = epPort.Port
-			} else if port.Name == epPort.Name {
-				targetPort = epPort.Port
-			}
+			targetPort := normalizePort(port.Name, epPort.Name, epPort.Port)
 
 			// check for invalid port value
 			if targetPort <= 0 {
@@ -502,18 +496,25 @@ func convertEndpointSlices(
 	for _, endpoint := range ep.Endpoints {
 		for _, epPort := range ep.Ports {
 
-			if !reflect.DeepEqual(epPort.Protocol, proto) || *epPort.Port <= 0 {
+			if !reflect.DeepEqual(*epPort.Protocol, proto) {
+				continue
+			}
+
+			targetPort := normalizePort(port.Name, *epPort.Name, *epPort.Port)
+
+			// check for invalid port value
+			if targetPort <= 0 {
 				continue
 			}
 
 			for _, epAddress := range endpoint.Addresses {
-				e := fmt.Sprintf("%v:%v", epAddress, *epPort.Port)
+				e := fmt.Sprintf("%v:%v", epAddress, targetPort)
 				if _, exists := adus[e]; exists {
 					continue
 				}
 				ups := util.Endpoint{
 					Address: epAddress,
-					Port:    fmt.Sprintf("%v", &epPort.Port),
+					Port:    fmt.Sprintf("%v", targetPort),
 				}
 				upsServers = append(upsServers, ups)
 				adus[e] = true

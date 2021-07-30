@@ -237,11 +237,23 @@ func TestMain(m *testing.M) {
 		os.Exit(ExitCodeCantCreateCluster)
 	}
 
+	// controller test using traditional endpoints
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
 		fmt.Println("INFO: deploying controller manager")
-		if err := deployControllers(ctx, controllerNamespace); err != nil {
+		if err := deployControllers(ctx, controllerNamespace, false); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(ExitCodeCantCreateCluster)
+		}
+	}
+
+	// controller test using endpoint slices
+	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
+		fmt.Println("WARNING: caller indicated that they will manage their own controller")
+	} else {
+		fmt.Println("INFO: deploying controller manager")
+		if err := deployControllers(ctx, controllerNamespace, true); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(ExitCodeCantCreateCluster)
 		}
@@ -274,7 +286,7 @@ var crds = []string{
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster
-func deployControllers(ctx context.Context, namespace string) error {
+func deployControllers(ctx context.Context, namespace string, useEndpointSlices bool) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
@@ -326,6 +338,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 		if err := flags.Parse([]string{
 			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
+			fmt.Sprintf("--use-endpoint-slices=%s", useEndpointSlices),
 			"--controller-kongstate=enabled",
 			"--controller-ingress-networkingv1=enabled",
 			"--controller-ingress-networkingv1beta1=enabled",

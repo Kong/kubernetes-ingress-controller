@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -21,6 +22,9 @@ import (
 const defaultNs = "default"
 
 func TestValidationWebhook(t *testing.T) {
+	if env.Cluster().Type() != kind.KindClusterType {
+		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
+	}
 	ctx := context.Background()
 
 	const webhookSvcName = "validations"

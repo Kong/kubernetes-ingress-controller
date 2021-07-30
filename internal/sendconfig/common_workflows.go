@@ -99,5 +99,6 @@ func UpdateKongAdminSimple(ctx context.Context,
 	}
 
 	promMetrics.ConfigureDurationHistogram.Observe(float64(time.Since(start)))
+	promMetrics.ConfigPassCounter.Inc()
 	return configSHA, nil
 }

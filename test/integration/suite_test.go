@@ -18,8 +18,10 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,7 +71,10 @@ var (
 	watchNamespaces = strings.Join([]string{
 		elsewhere,
 		corev1.NamespaceDefault,
-		testIngressNamespace,
+		testIngressEssentialsNamespace,
+		testIngressClassNameSpecNamespace,
+		testIngressHTTPSNamespace,
+		testIngressHTTPSRedirectNamespace,
 		testBulkIngressNamespace,
 		testTCPIngressNamespace,
 		testUDPIngressNamespace,
@@ -101,9 +106,9 @@ var (
 	// clusterVersion indicates the version of Kubernetes to use for the tests (if the cluster was not provided by the caller)
 	clusterVersionStr = os.Getenv("KONG_CLUSTER_VERSION")
 
-	// existingClusterName indicates whether or not the caller is providing their own kind cluster for running the tests,
-	// and if so what the name of that cluster is.
-	existingClusterName = os.Getenv("KIND_CLUSTER")
+	// existingCluster indicates whether or not the caller is providing their own cluster for running the tests.
+	// These need to come in the format <TYPE>:<NAME> (e.g. "kind:<NAME>", "gke:<NAME>", e.t.c.).
+	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
 
 	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
 	maxBatchSize = determineMaxBatchSize()
@@ -125,21 +130,47 @@ func TestMain(m *testing.M) {
 	}
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
-	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
+	builder := environments.NewBuilder().WithAddons(kongAddon)
 
 	fmt.Println("INFO: checking for reusable environment components")
-	if existingClusterName != "" {
+	if existingCluster != "" {
 		if clusterVersionStr != "" {
 			fmt.Fprintf(os.Stderr, "Error: can't flag cluster version and provide an existing cluster at the same time")
 			os.Exit(ExitCodeIncompatibleOptions)
 		}
-		fmt.Printf("INFO: using existing cluster %s\n", existingClusterName)
-		cluster, err := kind.NewFromExisting(existingClusterName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: could not use existing cluster for test env: %s", err)
+
+		fmt.Println("INFO: parsing existing cluster name identifier")
+		clusterParts := strings.Split(existingCluster, ":")
+		if len(clusterParts) != 2 {
+			fmt.Fprintf(os.Stderr, "Error: existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster)
 			os.Exit(ExitCodeCantUseExistingCluster)
 		}
-		builder = builder.WithExistingCluster(cluster)
+		clusterType, clusterName := clusterParts[0], clusterParts[1]
+
+		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
+		switch clusterType {
+		case string(kind.KindClusterType):
+			cluster, err := kind.NewFromExisting(clusterName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: could not use existing %s cluster for test env: %s", clusterType, err)
+				os.Exit(ExitCodeCantUseExistingCluster)
+			}
+			builder.WithExistingCluster(cluster)
+			builder.WithAddons(metallb.New())
+		case string(gke.GKEClusterType):
+			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: could not use existing %s cluster for test env: %s", clusterType, err)
+				os.Exit(ExitCodeCantUseExistingCluster)
+			}
+			builder.WithExistingCluster(cluster)
+		default:
+			fmt.Fprintf(os.Stderr, "Error: unknown cluster type: %s", clusterType)
+			os.Exit(ExitCodeCantUseExistingCluster)
+		}
+	} else {
+		fmt.Println("INFO: no existing cluster to be used, deploying using KIND")
+		builder.WithAddons(metallb.New())
 	}
 
 	fmt.Println("INFO: configuring kubernetes cluster")
@@ -163,16 +194,25 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "Error: could not create testing environment: %s", err)
 		os.Exit(ExitCodeCantCreateCluster)
 	}
-	fmt.Printf(
-		"INFO: environment built CLUSTER_NAME=(%s) CLUSTER_TYPE=(%s) ADDONS=(metallb, kong)\n",
-		env.Cluster().Name(), env.Cluster().Type(),
-	)
 	defer func() {
 		if err := env.Cleanup(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: could not cleanup testing environment: %s", err)
 			os.Exit(ExitCodeCleanupFailed)
 		}
 	}()
+
+	fmt.Printf("INFO: reconfiguring the kong admin service as LoadBalancer type\n")
+	svc, err := env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Get(ctx, kong.DefaultAdminServiceName, metav1.GetOptions{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not get proxy admin service from cluster: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
+	}
+	svc.Spec.Type = corev1.ServiceTypeLoadBalancer
+	_, err = env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Update(ctx, svc, metav1.UpdateOptions{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not update proxy admin service: %s", err)
+		os.Exit(ExitCodeCantCreateCluster)
+	}
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	if err := <-env.WaitForReady(ctx); err != nil {
@@ -245,19 +285,27 @@ func deployControllers(ctx context.Context, namespace string) error {
 
 	// run the controller in the background
 	go func() {
+		// convert the cluster rest.Config into a kubeconfig
+		yaml, err := generators.NewKubeConfigForRestConfig(env.Cluster().Name(), env.Cluster().Config())
+		if err != nil {
+			panic(err)
+		}
+
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
 		if err != nil {
 			panic(err)
 		}
 		defer os.Remove(kubeconfig.Name())
+		defer kubeconfig.Close()
 
 		// dump the kubeconfig from kind into the tempfile
-		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", env.Cluster().Name()) //nolint:gosec
-		generateKubeconfig.Stdout = kubeconfig
-		generateKubeconfig.Stderr = os.Stderr
-		if err := generateKubeconfig.Run(); err != nil {
+		c, err := kubeconfig.Write(yaml)
+		if err != nil {
 			panic(err)
+		}
+		if c != len(yaml) {
+			panic(fmt.Errorf("could not write entire kubeconfig file (%d/%d bytes)", c, len(yaml)))
 		}
 		kubeconfig.Close()
 

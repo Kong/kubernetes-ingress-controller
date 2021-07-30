@@ -131,17 +131,22 @@ QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
 	}
 )
 
+var (
+	testIngressHTTPSNamespace         = "ingress-https"
+	testIngressHTTPSRedirectNamespace = "ingress-redirect"
+)
+
 func TestHTTPSRedirect(t *testing.T) {
 	ctx := context.Background()
 	opts := metav1.CreateOptions{}
 
-	t.Logf("creating namespace %s for testing", testIngressNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressNamespace}}
+	t.Logf("creating namespace %s for testing", testIngressHTTPSRedirectNamespace)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressHTTPSRedirectNamespace}}
 	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up namespace %s", testIngressNamespace)
+		t.Logf("cleaning up namespace %s", testIngressHTTPSRedirectNamespace)
 		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
 		require.Eventually(t, func() bool {
 			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
@@ -232,13 +237,13 @@ func TestHTTPSIngress(t *testing.T) {
 		Transport: &testTransport,
 	}
 
-	t.Logf("creating namespace %s for testing", testIngressNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressNamespace}}
+	t.Logf("creating namespace %s for testing", testIngressHTTPSNamespace)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressHTTPSNamespace}}
 	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up namespace %s", testIngressNamespace)
+		t.Logf("cleaning up namespace %s", testIngressHTTPSNamespace)
 		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
 		require.Eventually(t, func() bool {
 			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})

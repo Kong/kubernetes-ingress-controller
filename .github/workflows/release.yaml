@@ -1,3 +1,4 @@
+# TODO: right now the release is not fully automated, but the tests below must pass before a release is made manually. See RELEASE.md for more information.
 name: release
 
 on:
@@ -7,7 +8,7 @@ on:
       - 'next'
 
 jobs:
-  latest-tests:
+  test-current-kubernetes:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,13 +39,14 @@ jobs:
       - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
 
-  legacy-tests:
+  test-previous-kubernetes:
+    environment: gcloud
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        kubernetes-version:
-          - 'v1.19.11'
-          - 'v1.20.7'
+        minor:
+          - '19'
+          - '20'
         dbmode:
           - 'dbless'
           - 'postgres'
@@ -67,7 +69,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
-        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
+      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
+        run: ./hack/e2e/run.sh
+        env:
+          KUBERNETES_MAJOR_VERSION: 1
+          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
-  # TODO: right now the release is not fully automated, but the above tests must pass before a release is made manually. See RELEASE.md for more information.
+# TODO: need kubernetes latest job (test against v1.20.7 and v1.21.2): https://github.com/Kong/kubernetes-ingress-controller/issues/1616

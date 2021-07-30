@@ -13,6 +13,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/prometheus/common/log"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -144,6 +145,10 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 		for retry < statusUpdateRetry {
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
+				if errors.IsNotFound(err) {
+					return nil
+				}
+
 				log.Errorf("failed to fetch Ingress %v/%v: %v. retrying...", namespace, name, err)
 				retry++
 				time.Sleep(time.Second)
@@ -166,6 +171,10 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 			if err == nil {
 				break
 			}
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
 			log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
 			time.Sleep(time.Second)
 			retry++
@@ -189,6 +198,10 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		for retry < statusUpdateRetry {
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
+				if errors.IsNotFound(err) {
+					return nil
+				}
+
 				log.Errorf("failed to fetch UDP Ingress %v/%v: %v", namespace, name, err)
 				time.Sleep(time.Second)
 				retry++
@@ -211,6 +224,10 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 			if err == nil {
 				break
 			}
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
 			log.Errorf("failed to update UDPIngress status: %v. retry...", err)
 			time.Sleep(time.Second)
 			retry++
@@ -232,6 +249,10 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
 			return fmt.Errorf("failed to fetch TCP Ingress %v/%v: %w", namespace, name, err)
 		}
 
@@ -248,6 +269,10 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		curIng.Status.LoadBalancer.Ingress = status
 		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
 			return fmt.Errorf("failed to update TCPIngress status: %v", err)
 		}
 	}
@@ -277,6 +302,10 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 		for retry < statusUpdateRetry {
 			curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
+				if errors.IsNotFound(err) {
+					return nil
+				}
+
 				log.Errorf("failed to fetch Knative Ingress %v/%v: %v", namespace, name, err)
 				time.Sleep(time.Second)
 				retry++
@@ -310,6 +339,10 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 			if err == nil {
 				break
 			}
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
 			log.Errorf("failed to update ingress status: %v. retrying...", err)
 			time.Sleep(time.Second)
 			retry++

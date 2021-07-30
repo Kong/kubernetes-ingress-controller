@@ -59,6 +59,9 @@
 
 #### Fixed
 
+- Increased the default timeout strategy for backend proxy HTTP requests
+  from 3 seconds to 10 seconds.
+  [#1610](https://github.com/Kong/kubernetes-ingress-controller/pull/1610)
 - Corrected the old Ingress v1beta1 API group.
   [#1584](https://github.com/Kong/kubernetes-ingress-controller/pull/1584)
 

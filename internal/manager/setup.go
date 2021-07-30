@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/bombsimon/logrusr"
@@ -12,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/component-base/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -121,7 +123,33 @@ func setupProxyServer(ctx context.Context,
 		return nil, err
 	}
 
-	return proxy.NewCacheBasedProxyWithStagger(ctx,
+	if c.UseEndpointSlices {
+		kubernetesVersion := version.Get()
+		major, err := strconv.Atoi(kubernetesVersion.Major)
+		if err != nil {
+			logger.Error(err, fmt.Sprintf("%d is not a valid major version", major))
+			return nil, err
+		}
+
+		minor, err := strconv.Atoi(kubernetesVersion.Minor)
+		if err != nil {
+			logger.Error(err, fmt.Sprintf("%d is not a valid minor version", minor))
+			return nil, err
+		}
+
+		if major >= 1 {
+			if minor >= 17 {
+				logger.Error(err, fmt.Sprintf("%d.%d is not a compatible version for using endpoint slices", major, minor))
+				return nil, err
+			}
+		} else {
+			logger.Error(err, fmt.Sprintf("%d is not a compatible major version for using endpoint slices", minor))
+			return nil, err
+		}
+	}
+
+	return proxy.NewCacheBasedProxyWithStagger(
+		context.WithValue(ctx, "useEndpointSlices", c.UseEndpointSlices),
 		fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
 		mgr.GetClient(),
 		kongConfig,

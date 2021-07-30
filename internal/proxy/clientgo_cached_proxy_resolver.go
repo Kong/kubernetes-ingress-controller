@@ -121,6 +121,7 @@ type clientgoCachedProxyResolver struct {
 	// It may ship diagnostic information through diagnostic
 	kongUpdater KongUpdater
 	diagnostic  util.ConfigDumpDiagnostic
+	promMetrics *util.ControllerFunctionalPrometheusMetrics
 
 	// server configuration, flow control, channels and utility attributes
 	ingressClassName    string
@@ -171,7 +172,7 @@ func (p *clientgoCachedProxyResolver) startProxyUpdateServer() {
 			return
 		case <-p.syncTicker.C:
 			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache,
-				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic, p.proxyRequestTimeout)
+				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic, p.proxyRequestTimeout, p.promMetrics)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 				break
@@ -228,6 +229,7 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 	p.kongConfig.Version = proxySemver
 	p.dbmode = dbmode
 	p.version = proxySemver
+	p.promMetrics = util.ControllerMetricsInit()
 
 	return nil
 }

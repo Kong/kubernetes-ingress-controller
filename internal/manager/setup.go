@@ -121,7 +121,6 @@ func setupProxyServer(ctx context.Context,
 		return nil, err
 	}
 
-	promMetrics := util.ControllerMetricsInit()
 	return proxy.NewCacheBasedProxyWithStagger(ctx,
 		fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
 		mgr.GetClient(),

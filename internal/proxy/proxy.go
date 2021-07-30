@@ -16,6 +16,13 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
+	// DefaultProxyTimeoutSeconds indicates the time.Duration allowed for responses to
+	// come back from the backend proxy API.
+	//
+	// NOTE: the current default is based on observed latency in a CI environment using
+	// the GKE cloud provider.
+	DefaultProxyTimeoutSeconds float32 = 10.0
+
 	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
 	// updates to the Kong Proxy Admin API when using the NewProxy() constructor.
 	// this 1s default was based on local testing wherein it appeared sub-second updates

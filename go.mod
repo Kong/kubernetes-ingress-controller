@@ -35,6 +35,5 @@ require (
 	knative.dev/pkg v0.0.0-20210622173328-dd0db4b05c80
 	knative.dev/serving v0.24.0
 	sigs.k8s.io/controller-runtime v0.9.5
-	sigs.k8s.io/kind v0.11.1 // indirect
 	sigs.k8s.io/yaml v1.2.0
 )

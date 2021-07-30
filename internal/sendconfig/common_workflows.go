@@ -38,8 +38,8 @@ func UpdateKongAdminSimple(ctx context.Context,
 	kongConfig Kong,
 	enableReverseSync bool,
 	diagnostic util.ConfigDumpDiagnostic,
-	promMetrics *util.ControllerFunctionalPrometheusMetrics,
 	proxyRequestTimeout time.Duration,
+	promMetrics *util.ControllerFunctionalPrometheusMetrics,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)

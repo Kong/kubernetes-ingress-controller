@@ -130,7 +130,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds)",
 			proxy.DefaultSyncSeconds,
 		))
-	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", proxy.DefaultSyncSeconds,
+	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", proxy.DefaultProxyTimeoutSeconds,
 		fmt.Sprintf(
 			"Define the rate (in seconds) in which the timeout configuration will be applied to the Kong client. (default: %g seconds)",
 			proxy.DefaultSyncSeconds,

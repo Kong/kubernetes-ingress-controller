@@ -25,6 +25,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -69,6 +70,7 @@ type Storer interface {
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
+	GetEndpointSlicesForService(namespace, name string) (*discoveryv1.EndpointSlice, error)
 	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
@@ -83,6 +85,8 @@ type Storer interface {
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
 	ListKongConsumers() []*kongv1.KongConsumer
 	ListCACerts() ([]*corev1.Secret, error)
+
+	UseEndpointSlices() bool
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -92,7 +96,8 @@ type Storer interface {
 type Store struct {
 	stores CacheStores
 
-	ingressClass string
+	ingressClass      string
+	useEndpointSlices bool
 
 	ingressV1Beta1ClassMatching annotations.ClassMatching
 	ingressV1ClassMatching      annotations.ClassMatching
@@ -112,9 +117,10 @@ type CacheStores struct {
 	TCPIngress     cache.Store
 	UDPIngress     cache.Store
 
-	Service  cache.Store
-	Secret   cache.Store
-	Endpoint cache.Store
+	Service       cache.Store
+	Secret        cache.Store
+	Endpoint      cache.Store
+	EndpointSlice cache.Store
 
 	Plugin        cache.Store
 	ClusterPlugin cache.Store
@@ -129,6 +135,7 @@ func NewCacheStores() (c CacheStores) {
 	c.ClusterPlugin = cache.NewStore(clusterResourceKeyFunc)
 	c.Consumer = cache.NewStore(keyFunc)
 	c.Endpoint = cache.NewStore(keyFunc)
+	c.EndpointSlice = cache.NewStore(keyFunc)
 	c.IngressV1 = cache.NewStore(keyFunc)
 	c.IngressV1beta1 = cache.NewStore(keyFunc)
 	c.KnativeIngress = cache.NewStore(keyFunc)
@@ -308,8 +315,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
-	processClasslessKongConsumer bool, logger logrus.FieldLogger) Storer {
+func New(cs CacheStores, ingressClass string, useEndpointSlices bool, processClasslessIngressV1Beta1 bool,
+	processClasslessIngressV1 bool, processClasslessKongConsumer bool, logger logrus.FieldLogger) Storer {
 	var ingressV1Beta1ClassMatching annotations.ClassMatching
 	var ingressV1ClassMatching annotations.ClassMatching
 	var kongConsumerClassMatching annotations.ClassMatching
@@ -331,6 +338,7 @@ func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 boo
 	return Store{
 		stores:                      cs,
 		ingressClass:                ingressClass,
+		useEndpointSlices:           useEndpointSlices,
 		ingressV1Beta1ClassMatching: ingressV1Beta1ClassMatching,
 		ingressV1ClassMatching:      ingressV1ClassMatching,
 		kongConsumerClassMatching:   kongConsumerClassMatching,
@@ -338,6 +346,12 @@ func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 boo
 		isValidIngressV1Class:       annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
 		logger:                      logger,
 	}
+}
+
+// UseEndpointSlices returns a boolean value indicating whether this store prefers endpoint slices
+// over endpoints
+func (s Store) UseEndpointSlices() bool {
+	return s.useEndpointSlices
 }
 
 // GetSecret returns a Secret using the namespace and name as key
@@ -491,6 +505,20 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
 	})
 	return ingresses, nil
+}
+
+// GetEndpointSlicesForService returns the internal endpoints from an endpoint slice for service
+// 'namespace/name' inside k8s.
+func (s Store) GetEndpointSlicesForService(namespace, name string) (*discoveryv1.EndpointSlice, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	eps, exists, err := s.stores.EndpointSlice.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("Endpoint slices for service %v not found", key)}
+	}
+	return eps.(*discoveryv1.EndpointSlice), nil
 }
 
 // GetEndpointsForService returns the internal endpoints for service

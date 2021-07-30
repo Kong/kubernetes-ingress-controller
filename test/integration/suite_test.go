@@ -69,7 +69,10 @@ var (
 	watchNamespaces = strings.Join([]string{
 		elsewhere,
 		corev1.NamespaceDefault,
-		testIngressNamespace,
+		testIngressEssentialsNamespace,
+		testIngressClassNameSpecNamespace,
+		testIngressHTTPSNamespace,
+		testIngressHTTPSRedirectNamespace,
 		testBulkIngressNamespace,
 		testTCPIngressNamespace,
 		testUDPIngressNamespace,

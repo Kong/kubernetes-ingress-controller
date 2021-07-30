@@ -32,22 +32,6 @@ const (
 	//
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
 	DefaultSyncSeconds float32 = 3.0
-
-	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
-	// before it starts rejecting new objects while it processes the originals.
-	// If you get to the point that objects are rejected, you'll find that the
-	// UpdateObject() and DeleteObject() methods will start throwing errors and you'll
-	// need to retry queing the object at a later time.
-	//
-	// NOTE: implementations of the Proxy interface should error, not block on full buffer.
-	//
-	// TODO: the current default of 50 is based on a loose approximation to allow ~5mb
-	//       of buffer space for client.Objects and assuming a throughput of ~50 API
-	//       updates per second, but in the future we may want to make this configurable,
-	//       provide metrics for it, and furthermore automate detecting good values for it.
-	//       depending on configuration and/or available system memory and the amount of
-	//       throughput (in Kubernetes object updates) that the API is meant to handle.
-	DefaultObjectBufferSize = 500
 )
 
 // -----------------------------------------------------------------------------

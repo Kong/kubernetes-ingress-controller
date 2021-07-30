@@ -238,7 +238,7 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 			}
 
 			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache,
-				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic)
+				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic, p.promMetrics)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 				break
@@ -303,6 +303,9 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 	p.kongConfig.Version = proxySemver
 	p.dbmode = dbmode
 	p.version = proxySemver
+
+	// register controller metrics
+	p.promMetrics = util.ControllerMetricsInit()
 
 	return nil
 }

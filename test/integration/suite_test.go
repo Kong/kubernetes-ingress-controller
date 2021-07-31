@@ -246,7 +246,7 @@ func TestMain(m *testing.M) {
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		fmt.Println("INFO: deploying controller manager using traditional endpoint objects")
+		fmt.Println("INFO: deploying controller manager")
 		if err := deployControllers(ctx, controllerNamespace); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(ExitCodeCantCreateCluster)

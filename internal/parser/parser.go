@@ -61,7 +61,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer, promMetrics *util.Controll
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
 func Build(log logrus.FieldLogger, s store.Storer, promMetrics *util.ControllerFunctionalPrometheusMetrics) (*kongstate.KongState, error) {
-	parsedAll := parseAll(log, s)
+	parsedAll := parseAll(log, s, promMetrics)
 	parsedAll.populateServices(log, s)
 
 	var result kongstate.KongState

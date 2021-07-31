@@ -2,6 +2,7 @@ package util
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
@@ -39,20 +40,16 @@ const (
 )
 
 func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusHistogram(name, help string) prometheus.Histogram {
-	return prometheus.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    name,
-			Help:    help,
-			Buckets: prometheus.ExponentialBuckets(1, 10, 4),
-		},
-	)
+	return
 }
 
 func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 	controllerMetrics := &ControllerFunctionalPrometheusMetrics{}
 
+	reg := prometheus.NewRegistry()
+
 	controllerMetrics.ConfigCounter =
-		prometheus.NewCounterVec(
+		promauto.With(reg).NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "send_configuration_count",
 				Help: "number of post config proxy processed successfully.",
@@ -61,7 +58,7 @@ func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 		)
 
 	controllerMetrics.ParseCounter =
-		prometheus.NewCounterVec(
+		promauto.With(reg).NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "ingress_parse_count",
 				Help: "number of ingress parse.",
@@ -69,8 +66,14 @@ func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 			[]string{"success"},
 		)
 
-	controllerMetrics.ConfigureDurationHistogram = controllerMetrics.NewPrometheusHistogram("proxy_configuration_duration_milliseconds", "duration of last successful configuration.")
-
+	controllerMetrics.ConfigureDurationHistogram =
+		promauto.With(reg).NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "proxy_configuration_duration_milliseconds",
+				Help:    "duration of last successful configuration.",
+				Buckets: prometheus.ExponentialBuckets(1, 10, 4),
+			},
+		)
 	// Register custom metrics with the global prometheus registry
 	metrics.Registry.MustRegister(
 		controllerMetrics.ConfigCounter,

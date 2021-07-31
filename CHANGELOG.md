@@ -56,6 +56,8 @@
   [#1563](https://github.com/Kong/kubernetes-ingress-controller/pull/1563)
 - Added support for --dump-config to 2.x.
   [#1589](https://github.com/Kong/kubernetes-ingress-controller/pull/1589)
+- Added support for --use-endpoint-slices to 2.x.
+  [#1608](https://github.com/Kong/kubernetes-ingress-controller/pull/1608)
 
 #### Fixed
 

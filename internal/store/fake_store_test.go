@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -449,6 +450,30 @@ func TestFakeStoreEndpiont(t *testing.T) {
 	assert.NotNil(c)
 
 	c, err = store.GetEndpointsForService("default", "does-not-exist")
+	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.Nil(c)
+}
+
+func TestFakeStoreEndpiontSlices(t *testing.T) {
+	assert := assert.New(t)
+
+	endpointSlices := []*discoveryv1.EndpointSlice{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{EndpointSlices: endpointSlices})
+	assert.Nil(err)
+	assert.NotNil(store)
+	c, err := store.GetEndpointSlicesForService("default", "foo")
+	assert.Nil(err)
+	assert.NotNil(c)
+
+	c, err = store.GetEndpointSlicesForService("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(c)

@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	apiv1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
@@ -34,6 +35,7 @@ type FakeObjects struct {
 	UDPIngresses       []*configurationv1beta1.UDPIngress
 	Services           []*apiv1.Service
 	Endpoints          []*apiv1.Endpoints
+	EndpointSlices     []*discoveryv1.EndpointSlice
 	Secrets            []*apiv1.Secret
 	KongPlugins        []*configurationv1.KongPlugin
 	KongClusterPlugins []*configurationv1.KongClusterPlugin
@@ -92,6 +94,13 @@ func NewFakeStore(
 	endpointStore := cache.NewStore(keyFunc)
 	for _, e := range objects.Endpoints {
 		err := endpointStore.Add(e)
+		if err != nil {
+			return nil, err
+		}
+	}
+	endpointSliceStore := cache.NewStore(keyFunc)
+	for _, e := range objects.EndpointSlices {
+		err := endpointSliceStore.Add(e)
 		if err != nil {
 			return nil, err
 		}

@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	admregv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +22,9 @@ import (
 const defaultNs = "default"
 
 func TestValidationWebhook(t *testing.T) {
+	if env.Cluster().Type() != kind.KindClusterType {
+		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
+	}
 	ctx := context.Background()
 
 	const webhookSvcName = "validations"
@@ -37,7 +42,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 		},
 	}, metav1.CreateOptions{})
-	assert.NoError(t, err, "creating webhook service")
+	require.NoError(t, err, "creating webhook service")
 
 	nodeName := "aaaa"
 	_, err = env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Create(ctx, &corev1.Endpoints{
@@ -61,7 +66,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 		},
 	}, metav1.CreateOptions{})
-	assert.NoError(t, err, "creating webhook endpoints")
+	require.NoError(t, err, "creating webhook endpoints")
 
 	fail := admregv1beta1.Fail
 	none := admregv1beta1.SideEffectClassNone
@@ -92,8 +97,8 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 		}, metav1.CreateOptions{})
-	assert.NoError(t, err, "creating webhook config")
-	assert.Eventually(t, func() bool {
+	require.NoError(t, err, "creating webhook config")
+	require.Eventually(t, func() bool {
 		_, err := net.DialTimeout("tcp", "172.17.0.1:49023", 1*time.Second)
 		return err == nil
 	}, ingressWait, waitTick, "waiting for the admission service to be up")

@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +17,13 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
+	// DefaultProxyTimeoutSeconds indicates the time.Duration allowed for responses to
+	// come back from the backend proxy API.
+	//
+	// NOTE: the current default is based on observed latency in a CI environment using
+	// the GKE cloud provider.
+	DefaultProxyTimeoutSeconds float32 = 10.0
+
 	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
 	// updates to the Kong Proxy Admin API when using the NewProxy() constructor.
 	// this 1s default was based on local testing wherein it appeared sub-second updates
@@ -25,22 +33,6 @@ const (
 	//
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
 	DefaultSyncSeconds float32 = 3.0
-
-	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
-	// before it starts rejecting new objects while it processes the originals.
-	// If you get to the point that objects are rejected, you'll find that the
-	// UpdateObject() and DeleteObject() methods will start throwing errors and you'll
-	// need to retry queing the object at a later time.
-	//
-	// NOTE: implementations of the Proxy interface should error, not block on full buffer.
-	//
-	// TODO: the current default of 50 is based on a loose approximation to allow ~5mb
-	//       of buffer space for client.Objects and assuming a throughput of ~50 API
-	//       updates per second, but in the future we may want to make this configurable,
-	//       provide metrics for it, and furthermore automate detecting good values for it.
-	//       depending on configuration and/or available system memory and the amount of
-	//       throughput (in Kubernetes object updates) that the API is meant to handle.
-	DefaultObjectBufferSize = 500
 )
 
 // -----------------------------------------------------------------------------
@@ -77,4 +69,6 @@ type KongUpdater func(ctx context.Context,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
 	enableReverseSync bool,
-	diagnostic util.ConfigDumpDiagnostic) ([]byte, error)
+	diagnostic util.ConfigDumpDiagnostic,
+	proxyRequestTimeout time.Duration,
+) ([]byte, error)

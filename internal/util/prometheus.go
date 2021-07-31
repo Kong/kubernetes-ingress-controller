@@ -60,7 +60,7 @@ func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 
 	controllerMetrics.ConfigCounter = controllerMetrics.NewPrometheusCounter("send_configuration_count", "number of post config proxy processed successfully.")
 	controllerMetrics.ParseCounter = controllerMetrics.NewPrometheusCounter("ingress_parse_count", "number of ingress parse.")
-	controllerMetrics.ConfigureDurationHistogram = controllerMetrics.NewPrometheusHistogram("send_configuration_duration_milliseconds", "duration of last successful configuration.")
+	controllerMetrics.ConfigureDurationHistogram = controllerMetrics.NewPrometheusHistogram("proxy_configuration_duration_milliseconds", "duration of last successful configuration.")
 
 	// Register custom metrics with the global prometheus registry
 	metrics.Registry.MustRegister(

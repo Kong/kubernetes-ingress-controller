@@ -72,6 +72,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	timedCtx, cancel := context.WithTimeout(ctx, proxyRequestTimeout)
 	defer cancel()
 
+	start := time.Now()
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
@@ -99,5 +100,6 @@ func UpdateKongAdminSimple(ctx context.Context,
 	}
 
 	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.ConfigSuccessTrue), "type": string(util.ConfigProxy)}).Inc()
+	promMetrics.ConfigureDurationHistogram.Observe(float64(time.Since(start)))
 	return configSHA, nil
 }

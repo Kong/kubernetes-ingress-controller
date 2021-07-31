@@ -84,24 +84,6 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
-			IsEnabled: &c.ServiceEnabled,
-			Controller: &configuration.CoreV1EndpointsReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
-			},
-		},
-		{
-			IsEnabled: &c.ServiceEnabled,
-			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
-			},
-		},
-		{
 			IsEnabled: &alwaysEnabled,
 			Controller: &configuration.CoreV1SecretReconciler{
 				Client: mgr.GetClient(),
@@ -166,6 +148,31 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 	// ---------------------------------------------------------------------------
 	// Dynamic Controller Configurations
 	// ---------------------------------------------------------------------------
+
+	// use either endpoint controller or endpoint slices controller but not both.
+	var endpointController ControllerDef
+	if c.UseEndpointSlices {
+		endpointController = ControllerDef{
+			IsEnabled: &c.ServiceEnabled,
+			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
+			},
+		}
+	} else {
+		endpointController = ControllerDef{
+			IsEnabled: &c.ServiceEnabled,
+			Controller: &configuration.CoreV1EndpointsReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
+			},
+		}
+	}
+	controllers = append(controllers, endpointController)
 
 	// Negotiate Ingress version
 	ingressControllers := map[IngressAPI]ControllerDef{

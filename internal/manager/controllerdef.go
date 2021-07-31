@@ -84,8 +84,6 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
-<<<<<<< HEAD
-=======
 			IsEnabled: &c.ServiceEnabled,
 			Controller: &configuration.CoreV1EndpointsReconciler{
 				Client: mgr.GetClient(),
@@ -104,7 +102,6 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
->>>>>>> ab0e2b76f086e394a0b5d8353af49af60ee391e0
 			IsEnabled: &alwaysEnabled,
 			Controller: &configuration.CoreV1SecretReconciler{
 				Client: mgr.GetClient(),

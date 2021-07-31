@@ -19,3 +19,11 @@ const MetricsPort = 10255
 
 // DiagnosticsPort is the default port of the manager's diagnostics service listens on.
 const DiagnosticsPort = 10256
+
+// -----------------------------------------------------------------------------
+// Validation - Constants & Vars
+// -----------------------------------------------------------------------------
+
+// endpointSliceMinimumVersion defines the mininum acceptable Kubernetes version for using endpoint
+// slices.
+const endpointSliceMinimumVersion = 1.17

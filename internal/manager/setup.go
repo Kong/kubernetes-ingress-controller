@@ -100,24 +100,17 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 }
 
 func validateVersionForEndpointSlices(major, minor string) error {
-	intMajor, err := strconv.Atoi(major)
+	fullVersion, err := strconv.ParseFloat(fmt.Sprintf("%s.%s", major, minor), 32)
 	if err != nil {
-		return fmt.Errorf("%s; %s is not a valid major version", err.Error(), major)
+		return fmt.Errorf("%s; %s.%s is not a valid version", err.Error(), major, minor)
 	}
 
-	intMinor, err := strconv.Atoi(minor)
-	if err != nil {
-		return fmt.Errorf("%s; %s is not a valid minor version", err.Error(), minor)
+	if fullVersion < endpointSliceMinimumVersion {
+		return fmt.Errorf("%s.%s is not a compatible version for using endpoint slices; minimum required version is %v",
+			major, minor, endpointSliceMinimumVersion)
 	}
 
-	switch {
-	case intMajor > 1:
-		return nil
-	case intMajor == 1 && intMinor >= 17:
-		return nil
-	}
-
-	return fmt.Errorf("%s.%s is not a compatible version for using endpoint slices", major, minor)
+	return nil
 }
 
 func setupProxyServer(ctx context.Context,
@@ -147,12 +140,12 @@ func setupProxyServer(ctx context.Context,
 	if c.UseEndpointSlices {
 		client, err := clientset.NewForConfig(mgr.GetConfig())
 		if err != nil {
-			logger.Error(err, "unable to check server version")
+			logger.Error(err, "unable to validate server version")
 		}
 
 		serverVersion, err := client.DiscoveryClient.ServerVersion()
 		if err != nil {
-			logger.Error(err, "unable to check server version")
+			logger.Error(err, "unable to validate server version")
 		}
 
 		if err := validateVersionForEndpointSlices(serverVersion.Major, serverVersion.Minor); err != nil {

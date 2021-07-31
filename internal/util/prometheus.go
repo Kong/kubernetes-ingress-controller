@@ -35,13 +35,8 @@ const (
 	ConfigDeck  ConfigType = "deck"
 )
 
-func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusCounter(name, help string) *prometheus.CounterVec {
-	return prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: name,
-			Help: help,
-		},
-		[]string{"success", "type"},
+func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusCounter(name, help string, labels ...string) *prometheus.CounterVec {
+	return 
 	)
 }
 
@@ -58,8 +53,24 @@ func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusHistogram
 func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 	controllerMetrics := &ControllerFunctionalPrometheusMetrics{}
 
-	controllerMetrics.ConfigCounter = controllerMetrics.NewPrometheusCounter("send_configuration_count", "number of post config proxy processed successfully.")
-	controllerMetrics.ParseCounter = controllerMetrics.NewPrometheusCounter("ingress_parse_count", "number of ingress parse.")
+	controllerMetrics.ConfigCounter = 
+		prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "send_configuration_count",
+				Help: "number of post config proxy processed successfully.",
+			},
+			[]string{"sucess", "type"},
+		)
+
+	controllerMetrics.ParseCounter =
+		prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "ingress_parse_count",
+				Help: "number of ingress parse.",
+			},
+			[]string{"sucess"},
+		)
+
 	controllerMetrics.ConfigureDurationHistogram = controllerMetrics.NewPrometheusHistogram("proxy_configuration_duration_milliseconds", "duration of last successful configuration.")
 
 	// Register custom metrics with the global prometheus registry

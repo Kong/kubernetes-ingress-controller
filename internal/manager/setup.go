@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/component-base/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------
@@ -145,7 +145,17 @@ func setupProxyServer(ctx context.Context,
 	}
 
 	if c.UseEndpointSlices {
-		if err := validateVersionForEndpointSlices(version.Get().Major, version.Get().Minor); err != nil {
+		client, err := clientset.NewForConfig(mgr.GetConfig())
+		if err != nil {
+			logger.Error(err, "unable to check server version")
+		}
+
+		serverVersion, err := client.DiscoveryClient.ServerVersion()
+		if err != nil {
+			logger.Error(err, "unable to check server version")
+		}
+
+		if err := validateVersionForEndpointSlices(serverVersion.Major, serverVersion.Minor); err != nil {
 			logger.Error(err, "failed validating kubernetes version for endpoint slices")
 			return nil, err
 		}

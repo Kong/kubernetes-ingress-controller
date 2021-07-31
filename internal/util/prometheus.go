@@ -7,31 +7,50 @@ import (
 
 type ControllerFunctionalPrometheusMetrics struct {
 	// number of post /config to proxy successfully
-	ConfigPassCounter prometheus.Counter
-	// number of post /config to proxy failed
-	ConfigFailureCounter prometheus.Counter
+	ConfigCounter *prometheus.CounterVec
+
 	// number of ingress analysis failure
-	ParseFailureCounter prometheus.Counter
+	ParseCounter *prometheus.CounterVec
 
 	// duration of last successful confiuration sync
 	ConfigureDurationHistogram prometheus.Histogram
 }
 
-func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) GeneratePrometheusCounter(name, help string) prometheus.Counter {
-	return prometheus.NewCounter(
+type Success string
+
+const (
+	// EnablementStatusDisabled says that the resource it controls is disabled.
+	ConfigSuccessTrue Success = "true"
+	// EnablementStatusEnabled says that the resource it controls is enabled.
+	ConfigSuccessFalse Success = "false"
+
+	IngressParseTrue  Success = "true"
+	IngressParseFalse Success = "false"
+)
+
+type ConfigType string
+
+const (
+	ConfigProxy ConfigType = "post-config"
+	ConfigDeck  ConfigType = "deck"
+)
+
+func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusCounter(name, help string) *prometheus.CounterVec {
+	return prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: name,
 			Help: help,
 		},
+		[]string{"success", "type"},
 	)
 }
 
-func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) GeneratePrometheusHistogram(name, help string) prometheus.Histogram {
+func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusHistogram(name, help string) prometheus.Histogram {
 	return prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    name,
 			Help:    help,
-			Buckets: prometheus.LinearBuckets(20, 5, 5),
+			Buckets: prometheus.ExponentialBuckets(1, 10, 4),
 		},
 	)
 }
@@ -39,17 +58,16 @@ func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) GeneratePrometheusHist
 func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 	controllerMetrics := &ControllerFunctionalPrometheusMetrics{}
 
-	controllerMetrics.ConfigPassCounter = controllerMetrics.GeneratePrometheusCounter("sendconfig_sync_proxy_success", "number of post config proxy processed successfully.")
-	controllerMetrics.ConfigFailureCounter = controllerMetrics.GeneratePrometheusCounter("sendconfig_sync_proxy_failure", "number of post config proxy processed successfully.")
-	controllerMetrics.ParseFailureCounter = controllerMetrics.GeneratePrometheusCounter("ingress_parse_failure", "number of ingress parse failed.")
-	controllerMetrics.ConfigureDurationHistogram = controllerMetrics.GeneratePrometheusHistogram("sendconfig_sync_duration", "duration of last successful configuration.")
+	controllerMetrics.ConfigCounter = controllerMetrics.NewPrometheusCounter("send_configuration_count", "number of post config proxy processed successfully.")
+	controllerMetrics.ParseCounter = controllerMetrics.NewPrometheusCounter("ingress_parse_count", "number of ingress parse.")
+	controllerMetrics.ConfigureDurationHistogram = controllerMetrics.NewPrometheusHistogram("send_configuration_duration_milliseconds", "duration of last successful configuration.")
 
 	// Register custom metrics with the global prometheus registry
 	metrics.Registry.MustRegister(
-		controllerMetrics.ConfigPassCounter,
-		controllerMetrics.ConfigFailureCounter,
-		controllerMetrics.ParseFailureCounter,
-		controllerMetrics.ConfigureDurationHistogram)
+		controllerMetrics.ConfigCounter,
+		controllerMetrics.ParseCounter,
+		controllerMetrics.ConfigureDurationHistogram,
+	)
 
 	return controllerMetrics
 }

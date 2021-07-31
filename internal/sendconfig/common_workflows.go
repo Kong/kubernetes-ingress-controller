@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kong/deck/file"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
@@ -43,9 +44,8 @@ func UpdateKongAdminSimple(ctx context.Context,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
-	kongstate, err := parser.Build(deprecatedLogger, storer)
+	kongstate, err := parser.Build(deprecatedLogger, storer, promMetrics)
 	if err != nil {
-		promMetrics.ParseFailureCounter.Inc()
 		return nil, err
 	}
 	var diagnosticConfig *file.Content
@@ -71,14 +71,14 @@ func UpdateKongAdminSimple(ctx context.Context,
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, proxyRequestTimeout)
 	defer cancel()
-	start := time.Now()
+
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false,
+		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, promMetrics,
 	)
 	if err != nil {
-		promMetrics.ConfigFailureCounter.Inc()
+		promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.ConfigSuccessFalse), "type": string(util.ConfigProxy)}).Inc()
 		if diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {
 			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagnosticConfig}:
@@ -98,7 +98,6 @@ func UpdateKongAdminSimple(ctx context.Context,
 		}
 	}
 
-	promMetrics.ConfigureDurationHistogram.Observe(float64(time.Since(start)))
-	promMetrics.ConfigPassCounter.Inc()
+	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.ConfigSuccessTrue), "type": string(util.ConfigProxy)}).Inc()
 	return configSHA, nil
 }

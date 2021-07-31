@@ -436,16 +436,47 @@ func normalizePort(
 	return targetPort
 }
 
+// extractEndpoint will extract an array of util.Endpoint objects given a port and list
+// of addresses from either an Endpoint or EndpointSlice.
+func extractEndpoints(inputAddresses interface{}, port int32) []util.Endpoint {
+	// avoid duplicated upstream servers when the service
+	// contains multiple port definitions sharing the same
+	// targetport.
+	adus := make(map[string]bool)
+	upsServers := []util.Endpoint{}
+	addresses := []string{}
+
+	switch inputAddresses := inputAddresses.(type) {
+	case []corev1.EndpointAddress:
+		for _, address := range inputAddresses {
+			addresses = append(addresses, address.IP)
+		}
+	case []string:
+		addresses = inputAddresses
+	}
+
+	for _, epAddress := range addresses {
+		e := fmt.Sprintf("%v:%v", epAddress, port)
+		if _, exists := adus[e]; exists {
+			continue
+		}
+		ups := util.Endpoint{
+			Address: epAddress,
+			Port:    fmt.Sprintf("%v", port),
+		}
+		upsServers = append(upsServers, ups)
+		adus[e] = true
+	}
+
+	return upsServers
+}
+
 // convertEndpoints converts proper kubernetes endpoints into internal util.Endpoints
 func convertEndpoints(
 	ep *corev1.Endpoints,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 ) []util.Endpoint {
-	// avoid duplicated upstream servers when the service
-	// contains multiple port definitions sharing the same
-	// targetport.
-	adus := make(map[string]bool)
 	upsServers := []util.Endpoint{}
 
 	for _, ss := range ep.Subsets {
@@ -462,18 +493,7 @@ func convertEndpoints(
 				continue
 			}
 
-			for _, epAddress := range ss.Addresses {
-				e := fmt.Sprintf("%v:%v", epAddress, targetPort)
-				if _, exists := adus[e]; exists {
-					continue
-				}
-				ups := util.Endpoint{
-					Address: epAddress.IP,
-					Port:    fmt.Sprintf("%v", targetPort),
-				}
-				upsServers = append(upsServers, ups)
-				adus[e] = true
-			}
+			upsServers = extractEndpoints(ss.Addresses, targetPort)
 		}
 	}
 
@@ -486,11 +506,6 @@ func convertEndpointSlices(
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 ) []util.Endpoint {
-	// avoid duplicated upstream servers when the service
-	// contains multiple port definitions sharing the same
-	// targetport.
-	adus := make(map[string]bool)
-
 	upsServers := []util.Endpoint{}
 
 	for _, endpoint := range ep.Endpoints {
@@ -507,18 +522,7 @@ func convertEndpointSlices(
 				continue
 			}
 
-			for _, epAddress := range endpoint.Addresses {
-				e := fmt.Sprintf("%v:%v", epAddress, targetPort)
-				if _, exists := adus[e]; exists {
-					continue
-				}
-				ups := util.Endpoint{
-					Address: epAddress,
-					Port:    fmt.Sprintf("%v", targetPort),
-				}
-				upsServers = append(upsServers, ups)
-				adus[e] = true
-			}
+			upsServers = extractEndpoints(endpoint.Addresses, targetPort)
 		}
 	}
 

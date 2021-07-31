@@ -3,7 +3,6 @@ package util
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 type ControllerFunctionalPrometheusMetrics struct {
@@ -39,10 +38,6 @@ const (
 	ConfigDeck ConfigType = "deck"
 )
 
-func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusHistogram(name, help string) prometheus.Histogram {
-	return
-}
-
 func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 	controllerMetrics := &ControllerFunctionalPrometheusMetrics{}
 
@@ -74,12 +69,6 @@ func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 				Buckets: prometheus.ExponentialBuckets(1, 10, 4),
 			},
 		)
-	// Register custom metrics with the global prometheus registry
-	metrics.Registry.MustRegister(
-		controllerMetrics.ConfigCounter,
-		controllerMetrics.ParseCounter,
-		controllerMetrics.ConfigureDurationHistogram,
-	)
 
 	return controllerMetrics
 }

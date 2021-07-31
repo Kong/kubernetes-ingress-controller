@@ -54,3 +54,9 @@ func ParseConfigDumpMode(in string) (ConfigDumpMode, error) {
 		return ConfigDumpModeOff, fmt.Errorf("unrecognized config dump mode: %s", in)
 	}
 }
+
+type ContextKey struct{}
+
+func GetContextKey() ContextKey {
+	return ContextKey{}
+}

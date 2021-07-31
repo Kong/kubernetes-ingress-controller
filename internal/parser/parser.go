@@ -410,9 +410,7 @@ func getEndpoints(
 		eps = convertEndpoints(ep, port, proto)
 	}
 
-	for _, server := range eps {
-		upsServers = append(upsServers, server)
-	}
+	upsServers = append(upsServers, eps...)
 
 	log.Debugf("found endpoints: %v", upsServers)
 	return upsServers

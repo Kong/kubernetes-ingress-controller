@@ -155,7 +155,7 @@ func setupProxyServer(ctx context.Context,
 	}
 
 	return proxy.NewCacheBasedProxyWithStagger(
-		context.WithValue(ctx, "useEndpointSlices", c.UseEndpointSlices),
+		context.WithValue(ctx, util.GetContextKey(), c.UseEndpointSlices),
 		fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
 		mgr.GetClient(),
 		kongConfig,

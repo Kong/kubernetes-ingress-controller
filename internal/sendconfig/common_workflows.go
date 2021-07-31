@@ -41,7 +41,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	proxyRequestTimeout time.Duration,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*cache, ingressClassName, ctx.Value("useEndpointSlices").(bool), false, false, false, deprecatedLogger)
+	storer := store.New(*cache, ingressClassName, ctx.Value(util.GetContextKey()).(bool), false, false, false, deprecatedLogger)
 	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
 		return nil, err

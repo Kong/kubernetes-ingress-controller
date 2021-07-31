@@ -6,39 +6,37 @@ import (
 )
 
 type ControllerFunctionalPrometheusMetrics struct {
-	// number of post /config to proxy successfully
+	// ConfigCounter number of post /config to proxy successfully
 	ConfigCounter *prometheus.CounterVec
 
-	// number of ingress analysis failure
+	// ParseCounter number of ingress analysis failure
 	ParseCounter *prometheus.CounterVec
 
-	// duration of last successful confiuration sync
+	// ConfigureDurationHistogram duration of last successful confiuration sync
 	ConfigureDurationHistogram prometheus.Histogram
 }
 
 type Success string
 
 const (
-	// EnablementStatusDisabled says that the resource it controls is disabled.
+	// ConfigSuccessTrue post-config to proxy successfully
 	ConfigSuccessTrue Success = "true"
-	// EnablementStatusEnabled says that the resource it controls is enabled.
+	// ConfigSuccessFalse post-config to proxy failed
 	ConfigSuccessFalse Success = "false"
-
-	IngressParseTrue  Success = "true"
+	// IngressParseTrue says that ingress parsed successful
+	IngressParseTrue Success = "true"
+	// IngressParseFalse ingress parsed failed
 	IngressParseFalse Success = "false"
 )
 
 type ConfigType string
 
 const (
+	// ConfigProxy says post config to proxy
 	ConfigProxy ConfigType = "post-config"
-	ConfigDeck  ConfigType = "deck"
+	// ConfigDeck says generate deck
+	ConfigDeck ConfigType = "deck"
 )
-
-func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusCounter(name, help string, labels ...string) *prometheus.CounterVec {
-	return 
-	)
-}
 
 func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusHistogram(name, help string) prometheus.Histogram {
 	return prometheus.NewHistogram(
@@ -53,13 +51,13 @@ func (ctrlMetrics *ControllerFunctionalPrometheusMetrics) NewPrometheusHistogram
 func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 	controllerMetrics := &ControllerFunctionalPrometheusMetrics{}
 
-	controllerMetrics.ConfigCounter = 
+	controllerMetrics.ConfigCounter =
 		prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "send_configuration_count",
 				Help: "number of post config proxy processed successfully.",
 			},
-			[]string{"sucess", "type"},
+			[]string{"success", "type"},
 		)
 
 	controllerMetrics.ParseCounter =
@@ -68,7 +66,7 @@ func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 				Name: "ingress_parse_count",
 				Help: "number of ingress parse.",
 			},
-			[]string{"sucess"},
+			[]string{"success"},
 		)
 
 	controllerMetrics.ConfigureDurationHistogram = controllerMetrics.NewPrometheusHistogram("proxy_configuration_duration_milliseconds", "duration of last successful configuration.")

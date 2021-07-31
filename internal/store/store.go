@@ -542,7 +542,7 @@ func (s Store) GetEndpointSlicesForService(namespace, name string) (*discoveryv1
 		func(ob interface{}) {
 			slice, ok := ob.(*discoveryv1.EndpointSlice)
 			if ok {
-				if slice.Namespace == namespace && strings.HasPrefix(slice.Name, name) {
+				if slice.Namespace == namespace && strings.HasPrefix(slice.Name, name+"-") {
 					eps = append(eps, slice)
 				}
 			}
@@ -551,8 +551,11 @@ func (s Store) GetEndpointSlicesForService(namespace, name string) (*discoveryv1
 		return nil, err
 	}
 
-	if len(eps) > 1 || len(eps) == 0 {
-		return nil, fmt.Errorf("expected 1 endpoint slice for service %s; found %d", name, len(eps))
+	if len(eps) > 1 {
+		return nil, fmt.Errorf("EndpointSlice for service %s/%s: found %d; expected: 1", namespace, name, len(eps))
+	}
+	if len(eps) == 0 {
+		return nil, ErrNotFound{fmt.Sprintf("EndpointSlices for service %s/%s not found", namespace, name)}
 	}
 
 	return eps[0], nil

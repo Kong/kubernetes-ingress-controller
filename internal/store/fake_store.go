@@ -149,6 +149,7 @@ func NewFakeStore(
 			UDPIngress:     udpIngressStore,
 			Service:        serviceStore,
 			Endpoint:       endpointStore,
+			EndpointSlice:  endpointSliceStore,
 			Secret:         secretsStore,
 
 			Plugin:        kongPluginsStore,

@@ -431,7 +431,7 @@ func TestFakeStoreService(t *testing.T) {
 	assert.Nil(service)
 }
 
-func TestFakeStoreEndpiont(t *testing.T) {
+func TestFakeStoreEndpoint(t *testing.T) {
 	assert := assert.New(t)
 
 	endpoints := []*apiv1.Endpoints{
@@ -455,14 +455,17 @@ func TestFakeStoreEndpiont(t *testing.T) {
 	assert.Nil(c)
 }
 
-func TestFakeStoreEndpiontSlices(t *testing.T) {
+func TestFakeStoreEndpointSlices(t *testing.T) {
 	assert := assert.New(t)
 
 	endpointSlices := []*discoveryv1.EndpointSlice{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
+				Name:      "foo-123",
 				Namespace: "default",
+				Labels: map[string]string{
+					"kubernetes.io/service-name": "foo",
+				},
 			},
 		},
 	}

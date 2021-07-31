@@ -93,6 +93,15 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
+			IsEnabled: &c.ServiceEnabled,
+			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
+			},
+		},
+		{
 			IsEnabled: &alwaysEnabled,
 			Controller: &configuration.CoreV1SecretReconciler{
 				Client: mgr.GetClient(),

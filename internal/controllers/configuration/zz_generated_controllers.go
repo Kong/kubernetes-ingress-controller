@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -176,6 +177,78 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// update the kong Admin API with the changes
 	log.Info("updating the proxy with new Endpoints", "namespace", obj.Namespace, "name", obj.Name)
+	if err := r.Proxy.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
+// DiscoveryV1 EndpointSlice
+// -----------------------------------------------------------------------------
+
+// DiscoveryV1EndpointSlice reconciles EndpointSlice resources
+type DiscoveryV1EndpointSliceReconciler struct {
+	client.Client
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&discoveryv1.EndpointSlice{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups="",resources=endpointslices,verbs=list;watch
+//+kubebuilder:rbac:groups="",resources=endpointslices/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=endpointslices,verbs=list;watch
+//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=endpointslices/status,verbs=get;update;patch
+
+// Reconcile processes the watched objects
+func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("DiscoveryV1EndpointSlice", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(discoveryv1.EndpointSlice)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		obj.Namespace = req.Namespace
+		obj.Name = req.Name
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			log.Info("deleted EndpointSlice object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.Info("resource is being deleted, its configuration will be removed", "type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// update the kong Admin API with the changes
+	log.Info("updating the proxy with new EndpointSlice", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}

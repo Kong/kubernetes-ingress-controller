@@ -17,10 +17,11 @@ import (
 const (
 	outputFile = "../../internal/controllers/configuration/zz_generated_controllers.go"
 
-	corev1     = "k8s.io/api/core/v1"
-	netv1      = "k8s.io/api/networking/v1"
-	netv1beta1 = "k8s.io/api/networking/v1beta1"
-	extv1beta1 = "k8s.io/api/extensions/v1beta1"
+	corev1      = "k8s.io/api/core/v1"
+	discoveryv1 = "k8s.io/api/discovery/v1"
+	netv1       = "k8s.io/api/networking/v1"
+	netv1beta1  = "k8s.io/api/networking/v1beta1"
+	extv1beta1  = "k8s.io/api/extensions/v1beta1"
 
 	kongv1          = "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	kongv1beta1     = "github.com/kong/kubernetes-ingress-controller/api/configuration/v1beta1"
@@ -30,7 +31,7 @@ const (
 // inputControllersNeeded is a list of the supported Types for the
 // Kong Kubernetes Ingress Controller. If you need to add a new type
 // for support, add it here and a new controller will be generated
-// when you run `make controllers`.
+// when you run `make generate.controllers`.
 var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		PackageImportAlias:                "corev1",
@@ -52,6 +53,18 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "endpoints",
 		URL:                               "\"\"",
 		CacheType:                         "Endpoint",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"list", "watch"},
+	},
+	typeNeeded{
+		PackageImportAlias:                "discoveryv1",
+		PackageAlias:                      "DiscoveryV1",
+		Package:                           discoveryv1,
+		Type:                              "EndpointSlice",
+		Plural:                            "endpointslices",
+		URL:                               "\"\"",
+		CacheType:                         "EndpointSlice",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"list", "watch"},

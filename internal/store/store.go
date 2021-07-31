@@ -206,6 +206,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.Secret.Get(obj)
 	case *corev1.Endpoints:
 		return c.Endpoint.Get(obj)
+	case *discoveryv1.EndpointSlice:
+		return c.EndpointSlice.Get(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -247,6 +249,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Secret.Add(obj)
 	case *corev1.Endpoints:
 		return c.Endpoint.Add(obj)
+	case *discoveryv1.EndpointSlice:
+		return c.EndpointSlice.Add(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -289,6 +293,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.Secret.Delete(obj)
 	case *corev1.Endpoints:
 		return c.Endpoint.Delete(obj)
+	case *discoveryv1.EndpointSlice:
+		return c.EndpointSlice.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -507,18 +513,36 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	return ingresses, nil
 }
 
-// GetEndpointSlicesForService returns the internal endpoints from an endpoint slice for service
-// 'namespace/name' inside k8s.
+// GetEndpointSlicesForService returns the internal endpoints from an endpoint slice for a
+// service inside k8s. Because endpoint slices give us an unpredictable GUID suffix, we
+// must filter those which match the associated service.
 func (s Store) GetEndpointSlicesForService(namespace, name string) (*discoveryv1.EndpointSlice, error) {
-	key := fmt.Sprintf("%v/%v", namespace, name)
-	eps, exists, err := s.stores.EndpointSlice.GetByKey(key)
+	var eps []*discoveryv1.EndpointSlice
+
+	req, err := labels.NewRequirement("kubernetes.io/service-name", selection.Equals, []string{name})
 	if err != nil {
 		return nil, err
 	}
-	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Endpoint slices for service %v not found", key)}
+
+	err = cache.ListAll(s.stores.EndpointSlice,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			slice, ok := ob.(*discoveryv1.EndpointSlice)
+			if ok {
+				if slice.Namespace == namespace && strings.HasPrefix(slice.Name, name) {
+					eps = append(eps, slice)
+				}
+			}
+		})
+	if err != nil {
+		return nil, err
 	}
-	return eps.(*discoveryv1.EndpointSlice), nil
+
+	if len(eps) > 1 || len(eps) == 0 {
+		return nil, fmt.Errorf("expected 1 endpoint slice for service %s; found %d", name, len(eps))
+	}
+
+	return eps[0], nil
 }
 
 // GetEndpointsForService returns the internal endpoints for service
@@ -744,6 +768,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &corev1.Secret{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Endpoints"):
 		return &corev1.Endpoints{}, nil
+	case corev1.SchemeGroupVersion.WithKind("EndpointSlice"):
+		return &discoveryv1.EndpointSlice{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongPlugin"):
 		return &kongv1.KongPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):

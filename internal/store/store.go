@@ -48,8 +48,9 @@ import (
 )
 
 const (
-	knativeIngressClassKey = "networking.knative.dev/ingress.class"
-	caCertKey              = "konghq.com/ca-cert"
+	knativeIngressClassKey  = "networking.knative.dev/ingress.class"
+	endpointSliceServiceKey = "kubernetes.io/service-name"
+	caCertKey               = "konghq.com/ca-cert"
 )
 
 // ErrNotFound error is returned when a lookup results in no resource.
@@ -532,7 +533,7 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 func (s Store) GetEndpointSlicesForService(namespace, name string) (*discoveryv1.EndpointSlice, error) {
 	var eps []*discoveryv1.EndpointSlice
 
-	req, err := labels.NewRequirement("kubernetes.io/service-name", selection.Equals, []string{name})
+	req, err := labels.NewRequirement(endpointSliceServiceKey, selection.Equals, []string{name})
 	if err != nil {
 		return nil, err
 	}

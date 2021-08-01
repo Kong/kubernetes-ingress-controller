@@ -28,9 +28,6 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestMetricsEndpoint(t *testing.T) {
-	if useLegacyKIC() {
-		t.Skip("metrics endpoint test does not apply to legacy KIC")
-	}
 	assert.Eventually(t, func() bool {
 		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
 		resp, err := httpc.Get(metricsURL)
@@ -58,9 +55,6 @@ func TestMetricsEndpoint(t *testing.T) {
 }
 
 func TestProfilingEndpoint(t *testing.T) {
-	if useLegacyKIC() {
-		t.Skip("profiling endpoint behaves differently in legacy KIC")
-	}
 	assert.Eventually(t, func() bool {
 		profilingURL := fmt.Sprintf("http://localhost:%v/debug/pprof/", manager.DiagnosticsPort)
 		resp, err := httpc.Get(profilingURL)
@@ -70,5 +64,25 @@ func TestProfilingEndpoint(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusOK
+	}, ingressWait, waitTick)
+}
+
+func TestConfigEndpoint(t *testing.T) {
+	assert.Eventually(t, func() bool {
+		successURL := fmt.Sprintf("http://localhost:%v/debug/config/successful", manager.DiagnosticsPort)
+		failURL := fmt.Sprintf("http://localhost:%v/debug/config/failed", manager.DiagnosticsPort)
+		successResp, err := httpc.Get(successURL)
+		defer successResp.Body.Close()
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", successURL, err)
+			return false
+		}
+		failResp, err := httpc.Get(failURL)
+		defer failResp.Body.Close()
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", failURL, err)
+			return false
+		}
+		return successResp.StatusCode == http.StatusOK && failResp.StatusCode == http.StatusOK
 	}, ingressWait, waitTick)
 }

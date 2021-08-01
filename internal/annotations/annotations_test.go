@@ -75,7 +75,8 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 
 	data := map[string]string{}
 	ing.SetAnnotations(data)
-	for _, test := range tests {
+	for i := 0; i < len(tests); i++ {
+		test := tests[i]
 		ing.Annotations[IngressClassKey] = test.ingress
 		ingv1.Spec.IngressClassName = &test.ingress
 		// TODO: unclear if we truly use IngressClassValidatorFunc anymore

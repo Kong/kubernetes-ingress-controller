@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	kongt "github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
 	"github.com/sirupsen/logrus"
@@ -80,7 +81,10 @@ var mockKongAdmin KongUpdater = func(ctx context.Context,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool) ([]byte, error) {
+	enableReverseSync bool,
+	diagnostic util.ConfigDumpDiagnostic,
+	proxyRequestTimeout time.Duration,
+) ([]byte, error) {
 	fakeKongAdminUpdateCount(1)
 	return lastConfigSHA, nil
 }

@@ -4,8 +4,9 @@ package rootcmd
 import (
 	"context"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 	"github.com/spf13/cobra"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 
 var cfg manager.Config

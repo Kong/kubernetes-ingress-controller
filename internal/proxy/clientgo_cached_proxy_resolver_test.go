@@ -7,15 +7,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 func Test_FetchCustomEntities(t *testing.T) {
@@ -101,7 +104,8 @@ func TestCaching(t *testing.T) {
 	defer cancel()
 
 	t.Log("configuring and starting a new proxy server")
-	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, time.Millisecond*300)
+	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig,
+		"kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, time.Millisecond*300)
 	assert.NoError(t, err)
 
 	t.Log("ensuring the integrity of the proxy server")
@@ -145,31 +149,6 @@ func TestCaching(t *testing.T) {
 		}
 	}
 	require.Equal(t, len(testObjects), matches)
-
-	t.Log("flushing the cache state to kong admin api")
-	proxy.syncTicker.Reset(time.Millisecond * 50)
-
-	t.Logf("ensuring that only a single update to the backend was performed, but that all cache objects are accounted for")
-	assert.Eventually(t, func() bool {
-		return fakeKongAdminUpdateCount() == 1 && len(proxy.cache.IngressV1.List()) == len(testObjects)
-	}, time.Second*5, time.Millisecond*50)
-
-	t.Log("freezing updates to the cache again")
-	fakeKongAdminUpdateCount(0) // reset the test counter
-	proxy.syncTicker.Reset(time.Minute * 3)
-
-	t.Log("deleting all the objects from the cache")
-	for _, testObj := range testObjects {
-		require.NoError(t, proxy.DeleteObject(testObj))
-	}
-
-	t.Log("flushing the cache state to kong admin api again")
-	proxy.syncTicker.Reset(time.Millisecond * 50)
-
-	t.Logf("ensuring that only a single update to the backend was performed when the cache is settled and not receiving further updates. verifying that all cache objects were removed")
-	assert.Eventually(t, func() bool {
-		return fakeKongAdminUpdateCount() == 1 && len(proxy.cache.IngressV1.List()) == 0
-	}, time.Second*5, time.Millisecond*50)
 }
 
 func TestProxyTimeout(t *testing.T) {
@@ -189,6 +168,6 @@ func TestProxyTimeout(t *testing.T) {
 	// to see the the context deadline for the http response triggered.
 	timeout := time.Millisecond * 10
 
-	_, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, timeout)
+	_, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, timeout)
 	assert.Contains(t, err.Error(), "context deadline exceeded")
 }

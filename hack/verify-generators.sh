@@ -4,9 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-SCRIPT_ROOT="$(dirname "${BASH_SOURCE}")/.."
-
-DIFFROOT="${SCRIPT_ROOT}/deploy/single-v2/"
+DIFFROOT="$(dirname "${BASH_SOURCE}")/.."
 
 if ! git status --porcelain --untracked-files=no "$DIFFROOT" ; then
     echo "error: please run this script on a clean working copy"
@@ -18,13 +16,14 @@ cleanup() {
 }
 trap "cleanup" EXIT SIGINT
 
-"${SCRIPT_ROOT}/hack/deploy/build-single-manifests.sh"
+cd "${DIFFROOT}"
+make generate
 
 if git diff --quiet "${DIFFROOT}"
 then
   echo "${DIFFROOT} up to date."
 else
-  echo "${DIFFROOT} is out of date. Please run hack/build-single-manifests.sh"
+  echo "${DIFFROOT} is out of date. Please run make generate"
   echo "Diff output:"
   git --no-pager diff "${DIFFROOT}"
   exit 1

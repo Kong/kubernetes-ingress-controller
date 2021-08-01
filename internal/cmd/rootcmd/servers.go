@@ -2,12 +2,23 @@ package rootcmd
 
 import (
 	"context"
+	"sync"
 
 	"github.com/bombsimon/logrusr"
+
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
+)
+
+const (
+	// DiagnosticConfigBufferDepth is the size of the channel buffer for receiving diagnostic
+	// config dumps from the proxy sync loop. The chosen size is essentially arbitrary: we don't
+	// expect that the receive end will get backlogged (it only assigns the value to a local
+	// variable) but do want a small amount of leeway to account for goroutine scheduling, so it
+	// is not zero.
+	DiagnosticConfigBufferDepth = 3
 )
 
 func StartAdmissionServer(ctx context.Context, c *manager.Config) error {
@@ -45,23 +56,33 @@ func StartAdmissionServer(ctx context.Context, c *manager.Config) error {
 	return nil
 }
 
-func StartProfilingServer(ctx context.Context, c *manager.Config) error {
+func StartDiagnosticsServer(ctx context.Context, port int, c *manager.Config) (diagnostics.Server, error) {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
-		return err
+		return diagnostics.Server{}, err
 	}
 	logger := logrusr.NewLogger(deprecatedLogger)
 
-	if !c.EnableProfiling {
-		logger.Info("profiling server disabled")
-		return nil
+	if !c.EnableProfiling && !c.EnableConfigDumps {
+		logger.Info("diagnostics server disabled")
+		return diagnostics.Server{}, nil
 	}
 
-	s := diagnostics.Server{Logger: logger}
+	s := diagnostics.Server{
+		Logger:           logger,
+		ProfilingEnabled: c.EnableProfiling,
+		ConfigLock:       &sync.RWMutex{},
+	}
+	if c.EnableConfigDumps {
+		s.ConfigDumps = util.ConfigDumpDiagnostic{
+			DumpsIncludeSensitive: c.DumpSensitiveConfig,
+			Configs:               make(chan util.ConfigDump, DiagnosticConfigBufferDepth),
+		}
+	}
 	go func() {
-		if err := s.Listen(ctx); err != nil {
+		if err := s.Listen(ctx, port); err != nil {
 			logger.Error(err, "unable to start diagnostics server")
 		}
 	}()
-	return nil
+	return s, nil
 }

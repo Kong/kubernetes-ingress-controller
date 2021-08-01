@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -20,17 +21,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 const testUDPIngressNamespace = "udpingress"
 
 func TestUDPIngressEssentials(t *testing.T) {
-	// TODO: once KIC 2.0 lands and pre v2 is gone, we can remove this check
-	if useLegacyKIC() {
-		t.Skip("legacy KIC does not support UDPIngress, skipping")
-	}
-
 	testName := "minudp"
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	defer cancel()

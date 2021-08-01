@@ -45,6 +45,7 @@ func (c *ControllerDef) Name() string {
 // MaybeSetupWithManager runs SetupWithManager on the controller if its EnablementStatus is either "enabled", or "auto"
 // and AutoHandler says that it should be enabled.
 func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
+	//nolint:exhaustive
 	switch *c.IsEnabled {
 	case util.EnablementStatusDisabled:
 		return nil

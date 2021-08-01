@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 const testBulkIngressNamespace = "ingress-bulk-testing"
@@ -93,8 +93,22 @@ func TestIngressBulk(t *testing.T) {
 		}, ingressWait, waitTick)
 	}
 
+	t.Log("cleaning up last batch of resources")
+	for i := 0; i < maxBatchSize; i++ {
+		name := fmt.Sprintf("bulk-httpbin-%d", i)
+		require.NoError(t, env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Delete(ctx, name, metav1.DeleteOptions{}))
+		require.NoError(t, env.Cluster().Client().NetworkingV1().Ingresses(testBulkIngressNamespace).Delete(ctx, name, metav1.DeleteOptions{}))
+		require.Eventually(t, func() bool {
+			_, err := env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return errors.IsNotFound(err)
+			}
+			return false
+		}, ingressWait, waitTick)
+	}
+
 	t.Log("staggering ingress deployments over several seconds")
-	maxStaggeredBatchSize := maxBatchSize * 2
+	maxStaggeredBatchSize := maxBatchSize
 	for i := 0; i < maxStaggeredBatchSize; i++ {
 		name := fmt.Sprintf("bulk-staggered-httpbin-%d", i)
 		path := fmt.Sprintf("/%s", name)
@@ -136,6 +150,20 @@ func TestIngressBulk(t *testing.T) {
 				require.NoError(t, err)
 				require.True(t, n > 0)
 				return strings.Contains(b.String(), "<title>httpbin.org</title>")
+			}
+			return false
+		}, ingressWait, waitTick)
+	}
+
+	t.Log("cleaning up last batch of resources")
+	for i := 0; i < maxBatchSize; i++ {
+		name := fmt.Sprintf("bulk-staggered-httpbin-%d", i)
+		require.NoError(t, env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Delete(ctx, name, metav1.DeleteOptions{}))
+		require.NoError(t, env.Cluster().Client().NetworkingV1().Ingresses(testBulkIngressNamespace).Delete(ctx, name, metav1.DeleteOptions{}))
+		require.Eventually(t, func() bool {
+			_, err := env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return errors.IsNotFound(err)
 			}
 			return false
 		}, ingressWait, waitTick)

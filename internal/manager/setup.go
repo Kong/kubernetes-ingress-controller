@@ -99,7 +99,8 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 
 func setupProxyServer(ctx context.Context,
 	logger logr.Logger, fieldLogger logrus.FieldLogger,
-	mgr manager.Manager, kongConfig sendconfig.Kong, c *Config,
+	mgr manager.Manager, kongConfig sendconfig.Kong,
+	diagnostic util.ConfigDumpDiagnostic, c *Config,
 ) (proxy.Proxy, error) {
 	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
@@ -128,5 +129,6 @@ func setupProxyServer(ctx context.Context,
 		c.EnableReverseSync,
 		syncTickDuration,
 		timeoutDuration,
+		diagnostic,
 		sendconfig.UpdateKongAdminSimple)
 }

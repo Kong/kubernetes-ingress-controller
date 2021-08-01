@@ -54,9 +54,14 @@
   [#1509](https://github.com/Kong/kubernetes-ingress-controller/pull/1509)
 - Added scripts to generate 2.x manifests.
   [#1563](https://github.com/Kong/kubernetes-ingress-controller/pull/1563)
+- Added support for --dump-config to 2.x.
+  [#1589](https://github.com/Kong/kubernetes-ingress-controller/pull/1589)
 
 #### Fixed
 
+- Increased the default timeout strategy for backend proxy HTTP requests
+  from 3 seconds to 10 seconds.
+  [#1610](https://github.com/Kong/kubernetes-ingress-controller/pull/1610)
 - Corrected the old Ingress v1beta1 API group.
   [#1584](https://github.com/Kong/kubernetes-ingress-controller/pull/1584)
 

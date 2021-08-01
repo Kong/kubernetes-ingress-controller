@@ -16,8 +16,9 @@ import (
 	"github.com/kong/deck/solver"
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
-	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
 	"github.com/sirupsen/logrus"
+
+	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
 )
 
 func equalSHA(a, b []byte) bool {

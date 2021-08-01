@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 func TestIngressPerformance(t *testing.T) {

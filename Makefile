@@ -5,6 +5,7 @@
 TAG?=2.0.0-alpha.3
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
+REPO_URL=github.com/kong/kubernetes-ingress-controller
 IMGNAME?=kubernetes-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 IMG ?= controller:latest
@@ -27,6 +28,10 @@ controller-gen: ## Download controller-gen locally if necessary.
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+
+CLIENT_GEN = $(shell pwd)/bin/client-gen
+client-gen: ## Download client-gen locally if necessary.
+	$(call go-get-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen@v0.21.3)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -60,7 +65,7 @@ all: build
 clean:
 	@rm -rf testbin/
 	@rm -rf bin/*
-	@rm -f coverage.out
+	@rm -f coverage*.out
 
 .PHONY: build
 build: generate fmt vet lint
@@ -68,6 +73,10 @@ build: generate fmt vet lint
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Release=$(TAG) \
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Commit=$(COMMIT) \
 		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Repo=$(REPO_INFO)" internal/cmd/main.go
+
+.PHONY: imports
+imports:
+	@find ./ -type f -name '*.go' -exec goimports -local $(REPO_URL) -w {} \;
 
 .PHONY: fmt
 fmt:
@@ -107,25 +116,25 @@ manifests.single: ## Compose single-file deployment manifests from building bloc
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets controller-gen 
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+generate: generate.controllers generate.clientsets
 
 .PHONY: generate.controllers
-generate.controllers:
+generate.controllers: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 	go generate ./...
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 # TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
 #       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1254
 .PHONY: generate.clientsets
-generate.clientsets:
-	@client-gen --go-header-file ./hack/boilerplate.go.txt \
+generate.clientsets: client-gen
+	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base github.com/kong/kubernetes-ingress-controller/pkg/apis/  \
 		--input configuration/v1,configuration/v1beta1 \
 		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
-		--output-package github.com/kong/kubernetes-ingress-controller/internal/
+		--output-package github.com/kong/kubernetes-ingress-controller/pkg/
 	@rm -rf pkg/clientset/
 	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/pkg/clientset pkg/
 	@rm -rf client-gen-tmp/
@@ -146,16 +155,15 @@ container:
 # Test
 # ------------------------------------------------------------------------------
 
-PKG_LIST = ./...
+PKG_LIST = ./pkg/...,./internal/...
 COVERAGE_PROFILE=coverage.out
-COVERAGE_INTEGRATION_PROFILE=coverage-integration.out
 KIND_CLUSTER_NAME ?= "integration-tests"
 
 .PHONY: test.all
 test.all: test test.integration
 
 .PHONY: test.integration
-test.integration: test.integration.legacy test.integration.dbless test.integration.postgres
+test.integration: test.integration.dbless test.integration.postgres
 
 .PHONY: test
 test:
@@ -168,14 +176,14 @@ test.integration.legacy: container
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./...
 
 # TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
 #       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 15m -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 15m -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./...
 
 # ------------------------------------------------------------------------------
 # Operations
@@ -196,4 +204,3 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-

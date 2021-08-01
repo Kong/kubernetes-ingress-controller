@@ -35,6 +35,8 @@ func (p *PortDef) CanonicalString() string {
 		return fmt.Sprintf("%d", p.Number)
 	case PortModeByName:
 		return p.Name
+	case PortModeImplicit:
+		return ImplicitPort
 	}
 	return ImplicitPort
 }

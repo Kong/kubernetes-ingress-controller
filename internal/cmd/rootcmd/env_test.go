@@ -85,7 +85,6 @@ func (t testvar) Set(newstr string) error {
 	if newstr == "intentionally_fail" {
 		return fmt.Errorf("bad value for var type %s", t.Type())
 	}
-	t = testvar(newstr)
 	return nil
 }
 

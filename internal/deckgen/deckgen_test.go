@@ -590,6 +590,7 @@ func TestFillKeyAuth(t *testing.T) {
 	assert.Nil(err)
 
 	res, err := FillPluginConfig(schema, config)
+	assert.NoError(err)
 	assert.Equal(def, res)
 }
 
@@ -607,6 +608,7 @@ func TestFillStatsD(t *testing.T) {
 	assert.Nil(err)
 
 	res, err := FillPluginConfig(schema, config)
+	assert.NoError(err)
 	assert.Equal(def, res)
 }
 
@@ -625,6 +627,7 @@ func TestKeyAuthSetKeys(t *testing.T) {
 	assert.Nil(err)
 
 	res, err := FillPluginConfig(schema, config)
+	assert.NoError(err)
 	assert.NotEqual(def, res)
 	assert.Equal(true, res["key_in_body"])
 }
@@ -641,6 +644,7 @@ func TestFillReqeustTransformer(t *testing.T) {
 	assert.Nil(err)
 
 	res, err := FillPluginConfig(schema, config)
+	assert.NoError(err)
 	assert.Equal(def, res)
 }
 
@@ -655,6 +659,7 @@ func TestFillReqeustTransformerNestedConfig(t *testing.T) {
 	assert.Nil(err)
 	want := make(kong.Configuration)
 	err = json.Unmarshal([]byte(RequestTransformerNonEmptyFilledConfig), &want)
+	assert.NoError(err)
 	res, err := FillPluginConfig(schema, config)
 	assert.Equal(want, res)
 	assert.Nil(err)

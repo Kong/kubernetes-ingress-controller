@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/go-uuid"
+	"github.com/google/uuid"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -28,10 +28,7 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 	}
 
 	// create a universal unique identifier for this system
-	uuid, err := uuid.GenerateUUID()
-	if err != nil {
-		return fmt.Errorf("failed to generate a random uuid: %w", err)
-	}
+	uuid := uuid.NewString()
 
 	// record the current Kubernetes server version
 	kc, err := kubernetes.NewForConfig(kubeCfg)

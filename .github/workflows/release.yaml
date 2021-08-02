@@ -2,6 +2,9 @@
 name: release
 
 on:
+  pull_request:
+    branches:
+      - '*'
   push:
     tags:
       - 'v2.*'

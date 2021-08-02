@@ -230,6 +230,24 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 }
 
 func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T) bool {
+	// the deployment manifests for knative include some CPU and Memory limits which
+	// are good for production, but mostly just problematic when running simple tests
+	// where these components are going to be brought up and torn down quickly.
+	// we tear out these requirements ad as long as the pods start we will likely have
+	// all the CPU and memory we need to complete the tests (whereafter we will tear
+	// all of the knative components down anyhow).
+	deploymentList, err := cluster.Client().AppsV1().Deployments(knativeNamespace).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	for _, deployment := range deploymentList.Items {
+		require.Eventually(t, func() bool {
+			for i := 0; i < len(deployment.Spec.Template.Spec.Containers); i++ {
+				deployment.Spec.Template.Spec.Containers[i].Resources = corev1.ResourceRequirements{}
+			}
+			_, err = cluster.Client().AppsV1().Deployments(knativeNamespace).Update(ctx, &deployment, metav1.UpdateOptions{})
+			return err == nil
+		}, knativeWaitTime, waitTick)
+	}
+
 	return assert.Eventually(t, func() bool {
 		podList, err := cluster.Client().CoreV1().Pods(knativeNamespace).List(ctx, metav1.ListOptions{})
 		if err != nil {

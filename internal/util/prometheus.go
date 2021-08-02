@@ -16,6 +16,7 @@ type ControllerFunctionalPrometheusMetrics struct {
 	ConfigureDurationHistogram prometheus.Histogram
 }
 
+// Success indicates the results of a function/operation
 type Success string
 
 const (
@@ -66,7 +67,7 @@ func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
 			prometheus.HistogramOpts{
 				Name:    "proxy_configuration_duration_milliseconds",
 				Help:    "duration of last successful configuration.",
-				Buckets: prometheus.ExponentialBuckets(1, 10, 4),
+				Buckets: prometheus.ExponentialBuckets(1, 1.2, 20),
 			},
 		)
 

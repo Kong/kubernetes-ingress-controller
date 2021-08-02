@@ -26,7 +26,6 @@ import (
 type ClassMatching int
 
 const (
-	// IgnoreClassMatch ...
 	IgnoreClassMatch       ClassMatching = iota
 	ExactOrEmptyClassMatch ClassMatching = iota
 	ExactClassMatch        ClassMatching = iota

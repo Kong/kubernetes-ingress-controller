@@ -14,7 +14,7 @@ type CtrlFuncMetrics struct {
 	// ParseCounter counts the events of converting resources from Kubernetes to a KongState.
 	ParseCounter *prometheus.CounterVec
 
-	// ConfigureDurationHistogram duration of last successful confiuration sync
+	// ConfigureDurationHistogram records the duration of each successful configuration sync.
 	ConfigureDurationHistogram prometheus.Histogram
 }
 

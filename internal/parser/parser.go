@@ -32,26 +32,26 @@ func parseAll(log logrus.FieldLogger, s store.Storer, promMetrics *util.Controll
 
 	tcpIngresses, err := s.ListTCPIngresses()
 	if err != nil {
-		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.IngressParseFalse)}).Inc()
+		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.SuccessFalse)}).Inc()
 		log.Errorf("failed to list TCPIngresses: %v", err)
 	}
-	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.IngressParseTrue)}).Inc()
+	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.SuccessTrue)}).Inc()
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 
 	udpIngresses, err := s.ListUDPIngresses()
 	if err != nil {
-		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.IngressParseFalse)}).Inc()
+		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.SuccessFalse)}).Inc()
 		log.Errorf("failed to list UDPIngresses: %v", err)
 	}
-	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.IngressParseTrue)}).Inc()
+	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.SuccessTrue)}).Inc()
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
-		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.IngressParseFalse)}).Inc()
+		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.SuccessFalse)}).Inc()
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.IngressParseTrue)}).Inc()
+	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(util.SuccessTrue)}).Inc()
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
 	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)

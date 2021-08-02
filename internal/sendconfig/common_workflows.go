@@ -99,7 +99,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 		}
 	}
 
-	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.ConfigSuccessTrue), "type": string(util.ConfigProxy)}).Inc()
+	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.SuccessTrue), "type": string(util.ConfigProxy)}).Inc()
 	promMetrics.ConfigureDurationHistogram.Observe(float64(time.Since(start).Milliseconds()))
 	return configSHA, nil
 }

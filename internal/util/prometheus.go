@@ -20,14 +20,10 @@ type ControllerFunctionalPrometheusMetrics struct {
 type Success string
 
 const (
-	// ConfigSuccessTrue post-config to proxy successfully
-	ConfigSuccessTrue Success = "true"
-	// ConfigSuccessFalse post-config to proxy failed
-	ConfigSuccessFalse Success = "false"
-	// IngressParseTrue says that ingress parsed successful
-	IngressParseTrue Success = "true"
-	// IngressParseFalse ingress parsed failed
-	IngressParseFalse Success = "false"
+	// SuccessTrue operation successfully
+	SuccessTrue Success = "true"
+	// SuccessFalse operation failed
+	SuccessFalse Success = "false"
 )
 
 type ConfigType string

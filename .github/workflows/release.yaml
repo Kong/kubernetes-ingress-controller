@@ -47,6 +47,8 @@ jobs:
     strategy:
       matrix:
         minor:
+          - '17'
+          - '18'
           - '19'
           - '20'
         dbmode:

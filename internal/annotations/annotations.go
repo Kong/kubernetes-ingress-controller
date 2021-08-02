@@ -32,7 +32,6 @@ const (
 )
 
 const (
-	// IngressClassKey
 	IngressClassKey        = "kubernetes.io/ingress.class"
 	KnativeIngressClassKey = "networking.knative.dev/ingress.class"
 

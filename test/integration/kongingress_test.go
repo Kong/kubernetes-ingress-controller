@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,16 +53,18 @@ func TestKongIngressEssentials(t *testing.T) {
 	}()
 
 	t.Logf("routing to service %s via Ingress", service.Name)
-	ingress := generators.NewIngressForService("/httpbin", map[string]string{
+	kubernetesVersion, err := env.Cluster().Version()
+	require.NoError(t, err)
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
-	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses("default").Create(ctx, ingress, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 
 	defer func() {
-		t.Logf("ensuring that Ingress %s is cleaned up", ingress.Name)
-		assert.NoError(t, env.Cluster().Client().NetworkingV1().Ingresses("default").Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
+		t.Log("ensuring that Ingress resources are cleaned up")
+		assert.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
+
 	}()
 
 	t.Logf("applying service overrides to Service %s via KongIngress", service.Name)
@@ -89,7 +92,7 @@ func TestKongIngressEssentials(t *testing.T) {
 		}
 	}()
 
-	t.Logf("waiting for routes from Ingress %s to be operational and that overrides are in place", ingress.Name)
+	t.Log("waiting for routes from Ingress to be operational and that overrides are in place")
 	httpc := http.Client{Timeout: time.Second * 10} // this timeout should never be hit, we expect a 504 from the proxy within 1000ms
 	assert.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin/delay/5", proxyURL))

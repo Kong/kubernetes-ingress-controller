@@ -58,7 +58,7 @@ func TestKnativeIngress(t *testing.T) {
 	require.Eventually(t, func() bool {
 		err := installKnativeSrv(ctx, t)
 		if err != nil {
-			t.Logf("checking knativing webhook readiness.")
+			t.Log("checking knativing webhook readiness.")
 			return false
 		}
 		return true
@@ -89,7 +89,7 @@ func configKnativeNetwork(ctx context.Context, cluster clusters.Cluster, t *test
 		return err
 	}
 
-	t.Logf("successfully configured knative network.")
+	t.Log("successfully configured knative network.")
 	return nil
 }
 
@@ -122,11 +122,16 @@ func installKnativeSrv(ctx context.Context, t *testing.T) error {
 		},
 	}
 	knativeCli, err := knativeversioned.NewForConfig(env.Cluster().Config())
+	if err != nil {
+		return fmt.Errorf("failed to create knative service. %v", err)
+	}
+
 	_, err = knativeCli.ServingV1().Services("default").Create(ctx, tobeDeployedService, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create knative service. %v", err)
 	}
-	t.Logf("successfully installed knative service.")
+
+	t.Log("successfully installed knative service.")
 	return nil
 }
 
@@ -152,7 +157,7 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Clu
 		t.Logf("failed updating config map %v", err)
 		return err
 	}
-	t.Logf("successfully update knative config domain.")
+	t.Log("successfully update knative config domain.")
 	return nil
 }
 
@@ -170,7 +175,7 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 		conds := curIng.Status.Status.GetConditions()
 		for _, cond := range conds {
 			if cond.Type == apis.ConditionReady && cond.Status == v1.ConditionTrue {
-				t.Logf("knative ingress status is ready.")
+				t.Log("knative ingress status is ready.")
 				return true
 			}
 		}
@@ -209,7 +214,7 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 			}
 			bodyString := string(bodyBytes)
 			t.Logf(bodyString)
-			t.Logf("service is successfully accessed through kong.")
+			t.Log("service is successfully accessed through kong.")
 			return true
 		}
 		return false
@@ -236,7 +241,7 @@ func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T)
 			}
 		}
 
-		t.Logf("All knative pods are up and ready.")
+		t.Log("All knative pods are up and ready.")
 		return true
 
 	}, 60*time.Second, 1*time.Second, true)

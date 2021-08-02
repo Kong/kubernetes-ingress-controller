@@ -33,7 +33,6 @@ var (
 )
 
 func main() {
-	fmt.Println("INFO: configuring GKE cloud environment for tests")
 	mustNotBeEmpty(gke.GKECredsVar, gkeCreds)
 	mustNotBeEmpty(gke.GKEProjectVar, gkeProject)
 	mustNotBeEmpty(gke.GKELocationVar, gkeLocation)

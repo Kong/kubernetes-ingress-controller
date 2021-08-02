@@ -71,7 +71,7 @@ jobs:
           fetch-depth: 0
 
       - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: ./hack/e2e/run.sh
+        run: ./hack/e2e/run-tests.sh
         env:
           KUBERNETES_MAJOR_VERSION: 1
           KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}

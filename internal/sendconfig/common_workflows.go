@@ -45,10 +45,12 @@ func UpdateKongAdminSimple(ctx context.Context,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
-	kongstate, err := parser.Build(deprecatedLogger, storer, promMetrics)
+	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
+		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse)}).Inc()
 		return nil, err
 	}
+	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessTrue)}).Inc()
 	var diagnosticConfig *file.Content
 
 	// generate the deck configuration to be applied to the admin API

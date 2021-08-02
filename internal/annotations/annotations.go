@@ -26,14 +26,12 @@ import (
 type ClassMatching int
 
 const (
-	// IgnoreClassMatch ...
 	IgnoreClassMatch       ClassMatching = iota
 	ExactOrEmptyClassMatch ClassMatching = iota
 	ExactClassMatch        ClassMatching = iota
 )
 
 const (
-	// IngressClassKey
 	IngressClassKey        = "kubernetes.io/ingress.class"
 	KnativeIngressClassKey = "networking.knative.dev/ingress.class"
 

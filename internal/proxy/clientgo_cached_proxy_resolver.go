@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
@@ -121,7 +122,7 @@ type clientgoCachedProxyResolver struct {
 	// It may ship diagnostic information through diagnostic
 	kongUpdater KongUpdater
 	diagnostic  util.ConfigDumpDiagnostic
-	promMetrics *util.ControllerFunctionalPrometheusMetrics
+	promMetrics *metrics.CtrlFuncMetrics
 
 	// server configuration, flow control, channels and utility attributes
 	ingressClassName    string
@@ -229,7 +230,7 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 	p.kongConfig.Version = proxySemver
 	p.dbmode = dbmode
 	p.version = proxySemver
-	p.promMetrics = util.ControllerMetricsInit()
+	p.promMetrics = metrics.ControllerMetricsInit()
 
 	return nil
 }

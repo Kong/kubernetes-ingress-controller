@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
@@ -21,38 +20,31 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
-func parseAll(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.CtrlFuncMetrics) ingressRules {
+func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
 	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
 
 	tcpIngresses, err := s.ListTCPIngresses()
 	if err != nil {
-		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse)}).Inc()
 		log.Errorf("failed to list TCPIngresses: %v", err)
 	}
-	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessTrue)}).Inc()
 	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 
 	udpIngresses, err := s.ListUDPIngresses()
 	if err != nil {
-		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse)}).Inc()
 		log.Errorf("failed to list UDPIngresses: %v", err)
 	}
-	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessTrue)}).Inc()
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
-		promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse)}).Inc()
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-	promMetrics.ParseCounter.With(prometheus.Labels{"success": string(metrics.SuccessTrue)}).Inc()
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
 	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)
@@ -61,8 +53,8 @@ func parseAll(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.CtrlF
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
-func Build(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.CtrlFuncMetrics) (*kongstate.KongState, error) {
-	parsedAll := parseAll(log, s, promMetrics)
+func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error) {
+	parsedAll := parseAll(log, s)
 	parsedAll.populateServices(log, s)
 
 	var result kongstate.KongState

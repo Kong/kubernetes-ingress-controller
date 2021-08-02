@@ -46,7 +46,7 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 		promauto.With(reg).NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "send_configuration_count",
-				Help: "number of post config proxy processed successfully.",
+				Help: "Counts the events of sending configuration to Kong, using metric fields to distinguish between DB-less or DB-mode syncs, and to tell successes from failures..",
 			},
 			[]string{"success", "type"},
 		)

@@ -29,6 +29,9 @@ import (
 )
 
 const (
+	// knativeNamespace is the testing namespace where Knative components will be deployed
+	knativeNamespace = "knative-serving"
+
 	knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
 )
@@ -83,7 +86,7 @@ func deployManifest(ctx context.Context, yml string, t *testing.T) error {
 
 func configKnativeNetwork(ctx context.Context, cluster clusters.Cluster, t *testing.T) error {
 	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", ingressClass))
-	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
+	_, err := cluster.Client().CoreV1().ConfigMaps(knativeNamespace).Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		t.Logf("failed updating config map %v", err)
 		return err
@@ -147,12 +150,12 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Clu
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "config-domain",
-			Namespace: "knative-serving",
+			Namespace: knativeNamespace,
 			Labels:    labels,
 		},
 		Data: configMapData,
 	}
-	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Update(ctx, &configMap, metav1.UpdateOptions{})
+	_, err := cluster.Client().CoreV1().ConfigMaps(knativeNamespace).Update(ctx, &configMap, metav1.UpdateOptions{})
 	if err != nil {
 		t.Logf("failed updating config map %v", err)
 		return err
@@ -224,7 +227,7 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 
 func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T) bool {
 	return assert.Eventually(t, func() bool {
-		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
+		podList, err := cluster.Client().CoreV1().Pods(knativeNamespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			t.Logf("failed retrieving knative pods. %v", err)
 			return false

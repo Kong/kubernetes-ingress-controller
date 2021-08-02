@@ -11,7 +11,7 @@ type ControllerFunctionalPrometheusMetrics struct {
 	// and to tell successes from failures.
 	ConfigCounter *prometheus.CounterVec
 
-	// ParseCounter number of ingress analysis failure
+	// ParseCounter counts the events of converting resources from Kubernetes to a KongState.
 	ParseCounter *prometheus.CounterVec
 
 	// ConfigureDurationHistogram duration of last successful confiuration sync

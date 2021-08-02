@@ -65,18 +65,59 @@ Thus:
 - if the list includes `next` but no release tags: the fix/enhancement will come in the nearest minor release.
 - if the list includes `main` but no release tags: the fix/enhancement will come in the nearest patch release.
 
+# Enhancements
+
+Documenting and communicating the motivation for major enhancements in the Kong Kubernetes Ingress Controller (KIC) is done using an upstream Kubernetes process referred to as [Kubernetes Enhancement Proposals (KEPs)][kep].
+
+[kep]:https://github.com/kubernetes/enhancements
+
+## New Enhancement Proposals
+
+When starting a new enhancement proposal use the upstream [KEP Template][template] file as the starting point for your KEP, and follow the instructions therein.
+
+Initially you can remove a lot of the scaffolding in the template for the first `provisional` iteration and focus on establishing the following sections:
+
+- Summary
+- Motivation
+- Goals
+- User Stories
+
+In general the maintainers here feel establishing these things in a KEP should be done _prior to any technical writeups_ but this is a soft rule.
+
+[template]:https://github.com/kubernetes/enhancements/blob/master/keps/NNNN-kep-template/README.md
+
 ## Development environment
 
 ## Environment
 
 - Golang version matching our [`Dockerfile`](./Dockerfile) installed
-- Access to a k8s cluster, you can use Minikube or GKE
-- make
-- Docker (for building)
+- [Kubebuilder][kubebuilder]
+- [GNU Make][make]
+- [Docker][docker] (for building)
+- Access to a Kubernetes cluster (we use [KIND][kind] for development)
+
+[kubebuilder]:https://kubebuilder.io/
+[make]:https://www.gnu.org/software/make/
+[docker]:https://docs.docker.com/
+[kind]:https://github.com/kubernetes-sigs/kind
 
 ## Dependencies
 
 The build uses dependencies are managed by [go modules](https://blog.golang.org/using-go-modules)
+
+## Developing
+
+Development of our [Kubernetes Controllers][ctrl] and [APIs][kapi] is managed through the [Kubebuilder SDK][kubebuilder].
+
+Prior to developing we recommend you read through the [Makefile](/Makefile) directives related to generation of API configurations, and run through the [Kubebuilder Quickstart Documentation][kbquick] documentation in order to familiarize yourself with how the command line works, how to add new APIs and controllers, and how to update existing APIs.
+
+Make sure you're [generally familiar with Kubernetes Controllers as a concept, and how to build them][kbctrl].
+
+[ctrl]:https://kubernetes.io/docs/concepts/architecture/controller/
+[kapi]:https://kubernetes.io/docs/concepts/overview/kubernetes-api/
+[kubebuilder]:https://kubebuilder.io/
+[kbquick]:https://kubebuilder.io/quick-start.html
+[kbctrl]:https://kubebuilder.io/cronjob-tutorial/controller-overview.html
 
 ## Running in dev mode
 

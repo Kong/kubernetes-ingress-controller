@@ -263,7 +263,6 @@ func TestGlobalPlugin(t *testing.T) {
 			},
 		})
 		assert.Nil(err)
-
 		state, err := Build(logrus.New(), store)
 		assert.Nil(err)
 		assert.NotNil(state)

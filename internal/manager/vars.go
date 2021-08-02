@@ -1,7 +1,5 @@
 package manager
 
-import "github.com/kong/kubernetes-ingress-controller/internal/util"
-
 // -----------------------------------------------------------------------------
 // Controller Manager - Versioning Information
 // -----------------------------------------------------------------------------
@@ -27,6 +25,5 @@ var (
 // Controller Manager - Configuration Vars
 // -----------------------------------------------------------------------------
 
-// alwaysEnabled is a convenience alias to indicate that a component is not configurable
-// and is always enabled in any configuration.
-var alwaysEnabled = util.EnablementStatusEnabled
+// neverDisabled is a convenience alias to indicate that a controller cannot be disabled
+var neverDisabled = false

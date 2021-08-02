@@ -43,7 +43,13 @@ const (
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
+)
 
+// -----------------------------------------------------------------------------
+// Testing Variables
+// -----------------------------------------------------------------------------
+
+var (
 	// httpBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
 	// See: https://github.com/postmanlabs/httpbin
@@ -57,13 +63,7 @@ const (
 
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed
 	controllerNamespace = "kong-system"
-)
 
-// -----------------------------------------------------------------------------
-// Testing Variables
-// -----------------------------------------------------------------------------
-
-var (
 	// httpc is the default HTTP client to use for tests
 	httpc = http.Client{Timeout: httpcTimeout}
 
@@ -93,6 +93,9 @@ var (
 
 	// proxyUDPURL provides access to the UDP API endpoint for the Kong Addon which is deployed to the test environment's cluster.
 	proxyUDPURL *url.URL
+
+	// clusterVersion is a convenience var where the found version of the env.Cluster is stored.
+	clusterVersion semver.Version
 )
 
 // -----------------------------------------------------------------------------
@@ -248,13 +251,13 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Printf("INFO: running final testing environment checks")
-	serverVersion, err := env.Cluster().Client().ServerVersion()
+	clusterVersion, err = env.Cluster().Version()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: could not retrieve server version for cluster: %s", err)
 		os.Exit(ExitCodeCantCreateCluster)
 	}
 
-	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", serverVersion)
+	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()
 	os.Exit(code)
 }

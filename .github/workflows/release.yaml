@@ -3,13 +3,15 @@ name: release
 
 on:
   push:
-    branches:
-      - 'main'
-      - 'next'
     tags:
       - 'v2.*'
 
 jobs:
+
+  # ----------------------------------------------------------------------------
+  # Release Testing
+  # ----------------------------------------------------------------------------
+
   test-current-kubernetes:
     runs-on: ubuntu-latest
     strategy:
@@ -74,13 +76,17 @@ jobs:
           fetch-depth: 0
 
       - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: ./hack/e2e/run.sh
+        run: ./hack/e2e/run-tests.sh
         env:
           KUBERNETES_MAJOR_VERSION: 1
           KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+  # ----------------------------------------------------------------------------
+  # Release Image Builds
+  # ----------------------------------------------------------------------------
 
   build-push-images:
     needs: [test-current-kubernetes, test-previous-kubernetes]

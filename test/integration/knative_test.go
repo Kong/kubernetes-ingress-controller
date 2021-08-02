@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -29,15 +28,18 @@ import (
 )
 
 const (
+	// knativeWaitTime indicates how long to wait for knative components to be up and running
+	// on the cluster. The current value is based on deployment times seen in a GKE environment.
+	knativeWaitTime = time.Minute * 2
+
+	// knativeNamespace is the testing namespace where Knative components will be deployed
+	knativeNamespace = "knative-serving"
+
 	knativeCrds = "https://github.com/knative/serving/releases/download/v0.13.0/serving-crds.yaml"
 	knativeCore = "https://github.com/knative/serving/releases/download/v0.13.0/serving-core.yaml"
 )
 
 func TestKnativeIngress(t *testing.T) {
-	if env.Cluster().Type() != kind.KindClusterType {
-		t.Skip("TODO: knative tests are only supported on KIND based environments right now")
-	}
-
 	cluster := env.Cluster()
 	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)
@@ -68,6 +70,14 @@ func TestKnativeIngress(t *testing.T) {
 	require.True(t, accessKnativeSrv(ctx, proxy, t), true)
 }
 
+// -----------------------------------------------------------------------------
+// Knative Deployment Functions
+// -----------------------------------------------------------------------------
+
+// TODO: in future iterations Knative components will become deployable as an "addon" for test clusters
+//       in our testing framework, and then we can remove this deployment logic and just have the tests.
+//       See: https://github.com/Kong/kubernetes-testing-framework/issues/75
+
 func deployManifest(ctx context.Context, yml string, t *testing.T) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
@@ -83,7 +93,7 @@ func deployManifest(ctx context.Context, yml string, t *testing.T) error {
 
 func configKnativeNetwork(ctx context.Context, cluster clusters.Cluster, t *testing.T) error {
 	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", ingressClass))
-	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
+	_, err := cluster.Client().CoreV1().ConfigMaps(knativeNamespace).Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		t.Logf("failed updating config map %v", err)
 		return err
@@ -147,12 +157,12 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Clu
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "config-domain",
-			Namespace: "knative-serving",
+			Namespace: knativeNamespace,
 			Labels:    labels,
 		},
 		Data: configMapData,
 	}
-	_, err := cluster.Client().CoreV1().ConfigMaps("knative-serving").Update(ctx, &configMap, metav1.UpdateOptions{})
+	_, err := cluster.Client().CoreV1().ConfigMaps(knativeNamespace).Update(ctx, &configMap, metav1.UpdateOptions{})
 	if err != nil {
 		t.Logf("failed updating config map %v", err)
 		return err
@@ -223,8 +233,27 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 }
 
 func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T) bool {
+	// the deployment manifests for knative include some CPU and Memory limits which
+	// are good for production, but mostly just problematic when running simple tests
+	// where these components are going to be brought up and torn down quickly.
+	// we tear out these requirements ad as long as the pods start we will likely have
+	// all the CPU and memory we need to complete the tests (whereafter we will tear
+	// all of the knative components down anyhow).
+	deploymentList, err := cluster.Client().AppsV1().Deployments(knativeNamespace).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	for i := 0; i < len(deploymentList.Items); i++ {
+		deployment := deploymentList.Items[i]
+		require.Eventually(t, func() bool {
+			for j := 0; j < len(deployment.Spec.Template.Spec.Containers); j++ {
+				deployment.Spec.Template.Spec.Containers[j].Resources = corev1.ResourceRequirements{}
+			}
+			_, err = cluster.Client().AppsV1().Deployments(knativeNamespace).Update(ctx, &deployment, metav1.UpdateOptions{})
+			return err == nil
+		}, knativeWaitTime, waitTick)
+	}
+
 	return assert.Eventually(t, func() bool {
-		podList, err := cluster.Client().CoreV1().Pods("knative-serving").List(ctx, metav1.ListOptions{})
+		podList, err := cluster.Client().CoreV1().Pods(knativeNamespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			t.Logf("failed retrieving knative pods. %v", err)
 			return false
@@ -244,5 +273,5 @@ func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T)
 		t.Log("All knative pods are up and ready.")
 		return true
 
-	}, 60*time.Second, 1*time.Second, true)
+	}, knativeWaitTime, waitTick, true)
 }

@@ -75,6 +75,14 @@ func TestKnativeIngress(t *testing.T) {
 	require.True(t, accessKnativeSrv(ctx, proxy, t), true)
 }
 
+// -----------------------------------------------------------------------------
+// Knative Deployment Functions
+// -----------------------------------------------------------------------------
+
+// TODO: in future iterations Knative components will become deployable as an "addon" for test clusters
+//       in our testing framework, and then we can remove this deployment logic and just have the tests.
+//       See: https://github.com/Kong/kubernetes-testing-framework/issues/75
+
 func deployManifest(ctx context.Context, yml string, t *testing.T) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)

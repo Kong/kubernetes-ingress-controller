@@ -46,7 +46,8 @@
   [#1522](https://github.com/Kong/kubernetes-ingress-controller/pull/1522)
 
 #### Added
-
+- Added controller functional metrics in 2.x
+  [#705] https://github.com/Kong/kubernetes-ingress-controller/issues/705
 - Implemented Ingress status updates in 2.x.
   [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
 - Added `--publish-status-address` and `--publish-service` flags to 2.x.

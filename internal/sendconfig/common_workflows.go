@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/internal/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
@@ -40,7 +41,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	enableReverseSync bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	proxyRequestTimeout time.Duration,
-	promMetrics *util.ControllerFunctionalPrometheusMetrics,
+	promMetrics *metrics.ControllerFunctionalPrometheusMetrics,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
@@ -79,7 +80,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, promMetrics,
 	)
 	if err != nil {
-		promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.ConfigSuccessFalse), "type": string(util.ConfigProxy)}).Inc()
+		promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse), "type": string(metrics.ConfigProxy)}).Inc()
 		if diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {
 			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagnosticConfig}:
@@ -99,7 +100,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 		}
 	}
 
-	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.SuccessTrue), "type": string(util.ConfigProxy)}).Inc()
+	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(metrics.SuccessTrue), "type": string(metrics.ConfigProxy)}).Inc()
 	promMetrics.ConfigureDurationHistogram.Observe(float64(time.Since(start).Milliseconds()))
 	return configSHA, nil
 }

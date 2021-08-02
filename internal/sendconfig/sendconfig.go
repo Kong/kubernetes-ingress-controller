@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
 )
 
 func equalSHA(a, b []byte) bool {
@@ -38,13 +38,13 @@ func PerformUpdate(ctx context.Context,
 	customEntities []byte,
 	oldSHA []byte,
 	skipUpdateCR bool,
-	promMetrics *util.ControllerFunctionalPrometheusMetrics) ([]byte, error) {
+	promMetrics *metrics.ControllerFunctionalPrometheusMetrics) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.SuccessFalse), "type": string(util.ConfigDeck)}).Inc()
+		promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse), "type": string(metrics.ConfigDeck)}).Inc()
 		return oldSHA, err
 	}
-	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(util.SuccessTrue), "type": string(util.ConfigDeck)}).Inc()
+	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(metrics.SuccessTrue), "type": string(metrics.ConfigDeck)}).Inc()
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
 		// use the previous SHA to determine whether or not to perform an update

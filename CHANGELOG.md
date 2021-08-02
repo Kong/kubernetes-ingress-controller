@@ -86,6 +86,8 @@
   flag has been deprecated and will no longer have any effect, it will be removed
   in a later release.
   [#1304](https://github.com/Kong/kubernetes-ingress-controller/issues/1304)
+- The uuid generation is now done by the same library in the whole project
+[#1604](https://github.com/Kong/kubernetes-ingress-controller/issues/1604)
 
 ## [2.0.0-alpha.2] - 2021/07/07
 

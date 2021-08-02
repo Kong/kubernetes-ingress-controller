@@ -72,17 +72,17 @@ func TestConfigEndpoint(t *testing.T) {
 		successURL := fmt.Sprintf("http://localhost:%v/debug/config/successful", manager.DiagnosticsPort)
 		failURL := fmt.Sprintf("http://localhost:%v/debug/config/failed", manager.DiagnosticsPort)
 		successResp, err := httpc.Get(successURL)
-		defer successResp.Body.Close()
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", successURL, err)
 			return false
 		}
+		defer successResp.Body.Close()
 		failResp, err := httpc.Get(failURL)
-		defer failResp.Body.Close()
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", failURL, err)
 			return false
 		}
+		defer failResp.Body.Close()
 		return successResp.StatusCode == http.StatusOK && failResp.StatusCode == http.StatusOK
 	}, ingressWait, waitTick)
 }

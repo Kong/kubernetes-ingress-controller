@@ -356,7 +356,7 @@ type NetV1Beta1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
 	return ctrl.NewControllerManagedBy(mgr).For(&netv1beta1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 
@@ -440,7 +440,7 @@ type ExtV1Beta1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
 	return ctrl.NewControllerManagedBy(mgr).For(&extv1beta1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
 }
 

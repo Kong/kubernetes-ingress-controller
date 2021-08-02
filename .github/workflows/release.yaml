@@ -1,4 +1,4 @@
-# TODO: right now the release is not fully automated, but the tests below must pass before a release is made manually. See RELEASE.md for more information.
+# TODO: need kubernetes latest job (test against v1.20.7 and v1.21.2): https://github.com/Kong/kubernetes-ingress-controller/issues/1616
 name: release
 
 on:
@@ -6,6 +6,8 @@ on:
     branches:
       - 'main'
       - 'next'
+    tags:
+      - 'v2.*'
 
 jobs:
   test-current-kubernetes:
@@ -45,6 +47,8 @@ jobs:
     strategy:
       matrix:
         minor:
+          - '17'
+          - '18'
           - '19'
           - '20'
         dbmode:
@@ -78,4 +82,72 @@ jobs:
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
-# TODO: need kubernetes latest job (test against v1.20.7 and v1.21.2): https://github.com/Kong/kubernetes-ingress-controller/issues/1616
+  build-push-images:
+    needs: [test-current-kubernetes, test-previous-kubernetes]
+    environment: 'Docker Push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse semver string
+        id: semver_parser
+        if: ${{ contains(github.ref, 'tags') }}
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.ref }}
+          version_extractor_regex: 'refs\/tags\/v(.*)$'
+      - name: Add standard tags
+        run: |
+          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=ref,event=branch' >> $GITHUB_ENV
+          echo 'type=semver,pattern={{version}}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Add major.minor tag
+        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        run: |
+          echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo 'type=semver,pattern={{major}}.{{minor}}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2.1.6
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3.3.0
+        with:
+          images: kong/kubernetes-ingress-controller
+          tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
+      - name: Build binary
+        env:
+          TAG: ${{ steps.meta.outputs.version }}
+          COMMIT: ${{ github.sha }}
+          REPO_INFO: https://github.com/${{ github.repository }}.git
+        id: docker_build_binary
+        uses: docker/build-push-action@v2
+        with:
+          push: false
+          file: Dockerfile
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          target: builder
+      - name: Build and push
+        id: docker_build
+        env:
+          TAG: ${{ steps.meta.outputs.version }}
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+

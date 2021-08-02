@@ -29,6 +29,10 @@ import (
 )
 
 const (
+	// knativeWaitTime indicates how long to wait for knative components to be up and running
+	// on the cluster. The current value is based on deployment times seen in a GKE environment.
+	knativeWaitTime = time.Minute * 2
+
 	// knativeNamespace is the testing namespace where Knative components will be deployed
 	knativeNamespace = "knative-serving"
 
@@ -247,5 +251,5 @@ func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T)
 		t.Log("All knative pods are up and ready.")
 		return true
 
-	}, 60*time.Second, 1*time.Second, true)
+	}, knativeWaitTime, waitTick, true)
 }

@@ -241,10 +241,11 @@ func isKnativeReady(ctx context.Context, cluster clusters.Cluster, t *testing.T)
 	// all of the knative components down anyhow).
 	deploymentList, err := cluster.Client().AppsV1().Deployments(knativeNamespace).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
-	for _, deployment := range deploymentList.Items {
+	for i := 0; i < len(deploymentList.Items); i++ {
+		deployment := deploymentList.Items[i]
 		require.Eventually(t, func() bool {
-			for i := 0; i < len(deployment.Spec.Template.Spec.Containers); i++ {
-				deployment.Spec.Template.Spec.Containers[i].Resources = corev1.ResourceRequirements{}
+			for j := 0; j < len(deployment.Spec.Template.Spec.Containers); j++ {
+				deployment.Spec.Template.Spec.Containers[j].Resources = corev1.ResourceRequirements{}
 			}
 			_, err = cluster.Client().AppsV1().Deployments(knativeNamespace).Update(ctx, &deployment, metav1.UpdateOptions{})
 			return err == nil

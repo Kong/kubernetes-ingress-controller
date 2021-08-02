@@ -14,7 +14,7 @@ type CtrlFuncMetrics struct {
 	// ParseCounter counts the events of converting resources from Kubernetes to a KongState.
 	ParseCounter *prometheus.CounterVec
 
-	// ConfigureDurationHistogram duration of last successful confiuration sync
+	// ConfigureDurationHistogram records the duration of each successful configuration sync.
 	ConfigureDurationHistogram prometheus.Histogram
 }
 
@@ -46,7 +46,7 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 		promauto.With(reg).NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "send_configuration_count",
-				Help: "number of post config proxy processed successfully.",
+				Help: "Counts the events of sending configuration to Kong, using metric fields to distinguish between DB-less or DB-mode syncs, and to tell successes from failures..",
 			},
 			[]string{"success", "type"},
 		)
@@ -64,7 +64,7 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 		promauto.With(reg).NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "proxy_configuration_duration_milliseconds",
-				Help:    "duration of last successful configuration.",
+				Help:    "Duration of last successful configuration.",
 				Buckets: prometheus.ExponentialBuckets(1, 1.2, 20),
 			},
 		)

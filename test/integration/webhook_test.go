@@ -52,7 +52,7 @@ func TestValidationWebhook(t *testing.T) {
 			{
 				Addresses: []corev1.EndpointAddress{
 					{
-						IP:       "172.17.0.1",
+						IP:       "127.0.0.1",
 						NodeName: &nodeName,
 					},
 				},
@@ -99,7 +99,7 @@ func TestValidationWebhook(t *testing.T) {
 		}, metav1.CreateOptions{})
 	require.NoError(t, err, "creating webhook config")
 	require.Eventually(t, func() bool {
-		_, err := net.DialTimeout("tcp", "172.17.0.1:49023", 1*time.Second)
+		_, err := net.DialTimeout("tcp", "127.0.0.1:49023", 1*time.Second)
 		return err == nil
 	}, ingressWait, waitTick, "waiting for the admission service to be up")
 

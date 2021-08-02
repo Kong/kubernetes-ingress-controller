@@ -38,7 +38,7 @@ func PerformUpdate(ctx context.Context,
 	customEntities []byte,
 	oldSHA []byte,
 	skipUpdateCR bool,
-	promMetrics *metrics.ControllerFunctionalPrometheusMetrics) ([]byte, error) {
+	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
 		promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse), "type": string(metrics.ConfigDeck)}).Inc()

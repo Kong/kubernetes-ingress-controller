@@ -27,7 +27,7 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
-func parseAll(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.ControllerFunctionalPrometheusMetrics) ingressRules {
+func parseAll(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.CtrlFuncMetrics) ingressRules {
 	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
 	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
 
@@ -61,7 +61,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.Contr
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
-func Build(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.ControllerFunctionalPrometheusMetrics) (*kongstate.KongState, error) {
+func Build(log logrus.FieldLogger, s store.Storer, promMetrics *metrics.CtrlFuncMetrics) (*kongstate.KongState, error) {
 	parsedAll := parseAll(log, s, promMetrics)
 	parsedAll.populateServices(log, s)
 

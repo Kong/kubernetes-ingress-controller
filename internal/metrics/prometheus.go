@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-type ControllerFunctionalPrometheusMetrics struct {
+type CtrlFuncMetrics struct {
 	// ConfigCounter number of post /config to proxy successfully
 	ConfigCounter *prometheus.CounterVec
 
@@ -35,8 +35,8 @@ const (
 	ConfigDeck ConfigType = "deck"
 )
 
-func ControllerMetricsInit() *ControllerFunctionalPrometheusMetrics {
-	controllerMetrics := &ControllerFunctionalPrometheusMetrics{}
+func ControllerMetricsInit() *CtrlFuncMetrics {
+	controllerMetrics := &CtrlFuncMetrics{}
 
 	reg := prometheus.NewRegistry()
 

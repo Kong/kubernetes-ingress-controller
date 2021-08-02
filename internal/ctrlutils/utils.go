@@ -1,7 +1,9 @@
 package ctrlutils
 
 import (
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -84,6 +86,10 @@ func IsIngressClassAnnotationConfigured(obj client.Object, expectedIngressClassN
 func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName string) bool {
 	switch obj := obj.(type) {
 	case *netv1.Ingress:
+		return obj.Spec.IngressClassName != nil && *obj.Spec.IngressClassName == expectedIngressClassName
+	case *netv1beta1.Ingress:
+		return obj.Spec.IngressClassName != nil && *obj.Spec.IngressClassName == expectedIngressClassName
+	case *extv1beta1.Ingress:
 		return obj.Spec.IngressClassName != nil && *obj.Spec.IngressClassName == expectedIngressClassName
 	}
 	return false

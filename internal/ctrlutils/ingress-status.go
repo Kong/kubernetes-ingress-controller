@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	"github.com/prometheus/common/log"
@@ -32,8 +33,14 @@ const (
 )
 
 // PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
-func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config,
-	publishService string, publishAddresses []string) {
+func PullConfigUpdate(
+	ctx context.Context,
+	kongConfig sendconfig.Kong,
+	log logr.Logger,
+	kubeConfig *rest.Config,
+	publishService string,
+	publishAddresses []string,
+) {
 	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
 	if err != nil {
 		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
@@ -43,6 +50,18 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 	cli, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
 		log.Error(err, "failed to create k8s client.")
+		return
+	}
+
+	versionInfo, err := cli.ServerVersion()
+	if err != nil {
+		log.Error(err, "failed to retrieve cluster version")
+		return
+	}
+
+	kubernetesVersion, err := semver.Parse(strings.TrimPrefix(versionInfo.String(), "v"))
+	if err != nil {
+		log.Error(err, "could not parse cluster version")
 		return
 	}
 
@@ -61,7 +80,7 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
 			wg.Add(1)
 			go func() {
-				if err := UpdateIngress(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig); err != nil {
+				if err := UpdateStatuses(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig, kubernetesVersion); err != nil {
 					log.Error(err, "failed to update resource statuses")
 				}
 			}()
@@ -73,11 +92,19 @@ func PullConfigUpdate(ctx context.Context, kongConfig sendconfig.Kong, log logr.
 	}
 }
 
-// UpdateIngress update ingress status according to generated rules and specs
-func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Logger, cli *clientset.Clientset,
+// UpdateStatuses update resources statuses according to generated rules and specs
+func UpdateStatuses(
+	ctx context.Context,
+	targetContent *file.Content,
+	log logr.Logger,
+	cli *clientset.Clientset,
 	kiccli *kicclientset.Clientset,
-	wg *sync.WaitGroup, ips []string, hostname string,
-	kubeConfig *rest.Config) error {
+	wg *sync.WaitGroup,
+	ips []string,
+	hostname string,
+	kubeConfig *rest.Config,
+	kubernetesVersion semver.Version,
+) error {
 	defer wg.Done()
 
 	for _, svc := range targetContent.Services {
@@ -91,7 +118,6 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 							if err := UpdateKnativeIngress(ctx, log, svc, kubeConfig, ips, hostname); err != nil {
 								return fmt.Errorf("failed to update knative ingress err %v", err)
 							}
-
 						}
 					}
 				}
@@ -109,8 +135,17 @@ func UpdateIngress(ctx context.Context, targetContent *file.Content, log logr.Lo
 			}
 
 		case "http":
-			if err := UpdateIngressV1(ctx, log, svc, cli, ips); err != nil {
-				return fmt.Errorf("failed to update ingressv1. err %v", err)
+			// if the cluster is on a very old version, we fall back to legacy Ingress support
+			// for compatibility with clusters older than v1.19.x.
+			// TODO: this can go away once we drop support for Kubernetes older than v1.19
+			if kubernetesVersion.Major >= uint64(1) && kubernetesVersion.Minor > uint64(18) {
+				if err := UpdateIngress(ctx, log, svc, cli, ips); err != nil {
+					return fmt.Errorf("failed to update ingressv1. err %v", err)
+				}
+			} else {
+				if err := UpdateIngressLegacy(ctx, log, svc, cli, ips); err != nil {
+					return fmt.Errorf("failed to update ingressv1. err %v", err)
+				}
 			}
 		default:
 			log.Info("protocol " + proto + " is not supported")
@@ -131,9 +166,14 @@ func toKnativeLBStatus(coreLBStatus []apiv1.LoadBalancerIngress) []knative.LoadB
 	return res
 }
 
-// UpdateIngressV1 networking v1 ingress status
-func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService, cli *clientset.Clientset,
-	ips []string) error {
+// UpdateIngress networking v1 ingress status
+func UpdateIngress(
+	ctx context.Context,
+	logger logr.Logger,
+	svc file.FService,
+	cli *clientset.Clientset,
+	ips []string,
+) error {
 	for _, route := range svc.Routes {
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
@@ -182,6 +222,66 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 	}
 
 	log.Debugf("successfully updated networkingv1 Ingress status")
+	return nil
+}
+
+// UpdateIngressLegacy networking v1beta1 ingress status
+// TODO: this can be removed once we no longer support old kubernetes < v1.19
+func UpdateIngressLegacy(
+	ctx context.Context,
+	logger logr.Logger,
+	svc file.FService,
+	cli *clientset.Clientset,
+	ips []string,
+) error {
+	for _, route := range svc.Routes {
+		routeInf := strings.Split(*((*route).Name), ".")
+		namespace := routeInf[0]
+		name := routeInf[1]
+		log.Debugf("updating status for v1beta1.Ingress route name %s  namespace %s", name, namespace)
+
+		ingCli := cli.NetworkingV1beta1().Ingresses(namespace)
+		retry := 0
+		for retry < statusUpdateRetry {
+			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+			if err != nil || curIng == nil {
+				if errors.IsNotFound(err) {
+					return nil
+				}
+
+				log.Errorf("failed to fetch Ingress %v/%v: %v. retrying...", namespace, name, err)
+				retry++
+				time.Sleep(time.Second)
+				continue
+			}
+
+			var status []apiv1.LoadBalancerIngress
+			sort.SliceStable(status, lessLoadBalancerIngress(status))
+			curIPs := curIng.Status.LoadBalancer.Ingress
+
+			status = SliceToStatus(ips)
+			if ingressSliceEqual(status, curIPs) {
+				log.Debugf("no change in status, update ingress v1beta1 skipped")
+				return nil
+			}
+
+			curIng.Status.LoadBalancer.Ingress = status
+
+			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			if err == nil {
+				break
+			}
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
+			log.Errorf("failed to update Ingress V1beta1 status. %v. retrying...", err)
+			time.Sleep(time.Second)
+			retry++
+		}
+	}
+
+	log.Debugf("successfully updated networkingv1beta1 Ingress status")
 	return nil
 }
 

@@ -64,7 +64,7 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 		promauto.With(reg).NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "proxy_configuration_duration_milliseconds",
-				Help:    "duration of last successful configuration.",
+				Help:    "Duration of last successful configuration.",
 				Buckets: prometheus.ExponentialBuckets(1, 1.2, 20),
 			},
 		)

@@ -7,6 +7,11 @@ on:
       - 'v2.*'
 
 jobs:
+
+  # ----------------------------------------------------------------------------
+  # Release Testing
+  # ----------------------------------------------------------------------------
+
   test-current-kubernetes:
     runs-on: ubuntu-latest
     strategy:
@@ -78,6 +83,10 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+  # ----------------------------------------------------------------------------
+  # Release Image Builds
+  # ----------------------------------------------------------------------------
 
   build-push-images:
     needs: [test-current-kubernetes, test-previous-kubernetes]

@@ -6,7 +6,9 @@ import (
 )
 
 type ControllerFunctionalPrometheusMetrics struct {
-	// ConfigCounter number of post /config to proxy successfully
+	// ConfigCounter counts the events of sending configuration to Kong,
+	// using metric fields to distinguish between DB-less or DB-mode syncs,
+	// and to tell successes from failures.
 	ConfigCounter *prometheus.CounterVec
 
 	// ParseCounter number of ingress analysis failure

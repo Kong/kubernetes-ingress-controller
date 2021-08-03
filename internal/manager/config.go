@@ -15,7 +15,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,7 +33,6 @@ type Config struct {
 	// Kong high-level controller manager configurations
 	KongAdminAPIConfig adminapi.HTTPClientOpts
 	KongAdminToken     string
-	KongStateEnabled   util.EnablementStatus
 	KongWorkspace      string
 	AnonymousReports   bool
 	EnableReverseSync  bool
@@ -64,17 +62,17 @@ type Config struct {
 	UpdateStatus         bool
 
 	// Kubernetes API toggling
-	IngressExtV1beta1Enabled util.EnablementStatus
-	IngressNetV1beta1Enabled util.EnablementStatus
-	IngressNetV1Enabled      util.EnablementStatus
-	UDPIngressEnabled        util.EnablementStatus
-	TCPIngressEnabled        util.EnablementStatus
-	KongIngressEnabled       util.EnablementStatus
-	KnativeIngressEnabled    util.EnablementStatus
-	KongClusterPluginEnabled util.EnablementStatus
-	KongPluginEnabled        util.EnablementStatus
-	KongConsumerEnabled      util.EnablementStatus
-	ServiceEnabled           util.EnablementStatus
+	IngressExtV1beta1Enabled bool
+	IngressNetV1beta1Enabled bool
+	IngressNetV1Enabled      bool
+	UDPIngressEnabled        bool
+	TCPIngressEnabled        bool
+	KongIngressEnabled       bool
+	KnativeIngressEnabled    bool
+	KongClusterPluginEnabled bool
+	KongPluginEnabled        bool
+	KongConsumerEnabled      bool
+	ServiceEnabled           bool
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -86,22 +84,13 @@ type Config struct {
 }
 
 // -----------------------------------------------------------------------------
-// Controller Manager - Config - Constants & Vars
-// -----------------------------------------------------------------------------
-
-// onOffUsage is used to indicate what textual options are used to enable or disable a feature.
-const onOffUsage = "Can be one of [enabled, disabled]."
-const onOffAutoIngressUsage = "Can be one of [enabled, disabled, auto]. If multiple ingress API versions are set to 'auto', then the newest out of these will be used."
-const onOffAutoCRDUsage = "Can be one of [enabled, disabled, auto]. 'auto' means that enablement will depend on the detected presence of the appropriate CRD in the cluster."
-
-// -----------------------------------------------------------------------------
 // Controller Manager - Config - Methods
 // -----------------------------------------------------------------------------
 
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
 
-	flagSet := flagSet{*pflag.NewFlagSet("", pflag.ExitOnError)}
+	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
 
 	// Logging configurations
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
@@ -116,7 +105,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "", `PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
 	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil, `add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
 	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "", `The Kong Enterprise RBAC token used by the controller.`)
-	flagSet.enablementStatusVar(&c.KongStateEnabled, "controller-kongstate", util.EnablementStatusEnabled, "Enable or disable the KongState controller. "+onOffUsage)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
@@ -160,18 +148,17 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 
 	// Kubernetes API toggling
-	flagSet.enablementStatusVar(&c.IngressNetV1Enabled, "controller-ingress-networkingv1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1)."+onOffAutoIngressUsage)
-	// TODO the other Ingress versions remain disabled for now. 2.x does not yet support version negotiation
-	flagSet.enablementStatusVar(&c.IngressNetV1beta1Enabled, "controller-ingress-networkingv1beta1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version networking.k8s.io/v1beta1)."+onOffAutoIngressUsage)
-	flagSet.enablementStatusVar(&c.IngressExtV1beta1Enabled, "controller-ingress-extensionsv1beta1", util.EnablementStatusAuto, "Enable or disable the Ingress controller (using API version extensions/v1beta1)."+onOffAutoIngressUsage)
-	flagSet.enablementStatusVar(&c.UDPIngressEnabled, "controller-udpingress", util.EnablementStatusEnabled, "Enable or disable the UDPIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.TCPIngressEnabled, "controller-tcpingress", util.EnablementStatusEnabled, "Enable or disable the TCPIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KnativeIngressEnabled, "controller-knativeingress", util.EnablementStatusAuto, "Enable or disable the KnativeIngress controller. "+onOffAutoCRDUsage)
-	flagSet.enablementStatusVar(&c.KongIngressEnabled, "controller-kongingress", util.EnablementStatusEnabled, "Enable or disable the KongIngress controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KongClusterPluginEnabled, "controller-kongclusterplugin", util.EnablementStatusAuto, "Enable or disable the KongClusterPlugin controller. "+onOffAutoCRDUsage)
-	flagSet.enablementStatusVar(&c.KongPluginEnabled, "controller-kongplugin", util.EnablementStatusEnabled, "Enable or disable the KongPlugin controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.KongConsumerEnabled, "controller-kongconsumer", util.EnablementStatusEnabled, "Enable or disable the KongConsumer controller. "+onOffUsage)
-	flagSet.enablementStatusVar(&c.ServiceEnabled, "controller-service", util.EnablementStatusEnabled, "Enable or disable the Service controller. "+onOffUsage)
+	flagSet.BoolVar(&c.IngressNetV1Enabled, "enable-controller-ingress-networkingv1", true, "Enable the networking.k8s.io/v1 Ingress controller.")
+	flagSet.BoolVar(&c.IngressNetV1beta1Enabled, "enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
+	flagSet.BoolVar(&c.IngressExtV1beta1Enabled, "enable-controller-ingress-extensionsv1beta1", true, "Enable the extensions/v1beta1 Ingress controller.")
+	flagSet.BoolVar(&c.UDPIngressEnabled, "enable-controller-udpingress", true, "Enable the UDPIngress controller.")
+	flagSet.BoolVar(&c.TCPIngressEnabled, "enable-controller-tcpingress", true, "Enable the TCPIngress controller.")
+	flagSet.BoolVar(&c.KnativeIngressEnabled, "enable-controller-knativeingress", true, "Enable the KnativeIngress controller.")
+	flagSet.BoolVar(&c.KongIngressEnabled, "enable-controller-kongingress", true, "Enable the KongIngress controller.")
+	flagSet.BoolVar(&c.KongClusterPluginEnabled, "enable-controller-kongclusterplugin", true, "Enable the KongClusterPlugin controller.")
+	flagSet.BoolVar(&c.KongPluginEnabled, "enable-controller-kongplugin", true, "Enable the KongPlugin controller.")
+	flagSet.BoolVar(&c.KongConsumerEnabled, "enable-controller-kongconsumer", true, "Enable the KongConsumer controller. ")
+	flagSet.BoolVar(&c.ServiceEnabled, "enable-controller-service", true, "Enable the Service controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
@@ -201,7 +188,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.Int("stderrthreshold", 0, "DEPRECATED: has no effect and will be removed in future releases (see github issue #1297)")
 	flagSet.Bool("update-status-on-shutdown", false, `DEPRECATED: no longer has any effect and will be removed in a later release (see github issue #1304)`)
 
-	return &flagSet.FlagSet
+	return flagSet
 }
 
 func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {

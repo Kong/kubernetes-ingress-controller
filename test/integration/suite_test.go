@@ -282,7 +282,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 			return err
 		}
 	}
-  
+
 	// run the controller in the background
 	go func() {
 		// convert the cluster rest.Config into a kubeconfig
@@ -320,33 +320,27 @@ func deployControllers(ctx context.Context, namespace string) error {
 				panic(fmt.Errorf("%s: %w", stderr.String(), err))
 			}
 		}
- 
-			config := manager.Config{}
-			flags := config.FlagSet()
-			if err := flags.Parse([]string{
-				fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
-				fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-				"--controller-kongstate=enabled",
-				"--controller-tcpingress=enabled",
-				"--controller-kongingress=enabled",
-				"--controller-kongplugin=enabled",
-				"--controller-kongconsumer=disabled",
-				"--election-id=integrationtests.konghq.com",
-				"--publish-service=kong-system/ingress-controller-kong-proxy",
-				fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
-				fmt.Sprintf("--ingress-class=%s", ingressClass),
-				"--log-level=trace",
-				"--log-format=text",
-				"--debug-log-reduce-redundancy",
-				"--admission-webhook-listen=172.17.0.1:49023",
-				fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
-				fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
-				"--profiling",
-			}); err != nil {
-				panic(fmt.Errorf("could not parse controller manager flags: %w", err))
-			}
-			fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 
+		config := manager.Config{}
+		flags := config.FlagSet()
+		if err := flags.Parse([]string{
+			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
+			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
+			"--election-id=integrationtests.konghq.com",
+			"--publish-service=kong-system/ingress-controller-kong-proxy",
+			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
+			fmt.Sprintf("--ingress-class=%s", ingressClass),
+			"--log-level=trace",
+			"--log-format=text",
+			"--debug-log-reduce-redundancy",
+			"--admission-webhook-listen=172.17.0.1:49023",
+			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
+			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
+			"--profiling",
+		}); err != nil {
+			panic(fmt.Errorf("could not parse controller manager flags: %w", err))
+		}
+		fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 
 		if err := rootcmd.Run(ctx, &config); err != nil {
 			panic(fmt.Errorf("controller manager exited with error: %w", err))

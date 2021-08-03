@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
 
 type IngressAPI int
@@ -42,15 +41,15 @@ func negotiateIngressAPI(config *Config, client client.Client) (IngressAPI, erro
 		},
 	}
 
-	if config.IngressNetV1Enabled != util.EnablementStatusDisabled {
+	if config.IngressNetV1Enabled {
 		allowedAPIs = append(allowedAPIs, NetworkingV1)
 	}
 
-	if config.IngressNetV1beta1Enabled != util.EnablementStatusDisabled {
+	if config.IngressNetV1beta1Enabled {
 		allowedAPIs = append(allowedAPIs, NetworkingV1beta1)
 	}
 
-	if config.IngressExtV1beta1Enabled != util.EnablementStatusDisabled {
+	if config.IngressExtV1beta1Enabled {
 		allowedAPIs = append(allowedAPIs, ExtensionsV1beta1)
 	}
 

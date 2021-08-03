@@ -40,11 +40,6 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
-	if clusterVersion.Major == uint64(1) && clusterVersion.Minor == uint64(18) {
-		t.Skip(`knative tests for Kubernetes v1.18 are temporarily disabled.
-			See: https://github.com/Kong/kubernetes-ingress-controller/issues/1637`)
-	}
-
 	cluster := env.Cluster()
 	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)

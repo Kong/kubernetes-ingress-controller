@@ -28,7 +28,7 @@ const (
 	SuccessFalse Success = "false"
 
 	// SuccessKey success label within metrics
-	SuccessKey Success = "sucess"
+	SuccessKey Success = "success"
 )
 
 type ConfigType string

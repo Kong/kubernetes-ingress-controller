@@ -25,14 +25,17 @@ and histogram execution time. The solution is able to scale according to control
 [docker]: https://www.docker.com/ 
 
 ## Motivation
-  - provide an isolated and reproducible environment for performance testing
-  - continue integration and continue test
-  - Visualize testing configuration and results.
-  - System distribution
-
+ - we currently have no profiles, documentation, or determined performance characteristics for the KIC in any Kubernetes or infrastructure environment
+ - we want libraries and tooling that can be run against a Kubernetes cluster and its underlying infrastructure to analyze the performance characteristics of the KIC in that environment
+ - we want our tooling to be open source so end-users can run a performance analysis themselves in their environment
+ 
 ### Goals
-  - Able to run performance pipeline repeatedly
-  - Able to collect following performance metrics
+ - provide an isolated and reproducible environment for performance testing
+ - continue integration and continue test
+ - Visualize testing configuration and results.
+ - System distribution
+ - Able to run performance pipeline repeatedly
+ - Able to collect following performance metrics
     - controller profiling
     - controller memory/cpu consumption
     - ingress config, deck sync, parser cost

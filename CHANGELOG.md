@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [2.0.0-alpha.3](#200-alpha3---tbd)
+ - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
  - [2.0.0-alpha.1](#200-alpha1---20210527)
  - [1.3.1](#131---20210603)
@@ -32,7 +32,7 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0-alpha.3] - TBD
+## [2.0.0-alpha.3] - 2021/08/02
 
 #### Breaking changes
 
@@ -46,7 +46,8 @@
   [#1522](https://github.com/Kong/kubernetes-ingress-controller/pull/1522)
 
 #### Added
-
+- Added controller functional metrics in 2.x
+  [#705] https://github.com/Kong/kubernetes-ingress-controller/issues/705
 - Implemented Ingress status updates in 2.x.
   [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
 - Added `--publish-status-address` and `--publish-service` flags to 2.x.
@@ -86,6 +87,8 @@
   flag has been deprecated and will no longer have any effect, it will be removed
   in a later release.
   [#1304](https://github.com/Kong/kubernetes-ingress-controller/issues/1304)
+- The uuid generation is now done by the same library in the whole project
+[#1604](https://github.com/Kong/kubernetes-ingress-controller/issues/1604)
 
 ## [2.0.0-alpha.2] - 2021/07/07
 

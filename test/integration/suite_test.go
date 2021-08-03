@@ -43,6 +43,9 @@ const (
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
+
+	// webhookPort is the port on which the webhook server run by KIC is listening (on the webhookIP address).
+	webhookPort = 49023
 )
 
 // -----------------------------------------------------------------------------
@@ -96,6 +99,9 @@ var (
 
 	// clusterVersion is a convenience var where the found version of the env.Cluster is stored.
 	clusterVersion semver.Version
+
+	// webhookIP is the IP address of the webhook server run by KIC.
+	webhookIP string
 )
 
 // -----------------------------------------------------------------------------
@@ -286,6 +292,12 @@ func deployControllers(ctx context.Context, namespace string) error {
 		}
 	}
 
+	// obtain a suitable address for the webhook server
+	var err error
+	if webhookIP, err = localIPAddr(); err != nil {
+		panic(fmt.Errorf("cannot obtain local IP: %w", err))
+	}
+
 	// run the controller in the background
 	go func() {
 		// convert the cluster rest.Config into a kubeconfig
@@ -347,7 +359,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 			"--log-level=trace",
 			"--log-format=text",
 			"--debug-log-reduce-redundancy",
-			"--admission-webhook-listen=127.0.0.1:49023",
+			fmt.Sprintf("--admission-webhook-listen=%s:%d", webhookIP, webhookPort),
 			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			"--profiling",

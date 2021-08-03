@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -75,3 +76,15 @@ const (
 	// that a failure occurred during cluster cleanup.
 	ExitCodeCleanupFailed = 103
 )
+
+// localIPAddr returns a "reasonable physical interface" IP address (which is not a Docker bridge or a loopback
+// interface, for example) of the local machine - that can be used as a bind address for servers.
+// Behold, this is a hack.
+func localIPAddr() (string, error) {
+	conn, err := net.Dial("udp", "1.1.1.1:53")
+	if err != nil {
+		return "", err
+	}
+	conn.Close()
+	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
+}

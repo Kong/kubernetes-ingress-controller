@@ -41,10 +41,10 @@ func PerformUpdate(ctx context.Context,
 	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(metrics.SuccessFalse), "type": string(metrics.ConfigDeck)}).Inc()
+		promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessFalse), string(metrics.TypeKey): string(metrics.ConfigDeck)}).Inc()
 		return oldSHA, err
 	}
-	promMetrics.ConfigCounter.With(prometheus.Labels{"success": string(metrics.SuccessTrue), "type": string(metrics.ConfigDeck)}).Inc()
+	promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessTrue), string(metrics.TypeKey): string(metrics.ConfigDeck)}).Inc()
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
 		// use the previous SHA to determine whether or not to perform an update

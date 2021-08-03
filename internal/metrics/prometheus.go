@@ -26,15 +26,22 @@ const (
 	SuccessTrue Success = "true"
 	// SuccessFalse operation failed
 	SuccessFalse Success = "false"
+
+	// SuccessKey success label within metrics
+	SuccessKey Success = "sucess"
 )
 
 type ConfigType string
 
 const (
+
 	// ConfigProxy says post config to proxy
 	ConfigProxy ConfigType = "post-config"
 	// ConfigDeck says generate deck
 	ConfigDeck ConfigType = "deck"
+
+	// TypeKey type label within metrics
+	TypeKey ConfigType = "type"
 )
 
 func ControllerMetricsInit() *CtrlFuncMetrics {
@@ -46,7 +53,7 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 		promauto.With(reg).NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "send_configuration_count",
-				Help: "Counts the events of sending configuration to Kong, using metric fields to distinguish between DB-less or DB-mode syncs, and to tell successes from failures..",
+				Help: "Counts the success/failure events of converting kubernetes resources to a KongState, including conversion.",
 			},
 			[]string{"success", "type"},
 		)
@@ -65,7 +72,7 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 			prometheus.HistogramOpts{
 				Name:    "proxy_configuration_duration_milliseconds",
 				Help:    "Duration of last successful configuration.",
-				Buckets: prometheus.ExponentialBuckets(1, 1.2, 20),
+				Buckets: prometheus.ExponentialBuckets(100, 1.33, 30),
 			},
 		)
 

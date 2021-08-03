@@ -14,8 +14,8 @@ For references see the dependencies related to this proprosal to check the progr
 
 
 ## Summary
-  We want a performance test solution that can collect controller metrics per release, which also provides profiling
-and histogram execution time. The solution is able to scale according to controller scalability. We mainly use kind as test cluster, but also support varied cloud provider cluster such EKS, AKS, GKE etc.
+  We want a performance test solution that can be executed collecting metrics (cpu, memory, workqueue, business logic etc) per release, which also provides controller profiling helping evaluating bottleneck and scalabilities. The execution could be based on configuration, or code change trigger. 
+  Performance tests should be able to integrate with different kubernetes cluster and cloud provider, and scale according to controller scalability. 
 
 [kic]:https://github.com/kong/kubernetes-ingress-controller
 [ktf]:https://github.com/Kong/kubernetes-testing-framework

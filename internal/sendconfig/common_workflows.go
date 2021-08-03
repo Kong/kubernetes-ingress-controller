@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/kong/deck/file"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/internal/parser"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
@@ -39,13 +41,16 @@ func UpdateKongAdminSimple(ctx context.Context,
 	enableReverseSync bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	proxyRequestTimeout time.Duration,
+	promMetrics *metrics.CtrlFuncMetrics,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
 	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
+		promMetrics.ParseCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessFalse)}).Inc()
 		return nil, err
 	}
+	promMetrics.ParseCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessTrue)}).Inc()
 	var diagnosticConfig *file.Content
 
 	// generate the deck configuration to be applied to the admin API
@@ -69,12 +74,15 @@ func UpdateKongAdminSimple(ctx context.Context,
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, proxyRequestTimeout)
 	defer cancel()
+
+	start := time.Now()
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false,
+		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, promMetrics,
 	)
 	if err != nil {
+		promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessFalse), string(metrics.TypeKey): string(metrics.ConfigProxy)}).Inc()
 		if diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {
 			case diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagnosticConfig}:
@@ -94,5 +102,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 		}
 	}
 
+	promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessTrue), string(metrics.TypeKey): string(metrics.ConfigProxy)}).Inc()
+	promMetrics.ConfigureDurationHistogram.Observe(float64(time.Since(start).Milliseconds()))
 	return configSHA, nil
 }

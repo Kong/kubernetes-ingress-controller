@@ -157,6 +157,7 @@
 - autonegotiation of the Ingress API version (extensions v1beta1, networking
   v1beta1, networking v1) has been disabled. Instead, the user is expected to
   set **exactly** one of `--controller-ingress-networkingv1`,
+- `--dump-config` is now a boolean. `true` is equivalent to the old `enabled` value. `false` is equivalent to the old `disabled` value. `true` with the additional new `--dump-sensitive-config=true` flag is equivalent to the old `sensitive` value.
   `--controller-ingress-networkingv1beta1`,
   `--controller-ingress-extensionsv1beta1` flags to `enabled`. There will be an
   `auto` mode implemented soon that will add the autonegotiation capability

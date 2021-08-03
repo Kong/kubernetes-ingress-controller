@@ -20,10 +20,3 @@ var (
 	//       See: "go doc cmd/link" for details, and "Dockerfile" for invocation via "go build".
 	Commit = "UNKNOWN"
 )
-
-// -----------------------------------------------------------------------------
-// Controller Manager - Configuration Vars
-// -----------------------------------------------------------------------------
-
-// neverDisabled is a convenience alias to indicate that a controller cannot be disabled
-var neverDisabled = false

@@ -62,17 +62,17 @@ type Config struct {
 	UpdateStatus         bool
 
 	// Kubernetes API toggling
-	IngressExtV1beta1Disabled bool
-	IngressNetV1beta1Disabled bool
-	IngressNetV1Disabled      bool
-	UDPIngressDisabled        bool
-	TCPIngressDisabled        bool
-	KongIngressDisabled       bool
-	KnativeIngressDisabled    bool
-	KongClusterPluginDisabled bool
-	KongPluginDisabled        bool
-	KongConsumerDisabled      bool
-	ServiceDisabled           bool
+	IngressExtV1beta1Enabled bool
+	IngressNetV1beta1Enabled bool
+	IngressNetV1Enabled      bool
+	UDPIngressEnabled        bool
+	TCPIngressEnabled        bool
+	KongIngressEnabled       bool
+	KnativeIngressEnabled    bool
+	KongClusterPluginEnabled bool
+	KongPluginEnabled        bool
+	KongConsumerEnabled      bool
+	ServiceEnabled           bool
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -90,7 +90,7 @@ type Config struct {
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
 
-	flagSet := *pflag.NewFlagSet("", pflag.ExitOnError)
+	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
 
 	// Logging configurations
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
@@ -148,17 +148,17 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 
 	// Kubernetes API toggling
-	flagSet.BoolVar(&c.IngressNetV1Disabled, "disable-controller-ingress-networkingv1", false, "Disable the networking.k8s.io/v1 Ingress controller.")
-	flagSet.BoolVar(&c.IngressNetV1beta1Disabled, "disable-controller-ingress-networkingv1beta1", false, "Disable the networking.k8s.io/v1beta1 Ingress controller.")
-	flagSet.BoolVar(&c.IngressExtV1beta1Disabled, "disable-controller-ingress-extensionsv1beta1", false, "Disable the extensions/v1beta1 Ingress controller.")
-	flagSet.BoolVar(&c.UDPIngressDisabled, "disable-controller-udpingress", false, "Disable the UDPIngress controller.")
-	flagSet.BoolVar(&c.TCPIngressDisabled, "disable-controller-tcpingress", false, "Disable the TCPIngress controller.")
-	flagSet.BoolVar(&c.KnativeIngressDisabled, "disable-controller-knativeingress", false, "Disable the KnativeIngress controller.")
-	flagSet.BoolVar(&c.KongIngressDisabled, "disable-controller-kongingress", false, "Disable the KongIngress controller.")
-	flagSet.BoolVar(&c.KongClusterPluginDisabled, "disable-controller-kongclusterplugin", false, "Disable the KongClusterPlugin controller.")
-	flagSet.BoolVar(&c.KongPluginDisabled, "disable-controller-kongplugin", false, "Disable the KongPlugin controller.")
-	flagSet.BoolVar(&c.KongConsumerDisabled, "disable-controller-kongconsumer", false, "Disable the KongConsumer controller. ")
-	flagSet.BoolVar(&c.ServiceDisabled, "disable-controller-service", false, "Disable the Service controller.")
+	flagSet.BoolVar(&c.IngressNetV1Enabled, "enable-controller-ingress-networkingv1", true, "Enable the networking.k8s.io/v1 Ingress controller.")
+	flagSet.BoolVar(&c.IngressNetV1beta1Enabled, "enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
+	flagSet.BoolVar(&c.IngressExtV1beta1Enabled, "enable-controller-ingress-extensionsv1beta1", true, "Enable the extensions/v1beta1 Ingress controller.")
+	flagSet.BoolVar(&c.UDPIngressEnabled, "enable-controller-udpingress", true, "Enable the UDPIngress controller.")
+	flagSet.BoolVar(&c.TCPIngressEnabled, "enable-controller-tcpingress", true, "Enable the TCPIngress controller.")
+	flagSet.BoolVar(&c.KnativeIngressEnabled, "enable-controller-knativeingress", true, "Enable the KnativeIngress controller.")
+	flagSet.BoolVar(&c.KongIngressEnabled, "enable-controller-kongingress", true, "Enable the KongIngress controller.")
+	flagSet.BoolVar(&c.KongClusterPluginEnabled, "enable-controller-kongclusterplugin", true, "Enable the KongClusterPlugin controller.")
+	flagSet.BoolVar(&c.KongPluginEnabled, "enable-controller-kongplugin", true, "Enable the KongPlugin controller.")
+	flagSet.BoolVar(&c.KongConsumerEnabled, "enable-controller-kongconsumer", true, "Enable the KongConsumer controller. ")
+	flagSet.BoolVar(&c.ServiceEnabled, "enable-controller-service", true, "Enable the Service controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
@@ -188,7 +188,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.Int("stderrthreshold", 0, "DEPRECATED: has no effect and will be removed in future releases (see github issue #1297)")
 	flagSet.Bool("update-status-on-shutdown", false, `DEPRECATED: no longer has any effect and will be removed in a later release (see github issue #1304)`)
 
-	return &flagSet
+	return flagSet
 }
 
 func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {

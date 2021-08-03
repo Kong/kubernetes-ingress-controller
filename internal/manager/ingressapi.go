@@ -41,15 +41,15 @@ func negotiateIngressAPI(config *Config, client client.Client) (IngressAPI, erro
 		},
 	}
 
-	if config.IngressNetV1Disabled != true {
+	if config.IngressNetV1Enabled == true {
 		allowedAPIs = append(allowedAPIs, NetworkingV1)
 	}
 
-	if config.IngressNetV1beta1Disabled != true {
+	if config.IngressNetV1beta1Enabled == true {
 		allowedAPIs = append(allowedAPIs, NetworkingV1beta1)
 	}
 
-	if config.IngressExtV1beta1Disabled != true {
+	if config.IngressExtV1beta1Enabled == true {
 		allowedAPIs = append(allowedAPIs, ExtensionsV1beta1)
 	}
 

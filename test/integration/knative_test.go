@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,9 +32,6 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
-	if env.Cluster().Type() != kind.KindClusterType {
-		t.Skip("TODO: knative tests are only supported on KIND based environments right now")
-	}
 	ctx := context.Background()
 
 	t.Log("generating a knative clientset")

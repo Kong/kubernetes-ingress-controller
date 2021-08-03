@@ -348,33 +348,43 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 		log.Debugf("Updating TCP ingress route name %s namespace %s", name, namespace)
 
 		ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
-		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
-		if err != nil || curIng == nil {
-			if errors.IsNotFound(err) {
+
+		retry := 0
+		for retry < statusUpdateRetry {
+			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+			if err != nil || curIng == nil {
+				if errors.IsNotFound(err) {
+					return nil
+				}
+
+				log.Errorf("failed to fetch TCPIngress %v/%v: %v", namespace, name, err)
+				time.Sleep(statusUpdateWaitTick)
+				retry++
+				continue
+			}
+
+			curIPs := curIng.Status.LoadBalancer.Ingress
+			status := SliceToStatus(ips)
+			if ingressSliceEqual(status, curIPs) {
+				log.Debugf("no change in status, update tcp ingress skipped")
 				return nil
 			}
 
-			return fmt.Errorf("failed to fetch TCP Ingress %v/%v: %w", namespace, name, err)
-		}
-
-		var status []apiv1.LoadBalancerIngress
-		sort.SliceStable(status, lessLoadBalancerIngress(status))
-		curIPs := curIng.Status.LoadBalancer.Ingress
-
-		status = SliceToStatus(ips)
-		if ingressSliceEqual(status, curIPs) {
-			log.Debugf("no change in status, update tcp ingress skipped")
-			return nil
-		}
-
-		curIng.Status.LoadBalancer.Ingress = status
-		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
-		if err != nil {
+			curIng.Status.LoadBalancer.Ingress = status
+			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			if err == nil {
+				break
+			}
 			if errors.IsNotFound(err) {
 				return nil
 			}
-
-			return fmt.Errorf("failed to update TCPIngress status: %v", err)
+			if errors.IsConflict(err) {
+				log.Debugf("failed to update TCPIngress status because the object (%s/%s) changed. retrying...", namespace, name)
+			} else {
+				log.Errorf("failed to update TCPIngress status. %v. retrying...", err)
+			}
+			time.Sleep(statusUpdateWaitTick)
+			retry++
 		}
 	}
 

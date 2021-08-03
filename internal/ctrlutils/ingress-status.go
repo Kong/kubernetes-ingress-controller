@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	statusUpdateRetry = 3
+	statusUpdateRetry    = 3
+	statusUpdateWaitTick = time.Second
 )
 
 // PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
@@ -191,7 +192,7 @@ func UpdateIngress(
 
 				log.Errorf("failed to fetch Ingress %v/%v: %v. retrying...", namespace, name, err)
 				retry++
-				time.Sleep(time.Second)
+				time.Sleep(statusUpdateWaitTick)
 				continue
 			}
 
@@ -216,7 +217,7 @@ func UpdateIngress(
 			}
 
 			log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
-			time.Sleep(time.Second)
+			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
 	}
@@ -251,7 +252,7 @@ func UpdateIngressLegacy(
 
 				log.Errorf("failed to fetch Ingress %v/%v: %v. retrying...", namespace, name, err)
 				retry++
-				time.Sleep(time.Second)
+				time.Sleep(statusUpdateWaitTick)
 				continue
 			}
 
@@ -276,7 +277,7 @@ func UpdateIngressLegacy(
 			}
 
 			log.Errorf("failed to update Ingress V1beta1 status. %v. retrying...", err)
-			time.Sleep(time.Second)
+			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
 	}
@@ -303,7 +304,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				}
 
 				log.Errorf("failed to fetch UDP Ingress %v/%v: %v", namespace, name, err)
-				time.Sleep(time.Second)
+				time.Sleep(statusUpdateWaitTick)
 				retry++
 				continue
 			}
@@ -329,7 +330,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 			}
 
 			log.Errorf("failed to update UDPIngress status: %v. retry...", err)
-			time.Sleep(time.Second)
+			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
 	}
@@ -407,7 +408,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 				}
 
 				log.Errorf("failed to fetch Knative Ingress %v/%v: %v", namespace, name, err)
-				time.Sleep(time.Second)
+				time.Sleep(statusUpdateWaitTick)
 				retry++
 				continue
 			}
@@ -444,7 +445,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 			}
 
 			log.Errorf("failed to update ingress status: %v. retrying...", err)
-			time.Sleep(time.Second)
+			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
 	}

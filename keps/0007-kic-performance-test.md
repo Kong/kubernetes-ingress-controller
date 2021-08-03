@@ -25,7 +25,7 @@ For references see the dependencies related to this proprosal to check the progr
 [docker]: https://www.docker.com/ 
 
 ## Motivation
- - we currently have no profiles, documentation, or determined performance characteristics for the KIC in any Kubernetes or infrastructure environment
+ - we currently have no data, documentation, or determined performance characteristics for the KIC in any Kubernetes or infrastructure environment
  - we want libraries and tooling that can be run against a Kubernetes cluster and its underlying infrastructure to analyze the performance characteristics of the KIC in that environment
  - we want our tooling to be open source so end-users can run a performance analysis themselves in their environment
  

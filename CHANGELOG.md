@@ -141,9 +141,9 @@
 
 - several miscellaneous flags have been removed.
   The following flags are no longer usable:
-  - `--disable-ingress-extensionsv1beta1`
-  - `--disable-ingress-networkingv1`
-  - `--disable-ingress-networkingv1beta1`
+  - `--disable-ingress-extensionsv1beta1` (replaced by `--enable-controller-ingress-extensionsv1beta1=false`)
+  - `--disable-ingress-networkingv1` (replaced by `--enable-controller-ingress-networkingv1=false`)
+  - `--disable-ingress-networkingv1beta1` (replaced by `--enable-controller-ingress-networkingv1beta1=false`)
   - `--version`
   - `--alsologtostderr`
   - `--logtostderr`

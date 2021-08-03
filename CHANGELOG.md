@@ -139,9 +139,21 @@
 
 #### Breaking changes
 
-- support for "classless" ingress types has been removed: the controller flags
-  `--process-classless-ingress-v1beta1`, `--process-classless-ingress-v1` and
-  `--process-classless-kong-consumer` flags are no longer valid
+- several miscellaneous flags have been removed.
+  The following flags are no longer usable:
+  - `--disable-ingress-extensionsv1beta1`
+  - `--disable-ingress-networkingv1`
+  - `--disable-ingress-networkingv1beta1`
+  - `--version`
+  - `--alsologtostderr`
+  - `--logtostderr`
+  - `--v`
+  - `--vmodule`
+- support for "classless" ingress types has been removed.
+  The following flags are no longer usable:
+  - `--process-classless-ingress-v1beta1`
+  - `--process-classless-ingress-v1`
+  - `--process-classless-kong-consumer`
 - autonegotiation of the Ingress API version (extensions v1beta1, networking
   v1beta1, networking v1) has been disabled. Instead, the user is expected to
   set **exactly** one of `--controller-ingress-networkingv1`,

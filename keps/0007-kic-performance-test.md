@@ -34,11 +34,12 @@ For references see the dependencies related to this proprosal to check the progr
  - continue integration and continue test
  - Visualize testing configuration and results.
  - System distribution
- - Able to run performance pipeline repeatedly
+ - Able to run performance pipeline repeatedly in each release cycle
  - Able to collect following performance metrics
     - controller profiling
     - controller memory/cpu consumption
     - ingress config, deck sync, parser cost
+ - Provide helm charts [Helm Chart](https://helm.sh) for performance container image to easily deploy it to Kubernetes clusters (enhancement)
 
 ### Non-Goals
 

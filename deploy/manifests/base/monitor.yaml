@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ingress-kong-metrics
+spec:
+  selector:
+    matchLabels:
+      app: ingress-kong
+  podMetricsEndpoints:
+  - port: 8100
+    interval: 10s
+  - port: 10255
+    interval: 10s

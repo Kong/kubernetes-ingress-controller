@@ -139,12 +139,25 @@
 
 #### Breaking changes
 
-- support for "classless" ingress types has been removed: the controller flags
-  `--process-classless-ingress-v1beta1`, `--process-classless-ingress-v1` and
-  `--process-classless-kong-consumer` flags are no longer valid
+- several miscellaneous flags have been removed.
+  The following flags are no longer usable:
+  - `--disable-ingress-extensionsv1beta1` (replaced by `--enable-controller-ingress-extensionsv1beta1=false`)
+  - `--disable-ingress-networkingv1` (replaced by `--enable-controller-ingress-networkingv1=false`)
+  - `--disable-ingress-networkingv1beta1` (replaced by `--enable-controller-ingress-networkingv1beta1=false`)
+  - `--version`
+  - `--alsologtostderr`
+  - `--logtostderr`
+  - `--v`
+  - `--vmodule`
+- support for "classless" ingress types has been removed.
+  The following flags are no longer usable:
+  - `--process-classless-ingress-v1beta1`
+  - `--process-classless-ingress-v1`
+  - `--process-classless-kong-consumer`
 - autonegotiation of the Ingress API version (extensions v1beta1, networking
   v1beta1, networking v1) has been disabled. Instead, the user is expected to
   set **exactly** one of `--controller-ingress-networkingv1`,
+- `--dump-config` is now a boolean. `true` is equivalent to the old `enabled` value. `false` is equivalent to the old `disabled` value. `true` with the additional new `--dump-sensitive-config=true` flag is equivalent to the old `sensitive` value.
   `--controller-ingress-networkingv1beta1`,
   `--controller-ingress-extensionsv1beta1` flags to `enabled`. There will be an
   `auto` mode implemented soon that will add the autonegotiation capability

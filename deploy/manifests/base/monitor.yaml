@@ -1,13 +1,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: ingress-kong-metrics
+  name: openebs-cstor-pool-metrics
+  namespace: openebs
 spec:
   selector:
     matchLabels:
-      app: ingress-kong
+      app: cstor-pool
   podMetricsEndpoints:
-  - port: 8100
+  - targetPort: 8100
     interval: 10s
-  - port: 10255
+  - targetPort: 10255
     interval: 10s

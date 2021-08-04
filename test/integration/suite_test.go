@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -133,7 +134,7 @@ func TestMain(m *testing.M) {
 	}
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
-	builder := environments.NewBuilder().WithAddons(kongAddon)
+	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
 
 	fmt.Println("INFO: checking for reusable environment components")
 	if existingCluster != "" {
@@ -273,7 +274,6 @@ var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
-	knativeCrds,
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster

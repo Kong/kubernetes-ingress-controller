@@ -182,6 +182,69 @@ func namespace(t *testing.T) (*corev1.Namespace, func()) {
 
 	return namespace, cleanup
 }
+
+// -----------------------------------------------------------------------------
+// Testing Utility Functions - Identifying Test Cases
+// -----------------------------------------------------------------------------
+
+// identifyTestCasesForDir finds the Go function names for any Go test files in the given directory
+func identifyTestCasesForDir(dir string) ([]string, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var testCasesForDir []string
+	for _, fileInfo := range files {
+		if !fileInfo.IsDir() {
+			if strings.HasSuffix(fileInfo.Name(), "test.go") {
+				testCasesForFile, err := identifyTestCasesForFile(dir + fileInfo.Name())
+				if err != nil {
+					return nil, err
+				}
+
+				testCasesForDir = append(testCasesForDir, testCasesForFile...)
+			}
+		}
+	}
+
+	return testCasesForDir, nil
+}
+
+// testCaseRegexp is a regex to identify Go test cases in test files
+var testCaseRegexp = regexp.MustCompile(`func (Test.*)\(`)
+
+// identifyTestCasesForFile searches the given file for any Golang test cases
+func identifyTestCasesForFile(filePath string) ([]string, error) {
+	if !strings.HasSuffix(filePath, "test.go") {
+		return nil, fmt.Errorf("%s does not look like a Golang test file", filePath)
+	}
+
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	matches := testCaseRegexp.FindAllSubmatch(b, -1)
+	if len(matches) < 1 {
+		return nil, nil
+	}
+
+	var testCasesForFile []string
+	for _, submatches := range matches {
+		if len(submatches) > 1 {
+			testCaseName := string(submatches[1])
+			if testCaseName != "TestMain" { // don't count TestMains
+				testCasesForFile = append(testCasesForFile, testCaseName)
+			}
+		}
+	}
+
+	return testCasesForFile, nil
+}
+
+// -----------------------------------------------------------------------------
+// Testing Utility Functions - HTTP Requests
 // -----------------------------------------------------------------------------
 
 // expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.

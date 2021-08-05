@@ -1,6 +1,6 @@
-//+build integration_tests
+//+build performance_tests
 
-package integration
+package performance
 
 import (
 	"bytes"
@@ -22,35 +22,14 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 )
 
-const testBulkIngressNamespace = "ingress-bulk-testing"
-
-// TestIngressBulk attempts to validate functionality at scale by rapidly deploying a large number of ingress resources.
 func TestIngressBulk(t *testing.T) {
 	ctx := context.Background()
-
-	t.Logf("creating namespace %s for testing", testBulkIngressNamespace)
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testBulkIngressNamespace}}
-	namespace, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up namespace %s", testBulkIngressNamespace)
-		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, namespace.Name, metav1.DeleteOptions{}))
-		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, namespace.Name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return true
-				}
-			}
-			return false
-		}, ingressWait, waitTick)
-	}()
+	ns := corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: corev1.NamespaceDefault}}
 
 	t.Log("deploying a minimal HTTP container to be exoposed via ingress")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(testBulkIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("checking the cluster version to determine which ingress version to use")
@@ -66,14 +45,14 @@ func TestIngressBulk(t *testing.T) {
 		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 		service.Name = name
 		service.Spec.Type = corev1.ServiceTypeClusterIP
-		_, err = env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
+		_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, path, map[string]string{
 			annotations.IngressClassKey: ingressClass,
 			"konghq.com/strip-path":     "true",
 		}, service)
-		require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), testBulkIngressNamespace, ingress))
+		require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 		ingresses[i] = ingress
 	}
 
@@ -103,10 +82,10 @@ func TestIngressBulk(t *testing.T) {
 	t.Log("cleaning up last batch of resources")
 	for i := 0; i < maxBatchSize; i++ {
 		name := fmt.Sprintf("bulk-httpbin-%d", i)
-		require.NoError(t, env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Delete(ctx, name, metav1.DeleteOptions{}))
-		require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), testBulkIngressNamespace, ingresses[i]))
+		require.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, name, metav1.DeleteOptions{}))
+		require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingresses[i]))
 		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Get(ctx, name, metav1.GetOptions{})
+			_, err := env.Cluster().Client().CoreV1().Services(ns.Name).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				return errors.IsNotFound(err)
 			}
@@ -124,14 +103,14 @@ func TestIngressBulk(t *testing.T) {
 		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 		service.Name = name
 		service.Spec.Type = corev1.ServiceTypeClusterIP
-		_, err = env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
+		_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, path, map[string]string{
 			annotations.IngressClassKey: ingressClass,
 			"konghq.com/strip-path":     "true",
 		}, service)
-		require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), testBulkIngressNamespace, ingress))
+		require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 		ingresses[i] = ingress
 
 		// every 10 items sleep for 1 second to stagger the updates to ~10/s
@@ -166,10 +145,10 @@ func TestIngressBulk(t *testing.T) {
 	t.Log("cleaning up last batch of resources")
 	for i := 0; i < maxBatchSize; i++ {
 		name := fmt.Sprintf("bulk-staggered-httpbin-%d", i)
-		require.NoError(t, env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Delete(ctx, name, metav1.DeleteOptions{}))
-		require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), testBulkIngressNamespace, ingresses[i]))
+		require.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, name, metav1.DeleteOptions{}))
+		require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingresses[i]))
 		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Services(testBulkIngressNamespace).Get(ctx, name, metav1.GetOptions{})
+			_, err := env.Cluster().Client().CoreV1().Services(ns.Name).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				return errors.IsNotFound(err)
 			}

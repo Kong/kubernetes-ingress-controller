@@ -119,6 +119,15 @@ func ToDeckContent(
 
 	for _, c := range k8sState.Consumers {
 		consumer := file.FConsumer{Consumer: c.Consumer}
+
+		// if a consumer with no username is provided deck wont be able to process it, but we shouldn't
+		// fail the rest of the deckgen either or this will result in one bad consumer being capable of
+		// stopping all updates to the Kong Admin API.
+		if consumer.Username == nil {
+			log.Errorf("invalid consumer received (username was empty)")
+			continue
+		}
+
 		for _, p := range c.Plugins {
 			consumer.Plugins = append(consumer.Plugins, &file.FPlugin{Plugin: p})
 		}

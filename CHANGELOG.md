@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.0.0-beta.1](#200-beta1---tbd)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
  - [2.0.0-alpha.1](#200-alpha1---20210527)
@@ -31,6 +32,19 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.0.0-beta.1] - TBD
+
+#### Fixes
+
+- Fixed a panic that would occur in the controller manager when a
+  `KongConsumer` object with an empty name was submitted.
+  Any `KongConsumer` resource created with an empty `UserName` will
+  now throw an error in the controller manager logs (this wont stop
+  other configurations from proceeding), but the object in question
+  will thereafter otherwise be skipped for backend configuration
+  until the resource has been corrected.
+  [#550](https://github.com/Kong/kubernetes-ingress-controller/issues/550)
 
 ## [2.0.0-alpha.3] - 2021/08/02
 
@@ -1207,6 +1221,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-beta.1
 [2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-alpha.3
 [2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1

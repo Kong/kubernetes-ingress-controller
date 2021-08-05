@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -36,6 +37,9 @@ var (
 	proxyURL      *url.URL
 	proxyAdminURL *url.URL
 	proxyUDPURL   *url.URL
+
+	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
+	maxBatchSize = determineMaxBatchSize()
 )
 
 func TestMain(m *testing.M) {
@@ -181,4 +185,16 @@ func CleanUpNamespace(ctx context.Context, namespace string, t *testing.T) error
 		return nil
 	}
 	return nil
+}
+
+// determineMaxBatchSize provides a size limit for the number of resources to POST in a single second during tests, and can be overridden with an ENV var if desired.
+func determineMaxBatchSize() int {
+	if v := os.Getenv("KONG_BULK_TESTING_BATCH_SIZE"); v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			panic(fmt.Sprintf("Error: invalid batch size %s: %s", v, err))
+		}
+		return i
+	}
+	return 50
 }

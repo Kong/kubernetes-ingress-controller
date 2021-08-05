@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"net"
 	"strings"
 	"testing"
@@ -25,7 +24,6 @@ func TestValidationWebhook(t *testing.T) {
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
 	}
-	ctx := context.Background()
 
 	const webhookSvcName = "validations"
 	_, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{

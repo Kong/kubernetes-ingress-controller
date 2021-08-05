@@ -29,8 +29,6 @@ import (
 const testPluginsNamespace = "kongplugins"
 
 func TestPluginEssentials(t *testing.T) {
-	ctx := context.Background()
-
 	t.Logf("creating namespace %s for testing", testPluginsNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testPluginsNamespace}}
 	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})

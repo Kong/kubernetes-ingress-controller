@@ -45,6 +45,13 @@ const (
 // -----------------------------------------------------------------------------
 
 var (
+	// ctx the topical context of the test suite, can be used by test cases if they don't need
+	// any special context as a function of the test
+	ctx context.Context
+
+	// cancel is the cancel function for the above global test context
+	cancel context.CancelFunc
+
 	// httpBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
 	// See: https://github.com/postmanlabs/httpbin

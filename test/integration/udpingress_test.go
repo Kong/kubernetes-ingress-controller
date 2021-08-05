@@ -27,8 +27,6 @@ const testUDPIngressNamespace = "udpingress"
 
 func TestUDPIngressEssentials(t *testing.T) {
 	testName := "minudp"
-	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
-	defer cancel()
 
 	t.Logf("creating namespace %s for testing", testUDPIngressNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testUDPIngressNamespace}}

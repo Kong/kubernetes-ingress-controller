@@ -31,8 +31,6 @@ func TestTCPIngressEssentials(t *testing.T) {
 	testName := "tcpingress"
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
-	defer cancel()
 
 	t.Logf("creating namespace %s for testing", testTCPIngressNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testTCPIngressNamespace}}

@@ -36,6 +36,10 @@
 ## [2.0.0-beta.1] - TBD
 
 #### Fixes
+- Expose both kic and proxy prometheus format metrics using PodMonitor
+  specify the /cmetrics as controller port for prometheus scrape
+  proxy keep /metrics as it is.
+  [#1497] Prometheus needs to scrape 2 addresses in a pod
 
 - Fixed a panic that would occur in the controller manager when a
   `KongConsumer` object with an empty name was submitted.

@@ -1,6 +1,6 @@
 ---
 apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+kind: PodMonitor
 metadata:
   name: ingress-kong-metrics
   namespace: kong
@@ -8,8 +8,6 @@ spec:
   selector:
     matchLabels:
       app: ingress-kong
-  endpoints:
-  - targetPort: 8100
-    path: /metrics
-  - targetPort: 10255
-    path: /metrics
+  podMetricsEndpoints:
+  - port: metrics
+  - port: cmetrics

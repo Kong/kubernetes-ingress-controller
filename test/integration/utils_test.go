@@ -108,6 +108,11 @@ var (
 	// These need to come in the format <TYPE>:<NAME> (e.g. "kind:<NAME>", "gke:<NAME>", e.t.c.).
 	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
 
+	// keepTestCluster indicates whether the caller wants the cluster created by the test suite
+	// to persist after the test for inspection. This has a nil effect when an existing cluster
+	// is provided, as cleanup is not performed for existing clusters.
+	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
+
 	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
 	maxBatchSize = determineMaxBatchSize()
 )
@@ -190,10 +195,12 @@ func exitOnErrWithCode(err error, exitCode int) {
 		return
 	}
 
-	if env != nil && existingCluster == "" {
+	fmt.Println("WARNING: failure occurred, performing test cleanup")
+	if env != nil && existingCluster == "" && keepTestCluster == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
 		defer cancel()
 
+		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
 		if cleanupErr := env.Cleanup(ctx); cleanupErr != nil {
 			err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%s) TEST_FAILURE=(%s)", cleanupErr, err)
 		}

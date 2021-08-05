@@ -124,6 +124,16 @@ func TestMain(m *testing.M) {
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()
+
+	fmt.Println("INFO: performing test cleanup")
+	if keepTestCluster == "" && existingCluster == "" {
+		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
+		defer cancel()
+
+		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
+		exitOnErr(env.Cleanup(ctx))
+	}
+
 	os.Exit(code)
 }
 

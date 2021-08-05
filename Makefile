@@ -157,7 +157,6 @@ container:
 # ------------------------------------------------------------------------------
 
 PKG_LIST = ./pkg/...,./internal/...
-COVERAGE_PROFILE=coverage.out
 KIND_CLUSTER_NAME ?= "integration-tests"
 
 .PHONY: test.all
@@ -168,23 +167,39 @@ test.integration: test.integration.dbless test.integration.postgres
 
 .PHONY: test
 test:
-	@go test -race -v ./...
-
-.PHONY: test.integration.legacy
-test.integration.legacy: container
-	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
+	@go test -v -race \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.unit.out \
+		./...
 
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -parallel $(NCPU) -timeout 15m -race -v -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./test/integration/...
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -v -race \
+		-timeout 15m \
+		-parallel $(NCPU) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.dbless.out \
+		./test/integration
 
 # TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
 #       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -parallel $(NCPU) -timeout 15m -v -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./test/integration/...
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v \
+		-timeout 15m \
+		-parallel $(NCPU) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.postgres.out \
+		./test/integration
+
+.PHONY: test.integration.legacy
+test.integration.legacy: container
+	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
 
 # ------------------------------------------------------------------------------
 # Operations

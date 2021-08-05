@@ -77,14 +77,6 @@ var (
 	watchNamespaces = strings.Join([]string{
 		elsewhere,
 		corev1.NamespaceDefault,
-		testIngressEssentialsNamespace,
-		testIngressClassNameSpecNamespace,
-		testIngressHTTPSNamespace,
-		testIngressHTTPSRedirectNamespace,
-		testBulkIngressNamespace,
-		testTCPIngressNamespace,
-		testUDPIngressNamespace,
-		testPluginsNamespace,
 	}, ",")
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster

@@ -1372,9 +1372,6 @@ spec:
         - containerPort: 8080
           name: webhook
           protocol: TCP
-        - name: cmetrics
-          containerPort: 10255
-          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:

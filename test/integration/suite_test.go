@@ -118,7 +118,7 @@ func TestMain(m *testing.M) {
 		exitOnErr(deployControllers(ctx, controllerNamespace))
 	}
 
-	fmt.Printf("INFO: running final testing environment checks")
+	fmt.Println("INFO: running final testing environment checks")
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(err)
 

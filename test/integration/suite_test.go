@@ -209,9 +209,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 			"--profiling",
 
 			"--dump-config",
-		}); err != nil {
-			panic(fmt.Errorf("could not parse controller manager flags: %w", err))
-		}
+		}))
 		fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 		exitOnErr(rootcmd.Run(ctx, &config))
 	}()

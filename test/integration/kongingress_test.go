@@ -23,6 +23,7 @@ import (
 )
 
 func TestKongIngressEssentials(t *testing.T) {
+	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 

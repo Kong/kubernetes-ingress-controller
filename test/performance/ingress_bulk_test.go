@@ -22,7 +22,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 )
 
-// TestIngressBulk attempts to validate functionality at scale by rapidly deploying a large number of ingress resources.
 func TestIngressBulk(t *testing.T) {
 	ctx := context.Background()
 	ns := corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: corev1.NamespaceDefault}}

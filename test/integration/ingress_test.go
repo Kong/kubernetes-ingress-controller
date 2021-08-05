@@ -24,6 +24,7 @@ import (
 )
 
 func TestIngressEssentials(t *testing.T) {
+	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -172,6 +173,7 @@ func TestIngressEssentials(t *testing.T) {
 }
 
 func TestIngressClassNameSpec(t *testing.T) {
+	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -319,7 +321,9 @@ func TestIngressClassNameSpec(t *testing.T) {
 }
 
 func TestIngressNamespaces(t *testing.T) {
-	// ensure the alternative namespace is created
+	t.Parallel()
+
+	t.Log("creating extra testing namespaces")
 	elsewhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: elsewhere}}
 	nowhere := "nowhere"
 	nowhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nowhere}}

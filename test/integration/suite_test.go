@@ -196,17 +196,6 @@ func deployControllers(ctx context.Context, namespace string) error {
 		exitOnErr(flags.Parse([]string{
 			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-			"--controller-kongstate=enabled",
-			"--controller-ingress-networkingv1=enabled",
-			"--controller-ingress-networkingv1beta1=enabled",
-			"--controller-ingress-extensionsv1beta1=enabled",
-			"--controller-tcpingress=enabled",
-			"--controller-kongingress=enabled",
-			"--controller-knativeingress=enabled",
-			"--controller-kongclusterplugin=enabled",
-			"--controller-kongplugin=enabled",
-			"--controller-kongconsumer=disabled",
-			"--dump-config",
 			"--election-id=integrationtests.konghq.com",
 			"--publish-service=kong-system/ingress-controller-kong-proxy",
 			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
@@ -218,6 +207,8 @@ func deployControllers(ctx context.Context, namespace string) error {
 			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			"--profiling",
+
+			"--dump-config",
 		}))
 		fmt.Fprintf(os.Stderr, "config: %+v\n", config)
 		exitOnErr(rootcmd.Run(ctx, &config))

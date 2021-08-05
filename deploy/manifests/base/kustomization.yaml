@@ -5,4 +5,4 @@ resources:
 - service.yaml
 - validation-service.yaml
 - kong-ingress-dbless.yaml
-- monitor.yaml
+

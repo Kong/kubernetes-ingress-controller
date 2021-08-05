@@ -7,9 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,6 +19,8 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -155,7 +159,29 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// Testing Utility Functions
+// Testing Utility Functions - Namespaces
+// -----------------------------------------------------------------------------
+
+var (
+	// namespaces is a map of test case names to a namespace that was generated specifically for them to use.
+	// each test case in the test run gets its own unique namespace.
+	namespaces = make(map[string]*corev1.Namespace)
+)
+
+// namespace provides the namespace provisioned for each test case given their t.Name as the "testCase".
+func namespace(t *testing.T) (*corev1.Namespace, func()) {
+	namespace, ok := namespaces[t.Name()]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error: test case %s did not have a namespace set up\n", t.Name())
+		os.Exit(ExitCodeCantCreateCluster)
+	}
+
+	cleanup := func() {
+		assert.NoError(t, generators.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
+	}
+
+	return namespace, cleanup
+}
 // -----------------------------------------------------------------------------
 
 // expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.

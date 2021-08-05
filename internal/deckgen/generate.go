@@ -124,11 +124,7 @@ func ToDeckContent(
 		// fail the rest of the deckgen either or this will result in one bad consumer being capable of
 		// stopping all updates to the Kong Admin API.
 		if consumer.Username == nil {
-			consumerID := "empty"
-			if consumer.ID != nil {
-				consumerID = *consumer.ID
-			}
-			log.Errorf("invalid consumer received (username was empty), consumer id: %s", consumerID)
+			log.Errorf("invalid consumer received (username was empty)")
 			continue
 		}
 

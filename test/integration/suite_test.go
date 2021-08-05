@@ -7,13 +7,10 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
@@ -46,21 +43,21 @@ func TestMain(m *testing.M) {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 	kongbuilder.WithControllerDisabled()
+
+	fmt.Println("INFO: configuring addons for testing environment")
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
 
-	fmt.Println("INFO: checking for reusable environment components")
+	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster != "" {
 		if clusterVersionStr != "" {
-			fmt.Fprintf(os.Stderr, "Error: can't flag cluster version and provide an existing cluster at the same time")
-			os.Exit(ExitCodeIncompatibleOptions)
+			exitOnErrWithCode(fmt.Errorf("can't flag cluster version & provide an existing cluster at the same time"), ExitCodeIncompatibleOptions)
 		}
 
 		fmt.Println("INFO: parsing existing cluster name identifier")
 		clusterParts := strings.Split(existingCluster, ":")
 		if len(clusterParts) != 2 {
-			fmt.Fprintf(os.Stderr, "Error: existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster)
-			os.Exit(ExitCodeCantUseExistingCluster)
+			exitOnErrWithCode(fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), ExitCodeCantUseExistingCluster)
 		}
 		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
@@ -68,22 +65,15 @@ func TestMain(m *testing.M) {
 		switch clusterType {
 		case string(kind.KindClusterType):
 			cluster, err := kind.NewFromExisting(clusterName)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: could not use existing %s cluster for test env: %s", clusterType, err)
-				os.Exit(ExitCodeCantUseExistingCluster)
-			}
+			exitOnErr(err)
 			builder.WithExistingCluster(cluster)
 			builder.WithAddons(metallb.New())
 		case string(gke.GKEClusterType):
 			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: could not use existing %s cluster for test env: %s", clusterType, err)
-				os.Exit(ExitCodeCantUseExistingCluster)
-			}
+			exitOnErr(err)
 			builder.WithExistingCluster(cluster)
 		default:
-			fmt.Fprintf(os.Stderr, "Error: unknown cluster type: %s", clusterType)
-			os.Exit(ExitCodeCantUseExistingCluster)
+			exitOnErrWithCode(fmt.Errorf("unknown cluster type: %s", clusterType), ExitCodeCantUseExistingCluster)
 		}
 	} else {
 		fmt.Println("INFO: no existing cluster to be used, deploying using KIND")
@@ -93,83 +83,44 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: configuring kubernetes cluster")
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: invalid cluster version provided (%s): %s", clusterVersionStr, err)
-			os.Exit(ExitCodeInvalidOptions)
-		}
+		exitOnErr(err)
 		cluster, err := kind.NewBuilder().WithClusterVersion(clusterVersion).Build(ctx)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to build kind cluster with version %s: %s", clusterVersion, err)
-			os.Exit(ExitCodeCantCreateCluster)
-		}
+		exitOnErr(err)
 		builder.WithExistingCluster(cluster)
 	}
 
 	fmt.Println("INFO: building test environment (note: can take some time)")
 	env, err = builder.Build(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not create testing environment: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
-	defer func() {
-		if err := env.Cleanup(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: could not cleanup testing environment: %s", err)
-			os.Exit(ExitCodeCleanupFailed)
-		}
-	}()
+	exitOnErr(err)
 
 	fmt.Printf("INFO: reconfiguring the kong admin service as LoadBalancer type\n")
 	svc, err := env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Get(ctx, kong.DefaultAdminServiceName, metav1.GetOptions{})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get proxy admin service from cluster: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
+	exitOnErr(err)
 	svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	_, err = env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Update(ctx, svc, metav1.UpdateOptions{})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not update proxy admin service: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
+	exitOnErr(err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
-	if err := <-env.WaitForReady(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: testing environment never became ready: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
+	exitOnErr(<-env.WaitForReady(ctx))
 
 	fmt.Printf("INFO: collecting Kong Proxy URLs from cluster %s for tests to make HTTP calls\n", env.Cluster().Name())
 	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
+	exitOnErr(err)
 	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
+	exitOnErr(err)
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
+	exitOnErr(err)
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
 		fmt.Println("INFO: deploying controller manager")
-		if err := deployControllers(ctx, controllerNamespace); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(ExitCodeCantCreateCluster)
-		}
+		exitOnErr(deployControllers(ctx, controllerNamespace))
 	}
 
 	fmt.Printf("INFO: running final testing environment checks")
 	clusterVersion, err = env.Cluster().Version()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not retrieve server version for cluster: %s", err)
-		os.Exit(ExitCodeCantCreateCluster)
-	}
+	exitOnErr(err)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()
@@ -203,25 +154,19 @@ func deployControllers(ctx context.Context, namespace string) error {
 	go func() {
 		// convert the cluster rest.Config into a kubeconfig
 		yaml, err := generators.NewKubeConfigForRestConfig(env.Cluster().Name(), env.Cluster().Config())
-		if err != nil {
-			panic(err)
-		}
+		exitOnErr(err)
 
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
-		if err != nil {
-			panic(err)
-		}
+		exitOnErr(err)
 		defer os.Remove(kubeconfig.Name())
 		defer kubeconfig.Close()
 
 		// dump the kubeconfig from kind into the tempfile
 		c, err := kubeconfig.Write(yaml)
-		if err != nil {
-			panic(err)
-		}
+		exitOnErr(err)
 		if c != len(yaml) {
-			panic(fmt.Errorf("could not write entire kubeconfig file (%d/%d bytes)", c, len(yaml)))
+			exitOnErr(fmt.Errorf("could not write entire kubeconfig file (%d/%d bytes)", c, len(yaml)))
 		}
 		kubeconfig.Close()
 
@@ -232,14 +177,13 @@ func deployControllers(ctx context.Context, namespace string) error {
 			cmd.Stdout = stdout
 			cmd.Stderr = stderr
 			if err := cmd.Run(); err != nil {
-				fmt.Fprintln(os.Stdout, stdout.String())
-				panic(fmt.Errorf("%s: %w", stderr.String(), err))
+				exitOnErr(fmt.Errorf("%s: %w", stderr.String(), err))
 			}
 		}
 
 		config := manager.Config{}
 		flags := config.FlagSet()
-		if err := flags.Parse([]string{
+		exitOnErr(flags.Parse([]string{
 			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 			"--controller-kongstate=enabled",
@@ -264,14 +208,9 @@ func deployControllers(ctx context.Context, namespace string) error {
 			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			"--profiling",
-		}); err != nil {
-			panic(fmt.Errorf("could not parse controller manager flags: %w", err))
-		}
+		}))
 		fmt.Fprintf(os.Stderr, "config: %+v\n", config)
-
-		if err := rootcmd.Run(ctx, &config); err != nil {
-			panic(fmt.Errorf("controller manager exited with error: %w", err))
-		}
+		exitOnErr(rootcmd.Run(ctx, &config))
 	}()
 
 	return nil

@@ -276,6 +276,4 @@ spec:
       app: ingress-kong
   podMetricsEndpoints:
   - targetPort: 8100
-    interval: 10s
   - targetPort: 10255
-    interval: 10s

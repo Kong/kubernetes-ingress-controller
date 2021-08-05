@@ -340,6 +340,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			"--profiling",
+			"--dump-config",
 		}); err != nil {
 			panic(fmt.Errorf("could not parse controller manager flags: %w", err))
 		}

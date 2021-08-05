@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -43,7 +44,13 @@ const (
 
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
+)
 
+// -----------------------------------------------------------------------------
+// Testing Variables
+// -----------------------------------------------------------------------------
+
+var (
 	// httpBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
 	// See: https://github.com/postmanlabs/httpbin
@@ -57,13 +64,7 @@ const (
 
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed
 	controllerNamespace = "kong-system"
-)
 
-// -----------------------------------------------------------------------------
-// Testing Variables
-// -----------------------------------------------------------------------------
-
-var (
 	// httpc is the default HTTP client to use for tests
 	httpc = http.Client{Timeout: httpcTimeout}
 
@@ -93,6 +94,9 @@ var (
 
 	// proxyUDPURL provides access to the UDP API endpoint for the Kong Addon which is deployed to the test environment's cluster.
 	proxyUDPURL *url.URL
+
+	// clusterVersion is a convenience var where the found version of the env.Cluster is stored.
+	clusterVersion semver.Version
 )
 
 // -----------------------------------------------------------------------------
@@ -130,7 +134,7 @@ func TestMain(m *testing.M) {
 	}
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
-	builder := environments.NewBuilder().WithAddons(kongAddon)
+	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
 
 	fmt.Println("INFO: checking for reusable environment components")
 	if existingCluster != "" {
@@ -248,13 +252,13 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Printf("INFO: running final testing environment checks")
-	serverVersion, err := env.Cluster().Client().ServerVersion()
+	clusterVersion, err = env.Cluster().Version()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: could not retrieve server version for cluster: %s", err)
 		os.Exit(ExitCodeCantCreateCluster)
 	}
 
-	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", serverVersion)
+	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()
 	os.Exit(code)
 }
@@ -270,7 +274,6 @@ var crds = []string{
 	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
 	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
-	knativeCrds,
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster

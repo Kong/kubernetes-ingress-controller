@@ -116,15 +116,11 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", proxy.DefaultSyncSeconds,
-		fmt.Sprintf(
-			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds)",
-			proxy.DefaultSyncSeconds,
-		))
+		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.",
+	)
 	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", proxy.DefaultProxyTimeoutSeconds,
-		fmt.Sprintf(
-			"Define the rate (in seconds) in which the timeout configuration will be applied to the Kong client. (default: %g seconds)",
-			proxy.DefaultSyncSeconds,
-		))
+		"Define the rate (in seconds) in which the timeout configuration will be applied to the Kong client.",
+	)
 	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `A Secret containing custom entities for DB-less mode, in "namespace/name" format`)
 
 	// Kubernetes configurations
@@ -181,10 +177,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Deprecated (to be removed in future releases)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
-		fmt.Sprintf(
-			"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. (default: %g seconds) (DEPRECATED, use --proxy-sync-seconds instead)",
-			proxy.DefaultSyncSeconds,
-		))
+		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API (DEPRECATED, use --proxy-sync-seconds instead)",
+	)
 	flagSet.Int("stderrthreshold", 0, "DEPRECATED: has no effect and will be removed in future releases (see github issue #1297)")
 	flagSet.Bool("update-status-on-shutdown", false, `DEPRECATED: no longer has any effect and will be removed in a later release (see github issue #1304)`)
 

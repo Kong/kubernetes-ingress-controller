@@ -9,6 +9,10 @@ spec:
       containers:
       - name: ingress-controller
         image: kong/kubernetes-ingress-controller:2.0.0-alpha.2
+        ports:
+        - name: cmetrics
+          containerPort: 10255
+          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz

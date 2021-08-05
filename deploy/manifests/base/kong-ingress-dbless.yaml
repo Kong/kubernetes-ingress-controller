@@ -108,9 +108,6 @@ spec:
         - name: webhook
           containerPort: 8080
           protocol: TCP
-        - name: cmetrics
-          containerPort: 10255
-          protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz

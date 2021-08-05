@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -115,9 +114,6 @@ var (
 	// to persist after the test for inspection. This has a nil effect when an existing cluster
 	// is provided, as cleanup is not performed for existing clusters.
 	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
-
-	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
-	maxBatchSize = determineMaxBatchSize()
 )
 
 // -----------------------------------------------------------------------------
@@ -257,18 +253,6 @@ func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bo
 		return body.Message == "no Route matched with those values"
 	}
 	return false
-}
-
-// determineMaxBatchSize provides a size limit for the number of resources to POST in a single second during tests, and can be overridden with an ENV var if desired.
-func determineMaxBatchSize() int {
-	if v := os.Getenv("KONG_BULK_TESTING_BATCH_SIZE"); v != "" {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			panic(fmt.Sprintf("Error: invalid batch size %s: %s", v, err))
-		}
-		return i
-	}
-	return 50
 }
 
 // -----------------------------------------------------------------------------

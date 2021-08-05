@@ -1,9 +1,10 @@
-//+build integration_tests
+//+build performance_tests
 
-package integration
+package performance
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -23,8 +24,8 @@ import (
 
 // TestIngressBulk attempts to validate functionality at scale by rapidly deploying a large number of ingress resources.
 func TestIngressBulk(t *testing.T) {
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ctx := context.Background()
+	ns := corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: corev1.NamespaceDefault}}
 
 	t.Log("deploying a minimal HTTP container to be exoposed via ingress")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)

@@ -18,9 +18,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const defaultNs = "default"
-
 func TestValidationWebhook(t *testing.T) {
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
 	}
@@ -134,9 +135,9 @@ func TestValidationWebhook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := env.Cluster().Client().CoreV1().Secrets(defaultNs).Create(ctx, &tt.obj, metav1.CreateOptions{})
+			_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, &tt.obj, metav1.CreateOptions{})
 			defer func() {
-				if err := env.Cluster().Client().CoreV1().Secrets(defaultNs).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{}); err != nil {
+				if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{}); err != nil {
 					if !errors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}

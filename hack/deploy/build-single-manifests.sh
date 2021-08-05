@@ -24,6 +24,7 @@ cp $STAGE_DIR/rbac/default_rbac.authorization.k8s.io_v1_rolebinding_leader-elect
 cp -Lr ./config/base $STAGE_DIR
 cp -Lr ./config/crd $STAGE_DIR/base/
 cp -Lr ./config/variants $STAGE_DIR
+cp -Lr ./config/prometheus $STAGE_DIR
 
 kustomize build $STAGE_DIR/base > deploy/single-v2/all-in-one-dbless.yaml
 kustomize build $STAGE_DIR/variants/postgres > deploy/single-v2/all-in-one-postgres.yaml

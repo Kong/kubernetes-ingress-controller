@@ -134,6 +134,7 @@ QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
 )
 
 func TestHTTPSRedirect(t *testing.T) {
+	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -192,6 +193,7 @@ func TestHTTPSRedirect(t *testing.T) {
 }
 
 func TestHTTPSIngress(t *testing.T) {
+	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 

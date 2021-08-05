@@ -1498,11 +1498,11 @@ spec:
           timeoutSeconds: 1
         name: ingress-controller
         ports:
-        - containerPort: 8080
-          name: webhook
-          protocol: TCP
         - containerPort: 10255
           name: cmetrics
+          protocol: TCP
+        - containerPort: 8080
+          name: webhook
           protocol: TCP
         readinessProbe:
           failureThreshold: 3

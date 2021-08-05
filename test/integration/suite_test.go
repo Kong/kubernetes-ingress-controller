@@ -33,7 +33,6 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestMain(m *testing.M) {
-	var err error
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
@@ -90,6 +89,7 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Println("INFO: building test environment (note: can take some time)")
+	var err error
 	env, err = builder.Build(ctx)
 	exitOnErr(err)
 

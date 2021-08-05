@@ -233,23 +233,23 @@ type ingressControllerStrategy struct {
 }
 
 // Initialize negotiates the best Ingress API version supported by both KIC and the k8s apiserver.
-func (s ingressControllerStrategy) Initialize(cfg *Config, cl client.Client) error {
+func (s *ingressControllerStrategy) Initialize(cfg *Config, cl client.Client) error {
 	var err error
 	s.chosenVersion, err = negotiateIngressAPI(cfg, cl)
 	return err
 }
 
 // IsExtV1beta1 returns true iff the best supported API version is extensions/v1beta1.
-func (s ingressControllerStrategy) IsExtV1beta1(_ client.Client) bool {
+func (s *ingressControllerStrategy) IsExtV1beta1(_ client.Client) bool {
 	return s.chosenVersion == ExtensionsV1beta1
 }
 
 // IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1beta1.
-func (s ingressControllerStrategy) IsNetV1beta1(_ client.Client) bool {
+func (s *ingressControllerStrategy) IsNetV1beta1(_ client.Client) bool {
 	return s.chosenVersion == NetworkingV1beta1
 }
 
 // IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1.
-func (s ingressControllerStrategy) IsNetV1(_ client.Client) bool {
+func (s *ingressControllerStrategy) IsNetV1(_ client.Client) bool {
 	return s.chosenVersion == NetworkingV1
 }

@@ -4,14 +4,22 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/blang/semver/v4"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+)
 
 // -----------------------------------------------------------------------------
 // Testing Timeouts
@@ -128,6 +136,10 @@ const (
 	// ExitCodeCleanupFailed is a POSIX compliant exit code for the test suite to indicate
 	// that a failure occurred during cluster cleanup.
 	ExitCodeCleanupFailed = 103
+
+	// ExitCodeEnvSetupFailed is a generic exit code that can be used as a fallback for general
+	// problems setting up the testing environment and/or cluster.
+	ExitCodeEnvSetupFailed = 104
 )
 
 // -----------------------------------------------------------------------------
@@ -167,27 +179,35 @@ func determineMaxBatchSize() int {
 }
 
 // -----------------------------------------------------------------------------
-// Test Suite Exit Codes
+// Test.MAIN Utility Functions
 // -----------------------------------------------------------------------------
 
-const (
-	// ExitCodeIncompatibleOptions is a POSIX compliant exit code for the test suite to
-	// indicate that some combination of provided configurations were not compatible.
-	ExitCodeIncompatibleOptions = 100
+// exitOnErrWithCode is a helper function meant for us in the test.Main to simplify failing and exiting
+// the tests under unrecoverable error conditions. It will also attempt to perform any cluster
+// cleaning necessary before exiting.
+func exitOnErrWithCode(err error, exitCode int) {
+	if err == nil {
+		return
+	}
 
-	// ExitCodeInvalidOptions is a POSIX compliant exit code for the test suite to indicate
-	// that some of the provided runtime options were not valid and the tests could not run.
-	ExitCodeInvalidOptions = 101
+	if env != nil && existingCluster == "" {
+		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
+		defer cancel()
 
-	// ExitCodeCantUseExistingCluster is a POSIX compliant exit code for the test suite to
-	// indicate that an existing cluster provided for the tests was not usable.
-	ExitCodeCantUseExistingCluster = 101
+		if cleanupErr := env.Cleanup(ctx); cleanupErr != nil {
+			err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%s) TEST_FAILURE=(%s)", cleanupErr, err)
+		}
+	}
 
-	// ExitCodeCantCreateCluster is a POSIX compliant exit code for the test suite to indicate
-	// that a failure occurred when trying to create a Kubernetes cluster to run the tests.
-	ExitCodeCantCreateCluster = 102
+	fmt.Fprintf(os.Stderr, "Error: tests failed: %s\n", err)
+	os.Exit(exitCode)
+}
 
-	// ExitCodeCleanupFailed is a POSIX compliant exit code for the test suite to indicate
-	// that a failure occurred during cluster cleanup.
-	ExitCodeCleanupFailed = 103
-)
+// exitOnErr is a wrapper around exitOnErrorWithCode that defaults to using the ExitCodeEnvSetupFailed
+// exit code. This function is meant for convenience to wrap errors in setup that are hard to predict.
+func exitOnErr(err error) {
+	if err == nil {
+		return
+	}
+	exitOnErrWithCode(err, ExitCodeEnvSetupFailed)
+}

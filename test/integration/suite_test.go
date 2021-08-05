@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/blang/semver/v4"
@@ -36,14 +37,12 @@ func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
-	fmt.Println("INFO: configuring testing environment")
+	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
 	if dbmode == "postgres" {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 	kongbuilder.WithControllerDisabled()
-
-	fmt.Println("INFO: configuring addons for testing environment")
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
 
@@ -52,8 +51,6 @@ func TestMain(m *testing.M) {
 		if clusterVersionStr != "" {
 			exitOnErrWithCode(fmt.Errorf("can't flag cluster version & provide an existing cluster at the same time"), ExitCodeIncompatibleOptions)
 		}
-
-		fmt.Println("INFO: parsing existing cluster name identifier")
 		clusterParts := strings.Split(existingCluster, ":")
 		if len(clusterParts) != 2 {
 			exitOnErrWithCode(fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), ExitCodeCantUseExistingCluster)
@@ -75,11 +72,9 @@ func TestMain(m *testing.M) {
 			exitOnErrWithCode(fmt.Errorf("unknown cluster type: %s", clusterType), ExitCodeCantUseExistingCluster)
 		}
 	} else {
-		fmt.Println("INFO: no existing cluster to be used, deploying using KIND")
+		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
 		builder.WithAddons(metallb.New())
 	}
-
-	fmt.Println("INFO: configuring kubernetes cluster")
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
 		exitOnErr(err)
@@ -88,7 +83,7 @@ func TestMain(m *testing.M) {
 		builder.WithExistingCluster(cluster)
 	}
 
-	fmt.Println("INFO: building test environment (note: can take some time)")
+	fmt.Println("INFO: building test environment")
 	var err error
 	env, err = builder.Build(ctx)
 	exitOnErr(err)
@@ -103,7 +98,7 @@ func TestMain(m *testing.M) {
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	exitOnErr(<-env.WaitForReady(ctx))
 
-	fmt.Printf("INFO: collecting Kong Proxy URLs from cluster %s for tests to make HTTP calls\n", env.Cluster().Name())
+	fmt.Println("INFO: collecting urls from the kong proxy deployment")
 	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())
 	exitOnErr(err)
 	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
@@ -124,7 +119,6 @@ func TestMain(m *testing.M) {
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		fmt.Println("INFO: deploying controller manager")
 		exitOnErr(deployControllers(ctx, controllerNamespace))
 	}
 
@@ -135,11 +129,9 @@ func TestMain(m *testing.M) {
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()
 
-	fmt.Println("INFO: performing test cleanup")
 	if keepTestCluster == "" && existingCluster == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
 		defer cancel()
-
 		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
 		exitOnErr(env.Cleanup(ctx))
 	}
@@ -169,6 +161,10 @@ func deployControllers(ctx context.Context, namespace string) error {
 			return err
 		}
 	}
+
+	// we'll wait until the controller has started before returning
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 
 	// run the controller in the background
 	go func() {
@@ -220,9 +216,11 @@ func deployControllers(ctx context.Context, namespace string) error {
 
 			"--dump-config",
 		}))
-		fmt.Fprintf(os.Stderr, "config: %+v\n", config)
+		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager with Configuration: %+v\n", config)
+		wg.Done()
 		exitOnErr(rootcmd.Run(ctx, &config))
 	}()
 
+	wg.Wait()
 	return nil
 }

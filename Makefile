@@ -176,14 +176,14 @@ test.integration.legacy: container
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./...
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./test/integration/...
 
 # TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
 #       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 15m -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./...
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -timeout 15m -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_PROFILE) ./test/integration/...
 
 # ------------------------------------------------------------------------------
 # Operations

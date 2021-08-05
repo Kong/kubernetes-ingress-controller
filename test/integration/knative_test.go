@@ -32,6 +32,9 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
 	t.Log("generating a knative clientset")
 	knativec, err := knativeversioned.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -40,34 +43,34 @@ func TestKnativeIngress(t *testing.T) {
 	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", ingressClass))
 	_, err = env.Cluster().Client().CoreV1().ConfigMaps(knative.DefaultNamespace).Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	require.NoError(t, err)
-	require.NoError(t, configKnativeDomain(ctx, proxyURL.Hostname(), env.Cluster()))
+	require.NoError(t, configKnativeDomain(ctx, proxyURL.Hostname(), knative.DefaultNamespace, env.Cluster()))
 
 	t.Log("deploying a native service to test routing")
 	var service *knservingv1.Service
 	require.Eventually(t, func() bool {
-		service, err = installKnativeSrv(ctx, knativec)
+		service, err = installKnativeSrv(ctx, ns.Name, knativec)
 		return err == nil
 	}, knativeWaitTime, waitTick, true)
 
 	defer func() {
 		t.Log("cleaning up knative services used for testing")
-		assert.NoError(t, knativec.ServingV1().Services("default").Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, knativec.ServingV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Log("Test knative service using kong.")
-	require.True(t, accessKnativeSrv(ctx, proxyURL.Hostname(), t), true)
+	require.True(t, accessKnativeSrv(ctx, proxyURL.Hostname(), ns.Name, t), true)
 }
 
 // -----------------------------------------------------------------------------
 // Knative Deployment Functions
 // -----------------------------------------------------------------------------
 
-func installKnativeSrv(ctx context.Context, knativec *knativeversioned.Clientset) (*knservingv1.Service, error) {
+func installKnativeSrv(ctx context.Context, nsn string, knativec *knativeversioned.Clientset) (*knservingv1.Service, error) {
 	// generate the knative service resource
 	tobeDeployedService := &knservingv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "helloworld-go",
-			Namespace: "default",
+			Namespace: nsn,
 		},
 		Spec: knservingv1.ServiceSpec{
 			ConfigurationSpec: knservingv1.ConfigurationSpec{
@@ -84,7 +87,7 @@ func installKnativeSrv(ctx context.Context, knativec *knativeversioned.Clientset
 										}}}}}}}}}}
 
 	// deploy the new service to the cluster
-	service, err := knativec.ServingV1().Services("default").Create(ctx, tobeDeployedService, metav1.CreateOptions{})
+	service, err := knativec.ServingV1().Services(nsn).Create(ctx, tobeDeployedService, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create knative service. %w", err)
 	}
@@ -92,7 +95,7 @@ func installKnativeSrv(ctx context.Context, knativec *knativeversioned.Clientset
 	return service, nil
 }
 
-func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Cluster) error {
+func configKnativeDomain(ctx context.Context, proxy, nsn string, cluster clusters.Cluster) error {
 	// generate the new config-domain configmap
 	configMap := v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -101,7 +104,7 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Clu
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "config-domain",
-			Namespace: knative.DefaultNamespace,
+			Namespace: nsn,
 			Labels: map[string]string{
 				"serving.knative.dev/release": "v0.13.0",
 			},
@@ -112,7 +115,7 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Clu
 	}
 
 	// update the config-domain configmap with the new values
-	_, err := cluster.Client().CoreV1().ConfigMaps(knative.DefaultNamespace).Update(ctx, &configMap, metav1.UpdateOptions{})
+	_, err := cluster.Client().CoreV1().ConfigMaps(nsn).Update(ctx, &configMap, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -120,12 +123,12 @@ func configKnativeDomain(ctx context.Context, proxy string, cluster clusters.Clu
 	return nil
 }
 
-func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
+func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool {
 	knativec, err := knativenetworkingversioned.NewForConfig(env.Cluster().Config())
 	if err != nil {
 		return false
 	}
-	ingCli := knativec.NetworkingV1alpha1().Ingresses("default")
+	ingCli := knativec.NetworkingV1alpha1().Ingresses(nsn)
 	assert.Eventually(t, func() bool {
 		curIng, err := ingCli.Get(ctx, "helloworld-go", metav1.GetOptions{})
 		if err != nil || curIng == nil {
@@ -156,8 +159,8 @@ func accessKnativeSrv(ctx context.Context, proxy string, t *testing.T) bool {
 	if err != nil {
 		t.Logf("failed generating httpquerst err %v", err)
 	}
-	req.Header.Set("Host", "helloworld-go.default."+proxy)
-	req.Host = "helloworld-go.default." + proxy
+	req.Header.Set("Host", fmt.Sprintf("helloworld-go.%s.%s", nsn, proxy))
+	req.Host = fmt.Sprintf("helloworld-go.%s.%s", nsn, proxy)
 
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)

@@ -74,10 +74,10 @@ var (
 	httpc = http.Client{Timeout: httpcTimeout}
 
 	// watchNamespaces is a list of namespaces the controller watches
-	watchNamespaces = strings.Join([]string{
-		elsewhere,
-		corev1.NamespaceDefault,
-	}, ",")
+	// NOTE: more namespaces will be loaded dynamically by the test.Main
+	//       during runtime. In general, avoid adding hardcoded namespaces
+	//       to this list as that's reserved for special cases.
+	watchNamespaces = elsewhere
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.

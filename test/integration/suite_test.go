@@ -111,6 +111,16 @@ func TestMain(m *testing.M) {
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
 	exitOnErr(err)
 
+	fmt.Println("INFO: generating unique namespaces for each test case")
+	testCases, err := identifyTestCasesForDir("./")
+	exitOnErr(err)
+	for _, testCase := range testCases {
+		namespaceForTestCase, err := generators.GenerateNamespace(ctx, env.Cluster(), testCase)
+		exitOnErr(err)
+		namespaces[testCase] = namespaceForTestCase
+		watchNamespaces = fmt.Sprintf("%s,%s", watchNamespaces, namespaceForTestCase.Name)
+	}
+
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {

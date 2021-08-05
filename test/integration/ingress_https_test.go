@@ -139,7 +139,6 @@ var (
 )
 
 func TestHTTPSRedirect(t *testing.T) {
-	ctx := context.Background()
 	opts := metav1.CreateOptions{}
 
 	t.Logf("creating namespace %s for testing", testIngressHTTPSRedirectNamespace)
@@ -215,7 +214,6 @@ func TestHTTPSRedirect(t *testing.T) {
 }
 
 func TestHTTPSIngress(t *testing.T) {
-	ctx := context.Background()
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,

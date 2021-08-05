@@ -34,7 +34,7 @@ import (
 
 func TestMain(m *testing.M) {
 	var err error
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
 	fmt.Println("INFO: configuring testing environment")

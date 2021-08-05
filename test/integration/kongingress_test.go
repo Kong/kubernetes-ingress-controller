@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -26,8 +25,6 @@ import (
 func TestKongIngressEssentials(t *testing.T) {
 	namespace := "default"
 	testName := "minking"
-	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
-	defer cancel()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, httpBinImage, 80))

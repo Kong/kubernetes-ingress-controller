@@ -32,8 +32,6 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
-	ctx := context.Background()
-
 	t.Log("generating a knative clientset")
 	knativec, err := knativeversioned.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

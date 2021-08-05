@@ -26,8 +26,6 @@ const testBulkIngressNamespace = "ingress-bulk-testing"
 
 // TestIngressBulk attempts to validate functionality at scale by rapidly deploying a large number of ingress resources.
 func TestIngressBulk(t *testing.T) {
-	ctx := context.Background()
-
 	t.Logf("creating namespace %s for testing", testBulkIngressNamespace)
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testBulkIngressNamespace}}
 	namespace, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})

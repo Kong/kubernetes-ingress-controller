@@ -28,8 +28,6 @@ var testIngressEssentialsNamespace = "ingress-essentials"
 var testIngressClassNameSpecNamespace = "ingress-class-name-spec"
 
 func TestIngressEssentials(t *testing.T) {
-	ctx := context.Background()
-
 	t.Logf("creating namespace %s for testing", testIngressEssentialsNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressEssentialsNamespace}}
 	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
@@ -198,8 +196,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 		t.Skip("ingress spec tests can not be properly validated against old clusters")
 	}
 
-	ctx := context.Background()
-
 	t.Logf("creating namespace %s for testing", testIngressClassNameSpecNamespace)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressClassNameSpecNamespace}}
 	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
@@ -359,8 +355,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 }
 
 func TestIngressNamespaces(t *testing.T) {
-	ctx := context.Background()
-
 	// ensure the alternative namespace is created
 	elsewhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: elsewhere}}
 	nowhere := "nowhere"

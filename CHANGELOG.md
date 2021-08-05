@@ -45,6 +45,13 @@
   will thereafter otherwise be skipped for backend configuration
   until the resource has been corrected.
   [#550](https://github.com/Kong/kubernetes-ingress-controller/issues/550)
+- Previously `KongConsumer` resources which were configured with
+  credentials that reference secrets which between them have a
+  duplicate key with a unique constraint would cause a hard error and lock
+  up updates to the Kong Admin API. This has now been patched to drop the
+  duplicates and provide a soft error that will be logged by the controller
+  manager until the `KongConsumer`'s credentials secret objects are fixed.
+  [#729](https://github.com/Kong/kubernetes-ingress-controller/issues/729)
 
 #### Breaking changes
 

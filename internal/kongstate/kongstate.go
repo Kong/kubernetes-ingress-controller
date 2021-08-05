@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -51,6 +52,10 @@ func (ks *KongState) SanitizedCopy() *KongState {
 func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
 	consumerIndex := make(map[string]Consumer)
 
+	// TODO: jwts in consumer credentials are GLOBALLY unique, need to deduplicate these
+	//       for all consumer here
+	// jwtDedup := make(map[string]credsValidationMeta)
+
 	// build consumer index
 	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
@@ -69,11 +74,22 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			"kongconsumer_name":      consumer.Name,
 			"kongconsumer_namespace": consumer.Namespace,
 		})
+
+		// ---------------------------------------------------------------------------
+		// KongConsumer Credentials - Processing & Validation
+		// ---------------------------------------------------------------------------
+
+		credsDedup := make(map[string][]credsValidationMeta)
 		for _, cred := range consumer.Credentials {
 			log = log.WithFields(logrus.Fields{
 				"secret_name":      cred,
 				"secret_namespace": consumer.Namespace,
 			})
+
+			// --------------------------------------------------------------------------
+			// Credentials Retrieval
+			// --------------------------------------------------------------------------
+
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
 				log.Errorf("failed to fetch secret: %v", err)
@@ -89,22 +105,93 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				}
 				credConfig[k] = string(v)
 			}
-			credType, ok := credConfig["kongCredType"].(string)
+
+			// --------------------------------------------------------------------------
+			// Credentials Validation
+			// --------------------------------------------------------------------------
+
+			// if any validation fails the credentials will be marked as invalid and not
+			// applied, however validation continues after each failure so as to get the
+			// benefit of reporting ALL validation issues that were found with this
+			// credential, so the user can make all the required changes and not update
+			// one only to find there were more the whole time.
+			invalid := false
+
+			// if any failure occur when validating the credentials, the error will contain
+			// this prefix in the message body to make it easier to search for this class
+			// of errors (KongConsumer credentials validation errors) in the manager logs.
+			failHeader := fmt.Sprintf("failed to provision credentials for consumer %s", consumer.Name)
+
+			// validate that the required "kongCredType" key is present in the creds.
+			credType, ok := credConfig[credTypeKey].(string)
 			if !ok {
-				log.Errorf("failed to provision credential: invalid credType: %v", credType)
+				log.Errorf("%s: secret %s provided no %s", failHeader, secret.Name, credTypeKey)
+				invalid = true
 			}
 			if !supportedCreds.Has(credType) {
-				log.Errorf("failed to provision credential: invalid credType: %v", credType)
-				continue
+				supportedCredsString := fmt.Sprintf("valid options are: %s", strings.Join(supportedCreds.List(), ","))
+				log.Errorf("%s: invalid credType: %s (%s)", failHeader, credType, supportedCredsString)
+				invalid = true
 			}
-			if len(credConfig) <= 1 { // 1 key of credType itself
-				log.Errorf("failed to provision credential: empty secret")
-				continue
+
+			// validate that the credentials actually includes configuration, not just the type
+			if len(credConfig) <= 1 {
+				log.Errorf("%s: secret %s has no data", failHeader, secret.Name)
+				continue // if this is true, there's nothing left to validate anyway
 			}
-			err = c.SetCredential(credType, credConfig, ks.Version)
-			if err != nil {
-				log.Errorf("failed to provision credential: %v", err)
-				continue
+
+			// consumer credentials can technically be configured with two (different)
+			// secrets that contain the same key. For some types there are unique
+			// contraints on the key. Here we validate the unique constraints for
+			// several types.
+			for k, v := range credConfig {
+				if k == credTypeKey {
+					continue
+				}
+
+				// TODO: filter out non-unique keys, such as "username" for "basic-auth"
+				//       See: https://github.com/kong/kong/blob/master/kong/plugins/hmac-auth/daos.lua
+
+				// validate the integrity of the secret key value data
+				value, ok := v.([]byte)
+				if !ok {
+					log.Errorf("%s: invalid credential %s: key value can't be %T", failHeader, consumer.Name, cred, v)
+					invalid = true
+				}
+
+				// check if the key has ever been seen before, if it has we need to
+				// process it to ensure deduplication.
+				//
+				// if all of the following are true (inclusively) then the key is
+				// invalid and the credentials will be dropped:
+				//
+				//  - if the credential type is the same
+				//  - if the key has a unique constraint
+				//  - if the data is duplicated
+				if metas, ok := credsDedup[k]; ok {
+					for _, meta := range metas {
+						if meta.credType == credType && bytes.Equal(meta.value, value) && supportedCredsWithUniqueConstraints.Has(credType) {
+							log.Errorf("%s: unique constaint violated: more than 1 credential secret has defined %s", failHeader, k)
+							invalid = true
+						}
+					}
+				}
+
+				// report to the deduplicator that we've seen this key now so that
+				// when future credentials are processed this validation logic can check.
+				credsDedup[k] = append(credsDedup[k], credsValidationMeta{value: value, credType: credType})
+			}
+
+			// --------------------------------------------------------------------------
+			// Credentials Updates
+			// --------------------------------------------------------------------------
+
+			if !invalid {
+				err = c.SetCredential(credType, credConfig, ks.Version)
+				if err != nil {
+					log.Errorf("%s: %w", failHeader, err)
+					continue
+				}
 			}
 		}
 
@@ -327,11 +414,45 @@ func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
 	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
 }
 
-var supportedCreds = sets.NewString(
-	"acl",
-	"basic-auth",
-	"hmac-auth",
-	"jwt",
-	"key-auth",
-	"oauth2",
+// -----------------------------------------------------------------------------
+// KongConsumer - Credentials Helper Vars & Functions
+// -----------------------------------------------------------------------------
+
+var (
+	// supportedCredsWithUniqueConstraints indicates all the "kongCredType"s which are supported for
+	// KongConsumer credentials and have a unique constraint (multiple credentials can not define
+	// these keys more than once for a single KongConsumer resource)
+	supportedCredsWithUniqueConstraints = sets.NewString(
+		"basic-auth",
+		"hmac-auth",
+		"jwt",
+		"key-auth",
+		"oauth2",
+	)
+
+	// supportedCredsWithoutUniqueConstraints indicates all the "kongCredType"s which are supported for
+	// KongConsumer credentials and also do not have a unique constraint (multiple credentials can define
+	// these keys more than once for a single KongConsumer resource)
+	supportedCredsWithoutUniqueConstraints = sets.NewString(
+		"acl",
+	)
+
+	// supportedCreds indicates all the "kongCredType"s which are supported for KongConsumer credentials.
+	supportedCreds = supportedCredsWithUniqueConstraints.Union(supportedCredsWithoutUniqueConstraints)
 )
+
+const (
+	// credTypeKey indicates the key in a consumer secret which identifies the type
+	// of credential that is being provided for the consumer.
+	credTypeKey = "kongCredType"
+
+	// credPrimaryKey indicates the key "key" in a consumer secret for credentials.
+	credPrimaryKey = "key"
+)
+
+// credsValidationMeta is a metadata struct to help validate the contents of
+// consumer credentials, particularly unique constraints on the underlying data.
+type credsValidationMeta struct {
+	value    []byte
+	credType string
+}

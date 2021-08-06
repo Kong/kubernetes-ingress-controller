@@ -10,10 +10,9 @@
 
 **For all releases**
 
-For this step we're going to start with the `next` branch and merge in `main` to create our release branch (e.g. `release/X.Y.Z`) which will later be submitted as a pull request back to `main`.
+For this step we're going to start with the `main` branch to create our release branch (e.g. `release/X.Y.Z`) which will later be submitted as a pull request back to `main`.
 
-- [ ] ensure that you have up to date copy of `main` and `next`: `git fetch --all`
-- [ ] merge main into next: `git checkout next && git merge main`
+- [ ] ensure that you have up to date copy of `main`: `git fetch --all`
 - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
 - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
 - [ ] ensure base manifest versions use the new version and update manifest files: `./hack/build-single-manifests.sh`
@@ -24,10 +23,9 @@ For this step we're going to start with the `next` branch and merge in `main` to
 
 **For all releases**
 
-- [ ] Open a PR from your branch to `next` (major/minor) or `main` (patch)
-- [ ] Once the PR is merged, tag your release: `git fetch --all && git tag origin/next 1.3.1 && git push origin --tags`
+- [ ] Open a PR from your branch to `main` (patch)
+- [ ] Once the PR is merged, tag your release: `git fetch --all && git tag origin/main 1.3.1 && git push origin --tags`
 - [ ] Wait for CI to build images and push them to Docker Hub
-- [ ] Open a PR from next to main (ignore if patch release)
 
 ## Github Release
 

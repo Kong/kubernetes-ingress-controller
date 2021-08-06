@@ -66,7 +66,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	setupLog.Info("deploying all enabled controllers")
-	controllers, err := setupControllers(setupLog, mgr, proxy, c)
+	controllers, err := setupControllers(mgr, proxy, c)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}

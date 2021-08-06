@@ -29,3 +29,7 @@ jobs:
 
       - name: cleanup orphaned test clusters
         run: go run hack/e2e/cluster/cleanup/main.go all
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}

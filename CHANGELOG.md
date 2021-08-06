@@ -1,5 +1,4 @@
 # Table of Contents
-
  - [2.0.0-beta.1](#200-beta1---tbd)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
@@ -36,6 +35,15 @@
 ## [2.0.0-beta.1] - TBD
 
 #### Fixes
+- Expose both kic and proxy prometheus format metrics using PodMonitor
+  specify the /cmetrics as controller port for prometheus scrape
+  proxy keep /metrics as it is.
+  [#1497] Prometheus needs to scrape 2 addresses in a pod
+  to scrape KIC using manifests, kindly following two steps
+  kubectl apply -f https://raw.githubusercontent.com/helm/charts/master/stable/prometheus-operator/crds/crd-podmonitor.yaml
+  kubectl apply -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/config/prometheus/monitor.yaml
+  The 0 extra steps will come in the coming beta2 release after cleaning up
+  https://github.com/Kong/kubernetes-ingress-controller/issues/1667
 
 - Fixed a panic that would occur in the controller manager when a
   `KongConsumer` object with an empty name was submitted.

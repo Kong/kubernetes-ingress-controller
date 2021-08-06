@@ -19,4 +19,5 @@ function cleanup() {
 }
 trap cleanup EXIT SIGINT SIGQUIT
 
-GOFLAGS="-tags=integration_tests" KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" go test -count 1 -timeout 45m -v ./test/integration/...
+NCPU="$(getconf _NPROCESSORS_ONLN)"
+GOFLAGS="-tags=integration_tests" KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" go test -parallel "${NCPU}" -timeout 30m -v ./test/integration/...

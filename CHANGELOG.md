@@ -54,6 +54,12 @@
   until the resource has been corrected.
   [#550](https://github.com/Kong/kubernetes-ingress-controller/issues/550)
 
+#### Breaking changes
+
+- TLS v1.2+ compatible clients are required now going forward in order
+  to do SSL negotiations with the webhook admission server.
+  [#1065](https://github.com/Kong/kubernetes-ingress-controller/issues/1065)
+
 ## [2.0.0-alpha.3] - 2021/08/02
 
 #### Breaking changes

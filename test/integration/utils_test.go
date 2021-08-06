@@ -7,16 +7,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -45,6 +48,13 @@ const (
 // -----------------------------------------------------------------------------
 
 var (
+	// ctx the topical context of the test suite, can be used by test cases if they don't need
+	// any special context as a function of the test
+	ctx context.Context
+
+	// cancel is the cancel function for the above global test context
+	cancel context.CancelFunc
+
 	// httpBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
 	// See: https://github.com/postmanlabs/httpbin
@@ -63,18 +73,10 @@ var (
 	httpc = http.Client{Timeout: httpcTimeout}
 
 	// watchNamespaces is a list of namespaces the controller watches
-	watchNamespaces = strings.Join([]string{
-		elsewhere,
-		corev1.NamespaceDefault,
-		testIngressEssentialsNamespace,
-		testIngressClassNameSpecNamespace,
-		testIngressHTTPSNamespace,
-		testIngressHTTPSRedirectNamespace,
-		testBulkIngressNamespace,
-		testTCPIngressNamespace,
-		testUDPIngressNamespace,
-		testPluginsNamespace,
-	}, ",")
+	// NOTE: more namespaces will be loaded dynamically by the test.Main
+	//       during runtime. In general, avoid adding hardcoded namespaces
+	//       to this list as that's reserved for special cases.
+	watchNamespaces = elsewhere
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
@@ -112,9 +114,6 @@ var (
 	// to persist after the test for inspection. This has a nil effect when an existing cluster
 	// is provided, as cleanup is not performed for existing clusters.
 	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
-
-	// maxBatchSize indicates the maximum number of objects that should be POSTed per second during testing
-	maxBatchSize = determineMaxBatchSize()
 )
 
 // -----------------------------------------------------------------------------
@@ -148,7 +147,92 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// Testing Utility Functions
+// Testing Utility Functions - Namespaces
+// -----------------------------------------------------------------------------
+
+var (
+	// namespaces is a map of test case names to a namespace that was generated specifically for them to use.
+	// each test case in the test run gets its own unique namespace.
+	namespaces = make(map[string]*corev1.Namespace)
+)
+
+// namespace provides the namespace provisioned for each test case given their t.Name as the "testCase".
+func namespace(t *testing.T) (*corev1.Namespace, func()) {
+	namespace, ok := namespaces[t.Name()]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error: test case %s did not have a namespace set up\n", t.Name())
+		os.Exit(ExitCodeCantCreateCluster)
+	}
+
+	cleanup := func() {
+		assert.NoError(t, generators.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
+	}
+
+	return namespace, cleanup
+}
+
+// -----------------------------------------------------------------------------
+// Testing Utility Functions - Identifying Test Cases
+// -----------------------------------------------------------------------------
+
+// identifyTestCasesForDir finds the Go function names for any Go test files in the given directory
+func identifyTestCasesForDir(dir string) ([]string, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var testCasesForDir []string
+	for _, fileInfo := range files {
+		if !fileInfo.IsDir() {
+			if strings.HasSuffix(fileInfo.Name(), "test.go") {
+				testCasesForFile, err := identifyTestCasesForFile(dir + fileInfo.Name())
+				if err != nil {
+					return nil, err
+				}
+
+				testCasesForDir = append(testCasesForDir, testCasesForFile...)
+			}
+		}
+	}
+
+	return testCasesForDir, nil
+}
+
+// testCaseRegexp is a regex to identify Go test cases in test files
+var testCaseRegexp = regexp.MustCompile(`func (Test.*)\(`)
+
+// identifyTestCasesForFile searches the given file for any Golang test cases
+func identifyTestCasesForFile(filePath string) ([]string, error) {
+	if !strings.HasSuffix(filePath, "test.go") {
+		return nil, fmt.Errorf("%s does not look like a Golang test file", filePath)
+	}
+
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	matches := testCaseRegexp.FindAllSubmatch(b, -1)
+	if len(matches) < 1 {
+		return nil, nil
+	}
+
+	var testCasesForFile []string
+	for _, submatches := range matches {
+		if len(submatches) > 1 {
+			testCaseName := string(submatches[1])
+			if testCaseName != "TestMain" { // don't count TestMains
+				testCasesForFile = append(testCasesForFile, testCaseName)
+			}
+		}
+	}
+
+	return testCasesForFile, nil
+}
+
+// -----------------------------------------------------------------------------
+// Testing Utility Functions - HTTP Requests
 // -----------------------------------------------------------------------------
 
 // expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
@@ -169,18 +253,6 @@ func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bo
 		return body.Message == "no Route matched with those values"
 	}
 	return false
-}
-
-// determineMaxBatchSize provides a size limit for the number of resources to POST in a single second during tests, and can be overridden with an ENV var if desired.
-func determineMaxBatchSize() int {
-	if v := os.Getenv("KONG_BULK_TESTING_BATCH_SIZE"); v != "" {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			panic(fmt.Sprintf("Error: invalid batch size %s: %s", v, err))
-		}
-		return i
-	}
-	return 50
 }
 
 // -----------------------------------------------------------------------------

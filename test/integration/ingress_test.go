@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,50 +23,30 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 )
 
-var testIngressEssentialsNamespace = "ingress-essentials"
-var testIngressClassNameSpecNamespace = "ingress-class-name-spec"
-
 func TestIngressEssentials(t *testing.T) {
-	ctx := context.Background()
-
-	t.Logf("creating namespace %s for testing", testIngressEssentialsNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressEssentialsNamespace}}
-	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up namespace %s", testIngressEssentialsNamespace)
-		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
-		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return true
-				}
-			}
-			return false
-		}, ingressWait, waitTick)
-	}()
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(testIngressEssentialsNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(testIngressEssentialsNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(testIngressEssentialsNamespace).Create(ctx, service, metav1.CreateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(testIngressEssentialsNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
@@ -77,11 +56,11 @@ func TestIngressEssentials(t *testing.T) {
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), testIngressEssentialsNamespace, ingress))
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 
 	defer func() {
 		t.Log("cleaning up Ingress resource")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), testIngressEssentialsNamespace, ingress); err != nil {
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -90,7 +69,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
-		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), testIngressEssentialsNamespace, ingress)
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress)
 		if err != nil {
 			return false
 		}
@@ -120,16 +99,16 @@ func TestIngressEssentials(t *testing.T) {
 	t.Logf("removing the ingress.class annotation %q from ingress", ingressClass)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(testIngressEssentialsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(testIngressEssentialsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	case *netv1beta1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressEssentialsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressEssentialsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	}
 
@@ -147,16 +126,16 @@ func TestIngressEssentials(t *testing.T) {
 	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(testIngressEssentialsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(testIngressEssentialsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	case *netv1beta1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressEssentialsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressEssentialsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	}
 
@@ -181,7 +160,7 @@ func TestIngressEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
-	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), testIngressEssentialsNamespace, ingress))
+	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
 		if err != nil {
@@ -194,50 +173,33 @@ func TestIngressEssentials(t *testing.T) {
 }
 
 func TestIngressClassNameSpec(t *testing.T) {
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
 	if clusterVersion.Major < uint64(2) && clusterVersion.Minor < uint64(19) {
 		t.Skip("ingress spec tests can not be properly validated against old clusters")
 	}
 
-	ctx := context.Background()
-
-	t.Logf("creating namespace %s for testing", testIngressClassNameSpecNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressClassNameSpecNamespace}}
-	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up namespace %s", testIngressClassNameSpecNamespace)
-		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
-		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return true
-				}
-			}
-			return false
-		}, ingressWait, waitTick)
-	}()
-
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(testIngressClassNameSpecNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(testIngressClassNameSpecNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(testIngressClassNameSpecNamespace).Create(ctx, service, metav1.CreateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(testIngressClassNameSpecNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
@@ -250,11 +212,11 @@ func TestIngressClassNameSpec(t *testing.T) {
 	case *netv1beta1.Ingress:
 		obj.Spec.IngressClassName = kong.String(ingressClass)
 	}
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), testIngressClassNameSpecNamespace, ingress))
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 
 	defer func() {
 		t.Log("ensuring that Ingress is cleaned up")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), testIngressClassNameSpecNamespace, ingress); err != nil {
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -284,16 +246,16 @@ func TestIngressClassNameSpec(t *testing.T) {
 	t.Logf("removing the IngressClassName %q from ingress", ingressClass)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(testIngressClassNameSpecNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ingress.Spec.IngressClassName = nil
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(testIngressClassNameSpecNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	case *netv1beta1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressClassNameSpecNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ingress.Spec.IngressClassName = nil
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressClassNameSpecNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	}
 
@@ -311,16 +273,16 @@ func TestIngressClassNameSpec(t *testing.T) {
 	t.Logf("putting the IngressClassName %q back on ingress", ingressClass)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(testIngressClassNameSpecNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ingress.Spec.IngressClassName = kong.String(ingressClass)
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(testIngressClassNameSpecNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	case *netv1beta1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressClassNameSpecNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ingress.Spec.IngressClassName = kong.String(ingressClass)
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(testIngressClassNameSpecNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	}
 
@@ -345,7 +307,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
-	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), testIngressClassNameSpecNamespace, ingress))
+	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
 		if err != nil {
@@ -359,9 +321,9 @@ func TestIngressClassNameSpec(t *testing.T) {
 }
 
 func TestIngressNamespaces(t *testing.T) {
-	ctx := context.Background()
+	t.Parallel()
 
-	// ensure the alternative namespace is created
+	t.Log("creating extra testing namespaces")
 	elsewhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: elsewhere}}
 	nowhere := "nowhere"
 	nowhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nowhere}}

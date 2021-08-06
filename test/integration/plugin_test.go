@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -26,49 +25,30 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 )
 
-const testPluginsNamespace = "kongplugins"
-
 func TestPluginEssentials(t *testing.T) {
-	ctx := context.Background()
-
-	t.Logf("creating namespace %s for testing", testPluginsNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testPluginsNamespace}}
-	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up namespace %s", testPluginsNamespace)
-		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
-		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return true
-				}
-			}
-			return false
-		}, ingressWait, waitTick)
-	}()
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(testPluginsNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(testPluginsNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(testPluginsNamespace).Create(ctx, service, metav1.CreateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(testPluginsNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
@@ -78,11 +58,11 @@ func TestPluginEssentials(t *testing.T) {
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), testPluginsNamespace, ingress))
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 
 	defer func() {
 		t.Log("ensuring that Ingress is cleaned up")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), testPluginsNamespace, ingress); err != nil {
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -111,7 +91,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	kongplugin := &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testPluginsNamespace,
+			Namespace: ns.Name,
 			Name:      "teapot",
 		},
 		PluginName: "request-termination",
@@ -133,14 +113,14 @@ func TestPluginEssentials(t *testing.T) {
 	}
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	kongplugin, err = c.ConfigurationV1().KongPlugins(testPluginsNamespace).Create(ctx, kongplugin, metav1.CreateOptions{})
+	kongplugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
 	require.NoError(t, err)
 	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Log("cleaning up plugins")
-		if err := c.ConfigurationV1().KongPlugins(testPluginsNamespace).Delete(ctx, kongplugin.Name, metav1.DeleteOptions{}); err != nil {
+		if err := c.ConfigurationV1().KongPlugins(ns.Name).Delete(ctx, kongplugin.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
@@ -156,20 +136,20 @@ func TestPluginEssentials(t *testing.T) {
 	require.Eventually(t, func() bool {
 		switch obj := ingress.(type) {
 		case *netv1.Ingress:
-			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(testPluginsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
 			ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
-			_, err = env.Cluster().Client().NetworkingV1().Ingresses(testPluginsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+			_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 			return err == nil
 		case *netv1beta1.Ingress:
-			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(testPluginsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
 			ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
-			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(testPluginsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 			return err == nil
 		}
 		return false
@@ -190,20 +170,20 @@ func TestPluginEssentials(t *testing.T) {
 	require.Eventually(t, func() bool {
 		switch obj := ingress.(type) {
 		case *netv1.Ingress:
-			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(testPluginsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
 			ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
-			_, err = env.Cluster().Client().NetworkingV1().Ingresses(testPluginsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+			_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 			return err == nil
 		case *netv1beta1.Ingress:
-			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(testPluginsNamespace).Get(ctx, obj.Name, metav1.GetOptions{})
+			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
 			ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
-			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(testPluginsNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 			return err == nil
 		}
 		return false
@@ -221,7 +201,7 @@ func TestPluginEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
-	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), testPluginsNamespace, ingress))
+	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	assert.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
 		if err != nil {

@@ -133,53 +133,31 @@ QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
 	}
 )
 
-var (
-	testIngressHTTPSNamespace         = "ingress-https"
-	testIngressHTTPSRedirectNamespace = "ingress-redirect"
-)
-
 func TestHTTPSRedirect(t *testing.T) {
-	ctx := context.Background()
-	opts := metav1.CreateOptions{}
-
-	t.Logf("creating namespace %s for testing", testIngressHTTPSRedirectNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressHTTPSRedirectNamespace}}
-	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up namespace %s", testIngressHTTPSRedirectNamespace)
-		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
-		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return true
-				}
-			}
-			return false
-		}, ingressWait, waitTick)
-	}()
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
 	container := generators.NewContainer("alsohttpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	_, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, opts)
+	opts := metav1.CreateOptions{}
+	_, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, opts)
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via Service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-	service, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, opts)
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, opts)
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up Service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing Service %s via Ingress", service.Name)
@@ -190,11 +168,11 @@ func TestHTTPSRedirect(t *testing.T) {
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)
-	assert.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
+	assert.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 
 	defer func() {
 		t.Log("cleaning up Ingress resource")
-		assert.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
+		assert.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	}()
 
 	t.Log("waiting for Ingress to be operational and properly redirect")
@@ -215,7 +193,10 @@ func TestHTTPSRedirect(t *testing.T) {
 }
 
 func TestHTTPSIngress(t *testing.T) {
-	ctx := context.Background()
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
@@ -240,44 +221,25 @@ func TestHTTPSIngress(t *testing.T) {
 		Transport: &testTransport,
 	}
 
-	t.Logf("creating namespace %s for testing", testIngressHTTPSNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testIngressHTTPSNamespace}}
-	ns, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up namespace %s", testIngressHTTPSNamespace)
-		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
-		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return true
-				}
-			}
-			return false
-		}, ingressWait, waitTick)
-	}()
-
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
@@ -316,7 +278,7 @@ func TestHTTPSIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 				Name:      "secret1",
-				Namespace: "default",
+				Namespace: ns.Name,
 			},
 			Data: map[string][]byte{
 				"tls.crt": []byte(tlsPairs[0].Cert),
@@ -327,7 +289,7 @@ func TestHTTPSIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e5"),
 				Name:      "secret2",
-				Namespace: "default",
+				Namespace: ns.Name,
 			},
 			Data: map[string][]byte{
 				"tls.crt": []byte(tlsPairs[1].Cert),
@@ -337,35 +299,35 @@ func TestHTTPSIngress(t *testing.T) {
 	}
 
 	t.Log("deploying secrets")
-	secret1, err := env.Cluster().Client().CoreV1().Secrets(corev1.NamespaceDefault).Create(ctx, secrets[0], metav1.CreateOptions{})
+	secret1, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[0], metav1.CreateOptions{})
 	assert.NoError(t, err)
-	secret2, err := env.Cluster().Client().CoreV1().Secrets(corev1.NamespaceDefault).Create(ctx, secrets[1], metav1.CreateOptions{})
+	secret2, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[1], metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	t.Log("deploying ingress resources")
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress1))
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress2))
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress1))
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress2))
 
 	defer func() {
 		t.Log("ensuring that Ingress resources are cleaned up")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress1); err != nil {
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress1); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		}
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress2); err != nil {
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress2); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		}
 		t.Logf("ensuring that Secret %s is cleaned up", secret1.Name)
-		if err := env.Cluster().Client().CoreV1().Secrets(corev1.NamespaceDefault).Delete(ctx, secret1.Name, metav1.DeleteOptions{}); err != nil {
+		if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, secret1.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		}
 		t.Logf("ensuring that Secret %s is cleaned up", secret2.Name)
-		if err := env.Cluster().Client().CoreV1().Secrets(corev1.NamespaceDefault).Delete(ctx, secret2.Name, metav1.DeleteOptions{}); err != nil {
+		if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, secret2.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -374,7 +336,7 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("checking first ingress status readiness")
 	require.Eventually(t, func() bool {
-		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), corev1.NamespaceDefault, ingress1)
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress1)
 		if err != nil {
 			return false
 		}
@@ -389,7 +351,7 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("checking second ingress status readiness")
 	assert.Eventually(t, func() bool {
-		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), corev1.NamespaceDefault, ingress2)
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress2)
 		if err != nil {
 			return false
 		}
@@ -461,16 +423,16 @@ func TestHTTPSIngress(t *testing.T) {
 
 	switch obj := ingress2.(type) {
 	case *netv1.Ingress:
-		ingress2, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress2, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		assert.NoError(t, err)
 		ingress2.ObjectMeta.Annotations["konghq.com/snis"] = "bar.example"
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress2, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress2, metav1.UpdateOptions{})
 		assert.NoError(t, err)
 	case *netv1beta1.Ingress:
-		ingress2, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(corev1.NamespaceDefault).Get(ctx, obj.Name, metav1.GetOptions{})
+		ingress2, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
 		assert.NoError(t, err)
 		ingress2.ObjectMeta.Annotations["konghq.com/snis"] = "bar.example"
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress2, metav1.UpdateOptions{})
+		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress2, metav1.UpdateOptions{})
 		assert.NoError(t, err)
 	}
 

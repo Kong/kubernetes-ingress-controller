@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -14,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 )
 
@@ -28,11 +26,11 @@ type Controller interface {
 }
 
 // AutoHandler decides whether the specific controller shall be enabled (true) or disabled (false).
-type AutoHandler func(client.Reader) bool
+type AutoHandler func(client.Client) bool
 
 // ControllerDef is a specification of a Controller that can be conditionally registered with Manager.
 type ControllerDef struct {
-	IsEnabled   *util.EnablementStatus
+	Enabled     bool
 	AutoHandler AutoHandler
 	Controller  Controller
 }
@@ -42,40 +40,71 @@ func (c *ControllerDef) Name() string {
 	return reflect.TypeOf(c.Controller).String()
 }
 
-// MaybeSetupWithManager runs SetupWithManager on the controller if its EnablementStatus is either "enabled", or "auto"
-// and AutoHandler says that it should be enabled.
+// MaybeSetupWithManager runs SetupWithManager on the controller if it is enabled
+// and its AutoHandler (if any) indicates that it can load
 func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
-	//nolint:exhaustive
-	switch *c.IsEnabled {
-	case util.EnablementStatusDisabled:
+	if !c.Enabled {
 		return nil
+	}
 
-	case util.EnablementStatusAuto:
-		if c.AutoHandler == nil {
-			return fmt.Errorf("'auto' enablement not supported for controller %q", c.Name())
-		}
-
-		if enable := c.AutoHandler(mgr.GetAPIReader()); !enable {
+	if c.AutoHandler != nil {
+		if enable := c.AutoHandler(mgr.GetClient()); !enable {
 			return nil
 		}
-		fallthrough
-
-	default: // controller enabled
-		return c.Controller.SetupWithManager(mgr)
 	}
+	return c.Controller.SetupWithManager(mgr)
 }
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
+func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
+	// Choose the best API version of Ingress to inform which ingress controller to enable.
+	var ingressPicker ingressControllerStrategy
+	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
+		return nil, fmt.Errorf("ingress version picker failed: %w", err)
+	}
+
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			IsEnabled: &c.ServiceEnabled,
+			Enabled:     c.IngressNetV1Enabled,
+			AutoHandler: ingressPicker.IsNetV1,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            proxy,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			Enabled:     c.IngressNetV1beta1Enabled,
+			AutoHandler: ingressPicker.IsNetV1beta1,
+			Controller: &configuration.NetV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            proxy,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			Enabled:     c.IngressExtV1beta1Enabled,
+			AutoHandler: ingressPicker.IsExtV1beta1,
+			Controller: &configuration.ExtV1Beta1IngressReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:           mgr.GetScheme(),
+				Proxy:            proxy,
+				IngressClassName: c.IngressClassName,
+			},
+		},
+		{
+			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
@@ -84,7 +113,25 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
-			IsEnabled: &alwaysEnabled,
+			Enabled: c.ServiceEnabled && !c.UseEndpointSlices,
+			Controller: &configuration.CoreV1EndpointsReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
+			},
+		},
+		{
+			Enabled: c.ServiceEnabled && c.UseEndpointSlices,
+			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
+			},
+		},
+		{
+			Enabled: true,
 			Controller: &configuration.CoreV1SecretReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("Secrets"),
@@ -96,7 +143,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			IsEnabled: &c.UDPIngressEnabled,
+			Enabled: c.UDPIngressEnabled,
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
@@ -106,7 +153,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
-			IsEnabled: &c.TCPIngressEnabled,
+			Enabled: c.TCPIngressEnabled,
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
@@ -116,7 +163,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
-			IsEnabled: &c.KongIngressEnabled,
+			Enabled: c.KongIngressEnabled,
 			Controller: &configuration.KongV1KongIngressReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
@@ -125,7 +172,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
-			IsEnabled: &c.KongPluginEnabled,
+			Enabled: c.KongPluginEnabled,
 			Controller: &configuration.KongV1KongPluginReconciler{
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
@@ -134,7 +181,7 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 			},
 		},
 		{
-			IsEnabled: &c.KongConsumerEnabled,
+			Enabled: c.KongConsumerEnabled,
 			Controller: &configuration.KongV1KongConsumerReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongConsumer"),
@@ -143,135 +190,74 @@ func setupControllers(logger logr.Logger, mgr manager.Manager, proxy proxy.Proxy
 				IngressClassName: c.IngressClassName,
 			},
 		},
-	}
-
-	// ---------------------------------------------------------------------------
-	// Dynamic Controller Configurations
-	// ---------------------------------------------------------------------------
-
-	// use either endpoint controller or endpoint slices controller but not both.
-	var endpointController ControllerDef
-	if c.UseEndpointSlices {
-		endpointController = ControllerDef{
-			IsEnabled: &c.ServiceEnabled,
-			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
-			},
-		}
-	} else {
-		endpointController = ControllerDef{
-			IsEnabled: &c.ServiceEnabled,
-			Controller: &configuration.CoreV1EndpointsReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
-			},
-		}
-	}
-	controllers = append(controllers, endpointController)
-
-	// Negotiate Ingress version
-	ingressControllers := map[IngressAPI]ControllerDef{
-		NetworkingV1: {
-			IsEnabled: &c.IngressNetV1Enabled,
-			Controller: &configuration.NetV1IngressReconciler{
+		{
+			Enabled: c.KongClusterPluginEnabled,
+			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
+				Group:    konghqcomv1.SchemeGroupVersion.Group,
+				Version:  konghqcomv1.SchemeGroupVersion.Version,
+				Resource: "kongclusterplugins",
+			}}.CRDExists,
+			Controller: &configuration.KongV1KongClusterPluginReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme:           mgr.GetScheme(),
 				Proxy:            proxy,
 				IngressClassName: c.IngressClassName,
 			},
 		},
-		NetworkingV1beta1: {
-			IsEnabled: &c.IngressNetV1beta1Enabled,
-			Controller: &configuration.NetV1Beta1IngressReconciler{
+		{
+			Enabled: c.KnativeIngressEnabled,
+			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
+				Group:    knativev1alpha1.SchemeGroupVersion.Group,
+				Version:  knativev1alpha1.SchemeGroupVersion.Version,
+				Resource: "ingresses",
+			}}.CRDExists,
+			Controller: &configuration.Knativev1alpha1IngressReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:           mgr.GetScheme(),
 				Proxy:            proxy,
 				IngressClassName: c.IngressClassName,
 			},
 		},
-		ExtensionsV1beta1: {
-			IsEnabled: &c.IngressExtV1beta1Enabled,
-			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-	}
-
-	negotiatedIngressAPI, err := negotiateIngressAPI(c, mgr.GetClient())
-	if err == nil {
-		controllers = append(controllers, ingressControllers[negotiatedIngressAPI])
-	} else {
-		logger.Info(`no Ingress controllers enabled or no suitable Ingress version found.
-		Disabling Ingress controller`)
-	}
-
-	if c.KongClusterPluginEnabled == util.EnablementStatusEnabled {
-		kongClusterPluginGVR := schema.GroupVersionResource{
-			Group:    konghqcomv1.SchemeGroupVersion.Group,
-			Version:  konghqcomv1.SchemeGroupVersion.Version,
-			Resource: "kongclusterplugins",
-		}
-
-		if ctrlutils.CRDExists(mgr.GetClient(), kongClusterPluginGVR) {
-			logger.Info("kongclusterplugins.configuration.konghq.com v1beta1 CRD available on cluster.")
-			controller := ControllerDef{
-				IsEnabled: &c.KongClusterPluginEnabled,
-				Controller: &configuration.KongV1KongClusterPluginReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
-					Scheme:           mgr.GetScheme(),
-					Proxy:            proxy,
-					IngressClassName: c.IngressClassName,
-				},
-			}
-			controllers = append(controllers, controller)
-		} else {
-			message := fmt.Sprintf("%s CRD not available on the cluster", kongClusterPluginGVR.String())
-			return nil, fmt.Errorf(message)
-		}
-	} else {
-		logger.Info(`kong cluster plugin is disabled.
-		Disabling KongClusterPlugin controller`)
-	}
-	if c.KnativeIngressEnabled == util.EnablementStatusEnabled {
-		knativeGVR := schema.GroupVersionResource{
-			Group:    knativev1alpha1.SchemeGroupVersion.Group,
-			Version:  knativev1alpha1.SchemeGroupVersion.Version,
-			Resource: "ingresses",
-		}
-
-		if ctrlutils.CRDExists(mgr.GetClient(), knativeGVR) {
-			logger.Info("ingresses.networking.internal.knative.dev v1alpha1 CRD available on cluster.")
-			controller := ControllerDef{
-				IsEnabled: &c.KnativeIngressEnabled,
-				Controller: &configuration.Knativev1alpha1IngressReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-					Scheme:           mgr.GetScheme(),
-					Proxy:            proxy,
-					IngressClassName: c.IngressClassName,
-				},
-			}
-			controllers = append(controllers, controller)
-		} else {
-			message := fmt.Sprintf("%s CRD not available on the cluster", knativeGVR.String())
-			return nil, fmt.Errorf(message)
-		}
-	} else {
-		logger.Info(`knative v1alpha1 ingress is disabled.
-		Disabling Knative controller`)
 	}
 
 	return controllers, nil
+}
+
+// crdExistsChecker verifies whether the resource type defined by GVR is supported by the k8s apiserver.
+type crdExistsChecker struct {
+	GVR schema.GroupVersionResource
+}
+
+// CRDExists returns true iff the apiserver supports the specified group/version/resource.
+func (c crdExistsChecker) CRDExists(r client.Client) bool {
+	return ctrlutils.CRDExists(r, c.GVR)
+}
+
+// ingressControllerStrategy picks the best Ingress API supported by k8s apiserver.
+type ingressControllerStrategy struct {
+	chosenVersion IngressAPI
+}
+
+// Initialize negotiates the best Ingress API version supported by both KIC and the k8s apiserver.
+func (s *ingressControllerStrategy) Initialize(cfg *Config, cl client.Client) error {
+	var err error
+	s.chosenVersion, err = negotiateIngressAPI(cfg, cl)
+	return err
+}
+
+// IsExtV1beta1 returns true iff the best supported API version is extensions/v1beta1.
+func (s *ingressControllerStrategy) IsExtV1beta1(_ client.Client) bool {
+	return s.chosenVersion == ExtensionsV1beta1
+}
+
+// IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1beta1.
+func (s *ingressControllerStrategy) IsNetV1beta1(_ client.Client) bool {
+	return s.chosenVersion == NetworkingV1beta1
+}
+
+// IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1.
+func (s *ingressControllerStrategy) IsNetV1(_ client.Client) bool {
+	return s.chosenVersion == NetworkingV1
 }

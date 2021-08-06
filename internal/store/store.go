@@ -206,6 +206,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
 		return c.IngressV1beta1.Get(obj)
+	case *networkingv1beta1.Ingress:
+		return c.IngressV1beta1.Get(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Get(obj)
 	case *corev1.Service:
@@ -251,6 +253,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
+		return c.IngressV1beta1.Add(obj)
+	case *networkingv1beta1.Ingress:
 		return c.IngressV1beta1.Add(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Add(obj)
@@ -298,6 +302,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
+		return c.IngressV1beta1.Delete(obj)
+	case *networkingv1beta1.Ingress:
 		return c.IngressV1beta1.Delete(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Delete(obj)

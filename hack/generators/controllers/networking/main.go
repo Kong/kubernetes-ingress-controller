@@ -102,7 +102,7 @@ var inputControllersNeeded = &typesNeeded{
 		URL:                               "networking.k8s.io",
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
+		AcceptsIngressClassNameSpec:       true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -114,7 +114,7 @@ var inputControllersNeeded = &typesNeeded{
 		URL:                               "extensions",
 		CacheType:                         "IngressV1beta1",
 		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
+		AcceptsIngressClassNameSpec:       true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{

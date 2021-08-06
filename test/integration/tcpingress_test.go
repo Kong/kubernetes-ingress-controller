@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -24,60 +23,41 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 )
 
-const testTCPIngressNamespace = "tcpingress"
-
 func TestTCPIngressEssentials(t *testing.T) {
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress"
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
-	defer cancel()
-
-	t.Logf("creating namespace %s for testing", testTCPIngressNamespace)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testTCPIngressNamespace}}
-	ns, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up namespace %s", testTCPIngressNamespace)
-		require.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}))
-		require.Eventually(t, func() bool {
-			_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return true
-				}
-			}
-			return false
-		}, ingressWait, waitTick)
-	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, httpBinImage, 80))
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(testTCPIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(testTCPIngressNamespace).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service, err = env.Cluster().Client().CoreV1().Services(testTCPIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(testTCPIngressNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("routing to service %s via TCPIngress", service.Name)
 	tcp := &kongv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testName,
-			Namespace: testTCPIngressNamespace,
+			Namespace: ns.Name,
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClass,
 			},
@@ -94,11 +74,11 @@ func TestTCPIngressEssentials(t *testing.T) {
 			},
 		},
 	}
-	tcp, err = c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace).Create(ctx, tcp, metav1.CreateOptions{})
+	tcp, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
 	require.NoError(t, err)
 	defer func() {
 		t.Logf("ensuring that TCPIngress %s is cleaned up", tcp.Name)
-		if err := c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
+		if err := c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -106,7 +86,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	}()
 
 	t.Logf("checking tcpingress %s status readiness.", tcp.Name)
-	ingCli := c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace)
+	ingCli := c.ConfigurationV1beta1().TCPIngresses(ns.Name)
 	assert.Eventually(t, func() bool {
 		curIng, err := ingCli.Get(ctx, tcp.Name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
@@ -144,7 +124,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("tearing down TCPIngress %s and ensuring that the relevant backend routes are removed", tcp.Name)
-	require.NoError(t, c.ConfigurationV1beta1().TCPIngresses(testTCPIngressNamespace).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
+	require.NoError(t, c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(tcpProxyURL.String())
 		if err != nil {

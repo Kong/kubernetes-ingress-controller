@@ -15,6 +15,7 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
+	t.Parallel()
 	assert.Eventually(t, func() bool {
 		healthzURL := fmt.Sprintf("http://localhost:%v/healthz", manager.HealthzPort)
 		resp, err := httpc.Get(healthzURL)
@@ -28,6 +29,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestMetricsEndpoint(t *testing.T) {
+	t.Parallel()
 	assert.Eventually(t, func() bool {
 		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
 		resp, err := httpc.Get(metricsURL)
@@ -55,6 +57,7 @@ func TestMetricsEndpoint(t *testing.T) {
 }
 
 func TestProfilingEndpoint(t *testing.T) {
+	t.Parallel()
 	assert.Eventually(t, func() bool {
 		profilingURL := fmt.Sprintf("http://localhost:%v/debug/pprof/", manager.DiagnosticsPort)
 		resp, err := httpc.Get(profilingURL)
@@ -68,21 +71,22 @@ func TestProfilingEndpoint(t *testing.T) {
 }
 
 func TestConfigEndpoint(t *testing.T) {
+	t.Parallel()
 	assert.Eventually(t, func() bool {
 		successURL := fmt.Sprintf("http://localhost:%v/debug/config/successful", manager.DiagnosticsPort)
 		failURL := fmt.Sprintf("http://localhost:%v/debug/config/failed", manager.DiagnosticsPort)
 		successResp, err := httpc.Get(successURL)
-		defer successResp.Body.Close()
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", successURL, err)
 			return false
 		}
+		defer successResp.Body.Close()
 		failResp, err := httpc.Get(failURL)
-		defer failResp.Body.Close()
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", failURL, err)
 			return false
 		}
+		defer failResp.Body.Close()
 		return successResp.StatusCode == http.StatusOK && failResp.StatusCode == http.StatusOK
 	}, ingressWait, waitTick)
 }

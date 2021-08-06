@@ -12,11 +12,12 @@ WORKDIR="$(dirname "${BASH_SOURCE}")/../.."
 cd "${WORKDIR}"
 
 CLUSTER_NAME="e2e-$(uuidgen)"
-KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/main.go
+KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go
 
 function cleanup() {
-    KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/main.go cleanup
+    go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME}
 }
 trap cleanup EXIT SIGINT SIGQUIT
 
-GOFLAGS="-tags=integration_tests" KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" go test -count 1 -timeout 45m -v ./test/integration/...
+NCPU="$(getconf _NPROCESSORS_ONLN)"
+GOFLAGS="-tags=integration_tests" KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" go test -parallel "${NCPU}" -timeout 30m -v ./test/integration/...

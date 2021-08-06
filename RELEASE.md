@@ -16,7 +16,7 @@ For this step we're going to start with the `next` branch and merge in `main` to
 - [ ] merge main into next: `git checkout next && git merge main`
 - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
 - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
-- [ ] update manifest files: `./hack/build-single-manifests.sh`
+- [ ] ensure base manifest versions use the new version and update manifest files: `./hack/build-single-manifests.sh`
 - [ ] update the `TAG` variable in the `Makefile` to the new version release and commit the change
 - [ ] push the branch up to the remote: `git push --set-upstream origin release/x.y.z`
 

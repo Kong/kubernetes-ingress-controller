@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -19,10 +20,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const defaultNs = "default"
-
 func TestValidationWebhook(t *testing.T) {
 	ctx := context.Background()
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
+	if env.Cluster().Type() != kind.KindClusterType {
+		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
+	}
 
 	const webhookSvcName = "validations"
 	_, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
@@ -133,9 +139,9 @@ func TestValidationWebhook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := env.Cluster().Client().CoreV1().Secrets(defaultNs).Create(ctx, &tt.obj, metav1.CreateOptions{})
+			_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, &tt.obj, metav1.CreateOptions{})
 			defer func() {
-				if err := env.Cluster().Client().CoreV1().Secrets(defaultNs).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{}); err != nil {
+				if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, tt.obj.ObjectMeta.Name, metav1.DeleteOptions{}); err != nil {
 					if !errors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}

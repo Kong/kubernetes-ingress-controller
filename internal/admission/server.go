@@ -79,7 +79,8 @@ func (sc *ServerConfig) toTLSConfig() (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("X509KeyPair error: %w", err)
 	}
-	return &tls.Config{ //nolint:gosec
+	return &tls.Config{
+		MinVersion:   tls.VersionTLS12,
 		Certificates: []tls.Certificate{keyPair},
 	}, nil
 }

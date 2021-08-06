@@ -100,7 +100,13 @@ jobs:
     - name: run unit tests
       run: make test
 
-  integration-test-dbless:
+    - name: collect test coverage
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: coverage.unit.out
+        path: coverage.unit.out
+
+  integration-tests-dbless:
     runs-on: ubuntu-latest
     steps:
 
@@ -125,13 +131,13 @@ jobs:
     - name: run integration tests
       run: make test.integration.dbless
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2.0.2
+    - name: collect test coverage
+      uses: actions/upload-artifact@v2.2.4
       with:
-        flags: integration-test
-        fail_ci_if_error: true
+        name: coverage.dbless.out
+        path: coverage.dbless.out
 
-  integration-test-postgres:
+  integration-tests-postgres:
     runs-on: ubuntu-latest
     steps:
 
@@ -156,8 +162,43 @@ jobs:
     - name: run integration tests
       run: make test.integration.postgres
 
+    - name: collect test coverage
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: coverage.postgres.out
+        path: coverage.postgres.out
+
+  coverage:
+    environment: "Configure ci"
+    needs:
+      - "unit-tests"
+      - "integration-tests-dbless"
+      - "integration-tests-postgres"
+    runs-on: ubuntu-latest
+    steps:
+    - name: collect unit test coverage artifacts
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: coverage.unit.out
+        path: coverage.unit.out
+
+    - name: collect dbless test coverage artifacts
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: coverage.dbless.out
+        path: coverage.dbless.out
+
+    - name: collect postgres test coverage artifacts
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: coverage.postgres.out
+        path: coverage.postgres.out
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.0.2
       with:
-        flags: integration-test
+        name: combined-coverage
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.unit.out,./coverage.dbless.out,./coverage.postgres.out
         fail_ci_if_error: true
+        verbose: true

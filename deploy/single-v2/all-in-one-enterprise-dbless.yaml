@@ -1415,7 +1415,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.0.0-alpha.2
+        image: kong/kubernetes-ingress-controller:2.0.0-beta.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -1429,6 +1429,9 @@ spec:
           timeoutSeconds: 1
         name: ingress-controller
         ports:
+        - containerPort: 10255
+          name: cmetrics
+          protocol: TCP
         - containerPort: 8080
           name: webhook
           protocol: TCP

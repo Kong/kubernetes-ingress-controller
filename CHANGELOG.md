@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
  - [2.0.0-alpha.1](#200-alpha1---20210527)
@@ -32,6 +33,58 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.0.0-beta.1] - 2021/08/06
+
+#### Breaking changes
+
+- The admission webhook now requires clients that support TLS 1.2 or higher.
+  [#1671](https://github.com/Kong/kubernetes-ingress-controller/issues/1671)
+- Flags to enable controllers are now booleans, and have been renamed. For
+  example, where you would have previously set
+  `--controller-tcpingress=disabled` to disable the TCPIngress controller, you
+  will now set `--enable-controller-tcpingress=false`
+  [#1638](https://github.com/Kong/kubernetes-ingress-controller/issues/1638)
+
+#### Added
+
+- Decreased log level of some status update messages.
+  [#1641](https://github.com/Kong/kubernetes-ingress-controller/issues/1641)
+- Added metrics tracking whether configuration was successfully generated and
+  applied and the time taken to sync configuration to Kong.
+  [#1622](https://github.com/Kong/kubernetes-ingress-controller/issues/1622)
+- Added a [Prometheus operator PodMonitor](https://github.com/Kong/kubernetes-ingress-controller/blob/v2.0.0-beta.1/config/prometheus/monitor.yaml)
+  to scrape controller and Kong metrics. To use it:
+
+  ```
+  kubectl apply -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/config/prometheus/monitor.yaml
+  ```
+
+  [#1657](https://github.com/Kong/kubernetes-ingress-controller/issues/1657)
+
+#### Fixed
+
+- Fixed a panic that would occur in the controller manager when a
+  `KongConsumer` object with an empty name was submitted.
+  Any `KongConsumer` resource created with an empty `UserName` will
+  now throw an error in the controller manager logs (this wont stop
+  other configurations from proceeding), but the object in question
+  will thereafter otherwise be skipped for backend configuration
+  until the resource has been corrected.
+  [#1658](https://github.com/Kong/kubernetes-ingress-controller/issues/1658)
+- The controller will now retry unsuccessful TCPIngress status updates.
+  [#1641](https://github.com/Kong/kubernetes-ingress-controller/issues/1641)
+- The controller now correctly disables Knative controllers automatically when
+  Knative controllers are not installed.
+  [#1585](https://github.com/Kong/kubernetes-ingress-controller/issues/1585)
+
+#### Under the hood
+
+- Made assorted improvements to CI and test code.
+  [#1646](https://github.com/Kong/kubernetes-ingress-controller/issues/1646)
+  [#1664](https://github.com/Kong/kubernetes-ingress-controller/issues/1664)
+  [#1669](https://github.com/Kong/kubernetes-ingress-controller/issues/1669)
+  [#1672](https://github.com/Kong/kubernetes-ingress-controller/issues/1672)
+
 ## [2.0.0-alpha.3] - 2021/08/02
 
 #### Breaking changes
@@ -46,7 +99,8 @@
   [#1522](https://github.com/Kong/kubernetes-ingress-controller/pull/1522)
 
 #### Added
-
+- Added controller functional metrics in 2.x
+  [#705] https://github.com/Kong/kubernetes-ingress-controller/issues/705
 - Implemented Ingress status updates in 2.x.
   [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
 - Added `--publish-status-address` and `--publish-service` flags to 2.x.
@@ -138,12 +192,25 @@
 
 #### Breaking changes
 
-- support for "classless" ingress types has been removed: the controller flags
-  `--process-classless-ingress-v1beta1`, `--process-classless-ingress-v1` and
-  `--process-classless-kong-consumer` flags are no longer valid
+- several miscellaneous flags have been removed.
+  The following flags are no longer usable:
+  - `--disable-ingress-extensionsv1beta1` (replaced by `--enable-controller-ingress-extensionsv1beta1=false`)
+  - `--disable-ingress-networkingv1` (replaced by `--enable-controller-ingress-networkingv1=false`)
+  - `--disable-ingress-networkingv1beta1` (replaced by `--enable-controller-ingress-networkingv1beta1=false`)
+  - `--version`
+  - `--alsologtostderr`
+  - `--logtostderr`
+  - `--v`
+  - `--vmodule`
+- support for "classless" ingress types has been removed.
+  The following flags are no longer usable:
+  - `--process-classless-ingress-v1beta1`
+  - `--process-classless-ingress-v1`
+  - `--process-classless-kong-consumer`
 - autonegotiation of the Ingress API version (extensions v1beta1, networking
   v1beta1, networking v1) has been disabled. Instead, the user is expected to
   set **exactly** one of `--controller-ingress-networkingv1`,
+- `--dump-config` is now a boolean. `true` is equivalent to the old `enabled` value. `false` is equivalent to the old `disabled` value. `true` with the additional new `--dump-sensitive-config=true` flag is equivalent to the old `sensitive` value.
   `--controller-ingress-networkingv1beta1`,
   `--controller-ingress-extensionsv1beta1` flags to `enabled`. There will be an
   `auto` mode implemented soon that will add the autonegotiation capability
@@ -1193,6 +1260,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.3...2.0.0-beta.1
 [2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-alpha.3
 [2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1

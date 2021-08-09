@@ -1,1 +1,74 @@
-../../../deploy/manifests/enterprise/kong-enterprise.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: kong-enterprise-edition-docker
+      initContainers:
+      - name: wait-for-migrations
+        env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+      containers:
+      - name: proxy
+        env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+        - name: KONG_ADMIN_API_URI
+          value: "set-me"
+        - name: KONG_ADMIN_GUI_AUTH
+          value: "basic-auth"
+        - name: KONG_ENFORCE_RBAC
+          value: 'on'
+        - name: KONG_ADMIN_GUI_SESSION_CONF
+          value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+        ports:
+        - containerPort: 8001
+          name: admin
+          protocol: TCP
+        - containerPort: 8002
+          name: manager
+          protocol: TCP
+      - name: ingress-controller
+        env:
+        - name: CONTROLLER_KONG_ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-superuser-password
+              key: password
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+  namespace: kong
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: kong-enterprise-edition-docker
+      containers:
+      - name: kong-migrations
+        env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+        - name: KONG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-superuser-password
+              key: password

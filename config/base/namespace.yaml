@@ -1,1 +1,6 @@
-../../deploy/manifests/base/namespace.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong
+

@@ -1,10 +1,10 @@
 resources:
 - namespace.yaml
 - crd
-- manager-role.yaml
-- manager-rolebinding.yaml
-- leader-election-role.yaml
-- leader-election-rolebinding.yaml
+- rbac/role.yaml
+- rbac/role_binding.yaml
+- rbac/leader_election_role.yaml
+- rbac/leader_election_role_binding.yaml
 - service.yaml
 - serviceaccount.yaml
 - validation-service.yaml

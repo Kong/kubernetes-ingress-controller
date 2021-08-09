@@ -9,6 +9,4 @@ resources:
 - serviceaccount.yaml
 - validation-service.yaml
 - kong-ingress-dbless.yaml
-patchesStrategicMerge:
-- kong-ingress-2x.yaml
 namespace: kong

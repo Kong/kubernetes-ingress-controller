@@ -82,7 +82,7 @@ a specific setting with Kong Ingress Controller.
 Pre-release builds of the `main` branch are available from the
 [kong-ingress-controller repository][docker-images] hosted on Docker Hub:
 
-`main` contains unreleased patch code for the current release:
+`main` contains unreleased new features for upcoming minor and major releases:
 
 ```
 docker pull kong/kubernetes-ingress-controller:main

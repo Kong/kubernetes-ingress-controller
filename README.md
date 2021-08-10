@@ -14,7 +14,7 @@ load balancing and more in Kong
 for Kubernetes Services, all using
 Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
-[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main/next branch builds**](#mainnext-branch-builds) | [**Seeking help**](#seeking-help)
+[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
 
 ## Features
 
@@ -77,21 +77,15 @@ Pull Requests are welcome for additions and corrections.
 Please browse through [guides][guides] to get started or understand how to configure
 a specific setting with Kong Ingress Controller.
 
-## main/next branch builds
+## main branch builds
 
-Pre-release builds of the `main` and `next` branches are available from the
+Pre-release builds of the `main` branch are available from the
 [kong-ingress-controller repository][docker-images] hosted on Docker Hub:
 
-`main` contains unreleased patch code for the current release:
+`main` contains unreleased new features for upcoming minor and major releases:
 
 ```
 docker pull kong/kubernetes-ingress-controller:main
-```
-
-`next` contains unreleased new features for upcoming minor and major releases:
-
-```
-docker pull kong/kubernetes-ingress-controller:next
 ```
 
 ## Seeking help

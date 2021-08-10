@@ -33,6 +33,8 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
+ ## [2.0.0] - TBA
+
 #### Added
 
 - upgrade kong gateway from 2.4 to 2.5

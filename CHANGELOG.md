@@ -1,5 +1,6 @@
 # Table of Contents
- - [2.0.0-beta.1](#200-beta1---tbd)
+
+ - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
  - [2.0.0-alpha.1](#200-alpha1---20210527)
@@ -32,18 +33,35 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0-beta.1] - TBD
+## [2.0.0-beta.1] - 2021/08/06
 
-#### Fixes
-- Expose both kic and proxy prometheus format metrics using PodMonitor
-  specify the /cmetrics as controller port for prometheus scrape
-  proxy keep /metrics as it is.
-  [#1497] Prometheus needs to scrape 2 addresses in a pod
-  to scrape KIC using manifests, kindly following two steps
-  kubectl apply -f https://raw.githubusercontent.com/helm/charts/master/stable/prometheus-operator/crds/crd-podmonitor.yaml
+#### Breaking changes
+
+- The admission webhook now requires clients that support TLS 1.2 or higher.
+  [#1671](https://github.com/Kong/kubernetes-ingress-controller/issues/1671)
+- Flags to enable controllers are now booleans, and have been renamed. For
+  example, where you would have previously set
+  `--controller-tcpingress=disabled` to disable the TCPIngress controller, you
+  will now set `--enable-controller-tcpingress=false`
+  [#1638](https://github.com/Kong/kubernetes-ingress-controller/issues/1638)
+
+#### Added
+
+- Decreased log level of some status update messages.
+  [#1641](https://github.com/Kong/kubernetes-ingress-controller/issues/1641)
+- Added metrics tracking whether configuration was successfully generated and
+  applied and the time taken to sync configuration to Kong.
+  [#1622](https://github.com/Kong/kubernetes-ingress-controller/issues/1622)
+- Added a [Prometheus operator PodMonitor](https://github.com/Kong/kubernetes-ingress-controller/blob/v2.0.0-beta.1/config/prometheus/monitor.yaml)
+  to scrape controller and Kong metrics. To use it:
+
+  ```
   kubectl apply -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/config/prometheus/monitor.yaml
-  The 0 extra steps will come in the coming beta2 release after cleaning up
-  https://github.com/Kong/kubernetes-ingress-controller/issues/1667
+  ```
+
+  [#1657](https://github.com/Kong/kubernetes-ingress-controller/issues/1657)
+
+#### Fixed
 
 - Fixed a panic that would occur in the controller manager when a
   `KongConsumer` object with an empty name was submitted.
@@ -52,13 +70,20 @@
   other configurations from proceeding), but the object in question
   will thereafter otherwise be skipped for backend configuration
   until the resource has been corrected.
-  [#550](https://github.com/Kong/kubernetes-ingress-controller/issues/550)
+  [#1658](https://github.com/Kong/kubernetes-ingress-controller/issues/1658)
+- The controller will now retry unsuccessful TCPIngress status updates.
+  [#1641](https://github.com/Kong/kubernetes-ingress-controller/issues/1641)
+- The controller now correctly disables Knative controllers automatically when
+  Knative controllers are not installed.
+  [#1585](https://github.com/Kong/kubernetes-ingress-controller/issues/1585)
 
-#### Breaking changes
+#### Under the hood
 
-- TLS v1.2+ compatible clients are required now going forward in order
-  to do SSL negotiations with the webhook admission server.
-  [#1065](https://github.com/Kong/kubernetes-ingress-controller/issues/1065)
+- Made assorted improvements to CI and test code.
+  [#1646](https://github.com/Kong/kubernetes-ingress-controller/issues/1646)
+  [#1664](https://github.com/Kong/kubernetes-ingress-controller/issues/1664)
+  [#1669](https://github.com/Kong/kubernetes-ingress-controller/issues/1669)
+  [#1672](https://github.com/Kong/kubernetes-ingress-controller/issues/1672)
 
 ## [2.0.0-alpha.3] - 2021/08/02
 
@@ -1235,7 +1260,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-beta.1
+[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.3...2.0.0-beta.1
 [2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-alpha.3
 [2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1

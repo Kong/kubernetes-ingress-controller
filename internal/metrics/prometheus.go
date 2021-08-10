@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 type CtrlFuncMetrics struct {
@@ -47,10 +47,8 @@ const (
 func ControllerMetricsInit() *CtrlFuncMetrics {
 	controllerMetrics := &CtrlFuncMetrics{}
 
-	reg := prometheus.NewRegistry()
-
 	controllerMetrics.ConfigCounter =
-		promauto.With(reg).NewCounterVec(
+		prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "send_configuration_count",
 				Help: "Counts the success/failure events of converting kubernetes resources to a KongState, including conversion.",
@@ -59,7 +57,7 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 		)
 
 	controllerMetrics.ParseCounter =
-		promauto.With(reg).NewCounterVec(
+		prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "ingress_parse_count",
 				Help: "number of ingress parse.",
@@ -68,13 +66,15 @@ func ControllerMetricsInit() *CtrlFuncMetrics {
 		)
 
 	controllerMetrics.ConfigureDurationHistogram =
-		promauto.With(reg).NewHistogram(
+		prometheus.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "proxy_configuration_duration_milliseconds",
 				Help:    "Duration of last successful configuration.",
 				Buckets: prometheus.ExponentialBuckets(100, 1.33, 30),
 			},
 		)
+
+	metrics.Registry.MustRegister(controllerMetrics.ConfigCounter, controllerMetrics.ParseCounter, controllerMetrics.ConfigureDurationHistogram)
 
 	return controllerMetrics
 }

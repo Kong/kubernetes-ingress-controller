@@ -1,7 +1,7 @@
 resources:
 - namespace.yaml
 - ../crd
-- ../rbac/
+- ../rbac
 - service.yaml
 - serviceaccount.yaml
 - validation-service.yaml

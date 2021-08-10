@@ -1,5 +1,5 @@
 # Table of Contents
-
+-  [2.0.0-ga](#200-ga---tbd)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
@@ -32,6 +32,11 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+#### Added
+
+- upgrade kong gateway from 2.4 to 2.5
+  [#1684](https://github.com/Kong/kubernetes-ingress-controller/issues/1684)
 
 ## [2.0.0-beta.1] - 2021/08/06
 

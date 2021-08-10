@@ -1328,8 +1328,6 @@ spec:
     metadata:
       annotations:
         kuma.io/gateway: enabled
-        prometheus.io/port: "8100"
-        prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
         app: ingress-kong

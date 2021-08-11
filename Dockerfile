@@ -10,7 +10,7 @@ ARG COMMIT
 RUN CGO_ENABLED=0 GOOS=linux go build -o kong-ingress-controller -ldflags "-s -w -X main.RELEASE=$TAG -X main.COMMIT=$COMMIT -X main.REPO=$REPO_INFO" ./cli/ingress-controller
 
 # Build Alpine image
-FROM alpine:3.11 AS alpine
+FROM alpine:3.14 AS alpine
 ARG TAG
 LABEL name="Kong Ingress Controller" \
       vendor="Kong" \

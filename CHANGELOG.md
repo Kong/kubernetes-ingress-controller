@@ -1,6 +1,7 @@
 # Table of Contents
 
  - [2.0.0-alpha.1](#200-alpha1---20210527)
+ - [1.3.2](#132---20210812)
  - [1.3.1](#131---20210603)
  - [1.3.0](#130---20210527)
  - [1.2.0](#120---20210324)
@@ -94,6 +95,14 @@ released and the release notes may change significantly before then.
 [controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
+
+## [1.3.2] - 2021/08/12
+
+#### Under the hood
+
+- Updated Alpine image to 3.14.
+  [#1691](https://github.com/Kong/kubernetes-ingress-controller/pull/1691/)
+- Update Kong images to 2.5.
 
 ## [1.3.1] - 2021/06/03
 
@@ -1100,6 +1109,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 [2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
+[1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.1...1.2.0

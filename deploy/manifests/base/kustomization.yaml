@@ -1,7 +1,0 @@
-resources:
-- namespace.yaml
-- custom-types.yaml
-- rbac.yaml
-- service.yaml
-- validation-service.yaml
-- kong-ingress-dbless.yaml

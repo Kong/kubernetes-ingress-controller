@@ -220,6 +220,7 @@ func getUpstreams(
 		upstream := kongstate.Upstream{
 			Upstream: kong.Upstream{
 				Name: kong.String(
+					// TODO TR we determine the upstream name here
 					fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())),
 			},
 			Service: service,

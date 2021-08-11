@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,8 +24,19 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
 )
 
+var tcpMutex sync.Mutex
+
 func TestTCPIngressEssentials(t *testing.T) {
 	t.Parallel()
+	// Ensure no other TCP tests run concurrently to avoid fights over the port
+	// Free it when done
+	t.Log("locking TCP port")
+	tcpMutex.Lock()
+	defer func() {
+		t.Log("unlocking TCP port")
+		tcpMutex.Unlock()
+	}()
+
 	ns, cleanup := namespace(t)
 	defer cleanup()
 

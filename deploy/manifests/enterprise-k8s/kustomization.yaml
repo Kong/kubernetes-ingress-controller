@@ -1,8 +1,0 @@
-resources:
-- ./../base
-patchesStrategicMerge:
-- kong-enterprise-k8s.yaml
-images:
-- name: kong
-  newName: kong/kong-gateway
-  newTag: '2.5'

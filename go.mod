@@ -28,8 +28,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.8.1
-	google.golang.org/api v0.52.0
-	google.golang.org/genproto v0.0.0-20210728212813-7823e685a01f
+	google.golang.org/api v0.53.0
+	google.golang.org/genproto v0.0.0-20210805201207-89edb61ffb67
 	k8s.io/api v0.22.0
 	k8s.io/apiextensions-apiserver v0.22.0
 	k8s.io/apimachinery v0.22.0

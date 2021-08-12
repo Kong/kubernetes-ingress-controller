@@ -59,8 +59,6 @@ func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=services/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=services,verbs=get;list;watch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=services/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -131,8 +129,6 @@ func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups="",resources=endpoints,verbs=list;watch
 //+kubebuilder:rbac:groups="",resources=endpoints/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=endpoints,verbs=list;watch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=endpoints/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -203,8 +199,6 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch
 //+kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=secrets,verbs=list;watch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=secrets/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -278,8 +272,6 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -362,8 +354,6 @@ func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -446,8 +436,6 @@ func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=extensions,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=extensions,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=extensions,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -527,8 +515,6 @@ func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -599,8 +585,6 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongplugins,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongplugins/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -674,8 +658,6 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongclusterplugins,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongclusterplugins/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -758,8 +740,6 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongconsumers,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=kongconsumers/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -842,8 +822,6 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=tcpingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=tcpingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -926,8 +904,6 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=udpingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,namespace=CHANGEME,resources=udpingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1010,8 +986,6 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.internal.knative.dev,namespace=CHANGEME,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.internal.knative.dev,namespace=CHANGEME,resources=ingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1076,18 +1050,15 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 // -----------------------------------------------------------------------------
 
 //+kubebuilder:rbac:groups="",resources=nodes,verbs=list;watch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=nodes,verbs=list;watch
 
 // -----------------------------------------------------------------------------
 // API Group "" resource pods
 // -----------------------------------------------------------------------------
 
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=pods,verbs=get;list;watch
 
 // -----------------------------------------------------------------------------
 // API Group "" resource events
 // -----------------------------------------------------------------------------
 
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
-//+kubebuilder:rbac:groups="",namespace=CHANGEME,resources=events,verbs=create;patch

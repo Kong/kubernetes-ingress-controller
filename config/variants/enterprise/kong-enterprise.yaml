@@ -1,1 +1,18 @@
-../../../deploy/manifests/enterprise-k8s/kong-enterprise-k8s.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: kong-enterprise-edition-docker
+      containers:
+      - name: proxy
+        env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license

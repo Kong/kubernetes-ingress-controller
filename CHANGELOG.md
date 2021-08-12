@@ -37,7 +37,7 @@
 
 #### Added
 
-- upgrade kong gateway from 2.4 to 2.5
+- Upgraded Kong Gateway from 2.4 to 2.5
   [#1684](https://github.com/Kong/kubernetes-ingress-controller/issues/1684)
 
 ## [2.0.0-beta.1] - 2021/08/06

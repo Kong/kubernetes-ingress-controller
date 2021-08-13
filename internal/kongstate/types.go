@@ -44,7 +44,6 @@ func (p *PortDef) CanonicalString() string {
 type ServiceBackend struct {
 	Name string
 	Port PortDef
-	// TODO TR this probably needs proto. we use it to construct the upstream name
 }
 
 // Target is a wrapper around Target object in Kong.

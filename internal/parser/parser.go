@@ -64,7 +64,10 @@ func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error)
 	}
 
 	// generate Upstreams and Targets from service defs
-	result.Upstreams = getUpstreams(log, s, parsedAll.ServiceNameToServices)
+	upstreams := getUpstreams(log, s, parsedAll.ServiceNameToServices)
+	for _, upstream := range upstreams {
+		result.Upstreams = append(result.Upstreams, upstream)
+	}
 
 	// merge KongIngress with Routes, Services and Upstream
 	result.FillOverrides(log, s)
@@ -206,8 +209,8 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 }
 
 func getUpstreams(
-	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
-	var upstreams []kongstate.Upstream
+	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) map[string]kongstate.Upstream {
+	upstreams := make(map[string]kongstate.Upstream)
 	for _, service := range serviceMap {
 		var targets []kongstate.Target
 		port, err := findPort(&service.K8sService, service.Backend.Port)
@@ -220,13 +223,12 @@ func getUpstreams(
 		upstream := kongstate.Upstream{
 			Upstream: kong.Upstream{
 				Name: kong.String(
-					// TODO TR we determine the upstream name here
 					fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())),
 			},
 			Service: service,
 			Targets: targets,
 		}
-		upstreams = append(upstreams, upstream)
+		upstreams[*upstream.Name] = upstream
 	}
 	return upstreams
 }

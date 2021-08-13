@@ -176,19 +176,23 @@ jobs:
       - "integration-tests-postgres"
     runs-on: ubuntu-latest
     steps:
+      # TODO: deduplicate the download-artifact steps by implementing a `matrix` workflow step instead
     - name: collect unit test coverage artifacts
+      id: download-unit
       uses: actions/download-artifact@v2.0.10
       with:
         name: coverage.unit.out
         path: coverage.unit.out
 
     - name: collect dbless test coverage artifacts
+      id: download-dbless
       uses: actions/download-artifact@v2.0.10
       with:
         name: coverage.dbless.out
         path: coverage.dbless.out
 
     - name: collect postgres test coverage artifacts
+      id: download-postgres
       uses: actions/download-artifact@v2.0.10
       with:
         name: coverage.postgres.out
@@ -199,6 +203,6 @@ jobs:
       with:
         name: combined-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.unit.out,./coverage.dbless.out,./coverage.postgres.out
+        files: ${{steps.download-unit.outputs.download-path}}/coverage.unit.out,${{steps.download-dbless.outputs.download-path}}/coverage.dbless.out,${{steps.download-postgres.outputs.download-path}}/coverage.postgres.out
         fail_ci_if_error: true
         verbose: true

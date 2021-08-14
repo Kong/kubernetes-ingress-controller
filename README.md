@@ -6,6 +6,8 @@
 
 # Kong for Kubernetes
 
+# Not supported, k8s 1.22
+
 ⚠️ **Due to Bintray image registries going out of service, we've moved our Docker images to [Docker Hub](https://hub.docker.com/r/kong/kubernetes-ingress-controller/tags).** ⚠️
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].

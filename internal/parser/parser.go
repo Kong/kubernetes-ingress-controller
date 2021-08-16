@@ -64,10 +64,7 @@ func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error)
 	}
 
 	// generate Upstreams and Targets from service defs
-	upstreams := getUpstreams(log, s, parsedAll.ServiceNameToServices)
-	for _, upstream := range upstreams {
-		result.Upstreams = append(result.Upstreams, upstream)
-	}
+	result.Upstreams = getUpstreams(log, s, parsedAll.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
 	result.FillOverrides(log, s)
@@ -209,26 +206,31 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 }
 
 func getUpstreams(
-	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) map[string]kongstate.Upstream {
-	upstreams := make(map[string]kongstate.Upstream)
+	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
+	upstreamDedup := make(map[string]struct{})
+	var empty struct{}
+	upstreams := make([]kongstate.Upstream, 0, len(serviceMap))
 	for _, service := range serviceMap {
-		var targets []kongstate.Target
-		port, err := findPort(&service.K8sService, service.Backend.Port)
-		if err == nil {
-			targets = getServiceEndpoints(log, s, service.K8sService, port)
-		} else {
-			log.WithField("service_name", *service.Name).Warnf("skipping service - getServiceEndpoints failed: %v", err)
-		}
+		name := fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())
+		if _, exists := upstreamDedup[name]; !exists {
+			var targets []kongstate.Target
+			port, err := findPort(&service.K8sService, service.Backend.Port)
+			if err == nil {
+				targets = getServiceEndpoints(log, s, service.K8sService, port)
+			} else {
+				log.WithField("service_name", *service.Name).Warnf("skipping service - getServiceEndpoints failed: %v", err)
+			}
 
-		upstream := kongstate.Upstream{
-			Upstream: kong.Upstream{
-				Name: kong.String(
-					fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())),
-			},
-			Service: service,
-			Targets: targets,
+			upstream := kongstate.Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String(name),
+				},
+				Service: service,
+				Targets: targets,
+			}
+			upstreams = append(upstreams, upstream)
+			upstreamDedup[name] = empty
 		}
-		upstreams[*upstream.Name] = upstream
 	}
 	return upstreams
 }

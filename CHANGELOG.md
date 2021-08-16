@@ -36,9 +36,8 @@
 
  ## [2.0.0] - TBA
 
-#### Hot-Fix
-- Fixed controller metrics expose bug
-  [#1497] (https://github.com/Kong/kubernetes-ingress-controller/issues/1497)
+#### Fixed
+- Prometheus metrics were not exposed on the metrics endpoint in 2.0.0-beta.1 by default [#1497](https://github.com/Kong/kubernetes-ingress-controller/issues/1497)
 
 #### Added
 

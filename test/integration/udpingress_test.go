@@ -143,7 +143,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, 120*time.Second, 1*time.Second, true)
+	}, 30*time.Second, 1*time.Second, true)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
@@ -278,7 +278,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			}
 		}
 		return false
-	}, 120*time.Second, 1*time.Second, true)
+	}, 30*time.Second, 1*time.Second, true)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
@@ -333,7 +333,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			}
 		}
 		return false
-	}, 120*time.Second, 1*time.Second, true)
+	}, 30*time.Second, 1*time.Second, true)
 
 	t.Logf("checking DNS to resolve via TCPIngress %s", tcp.Name)
 	assert.Eventually(t, func() bool {

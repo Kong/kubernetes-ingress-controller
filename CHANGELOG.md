@@ -1,5 +1,6 @@
 # Table of Contents
 -  [2.0.0](#200---tbd)
+ - [2.0.0-beta.2](#200-beta1---202108015)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
@@ -34,6 +35,10 @@
  - [0.0.4 and prior](#004-and-prior)
 
  ## [2.0.0] - TBA
+
+#### Hot-Fix
+- Fixed controller metrics expose bug
+  [#1497] (https://github.com/Kong/kubernetes-ingress-controller/issues/1497)
 
 #### Added
 

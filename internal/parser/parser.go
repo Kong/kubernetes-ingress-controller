@@ -207,7 +207,7 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 
 func getUpstreams(
 	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
-	upstreamDedup := make(map[string]struct{})
+	upstreamDedup := make(map[string]struct{}, len(serviceMap))
 	var empty struct{}
 	upstreams := make([]kongstate.Upstream, 0, len(serviceMap))
 	for _, service := range serviceMap {

@@ -6,8 +6,6 @@
 
 # Kong for Kubernetes
 
-⚠️ **Due to Bintray image registries going out of service, we've moved our Docker images to [Docker Hub](https://hub.docker.com/r/kong/kubernetes-ingress-controller/tags).** ⚠️
-
 Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
 load balancing and more in Kong

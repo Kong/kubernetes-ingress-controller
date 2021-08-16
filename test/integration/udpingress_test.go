@@ -169,11 +169,9 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	t.Log("locking TCP and UDP ports")
 	udpMutex.Lock()
 	tcpMutex.Lock()
-	defer func() {
-		t.Log("unlocking TCP and UDP ports")
-		tcpMutex.Unlock()
-		udpMutex.Unlock()
-	}()
+
+	defer udpMutex.Unlock()
+	defer tcpMutex.Unlock()
 
 	ns, cleanup := namespace(t)
 	defer cleanup()

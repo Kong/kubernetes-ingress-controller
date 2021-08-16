@@ -3,7 +3,7 @@ module github.com/kong/kubernetes-ingress-controller
 go 1.16
 
 require (
-	cloud.google.com/go v0.90.0
+	cloud.google.com/go v0.91.1
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
@@ -29,8 +29,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.8.1
-	google.golang.org/api v0.53.0
-	google.golang.org/genproto v0.0.0-20210805201207-89edb61ffb67
+	google.golang.org/api v0.54.0
+	google.golang.org/genproto v0.0.0-20210811021853-ddbe55d93216
 	k8s.io/api v0.22.0
 	k8s.io/apiextensions-apiserver v0.22.0
 	k8s.io/apimachinery v0.22.0

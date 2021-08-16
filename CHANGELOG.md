@@ -1,6 +1,6 @@
 # Table of Contents
 -  [2.0.0](#200---tbd)
- - [2.0.0-beta.2](#200-beta2---202108015)
+ - [2.0.0-beta.2](#200-beta2---202108016)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
@@ -36,7 +36,7 @@
 
  ## [2.0.0] - TBA
 
-## [2.0.0-beta.2] - 2021/08/15
+## [2.0.0-beta.2] - 2021/08/16
 
 #### Fixed
 - Prometheus metrics were not exposed on the metrics endpoint in 2.0.0-beta.1 by default [#1497](https://github.com/Kong/kubernetes-ingress-controller/issues/1497)

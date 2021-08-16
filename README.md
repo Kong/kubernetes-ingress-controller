@@ -14,7 +14,7 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
 
-## KIC 2.0 is in beta now!
+## ✨ KIC 2.0 is in public beta! ✨
 
 We're happy to announce that Kong Ingress Controller 2.0 is in public beta.
 

@@ -3,6 +3,9 @@ name: release
 
 on:
   push:
+    branches:
+      - 'main'
+      - 'next'
     tags:
       - 'v2.*'
 

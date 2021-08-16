@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
 
-# Kong Kubernetes Ingress Controller
+# Kong Ingress Controller for Kubernetes
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
@@ -13,6 +13,21 @@ for Kubernetes Services, all using
 Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
+
+## KIC 2.0 is in beta now!
+
+We're happy to announce that Kong Ingress Controller 2.0 is in public beta.
+
+This new release comes with a major internal rearchitecture, and the following added features:
+- Support for UDP ingress resources and the new `UDPIngress` CRD,
+- Ingress controller runtime metrics compatible with Prometheus, for easier monitoring and alerting.
+
+For a quick start, just deploy KIC 2.0 beta to your cluster:
+```console
+$ https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/deploy/single-v2/all-in-one-dbless.yaml
+```
+
+See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller-beta) for Kong Ingress Controller 2.0 beta.
 
 ## Features
 

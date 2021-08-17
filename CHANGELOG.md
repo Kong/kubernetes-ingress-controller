@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [2.0.0](#200---tbd)
+ - [2.0.0](#200---tba)
  - [2.0.0-beta.2](#200-beta2---202108016)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
@@ -37,6 +37,12 @@
  - [0.0.4 and prior](#004-and-prior)
 
 ## [2.0.0] - TBA
+
+#### Added
+- In DB-less mode, the controller only marks itself ready once it has
+  successfully applied configuration at least once. This ensures that proxies
+  do not start handling traffic until they are configured.
+  [#1720](https://github.com/Kong/kubernetes-ingress-controller/issues/1720)
 
 #### Fixed
 
@@ -1298,6 +1304,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-beta.2...2.0.0
 [2.0.0-beta.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-beta.1...2.0.0-beta.2
 [2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.3...2.0.0-beta.1
 [2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-alpha.3

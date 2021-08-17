@@ -1,4 +1,4 @@
-e of Contents
+# Table of Contents
  - [2.0.0-beta.2](#200-beta2---202108016)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)

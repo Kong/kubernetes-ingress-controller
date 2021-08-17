@@ -155,6 +155,17 @@ func (p *clientgoCachedProxyResolver) ObjectExists(obj client.Object) (bool, err
 	return exists, err
 }
 
+func (p *clientgoCachedProxyResolver) IsReady() bool {
+	// If the proxy is has no database, it is only ready after a successful sync
+	// Otherwise, it has no configuration loaded
+	if p.dbmode == "off" {
+		return len(p.lastConfigSHA) > 0
+	}
+	// If the proxy has a database, it is ready immediately
+	// It will load existing configuration from the database
+	return true
+}
+
 // -----------------------------------------------------------------------------
 // Client Go Cached Proxy Resolver - Private Methods - Servers
 // -----------------------------------------------------------------------------

@@ -7,8 +7,9 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/adminapi/validators"
+	credvalidators "github.com/kong/kubernetes-ingress-controller/internal/adminapi/validators/consumer/credentials"
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
@@ -48,10 +49,13 @@ func (ks *KongState) SanitizedCopy() *KongState {
 	}
 }
 
+// FillConsumersAndCredentials builds indices of all consumers and credentials within its purview.
+// If violations for constraints between credentials are found, this function will log those as errors
+// but will attempt to drop the offending data and otherwise move past them until a time when the
+// problem has been rectified by an operator.
 func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
 	consumerIndex := make(map[string]Consumer)
-
-	// build consumer index
+	credentialsIndex := make(credvalidators.Index)
 	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
 		if consumer.Username == "" && consumer.CustomID == "" {
@@ -69,11 +73,21 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			"kongconsumer_name":      consumer.Name,
 			"kongconsumer_namespace": consumer.Namespace,
 		})
+
+		// ---------------------------------------------------------------------------
+		// KongConsumer Credentials - Processing & Validation
+		// ---------------------------------------------------------------------------
+
 		for _, cred := range consumer.Credentials {
 			log = log.WithFields(logrus.Fields{
 				"secret_name":      cred,
 				"secret_namespace": consumer.Namespace,
 			})
+
+			// --------------------------------------------------------------------------
+			// Credentials Retrieval
+			// --------------------------------------------------------------------------
+
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
 				log.Errorf("failed to fetch secret: %v", err)
@@ -89,22 +103,97 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				}
 				credConfig[k] = string(v)
 			}
-			credType, ok := credConfig["kongCredType"].(string)
+
+			// --------------------------------------------------------------------------
+			// Credentials Validation
+			// --------------------------------------------------------------------------
+
+			// if any validation fails the credentials will be marked as invalid and not
+			// applied, however validation continues after each failure so as to get the
+			// benefit of reporting ALL validation issues that were found with this
+			// credential, so the operator can make all the required changes and not
+			// update one only to find there were more the whole time.
+			invalid := false
+
+			// if any failure occur when validating the credentials, the error will contain
+			// this prefix in the message body to make it easier to search for this class
+			// of errors (KongConsumer credentials validation errors) in the manager logs.
+			failHeader := fmt.Sprintf("failed to provision credentials for consumer %s", consumer.Name)
+
+			// validate that the required "kongCredType" key is present in the creds.
+			credType, ok := credConfig[credvalidators.TypeKey].(string)
 			if !ok {
-				log.Errorf("failed to provision credential: invalid credType: %v", credType)
+				log.Errorf("%s: secret %s provided no %s", failHeader, secret.Name, credvalidators.TypeKey)
+				invalid = true
 			}
-			if !supportedCreds.Has(credType) {
-				log.Errorf("failed to provision credential: invalid credType: %v", credType)
-				continue
+			if !credvalidators.SupportedTypes.Has(credType) {
+				supportedCredsString := fmt.Sprintf("valid options are: %s", strings.Join(credvalidators.SupportedTypes.List(), ","))
+				log.Errorf("%s: invalid credType: %s (%s)", failHeader, credType, supportedCredsString)
+				invalid = true
 			}
-			if len(credConfig) <= 1 { // 1 key of credType itself
-				log.Errorf("failed to provision credential: empty secret")
-				continue
+
+			// validate that the credentials actually includes configuration, not just the type
+			if len(credConfig) <= 1 {
+				log.Errorf("%s: secret %s has no data", failHeader, secret.Name)
+				continue // if this is true, there's nothing left to validate anyway
 			}
-			err = c.SetCredential(credType, credConfig, ks.Version)
-			if err != nil {
-				log.Errorf("failed to provision credential: %v", err)
-				continue
+
+			// consumer credentials can technically be configured with two (different)
+			// secrets that contain the same key. For some types there are unique
+			// contraints on the key. Here we validate the unique constraints for
+			// several types.
+			for k, v := range credConfig {
+				if k == credvalidators.TypeKey {
+					continue // the type key doesn't need to be validated, it's only organizational
+				}
+
+				// check whether the type for this key is one that includes unique
+				// constraints. Ultimately if there are no constraints on the type
+				// we don't need to bother using system memory to keep track of it
+				// in the index because it will be inconsequential.
+				if credvalidators.IsKeyUniqueConstrained(credType, k) {
+					// we will need a copy of the actual data for this key in order to validate it.
+					value, ok := v.(string)
+					if !ok {
+						log.Errorf("%s: invalid credential %s: key value can't be %T", failHeader, consumer.Name, cred, v)
+						invalid = true
+						continue // invalid data can't be validated
+					}
+
+					// generate a credential validation object reference
+					credential := credvalidators.Credential{
+						ConsumerName:      consumer.Name,
+						ConsumerNamespace: consumer.Namespace,
+						Key:               k,
+						Value:             value,
+						Type:              credType,
+					}
+
+					// try to add the newly found credential to the credentials index.
+					// if the new credential is in violation of any constraints in reference
+					// to the existing credentials in the list it will throw an error.
+					if err := credentialsIndex.Add(credential); err != nil {
+						if violationErr, ok := err.(validators.UniqueConstraintViolationError); ok {
+							log.Errorf("%s: %w", failHeader, violationErr)
+							invalid = true
+						} else {
+							log.Errorf("%s: unexpected error when validating constraints for key %s: %w", failHeader, k, err)
+							invalid = true
+						}
+					}
+				}
+			}
+
+			// --------------------------------------------------------------------------
+			// Credentials Updates
+			// --------------------------------------------------------------------------
+
+			if !invalid {
+				err = c.SetCredential(credType, credConfig, ks.Version)
+				if err != nil {
+					log.Errorf("%s: %w", failHeader, err)
+					continue
+				}
 			}
 		}
 
@@ -326,12 +415,3 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
 	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
 }
-
-var supportedCreds = sets.NewString(
-	"acl",
-	"basic-auth",
-	"hmac-auth",
-	"jwt",
-	"key-auth",
-	"oauth2",
-)

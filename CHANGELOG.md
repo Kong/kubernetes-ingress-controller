@@ -43,7 +43,8 @@ e of Contents
 
 #### Fixed
 
-- Prometheus metrics were not exposed on the metrics endpoint in 2.0.0-beta.1 by default [#1497](https://github.com/Kong/kubernetes-ingress-controller/issues/1497)
+- Prometheus metrics were not exposed on the metrics endpoint in 2.0.0-beta.1 by default
+  [#1497](https://github.com/Kong/kubernetes-ingress-controller/issues/1497)
 - Resolved an issue where certain UDPIngress and TCPIngress configurations
   resulted in overlapping incompatible Kong configuration.
   [#1702](https://github.com/Kong/kubernetes-ingress-controller/issues/1702)

@@ -1,5 +1,5 @@
-# Table of Contents
--  [2.0.0](#200---tbd)
+e of Contents
+ - [2.0.0](#200---tbd)
  - [2.0.0-beta.2](#200-beta2---202108016)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
@@ -46,6 +46,12 @@
 
 - Upgraded Kong Gateway from 2.4 to 2.5
   [#1684](https://github.com/Kong/kubernetes-ingress-controller/issues/1684)
+
+#### Fixed
+
+- Resolved an issue where certain UDPIngress and TCPIngress configurations
+  resulted in overlapping incompatible Kong configuration.
+  [#1702](https://github.com/Kong/kubernetes-ingress-controller/issues/1702)
 
 ## [2.0.0-beta.1] - 2021/08/06
 

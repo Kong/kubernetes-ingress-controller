@@ -1,6 +1,4 @@
 # Table of Contents
-
- - [2.0.0](#200---tbd)
  - [2.0.0-beta.2](#200-beta2---202108016)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
@@ -35,18 +33,6 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
-
-## [2.0.0] - TBA
-
-#### Fixed
-
-- Previously when `KongConsumer` credentials were provided which were in violation
-  of unique constraints this would cause a hard lockup of the controller and it would
-  be unable to perform any updates on the gateway until the offending objects were
-  resolved. We've patched this to now _drop_ the offending credentials instead so that
-  other configurations can continue and log the error continually until the offending
-  objects are resolved.
-  [#729](https://github.com/Kong/kubernetes-ingress-controller/issues/729)
 
 ## [2.0.0-beta.2] - 2021/08/16
 

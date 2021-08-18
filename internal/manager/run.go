@@ -67,13 +67,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to start proxy cache server: %w", err)
 	}
 
-	var ConfigReady healthz.Checker = func(_ *http.Request) error {
-		if proxy.IsReady() {
-			return nil
-		}
-		return errors.New("proxy not yet configured")
-	}
-
 	setupLog.Info("deploying all enabled controllers")
 	controllers, err := setupControllers(mgr, proxy, c)
 	if err != nil {
@@ -93,7 +86,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
-	if err := mgr.AddReadyzCheck("check", ConfigReady); err != nil {
+	if err := mgr.AddReadyzCheck("check", func(_ *http.Request) error {
+		if proxy.IsReady() {
+			return nil
+		}
+		return errors.New("proxy not yet configured")
+	}); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
 	}
 

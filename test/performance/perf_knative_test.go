@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	knativeCrds = "https://github.com/knative/serving/releases/download/v0.16.0/serving-crds.yaml"
-	knativeCore = "https://github.com/knative/serving/releases/download/v0.16.0/serving-core.yaml"
+	knativeCrds = "https://github.com/knative/serving/releases/download/v0.18.0/serving-crds.yaml"
+	knativeCore = "https://github.com/knative/serving/releases/download/v0.18.0/serving-core.yaml"
 )
 
 func TestPerfKnativePerformance(t *testing.T) {
@@ -151,7 +151,7 @@ func perfconfigKnativeDomain(ctx context.Context, proxy string, cluster clusters
 	configMapData := make(map[string]string, 0)
 	configMapData[proxy] = ""
 	labels := make(map[string]string)
-	labels["serving.knative.dev/release"] = "v0.16.0"
+	labels["serving.knative.dev/release"] = "v0.18.0"
 	configMap := v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",

@@ -1,4 +1,5 @@
-//+build integration_tests
+//go:build integration_tests
+// +build integration_tests
 
 package integration
 
@@ -11,7 +12,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	admregv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,30 +69,30 @@ func TestValidationWebhook(t *testing.T) {
 	}, metav1.CreateOptions{})
 	require.NoError(t, err, "creating webhook endpoints")
 
-	fail := admregv1beta1.Fail
-	none := admregv1beta1.SideEffectClassNone
-	_, err = env.Cluster().Client().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(ctx,
-		&admregv1beta1.ValidatingWebhookConfiguration{
+	fail := admregv1.Fail
+	none := admregv1.SideEffectClassNone
+	_, err = env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
+		&admregv1.ValidatingWebhookConfiguration{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "admissionregistration.k8s.io/v1", Kind: "ValidatingWebhookConfiguration"},
 			ObjectMeta: metav1.ObjectMeta{Name: "kong-validations"},
-			Webhooks: []admregv1beta1.ValidatingWebhook{
+			Webhooks: []admregv1.ValidatingWebhook{
 				{
 					Name:                    "validations.kong.konghq.com",
 					FailurePolicy:           &fail,
 					SideEffects:             &none,
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					Rules: []admregv1beta1.RuleWithOperations{
+					Rules: []admregv1.RuleWithOperations{
 						{
-							Rule: admregv1beta1.Rule{
+							Rule: admregv1.Rule{
 								APIGroups:   []string{""},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"secrets"},
 							},
-							Operations: []admregv1beta1.OperationType{admregv1beta1.Create, admregv1beta1.Update},
+							Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
 						},
 					},
-					ClientConfig: admregv1beta1.WebhookClientConfig{
-						Service:  &admregv1beta1.ServiceReference{Namespace: controllerNamespace, Name: webhookSvcName},
+					ClientConfig: admregv1.WebhookClientConfig{
+						Service:  &admregv1.ServiceReference{Namespace: controllerNamespace, Name: webhookSvcName},
 						CABundle: []byte(admissionWebhookCert),
 					},
 				},

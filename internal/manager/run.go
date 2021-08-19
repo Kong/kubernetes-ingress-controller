@@ -87,10 +87,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", func(_ *http.Request) error {
-		if proxy.IsReady() {
-			return nil
+		if !proxy.IsReady() {
+			return errors.New("proxy not yet configured")
 		}
-		return errors.New("proxy not yet configured")
+		return nil
 	}); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
 	}

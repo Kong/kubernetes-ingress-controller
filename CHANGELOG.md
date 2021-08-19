@@ -39,20 +39,11 @@
 ## [2.0.0] - TBA
 
 #### Added
+
 - In DB-less mode, the controller only marks itself ready once it has
   successfully applied configuration at least once. This ensures that proxies
   do not start handling traffic until they are configured.
   [#1720](https://github.com/Kong/kubernetes-ingress-controller/issues/1720)
-
-#### Fixed
-
-- Previously when `KongConsumer` credentials were provided which were in violation
-  of unique constraints this would cause a hard lockup of the controller and it would
-  be unable to perform any updates on the gateway until the offending objects were
-  resolved. We've patched this to now _drop_ the offending credentials instead so that
-  other configurations can continue and log the error continually until the offending
-  objects are resolved.
-  [#729](https://github.com/Kong/kubernetes-ingress-controller/issues/729)
 
 ## [2.0.0-beta.2] - 2021/08/16
 

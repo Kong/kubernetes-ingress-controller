@@ -1,4 +1,5 @@
-//+build integration_tests
+//go:build integration_tests
+// +build integration_tests
 
 package integration
 
@@ -107,7 +108,7 @@ func configKnativeDomain(ctx context.Context, proxy, nsn string, cluster cluster
 			Name:      "config-domain",
 			Namespace: nsn,
 			Labels: map[string]string{
-				"serving.knative.dev/release": "v0.13.0",
+				"serving.knative.dev/release": "v0.18.0",
 			},
 		},
 		Data: map[string]string{

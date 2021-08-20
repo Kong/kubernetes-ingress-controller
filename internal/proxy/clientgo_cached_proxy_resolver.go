@@ -167,7 +167,6 @@ func (p *clientgoCachedProxyResolver) IsReady() bool {
 	// Otherwise, it has no configuration loaded
 	if p.dbmode == "off" {
 		p.configAppliedMutex.RLock()
-		return p.configApplied
 		defer p.configAppliedMutex.RUnlock()
 		return p.configApplied
 	}

@@ -168,7 +168,8 @@ func (p *clientgoCachedProxyResolver) IsReady() bool {
 	if p.dbmode == "off" {
 		p.configAppliedMutex.RLock()
 		return p.configApplied
-		p.configAppliedMutex.RUnlock()
+		defer p.configAppliedMutex.RUnlock()
+		return p.configApplied
 	}
 	// If the proxy has a database, it is ready immediately
 	// It will load existing configuration from the database

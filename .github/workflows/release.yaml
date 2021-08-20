@@ -134,7 +134,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.4.1
+        uses: docker/metadata-action@v3.5.0
         with:
           images: kong/kubernetes-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}

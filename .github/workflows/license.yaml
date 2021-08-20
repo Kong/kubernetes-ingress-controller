@@ -42,7 +42,7 @@ jobs:
         diff -u target_licenses.csv pr_licenses.csv >> $GITHUB_ENV || true
         echo 'EOF' >> $GITHUB_ENV
     - name: Update PR - go-license output differs
-      uses: actions/github-script@v4.0.2
+      uses: actions/github-script@v4.1
       if: ${{ env.DIFF_OUT != '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -61,7 +61,7 @@ jobs:
             })
     - name: Update PR - remove unchanged label
       continue-on-error: true
-      uses: actions/github-script@v4.0.2
+      uses: actions/github-script@v4.1
       if: ${{ env.DIFF_OUT != '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -73,7 +73,7 @@ jobs:
               name: ['ci/license/unchanged']
             })
     - name: Update PR - go-license output equal
-      uses: actions/github-script@v4.0.2
+      uses: actions/github-script@v4.1
       if: ${{ env.DIFF_OUT == '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}

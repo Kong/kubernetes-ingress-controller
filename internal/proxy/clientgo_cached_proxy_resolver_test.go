@@ -116,9 +116,9 @@ func TestIsReady(t *testing.T) {
 	assert.True(t, postgresProxy.IsReady())
 	assert.False(t, dblessProxy.IsReady())
 
-	t.Log("checking readiness after lastConfigSHA is set")
-	postgresProxy.lastConfigSHA = []byte{1, 2, 3, 4}
-	dblessProxy.lastConfigSHA = []byte{1, 2, 3, 4}
+	t.Log("marking config applied and checking readiness after")
+	postgresProxy.markConfigApplied()
+	dblessProxy.markConfigApplied()
 	assert.True(t, postgresProxy.IsReady())
 	assert.True(t, dblessProxy.IsReady())
 }

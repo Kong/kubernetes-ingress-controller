@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -75,6 +76,8 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		stagger:             stagger,
 		proxyRequestTimeout: proxyRequestTimeout,
 		syncTicker:          time.NewTicker(stagger),
+
+		configApplied: false,
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -106,6 +109,10 @@ type clientgoCachedProxyResolver struct {
 	// lastConfigSHA indicates the last SHA sum for the last configuration
 	// updated in the Kong Proxy and is used to avoid making unnecessary updates.
 	lastConfigSHA []byte
+
+	// configApplied is true if config has been applied at least once
+	configApplied      bool
+	configAppliedMutex sync.RWMutex
 
 	// kong configuration
 	kongConfig        sendconfig.Kong
@@ -159,7 +166,9 @@ func (p *clientgoCachedProxyResolver) IsReady() bool {
 	// If the proxy is has no database, it is only ready after a successful sync
 	// Otherwise, it has no configuration loaded
 	if p.dbmode == "off" {
-		return len(p.lastConfigSHA) > 0
+		p.configAppliedMutex.RLock()
+		return p.configApplied
+		p.configAppliedMutex.RUnlock()
 	}
 	// If the proxy has a database, it is ready immediately
 	// It will load existing configuration from the database
@@ -173,6 +182,7 @@ func (p *clientgoCachedProxyResolver) IsReady() bool {
 // startProxyUpdateServer runs a server in a background goroutine that is responsible for
 // updating the kong proxy backend at regular intervals.
 func (p *clientgoCachedProxyResolver) startProxyUpdateServer() {
+	var initialConfig sync.Once
 	for {
 		select {
 		case <-p.ctx.Done():
@@ -190,6 +200,7 @@ func (p *clientgoCachedProxyResolver) startProxyUpdateServer() {
 				break
 			}
 			p.lastConfigSHA = updateConfigSHA
+			initialConfig.Do(p.markConfigApplied)
 		}
 	}
 }
@@ -252,6 +263,13 @@ func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interfac
 	ctx, cancel := context.WithTimeout(p.ctx, p.proxyRequestTimeout)
 	defer cancel()
 	return p.kongConfig.Client.Root(ctx)
+}
+
+// markConfigApplied marks that config has been applied
+func (p *clientgoCachedProxyResolver) markConfigApplied() {
+	p.configAppliedMutex.Lock()
+	p.configApplied = true
+	p.configAppliedMutex.Unlock()
 }
 
 // -----------------------------------------------------------------------------

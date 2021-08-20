@@ -113,14 +113,14 @@ func TestIsReady(t *testing.T) {
 	}
 
 	t.Log("checking initial readiness state")
-	assert.Equal(t, true, postgresProxy.IsReady())
-	assert.Equal(t, false, dblessProxy.IsReady())
+	assert.True(t, postgresProxy.IsReady())
+	assert.False(t, dblessProxy.IsReady())
 
 	t.Log("checking readiness after lastConfigSHA is set")
 	postgresProxy.lastConfigSHA = []byte{1, 2, 3, 4}
 	dblessProxy.lastConfigSHA = []byte{1, 2, 3, 4}
-	assert.Equal(t, postgresProxy.IsReady(), true)
-	assert.Equal(t, dblessProxy.IsReady(), true)
+	assert.True(t, postgresProxy.IsReady())
+	assert.True(t, dblessProxy.IsReady())
 }
 
 func TestCaching(t *testing.T) {

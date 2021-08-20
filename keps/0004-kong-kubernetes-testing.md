@@ -1,5 +1,5 @@
 ---
-status: implementable
+status: implemented
 ---
 
 **NOTE**: this will be considered `implemented` once [Milestone 1][m1] is completed.
@@ -29,7 +29,7 @@ status: implementable
 
 ## Release Signoff Checklist
 
-- [ ] [v0.1.0 Milestone][ms1]
+- [x] [v0.1.0 Milestone][ms1]
 
 [ms1]:https://github.com/Kong/kubernetes-testing-framework/milestone/1
 
@@ -105,7 +105,7 @@ Integration tests written in the testing framework will also serve the purpose o
 
 - [X] Testing Framework Prototype
 - [X] Testing Framework plugged into KIC
-- [ ] KTF `v0.1.0` milestone completed & `v0.1.0` released
+- [x] KTF `v0.1.0` milestone completed & `v0.1.0` released
 
 ## Implementation History
 

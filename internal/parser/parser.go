@@ -249,7 +249,7 @@ func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
 
 	_, err := tls.X509KeyPair([]byte(cert), []byte(key))
 	if err != nil {
-		return "", "", fmt.Errorf("parsing TLS key-pair in secret '%v/%v': %v",
+		return "", "", fmt.Errorf("parsing TLS key-pair in secret '%v/%v': %w",
 			secret.Namespace, secret.Name, err)
 	}
 

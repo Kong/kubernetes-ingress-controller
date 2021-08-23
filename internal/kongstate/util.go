@@ -87,7 +87,7 @@ func kongPluginFromK8SClusterPlugin(
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
@@ -131,7 +131,7 @@ func kongPluginFromK8SPlugin(
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom.SecretValue !=
@@ -197,7 +197,7 @@ func SecretToConfiguration(
 	secret, err := s.GetSecret(namespace, reference.Secret)
 	if err != nil {
 		return kong.Configuration{}, fmt.Errorf(
-			"error fetching plugin configuration secret '%v/%v': %v",
+			"error fetching plugin configuration secret '%v/%v': %w",
 			namespace, reference.Secret, err)
 	}
 	secretVal, ok := secret.Data[reference.Key]

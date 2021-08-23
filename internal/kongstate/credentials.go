@@ -80,7 +80,7 @@ func NewJWTAuth(config interface{}) (*JWTAuth, error) {
 	var res JWTAuth
 	err := decodeCredential(config, &res.JWTAuth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to process JWT credential: %v", err)
+		return nil, fmt.Errorf("failed to process JWT credential: %w", err)
 	}
 	// This is treated specially because only this
 	// field might be omitted by user under the expectation
@@ -113,7 +113,7 @@ func NewACLGroup(config interface{}) (*ACLGroup, error) {
 	var res ACLGroup
 	err := decodeCredential(config, &res.ACLGroup)
 	if err != nil {
-		return nil, fmt.Errorf("failed to process ACL group: %v", err)
+		return nil, fmt.Errorf("failed to process ACL group: %w", err)
 	}
 	if res.Group == nil {
 		return nil, fmt.Errorf("acl is invalid: no group")

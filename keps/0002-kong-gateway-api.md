@@ -238,33 +238,9 @@ Production readiness of this feature is marked by the following requirements:
 
 ### Feature Enablement and Rollback
 
-In order to significantly limit the exposure of our Gateway APIs implementations during the alpha/beta periods of their release
-we will not provide the standard `--enable-controller-<name>` flags for the manager as these are [prominently documented][flags-docs]
-and otherwise easily visible when running `manager --help` which ostensibly gives them a sense that they are a normal part of any included release.
+The Gateway API support will be disabled by default prior to GA and enabled by using `--enable-controller-gateway`.
 
-We will provide a [Feature Gate][feature-gates] option for enabling Gateway APIs which will [conform to upstream standards][gate-alpha-beta] as to how
-alpha and beta features can be enabled, which in turn will be strongly familiar way to manage these kinds of features to Kubernetes cluster operators.
-
-Consequently we will need to add [documentation][docs-refs] a table of our feature gates statuses as upstream does for their controllers.
-
-###### How can this feature be enabled / disabled in a live cluster?
-
-Can be enabled with:
-
-```shell
---feature-gates="...,GatewayAPIs=true"
-```
-
-Disabling can be a matter of not setting a value on the feature gate at all, or being explicitly if desired for documentative reasons:
-
-```shell
---feature-gates="...,GatewayAPIs=false"
-```
-
-[flags-docs]:https://docs.konghq.com/kubernetes-ingress-controller/latest/references/cli-arguments/
-[features-gates]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
-[gate-alpha-beta]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features
-[docs-refs]:https://docs.konghq.com/kubernetes-ingress-controller/latest/references
+Once the feature is GA according to the `Production Readiness` standards, the flag will be enabled by default instead.
 
 ## Drawbacks
 

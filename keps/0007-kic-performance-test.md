@@ -4,8 +4,10 @@ status: provisional
 ---
 
 # Notes
+
 For references see the dependencies related to this proprosal to check the progress of related efforts:
-- solution 
+
+- solution
 - deployment and configuration
 - code/repo
 - configuration and execution
@@ -14,8 +16,9 @@ For references see the dependencies related to this proprosal to check the progr
 
 
 ## Summary
-  We want a performance test solution that can be executed collecting metrics (cpu, memory, workqueue, business logic etc) per release, which also provides controller profiling helping evaluating bottleneck and scalabilities. The execution could be based on configuration, or code change trigger. 
-  Performance tests should be able to integrate with different kubernetes cluster and cloud provider, and scale according to controller scalability. 
+
+We want a performance test solution that can be executed collecting metrics (cpu, memory, workqueue, business logic etc) per release, which also provides controller profiling helping evaluating bottleneck and scalabilities. The execution could be based on configuration, or code change trigger.
+Performance tests should be able to integrate with different kubernetes cluster and cloud provider, and scale according to controller scalability.
 
 [kic]:https://github.com/kong/kubernetes-ingress-controller
 [ktf]:https://github.com/Kong/kubernetes-testing-framework
@@ -25,11 +28,13 @@ For references see the dependencies related to this proprosal to check the progr
 [docker]: https://www.docker.com/ 
 
 ## Motivation
+
  - we currently have no data, documentation, or determined performance characteristics for the KIC in any Kubernetes or infrastructure environment
  - we want libraries and tooling that can be run against a Kubernetes cluster and its underlying infrastructure to analyze the performance characteristics of the KIC in that environment
  - we want our tooling to be open source so end-users can run a performance analysis themselves in their environment
- 
+
 ### Goals
+
  - provide an isolated and reproducible environment for performance testing
  - continue integration and continue test
  - Visualize testing configuration and results.

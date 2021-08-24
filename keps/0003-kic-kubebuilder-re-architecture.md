@@ -1,6 +1,6 @@
 ---
 title: KIC Kubebuilder Rearchitecture
-status: implementable
+status: implemented
 ---
 
 # Notes

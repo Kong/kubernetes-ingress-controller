@@ -121,7 +121,9 @@ manager --gateway-class konghq.com/gateway-controller
 
 - It's up to the operator whether they want a single or multiple controllers responsible for their `GatewayClasses`, for some high end deployments an entirely separate manager can be spun up but will need to have a distinct `--gateway-class`
 - If someone mutates the specification for a `GatewayClass` such as to drop the `controller: <tag>` which enables our support of it, the controller will stop managing related resources and will clean out the Kong Gateway's relevant configurations
+- TODO: Note that there's [some discussion][gateway-823] we've started upstream for some of the nuances with multi-tenancy, as there's currently limited documentation upstream on the matter. Before we consider this KEP `implementable` we need to make sure we get resolution there.
 
+[gateway-823]:https://github.com/kubernetes-sigs/gateway-api/discussions/823
 #### Gateway Controller
 
 Where the `GatewayClass` API maps to our controller manager, the `Gateway` API maps to the Kong Gateway (Proxy Server).

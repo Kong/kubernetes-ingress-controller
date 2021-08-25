@@ -101,7 +101,6 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new Service", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -171,7 +170,6 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new Endpoints", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -241,7 +239,6 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new Secret", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -323,7 +320,6 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -405,7 +401,6 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -487,7 +482,6 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -557,7 +551,6 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new KongIngress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -627,7 +620,6 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new KongPlugin", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -709,7 +701,6 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new KongClusterPlugin", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -791,7 +782,6 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new KongConsumer", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -873,7 +863,6 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new TCPIngress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -955,7 +944,6 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new UDPIngress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -1037,7 +1025,6 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new Ingress", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}

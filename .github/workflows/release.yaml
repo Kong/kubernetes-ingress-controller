@@ -4,7 +4,7 @@ name: release
 on:
   push:
     branches:
-      - 'main'
+      - 'integrate-kong-enterprise'
     tags:
       - 'v2.*'
 
@@ -88,6 +88,15 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+test-enterprise-kong:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install docker-compose
+        run: ./hack/integration/install.sh
+
+      - name: run container tests
+        run: ./hack/e2e/run-tests.sh
 
   # ----------------------------------------------------------------------------
   # Release Image Builds

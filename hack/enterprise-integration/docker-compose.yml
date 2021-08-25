@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  dynamo:
+    container_name: kic-enterprise
+    image: jimin1/kic-release:kic-enterprise-kong
+    volumes:
+      - jimin1/kic-release:kic-enterprise-kong
+    working_dir: /home/kic-enterprise-kong
+
+networks:
+  kic-enterprise:
+    name: kic-enterprise
+
+volumes:
+  kic-enterprise: {}

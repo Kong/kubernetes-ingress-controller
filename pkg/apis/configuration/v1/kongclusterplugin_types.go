@@ -29,6 +29,10 @@ import (
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
 //+kubebuilder:validation:Optional
+//+kubebuilder:printcolumn:name="Plugin-Type",type=string,JSONPath=`.plugin`,description="Name of the plugin"
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+//+kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled"
+//+kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin"
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API
 type KongClusterPlugin struct {

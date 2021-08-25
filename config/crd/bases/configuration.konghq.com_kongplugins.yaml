@@ -19,7 +19,24 @@ spec:
   preserveUnknownFields: false
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Name of the plugin
+      jsonPath: .plugin
+      name: Plugin-Type
+      type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - description: Indicates if the plugin is disabled
+      jsonPath: .disabled
+      name: Disabled
+      type: boolean
+    - description: Configuration of the plugin
+      jsonPath: .config
+      name: Config
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: KongPlugin is the Schema for the kongplugins API

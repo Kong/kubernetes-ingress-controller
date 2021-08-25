@@ -27,6 +27,8 @@ import (
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=kc
 //+kubebuilder:validation:Optional
+//+kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.username`,description="Username of a Kong Consumer"
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
 // KongConsumer is the Schema for the kongconsumers API
 type KongConsumer struct {

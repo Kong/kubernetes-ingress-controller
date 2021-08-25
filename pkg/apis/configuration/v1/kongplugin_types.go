@@ -28,6 +28,10 @@ import (
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=kp
 //+kubebuilder:validation:Optional
+//+kubebuilder:printcolumn:name="Plugin-Type",type=string,JSONPath=`.plugin`,description="Name of the plugin"
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+//+kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled"
+//+kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin"
 
 // KongPlugin is the Schema for the kongplugins API
 type KongPlugin struct {

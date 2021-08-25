@@ -27,6 +27,7 @@ import (
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=ki
+//+kubebuilder:validation:Optional
 
 // KongIngress is the Schema for the kongingresses API
 type KongIngress struct {

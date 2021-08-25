@@ -26,6 +26,7 @@ import (
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=kc
+//+kubebuilder:validation:Optional
 
 // KongConsumer is the Schema for the kongconsumers API
 type KongConsumer struct {

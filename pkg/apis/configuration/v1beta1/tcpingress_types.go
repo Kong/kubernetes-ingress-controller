@@ -26,6 +26,7 @@ import (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
+//+kubebuilder:validation:Optional
 
 // TCPIngress is the Schema for the tcpingresses API
 type TCPIngress struct {

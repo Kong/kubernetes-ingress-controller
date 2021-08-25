@@ -39,6 +39,7 @@ type UDPIngressList struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
+//+kubebuilder:validation:Optional
 
 // UDPIngress is the Schema for the udpingresses API
 type UDPIngress struct {

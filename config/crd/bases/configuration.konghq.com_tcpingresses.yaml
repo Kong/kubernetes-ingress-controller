@@ -53,6 +53,7 @@ spec:
                           type: string
                         servicePort:
                           description: Specifies the port of the referenced service.
+                          format: int32
                           type: integer
                       required:
                       - serviceName
@@ -69,6 +70,7 @@ spec:
                         over TCP sessions and route. It is a required field. If a
                         Host is not specified, the requested are routed based only
                         on Port.
+                      format: int32
                       maximum: 65535
                       minimum: 1
                       type: integer

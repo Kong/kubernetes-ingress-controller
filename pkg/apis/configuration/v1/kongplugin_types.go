@@ -27,6 +27,7 @@ import (
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=kp
+//+kubebuilder:validation:Optional
 
 // KongPlugin is the Schema for the kongplugins API
 type KongPlugin struct {
@@ -40,20 +41,24 @@ type KongPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
+	//+kubebuilder:validation:Type=object
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
 	ConfigFrom ConfigSource `json:"configFrom,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
+	//+kubebuilder:validation:Required
 	PluginName string `json:"plugin,omitempty"`
 
 	// RunOn configures the plugin to run on the first or the second or both
 	// nodes in case of a service mesh deployment.
+	//+kubebuilder:validation:Enum:=first;second;all
 	RunOn string `json:"run_on,omitempty"`
 
 	// Protocols configures plugin to run on requests received on specific
 	// protocols.
+	//+kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls
 	Protocols []string `json:"protocols,omitempty"`
 }
 

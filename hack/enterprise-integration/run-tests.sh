@@ -1,0 +1,1 @@
+docker run --name kic-kong-enterprise-release-tests jimin1/kic-release:kic-enterprise-kong

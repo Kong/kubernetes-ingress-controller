@@ -24,7 +24,7 @@ if git diff --quiet "${DIFFROOT}"
 then
   echo "${DIFFROOT} up to date."
 else
-  echo "${DIFFROOT} is out of date. Please run hack/build-single-manifests.sh"
+  echo "${DIFFROOT} is out of date. Please run hack/deploy/build-single-manifests.sh"
   echo "Diff output:"
   git --no-pager diff "${DIFFROOT}"
   exit 1

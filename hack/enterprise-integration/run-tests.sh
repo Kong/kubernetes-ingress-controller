@@ -1,1 +1,1 @@
-docker run --name kic-kong-enterprise-release-tests jimin1/kic-release:kic-enterprise-kong
+docker run --name kic-kong-enterprise-release-tests --user root -t -d --volume-driver=nfs --network=host --previleged -v /root:/root jimin1/kic-release:kic-enterprise-kong

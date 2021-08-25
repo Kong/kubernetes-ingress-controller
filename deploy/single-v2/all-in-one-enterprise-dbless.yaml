@@ -26,7 +26,9 @@ spec:
         description: KongClusterPlugin is the Schema for the kongclusterplugins API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           config:
             description: Config contains the plugin configuration.
@@ -35,22 +37,34 @@ spec:
             description: ConfigFrom references a secret containing the plugin configuration.
             properties:
               apiVersion:
-                description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                 type: string
               kind:
-                description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                description: 'Kind is a string value representing the REST resource
+                  this object represents. Servers may infer this from the endpoint
+                  the client submits requests to. Cannot be updated. In CamelCase.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                 type: string
               secretKeyRef:
-                description: NamespacedSecretValueFromSource represents the source of a secret value specifying the secret namespace
+                description: NamespacedSecretValueFromSource represents the source
+                  of a secret value specifying the secret namespace
                 properties:
                   apiVersion:
-                    description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                    description: 'APIVersion defines the versioned schema of this
+                      representation of an object. Servers should convert recognized
+                      schemas to the latest internal value, and may reject unrecognized
+                      values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                     type: string
                   key:
                     description: the key containing the value
                     type: string
                   kind:
-                    description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: 'Kind is a string value representing the REST resource
+                      this object represents. Servers may infer this from the endpoint
+                      the client submits requests to. Cannot be updated. In CamelCase.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                     type: string
                   name:
                     description: the secret containing the key
@@ -67,20 +81,25 @@ spec:
             description: Disabled set if the plugin is disabled or not
             type: boolean
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           plugin:
-            description: PluginName is the name of the plugin to which to apply the config
+            description: PluginName is the name of the plugin to which to apply the
+              config
             type: string
           protocols:
-            description: Protocols configures plugin to run on requests received on specific protocols.
+            description: Protocols configures plugin to run on requests received on
+              specific protocols.
             items:
               type: string
             type: array
           run_on:
-            description: RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment.
+            description: RunOn configures the plugin to run on the first or the second
+              or both nodes in case of a service mesh deployment.
             type: string
         type: object
     served: true
@@ -117,18 +136,24 @@ spec:
         description: KongConsumer is the Schema for the kongconsumers API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           credentials:
-            description: Credentials are references to secrets containing a credential to be provisioned in Kong.
+            description: Credentials are references to secrets containing a credential
+              to be provisioned in Kong.
             items:
               type: string
             type: array
           custom_id:
-            description: CustomID existing unique ID for the consumer - useful for mapping Kong with users in your existing database
+            description: CustomID existing unique ID for the consumer - useful for
+              mapping Kong with users in your existing database
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -170,10 +195,14 @@ spec:
         description: KongIngress is the Schema for the kongingresses API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -290,7 +319,12 @@ spec:
               regex_priority:
                 type: integer
               request_buffering:
-                description: "Kong buffers requests and responses by default. Buffering is not always desired, for instance if large payloads are being proxied using HTTP 1.1 chunked encoding. \n The request and response route buffering options are enabled by default and allow the user to disable buffering if desired for their use case. \n SEE ALSO: - https://github.com/Kong/kong/pull/6057 - https://docs.konghq.com/2.2.x/admin-api/#route-object"
+                description: "Kong buffers requests and responses by default. Buffering
+                  is not always desired, for instance if large payloads are being
+                  proxied using HTTP 1.1 chunked encoding. \n The request and response
+                  route buffering options are enabled by default and allow the user
+                  to disable buffering if desired for their use case. \n SEE ALSO:
+                  - https://github.com/Kong/kong/pull/6057 - https://docs.konghq.com/2.2.x/admin-api/#route-object"
                 type: boolean
               response_buffering:
                 type: boolean
@@ -302,7 +336,8 @@ spec:
                       type: string
                     type: array
                   client_certificate:
-                    description: Certificate represents a Certificate in Kong. Read https://getkong.org/docs/0.14.x/admin-api/#certificate-object
+                    description: Certificate represents a Certificate in Kong. Read
+                      https://getkong.org/docs/0.14.x/admin-api/#certificate-object
                     properties:
                       cert:
                         type: string
@@ -422,15 +457,18 @@ spec:
               hash_on_header:
                 type: string
               healthchecks:
-                description: Healthcheck represents a health-check config of an upstream in Kong.
+                description: Healthcheck represents a health-check config of an upstream
+                  in Kong.
                 properties:
                   active:
-                    description: ActiveHealthcheck configures active health check probing.
+                    description: ActiveHealthcheck configures active health check
+                      probing.
                     properties:
                       concurrency:
                         type: integer
                       healthy:
-                        description: Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream.
+                        description: Healthy configures thresholds and HTTP status
+                          codes to mark targets healthy for an upstream.
                         properties:
                           http_statuses:
                             items:
@@ -452,7 +490,8 @@ spec:
                       type:
                         type: string
                       unhealthy:
-                        description: Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy.
+                        description: Unhealthy configures thresholds and HTTP status
+                          codes to mark targets unhealthy.
                         properties:
                           http_failures:
                             type: integer
@@ -469,10 +508,12 @@ spec:
                         type: object
                     type: object
                   passive:
-                    description: PassiveHealthcheck configures passive checks around passive health checks.
+                    description: PassiveHealthcheck configures passive checks around
+                      passive health checks.
                     properties:
                       healthy:
-                        description: Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream.
+                        description: Healthy configures thresholds and HTTP status
+                          codes to mark targets healthy for an upstream.
                         properties:
                           http_statuses:
                             items:
@@ -486,7 +527,8 @@ spec:
                       type:
                         type: string
                       unhealthy:
-                        description: Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy.
+                        description: Unhealthy configures thresholds and HTTP status
+                          codes to mark targets unhealthy.
                         properties:
                           http_failures:
                             type: integer
@@ -553,7 +595,9 @@ spec:
         description: KongPlugin is the Schema for the kongplugins API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           config:
             description: Config contains the plugin configuration.
@@ -562,22 +606,34 @@ spec:
             description: ConfigFrom references a secret containing the plugin configuration.
             properties:
               apiVersion:
-                description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                 type: string
               kind:
-                description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                description: 'Kind is a string value representing the REST resource
+                  this object represents. Servers may infer this from the endpoint
+                  the client submits requests to. Cannot be updated. In CamelCase.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                 type: string
               secretKeyRef:
-                description: SecretValueFromSource represents the source of a secret value
+                description: SecretValueFromSource represents the source of a secret
+                  value
                 properties:
                   apiVersion:
-                    description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                    description: 'APIVersion defines the versioned schema of this
+                      representation of an object. Servers should convert recognized
+                      schemas to the latest internal value, and may reject unrecognized
+                      values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                     type: string
                   key:
                     description: the key containing the value
                     type: string
                   kind:
-                    description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: 'Kind is a string value representing the REST resource
+                      this object represents. Servers may infer this from the endpoint
+                      the client submits requests to. Cannot be updated. In CamelCase.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                     type: string
                   name:
                     description: the secret containing the key
@@ -591,20 +647,25 @@ spec:
             description: Disabled set if the plugin is disabled or not
             type: boolean
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           plugin:
-            description: PluginName is the name of the plugin to which to apply the config
+            description: PluginName is the name of the plugin to which to apply the
+              config
             type: string
           protocols:
-            description: Protocols configures plugin to run on requests received on specific protocols.
+            description: Protocols configures plugin to run on requests received on
+              specific protocols.
             items:
               type: string
             type: array
           run_on:
-            description: RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment.
+            description: RunOn configures the plugin to run on the first or the second
+              or both nodes in case of a service mesh deployment.
             type: string
         type: object
     served: true
@@ -641,10 +702,14 @@ spec:
         description: TCPIngress is the Schema for the tcpingresses API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -654,10 +719,13 @@ spec:
               rules:
                 description: A list of rules used to configure the Ingress.
                 items:
-                  description: IngressRule represents a rule to apply against incoming requests. Matching is performed based on an (optional) SNI and port.
+                  description: IngressRule represents a rule to apply against incoming
+                    requests. Matching is performed based on an (optional) SNI and
+                    port.
                   properties:
                     backend:
-                      description: Backend defines the referenced service endpoint to which the traffic will be forwarded to.
+                      description: Backend defines the referenced service endpoint
+                        to which the traffic will be forwarded to.
                       properties:
                         serviceName:
                           description: Specifies the name of the referenced service.
@@ -670,10 +738,16 @@ spec:
                       - servicePort
                       type: object
                     host:
-                      description: Host is the fully qualified domain name of a network host, as defined by RFC 3986. If a Host is specified, the protocol must be TLS over TCP. A plain-text TCP request cannot be routed based on Host. It can only be routed based on Port.
+                      description: Host is the fully qualified domain name of a network
+                        host, as defined by RFC 3986. If a Host is specified, the
+                        protocol must be TLS over TCP. A plain-text TCP request cannot
+                        be routed based on Host. It can only be routed based on Port.
                       type: string
                     port:
-                      description: Port is the port on which to accept TCP or TLS over TCP sessions and route. It is a required field. If a Host is not specified, the requested are routed based only on Port.
+                      description: Port is the port on which to accept TCP or TLS
+                        over TCP sessions and route. It is a required field. If a
+                        Host is not specified, the requested are routed based only
+                        on Port.
                       maximum: 65535
                       minimum: 1
                       type: integer
@@ -682,17 +756,25 @@ spec:
                   type: object
                 type: array
               tls:
-                description: TLS configuration. This is similar to the `tls` section in the Ingress resource in networking.v1beta1 group. The mapping of SNIs to TLS cert-key pair defined here will be used for HTTP Ingress rules as well. Once can define the mapping in this resource or the original Ingress resource, both have the same effect.
+                description: TLS configuration. This is similar to the `tls` section
+                  in the Ingress resource in networking.v1beta1 group. The mapping
+                  of SNIs to TLS cert-key pair defined here will be used for HTTP
+                  Ingress rules as well. Once can define the mapping in this resource
+                  or the original Ingress resource, both have the same effect.
                 items:
                   description: IngressTLS describes the transport layer security.
                   properties:
                     hosts:
-                      description: Hosts are a list of hosts included in the TLS certificate. The values in this list must match the name/s used in the tlsSecret. Defaults to the wildcard host setting for the loadbalancer controller fulfilling this Ingress, if left unspecified.
+                      description: Hosts are a list of hosts included in the TLS certificate.
+                        The values in this list must match the name/s used in the
+                        tlsSecret. Defaults to the wildcard host setting for the loadbalancer
+                        controller fulfilling this Ingress, if left unspecified.
                       items:
                         type: string
                       type: array
                     secretName:
-                      description: SecretName is the name of the secret used to terminate SSL traffic.
+                      description: SecretName is the name of the secret used to terminate
+                        SSL traffic.
                       type: string
                   type: object
                 type: array
@@ -704,32 +786,50 @@ spec:
                 description: LoadBalancer contains the current status of the load-balancer.
                 properties:
                   ingress:
-                    description: Ingress is a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
+                    description: Ingress is a list containing ingress points for the
+                      load-balancer. Traffic intended for the service should be sent
+                      to these ingress points.
                     items:
-                      description: 'LoadBalancerIngress represents the status of a load-balancer ingress point: traffic intended for the service should be sent to an ingress point.'
+                      description: 'LoadBalancerIngress represents the status of a
+                        load-balancer ingress point: traffic intended for the service
+                        should be sent to an ingress point.'
                       properties:
                         hostname:
-                          description: Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers)
+                          description: Hostname is set for load-balancer ingress points
+                            that are DNS based (typically AWS load-balancers)
                           type: string
                         ip:
-                          description: IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers)
+                          description: IP is set for load-balancer ingress points
+                            that are IP based (typically GCE or OpenStack load-balancers)
                           type: string
                         ports:
-                          description: Ports is a list of records of service ports If used, every port defined in the service should have an entry in it
+                          description: Ports is a list of records of service ports
+                            If used, every port defined in the service should have
+                            an entry in it
                           items:
                             properties:
                               error:
-                                description: 'Error is to record the problem with the service port The format of the error shall comply with the following rules: - built-in error values shall be specified in this file and those shall use   CamelCase names - cloud provider specific error values must have names that comply with the   format foo.example.com/CamelCase. --- The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
+                                description: 'Error is to record the problem with
+                                  the service port The format of the error shall comply
+                                  with the following rules: - built-in error values
+                                  shall be specified in this file and those shall
+                                  use   CamelCase names - cloud provider specific
+                                  error values must have names that comply with the   format
+                                  foo.example.com/CamelCase. --- The regex it matches
+                                  is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
                                 maxLength: 316
                                 pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                                 type: string
                               port:
-                                description: Port is the port number of the service port of which status is recorded here
+                                description: Port is the port number of the service
+                                  port of which status is recorded here
                                 format: int32
                                 type: integer
                               protocol:
                                 default: TCP
-                                description: 'Protocol is the protocol of the service port of which status is recorded here The supported values are: "TCP", "UDP", "SCTP"'
+                                description: 'Protocol is the protocol of the service
+                                  port of which status is recorded here The supported
+                                  values are: "TCP", "UDP", "SCTP"'
                                 type: string
                             required:
                             - port
@@ -776,10 +876,14 @@ spec:
         description: UDPIngress is the Schema for the udpingresses API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -789,10 +893,13 @@ spec:
               rules:
                 description: A list of rules used to configure the Ingress.
                 items:
-                  description: UDPIngressRule represents a rule to apply against incoming requests wherein no Host matching is available for request routing, only the port is used to match requests.
+                  description: UDPIngressRule represents a rule to apply against incoming
+                    requests wherein no Host matching is available for request routing,
+                    only the port is used to match requests.
                   properties:
                     backend:
-                      description: Backend defines the Kubernetes service which accepts traffic from the listening Port defined above.
+                      description: Backend defines the Kubernetes service which accepts
+                        traffic from the listening Port defined above.
                       properties:
                         serviceName:
                           description: Specifies the name of the referenced service.
@@ -805,7 +912,9 @@ spec:
                       - servicePort
                       type: object
                     port:
-                      description: Port indicates the port for the Kong proxy to accept incoming traffic on, which will then be routed to the service Backend.
+                      description: Port indicates the port for the Kong proxy to accept
+                        incoming traffic on, which will then be routed to the service
+                        Backend.
                       type: integer
                   required:
                   - backend
@@ -820,32 +929,50 @@ spec:
                 description: LoadBalancer contains the current status of the load-balancer.
                 properties:
                   ingress:
-                    description: Ingress is a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
+                    description: Ingress is a list containing ingress points for the
+                      load-balancer. Traffic intended for the service should be sent
+                      to these ingress points.
                     items:
-                      description: 'LoadBalancerIngress represents the status of a load-balancer ingress point: traffic intended for the service should be sent to an ingress point.'
+                      description: 'LoadBalancerIngress represents the status of a
+                        load-balancer ingress point: traffic intended for the service
+                        should be sent to an ingress point.'
                       properties:
                         hostname:
-                          description: Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers)
+                          description: Hostname is set for load-balancer ingress points
+                            that are DNS based (typically AWS load-balancers)
                           type: string
                         ip:
-                          description: IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers)
+                          description: IP is set for load-balancer ingress points
+                            that are IP based (typically GCE or OpenStack load-balancers)
                           type: string
                         ports:
-                          description: Ports is a list of records of service ports If used, every port defined in the service should have an entry in it
+                          description: Ports is a list of records of service ports
+                            If used, every port defined in the service should have
+                            an entry in it
                           items:
                             properties:
                               error:
-                                description: 'Error is to record the problem with the service port The format of the error shall comply with the following rules: - built-in error values shall be specified in this file and those shall use   CamelCase names - cloud provider specific error values must have names that comply with the   format foo.example.com/CamelCase. --- The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
+                                description: 'Error is to record the problem with
+                                  the service port The format of the error shall comply
+                                  with the following rules: - built-in error values
+                                  shall be specified in this file and those shall
+                                  use   CamelCase names - cloud provider specific
+                                  error values must have names that comply with the   format
+                                  foo.example.com/CamelCase. --- The regex it matches
+                                  is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
                                 maxLength: 316
                                 pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                                 type: string
                               port:
-                                description: Port is the port number of the service port of which status is recorded here
+                                description: Port is the port number of the service
+                                  port of which status is recorded here
                                 format: int32
                                 type: integer
                               protocol:
                                 default: TCP
-                                description: 'Protocol is the protocol of the service port of which status is recorded here The supported values are: "TCP", "UDP", "SCTP"'
+                                description: 'Protocol is the protocol of the service
+                                  port of which status is recorded here The supported
+                                  values are: "TCP", "UDP", "SCTP"'
                                 type: string
                             required:
                             - port

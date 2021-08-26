@@ -8,6 +8,10 @@ on:
     tags:
       - 'v2.*'
 
+defaults:
+  run:
+    working-directory: /home/runner/work
+
 jobs:
 
   # ----------------------------------------------------------------------------
@@ -113,9 +117,7 @@ jobs:
       #     fetch-depth: 0
 
       - name: Checkout test repo
-        run:
-          shell: git clone https://github.com/Kong/dolphin-kic 
-          working-directory: /home/runner/work/
+        run: git clone https://github.com/Kong/dolphin-kic 
 
       - name: install dependencies
         run: ./hack/enterprise-integration/install.sh

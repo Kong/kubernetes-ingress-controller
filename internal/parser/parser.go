@@ -207,25 +207,30 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 
 func getUpstreams(
 	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
-	var upstreams []kongstate.Upstream
+	upstreamDedup := make(map[string]struct{}, len(serviceMap))
+	var empty struct{}
+	upstreams := make([]kongstate.Upstream, 0, len(serviceMap))
 	for _, service := range serviceMap {
-		var targets []kongstate.Target
-		port, err := findPort(&service.K8sService, service.Backend.Port)
-		if err == nil {
-			targets = getServiceEndpoints(log, s, service.K8sService, port)
-		} else {
-			log.WithField("service_name", *service.Name).Warnf("skipping service - getServiceEndpoints failed: %v", err)
-		}
+		name := fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())
+		if _, exists := upstreamDedup[name]; !exists {
+			var targets []kongstate.Target
+			port, err := findPort(&service.K8sService, service.Backend.Port)
+			if err == nil {
+				targets = getServiceEndpoints(log, s, service.K8sService, port)
+			} else {
+				log.WithField("service_name", *service.Name).Warnf("skipping service - getServiceEndpoints failed: %v", err)
+			}
 
-		upstream := kongstate.Upstream{
-			Upstream: kong.Upstream{
-				Name: kong.String(
-					fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())),
-			},
-			Service: service,
-			Targets: targets,
+			upstream := kongstate.Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String(name),
+				},
+				Service: service,
+				Targets: targets,
+			}
+			upstreams = append(upstreams, upstream)
+			upstreamDedup[name] = empty
 		}
-		upstreams = append(upstreams, upstream)
 	}
 	return upstreams
 }
@@ -244,7 +249,7 @@ func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
 
 	_, err := tls.X509KeyPair([]byte(cert), []byte(key))
 	if err != nil {
-		return "", "", fmt.Errorf("parsing TLS key-pair in secret '%v/%v': %v",
+		return "", "", fmt.Errorf("parsing TLS key-pair in secret '%v/%v': %w",
 			secret.Namespace, secret.Name, err)
 	}
 

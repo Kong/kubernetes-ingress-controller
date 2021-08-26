@@ -3,6 +3,8 @@ name: release
 
 on:
   push:
+    branches:
+      - 'main'
     tags:
       - 'v2.*'
 
@@ -13,11 +15,13 @@ jobs:
   # ----------------------------------------------------------------------------
 
   test-current-kubernetes:
+    if: ${{ contains(github.ref, 'tags') }} # run only for tags
     runs-on: ubuntu-latest
     strategy:
       matrix:
         kubernetes-version:
           - 'v1.21.2'
+          - 'v1.22.0'
         dbmode:
           - 'dbless'
           - 'postgres'
@@ -44,6 +48,7 @@ jobs:
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
 
   test-previous-kubernetes:
+    if: ${{ contains(github.ref, 'tags') }} # run only for tags
     environment: gcloud
     runs-on: ubuntu-latest
     strategy:
@@ -129,7 +134,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.4.1
+        uses: docker/metadata-action@v3.5.0
         with:
           images: kong/kubernetes-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}

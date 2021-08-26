@@ -1,7 +1,12 @@
 ---
-status: on-hold
-WARNING: this is an early draft and we are NOT ready to commit to any process that results from it, it's only ideas "on paper" for now.
+status: declined
 ---
+
+# NOTES
+
+This is considered "declined" and the maintainers are not intending to take further action at this time due to a lack of demand for the functionality.
+
+If you're reading this and you desire for this work to continue, please check with us in discussions and let us know your use case so it can help to inform the priority.
 
 # Official Support for new Platforms and Integrations with KIC
 

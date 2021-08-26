@@ -113,11 +113,9 @@ jobs:
       #     fetch-depth: 0
 
       - name: Checkout test repo
-        uses: actions/checkout@main
-        with:
-          repository: Kong/dolphin-kic
-          path: ./dolphin-kic
-          ref: main
+        run:
+          shell: git clone https://github.com/Kong/dolphin-kic 
+          working-directory: /home/runner/work/
 
       - name: install dependencies
         run: ./hack/enterprise-integration/install.sh

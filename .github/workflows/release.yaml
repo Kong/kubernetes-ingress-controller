@@ -116,8 +116,8 @@ jobs:
         uses: actions/checkout@main
         with:
           repository: Kong/dolphin-kic
-          path: ./dolphin-kic
-          working-directory: ${{env.working-directory}}
+          path: /home/runner/work/dolphin-kic
+          ref: main
 
       - name: install dependencies
         run: ./hack/enterprise-integration/install.sh

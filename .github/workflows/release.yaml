@@ -29,6 +29,7 @@ jobs:
         dbmode:
           - 'dbless'
           - 'postgres'
+          - 'enterprisedbless'
     steps:
       - name: setup golang
         uses: actions/setup-go@v2
@@ -65,6 +66,7 @@ jobs:
         dbmode:
           - 'dbless'
           - 'postgres'
+          - 'enterprisedbless'
     steps:
       - name: setup golang
         uses: actions/setup-go@v2
@@ -92,41 +94,6 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-
-  test-enterprise-kong:
-    runs-on: ubuntu-latest
-
-    steps:
-      # - name: setup golang
-      #   uses: actions/setup-go@v2
-      #   with:
-      #     go-version: '^1.16'
-
-      # - name: cache go modules
-      #   uses: actions/cache@v2.1.6
-      #   with:
-      #     path: ~/go/pkg/mod
-      #     key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-build-codegen-
-
-      #         - name: checkout kic repository
-      #   uses: actions/checkout@v2
-      #   with:
-      #     fetch-depth: 0
-
-      - name: Checkout test repo
-        uses: actions/checkout@main
-        with:
-          repository: Kong/dolphin-kic
-          ref: main
-          path: ./dolphin-kic
-
-      - name: install dependencies
-        run: ./hack/enterprise-integration/install.sh
-
-      - name: run tests
-        run: ./hack/enterprise-integration/run-tests.sh
 
   # ----------------------------------------------------------------------------
   # Release Image Builds

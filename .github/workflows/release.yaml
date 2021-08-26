@@ -91,6 +91,8 @@ jobs:
 
   test-enterprise-kong:
     runs-on: ubuntu-latest
+    env: 
+      working-directory: /home/runner/work/
     steps:
       # - name: setup golang
       #   uses: actions/setup-go@v2
@@ -114,7 +116,8 @@ jobs:
         uses: actions/checkout@main
         with:
           repository: Kong/dolphin-kic
-          path: ~/dolphin-kic
+          path: ./dolphin-kic
+          working-directory: ${{env.working-directory}}
 
       - name: install dependencies
         run: ./hack/enterprise-integration/install.sh

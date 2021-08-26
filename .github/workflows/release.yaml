@@ -89,7 +89,7 @@ jobs:
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
-test-enterprise-kong:
+    test-enterprise-kong:
     runs-on: ubuntu-latest
     steps:
       - name: install docker-compose
@@ -170,4 +170,3 @@ test-enterprise-kong:
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
-

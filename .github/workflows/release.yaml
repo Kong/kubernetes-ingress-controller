@@ -116,7 +116,7 @@ jobs:
         uses: actions/checkout@main
         with:
           repository: Kong/dolphin-kic
-          path: /home/runner/work/dolphin-kic
+          path: ./dolphin-kic
           ref: main
 
       - name: install dependencies

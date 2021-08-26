@@ -114,6 +114,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Kong/dolphin-kic
+          token: ${{ secrets.GitHub_PAT }} 
+          path: dolphin-kic
 
       - name: install dependencies
         run: ./hack/enterprise-integration/install.sh

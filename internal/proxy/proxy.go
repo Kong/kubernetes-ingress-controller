@@ -59,6 +59,10 @@ type Proxy interface {
 
 	// ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
 	ObjectExists(obj client.Object) (bool, error)
+
+	// IsReady returns true if the proxy is considered ready.
+	// A ready proxy has configuration available and can handle traffic.
+	IsReady() bool
 }
 
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API

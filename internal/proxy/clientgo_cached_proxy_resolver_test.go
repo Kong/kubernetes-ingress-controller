@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
 )
@@ -97,6 +98,29 @@ func Test_FetchCustomEntities(t *testing.T) {
 			assert.Equal(tt.want, got)
 		})
 	}
+}
+
+func TestIsReady(t *testing.T) {
+	fakePostgresKong := sendconfig.Kong{InMemory: false}
+	fakeDblessKong := sendconfig.Kong{InMemory: true}
+	postgresProxy := clientgoCachedProxyResolver{
+		kongConfig: fakePostgresKong,
+		dbmode:     "postgres",
+	}
+	dblessProxy := clientgoCachedProxyResolver{
+		kongConfig: fakeDblessKong,
+		dbmode:     "off",
+	}
+
+	t.Log("checking initial readiness state")
+	assert.True(t, postgresProxy.IsReady())
+	assert.False(t, dblessProxy.IsReady())
+
+	t.Log("marking config applied and checking readiness after")
+	postgresProxy.markConfigApplied()
+	dblessProxy.markConfigApplied()
+	assert.True(t, postgresProxy.IsReady())
+	assert.True(t, dblessProxy.IsReady())
 }
 
 func TestCaching(t *testing.T) {

@@ -50,7 +50,7 @@ type KongClusterPlugin struct {
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
-	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
+	ConfigFrom *NamespacedConfigSource `json:"configFrom,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
 	//+kubebuilder:validation:Required

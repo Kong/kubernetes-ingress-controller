@@ -69,17 +69,16 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 	if err != nil {
 		return false, ErrTextPluginConfigInvalid, err
 	}
-	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.SecretValueFromSource{}) {
+	if k8sPlugin.ConfigFrom != nil {
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
 		config, err := kongstate.SecretToConfiguration(validator.SecretGetter,
-			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
+			(*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}
 		plugin.Config = config
-
 	}
 	if k8sPlugin.RunOn != "" {
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)

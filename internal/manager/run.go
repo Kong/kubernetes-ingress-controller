@@ -3,7 +3,9 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -84,7 +86,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
-	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("check", func(_ *http.Request) error {
+		if !proxy.IsReady() {
+			return errors.New("proxy not yet configured")
+		}
+		return nil
+	}); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
 	}
 

@@ -1,4 +1,6 @@
 # Table of Contents
+
+ - [2.0.0](#200---tba)
  - [2.0.0-beta.2](#200-beta2---202108016)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
@@ -33,6 +35,15 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.0.0] - TBA
+
+#### Added
+
+- In DB-less mode, the controller only marks itself ready once it has
+  successfully applied configuration at least once. This ensures that proxies
+  do not start handling traffic until they are configured.
+  [#1720](https://github.com/Kong/kubernetes-ingress-controller/issues/1720)
 
 ## [2.0.0-beta.2] - 2021/08/16
 
@@ -1284,11 +1295,12 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.0.0-beta.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-beta.1...2.0.0-beta.2
-[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.3...2.0.0-beta.1
-[2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-alpha.3
+[2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.2...v2.0.0
+[2.0.0-beta.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.1...v2.0.0-beta.2
+[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-alpha.3...v2.0.0-beta.1
+[2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...v2.0.0-alpha.3
 [2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
-[2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
+[2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...2.0.0-alpha.1
 [1.3.2]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0

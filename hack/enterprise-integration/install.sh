@@ -12,7 +12,7 @@ sudo easy_install3 pip
 sudo pip3 install awscli==1.18.115
 sudo pip3 install botocore==1.17.63
 
-git clone git@github.com:Kong/dolphin-kic.git
+
 cd dolphin-kic
 echo "install enterprise test tool."
 sudo make install

@@ -118,7 +118,9 @@ jobs:
       - name: Checkout test repo
         uses: actions/checkout@main
         with:
-          repository: Kong/dolphin-kic 
+          repository: Kong/dolphin-kic
+          ref: main
+          path: ./dolphin-kic
 
       - name: install dependencies
         run: ./hack/enterprise-integration/install.sh

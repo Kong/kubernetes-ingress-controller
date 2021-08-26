@@ -4,7 +4,7 @@ name: release
 on:
   push:
     branches:
-      - 'main'
+      - 'integrate-kong-enterprise'
     tags:
       - 'v2.*'
 

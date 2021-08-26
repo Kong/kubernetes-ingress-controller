@@ -117,7 +117,7 @@ func UpdateStatuses(
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
 							log.Info("knative service updated. update knative CR condition and status...")
 							if err := UpdateKnativeIngress(ctx, log, svc, kubeConfig, ips, hostname); err != nil {
-								return fmt.Errorf("failed to update knative ingress err %v", err)
+								return fmt.Errorf("failed to update knative ingress err %w", err)
 							}
 						}
 					}
@@ -128,11 +128,11 @@ func UpdateStatuses(
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
 			if err := UpdateTCPIngress(ctx, log, svc, kiccli, ips); err != nil {
-				return fmt.Errorf("failed to update tcp ingress. err %v", err)
+				return fmt.Errorf("failed to update tcp ingress. err %w", err)
 			}
 		case "udp":
 			if err := UpdateUDPIngress(ctx, log, svc, kiccli, ips); err != nil {
-				return fmt.Errorf("failed to update udp ingress. err %v", err)
+				return fmt.Errorf("failed to update udp ingress. err %w", err)
 			}
 
 		case "http":
@@ -141,11 +141,11 @@ func UpdateStatuses(
 			// TODO: this can go away once we drop support for Kubernetes older than v1.19
 			if kubernetesVersion.Major >= uint64(1) && kubernetesVersion.Minor > uint64(18) {
 				if err := UpdateIngress(ctx, log, svc, cli, ips); err != nil {
-					return fmt.Errorf("failed to update ingressv1. err %v", err)
+					return fmt.Errorf("failed to update ingressv1. err %w", err)
 				}
 			} else {
 				if err := UpdateIngressLegacy(ctx, log, svc, cli, ips); err != nil {
-					return fmt.Errorf("failed to update ingressv1. err %v", err)
+					return fmt.Errorf("failed to update ingressv1. err %w", err)
 				}
 			}
 		default:
@@ -422,7 +422,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 
 		knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
 		if err != nil {
-			return fmt.Errorf("failed to generate knative client. err %v", err)
+			return fmt.Errorf("failed to generate knative client. err %w", err)
 		}
 		ingClient := knativeCli.NetworkingV1alpha1().Ingresses(namespace)
 

@@ -92,11 +92,11 @@ jobs:
   test-enterprise-kong:
     runs-on: ubuntu-latest
     steps:
-      - name: install docker-compose
-        run: ./hack/integration/install.sh
+      - name: install dependencies
+        run: ./hack/enterprise-integration/install.sh
 
-      - name: run container tests
-        run: ./hack/e2e/run-tests.sh
+      - name: run tests
+        run: ./hack/enterprise-integration/run-tests.sh
 
   # ----------------------------------------------------------------------------
   # Release Image Builds

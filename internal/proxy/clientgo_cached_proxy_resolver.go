@@ -268,8 +268,8 @@ func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interfac
 // markConfigApplied marks that config has been applied
 func (p *clientgoCachedProxyResolver) markConfigApplied() {
 	p.configAppliedMutex.Lock()
+	defer p.configAppliedMutex.Unlock()
 	p.configApplied = true
-	p.configAppliedMutex.Unlock()
 }
 
 // -----------------------------------------------------------------------------

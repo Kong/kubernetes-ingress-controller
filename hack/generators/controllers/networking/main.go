@@ -445,7 +445,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{end}}
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new {{.Type}}", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}

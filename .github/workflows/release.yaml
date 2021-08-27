@@ -4,7 +4,7 @@ name: release
 on:
   push:
     branches:
-      - 'integrate-kong-enterprise'
+      - 'main'
     tags:
       - 'v2.*'
 
@@ -15,16 +15,16 @@ jobs:
   # ----------------------------------------------------------------------------
 
   test-current-kubernetes:
-#    if: ${{ contains(github.ref, 'tags') }} # run only for tags
+   if: ${{ contains(github.ref, 'tags') }} # run only for tags
     runs-on: ubuntu-latest
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.21.2'
-#          - 'v1.22.0'
+         - 'v1.21.2'
+         - 'v1.22.0'
         dbmode:
-#          - 'dbless'
-#          - 'postgres'
+         - 'dbless'
+         - 'postgres'
           - 'enterprisedbless'
     steps:
       - name: setup golang

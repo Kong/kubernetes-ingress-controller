@@ -125,6 +125,7 @@ spec:
             - grpcs
             - tcp
             - tls
+            - udp
             items:
               type: string
             type: array
@@ -548,6 +549,7 @@ spec:
             - grpcs
             - tcp
             - tls
+            - udp
             items:
               type: string
             type: array
@@ -636,6 +638,8 @@ spec:
                         servicePort:
                           description: Specifies the port of the referenced service.
                           format: int32
+                          maximum: 65535
+                          minimum: 1
                           type: integer
                       required:
                       - serviceName
@@ -821,6 +825,8 @@ spec:
                         servicePort:
                           description: Specifies the port of the referenced service.
                           format: int32
+                          maximum: 65535
+                          minimum: 1
                           type: integer
                       required:
                       - serviceName

@@ -34,10 +34,12 @@ spec:
     - description: Indicates if the plugin is disabled
       jsonPath: .disabled
       name: Disabled
+      priority: 1
       type: boolean
     - description: Configuration of the plugin
       jsonPath: .config
       name: Config
+      priority: 1
       type: string
     name: v1
     schema:
@@ -462,10 +464,12 @@ spec:
     - description: Indicates if the plugin is disabled
       jsonPath: .disabled
       name: Disabled
+      priority: 1
       type: boolean
     - description: Configuration of the plugin
       jsonPath: .config
       name: Config
+      priority: 1
       type: string
     name: v1
     schema:

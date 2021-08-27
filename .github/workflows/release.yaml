@@ -15,7 +15,7 @@ jobs:
   # ----------------------------------------------------------------------------
 
   test-current-kubernetes:
-   if: ${{ contains(github.ref, 'tags') }} # run only for tags
+    if: ${{ contains(github.ref, 'tags') }} # run only for tags
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,7 +25,7 @@ jobs:
         dbmode:
          - 'dbless'
          - 'postgres'
-          - 'enterprisedbless'
+         - 'enterprisedbless'
     steps:
       - name: setup golang
         uses: actions/setup-go@v2

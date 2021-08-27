@@ -20,12 +20,12 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-         - 'v1.21.2'
-         - 'v1.22.0'
+          - 'v1.21.2'
+          - 'v1.22.0'
         dbmode:
-         - 'dbless'
-         - 'postgres'
-         - 'enterprisedbless'
+          - 'dbless'
+          - 'postgres'
+          - 'enterprisedbless'
     steps:
       - name: setup golang
         uses: actions/setup-go@v2

@@ -17,7 +17,16 @@ spec:
   preserveUnknownFields: false
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Address of the load balancer
+      jsonPath: .status.loadBalancer.ingress[*].ip
+      name: Address
+      type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: UDPIngress is the Schema for the udpingresses API
@@ -53,6 +62,9 @@ spec:
                           type: string
                         servicePort:
                           description: Specifies the port of the referenced service.
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
                           type: integer
                       required:
                       - serviceName

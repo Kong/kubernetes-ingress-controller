@@ -63,7 +63,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				plugin: configurationv1.KongClusterPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "conf-secret",
@@ -87,7 +87,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				plugin: configurationv1.KongClusterPlugin{
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "missing",
@@ -122,7 +122,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "conf-secret",
@@ -201,7 +201,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "conf-secret",
@@ -228,7 +228,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "missing",
@@ -262,7 +262,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "conf-secret",

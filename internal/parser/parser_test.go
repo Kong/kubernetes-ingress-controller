@@ -364,7 +364,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
 							Secret: "conf-secret",
@@ -385,7 +385,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
@@ -405,7 +405,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
@@ -419,7 +419,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
@@ -478,7 +478,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
@@ -491,7 +491,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
@@ -509,7 +509,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",
@@ -523,7 +523,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",
@@ -570,7 +570,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
 							Secret: "conf-secret",
@@ -586,7 +586,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
 							Secret: "conf-secret",
@@ -607,7 +607,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
@@ -624,7 +624,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
@@ -728,7 +728,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
@@ -741,7 +741,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
@@ -759,7 +759,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",
@@ -773,7 +773,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 					Protocols:  []string{"http"},
 					PluginName: "basic-auth",
-					ConfigFrom: configurationv1.NamespacedConfigSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",

@@ -25,9 +25,14 @@ import (
 //+genclient:nonNamespaced
 //+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 //+kubebuilder:object:root=true
-//+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:scope=Cluster,shortName=kcp
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
+//+kubebuilder:validation:Optional
+//+kubebuilder:printcolumn:name="Plugin-Type",type=string,JSONPath=`.plugin`,description="Name of the plugin"
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+//+kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
+//+kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API
 type KongClusterPlugin struct {
@@ -41,20 +46,24 @@ type KongClusterPlugin struct {
 	Disabled bool `json:"disabled,omitempty"`
 
 	// Config contains the plugin configuration.
+	//+kubebuilder:validation:Type=object
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
-	ConfigFrom NamespacedConfigSource `json:"configFrom,omitempty"`
+	ConfigFrom *NamespacedConfigSource `json:"configFrom,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config
+	//+kubebuilder:validation:Required
 	PluginName string `json:"plugin,omitempty"`
 
 	// RunOn configures the plugin to run on the first or the second or both
 	// nodes in case of a service mesh deployment.
+	//+kubebuilder:validation:Enum:=first;second;all
 	RunOn string `json:"run_on,omitempty"`
 
 	// Protocols configures plugin to run on requests received on specific
 	// protocols.
+	//+kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
 	Protocols []string `json:"protocols,omitempty"`
 }
 

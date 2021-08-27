@@ -13,6 +13,8 @@ spec:
     kind: KongIngress
     listKind: KongIngressList
     plural: kongingresses
+    shortNames:
+    - ki
     singular: kongingress
   preserveUnknownFields: false
   scope: Namespaced

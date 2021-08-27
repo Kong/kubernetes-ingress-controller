@@ -56,7 +56,11 @@ func (in *KongClusterPlugin) DeepCopyInto(out *KongClusterPlugin) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Config.DeepCopyInto(&out.Config)
-	out.ConfigFrom = in.ConfigFrom
+	if in.ConfigFrom != nil {
+		in, out := &in.ConfigFrom, &out.ConfigFrom
+		*out = new(NamespacedConfigSource)
+		**out = **in
+	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
 		*out = make([]string, len(*in))
@@ -254,7 +258,11 @@ func (in *KongPlugin) DeepCopyInto(out *KongPlugin) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Config.DeepCopyInto(&out.Config)
-	out.ConfigFrom = in.ConfigFrom
+	if in.ConfigFrom != nil {
+		in, out := &in.ConfigFrom, &out.ConfigFrom
+		*out = new(ConfigSource)
+		**out = **in
+	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
 		*out = make([]string, len(*in))

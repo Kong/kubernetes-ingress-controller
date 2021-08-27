@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/kong/deck v1.7.0
-	github.com/kong/go-kong v0.20.0
+	github.com/kong/go-kong v0.21.0
 	github.com/kong/kubernetes-testing-framework v0.6.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.43

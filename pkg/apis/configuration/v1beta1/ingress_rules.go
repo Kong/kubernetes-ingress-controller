@@ -53,6 +53,8 @@ type IngressBackend struct {
 	ServiceName string `json:"serviceName"`
 
 	// Specifies the port of the referenced service.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32
 	// +kubebuilder:validation:Required
 	ServicePort int `json:"servicePort"`

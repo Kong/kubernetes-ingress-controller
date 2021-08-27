@@ -122,6 +122,7 @@ spec:
             - grpcs
             - tcp
             - tls
+            - udp
             items:
               type: string
             type: array

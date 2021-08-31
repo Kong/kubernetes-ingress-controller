@@ -134,6 +134,7 @@ manager --gateway-class konghq.com/gateway-controller
 - TODO: Note that there's [some discussion][gateway-823] we've started upstream for some of the nuances with multi-tenancy, as there's currently limited documentation upstream on the matter. Before we consider this KEP `implementable` we need to make sure we get resolution there.
 
 [gateway-823]:https://github.com/kubernetes-sigs/gateway-api/discussions/823
+
 #### Gateway Controller
 
 Where the `GatewayClass` API maps to our controller manager, the `Gateway` API maps to the Kong Gateway (Proxy Server).

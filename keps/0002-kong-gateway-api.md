@@ -266,6 +266,8 @@ a time when the API isn't GA.
 The primary alternative we've considered is that we could continue to support the featuresets which Gateway APIs is bound for using our custom APIs,
 however this will make us an outlier and less attractive an option to operators as many competing implementations already have and are planning long-term support of Gateway APIs.
 
+Separating the Gateway implementation for Kong into its own repository instead of adding it to the KIC was considered, but ultimately decided against. The main factors in this decision were to make it easy to integrate some existing types which Gateway APIs does not have an answer for (e.g. `KongPlugin`), and to re-use the existing backend libraries for updating the Kong Admin API without having to make them more portable or make significant changes in a time shortly after KIC 2.0 release wherein we had just finished several large maintenance investments.
+
 ## Infrastructure Needed
 
 We can rely on the existing infrastructure available currently which tests `Ingress` and our CRD based APIs, no new infrastructure will be required.

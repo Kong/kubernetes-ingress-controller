@@ -25,7 +25,8 @@ jobs:
         dbmode:
           - 'dbless'
           - 'postgres'
-          - 'enterprisedbless'
+        enterprise:
+          - 'yes'
     steps:
       - name: setup golang
         uses: actions/setup-go@v2
@@ -48,6 +49,9 @@ jobs:
       - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
 
+      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.enterprise }} Integration Tests
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.enterprise
+
   test-previous-kubernetes:
     if: ${{ contains(github.ref, 'tags') }} # run only for tags
     environment: gcloud
@@ -62,7 +66,8 @@ jobs:
         dbmode:
           - 'dbless'
           - 'postgres'
-          - 'enterprisedbless'
+        enterprise:
+          - 'yes'
     steps:
       - name: setup golang
         uses: actions/setup-go@v2

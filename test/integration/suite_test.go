@@ -29,6 +29,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 
+const (
+	EnterpriseImageRepo = "kong/kong-gateway"
+	EnterpriseImageTag  = "2.5.0.0-alpine"
+)
+
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
@@ -39,9 +44,14 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
-	if dbmode == "postgres" {
-		kongbuilder = kongbuilder.WithPostgreSQL()
+	if enterprise == "yes" {
+		kongbuilder = kongbuilder.WithEnterprise(dbmode).WithImage(EnterpriseImageRepo, EnterpriseImageTag).Build()
+	} else {
+		if dbmode == "postgres" {
+			kongbuilder = kongbuilder.WithPostgreSQL()
+		}
 	}
+
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())

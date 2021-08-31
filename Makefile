@@ -184,8 +184,8 @@ test.integration.dbless:
 		-coverprofile=coverage.dbless.out \
 		./test/integration
 
-.PHONY: test.integration.enterprisedbless
-test.integration.enterprisedbless:
+.PHONY: test.integration.enterprise.dbless
+test.integration.enterprise.dbless:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -v -race \
 		-timeout 15m \

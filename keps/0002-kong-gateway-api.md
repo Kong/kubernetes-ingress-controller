@@ -9,6 +9,16 @@ status: provisional
 - [Summary](#summary)
 - [Motivation](#motivation)
   - [Goals](#goals)
+  - [Non-Goals](#non-goals)
+- [Proposal](#proposal)
+  - [User Stories](#user-stories)
+- [Design Details](#design-details)
+  - [Test Plan](#test-plan)
+- [Production Readiness](#production-readiness)
+  - [Feature Enablement and Rollback](#feature-enablement-and-rollback)
+- [Drawbacks](#drawbacks)
+- [Alternatives](#alternatives)
+- [Infrastructure Needed](#infrastructure-needed)
 <!-- /toc -->
 
 ## Summary

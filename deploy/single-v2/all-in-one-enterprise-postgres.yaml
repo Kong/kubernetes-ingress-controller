@@ -959,7 +959,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: manager-role
+  name: kong-ingress
 rules:
 - apiGroups:
   - ""
@@ -1191,11 +1191,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: manager-rolebinding
+  name: kong-ingress
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: manager-role
+  name: kong-ingress
 subjects:
 - kind: ServiceAccount
   name: kong-serviceaccount

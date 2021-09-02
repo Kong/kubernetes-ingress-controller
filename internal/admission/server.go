@@ -5,8 +5,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	admission "k8s.io/api/admission/v1"
@@ -39,11 +40,11 @@ type ServerConfig struct {
 }
 
 func readKeyPairFiles(certPath, keyPath string) ([]byte, []byte, error) {
-	cert, err := ioutil.ReadFile(certPath)
+	cert, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read cert from file %q: %w", certPath, err)
 	}
-	key, err := ioutil.ReadFile(keyPath)
+	key, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read key from file %q: %w", keyPath, err)
 	}
@@ -116,7 +117,7 @@ func (a RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest)
 		return
 	}
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		a.Logger.Errorf("failed to read request from client: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

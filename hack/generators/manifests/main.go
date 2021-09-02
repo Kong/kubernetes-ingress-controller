@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -87,7 +86,7 @@ func processFile(path string, info os.FileInfo, err error) error {
 	}
 
 	// read in the file contents
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -120,5 +119,5 @@ func processFile(path string, info os.FileInfo, err error) error {
 	patchedCRD := append([]byte("\n---\n"), stdout.Bytes()...)
 
 	// write the patched CRD back to the original file
-	return ioutil.WriteFile(path, patchedCRD, info.Mode().Perm())
+	return os.WriteFile(path, patchedCRD, info.Mode().Perm())
 }

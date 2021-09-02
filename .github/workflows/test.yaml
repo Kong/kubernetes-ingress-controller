@@ -44,7 +44,7 @@ jobs:
       run: make verify.manifests
 
     - name: Verify generators consistency
-      run: make generate
+      run: make verify.generators
 
   image-tests:
     runs-on: ubuntu-latest

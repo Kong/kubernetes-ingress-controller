@@ -95,9 +95,19 @@ lint: verify.tidy
 verify.tidy:
 	./hack/verify-tidy.sh
 
+.PHONY: verify.repo
+verify.repo:
+	./hack/verify-repo.sh
+
+.PHONY: verify.diff
+verify.diff:
+	./hack/verify-diff.sh
+
 .PHONY: verify.manifests
-verify.manifests:
-	./hack/verify-manifests.sh
+verify.manifests: verify.repo manifests manifests.single verify.diff
+
+.PHONY: verify.generators
+verify.generators: verify.repo generate verify.diff
 
 # ------------------------------------------------------------------------------
 # Build - Manifests

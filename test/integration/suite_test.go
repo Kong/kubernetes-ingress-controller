@@ -33,6 +33,8 @@ const (
 	EnterpriseImageTag  = "2.5.0.0-alpine"
 )
 
+var enterpriseEnablement bool
+
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
@@ -44,6 +46,7 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
 	if enterprise == "yes" {
+		enterpriseEnablement = true
 		kongbuilder = kongbuilder.WithEnterprise(dbmode).WithImage(EnterpriseImageRepo, EnterpriseImageTag).Build()
 	} else {
 		if dbmode == "postgres" {
@@ -208,7 +211,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 
 		config := manager.Config{}
 		flags := config.FlagSet()
-		exitOnErr(flags.Parse([]string{
+		basicParams := []string{
 			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 			"--election-id=integrationtests.konghq.com",
@@ -222,9 +225,17 @@ func deployControllers(ctx context.Context, namespace string) error {
 			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			"--profiling",
-
 			"--dump-config",
-		}))
+		}
+
+		if enterpriseEnablement {
+			enterpriseParams := []string{
+				"--kong-admin-token=password",
+				"--kong-workspace=workspace",
+			}
+			basicParams = append(basicParams, enterpriseParams...)
+		}
+		exitOnErr(flags.Parse(basicParams))
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager with Configuration: %+v\n", config)
 		wg.Done()
 		exitOnErr(rootcmd.Run(ctx, &config))

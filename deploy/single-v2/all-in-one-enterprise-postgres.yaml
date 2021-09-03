@@ -244,6 +244,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
+        type: object
         properties:
           proxy:
             properties:
@@ -316,6 +317,7 @@ spec:
                 type: array
               strip_path:
                 type: boolean
+            type: object
           upstream:
             properties:
               algorithm:

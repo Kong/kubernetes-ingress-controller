@@ -7,8 +7,10 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
+        type: object
         properties:
           route:
+            type: object
             properties:
               methods:
                 type: array
@@ -159,3 +161,7 @@ spec:
                     properties:
                       healthy: *healthy
                       unhealthy: *unhealthy
+    served: true
+    storage: true
+    subresources:
+      status: {}

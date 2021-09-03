@@ -22,6 +22,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
+        type: object
         description: KongIngress is the Schema for the kongingresses API
         properties:
           apiVersion:
@@ -100,6 +101,7 @@ spec:
                 type: integer
             type: object
           route:
+            type: object
             description: Route represents a Route in Kong. Read https://getkong.org/docs/0.13.x/admin-api/#Route-object
             properties:
               created_at:

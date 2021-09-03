@@ -1558,4 +1558,3 @@ spec:
         image: busybox
         name: wait-for-postgres
       restartPolicy: OnFailure
----

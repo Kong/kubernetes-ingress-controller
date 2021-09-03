@@ -13,11 +13,32 @@ spec:
     kind: KongPlugin
     listKind: KongPluginList
     plural: kongplugins
+    shortNames:
+    - kp
     singular: kongplugin
   preserveUnknownFields: false
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Name of the plugin
+      jsonPath: .plugin
+      name: Plugin-Type
+      type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - description: Indicates if the plugin is disabled
+      jsonPath: .disabled
+      name: Disabled
+      priority: 1
+      type: boolean
+    - description: Configuration of the plugin
+      jsonPath: .config
+      name: Config
+      priority: 1
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: KongPlugin is the Schema for the kongplugins API
@@ -29,6 +50,7 @@ spec:
             type: string
           config:
             description: Config contains the plugin configuration.
+            type: object
             x-kubernetes-preserve-unknown-fields: true
           configFrom:
             description: ConfigFrom references a secret containing the plugin configuration.
@@ -66,6 +88,9 @@ spec:
                   name:
                     description: the secret containing the key
                     type: string
+                required:
+                - key
+                - name
                 type: object
             type: object
           consumerRef:
@@ -88,13 +113,27 @@ spec:
           protocols:
             description: Protocols configures plugin to run on requests received on
               specific protocols.
+            enum:
+            - http
+            - https
+            - grpc
+            - grpcs
+            - tcp
+            - tls
+            - udp
             items:
               type: string
             type: array
           run_on:
             description: RunOn configures the plugin to run on the first or the second
               or both nodes in case of a service mesh deployment.
+            enum:
+            - first
+            - second
+            - all
             type: string
+        required:
+        - plugin
         type: object
     served: true
     storage: true

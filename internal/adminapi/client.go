@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/kong/go-kong/kong"
 )
@@ -53,7 +53,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	if opts.CACertPath != "" {
 		certPath := opts.CACertPath
 		certPool := x509.NewCertPool()
-		cert, err := ioutil.ReadFile(certPath)
+		cert, err := os.ReadFile(certPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read kong-admin-ca-cert from path '%s': %w", certPath, err)
 		}

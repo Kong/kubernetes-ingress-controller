@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -183,7 +182,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 		exitOnErr(err)
 
 		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
-		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
+		kubeconfig, err := os.CreateTemp(os.TempDir(), "kubeconfig-")
 		exitOnErr(err)
 		defer os.Remove(kubeconfig.Name())
 		defer kubeconfig.Close()

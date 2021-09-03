@@ -325,7 +325,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names": "whatever"}`),
 					},
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "key-auth-config",
 							Secret: "conf-secret",
@@ -343,7 +343,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			args: args{
 				plugin: configurationv1.KongPlugin{
 					PluginName: "key-auth",
-					ConfigFrom: configurationv1.ConfigSource{
+					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "key-auth-config",
 							Secret: "conf-secret",

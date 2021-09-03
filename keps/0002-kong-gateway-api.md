@@ -9,6 +9,16 @@ status: provisional
 - [Summary](#summary)
 - [Motivation](#motivation)
   - [Goals](#goals)
+  - [Non-Goals](#non-goals)
+- [Proposal](#proposal)
+  - [User Stories](#user-stories)
+- [Design Details](#design-details)
+  - [Test Plan](#test-plan)
+- [Production Readiness](#production-readiness)
+  - [Feature Enablement and Rollback](#feature-enablement-and-rollback)
+- [Drawbacks](#drawbacks)
+- [Alternatives](#alternatives)
+- [Infrastructure Needed](#infrastructure-needed)
 <!-- /toc -->
 
 ## Summary
@@ -124,6 +134,7 @@ manager --gateway-class konghq.com/gateway-controller
 - TODO: Note that there's [some discussion][gateway-823] we've started upstream for some of the nuances with multi-tenancy, as there's currently limited documentation upstream on the matter. Before we consider this KEP `implementable` we need to make sure we get resolution there.
 
 [gateway-823]:https://github.com/kubernetes-sigs/gateway-api/discussions/823
+
 #### Gateway Controller
 
 Where the `GatewayClass` API maps to our controller manager, the `Gateway` API maps to the Kong Gateway (Proxy Server).
@@ -254,6 +265,8 @@ a time when the API isn't GA.
 
 The primary alternative we've considered is that we could continue to support the featuresets which Gateway APIs is bound for using our custom APIs,
 however this will make us an outlier and less attractive an option to operators as many competing implementations already have and are planning long-term support of Gateway APIs.
+
+Separating the Gateway implementation for Kong into its own repository instead of adding it to the KIC was considered, but ultimately decided against. The main factors in this decision were to make it easy to integrate some existing types which Gateway APIs does not have an answer for (e.g. `KongPlugin`), and to re-use the existing backend libraries for updating the Kong Admin API without having to make them more portable or make significant changes in a time shortly after KIC 2.0 release wherein we had just finished several large maintenance investments.
 
 ## Infrastructure Needed
 

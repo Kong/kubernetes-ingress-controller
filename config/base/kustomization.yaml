@@ -7,3 +7,5 @@ resources:
 - validation-service.yaml
 - kong-ingress-dbless.yaml
 namespace: kong
+patchesStrategicMerge:
+- kong-ingress-crd-spec.yaml

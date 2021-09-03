@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"text/template"
 
@@ -227,7 +226,7 @@ func main() {
 func header() (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 
-	boilerPlate, err := ioutil.ReadFile("../../hack/boilerplate.go.txt")
+	boilerPlate, err := os.ReadFile("../../hack/boilerplate.go.txt")
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +279,7 @@ func (needed necessary) generate() error {
 		}
 	}
 
-	return ioutil.WriteFile(outputFile, contents.Bytes(), 0600)
+	return os.WriteFile(outputFile, contents.Bytes(), 0600)
 }
 
 type typeNeeded struct {

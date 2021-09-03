@@ -95,9 +95,19 @@ lint: verify.tidy
 verify.tidy:
 	./hack/verify-tidy.sh
 
+.PHONY: verify.repo
+verify.repo:
+	./hack/verify-repo.sh
+
+.PHONY: verify.diff
+verify.diff:
+	./hack/verify-diff.sh
+
 .PHONY: verify.manifests
-verify.manifests:
-	./hack/verify-manifests.sh
+verify.manifests: verify.repo manifests manifests.single verify.diff
+
+.PHONY: verify.generators
+verify.generators: verify.repo generate verify.diff
 
 # ------------------------------------------------------------------------------
 # Build - Manifests
@@ -105,7 +115,7 @@ verify.manifests:
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	go run hack/generators/manifests/main.go --directory config/crd/bases/
 
 .PHONY: manifests.single

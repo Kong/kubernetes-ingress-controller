@@ -13,11 +13,22 @@ spec:
     kind: KongConsumer
     listKind: KongConsumerList
     plural: kongconsumers
+    shortNames:
+    - kc
     singular: kongconsumer
   preserveUnknownFields: false
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Username of a Kong Consumer
+      jsonPath: .username
+      name: Username
+      type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: KongConsumer is the Schema for the kongconsumers API

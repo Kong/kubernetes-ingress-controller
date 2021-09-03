@@ -44,6 +44,8 @@
   successfully applied configuration at least once. This ensures that proxies
   do not start handling traffic until they are configured.
   [#1720](https://github.com/Kong/kubernetes-ingress-controller/issues/1720)
+- Renamed roles and bindings to reflect their association with Kong.
+  [#1801](https://github.com/Kong/kubernetes-ingress-controller/issues/1801)
 
 ## [2.0.0-beta.2] - 2021/08/16
 

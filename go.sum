@@ -693,6 +693,7 @@ github.com/kong/deck v1.7.0/go.mod h1:o2letQaSpXVnDNoXehEibOF6q7v46qtbsKOCC+1owA
 github.com/kong/go-kong v0.19.0/go.mod h1:HyNtOxzh/tzmOV//ccO5NAdmrCnq8b86YUPjmdy5aog=
 github.com/kong/go-kong v0.20.0 h1:KiPsJORNs9UbjU8m1Tr3MZkIiKkzcVHIz0EYeT7SD3c=
 github.com/kong/go-kong v0.20.0/go.mod h1:eQP22bzJVeiEH77hYdWD019WjecJFVFHm77kPXquC28=
+github.com/kong/go-kong v0.21.0 h1:cF0pdHwmL1ik6K1t+6cqaQsSW5J9SeVtCr2a2NKyeZA=
 github.com/kong/go-kong v0.21.0/go.mod h1:PA0trWxMuZ+iVxJroGMQzV3WAVUhATN7vXvz4dc5fkM=
 github.com/kong/kubernetes-testing-framework v0.6.2 h1:ksUxDfEVOq1BpuNc5AFRylvcZ8kw4KyBkrAapQX/fMs=
 github.com/kong/kubernetes-testing-framework v0.6.2/go.mod h1:nzWmIS4vqU4Keo8jLRReJlUeE5kYLNkZUjBejCpv/f8=

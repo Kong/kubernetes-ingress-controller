@@ -28,11 +28,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 )
 
-const (
-	EnterpriseImageRepo = "kong/kong-gateway"
-	EnterpriseImageTag  = "2.5.0.0-alpine"
-)
-
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
@@ -40,13 +35,15 @@ const (
 func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
-	enterpriseEnablement := false
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
-	if enterpriseRepo != "" && enterpriseTag != "" {
-		kongbuilder = kongbuilder.WithEnterprise().WithImage(EnterpriseImageRepo, EnterpriseImageTag)
-		enterpriseEnablement = true
+	if enterpriseEnablement == "on" {
+		if enterpriseRepo != "" && enterpriseTag != "" {
+			kongbuilder = kongbuilder.WithEnterprise().WithImage(enterpriseRepo, enterpriseTag)
+		} else {
+			panic("enterprise repo and tag is not configured.")
+		}
 	}
 
 	if dbmode == "postgres" {
@@ -164,7 +161,7 @@ var crds = []string{
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster
-func deployControllers(ctx context.Context, namespace string, enterprise bool) error {
+func deployControllers(ctx context.Context, namespace string, enterprise string) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
@@ -227,7 +224,7 @@ func deployControllers(ctx context.Context, namespace string, enterprise bool) e
 			"--dump-config",
 		}
 
-		if enterpriseEnablement {
+		if enterpriseEnablement == "on" {
 			workspace := "kic-ws"
 			if err := createWorkspace(proxyAdminURL.Hostname(), 8001, workspace); err != nil {
 				panic("failed creating non-default workspace through kong admin api.")

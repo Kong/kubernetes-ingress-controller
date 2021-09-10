@@ -119,6 +119,9 @@ var (
 
 	// enterprise Tag
 	enterpriseTag = os.Getenv("ENTERPRISE_TAG")
+
+	// enterpriseEnable
+	enterpriseEnablement = os.Getenv("TEST_ENTERPRISE")
 )
 
 // -----------------------------------------------------------------------------

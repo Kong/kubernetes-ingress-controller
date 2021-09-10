@@ -7,10 +7,8 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        type: object
         properties:
           route:
-            type: object
             properties:
               methods:
                 type: array
@@ -54,6 +52,7 @@ spec:
                 type: boolean
               response_buffering:
                 type: boolean
+            type: object
           proxy:
             type: object
             properties:
@@ -161,6 +160,7 @@ spec:
                     properties:
                       healthy: *healthy
                       unhealthy: *unhealthy
+        type: object
     served: true
     storage: true
     subresources:

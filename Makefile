@@ -215,6 +215,14 @@ test.integration.postgres:
 test.integration.legacy: container
 	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
 
+.PHONY: test.e2e
+test.e2e:
+	GOFLAGS="-tags=e2e_tests" go test -v \
+		-race \
+		-timeout 15m \
+		-parallel $(NCPU) \
+		./test/e2e/...
+
 # ------------------------------------------------------------------------------
 # Operations
 # ------------------------------------------------------------------------------

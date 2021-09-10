@@ -431,7 +431,7 @@ spec:
     served: true
     storage: true
     subresources:
-    status: {}
+      status: {}
 status:
   acceptedNames:
     kind: ""

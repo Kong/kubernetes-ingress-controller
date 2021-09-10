@@ -39,12 +39,12 @@ const (
 	// kongComponentWait is the maximum amount of time to wait for components (such as
 	// the ingress controller or the Kong Gateway) to become responsive after
 	// deployment to the cluster has finished.
-	kongComponentWait = time.Minute * 5
+	kongComponentWait = time.Minute * 7
 
 	// ingressWait is the maximum amount of time to wait for a basic HTTP service
 	// (e.g. httpbin) to come online and for ingress to have properly configured
 	// proxy traffic to route to it.
-	ingressWait = time.Minute * 3
+	ingressWait = time.Minute * 5
 )
 
 var (

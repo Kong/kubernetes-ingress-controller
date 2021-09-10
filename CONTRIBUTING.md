@@ -195,14 +195,27 @@ Please check the [deployment guide](https://docs.konghq.com/kubernetes-ingress-c
 
 ## Testing
 
-To run unit-tests, just run
+You can run the unit tests by running:
 
 ```console
-$ cd $GOPATH/src/github.com/kong/kubernetes-ingress-controller
 $ make test
 ```
 
-To run integration tests, see the [integration test readme](test/integration/README.md).
+For integration tests run:
+
+```console
+$ make test.integration
+```
+
+And for E2E tests run:
+
+```console
+$ make test.e2e
+```
+
+Note that the `integration` and `e2e` tests require a local container runtime
+and will utilize a sizable amount of system resources as one or many local
+Kubernetes clusters will be spun up in containers and tested against.
 
 ## Releasing
 

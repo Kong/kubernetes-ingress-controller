@@ -702,6 +702,8 @@ github.com/kong/kubernetes-testing-framework v0.6.3-0.20210831173729-7f7af2e00a3
 github.com/kong/kubernetes-testing-framework v0.6.3-0.20210831173729-7f7af2e00a30/go.mod h1:B7B5iEtYIkLY5pe2xRq7dXg6VbZvIhpasasbW6jHFdU=
 github.com/kong/kubernetes-testing-framework v0.6.3-0.20210909215413-e523384e876e h1:ExOu6pFvt+fvOYlPthX1WBbDYbkfgiQsrekxH6rTg/0=
 github.com/kong/kubernetes-testing-framework v0.6.3-0.20210909215413-e523384e876e/go.mod h1:cG2WtSafHNGxvFxDdUpDbyogdRLfP9i3IeDZMP/hnUQ=
+github.com/kong/kubernetes-testing-framework v0.6.3-0.20210910222251-99ecb3289605 h1:wLaZhKhzZJ266d2ph1ZC6hQWHdp7+mfJr/ko/zI38Z0=
+github.com/kong/kubernetes-testing-framework v0.6.3-0.20210910222251-99ecb3289605/go.mod h1:cG2WtSafHNGxvFxDdUpDbyogdRLfP9i3IeDZMP/hnUQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
@@ -944,6 +946,8 @@ github.com/seccomp/libseccomp-golang v0.9.1/go.mod h1:GbW5+tmTXfcxTToHLXlScSlAvW
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
+github.com/sethvargo/go-password v0.2.0 h1:BTDl4CC/gjf/axHMaDQtw507ogrXLci6XRiLc7i/UHI=
+github.com/sethvargo/go-password v0.2.0/go.mod h1:Ym4Mr9JXLBycr02MFuVQ/0JHidNetSgbzutTr3zsYXE=
 github.com/shirou/gopsutil/v3 v3.21.4 h1:XB/+p+kVnyYLuPHCfa99lxz2aJyvVhnyd+FxZqH/k7M=
 github.com/shirou/gopsutil/v3 v3.21.4/go.mod h1:ghfMypLDrFSWN2c9cDYFLHyynQ+QUht0cv/18ZqVczw=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
@@ -1778,10 +1782,11 @@ knative.dev/caching v0.0.0-20210803185815-4e553d2275a0/go.mod h1:Vs+HND39+KKaIQp
 knative.dev/hack v0.0.0-20210622141627-e28525d8d260/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/networking v0.0.0-20210803181815-acdfd41c575c h1:7G6TQr7ZyIHx35Dn5zuNKUDhlly3KkFxgrKLXeKmjj8=
 knative.dev/networking v0.0.0-20210803181815-acdfd41c575c/go.mod h1:UA9m1M3rGssy63gVwjSh7CYoWTKZNO8cnY9QsIu7tyo=
-knative.dev/pkg v0.0.0-20210803160015-21eb4c167cc5 h1:jpOTmAXg1oLS8u5HPBrFP1XsOSFCQIvlTRxP8TDGg2E=
 knative.dev/pkg v0.0.0-20210803160015-21eb4c167cc5/go.mod h1:RPk5txNA3apR9X40D4MpUOP9/VqOG8CrtABWfOwGVS4=
-knative.dev/serving v0.25.0 h1:YdIdW7CSJ53xbVp5D6dZmXccFnQ6PiR+U/GiwujhwIc=
-knative.dev/serving v0.25.0/go.mod h1:24E4fVyViFnz8aAaafzdrYKB7CAsQr4FMU7QXoIE6CI=
+knative.dev/pkg v0.0.0-20210902173607-844a6bc45596 h1:LCSg0O51V8I7sfnhw+j9WLBol8f2lCV5HkPyxJT9zzA=
+knative.dev/pkg v0.0.0-20210902173607-844a6bc45596/go.mod h1:RPk5txNA3apR9X40D4MpUOP9/VqOG8CrtABWfOwGVS4=
+knative.dev/serving v0.25.1 h1:SB69pmTrnU9h7VKwFeG/puJg4FeuneMUWygbTn11Vc4=
+knative.dev/serving v0.25.1/go.mod h1:cONj5E1LW18TW5ai6gN6UG/PFqx2BmOxoR8umm+xoOQ=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=

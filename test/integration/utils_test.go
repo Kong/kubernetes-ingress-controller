@@ -113,6 +113,12 @@ var (
 	// to persist after the test for inspection. This has a nil effect when an existing cluster
 	// is provided, as cleanup is not performed for existing clusters.
 	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
+
+	// enterprise Repo
+	enterpriseRepo = os.Getenv("ENTERPRISE_REPO")
+
+	// enterprise Tag
+	enterpriseTag = os.Getenv("ENTERPRISE_TAG")
 )
 
 // -----------------------------------------------------------------------------

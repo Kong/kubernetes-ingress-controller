@@ -33,8 +33,6 @@ const (
 	EnterpriseImageTag  = "2.5.0.0-alpine"
 )
 
-var enterpriseEnablement bool
-
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
@@ -42,16 +40,17 @@ var enterpriseEnablement bool
 func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
+	enterpriseEnablement := false
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
-	if enterprise == "yes" {
+	if enterpriseRepo != "" && enterpriseTag != "" {
+		kongbuilder = kongbuilder.WithEnterprise().WithImage(EnterpriseImageRepo, EnterpriseImageTag)
 		enterpriseEnablement = true
-		kongbuilder = kongbuilder.WithEnterprise(dbmode).WithImage(EnterpriseImageRepo, EnterpriseImageTag).Build()
-	} else {
-		if dbmode == "postgres" {
-			kongbuilder = kongbuilder.WithPostgreSQL()
-		}
+	}
+
+	if dbmode == "postgres" {
+		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 
 	kongbuilder.WithControllerDisabled()
@@ -131,7 +130,7 @@ func TestMain(m *testing.M) {
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		exitOnErr(deployControllers(ctx, controllerNamespace))
+		exitOnErr(deployControllers(ctx, controllerNamespace, enterpriseEnablement))
 	}
 
 	fmt.Println("INFO: running final testing environment checks")
@@ -165,7 +164,7 @@ var crds = []string{
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster
-func deployControllers(ctx context.Context, namespace string) error {
+func deployControllers(ctx context.Context, namespace string, enterprise bool) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
@@ -229,6 +228,14 @@ func deployControllers(ctx context.Context, namespace string) error {
 		}
 
 		if enterpriseEnablement {
+			workspace := "kic-ws"
+			if err := createWorkspace(proxyAdminURL.Hostname(), 8001, workspace); err != nil {
+				panic("failed creating non-default workspace through kong admin api.")
+			}
+			userToken := "kic-ws-pwd"
+			if err := createNonAdminUser(proxyAdminURL.Hostname(), 8001, userToken); err != nil {
+				panic("failed creating non-admin user through kong admin api.")
+			}
 			enterpriseParams := []string{
 				"--kong-admin-token=password",
 				"--kong-workspace=workspace",
@@ -242,5 +249,13 @@ func deployControllers(ctx context.Context, namespace string) error {
 	}()
 
 	wg.Wait()
+	return nil
+}
+
+func createWorkspace(adminHost string, adminPort int, workspaceName string) error {
+	return nil
+}
+
+func createNonAdminUser(adminHost string, adminPort int, userToken string) error {
 	return nil
 }

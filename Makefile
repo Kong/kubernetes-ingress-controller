@@ -64,6 +64,7 @@ all: build
 
 .PHONY: clean
 clean:
+	@rm -rf build/
 	@rm -rf testbin/
 	@rm -rf bin/*
 	@rm -f coverage*.out
@@ -114,12 +115,15 @@ verify.generators: verify.repo generate verify.diff
 # ------------------------------------------------------------------------------
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	go run hack/generators/manifests/main.go --directory config/crd/bases/
+manifests: manifests.crds manifests.single
+
+.PHONY: manifests.crds
+manifests.crds: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=build/config/crd/bases
+	go run hack/generators/manifests/main.go --input-directory build/config/crd/bases/ --output-directory config/crd/bases
 
 .PHONY: manifests.single
-manifests.single: ## Compose single-file deployment manifests from building blocks
+manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
 	./hack/deploy/build-single-manifests.sh
 
 # ------------------------------------------------------------------------------
@@ -194,10 +198,10 @@ test.integration.dbless:
 		-coverprofile=coverage.dbless.out \
 		./test/integration
 
-.PHONY: test.integration.enterprise.dbless
-test.integration.enterprise.dbless:
+.PHONY: test.integration.enterprise/kong/kong-gateway.2.5.0.0-alpine/postgres
+test.integration.enterprise.kong/kong-gateway.2.5.0.0-alpine.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -v -race \
+	@TEST_DATABASE_MODE="on" @ENTERPRISE_REPO="kong/kong-gateway" @ENTERPRISE_TAG="2.5.0.0-alpine" GOFLAGS="-tags=integration_tests" go test -v -race \
 		-timeout 15m \
 		-parallel $(NCPU) \
 		-covermode=atomic \
@@ -221,6 +225,14 @@ test.integration.postgres:
 .PHONY: test.integration.legacy
 test.integration.legacy: container
 	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
+
+.PHONY: test.e2e
+test.e2e:
+	GOFLAGS="-tags=e2e_tests" go test -v \
+		-race \
+		-timeout 15m \
+		-parallel $(NCPU) \
+		./test/e2e/...
 
 # ------------------------------------------------------------------------------
 # Operations

@@ -244,7 +244,6 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        type: object
         properties:
           proxy:
             properties:
@@ -274,7 +273,6 @@ spec:
                 type: integer
             type: object
           route:
-            type: object
             properties:
               headers:
                 additionalProperties:
@@ -318,6 +316,7 @@ spec:
                 type: array
               strip_path:
                 type: boolean
+            type: object
           upstream:
             properties:
               algorithm:
@@ -428,6 +427,7 @@ spec:
                 minimum: 10
                 type: integer
             type: object
+        type: object
     served: true
     storage: true
     subresources:

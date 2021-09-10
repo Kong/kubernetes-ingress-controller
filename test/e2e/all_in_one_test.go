@@ -21,7 +21,9 @@ import (
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -45,6 +47,10 @@ const (
 	// (e.g. httpbin) to come online and for ingress to have properly configured
 	// proxy traffic to route to it.
 	ingressWait = time.Minute * 5
+
+	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
+	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
+	adminAPIWait = time.Minute * 2
 )
 
 var (
@@ -210,9 +216,10 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 // -----------------------------------------------------------------------------
 
 const (
-	httpBinImage = "kennethreitz/httpbin"
-	ingressClass = "kong"
-	namespace    = "kong"
+	httpBinImage     = "kennethreitz/httpbin"
+	ingressClass     = "kong"
+	namespace        = "kong"
+	adminServiceName = "kong-admin"
 )
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifestPath string, additionalManifests ...string) {
@@ -317,8 +324,15 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 
 func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
 	t.Log("finding the ip address for the admin API")
-	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-admin", metav1.GetOptions{})
-	require.NoError(t, err)
+	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			t.Log("no admin service available, creating one")
+			service = exposeAdminAPI(ctx, t, env)
+		} else {
+			require.NoError(t, err)
+		}
+	}
 	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
 	adminIP := service.Status.LoadBalancer.Ingress[0].IP
 
@@ -328,13 +342,20 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	req.Header.Set("Kong-Admin-Token", adminPassword)
 
 	t.Log("pulling the admin api information")
+	var body []byte
 	httpc := http.Client{Timeout: time.Second * 10}
-	resp, err := httpc.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode, fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body)))
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return false
+		}
+		return resp.StatusCode == http.StatusOK
+	}, adminAPIWait, time.Second)
 
 	t.Log("verifying the admin api version is enterprise")
 	adminOutput := struct {
@@ -346,7 +367,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 
 func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
 	t.Log("finding the ip address for the admin API")
-	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-admin", metav1.GetOptions{})
+	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
 	adminIP := service.Status.LoadBalancer.Ingress[0].IP
@@ -406,4 +427,53 @@ type: Opaque
 data:
   password: %s`, adminPasswordSecretName, adminPasswordB64)
 	return adminPassword, adminPasswordSecretYAML, nil
+}
+
+// exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the
+// Admin API via a service. Some deployments only expose this on localhost by default as there's
+// no authentication, so note that this is only for testing environment purposes.
+func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment) *corev1.Service {
+	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
+	require.NoError(t, err)
+	for i, containerSpec := range deployment.Spec.Template.Spec.Containers {
+		if containerSpec.Name == "proxy" {
+			for j, envVar := range containerSpec.Env {
+				if envVar.Name == "KONG_ADMIN_LISTEN" {
+					deployment.Spec.Template.Spec.Containers[i].Env[j].Value = "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+				}
+			}
+		}
+	}
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("creating a loadbalancer service for the admin API")
+	svcPorts := []corev1.ServicePort{{
+		Name:       "proxy",
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.IntOrString{IntVal: 8001},
+		Port:       80,
+	}}
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: adminServiceName,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeLoadBalancer,
+			Selector: deployment.Spec.Selector.MatchLabels,
+			Ports:    svcPorts,
+		},
+	}
+	service, err = env.Cluster().Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("waiting for loadbalancer ip to provision")
+	require.Eventually(t, func() bool {
+		service, err = env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, service.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		return len(service.Status.LoadBalancer.Ingress) == 1
+	}, time.Minute, time.Second)
+
+	return service
 }

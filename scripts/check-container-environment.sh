@@ -29,7 +29,4 @@ fi
 DOCKER_VERSION="$(docker -v)"
 KIND_VERSION="$(kind version)"
 
-export ENTERPRISE_REPO="kong/kong-gateway"
-export ENTERPRISE_TAG="2.5.0.0-alpine"
-
 echo "INFO: container environment ready DOCKER=(${DOCKER_VERSION}) KIND=(${KIND_VERSION})"

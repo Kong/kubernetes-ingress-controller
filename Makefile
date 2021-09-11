@@ -10,6 +10,9 @@ IMGNAME?=kubernetes-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 IMG ?= controller:latest
 NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
+export ENTERPRISE_REPO = kong/kong-gateway
+export ENTERPRISE_TAG = 2.5.0.0-alpine
+
 
 # ------------------------------------------------------------------------------
 # Setup

@@ -177,7 +177,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 test.all: test test.integration
 
 .PHONY: test.integration
-test.integration: test.integration.enterprise.postgres  test.integration.enterprise.dbless
+test.integration: test.integration.dbless test.integration.postgres test.integration.enterprise.postgres  test.integration.enterprise.dbless
 
 .PHONY: test
 test:
@@ -214,7 +214,7 @@ test.integration.postgres:
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="on" TEST_ENTERPRISE="on" GOFLAGS="-tags=integration_tests" go test -v -race \
+	@TEST_DATABASE_MODE="postgres" TEST_ENTERPRISE="on" GOFLAGS="-tags=integration_tests" go test -v -race \
 		-timeout 15m \
 		-parallel $(NCPU) \
 		-covermode=atomic \

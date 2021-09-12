@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -225,17 +227,17 @@ func deployControllers(ctx context.Context, namespace string, enterprise string)
 		}
 
 		if enterpriseEnablement == "on" {
-			workspace := "kic-ws"
+			workspace := "kic-test-workspace"
 			if err := createWorkspace(proxyAdminURL.Hostname(), 8001, workspace); err != nil {
 				panic("failed creating non-default workspace through kong admin api.")
 			}
 			userToken := "kic-ws-pwd"
-			if err := createNonAdminUser(proxyAdminURL.Hostname(), 8001, userToken); err != nil {
+			if err := createAdminUser(proxyAdminURL.Hostname(), 8001, userToken); err != nil {
 				panic("failed creating non-admin user through kong admin api.")
 			}
 			enterpriseParams := []string{
-				"--kong-admin-token=password",
-				"--kong-workspace=workspace",
+				fmt.Sprintf("--kong-admin-token=%s", userToken),
+				fmt.Sprintf("--kong-workspace=%s", workspace),
 			}
 			basicParams = append(basicParams, enterpriseParams...)
 		}
@@ -250,9 +252,51 @@ func deployControllers(ctx context.Context, namespace string, enterprise string)
 }
 
 func createWorkspace(adminHost string, adminPort int, workspaceName string) error {
+	url := "http://" + adminHost + ":" + fmt.Sprintf("%d", adminPort) + "/workspaces"
+	fmt.Println("Admin Service URL:>", url)
+
+	var jsonStr = []byte(`{"name": "kic-ci-workspace"}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	req.Header.Set("kong-admin-token", "password")
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	if 201 == resp.StatusCode {
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Printf("successfully created workspace %s through admin api.", body)
+	}
 	return nil
 }
 
-func createNonAdminUser(adminHost string, adminPort int, userToken string) error {
+func createAdminUser(adminHost string, adminPort int, userToken string) error {
+
+	url := "http://" + adminHost + ":" + fmt.Sprintf("%d", adminPort) + "rbac/users"
+	fmt.Println("Admin Service URL:>", url)
+
+	var jsonStr = []byte(`{"name": "super-admin", "user_token" : ` + userToken)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	req.Header.Set("kong-admin-token", "password")
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	if 201 == resp.StatusCode {
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Printf("successfully created rbac user %s through admin api.", body)
+	}
+
 	return nil
 }

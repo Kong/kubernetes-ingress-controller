@@ -193,37 +193,3 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
-
-  test-gateway-enterprise:
-    if: ${{ contains(github.ref, 'tags') }} # run only for tags
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        enterprise:
-          repository: 'kong/kong-gateway'
-          tag: '2.5.0.0-alpine'
-        dbmode:
-          - 'postgres'
-          - 'dbmode'
-    steps:
-      - name: setup golang
-        uses: actions/setup-go@v2
-        with:
-          go-version: '^1.16'
-
-      - name: cache go modules
-        uses: actions/cache@v2.1.6
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
-      - name: checkout repository
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Enterprise ${{ matrix.enterprise.repository }} ${{ matrix.enterprise.tag }} ${{ matrix.dbmode}} Integration Tests
-        run: make test.integration.enterprise/${{ matrix.enterprise.repository }}.${{ matrix.enterprise.tag }}/${{ matrix.dbmode}}
-

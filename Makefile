@@ -180,7 +180,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 test.all: test test.integration
 
 .PHONY: test.integration
-test.integration: test.integration.dbless test.integration.postgres test.integration.enterprise.postgres  test.integration.enterprise.dbless
+test.integration: test.integration.enterprise.postgres  test.integration.enterprise.dbless
 
 .PHONY: test
 test:

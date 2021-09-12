@@ -152,6 +152,9 @@ const (
 	// ExitCodeEnvSetupFailed is a generic exit code that can be used as a fallback for general
 	// problems setting up the testing environment and/or cluster.
 	ExitCodeEnvSetupFailed = 104
+
+	// Kong Admin test password
+	KongTestPassword = "password"
 )
 
 // -----------------------------------------------------------------------------

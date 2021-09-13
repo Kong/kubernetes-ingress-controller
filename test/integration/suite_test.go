@@ -229,7 +229,7 @@ func deployControllers(ctx context.Context, namespace string, enterprise string)
 		if enterpriseEnablement == "on" {
 			adminURL := fmt.Sprintf("http://%s:8001", proxyAdminURL.Hostname())
 
-			workspace := "workspace"
+			workspace := "non-default-workspace"
 			if err := createNonDefaultWorkspace(adminURL, workspace); err != nil {
 				panic("failed creating non-default workspace through kong admin api.")
 			}
@@ -240,7 +240,7 @@ func deployControllers(ctx context.Context, namespace string, enterprise string)
 				panic("failed creating non-admin user through kong admin api.")
 			}
 
-			role := "rw-role"
+			role := "non-admin-role"
 			if err := createwsRoleAndPermission(adminURL, workspace, role); err != nil {
 				panic("failed creating role and endpoints through kong admin api.")
 			}

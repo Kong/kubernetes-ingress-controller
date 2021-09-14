@@ -38,6 +38,11 @@
 
 ## [2.0.0] - TBA
 
+#### Breaking changes
+
+- A non-admin-token is provided to specify non-admin rbac user.
+  [#1279](https://github.com/Kong/kubernetes-ingress-controller/issues/1279)
+
 #### Added
 
 - In DB-less mode, the controller only marks itself ready once it has

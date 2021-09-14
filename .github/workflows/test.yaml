@@ -106,40 +106,6 @@ jobs:
         name: coverage.unit.out
         path: coverage.unit.out
 
-  integration-tests-enterprise-dbless:
-    environment: "Configure ci"
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.16'
-
-    - name: cache go modules
-      uses: actions/cache@v2.1.6
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: run integration tests
-      run: make test.integration.enterprise.dbless
-      env:
-        KONG_ENTERPRISE_LICENSE: ${{ secrets.KONG_ENTERPRISE_LICENSE }}
-
-    - name: collect test coverage
-      uses: actions/upload-artifact@v2.2.4
-      with:
-        name: coverage.enterprisdbless.out
-        path: coverage.enterprisdbless.out
-
   integration-tests-enterprise-postgres:
     environment: "Configure ci"
     runs-on: ubuntu-latest
@@ -174,74 +140,74 @@ jobs:
         name: coverage.enterprisepostgres.out
         path: coverage.enterprisepostgres.out
   
-  # integration-tests-dbless:
-  #   runs-on: ubuntu-latest
-  #   steps:
+  integration-tests-dbless:
+    runs-on: ubuntu-latest
+    steps:
 
-  #   - name: setup golang
-  #     uses: actions/setup-go@v2
-  #     with:
-  #       go-version: '^1.16'
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.16'
 
-  #   - name: cache go modules
-  #     uses: actions/cache@v2.1.6
-  #     with:
-  #       path: ~/go/pkg/mod
-  #       key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-  #       restore-keys: |
-  #         ${{ runner.os }}-build-codegen-
+    - name: cache go modules
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
 
-  #   - name: checkout repository
-  #     uses: actions/checkout@v2
-  #     with:
-  #       fetch-depth: 0
+    - name: checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
-  #   - name: run integration tests
-  #     run: make test.integration.dbless
+    - name: run integration tests
+      run: make test.integration.dbless
 
-  #   - name: collect test coverage
-  #     uses: actions/upload-artifact@v2.2.4
-  #     with:
-  #       name: coverage.dbless.out
-  #       path: coverage.dbless.out
+    - name: collect test coverage
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: coverage.dbless.out
+        path: coverage.dbless.out
 
-  # integration-tests-postgres:
-  #   runs-on: ubuntu-latest
-  #   steps:
+  integration-tests-postgres:
+    runs-on: ubuntu-latest
+    steps:
 
-  #   - name: setup golang
-  #     uses: actions/setup-go@v2
-  #     with:
-  #       go-version: '^1.16'
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.16'
 
-  #   - name: cache go modules
-  #     uses: actions/cache@v2.1.6
-  #     with:
-  #       path: ~/go/pkg/mod
-  #       key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-  #       restore-keys: |
-  #         ${{ runner.os }}-build-codegen-
+    - name: cache go modules
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
 
-  #   - name: checkout repository
-  #     uses: actions/checkout@v2
-  #     with:
-  #       fetch-depth: 0
+    - name: checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
-  #   - name: run integration tests
-  #     run: make test.integration.postgres
+    - name: run integration tests
+      run: make test.integration.postgres
 
-  #   - name: collect test coverage
-  #     uses: actions/upload-artifact@v2.2.4
-  #     with:
-  #       name: coverage.postgres.out
-  #       path: coverage.postgres.out
+    - name: collect test coverage
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: coverage.postgres.out
+        path: coverage.postgres.out
 
   coverage:
     environment: "Configure ci"
     needs:
       - "unit-tests"
-      # - "integration-tests-dbless"
-      # - "integration-tests-postgres"
+      - "integration-tests-dbless"
+      - "integration-tests-postgres"
     runs-on: ubuntu-latest
     steps:
       # TODO: deduplicate the download-artifact steps by implementing a `matrix` workflow step instead
@@ -252,19 +218,19 @@ jobs:
         name: coverage.unit.out
         path: coverage.unit.out
 
-    # - name: collect dbless test coverage artifacts
-    #   id: download-dbless
-    #   uses: actions/download-artifact@v2.0.10
-    #   with:
-    #     name: coverage.dbless.out
-    #     path: coverage.dbless.out
+    - name: collect dbless test coverage artifacts
+      id: download-dbless
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: coverage.dbless.out
+        path: coverage.dbless.out
 
-    # - name: collect postgres test coverage artifacts
-    #   id: download-postgres
-    #   uses: actions/download-artifact@v2.0.10
-    #   with:
-    #     name: coverage.postgres.out
-    #     path: coverage.postgres.out
+    - name: collect postgres test coverage artifacts
+      id: download-postgres
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: coverage.postgres.out
+        path: coverage.postgres.out
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.0.3

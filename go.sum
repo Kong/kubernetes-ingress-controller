@@ -691,6 +691,7 @@ github.com/klauspost/compress v1.13.0/go.mod h1:8dP1Hq4DHOhN9w426knH3Rhby4rFm6D8
 github.com/kong/deck v1.7.0 h1:uo4NdcChHoM9sb2Z8YPAuFyobv8bxaQuayA00tzN5js=
 github.com/kong/deck v1.7.0/go.mod h1:o2letQaSpXVnDNoXehEibOF6q7v46qtbsKOCC+1owAw=
 github.com/kong/go-kong v0.19.0/go.mod h1:HyNtOxzh/tzmOV//ccO5NAdmrCnq8b86YUPjmdy5aog=
+github.com/kong/go-kong v0.21.0 h1:cF0pdHwmL1ik6K1t+6cqaQsSW5J9SeVtCr2a2NKyeZA=
 github.com/kong/go-kong v0.21.0/go.mod h1:PA0trWxMuZ+iVxJroGMQzV3WAVUhATN7vXvz4dc5fkM=
 github.com/kong/go-kong v0.21.1-0.20210913062450-b0839ed575ab h1:CUtqyTYkM+zMRGOimIbGhD53C3U49EK1r9d4vOr/o6E=
 github.com/kong/go-kong v0.21.1-0.20210913062450-b0839ed575ab/go.mod h1:PA0trWxMuZ+iVxJroGMQzV3WAVUhATN7vXvz4dc5fkM=

@@ -268,7 +268,6 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(p.ctx, p.proxyRequestTimeout)
 	defer cancel()
-	p.kongConfig.Client.SetWorkspace(p.kongWorkspace)
 	return p.kongConfig.Client.Root(ctx)
 }
 

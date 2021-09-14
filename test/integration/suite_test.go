@@ -250,8 +250,9 @@ func deployControllers(ctx context.Context, namespace string, enterprise string)
 			}
 
 			enterpriseParams := []string{
-				fmt.Sprintf("--kong-admin-token=%s", userToken),
+				fmt.Sprintf("--kong-admin-token=password"),
 				fmt.Sprintf("--kong-workspace=%s", workspace),
+				fmt.Sprintf("--kong-non-admin-token=%s", userToken),
 			}
 			basicParams = append(basicParams, enterpriseParams...)
 		}

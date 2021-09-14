@@ -63,7 +63,7 @@ func PerformUpdate(ctx context.Context,
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
 	}
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	if newSHA != nil && !skipUpdateCR {

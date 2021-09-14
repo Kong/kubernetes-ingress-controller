@@ -44,32 +44,27 @@ func PullConfigUpdate(
 ) {
 	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
 	if err != nil {
-		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
-		return
+		panic(err)
 	}
 
 	cli, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
-		log.Error(err, "failed to create k8s client.")
-		return
+		panic(err)
 	}
 
 	versionInfo, err := cli.ServerVersion()
 	if err != nil {
-		log.Error(err, "failed to retrieve cluster version")
-		return
+		panic(err)
 	}
 
 	kubernetesVersion, err := semver.Parse(strings.TrimPrefix(versionInfo.String(), "v"))
 	if err != nil {
-		log.Error(err, "could not parse cluster version")
-		return
+		panic(err)
 	}
 
 	kiccli, err := kicclientset.NewForConfig(kubeConfig)
 	if err != nil {
-		log.Error(err, "failed to create kong ingress client.")
-		return
+		panic(err)
 	}
 
 	log.Info("Launching Ingress Status Update Thread.")

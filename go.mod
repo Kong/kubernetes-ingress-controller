@@ -9,7 +9,6 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr v1.1.0
-	github.com/fatih/color v1.12.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.3.0

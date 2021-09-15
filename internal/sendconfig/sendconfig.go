@@ -199,7 +199,7 @@ func onUpdateDBMode(ctx context.Context,
 		// return fmt.Errorf("creating a new syncer: %w", err)
 		panic(err)
 	}
-	//syncer.SilenceWarnings = true
+
 	_, errs := syncer.Solve(ctx, kongConfig.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}

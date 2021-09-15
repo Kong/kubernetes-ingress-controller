@@ -42,7 +42,11 @@ func TestMain(m *testing.M) {
 	kongbuilder := kong.NewBuilder()
 	if enterpriseEnablement == "on" {
 		if enterpriseRepo != "" && enterpriseTag != "" {
-			kongbuilder = kongbuilder.WithEnterprise().WithImage(enterpriseRepo, enterpriseTag)
+			licenseJSON := os.Getenv("KONG_ENTERPRISE_LICENSE")
+			if licenseJSON == "" {
+				panic("enterprise can not be installed w/o a license json.")
+			}
+			kongbuilder = kongbuilder.WithEnterprise().WithImage(enterpriseRepo, enterpriseTag).WithEnterpriseLicense(licenseJSON).WithKongAdminPassword(KongTestPassword)
 		} else {
 			panic("enterprise repo and tag is not configured.")
 		}
@@ -250,7 +254,7 @@ func deployControllers(ctx context.Context, namespace string, enterprise string)
 			}
 
 			enterpriseParams := []string{
-				fmt.Sprintf("--kong-admin-token=password"),
+				fmt.Sprintf("--kong-admin-token=%s", KongTestPassword),
 				fmt.Sprintf("--kong-workspace=%s", workspace),
 				fmt.Sprintf("--kong-non-admin-token=%s", userToken),
 			}
@@ -273,7 +277,7 @@ func createNonDefaultWorkspace(adminURL string, workspaceName string) error {
 	var jsonStr = []byte(`{"name":"` + workspaceName + `"}`)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("kong-admin-token", "password")
+	req.Header.Set("kong-admin-token", KongTestPassword)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -299,7 +303,7 @@ func createNonAdminUser(adminURL string, workspace, user, userToken string) erro
 	fmt.Printf("json %s", str)
 	var jsonStr = []byte(str)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("kong-admin-token", "password")
+	req.Header.Set("kong-admin-token", KongTestPassword)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -324,7 +328,7 @@ func createwsRoleAndPermission(adminURL string, workspace, role string) error {
 
 	var jsonStr = []byte(`{"name": "` + role + `"}`)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("kong-admin-token", "password")
+	req.Header.Set("kong-admin-token", KongTestPassword)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -344,7 +348,7 @@ func createwsRoleAndPermission(adminURL string, workspace, role string) error {
 	fmt.Println("add role endpoints URL:>", url)
 	jsonStr = []byte(`{"endpoint": "*", "workspace": "` + workspace + `",  "actions":"*"}`)
 	req, err = http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("kong-admin-token", "password")
+	req.Header.Set("kong-admin-token", KongTestPassword)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err = client.Do(req)
@@ -368,7 +372,7 @@ func addUserIntoRole(adminURL string, workspace, user, role string) error {
 
 	var jsonStr = []byte(`{"roles": "` + role + `"}`)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("kong-admin-token", "password")
+	req.Header.Set("kong-admin-token", KongTestPassword)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}

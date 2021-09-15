@@ -106,7 +106,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "", `PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
 	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil, `add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
 	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "", `The Kong Enterprise RBAC token used by the controller.`)
-	flagSet.StringVar(&c.KongNonAdminToken, "kong-non-admin-token", "", `The Kong Enterprise RBAC non-admintoken used by the controller.`)
+	flagSet.StringVar(&c.KongNonAdminToken, "kong-non-admin-token", "", `The Kong Enterprise RBAC non-admin user token used by the controller.`)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
@@ -187,18 +187,15 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-// CheckKongNonDefaultWorkSpace invokes api :workspaces/ws-name, requiring kong-admin credential
+// CheckKongNonDefaultWorkSpace invokes :workspaces/ws-name, checks workspace existence
 func (c *Config) CheckKongNonDefaultWorkSpace(ctx context.Context, adminURL string, wsName string, client *kong.Client) (bool, error) {
-	// if a workspace was provided, verify whether or not it exists.
-	fmt.Printf("checking workspace <%s>", *(kong.String(wsName)))
 	exists, err := client.Workspaces.Exists(ctx, kong.String(wsName))
 	if err != nil {
-		return false, fmt.Errorf("looking up workspace: %w", err)
+		return false, fmt.Errorf("failed looking up workspace: %w", err)
 	}
 
 	// if the provided workspace does not exist, for convenience we create it.
 	if !exists {
-		fmt.Printf("workspace %s does not exist. creating...", wsName)
 		workspace := kong.Workspace{
 			Name: kong.String(wsName),
 		}
@@ -206,9 +203,8 @@ func (c *Config) CheckKongNonDefaultWorkSpace(ctx context.Context, adminURL stri
 		if err != nil {
 			return false, fmt.Errorf("failed creating workspace: %w", err)
 		}
-		fmt.Printf("successfully create workspace %s.", wsName)
+		fmt.Printf("created workspace %s successfully", wsName)
 	}
-	fmt.Printf("workspace <%s> exist\n", *(kong.String(wsName)))
 	return true, nil
 }
 
@@ -226,7 +222,7 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 
 	client, err := kong.NewClient(kong.String(c.KongAdminURL), httpclient)
 	if err != nil {
-		return nil, fmt.Errorf("creating Kong client: %w", err)
+		return nil, fmt.Errorf("creating Kong client err: %w", err)
 	}
 
 	if c.KongWorkspace == "" {
@@ -242,26 +238,24 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 		return nil, fmt.Errorf("workspace: %s does not exist", c.KongWorkspace)
 	}
 
-	fmt.Printf("finish checking workspace. \n")
 	if c.KongNonAdminToken == "" {
-		fmt.Printf("only kong-admin user.")
+		// set up kong-admin user with workspace
 		client.SetWorkspace(c.KongWorkspace)
 		return client, nil
 	}
 
-	fmt.Printf("non-admin token %s \n", c.KongNonAdminToken)
 	c.KongAdminAPIConfig.Headers = []string{}
 	c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongNonAdminToken)
 	httpclient, err = adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("creating non-admin kong client \n")
+
 	client, err = kong.NewClient(kong.String(c.KongAdminURL), httpclient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
-	fmt.Printf("using non-defaultworkspace %s \n", c.KongNonAdminToken)
+
 	client.SetWorkspace(c.KongWorkspace)
 	return client, nil
 }

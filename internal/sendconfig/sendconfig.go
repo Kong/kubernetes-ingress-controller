@@ -62,7 +62,7 @@ func PerformUpdate(ctx context.Context,
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
 	}
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if newSHA != nil && !skipUpdateCR {
@@ -196,10 +196,9 @@ func onUpdateDBMode(ctx context.Context,
 		StageDelaySec: 0,
 	})
 	if err != nil {
-		// return fmt.Errorf("creating a new syncer: %w", err)
-		panic(err)
+		return fmt.Errorf("creating a new syncer: %w", err)
 	}
-	//syncer.SilenceWarnings = true
+
 	_, errs := syncer.Solve(ctx, kongConfig.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}

@@ -34,13 +34,12 @@ func NewCacheBasedProxy(ctx context.Context,
 	kongUpdater KongUpdater,
 	diagnostic util.ConfigDumpDiagnostic,
 	proxyRequestTimeout time.Duration,
-	kongWorkspace string,
 ) (Proxy, error) {
 	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
 	if err != nil {
 		return nil, err
 	}
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, proxyRequestTimeout, diagnostic, kongUpdater, kongWorkspace)
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, proxyRequestTimeout, diagnostic, kongUpdater)
 }
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
@@ -56,7 +55,6 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	proxyRequestTimeout time.Duration,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongUpdater KongUpdater,
-	kongWorkspace string,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
 	cache := store.NewCacheStores()
@@ -80,7 +78,6 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		syncTicker:          time.NewTicker(stagger),
 
 		configApplied: false,
-		kongWorkspace: kongWorkspace,
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -146,9 +143,6 @@ type clientgoCachedProxyResolver struct {
 	// on the logrus API.
 	deprecatedLogger logrus.FieldLogger
 	logger           logr.Logger
-
-	// kongWorkspace is non-default workspace
-	kongWorkspace string
 }
 
 // -----------------------------------------------------------------------------

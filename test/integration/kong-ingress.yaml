@@ -1,9 +1,0 @@
-apiVersion: configuration.konghq.com/v1
-kind: KongIngress
-metadata:
-  annotations:
-    kubernetes.io/ingress.class: kongtests
-  name: minking
-  namespace: 3c57d15c-6a30-4c5d-a4c1-ee8a48c5ed2a
-proxy:
-  read_timeout: 1000

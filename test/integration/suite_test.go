@@ -46,7 +46,11 @@ func TestMain(m *testing.M) {
 			if licenseJSON == "" {
 				panic("enterprise can not be installed w/o a license json.")
 			}
-			kongbuilder = kongbuilder.WithEnterprise().WithImage(enterpriseRepo, enterpriseTag).WithEnterpriseLicense(licenseJSON).WithKongAdminPassword(KongTestPassword).WithAdminServiceTypeLoadBalancer()
+			kongbuilder = kongbuilder.WithEnterprise().
+				WithImage(enterpriseRepo, enterpriseTag).
+				WithEnterpriseLicense(licenseJSON).
+				WithKongAdminPassword(KongTestPassword).
+				WithAdminServiceTypeLoadBalancer()
 		} else {
 			panic("enterprise repo and tag is not configured.")
 		}

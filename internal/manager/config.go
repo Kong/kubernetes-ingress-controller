@@ -188,7 +188,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 }
 
 // CheckKongNonDefaultWorkSpace invokes :workspaces/ws-name, checks workspace existence
-func (c *Config) CheckKongNonDefaultWorkSpace(ctx context.Context, adminURL string, wsName string, client *kong.Client) (bool, error) {
+func (c *Config) CheckKongNonDefaultWorkSpace(ctx context.Context, adminURL, wsName string, client *kong.Client) (bool, error) {
 	exists, err := client.Workspaces.Exists(ctx, kong.String(wsName))
 	if err != nil {
 		return false, fmt.Errorf("failed looking up workspace: %w", err)
@@ -203,7 +203,6 @@ func (c *Config) CheckKongNonDefaultWorkSpace(ctx context.Context, adminURL stri
 		if err != nil {
 			return false, fmt.Errorf("failed creating workspace: %w", err)
 		}
-		fmt.Printf("created workspace %s successfully", wsName)
 	}
 	return true, nil
 }
@@ -211,7 +210,6 @@ func (c *Config) CheckKongNonDefaultWorkSpace(ctx context.Context, adminURL stri
 // GetKongClient create a kong client based on configuration
 func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 	if c.KongAdminToken != "" {
-		fmt.Printf("kong-admin-token %s", c.KongAdminToken)
 		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
 	}
 

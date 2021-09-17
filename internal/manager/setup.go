@@ -130,5 +130,5 @@ func setupProxyServer(ctx context.Context,
 		syncTickDuration,
 		timeoutDuration,
 		diagnostic,
-		sendconfig.UpdateKongAdminSimple, c.KongWorkspace)
+		sendconfig.UpdateKongAdminSimple)
 }

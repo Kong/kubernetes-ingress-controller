@@ -260,11 +260,18 @@ jobs:
         name: coverage.postgres.out
         path: coverage.postgres.out
 
+    - name: collect enterprisepostgres test coverage artifacts
+      id: download-enterprisepostgres
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: coverage.enterprisepostgres.out
+        path: coverage.enterprisepostgres.out
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.1.0
       with:
         name: combined-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ${{steps.download-unit.outputs.download-path}}/coverage.unit.out,${{steps.download-dbless.outputs.download-path}}/coverage.dbless.out,${{steps.download-postgres.outputs.download-path}}/coverage.postgres.out
+        files: ${{steps.download-unit.outputs.download-path}}/coverage.unit.out,${{steps.download-dbless.outputs.download-path}}/coverage.dbless.out,${{steps.download-postgres.outputs.download-path}}/coverage.postgres.out/coverage.enterprisepostgres.out
         fail_ci_if_error: true
         verbose: true

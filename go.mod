@@ -32,9 +32,9 @@ require (
 	github.com/tidwall/gjson v1.9.1
 	google.golang.org/api v0.56.0
 	google.golang.org/genproto v0.0.0-20210828152312-66f60bf46e71
-	k8s.io/api v0.22.1
+	k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver v0.22.1
-	k8s.io/apimachinery v0.22.1
+	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.1
 	knative.dev/networking v0.0.0-20210803181815-acdfd41c575c
 	knative.dev/pkg v0.0.0-20210902173607-844a6bc45596

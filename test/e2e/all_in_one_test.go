@@ -21,7 +21,6 @@ import (
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -134,6 +133,9 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 
 	t.Log("deploying kong components")
 	deployKong(ctx, t, env, entDBLESSPath, enterpriseLicenseSecretYAML, adminPasswordSecretYAML)
+
+	t.Log("exposing the admin api so that enterprise features can be verified")
+	exposeAdminAPI(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	verifyIngress(ctx, t, env)
@@ -322,17 +324,13 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 	}, ingressWait, time.Second)
 }
 
+// verifyEnterprise performs some basic tests of the Kong Admin API in the provided
+// environment to ensure that the Admin API that responds is in fact the enterprise
+// version of Kong.
 func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
 	t.Log("finding the ip address for the admin API")
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			t.Log("no admin service available, creating one")
-			service = exposeAdminAPI(ctx, t, env)
-		} else {
-			require.NoError(t, err)
-		}
-	}
+	require.NoError(t, err)
 	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
 	adminIP := service.Status.LoadBalancer.Ingress[0].IP
 

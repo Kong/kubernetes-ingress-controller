@@ -10,12 +10,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
@@ -106,19 +109,29 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 
 	if c.UpdateStatus {
 		setupLog.Info("status updates enabled, status update routine is being started in the background.")
-
-		errChan := make(chan error)
-		go func() {
-			err := ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
-			errChan <- err
-		}()
-		if err := <-errChan; err != nil {
-			setupLog.Error(err, "update config failed.")
-		}
+		go startUpdateThread(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
 	} else {
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
 	setupLog.Info("starting manager")
 	return mgr.Start(ctx)
+}
+
+// startUpdateThread start deadicated status update thread
+func startUpdateThread(ctx context.Context,
+	kongConfig sendconfig.Kong,
+	log logr.Logger,
+	kubeConfig *rest.Config,
+	publishService string,
+	publishAddresses []string) {
+	for {
+		select {
+		case err := <-ctrlutils.PullConfigUpdate(ctx, kongConfig, log, kubeConfig, publishService, publishAddresses):
+			log.Error(err, "update config failed.")
+			continue
+		case <-ctx.Done():
+			return
+		}
+	}
 }

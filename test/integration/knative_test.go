@@ -1,4 +1,5 @@
-//+build integration_tests
+//go:build integration_tests
+// +build integration_tests
 
 package integration
 
@@ -6,7 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -107,7 +108,7 @@ func configKnativeDomain(ctx context.Context, proxy, nsn string, cluster cluster
 			Name:      "config-domain",
 			Namespace: nsn,
 			Labels: map[string]string{
-				"serving.knative.dev/release": "v0.13.0",
+				"serving.knative.dev/release": "v0.18.0",
 			},
 		},
 		Data: map[string]string{
@@ -171,7 +172,7 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return false
 			}

@@ -2,7 +2,7 @@
 # Configuration
 # ------------------------------------------------------------------------------
 
-TAG?=2.0.0-beta.1
+TAG?=2.0.0-beta.2
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
 REPO_URL=github.com/kong/kubernetes-ingress-controller
@@ -24,11 +24,11 @@ export GO111MODULE=on
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.3.0)
 
 CLIENT_GEN = $(shell pwd)/bin/client-gen
 client-gen: ## Download client-gen locally if necessary.
@@ -64,6 +64,7 @@ all: build
 
 .PHONY: clean
 clean:
+	@rm -rf build/
 	@rm -rf testbin/
 	@rm -rf bin/*
 	@rm -f coverage*.out
@@ -95,21 +96,34 @@ lint: verify.tidy
 verify.tidy:
 	./hack/verify-tidy.sh
 
+.PHONY: verify.repo
+verify.repo:
+	./hack/verify-repo.sh
+
+.PHONY: verify.diff
+verify.diff:
+	./hack/verify-diff.sh
+
 .PHONY: verify.manifests
-verify.manifests:
-	./hack/verify-manifests.sh
+verify.manifests: verify.repo manifests manifests.single verify.diff
+
+.PHONY: verify.generators
+verify.generators: verify.repo generate verify.diff
 
 # ------------------------------------------------------------------------------
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	go run hack/generators/manifests/main.go --directory config/crd/bases/
+manifests: manifests.crds manifests.single
+
+.PHONY: manifests.crds
+manifests.crds: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=build/config/crd/bases
+	go run hack/generators/manifests/main.go --input-directory build/config/crd/bases/ --output-directory config/crd/bases
 
 .PHONY: manifests.single
-manifests.single: ## Compose single-file deployment manifests from building blocks
+manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
 	./hack/deploy/build-single-manifests.sh
 
 # ------------------------------------------------------------------------------
@@ -200,6 +214,14 @@ test.integration.postgres:
 .PHONY: test.integration.legacy
 test.integration.legacy: container
 	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
+
+.PHONY: test.e2e
+test.e2e:
+	GOFLAGS="-tags=e2e_tests" go test -v \
+		-race \
+		-timeout 15m \
+		-parallel $(NCPU) \
+		./test/e2e/...
 
 # ------------------------------------------------------------------------------
 # Operations

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -182,7 +181,7 @@ func namespace(t *testing.T) (*corev1.Namespace, func()) {
 
 // identifyTestCasesForDir finds the Go function names for any Go test files in the given directory
 func identifyTestCasesForDir(dir string) ([]string, error) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +212,7 @@ func identifyTestCasesForFile(filePath string) ([]string, error) {
 		return nil, fmt.Errorf("%s does not look like a Golang test file", filePath)
 	}
 
-	b, err := ioutil.ReadFile(filePath)
+	b, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}

@@ -1,9 +1,12 @@
 # Table of Contents
 
+ - [2.0.0](#200---tba)
+ - [2.0.0-beta.2](#200-beta2---202108016)
  - [2.0.0-beta.1](#200-beta1---20210806)
  - [2.0.0-alpha.3](#200-alpha3---20210802)
  - [2.0.0-alpha.2](#200-alpha2---20210707)
  - [2.0.0-alpha.1](#200-alpha1---20210527)
+ - [1.3.2](#132---20210812)
  - [1.3.1](#131---20210603)
  - [1.3.0](#130---20210527)
  - [1.2.0](#120---20210324)
@@ -32,6 +35,32 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.0.0] - TBA
+
+#### Added
+
+- In DB-less mode, the controller only marks itself ready once it has
+  successfully applied configuration at least once. This ensures that proxies
+  do not start handling traffic until they are configured.
+  [#1720](https://github.com/Kong/kubernetes-ingress-controller/issues/1720)
+- Renamed roles and bindings to reflect their association with Kong.
+  [#1801](https://github.com/Kong/kubernetes-ingress-controller/issues/1801)
+
+## [2.0.0-beta.2] - 2021/08/16
+
+#### Added
+
+- Upgraded Kong Gateway from 2.4 to 2.5
+  [#1684](https://github.com/Kong/kubernetes-ingress-controller/issues/1684)
+
+#### Fixed
+
+- Prometheus metrics were not exposed on the metrics endpoint in 2.0.0-beta.1 by default
+  [#1497](https://github.com/Kong/kubernetes-ingress-controller/issues/1497)
+- Resolved an issue where certain UDPIngress and TCPIngress configurations
+  resulted in overlapping incompatible Kong configuration.
+  [#1702](https://github.com/Kong/kubernetes-ingress-controller/issues/1702)
 
 ## [2.0.0-beta.1] - 2021/08/06
 
@@ -257,6 +286,14 @@
 [controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
+
+## [1.3.2] - 2021/08/12
+
+#### Under the hood
+
+- Updated Alpine image to 3.14.
+  [#1691](https://github.com/Kong/kubernetes-ingress-controller/pull/1691/)
+- Update Kong images to 2.5.
 
 ## [1.3.1] - 2021/06/03
 
@@ -1262,10 +1299,13 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.3...2.0.0-beta.1
-[2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...2.0.0-alpha.3
+[2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.2...v2.0.0
+[2.0.0-beta.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.1...v2.0.0-beta.2
+[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-alpha.3...v2.0.0-beta.1
+[2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...v2.0.0-alpha.3
 [2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
-[2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
+[2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...2.0.0-alpha.1
+[1.3.2]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.1...1.2.0

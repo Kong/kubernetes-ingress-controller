@@ -7,8 +7,8 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/kong/kubernetes-ingress-controller/internal/adminapi/validators/consumer/credentials"
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
@@ -93,7 +93,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			if !ok {
 				log.Errorf("failed to provision credential: invalid credType: %v", credType)
 			}
-			if !supportedCreds.Has(credType) {
+			if !credentials.SupportedTypes.Has(credType) {
 				log.Errorf("failed to provision credential: invalid credType: %v", credType)
 				continue
 			}
@@ -326,12 +326,3 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
 	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
 }
-
-var supportedCreds = sets.NewString(
-	"acl",
-	"basic-auth",
-	"hmac-auth",
-	"jwt",
-	"key-auth",
-	"oauth2",
-)

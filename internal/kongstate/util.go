@@ -87,22 +87,19 @@ func kongPluginFromK8SClusterPlugin(
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
-	if k8sPlugin.ConfigFrom.SecretValue !=
-		(configurationv1.NamespacedSecretValueFromSource{}) &&
-		len(config) > 0 {
+	if k8sPlugin.ConfigFrom != nil && len(config) > 0 {
 		return kong.Plugin{},
 			fmt.Errorf("KongClusterPlugin '/%v' has both "+
 				"Config and ConfigFrom set", k8sPlugin.Name)
 	}
-	if k8sPlugin.ConfigFrom.SecretValue != (configurationv1.
-		NamespacedSecretValueFromSource{}) {
+	if k8sPlugin.ConfigFrom != nil {
 		var err error
 		config, err = namespacedSecretToConfiguration(
 			s,
-			k8sPlugin.ConfigFrom.SecretValue)
+			(*k8sPlugin.ConfigFrom).SecretValue)
 		if err != nil {
 			return kong.Plugin{},
 				fmt.Errorf("error parsing config for KongClusterPlugin %v: %w",
@@ -131,22 +128,19 @@ func kongPluginFromK8SPlugin(
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %s",
+		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
-	if k8sPlugin.ConfigFrom.SecretValue !=
-		(configurationv1.SecretValueFromSource{}) &&
-		len(config) > 0 {
+	if k8sPlugin.ConfigFrom != nil && len(config) > 0 {
 		return kong.Plugin{},
 			fmt.Errorf("KongPlugin '%v/%v' has both "+
 				"Config and ConfigFrom set",
 				k8sPlugin.Namespace, k8sPlugin.Name)
 	}
-	if k8sPlugin.ConfigFrom.SecretValue !=
-		(configurationv1.SecretValueFromSource{}) {
+	if k8sPlugin.ConfigFrom != nil {
 		var err error
 		config, err = SecretToConfiguration(s,
-			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
+			(*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return kong.Plugin{},
 				fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w",
@@ -197,7 +191,7 @@ func SecretToConfiguration(
 	secret, err := s.GetSecret(namespace, reference.Secret)
 	if err != nil {
 		return kong.Configuration{}, fmt.Errorf(
-			"error fetching plugin configuration secret '%v/%v': %v",
+			"error fetching plugin configuration secret '%v/%v': %w",
 			namespace, reference.Secret, err)
 	}
 	secretVal, ok := secret.Data[reference.Key]

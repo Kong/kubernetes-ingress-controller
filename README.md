@@ -4,9 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
 
-# Kong for Kubernetes
-
-⚠️ **Due to Bintray image registries going out of service, we've moved our Docker images to [Docker Hub](https://hub.docker.com/r/kong/kubernetes-ingress-controller/tags).** ⚠️
+# Kong Ingress Controller for Kubernetes
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
@@ -14,7 +12,22 @@ load balancing and more in Kong
 for Kubernetes Services, all using
 Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
-[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main/next branch builds**](#mainnext-branch-builds) | [**Seeking help**](#seeking-help)
+[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
+
+## ✨ KIC 2.0 is in public beta! ✨
+
+We're happy to announce that Kong Ingress Controller 2.0 is in public beta.
+
+This new release comes with a major internal rearchitecture, and the following added features:
+- Support for UDP ingress resources and the new `UDPIngress` CRD,
+- Ingress controller runtime metrics compatible with Prometheus, for easier monitoring and alerting.
+
+For a quick start, just deploy KIC 2.0 beta to your cluster:
+```console
+$ kubectl apply -f "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/deploy/single-v2/all-in-one-dbless.yaml"
+```
+
+See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller-beta) for Kong Ingress Controller 2.0 beta.
 
 ## Features
 
@@ -77,21 +90,15 @@ Pull Requests are welcome for additions and corrections.
 Please browse through [guides][guides] to get started or understand how to configure
 a specific setting with Kong Ingress Controller.
 
-## main/next branch builds
+## main branch builds
 
-Pre-release builds of the `main` and `next` branches are available from the
+Pre-release builds of the `main` branch are available from the
 [kong-ingress-controller repository][docker-images] hosted on Docker Hub:
 
-`main` contains unreleased patch code for the current release:
+`main` contains unreleased new features for upcoming minor and major releases:
 
 ```
 docker pull kong/kubernetes-ingress-controller:main
-```
-
-`next` contains unreleased new features for upcoming minor and major releases:
-
-```
-docker pull kong/kubernetes-ingress-controller:next
 ```
 
 ## Seeking help

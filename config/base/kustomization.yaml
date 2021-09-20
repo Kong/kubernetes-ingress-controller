@@ -1,14 +1,9 @@
+namespace: kong
 resources:
 - namespace.yaml
-- crd
-- manager-role.yaml
-- manager-rolebinding.yaml
-- leader-election-role.yaml
-- leader-election-rolebinding.yaml
+- ../crd
+- ../rbac
 - service.yaml
 - serviceaccount.yaml
 - validation-service.yaml
 - kong-ingress-dbless.yaml
-patchesStrategicMerge:
-- kong-ingress-2x.yaml
-namespace: kong

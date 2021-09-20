@@ -3,6 +3,7 @@ package diagnostics
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -44,10 +45,9 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil {
-			switch err {
-			case http.ErrServerClosed:
+			if errors.Is(err, http.ErrServerClosed) {
 				s.Logger.Info("shutting down diagnostics server")
-			default:
+			} else {
 				s.Logger.Error(err, "could not start diagnostics server")
 				errChan <- err
 			}

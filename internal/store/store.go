@@ -743,11 +743,11 @@ func (s Store) networkingIngressV1Beta1(obj interface{}) *networkingv1beta1.Ingr
 func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*networkingv1beta1.Ingress, error) {
 	js, err := json.Marshal(obj)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize object of type %v: %v", reflect.TypeOf(obj), err)
+		return nil, fmt.Errorf("failed to serialize object of type %v: %w", reflect.TypeOf(obj), err)
 	}
 	var out networkingv1beta1.Ingress
 	if err := json.Unmarshal(js, &out); err != nil {
-		return nil, fmt.Errorf("failed to deserialize json: %v", err)
+		return nil, fmt.Errorf("failed to deserialize json: %w", err)
 	}
 	out.APIVersion = networkingv1beta1.SchemeGroupVersion.String()
 	return &out, nil

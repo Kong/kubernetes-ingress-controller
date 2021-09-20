@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"text/template"
 
@@ -240,7 +239,7 @@ func main() {
 func header() (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 
-	boilerPlate, err := ioutil.ReadFile("../../hack/boilerplate.go.txt")
+	boilerPlate, err := os.ReadFile("../../hack/boilerplate.go.txt")
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +292,7 @@ func (needed necessary) generate() error {
 		}
 	}
 
-	return ioutil.WriteFile(outputFile, contents.Bytes(), 0600)
+	return os.WriteFile(outputFile, contents.Bytes(), 0600)
 }
 
 type typeNeeded struct {
@@ -375,7 +374,6 @@ var rbacTemplate = `
 // -----------------------------------------------------------------------------
 
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
-//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 `
 
 var controllerTemplate = `
@@ -408,8 +406,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
-//+kubebuilder:rbac:groups={{.URL}},namespace=CHANGEME,resources={{.Plural}}/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -461,7 +457,6 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{end}}
 	// update the kong Admin API with the changes
-	log.Info("updating the proxy with new {{.Type}}", "namespace", obj.Namespace, "name", obj.Name)
 	if err := r.Proxy.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}

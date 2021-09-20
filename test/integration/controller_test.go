@@ -1,4 +1,5 @@
-//+build integration_tests
+//go:build integration_tests
+// +build integration_tests
 
 package integration
 
@@ -21,6 +22,20 @@ func TestHealthEndpoint(t *testing.T) {
 		resp, err := httpc.Get(healthzURL)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", healthzURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}, ingressWait, waitTick)
+}
+
+func TestReadyEndpoint(t *testing.T) {
+	t.Parallel()
+	assert.Eventually(t, func() bool {
+		readyzURL := fmt.Sprintf("http://localhost:%v/readyz", manager.HealthzPort)
+		resp, err := httpc.Get(readyzURL)
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", readyzURL, err)
 			return false
 		}
 		defer resp.Body.Close()

@@ -73,5 +73,7 @@ __debug_bin
 
 # tmp files
 client-gen-tmp/*
+build/*
+
 # ignore personal TODO lists
 TODO

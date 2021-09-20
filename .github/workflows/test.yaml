@@ -19,7 +19,7 @@ jobs:
     - name: Setup go
       uses: actions/setup-go@v2
       with:
-        go-version: '^1.16'
+        go-version: '1.16'
 
     - name: Cache Go modules
       uses: actions/cache@v2.1.6
@@ -44,7 +44,7 @@ jobs:
       run: make verify.manifests
 
     - name: Verify generators consistency
-      run: make generate
+      run: make verify.generators
 
   image-tests:
     runs-on: ubuntu-latest
@@ -82,7 +82,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v2
       with:
-        go-version: '^1.16'
+        go-version: '1.16'
 
     - name: cache go modules
       uses: actions/cache@v2.1.6
@@ -113,7 +113,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v2
       with:
-        go-version: '^1.16'
+        go-version: '1.16'
 
     - name: cache go modules
       uses: actions/cache@v2.1.6
@@ -144,7 +144,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v2
       with:
-        go-version: '^1.16'
+        go-version: '1.16'
 
     - name: cache go modules
       uses: actions/cache@v2.1.6
@@ -168,6 +168,34 @@ jobs:
         name: coverage.postgres.out
         path: coverage.postgres.out
 
+  e2e-tests:
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.16'
+
+    - name: cache go modules
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: run e2e tests
+      run: make test.e2e
+      env:
+        KONG_ENTERPRISE_LICENSE_SECRET: ${{ secrets.KONG_ENTERPRISE_LICENSE_SECRET }}
+
   coverage:
     environment: "Configure ci"
     needs:
@@ -176,29 +204,33 @@ jobs:
       - "integration-tests-postgres"
     runs-on: ubuntu-latest
     steps:
+      # TODO: deduplicate the download-artifact steps by implementing a `matrix` workflow step instead
     - name: collect unit test coverage artifacts
+      id: download-unit
       uses: actions/download-artifact@v2.0.10
       with:
         name: coverage.unit.out
         path: coverage.unit.out
 
     - name: collect dbless test coverage artifacts
+      id: download-dbless
       uses: actions/download-artifact@v2.0.10
       with:
         name: coverage.dbless.out
         path: coverage.dbless.out
 
     - name: collect postgres test coverage artifacts
+      id: download-postgres
       uses: actions/download-artifact@v2.0.10
       with:
         name: coverage.postgres.out
         path: coverage.postgres.out
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2.0.2
+      uses: codecov/codecov-action@v2.1.0
       with:
         name: combined-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.unit.out,./coverage.dbless.out,./coverage.postgres.out
+        files: ${{steps.download-unit.outputs.download-path}}/coverage.unit.out,${{steps.download-dbless.outputs.download-path}}/coverage.dbless.out,${{steps.download-postgres.outputs.download-path}}/coverage.postgres.out
         fail_ci_if_error: true
         verbose: true

@@ -41,21 +41,23 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
-	var adminPassword string
+	kongAdminPwd := ""
 	if enterpriseEnablement == "on" {
 		if enterpriseRepo != "" && enterpriseTag != "" {
 			licenseJSON := os.Getenv("KONG_ENTERPRISE_LICENSE")
 			if licenseJSON == "" {
 				exitOnErr(fmt.Errorf(("enterprise can not be installed w/o a license json.")))
 			}
-			adminPassword, err := password.Generate(10, 5, 0, false, false)
+			password, err := password.Generate(10, 5, 0, false, false)
 			if err != nil {
-				adminPassword = KongTestPassword
+				kongAdminPwd = KongTestPassword
+			} else {
+				kongAdminPwd = password
 			}
 			kongbuilder = kongbuilder.WithEnterprise().
 				WithImage(enterpriseRepo, enterpriseTag).
 				WithEnterpriseLicense(licenseJSON).
-				WithKongAdminPassword(adminPassword).
+				WithKongAdminPassword(kongAdminPwd).
 				WithAdminServiceTypeLoadBalancer()
 		} else {
 			exitOnErr(fmt.Errorf(("enterprise repo and tag is not configured.")))
@@ -143,7 +145,7 @@ func TestMain(m *testing.M) {
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		exitOnErr(deployControllers(ctx, controllerNamespace, enterpriseEnablement, adminPassword))
+		exitOnErr(deployControllers(ctx, controllerNamespace, enterpriseEnablement, kongAdminPwd))
 	}
 
 	fmt.Println("INFO: running final testing environment checks")

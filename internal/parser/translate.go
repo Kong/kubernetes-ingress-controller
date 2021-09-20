@@ -36,6 +36,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 
 	for _, ingress := range ingressList {
 		ingressSpec := ingress.Spec
+
 		log = log.WithFields(logrus.Fields{
 			"ingress_namespace": ingress.Namespace,
 			"ingress_name":      ingress.Name,
@@ -46,6 +47,13 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 		}
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
+
+		hasSNI := false
+		for i := range ingressSpec.TLS {
+			if len(ingressSpec.TLS[i].Hosts) > 0 {
+				hasSNI = true
+			}
+		}
 
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
@@ -84,6 +92,9 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				if host != "" {
 					hosts := kong.StringSlice(host)
 					r.Hosts = hosts
+					if hasSNI {
+						r.SNIs = composeSNIs(hosts)
+					}
 				}
 
 				serviceName := ingress.Namespace + "." +
@@ -191,6 +202,13 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
 
+		hasSNI := false
+		for i := range ingressSpec.TLS {
+			if len(ingressSpec.TLS[i].Hosts) > 0 {
+				hasSNI = true
+			}
+		}
+
 		for i, rule := range ingressSpec.Rules {
 			if rule.HTTP == nil {
 				continue
@@ -233,6 +251,9 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				}
 				if rule.Host != "" {
 					r.Hosts = kong.StringSlice(rule.Host)
+					if hasSNI {
+						r.SNIs = composeSNIs(r.Hosts)
+					}
 				}
 
 				port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
@@ -489,6 +510,13 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
 
+		hasSNI := false
+		for i := range ingressSpec.TLS {
+			if len(ingressSpec.TLS[i].Hosts) > 0 {
+				hasSNI = true
+			}
+		}
+
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
@@ -520,6 +548,9 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 					},
 				}
 				r.Hosts = kong.StringSlice(hosts...)
+				if hasSNI {
+					r.SNIs = composeSNIs(r.Hosts)
+				}
 
 				knativeBackend := knativeSelectSplit(rule.Splits)
 				serviceName := fmt.Sprintf("%s.%s.%s", knativeBackend.ServiceNamespace, knativeBackend.ServiceName,
@@ -642,4 +673,14 @@ func PortDefFromIntStr(is intstr.IntOrString) kongstate.PortDef {
 		return kongstate.PortDef{Mode: kongstate.PortModeByName, Name: is.StrVal}
 	}
 	return kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: is.IntVal}
+}
+
+func composeSNIs(hosts []*string) []*string {
+	var snis []*string
+	for _, hostname := range hosts {
+		if !strings.Contains(*hostname, "*") {
+			snis = append(snis, hostname)
+		}
+	}
+	return snis
 }

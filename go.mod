@@ -33,7 +33,7 @@ require (
 	google.golang.org/api v0.57.0
 	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83
 	k8s.io/api v0.22.2
-	k8s.io/apiextensions-apiserver v0.22.1
+	k8s.io/apiextensions-apiserver v0.22.2
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.2
 	knative.dev/networking v0.0.0-20210803181815-acdfd41c575c

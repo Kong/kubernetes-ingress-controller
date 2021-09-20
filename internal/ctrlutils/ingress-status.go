@@ -41,30 +41,30 @@ func PullConfigUpdate(
 	kubeConfig *rest.Config,
 	publishService string,
 	publishAddresses []string,
-) {
+) error {
 	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to determine kong proxy external ips/hostnames. err %w", err)
 	}
 
 	cli, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to create k8s client. err %w", err)
 	}
 
 	versionInfo, err := cli.ServerVersion()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to create k8s client. err %w", err)
 	}
 
 	kubernetesVersion, err := semver.Parse(strings.TrimPrefix(versionInfo.String(), "v"))
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to parse kubernetes version. err %w", err)
 	}
 
 	kiccli, err := kicclientset.NewForConfig(kubeConfig)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to generate kubernetes client. err %w", err)
 	}
 
 	log.Info("Launching Ingress Status Update Thread.")
@@ -83,7 +83,7 @@ func PullConfigUpdate(
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
-			return
+			return nil
 		}
 	}
 }

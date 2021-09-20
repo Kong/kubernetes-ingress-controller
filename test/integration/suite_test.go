@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/sethvargo/go-password/password"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,11 +41,12 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
+	var adminPassword string
 	if enterpriseEnablement == "on" {
 		if enterpriseRepo != "" && enterpriseTag != "" {
 			licenseJSON := os.Getenv("KONG_ENTERPRISE_LICENSE")
 			if licenseJSON == "" {
-				exitOnError(fmt.Errorf(("enterprise can not be installed w/o a license json.")))
+				exitOnErr(fmt.Errorf(("enterprise can not be installed w/o a license json.")))
 			}
 			adminPassword, err := password.Generate(10, 5, 0, false, false)
 			if err != nil {
@@ -56,7 +58,7 @@ func TestMain(m *testing.M) {
 				WithKongAdminPassword(adminPassword).
 				WithAdminServiceTypeLoadBalancer()
 		} else {
-			exitOnError(fmt.Errorf(("enterprise repo and tag is not configured.")))
+			exitOnErr(fmt.Errorf(("enterprise repo and tag is not configured.")))
 		}
 	}
 

@@ -1,0 +1,14 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kongtests
+  name: kic-event-hooks
+  namespace: kong-system
+
+eventhooks:
+  event: "workspaces"
+  config:
+    url: "https://webhook.site/ec707ef0-ab91-4693-8dd2-114471ff6f90"
+  source: "crud"
+  handler: "webhook"

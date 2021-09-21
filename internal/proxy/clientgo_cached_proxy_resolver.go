@@ -248,6 +248,11 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 		return err
 	}
 
+	_, ok = proxyConfig["event_hooks_enabled"].(bool)
+	if ok {
+		p.kongConfig.Enterprise = true
+	}
+
 	// store the gathered configuration options
 	p.kongConfig.Version = proxySemver
 	p.dbmode = dbmode

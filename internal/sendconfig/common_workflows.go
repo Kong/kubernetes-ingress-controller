@@ -45,7 +45,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
-	kongstate, err := parser.Build(deprecatedLogger, storer)
+	kongstate, kongadmin, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
 		promMetrics.ParseCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessFalse)}).Inc()
 		return nil, err
@@ -79,7 +79,7 @@ func UpdateKongAdminSimple(ctx context.Context,
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,
-		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, promMetrics,
+		targetConfig, kongConfig.FilterTags, nil, lastConfigSHA, false, promMetrics, kongadmin,
 	)
 	if err != nil {
 		promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessFalse), string(metrics.TypeKey): string(metrics.ConfigProxy)}).Inc()

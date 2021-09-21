@@ -6,13 +6,13 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
-
 	"github.com/kong/kubernetes-ingress-controller/internal/adminapi/validators/consumer/credentials"
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/kongadmin"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/sirupsen/logrus"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -117,7 +117,8 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 	}
 }
 
-func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
+// FillOverrides collects configured event hooks
+func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer, adminPost *kongadmin.KongAdmin) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
 		anns := ks.Services[i].K8sService.Annotations
@@ -129,6 +130,16 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
 		}
 		ks.Services[i].override(kongIngress, anns)
+
+		// Collecting event-hooks configuration from kongIngress for a service
+		if kongIngress.EventHooks != nil {
+			if err := kongadmin.CollectEventHooks(kongIngress, adminPost); err != nil {
+				log.WithFields(logrus.Fields{
+					"kongingress_name":      kongIngress.Name,
+					"kongingress_namespace": kongIngress.Namespace,
+				}).Errorf("failed to fetch KongIngress service eventhooks: %v", err)
+			}
+		}
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
@@ -143,6 +154,16 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 			}
 
 			ks.Services[i].Routes[j].override(log, kongIngress)
+
+			// Collecting event-hooks configuration from kongIngress for a routes
+			if kongIngress.EventHooks != nil {
+				if err := kongadmin.CollectEventHooks(kongIngress, adminPost); err != nil {
+					log.WithFields(logrus.Fields{
+						"kongingress_name":      kongIngress.Name,
+						"kongingress_namespace": kongIngress.Namespace,
+					}).Errorf("failed to fetch KongIngress routes eventhooks: %v", err)
+				}
+			}
 		}
 	}
 
@@ -159,6 +180,16 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 			continue
 		}
 		ks.Upstreams[i].override(kongIngress, anns)
+
+		// Collecting event-hooks configuration from kongIngress for a Upstreams
+		if kongIngress.EventHooks != nil {
+			if err := kongadmin.CollectEventHooks(kongIngress, adminPost); err != nil {
+				log.WithFields(logrus.Fields{
+					"kongingress_name":      kongIngress.Name,
+					"kongingress_namespace": kongIngress.Namespace,
+				}).Errorf("failed to fetch KongIngress upstreams eventhooks: %v", err)
+			}
+		}
 	}
 }
 

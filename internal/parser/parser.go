@@ -19,6 +19,7 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/internal/kongadmin"
 	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/internal/util"
@@ -53,7 +54,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
-func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error) {
+func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, *kongadmin.KongAdmin, error) {
 	parsedAll := parseAll(log, s)
 	parsedAll.populateServices(log, s)
 
@@ -66,8 +67,9 @@ func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error)
 	// generate Upstreams and Targets from service defs
 	result.Upstreams = getUpstreams(log, s, parsedAll.ServiceNameToServices)
 
+	kongadminPost := kongadmin.KongAdmin{}
 	// merge KongIngress with Routes, Services and Upstream
-	result.FillOverrides(log, s)
+	result.FillOverrides(log, s, &kongadminPost)
 
 	// generate consumers and credentials
 	result.FillConsumersAndCredentials(log, s)
@@ -82,11 +84,11 @@ func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error)
 	var err error
 	caCertSecrets, err := s.ListCACerts()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	result.CACertificates = toCACerts(log, caCertSecrets)
 
-	return &result, nil
+	return &result, &kongadminPost, nil
 }
 
 func toCACerts(log logrus.FieldLogger, caCertSecrets []*corev1.Secret) []kong.CACertificate {

@@ -690,8 +690,8 @@ github.com/klauspost/compress v1.13.0/go.mod h1:8dP1Hq4DHOhN9w426knH3Rhby4rFm6D8
 github.com/kong/deck v1.8.0 h1:RAhF9g/FkiqXVaVg5yxI/1ZCxpOhPAnV43pUX/djMwo=
 github.com/kong/deck v1.8.0/go.mod h1:lxmTKA5XIgMpfXfZXhR7V4Ip5RLFpS15/iGrntunvRg=
 github.com/kong/go-kong v0.21.0/go.mod h1:PA0trWxMuZ+iVxJroGMQzV3WAVUhATN7vXvz4dc5fkM=
-github.com/kong/go-kong v0.21.1-0.20210921223107-14373f35d008 h1:4vVRZLutfoUXunhusLgf96B5e5TWBQY+3eQtXKinStI=
-github.com/kong/go-kong v0.21.1-0.20210921223107-14373f35d008/go.mod h1:PA0trWxMuZ+iVxJroGMQzV3WAVUhATN7vXvz4dc5fkM=
+github.com/kong/go-kong v0.21.1-0.20210921225346-2245107b04d0 h1:hR657j014vJ5Y3HGwyqFlrlFp3Nh/G8dt7Lf7ElNtGg=
+github.com/kong/go-kong v0.21.1-0.20210921225346-2245107b04d0/go.mod h1:PA0trWxMuZ+iVxJroGMQzV3WAVUhATN7vXvz4dc5fkM=
 github.com/kong/kubernetes-testing-framework v0.6.3-0.20210916213947-17da2b42ed32 h1:U1SeG15SYwXBHmpxmW+Kq8TVNOqz/cIeQLvDxFqCExU=
 github.com/kong/kubernetes-testing-framework v0.6.3-0.20210916213947-17da2b42ed32/go.mod h1:ZMXFrhqBDmyX/N6sQ9nMJpO+uPCmVCM00TYxnv99EAs=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

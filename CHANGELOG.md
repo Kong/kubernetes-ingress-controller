@@ -38,9 +38,9 @@
 
 ## [2.0.0] - TBA
 
-#### Breaking changes
+#### Added
 
-- A non-admin-token is provided to specify non-admin rbac user.
+- KIC is able to communicate to kong using RBAC user on non-default workspace.
   [#1279](https://github.com/Kong/kubernetes-ingress-controller/issues/1279)
 
 #### Added

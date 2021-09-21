@@ -236,6 +236,7 @@ jobs:
       - "unit-tests"
       - "integration-tests-dbless"
       - "integration-tests-postgres"
+      - "integration-tests-enterprise-postgres"
     runs-on: ubuntu-latest
     steps:
       # TODO: deduplicate the download-artifact steps by implementing a `matrix` workflow step instead

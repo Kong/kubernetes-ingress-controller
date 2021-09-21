@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -45,27 +46,32 @@ func PullConfigUpdate(
 	errs := make(chan error)
 	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
 	if err != nil {
-		errs <- fmt.Errorf("failed to determine kong proxy external ips/hostnames. err %w", err)
+		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
+		os.Exit(2)
 	}
 
 	cli, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
-		errs <- fmt.Errorf("failed to create k8s client. err %w", err)
+		log.Error(err, "failed to create k8s client.")
+		os.Exit(2)
 	}
 
 	versionInfo, err := cli.ServerVersion()
 	if err != nil {
-		errs <- fmt.Errorf("failed to create k8s client. err %w", err)
+		log.Error(err, "failed to retrieve cluster version")
+		os.Exit(2)
 	}
 
 	kubernetesVersion, err := semver.Parse(strings.TrimPrefix(versionInfo.String(), "v"))
 	if err != nil {
-		errs <- fmt.Errorf("failed to parse kubernetes version. err %w", err)
+		log.Error(err, "could not parse cluster version")
+		os.Exit(2)
 	}
 
 	kiccli, err := kicclientset.NewForConfig(kubeConfig)
 	if err != nil {
-		errs <- fmt.Errorf("failed to generate kubernetes client. err %w", err)
+		log.Error(err, "failed to create kong ingress client.")
+		os.Exit(2)
 	}
 
 	log.Info("Launching Ingress Status Update Thread.")
@@ -78,8 +84,7 @@ func PullConfigUpdate(
 			wg.Add(1)
 			go func() {
 				if err := UpdateStatuses(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig, kubernetesVersion); err != nil {
-					log.Error(err, "failed to update resource statuses")
-					errs <- err
+					errs <- fmt.Errorf("failed to update resource statuses %w", err)
 				}
 			}()
 		case <-ctx.Done():

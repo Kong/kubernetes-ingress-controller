@@ -47,6 +47,39 @@ spec:
                 minimum: 0
                 type: integer
             type: object
+          eventhooks:
+            description: a list of eventhooks represents a EventHooks in Kong.
+            properties:
+              config:
+                description: event hooks configuration
+                properties:
+                  url:
+                    description: "The URL the JSON POST request is made to with the event data as the payload."
+                    type: string
+                  method:
+                    description: "The HTTP method used to create the custom webhook."
+                    type: string
+                  functions:
+                    description: "An array of Lua code functions to execute on the event hook."
+                    type: string
+                required:
+                - url
+                type: object
+              handler:
+                description: "A string describing one of four handler options: webhook, webhook-custom, log, or lambda."
+                type: string
+              source:
+                description: "A string describing the action that triggers the event hook."
+                type: string
+              event:
+                description: "A string describing the Kong entity the event hook will listen to for events."
+                type: string
+            required:
+              - config
+              - handler
+              - source
+            type: object
+           
           route:
             description: Route represents a Route in Kong. Read https://getkong.org/docs/0.13.x/admin-api/#Route-object
             properties:

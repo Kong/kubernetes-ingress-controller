@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/kong/deck v1.7.0
-	github.com/kong/go-kong v0.21.0
+	github.com/kong/go-kong v0.21.1-0.20210920233334-92353063223f
 	github.com/kong/kubernetes-testing-framework v0.6.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.43
@@ -30,12 +30,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.9.1
-	google.golang.org/api v0.57.0
-	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83
-	k8s.io/api v0.22.2
-	k8s.io/apiextensions-apiserver v0.22.2
-	k8s.io/apimachinery v0.22.2
-	k8s.io/client-go v0.22.2
+	google.golang.org/api v0.56.0
+	google.golang.org/genproto v0.0.0-20210828152312-66f60bf46e71
+	k8s.io/api v0.22.1
+	k8s.io/apiextensions-apiserver v0.22.1
+	k8s.io/apimachinery v0.22.1
+	k8s.io/client-go v0.22.1
 	knative.dev/networking v0.0.0-20210803181815-acdfd41c575c
 	knative.dev/pkg v0.0.0-20210902173607-844a6bc45596
 	knative.dev/serving v0.25.1

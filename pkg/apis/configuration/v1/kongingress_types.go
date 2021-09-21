@@ -21,25 +21,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:storageversion
-//+kubebuilder:resource:shortName=ki
-//+kubebuilder:validation:Optional
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:storageversion
+// +kubebuilder:resource:shortName=ki
+// +kubebuilder:validation:Optional
 
 // KongIngress is the Schema for the kongingresses API
 type KongIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Upstream *kong.Upstream `json:"upstream,omitempty"`
-	Proxy    *kong.Service  `json:"proxy,omitempty"`
-	Route    *kong.Route    `json:"route,omitempty"`
+	Upstream   *kong.Upstream   `json:"upstream,omitempty"`
+	Proxy      *kong.Service    `json:"proxy,omitempty"`
+	Route      *kong.Route      `json:"route,omitempty"`
+	EventHooks *kong.EventHooks `json:"eventhooks,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // KongIngressList contains a list of KongIngress
 type KongIngressList struct {

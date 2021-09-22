@@ -194,6 +194,9 @@ TODO: for legacy reasons we may need to include a single proxy deployment mechan
 [gateway-spec-addrs]:https://github.com/kubernetes-sigs/gateway-api/blob/master/apis/v1alpha2/gateway_types.go#L428
 [gateway-spec-addr-types]:https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/gateway_types.go#L452
 
+##### Operational Mode 2: Pre-Provisioned Gateways
+
+WIP: we're looking at support for gateway lifecycle management for the long term and this is here for posterity so readers know we're thinking about it, but in the short-term and for our initial implementation we're focused on `Operational Mode 1: In-Cluster Gateways` first and we'll come back to this mode in later iterations.
 
 ##### Additional Considerations
 

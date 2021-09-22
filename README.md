@@ -27,7 +27,7 @@ For a quick start, just deploy KIC 2.0 beta to your cluster:
 $ kubectl apply -f "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/deploy/single-v2/all-in-one-dbless.yaml"
 ```
 
-See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller-beta) for Kong Ingress Controller 2.0 beta.
+See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller) for Kong Ingress Controller 2.0 beta.
 
 ## Features
 

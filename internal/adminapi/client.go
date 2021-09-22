@@ -89,7 +89,7 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	}
 
 	// if a workspace was provided, verify whether or not it exists.
-	exists, err := client.Workspaces.Exists(ctx, kong.String(wsName))
+	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
 	if err != nil {
 		return nil, fmt.Errorf("looking up workspace: %w", err)
 	}

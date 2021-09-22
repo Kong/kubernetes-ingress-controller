@@ -70,16 +70,15 @@ As a Kubernetes operator I want to use standard Kubernetes APIs to define ingres
 
 #### Story 2
 
-As a Kubernetes operator with an already existing gateway for ingress I want transitioning to Kong to be as seamless and require as minimal changes
-to my existing deployments as possible.
+As a **developer** I want to use **standard Kubernetes APIs** so that my manifests and deployments don't require (at least minimize) domain specific comprehension of the underlying Gateway implementations I use for ingress traffic to my services.
 
 #### Story 3
 
-As a Kubernetes operator I want automated lifecycle management of Kong Gateways deployed to my clusters, rather than having to manage them by hand using Helm.
+As **devops** providing **infrastructure** for other teams I want the ability to **spin up and tear down multiple Kong Gateways dynamically for separate teams** and projects within my organization, in a **Kubernetes native way**.
 
 #### Story 4
 
-As a Kubernetes operator I want the KIC to automate the deployment and manage the lifecycle of multiple Kong Gateways when my use case is high enough scale that a single gateway is not sufficient.
+As an **operator** of a Kubernetes cluster I want the **lifecycle management of Kong Gateways to be automated and managed for me**, and **not manually via Helm**.
 
 ## Design Details
 

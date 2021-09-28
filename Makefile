@@ -219,7 +219,7 @@ test.integration.legacy: container
 test.e2e:
 	GOFLAGS="-tags=e2e_tests" go test -v \
 		-race \
-		-timeout 15m \
+		-timeout 45m \
 		-parallel $(NCPU) \
 		./test/e2e/...
 

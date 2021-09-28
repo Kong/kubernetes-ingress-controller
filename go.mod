@@ -9,13 +9,12 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr v1.1.0
-	github.com/fatih/color v1.12.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
-	github.com/kong/deck v1.7.0
+	github.com/kong/deck v1.8.2
 	github.com/kong/go-kong v0.22.0
 	github.com/kong/kubernetes-testing-framework v0.6.2
 	github.com/lithammer/dedent v1.1.0

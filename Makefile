@@ -11,6 +11,7 @@ IMAGE = $(REGISTRY)/$(IMGNAME)
 IMG ?= controller:latest
 NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 
+
 # ------------------------------------------------------------------------------
 # Setup
 # ------------------------------------------------------------------------------
@@ -177,7 +178,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 test.all: test test.integration
 
 .PHONY: test.integration
-test.integration: test.integration.dbless test.integration.postgres
+test.integration: test.integration.enterprise.postgres  test.integration.dbless test.integration.postgres
 
 .PHONY: test
 test:
@@ -209,6 +210,17 @@ test.integration.postgres:
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.postgres.out \
+		./test/integration
+
+.PHONY: test.integration.enterprise.postgres
+test.integration.enterprise.postgres:
+	@./scripts/check-container-environment.sh
+	@TEST_DATABASE_MODE="postgres" TEST_ENTERPRISE="on" GOFLAGS="-tags=integration_tests" go test -v -race \
+		-timeout 15m \
+		-parallel $(NCPU) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.enterprisepostgres.out \
 		./test/integration
 
 .PHONY: test.integration.legacy

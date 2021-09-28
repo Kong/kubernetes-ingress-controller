@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/kong/deck v1.7.0
-	github.com/kong/go-kong v0.21.0
+	github.com/kong/go-kong v0.22.0
 	github.com/kong/kubernetes-testing-framework v0.6.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.43
@@ -40,5 +40,5 @@ require (
 	knative.dev/pkg v0.0.0-20210902173607-844a6bc45596
 	knative.dev/serving v0.25.1
 	sigs.k8s.io/controller-runtime v0.10.1
-	sigs.k8s.io/yaml v1.2.0
+	sigs.k8s.io/yaml v1.3.0
 )

@@ -49,7 +49,7 @@ const (
 
 	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
 	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
-	adminAPIWait = time.Minute * 2
+	adminAPIWait = time.Minute * 5
 )
 
 var (

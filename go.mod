@@ -34,7 +34,7 @@ require (
 	golang.org/x/net v0.0.0-20210928044308-7d9f5e0b762b // indirect
 	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/api v0.57.0
+	google.golang.org/api v0.58.0
 	google.golang.org/genproto v0.0.0-20210928142010-c7af6a1a74c9
 	google.golang.org/grpc v1.41.0 // indirect
 	k8s.io/api v0.22.2

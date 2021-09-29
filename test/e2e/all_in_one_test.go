@@ -334,7 +334,9 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	req.Header.Set("Kong-Admin-Token", adminPassword)
 
 	t.Log("pulling the admin api information")
-	var body []byte
+	adminOutput := struct {
+		Version string `json:"version"`
+	}{}
 	httpc := http.Client{Timeout: time.Second * 10}
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Do(req)
@@ -342,18 +344,15 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 			return false
 		}
 		defer resp.Body.Close()
-		body, err = io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return false
 		}
-		return resp.StatusCode == http.StatusOK
+		if resp.StatusCode != http.StatusOK {
+			return false
+		}
+		return json.Unmarshal(body, &adminOutput) == nil
 	}, adminAPIWait, time.Second)
-
-	t.Log("verifying the admin api version is enterprise")
-	adminOutput := struct {
-		Version string `json:"version"`
-	}{}
-	require.NoError(t, json.Unmarshal(body, &adminOutput))
 	require.True(t, strings.Contains(adminOutput.Version, "enterprise-edition"))
 }
 

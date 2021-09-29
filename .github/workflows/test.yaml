@@ -195,8 +195,8 @@ jobs:
       run: make test.e2e
       env:
         KONG_ENTERPRISE_LICENSE_SECRET: ${{ secrets.KONG_ENTERPRISE_LICENSE_SECRET }}
-        NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
-                # multiple kind clusters within a single job so this is hardcoded to 1 to avoid those problems.
+        NCPU: 2 # it was found that github actions (specifically) did not seem to perform well when spawning
+                # multiple kind clusters within a single job so this is hardcoded to 2 to ensure a limit of 2 clusters at any one point.
 
   coverage:
     environment: "Configure ci"

@@ -97,6 +97,8 @@ jobs:
         kubernetes-version:
           - 'v1.21.2'
           - 'v1.22.0'
+        istio-version:
+          - 'v1.11.3'
     steps:
       - name: setup golang
         uses: actions/setup-go@v2
@@ -120,6 +122,7 @@ jobs:
         run: make test.e2e
         env:
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes_version }}
+          ISTIO_VERSION: ${{ matrix.istio_version }}
 
   # ----------------------------------------------------------------------------
   # Release Image Builds

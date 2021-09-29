@@ -18,7 +18,7 @@ require (
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/kong/deck v1.7.0
 	github.com/kong/go-kong v0.22.0
-	github.com/kong/kubernetes-testing-framework v0.6.2
+	github.com/kong/kubernetes-testing-framework v0.7.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.43
 	github.com/mitchellh/copystructure v1.2.0 // indirect

@@ -6,6 +6,20 @@
 - [GNU Make](https://www.gnu.org/software/make/) `v4.x`
 - [Kustomize](https://github.com/kubernetes-sigs/kustomize) `v1.3.x`
 
+## Github Workflow Test Matrix Checkup
+
+**For all releases**
+
+We maintain some integration tests with 3rd party components which we need to manually verify and update before cutting any release.
+
+- [ ] check the testing workflow (`.github/workflows/test.yaml`) and ensure that all matrix versions are up to date for Kubernetes releases. If there have been any new releases (major, minor or patch) of Kubernetes since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
+- [ ] check the release workflow (`.github/workflows/release.yaml`) and ensure that all matrix versions are up to date for Kubernetes releases. If there have been any new releases (major, minor or patch) of Kubernetes since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
+- [ ] check the release workflow (`.github/workflows/release.yaml`) and ensure that all matrix versions are up to date for [Istio][istio] releases. If there have been any new releases (major, minor or patch) of Istio since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
+
+TODO: in the future we would like to automate these updates.
+
+[istio]:https://istio.io
+
 ## Release Branch
 
 **For all releases**
@@ -43,7 +57,7 @@ For this step we're going to start with the `main` branch to create our release 
 - [ ] Create a new branch in the [documentation site repo](https://github.com/Kong/docs.konghq.com).
 - [ ] Copy `app/kubernetes-ingress-controller/OLD_VERSION` to `app/kubernetes-ingress-controller/NEW_VERSION`.
 - [ ] Update articles in the new version as needed.
-- [ ] Update `references/version-compatibility.md` to include the new version.
+- [ ] Update `references/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)
 - [ ] Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml`. Add entries for any new articles.
 - [ ] Add a section to `app/_data/kong_versions.yml` for your version.
 - [ ] Open a PR from your branch.

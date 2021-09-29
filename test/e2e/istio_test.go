@@ -177,13 +177,22 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	kialiAPIUrl := fmt.Sprintf("http://%s:%d/kiali/api", service.Status.LoadBalancer.Ingress[0].IP, kialiAPIPort)
 
 	t.Logf("retrieving the Kiali workload metrics for deployment %s", deployment.Name)
-	resp, err := httpc.Get(fmt.Sprintf("%s/namespaces/%s/apps/%s", kialiAPIUrl, namespace.Name, deployment.Name))
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	b, err := io.ReadAll(resp.Body)
 	respData := kialiWorkloads{}
-	require.NoError(t, json.Unmarshal(b, &respData))
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/namespaces/%s/apps/%s", kialiAPIUrl, namespace.Name, deployment.Name))
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return false
+		}
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return false
+		}
+		return json.Unmarshal(b, &respData) == nil
+	}, time.Minute*3, time.Second)
 
 	t.Logf("verifying the contents of Kiali workload metrics for deployment %s", deployment.Name)
 	require.Len(t, respData.Workloads, 1)

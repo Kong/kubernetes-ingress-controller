@@ -41,9 +41,10 @@ var (
 	// kialiAPIPort is the port number that the Kiali API will use.
 	kialiAPIPort = 20001
 
-	// perMinuteRateLimit is a default rate-limit setting for rate limiting
-	// requests in tests.
-	perMinuteRateLimit = 3
+	// perHourRateLimit is a default rate-limit configuration for tests.
+	//
+	// See: https://docs.konghq.com/hub/kong-inc/rate-limiting/
+	perHourRateLimit = 3
 )
 
 // TestIstioWithKongIngressGateway verifies integration of Kong Gateway as an Ingress
@@ -257,7 +258,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		},
 		PluginName: "rate-limiting",
 		Config: apiextensionsv1.JSON{
-			Raw: []byte(fmt.Sprintf(`{"minute":%d,"policy":"local"}`, perMinuteRateLimit)),
+			Raw: []byte(fmt.Sprintf(`{"hour":%d,"policy":"local"}`, perHourRateLimit)),
 		},
 	}
 	rateLimiterPlugin, err = kongc.ConfigurationV1().KongPlugins(namespace.Name).Create(ctx, rateLimiterPlugin, metav1.CreateOptions{})
@@ -283,12 +284,12 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		headers = resp.Header
-		limitPerMinute := headers.Get("X-Ratelimit-Limit-Minute")
-		return limitPerMinute != "" && (limitPerMinute == strconv.Itoa(perMinuteRateLimit))
+		limitPerHour := headers.Get("X-Ratelimit-Limit-Hour")
+		return limitPerHour != "" && (limitPerHour == strconv.Itoa(perHourRateLimit))
 	}, time.Minute*3, time.Second)
 
 	t.Log("intentionally using up the current rate-limit availability")
-	remainingRateLimitStr := headers.Get("X-Ratelimit-Remaining-Minute")
+	remainingRateLimitStr := headers.Get("X-Ratelimit-Remaining-Hour")
 	require.NotEmpty(t, remainingRateLimitStr)
 	remainingRateLimit, err := strconv.Atoi(remainingRateLimitStr)
 	require.NoError(t, err)

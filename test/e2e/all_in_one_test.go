@@ -49,7 +49,7 @@ const (
 
 	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
 	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
-	adminAPIWait = time.Minute * 5
+	adminAPIWait = time.Minute * 2
 )
 
 var (
@@ -339,6 +339,12 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	}{}
 	httpc := http.Client{Timeout: time.Second * 10}
 	require.Eventually(t, func() bool {
+		// at the time of writing it was seen that the admin API had
+		// brief timing windows where it could respond 200 OK but
+		// the API version data would not be populated and the JSON
+		// decode would fail. Thus this check actually waits until
+		// the response body is fully decoded with a non-empty value
+		// before considering this complete.
 		resp, err := httpc.Do(req)
 		if err != nil {
 			return false
@@ -351,7 +357,10 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		if resp.StatusCode != http.StatusOK {
 			return false
 		}
-		return json.Unmarshal(body, &adminOutput) == nil
+		if err := json.Unmarshal(body, &adminOutput); err != nil {
+			return false
+		}
+		return adminOutput.Version != ""
 	}, adminAPIWait, time.Second)
 	require.True(t, strings.Contains(adminOutput.Version, "enterprise-edition"))
 }

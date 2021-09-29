@@ -35,7 +35,7 @@ import (
 
 var (
 	// istioVersion allows the version of Istio to be overridden by ENV.
-	// If not provided the latest version of Istio will be tested.
+	// If not provided, the latest version of Istio will be tested.
 	istioVersionStr = os.Getenv("ISTIO_VERSION")
 
 	// kialiAPIPort is the port number that the Kiali API will use.
@@ -43,7 +43,7 @@ var (
 
 	// perMinuteRateLimit is a default rate-limit setting for rate limiting
 	// requests in tests.
-	perMinuteRateLimit = 60
+	perMinuteRateLimit = 3
 )
 
 // TestIstioWithKongIngressGateway verifies integration of Kong Gateway as an Ingress
@@ -66,7 +66,6 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("configuring istio cluster addon for the testing environment")
 	istioBuilder := istio.NewBuilder().
 		WithPrometheus().
-		WithJaeger().
 		WithKiali()
 	if istioVersionStr != "" {
 		t.Logf("a specific version of istio was requested: %s", istioVersionStr)
@@ -98,7 +97,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Logf("istio version %s was deployed, enabling istio mesh network for the Kong Gateway's namespace", istioAddon.Version().String())
 	require.NoError(t, istioAddon.EnableMeshForNamespace(ctx, env.Cluster(), kongAddon.Namespace()))
 
-	t.Log("kicking kong pods to ensure istio sidecar injection")
+	t.Log("deleting kong pods to ensure istio sidecar injection")
 	pods, err := env.Cluster().Client().CoreV1().Pods(kongAddon.Namespace()).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 	for _, pod := range pods.Items {
@@ -266,7 +265,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		return err == nil
 	}, time.Minute, time.Second)
 
-	t.Log("waiting for rate-limiter plugin to be active")
+	t.Log("waiting for the rate-limiter plugin to be active")
 	var headers http.Header
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(appStatusOKUrl)
@@ -275,15 +274,13 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		headers = resp.Header
-		limitPerMinute, ok := headers["X-Ratelimit-Limit-Minute"]
-		return ok && len(limitPerMinute) == 1 && (limitPerMinute[0] == strconv.Itoa(perMinuteRateLimit))
+		limitPerMinute := headers.Get("X-Ratelimit-Limit-Minute")
+		return limitPerMinute != "" && (limitPerMinute == strconv.Itoa(perMinuteRateLimit))
 	}, time.Minute*3, time.Second)
 
 	t.Log("intentionally using up the current rate-limit availability")
-	remainingRateLimitVar, ok := headers["X-Ratelimit-Remaining-Minute"]
-	require.True(t, ok)
-	require.Len(t, remainingRateLimitVar, 1)
-	remainingRateLimitStr := remainingRateLimitVar[0]
+	remainingRateLimitStr := headers.Get("X-Ratelimit-Remaining-Minute")
+	require.NotEmpty(t, remainingRateLimitStr)
 	remainingRateLimit, err := strconv.Atoi(remainingRateLimitStr)
 	require.NoError(t, err)
 	for i := 0; i < remainingRateLimit; i++ {

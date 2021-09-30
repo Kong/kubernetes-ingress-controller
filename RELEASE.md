@@ -18,8 +18,6 @@ We maintain some integration tests with 3rd party components which we need to ma
 
 An issue exists to automate the above actions: https://github.com/Kong/kubernetes-ingress-controller/issues/1886
 
-[istio]:https://istio.io
-
 ## Release Branch
 
 **For all releases**

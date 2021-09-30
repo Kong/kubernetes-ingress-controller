@@ -1,6 +1,7 @@
 # Table of Contents
 
  - [2.0.0](#200---tba)
+ - [1.3.3](#133---20211001)
  - [1.3.2](#132---20210812)
  - [1.3.1](#131---20210603)
  - [1.3.0](#130---20210527)
@@ -230,6 +231,15 @@ previous `v1.3.x` releases to this release.
 [controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
+
+## [1.3.3] - 2021/10/01
+
+#### Fixed
+
+- Fixed invalid plugin validation code in admission controller.
+  [go-kong#81](https://github.com/Kong/go-kong/pull/81)
+- Fixed a panic when sorting consumers.
+  [#1658](https://github.com/Kong/kubernetes-ingress-controller/pull/1658)
 
 ## [1.3.2] - 2021/08/12
 
@@ -1244,11 +1254,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 [2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.2...v2.0.0
-[2.0.0-beta.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.1...v2.0.0-beta.2
-[2.0.0-beta.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-alpha.3...v2.0.0-beta.1
-[2.0.0-alpha.3]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.2...v2.0.0-alpha.3
-[2.0.0-alpha.2]: https://github.com/kong/kubernetes-ingress-controller/compare/2.0.0-alpha.1...2.0.0-alpha.2
-[2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...2.0.0-alpha.1
+[1.3.3]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.2...1.3.3
 [1.3.2]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0

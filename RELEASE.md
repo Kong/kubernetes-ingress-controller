@@ -12,11 +12,11 @@
 
 We maintain some integration tests with 3rd party components which we need to manually verify and update before cutting any release.
 
-- [ ] check the testing workflow (`.github/workflows/test.yaml`) and ensure that all matrix versions are up to date for Kubernetes releases. If there have been any new releases (major, minor or patch) of Kubernetes since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
-- [ ] check the release workflow (`.github/workflows/release.yaml`) and ensure that all matrix versions are up to date for Kubernetes releases. If there have been any new releases (major, minor or patch) of Kubernetes since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
-- [ ] check the release workflow (`.github/workflows/release.yaml`) and ensure that all matrix versions are up to date for [Istio][istio] releases. If there have been any new releases (major, minor or patch) of Istio since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
+- [ ] check the testing workflow (`.github/workflows/test.yaml`) and ensure that all matrix versions are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
+  - [ ] Kubernetes
+  - [ ] Istio
 
-TODO: in the future we would like to automate these updates.
+An issue exists to automate the above actions: https://github.com/Kong/kubernetes-ingress-controller/issues/1886
 
 [istio]:https://istio.io
 

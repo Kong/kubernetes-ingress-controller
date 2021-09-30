@@ -55,7 +55,7 @@ previous `v1.3.x` releases to this release.
   `--controller-ingress-networkingv1beta1`
   `--controller-ingress-extensionsv1beta1`
 - several miscellaneous flags have been removed.
-  The following flags are no longer usable:
+  The following flags are no longer present:
   - `--disable-ingress-extensionsv1beta1` (replaced by `--enable-controller-ingress-extensionsv1beta1=false`)
   - `--disable-ingress-networkingv1` (replaced by `--enable-controller-ingress-networkingv1=false`)
   - `--disable-ingress-networkingv1beta1` (replaced by `--enable-controller-ingress-networkingv1beta1=false`)
@@ -65,7 +65,7 @@ previous `v1.3.x` releases to this release.
   - `--v`
   - `--vmodule`
 - support for "classless" ingress types has been removed.
-  The following flags are no longer usable:
+  The following flags are no longer present:
   - `--process-classless-ingress-v1beta1`
   - `--process-classless-ingress-v1`
   - `--process-classless-kong-consumer`
@@ -121,7 +121,7 @@ previous `v1.3.x` releases to this release.
   ```
   [#1657](https://github.com/Kong/kubernetes-ingress-controller/issues/1657)
 - Added controller functional metrics in 2.x
-  [#705] https://github.com/Kong/kubernetes-ingress-controller/issues/705
+  [#705](https://github.com/Kong/kubernetes-ingress-controller/issues/705)
 - Implemented Ingress status updates in 2.x.
   [#1451](https://github.com/Kong/kubernetes-ingress-controller/pull/1451)
 - Added `--publish-status-address` and `--publish-service` flags to 2.x.

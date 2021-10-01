@@ -203,7 +203,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	workload := respData.Workloads[0]
 
 	t.Logf("generating traffic and verifying health metrics for kiali workload %s", workload.Name)
-	var health workloadHealth
+	var health *workloadHealth
 	var inboundHttpRequests map[string]float64
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(appStatusOKUrl)
@@ -214,7 +214,9 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			return false
 		}
-		health = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name)
+		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
+			return false
+		}
 		inboundHttpRequests = health.Requests.Inbound.Http
 		return len(inboundHttpRequests) == 1
 	}, time.Minute*3, time.Second, "eventually metrics data for successful requests should start populating in kiali")
@@ -227,10 +229,18 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	notFoundURL := fmt.Sprintf("%s/status/404", appURL)
 	serverErrorURL := fmt.Sprintf("%s/status/500", appURL)
 	require.Eventually(t, func() bool {
-		verifyStatusForUrl(t, appStatusOKUrl, http.StatusOK)
-		verifyStatusForUrl(t, notFoundURL, http.StatusNotFound)
-		verifyStatusForUrl(t, serverErrorURL, http.StatusInternalServerError)
-		health = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name)
+		if err := verifyStatusForUrl(t, appStatusOKUrl, http.StatusOK); err != nil {
+			return false
+		}
+		if err := verifyStatusForUrl(t, notFoundURL, http.StatusNotFound); err != nil {
+			return false
+		}
+		if err := verifyStatusForUrl(t, serverErrorURL, http.StatusInternalServerError); err != nil {
+			return false
+		}
+		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
+			return false
+		}
 		inboundHttpRequests = health.Requests.Inbound.Http
 		return len(inboundHttpRequests) == 3
 	}, time.Minute*3, time.Second, "eventually metrics data for failed requests should start populating in kiali")
@@ -290,19 +300,18 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}, time.Minute*3, time.Second)
 
 	t.Log("intentionally using up the current rate-limit availability")
-	remainingRateLimitStr := headers.Get("X-Ratelimit-Remaining-Hour")
-	require.NotEmpty(t, remainingRateLimitStr)
-	remainingRateLimit, err := strconv.Atoi(remainingRateLimitStr)
-	require.NoError(t, err)
-	for i := 0; i < remainingRateLimit; i++ {
-		verifyStatusForUrl(t, appStatusOKUrl, http.StatusOK)
-	}
+	require.Eventually(t, func() bool {
+		return verifyStatusForUrl(t, appStatusOKUrl, http.StatusTooManyRequests) == nil
+	}, time.Minute*3, time.Second)
 
 	t.Log("exceeding the rate-limit and verifying that kiali health metrics pick up on it")
-	verifyStatusForUrl(t, appStatusOKUrl, http.StatusTooManyRequests)
 	require.Eventually(t, func() bool {
-		verifyStatusForUrl(t, appStatusOKUrl, http.StatusTooManyRequests)
-		health = getKialiWorkloadHealth(t, kialiAPIUrl, kongAddon.Namespace(), "ingress-controller-kong")
+		if err := verifyStatusForUrl(t, appStatusOKUrl, http.StatusTooManyRequests); err != nil {
+			return false
+		}
+		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, kongAddon.Namespace(), "ingress-controller-kong"); err != nil {
+			return false
+		}
 		inboundHttpRequests = health.Requests.Inbound.Http
 		rateLimitedRequests, ok := inboundHttpRequests[strconv.Itoa(http.StatusTooManyRequests)]
 		return ok && (rateLimitedRequests > 0.0)
@@ -314,39 +323,58 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 // -----------------------------------------------------------------------------
 
 // verifyStatusForUrl is a helper function which given a URL and a status code performs
-// a GET and verifies the status code returned.
-func verifyStatusForUrl(t *testing.T, getURL string, statusCode int) {
+// a GET and verifies the status code returning an error if the result isn't as expected.
+func verifyStatusForUrl(t *testing.T, getURL string, statusCode int) error {
 	resp, err := httpc.Get(getURL)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
-	require.Equal(t, statusCode, resp.StatusCode)
+	if resp.StatusCode != statusCode {
+		return fmt.Errorf("expected status code %d got %d", statusCode, resp.StatusCode)
+	}
+	return nil
 }
 
 // getKialiWorkloadHealth produces the health metrics of a workload given the namespace and name of that workload.
-func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloadName string) workloadHealth {
+func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
 	// generate the URL for the namespace health metrics
 	kialiHealthURL := fmt.Sprintf("%s/namespaces/%s/health", kialiAPIUrl, namespace)
 	req, err := http.NewRequest("GET", kialiHealthURL, nil)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	query := req.URL.Query()
 	query.Add("type", "workload")
 	req.URL.RawQuery = query.Encode()
 
 	// make the health metrics request
 	resp, err := httpc.Do(req)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
 	// verify the health metrics response
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	b, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	healthData := map[string]workloadHealth{}
-	require.NoError(t, json.Unmarshal(b, &healthData))
-	workloadHealth, ok := healthData[workloadName]
-	require.True(t, ok)
+	if err != nil {
+		return nil, err
+	}
 
-	return workloadHealth
+	// decode the health metrics response
+	healthData := map[string]workloadHealth{}
+	if err := json.Unmarshal(b, &healthData); err != nil {
+		return nil, err
+	}
+
+	// verify the presence of workload metrics data
+	health, ok := healthData[workloadName]
+	if !ok {
+		return nil, fmt.Errorf("health metrics are not yet ready")
+	}
+
+	return &health, nil
 }
 
 // -----------------------------------------------------------------------------

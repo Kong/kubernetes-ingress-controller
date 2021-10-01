@@ -23,7 +23,7 @@ fi
 # ensure kind command is accessible
 if ! command -v kind &> /dev/null
 then
-    go get -v sigs.k8s.io/kind@${KIND_VERSION}
+    go install -v sigs.k8s.io/kind@${KIND_VERSION}
 fi
 
 DOCKER_VERSION="$(docker -v)"

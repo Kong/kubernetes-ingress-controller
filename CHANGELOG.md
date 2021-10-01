@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [2.0.0-alpha.1](#200-alpha1---20210527)
+ - [1.3.3](#133---20211001)
  - [1.3.2](#132---20210812)
  - [1.3.1](#131---20210603)
  - [1.3.0](#130---20210527)
@@ -31,70 +31,14 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0-alpha.1] - 2021/05/27
+## [1.3.3] - 2021/10/01
 
-**NOTE**: This is a draft of release notes for the next major version to be
-released and the release notes may change significantly before then.
+#### Fixed
 
-#### Added
-
-- support for [UDP][kong-udp] via the new `UDPIngress` API.
-- `--watch-namespace` now supports multiple distinct namespaces versus simply
-  supporting all namespaces (the default) or a single namespace. To watch
-  multiple namespaces, use a comma-separated list (for example,
-  `--watch-namespace "namespaceA,namespaceB"`).
-- support for the `konghq.com/host-aliases` annotation.
-  [#1016](https://github.com/Kong/kubernetes-ingress-controller/pull/1016/)
-
-[kong-udp]:https://konghq.com/blog/kong-gateway-2-2-released/#UDP-Support
-
-#### Breaking changes
-
-- support for "classless" ingress types has been removed: the controller flags
-  `--process-classless-ingress-v1beta1`, `--process-classless-ingress-v1` and
-  `--process-classless-kong-consumer` flags are no longer valid
-- autonegotiation of the Ingress API version (extensions v1beta1, networking
-  v1beta1, networking v1) has been disabled. Instead, the user is expected to
-  set **exactly** one of `--controller-ingress-networkingv1`,
-  `--controller-ingress-networkingv1beta1`,
-  `--controller-ingress-extensionsv1beta1` flags to `enabled`. There will be an
-  `auto` mode implemented soon that will add the autonegotiation capability
-  back.
-
-#### Under the hood
-
-- the `--sync-rate-limit` is now deprecated in favor of `--sync-time-seconds`.
-  This functionality no longer blocks goroutines until the provided number of
-  seconds has passed to enforce rate limiting, now instead it configures a
-  non-blocking [time.Ticker][go-tick] that runs at the provided seconds
-  interval. Input remains a float that indicates seconds.
-- project layout for contributions has been changed: this project now uses the
-  [Kubebuilder SDK][kubebuilder] and there are layout changes and
-  configurations specific to the new build environment.
-- controller architecture has been changed: each API type now has an
-  independent controller implementation and all controllers now utilize
-  [controller-runtime][controller-runtime].
-- full integration testing in [Golang][go] has been added for testing APIs and
-  controllers on a fully featured Kubernetes cluster, this is now supported by
-  the new [Kong Kubernetes Testing Framework (KTF)][ktf] project and now runs
-  as part of CI.
-- the mechanism for caching and resolving Kong Admin `/config` configurations
-  when running in `DBLESS` mode has been reimplemented to enable fine-tuned
-  configuration options in later iterations.
-- contains the refactored admission webhook server. The server key and
-  certificate flags have improved semantics: the default flag value is no
-  longer the default path, but an empty string. When both key/cert value flags
-  and key/cert file flags remain unset, KIC will read cert/key files from the
-  default paths, as said in the flag descriptions. This change should not
-  affect any existing configuration - in all configuration cases, behavior is
-  expected to remain unchanged.
-- taking configuration values from environment variables no longer uses Viper.
-
-[go-tick]:https://golang.org/pkg/time/#Ticker
-[kubebuilder]:https://github.com/kubernetes-sigs/kubebuilder
-[controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
-[go]:https://golang.org
-[ktf]:https://github.com/kong/kubernetes-testing-framework
+- Fixed invalid plugin validation code in admission controller.
+  [go-kong#81](https://github.com/Kong/go-kong/pull/81)
+- Fixed a panic when sorting consumers.
+  [#1658](https://github.com/Kong/kubernetes-ingress-controller/pull/1658)
 
 ## [1.3.2] - 2021/08/12
 
@@ -1108,8 +1052,8 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.0.0-alpha.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...2.0.0-alpha.1
-[1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
+[1.3.3]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.2...1.3.3
+[1.3.2]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/1.1.1...1.2.0

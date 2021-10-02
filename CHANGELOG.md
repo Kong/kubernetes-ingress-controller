@@ -177,6 +177,8 @@ previous `v1.3.x` releases to this release.
 
 #### Under the hood
 
+- Updated the compiler to [Go v1.17](https://golang.org/doc/go1.17)
+  [#1714](https://github.com/Kong/kubernetes-ingress-controller/issues/1714)
 - Code for the previous v1.x releases of the Kubernetes Ingress Controller
   have been removed. Maintenance of the v1.x era codebase lives on in the
   `1.3.x` and related branches going forward.

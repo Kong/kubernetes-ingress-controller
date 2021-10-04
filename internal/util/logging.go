@@ -6,6 +6,28 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// we currently implement two different loggers and use a middleware called
+// logrusr to translate logrus loggers into go-logrs (used by controller-runtime).
+// The middleware currently squashes loglevels 0-4 together and effectively starts
+// the "info" level logging at 0 (whereas logrus starts that at 4 (range from 0)).
+// Since the middleware at the time of writing made all of this part of the private
+// implementation these options are used for convenience until a time when we unify
+// our logging implementations into one or the other.
+//
+// See: https://github.com/Kong/kubernetes-ingress-controller/issues/1893
+const (
+	logrusrDiff = 4
+
+	// InfoLevel is the converted logging level from logrus to go-logr for
+	// information level logging. Note that the logrusr middleware technically
+	// flattens all levels prior to this level into this level as well.
+	InfoLevel = int(logrus.InfoLevel) - logrusrDiff
+
+	// DebugLevel is the converted logging level from logrus to go-logr for
+	// debug level logging.
+	DebugLevel = int(logrus.DebugLevel) - logrusrDiff
+)
+
 var (
 	logrusLevels = map[string]logrus.Level{
 		"panic": logrus.PanicLevel,
@@ -21,13 +43,16 @@ var (
 func MakeLogger(level string, formatter string) (logrus.FieldLogger, error) {
 	log := logrus.New()
 	var err error
-	if log.Level, err = getLogrusLevel(level); err != nil {
+
+	logLevel, err := getLogrusLevel(level)
+	if err != nil {
 		return nil, fmt.Errorf("setting log level failed: %w", err)
 	}
 	if log.Formatter, err = getLogrusFormatter(formatter); err != nil {
 		return nil, fmt.Errorf("setting log formatter failed: %w", err)
 	}
 
+	log.SetLevel(logLevel)
 	return log, nil
 }
 

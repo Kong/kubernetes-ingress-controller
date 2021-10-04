@@ -1,4 +1,5 @@
-//+build integration_tests
+//go:build integration_tests
+// +build integration_tests
 
 package integration
 
@@ -20,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/sethvargo/go-password/password"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +40,31 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
+	kongAdminPwd := ""
+	controllerExtraArgs := []string{}
+	if kongEnterpriseEnabled == "true" {
+		licenseJSON := os.Getenv("KONG_LICENSE_DATA")
+		if licenseJSON == "" {
+			exitOnErr(fmt.Errorf(("KONG_LICENSE_DATA must be set for Enterprise tests")))
+		}
+		password, err := password.Generate(10, 5, 0, false, false)
+		if err != nil {
+			kongAdminPwd = KongTestPassword
+		} else {
+			kongAdminPwd = password
+		}
+		controllerExtraArgs = append(controllerExtraArgs, fmt.Sprintf("--kong-admin-token=%s", kongAdminPwd))
+		controllerExtraArgs = append(controllerExtraArgs, "--kong-workspace=notdefault")
+		fmt.Printf("INFO: using Kong admin password %s\n", kongAdminPwd)
+		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
+			WithProxyEnterpriseSuperAdminPassword(kongAdminPwd).
+			WithProxyAdminServiceTypeLoadBalancer()
+	}
+
 	if dbmode == "postgres" {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
+
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
@@ -118,7 +142,7 @@ func TestMain(m *testing.M) {
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		exitOnErr(deployControllers(ctx, controllerNamespace))
+		exitOnErr(deployControllers(ctx, controllerNamespace, controllerExtraArgs))
 	}
 
 	fmt.Println("INFO: running final testing environment checks")
@@ -152,7 +176,7 @@ var crds = []string{
 }
 
 // deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster
-func deployControllers(ctx context.Context, namespace string) error {
+func deployControllers(ctx context.Context, namespace string, extraParams []string) error {
 	// ensure the controller namespace is created
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
@@ -198,7 +222,7 @@ func deployControllers(ctx context.Context, namespace string) error {
 
 		config := manager.Config{}
 		flags := config.FlagSet()
-		exitOnErr(flags.Parse([]string{
+		basicParams := []string{
 			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 			"--election-id=integrationtests.konghq.com",
@@ -212,9 +236,10 @@ func deployControllers(ctx context.Context, namespace string) error {
 			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
 			"--profiling",
-
 			"--dump-config",
-		}))
+		}
+
+		exitOnErr(flags.Parse(append(basicParams, extraParams...)))
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager with Configuration: %+v\n", config)
 		wg.Done()
 		exitOnErr(rootcmd.Run(ctx, &config))

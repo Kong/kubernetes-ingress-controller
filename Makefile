@@ -212,10 +212,11 @@ test.integration.postgres:
 		-coverprofile=coverage.postgres.out \
 		./test/integration
 
+# TODO: ditto above https://github.com/Kong/kubernetes-ingress-controller/issues/1324
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" TEST_ENTERPRISE="on" GOFLAGS="-tags=integration_tests" go test -v -race \
+	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" TEST_KONG_IMAGE="kong/kong-gateway:2.5.1.0" GOFLAGS="-tags=integration_tests" go test -v \
 		-timeout 15m \
 		-parallel $(NCPU) \
 		-covermode=atomic \

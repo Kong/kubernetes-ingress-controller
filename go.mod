@@ -17,7 +17,7 @@ require (
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/kong/deck v1.7.0
 	github.com/kong/go-kong v0.22.0
-	github.com/kong/kubernetes-testing-framework v0.7.2
+	github.com/kong/kubernetes-testing-framework v0.6.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.43
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -30,8 +30,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.9.1
-	google.golang.org/api v0.58.0
-	google.golang.org/genproto v0.0.0-20210917145530-b395a37504d4
+	google.golang.org/api v0.57.0
+	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83
 	k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver v0.22.2
 	k8s.io/apimachinery v0.22.2

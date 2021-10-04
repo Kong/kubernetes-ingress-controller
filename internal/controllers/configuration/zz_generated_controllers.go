@@ -35,6 +35,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
@@ -74,7 +75,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted Service object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted Service object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -82,11 +83,11 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -143,7 +144,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted Endpoints object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted Endpoints object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -151,11 +152,11 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "Endpoints", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Endpoints", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -212,7 +213,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted Secret object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted Secret object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -220,11 +221,11 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -284,7 +285,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -292,11 +293,11 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -312,7 +313,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -365,7 +366,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -373,11 +374,11 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -393,7 +394,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -446,7 +447,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -454,11 +455,11 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -474,7 +475,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -524,7 +525,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted KongIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted KongIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -532,11 +533,11 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -593,7 +594,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted KongPlugin object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted KongPlugin object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -601,11 +602,11 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -665,7 +666,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted KongClusterPlugin object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted KongClusterPlugin object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -673,11 +674,11 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -693,7 +694,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -746,7 +747,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted KongConsumer object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted KongConsumer object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -754,11 +755,11 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -774,7 +775,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -827,7 +828,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted TCPIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted TCPIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -835,11 +836,11 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -855,7 +856,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -908,7 +909,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted UDPIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted UDPIngress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -916,11 +917,11 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -936,7 +937,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -989,7 +990,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted Ingress object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -997,11 +998,11 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -1017,7 +1018,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}

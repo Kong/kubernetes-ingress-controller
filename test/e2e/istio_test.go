@@ -114,7 +114,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("starting the controller manager")
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), "--log-level=error"))
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), "--log-level=debug"))
 
 	t.Log("creating a new mesh-enabled namespace for testing http traffic")
 	namespace := &corev1.Namespace{

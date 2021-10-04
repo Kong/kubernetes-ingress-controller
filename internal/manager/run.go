@@ -32,10 +32,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return err
 	}
 	setupLog := ctrl.Log.WithName("setup")
-	setupLog.Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
-	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
-
-	setupLog.Info("building the manager runtime scheme and loading apis into the scheme")
+	setupLog.V(util.DebugLevel).Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
+	setupLog.V(util.DebugLevel).Info("the ingress class name has been set", "value", c.IngressClassName)
+	setupLog.V(util.DebugLevel).Info("building the manager runtime scheme and loading apis into the scheme")
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))

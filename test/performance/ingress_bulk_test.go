@@ -1,4 +1,5 @@
-//+build performance_tests
+//go:build performance_tests
+// +build performance_tests
 
 package performance
 

@@ -50,9 +50,9 @@ func PerformUpdate(ctx context.Context,
 		// use the previous SHA to determine whether or not to perform an update
 		if equalSHA(oldSHA, newSHA) {
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Infof("sha %s has been reported", hex.EncodeToString(newSHA))
+				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
 			}
-			log.Info("no configuration change, skipping sync to kong")
+			log.Debug("no configuration change, skipping sync to kong")
 			return oldSHA, nil
 		}
 	}

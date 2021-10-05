@@ -19,7 +19,7 @@ jobs:
     - name: Setup go
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16'
+        go-version: '^1.17'
 
     - name: Cache Go modules
       uses: actions/cache@v2.1.6
@@ -82,7 +82,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16'
+        go-version: '^1.17'
 
     - name: cache go modules
       uses: actions/cache@v2.1.6
@@ -147,7 +147,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16'
+        go-version: '^1.17'
 
     - name: cache go modules
       uses: actions/cache@v2.1.6
@@ -178,7 +178,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16'
+        go-version: '^1.17'
 
     - name: cache go modules
       uses: actions/cache@v2.1.6
@@ -210,7 +210,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16'
+        go-version: '^1.17'
 
     - name: cache go modules
       uses: actions/cache@v2.1.6
@@ -229,6 +229,8 @@ jobs:
       run: make test.e2e
       env:
         KONG_ENTERPRISE_LICENSE_SECRET: ${{ secrets.KONG_ENTERPRISE_LICENSE_SECRET }}
+        NCPU: 2 # it was found that github actions (specifically) did not seem to perform well when spawning
+                # multiple kind clusters within a single job so this is hardcoded to 2 to ensure a limit of 2 clusters at any one point.
 
   coverage:
     environment: "Configure ci"

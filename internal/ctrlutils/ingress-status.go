@@ -72,13 +72,11 @@ func PullConfigUpdate(
 		return
 	}
 
-	log.Info("Launching Ingress Status Update Thread.")
-
 	var wg sync.WaitGroup
 	for {
 		select {
 		case updateDone := <-kongConfig.ConfigDone:
-			log.V(4).Info("receive configuration information. Update ingress status %v \n", updateDone)
+			log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
 			wg.Add(1)
 			go func() {
 				if err := UpdateStatuses(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig, kubernetesVersion); err != nil {
@@ -110,7 +108,7 @@ func UpdateStatuses(
 
 	for _, svc := range targetContent.Services {
 		for _, plugin := range svc.Plugins {
-			log.V(5).Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
+			log.V(util.DebugLevel).Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
 			if *plugin.Enabled {
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {

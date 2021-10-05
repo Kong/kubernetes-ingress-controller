@@ -70,16 +70,15 @@ As a Kubernetes operator I want to use standard Kubernetes APIs to define ingres
 
 #### Story 2
 
-As a Kubernetes operator with an already existing gateway for ingress I want transitioning to Kong to be as seamless and require as minimal changes
-to my existing deployments as possible.
+As a **developer** I want to use **standard Kubernetes APIs** so that my manifests and deployments don't require (at least minimize) domain specific comprehension of the underlying Gateway implementations I use for ingress traffic to my services.
 
 #### Story 3
 
-As a Kubernetes operator I want automated lifecycle management of Kong Gateways deployed to my clusters, rather than having to manage them by hand using Helm.
+As **devops** providing **infrastructure** for other teams I want the ability to **spin up and tear down multiple Kong Gateways dynamically for separate teams** and projects within my organization, in a **Kubernetes native way**.
 
 #### Story 4
 
-As a Kubernetes operator I want the KIC to automate the deployment and manage the lifecycle of multiple Kong Gateways when my use case is high enough scale that a single gateway is not sufficient.
+As an **operator** of a Kubernetes cluster I want the **lifecycle management of Kong Gateways to be automated and managed for me**, and **not manually via Helm**.
 
 ## Design Details
 
@@ -172,12 +171,36 @@ spec:
     port: 80
 ```
 
-In the above example there will be a separate Kong proxy container present for both `project-1-ingress` and `project-2-ingress`.
+There will be two operational modes for this controller which indicate whether a `Gateway` object is to be provisioned and have its lifecycle managed (we will call this "pre-provisioned" mode) or whether an existing gateway will be utilized (we will call this "in-cluster" mode).
+
+##### Operational Mode 1: In-Cluster Gateways
+
+Historically the KIC has relied on an existing Kong Gateway to already be deployed (commonly managed as a `Deployment` via the [Helm Chart][chart]) which the controller integrates with via the [Kong Admin API][kong-admin-api], and the connection and authorization information for that API was passed to the controller manager via command line flags. This operational mode follows the historical legacy of the KIC by allowing an existing Kong Gateway on the cluster to be used as the backend for a `Gateway` object in Gateway APIs parlance.
+
+In this operational mode an operator creates a `Gateway` resource with the [spec.Addresses][gateway-spec-addrs] populated to indicate the existing backend Kong Gateway. There are multiple [Address Types][gateway-spec-addr-types] available:
+
+- `IPAddress`: a direct IP address to use to connect to the Kong Admin API
+- `Hostname`: a DNS name to resolve the IP address of the Kong Admin API
+- `Named`: this is implementation specific
+
+Most of these are self-explanatory, but we will make special use of the `Named` option to indicate the separate endpoints for the proxy endpoint as opposed to the admin API endpoint.
+
+WIP: we're currently working with upstream to get some provisions and consensus figured out on how to use the addresses to indicate a separate proxy endpoint vs administrative api.
+
+TODO: for legacy reasons we may need to include a single proxy deployment mechanism where one proxy server can host for multiple gateways, as this is how the KIC has historically operated (see the current Helm chart)
+
+[chart]:https://github.com/kong/charts
+[kong-admin-api]:https://docs.konghq.com/gateway-oss/latest/admin-api/
+[gateway-spec-addrs]:https://github.com/kubernetes-sigs/gateway-api/blob/master/apis/v1alpha2/gateway_types.go#L428
+[gateway-spec-addr-types]:https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/gateway_types.go#L452
+
+##### Operational Mode 2: Pre-Provisioned Gateways
+
+WIP: we're looking at support for gateway lifecycle management for the long term and this is here for posterity so readers know we're thinking about it, but in the short-term and for our initial implementation we're focused on `Operational Mode 1: In-Cluster Gateways` first and we'll come back to this mode in later iterations.
 
 ##### Additional Considerations
 
 - https://github.com/Kong/kubernetes-ingress-controller/issues/702 is related to our single controller multi-proxy lifecycle management concerns
-- for legacy reasons we may need to include a single proxy deployment mechanism where one proxy server can host for multiple gateways, as this is how the KIC has historically operated (see the current Helm chart)
 
 #### HTTPRoute Controller
 

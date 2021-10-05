@@ -4,16 +4,17 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/blang/semver/v4"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -22,12 +23,8 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/sethvargo/go-password/password"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/cmd/rootcmd"
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
+	testutils "github.com/kong/kubernetes-ingress-controller/test/utils"
 )
 
 // -----------------------------------------------------------------------------
@@ -41,7 +38,7 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
 	kongAdminPwd := ""
-	controllerExtraArgs := []string{}
+	extraControllerArgs := []string{}
 	if kongEnterpriseEnabled == "true" {
 		licenseJSON := os.Getenv("KONG_LICENSE_DATA")
 		if licenseJSON == "" {
@@ -53,8 +50,8 @@ func TestMain(m *testing.M) {
 		} else {
 			kongAdminPwd = password
 		}
-		controllerExtraArgs = append(controllerExtraArgs, fmt.Sprintf("--kong-admin-token=%s", kongAdminPwd))
-		controllerExtraArgs = append(controllerExtraArgs, "--kong-workspace=notdefault")
+		extraControllerArgs = append(extraControllerArgs, fmt.Sprintf("--kong-admin-token=%s", kongAdminPwd))
+		extraControllerArgs = append(extraControllerArgs, "--kong-workspace=notdefault")
 		fmt.Printf("INFO: using Kong admin password %s\n", kongAdminPwd)
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
 			WithProxyEnterpriseSuperAdminPassword(kongAdminPwd).
@@ -142,7 +139,27 @@ func TestMain(m *testing.M) {
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		exitOnErr(deployControllers(ctx, controllerNamespace, controllerExtraArgs))
+		fmt.Println("INFO: creating additional controller namespaces")
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace}}
+		if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
+			if !errors.IsAlreadyExists(err) {
+				exitOnErr(err)
+			}
+		}
+		fmt.Println("INFO: starting the controller manager")
+		standardControllerArgs := []string{
+			fmt.Sprintf("--ingress-class=%s", ingressClass),
+			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
+			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
+			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
+			"--admission-webhook-listen=172.17.0.1:49023",
+			"--profiling",
+			"--dump-config",
+			"--log-level=trace",
+			"--debug-log-reduce-redundancy",
+		}
+		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
+		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))
 	}
 
 	fmt.Println("INFO: running final testing environment checks")
@@ -160,91 +177,4 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(code)
-}
-
-// -----------------------------------------------------------------------------
-// Testing Main - Controller Deployment
-// -----------------------------------------------------------------------------
-
-var crds = []string{
-	"../../config/crd/bases/configuration.konghq.com_udpingresses.yaml",
-	"../../config/crd/bases/configuration.konghq.com_tcpingresses.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongplugins.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongingresses.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongconsumers.yaml",
-	"../../config/crd/bases/configuration.konghq.com_kongclusterplugins.yaml",
-}
-
-// deployControllers ensures that relevant CRDs and controllers are deployed to the test cluster
-func deployControllers(ctx context.Context, namespace string, extraParams []string) error {
-	// ensure the controller namespace is created
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return err
-		}
-	}
-
-	// we'll wait until the controller has started before returning
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	// run the controller in the background
-	go func() {
-		// convert the cluster rest.Config into a kubeconfig
-		yaml, err := generators.NewKubeConfigForRestConfig(env.Cluster().Name(), env.Cluster().Config())
-		exitOnErr(err)
-
-		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
-		kubeconfig, err := os.CreateTemp(os.TempDir(), "kubeconfig-")
-		exitOnErr(err)
-		defer os.Remove(kubeconfig.Name())
-		defer kubeconfig.Close()
-
-		// dump the kubeconfig from kind into the tempfile
-		c, err := kubeconfig.Write(yaml)
-		exitOnErr(err)
-		if c != len(yaml) {
-			exitOnErr(fmt.Errorf("could not write entire kubeconfig file (%d/%d bytes)", c, len(yaml)))
-		}
-		kubeconfig.Close()
-
-		// deploy our CRDs to the cluster
-		for _, crd := range crds {
-			cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", crd) //nolint:gosec
-			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-			cmd.Stdout = stdout
-			cmd.Stderr = stderr
-			if err := cmd.Run(); err != nil {
-				exitOnErr(fmt.Errorf("%s: %w", stderr.String(), err))
-			}
-		}
-
-		config := manager.Config{}
-		flags := config.FlagSet()
-		basicParams := []string{
-			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
-			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-			"--election-id=integrationtests.konghq.com",
-			"--publish-service=kong-system/ingress-controller-kong-proxy",
-			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
-			fmt.Sprintf("--ingress-class=%s", ingressClass),
-			"--log-level=trace",
-			"--log-format=text",
-			"--debug-log-reduce-redundancy",
-			"--admission-webhook-listen=172.17.0.1:49023",
-			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
-			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
-			"--profiling",
-			"--dump-config",
-		}
-
-		exitOnErr(flags.Parse(append(basicParams, extraParams...)))
-		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager with Configuration: %+v\n", config)
-		wg.Done()
-		exitOnErr(rootcmd.Run(ctx, &config))
-	}()
-
-	wg.Wait()
-	return nil
 }

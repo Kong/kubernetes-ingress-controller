@@ -81,7 +81,7 @@ func (s *Server) receiveConfig(ctx context.Context) {
 			if err := ctx.Err(); err != nil {
 				s.Logger.Error(err, "shutting down diagnostic config collection: context completed with error")
 			}
-			s.Logger.V(3).Info("shutting down diagnostic config collection: context completed")
+			s.Logger.V(util.InfoLevel).Info("shutting down diagnostic config collection: context completed")
 			return
 		}
 	}

@@ -115,12 +115,6 @@ var (
 	// is provided, as cleanup is not performed for existing clusters.
 	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
 
-	// kongImageRepo is the Docker repo (e.g. "kong/kong-gateway") to use for Kong proxy Deployments
-	kongImageRepo = os.Getenv("ENTERPRISE_REPO")
-
-	// kongImageTag is the Docker tag (e.g. "2.5") to use for Kong proxy Deployments
-	kongImageTag = os.Getenv("ENTERPRISE_TAG")
-
 	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true"
 	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
 )

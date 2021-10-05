@@ -216,7 +216,7 @@ test.integration.postgres:
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" TEST_KONG_IMAGE="kong/kong-gateway:2.5.1.0" GOFLAGS="-tags=integration_tests" go test -v \
+	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" go test -v \
 		-timeout 15m \
 		-parallel $(NCPU) \
 		-covermode=atomic \

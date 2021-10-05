@@ -10,12 +10,18 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
 	"github.com/prometheus/common/expfmt"
-	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMetricsEndpoint(t *testing.T) {
 	t.Parallel()
+
+	wantMetrics := []string{
+		"send_configuration_count",
+		"ingress_parse_count",
+		"proxy_configuration_duration_milliseconds",
+	}
+
 	assert.Eventually(t, func() bool {
 		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
 		resp, err := httpc.Get(metricsURL)
@@ -27,17 +33,21 @@ func TestMetricsEndpoint(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			return false
 		}
-		decoder := expfmt.SampleDecoder{
-			Dec:  expfmt.NewDecoder(resp.Body, expfmt.FmtText),
-			Opts: &expfmt.DecodeOptions{},
-		}
 
-		var v model.Vector
-		if err := decoder.Decode(&v); err != nil {
-			t.Logf("decoder failed: %v", err)
+		var parser expfmt.TextParser
+		mf, err := parser.TextToMetricFamilies(resp.Body)
+		if err != nil {
+			t.Logf("WARNING: error when decoding prometheus metrics: %v", err)
 			return false
 		}
 
-		return len(v) > 0
+		for _, wantMetric := range wantMetrics {
+			if _, ok := mf[wantMetric]; !ok {
+				t.Logf("WARNING: metric not found in /metrics: %q", wantMetric)
+				return false
+			}
+		}
+
+		return true // All metrics from wantMetrics have been found in /metrics.
 	}, ingressWait, waitTick)
 }

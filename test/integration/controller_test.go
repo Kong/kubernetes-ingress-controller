@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/prometheus/common/expfmt"
-	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
@@ -40,34 +38,6 @@ func TestReadyEndpoint(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusOK
-	}, ingressWait, waitTick)
-}
-
-func TestMetricsEndpoint(t *testing.T) {
-	t.Parallel()
-	assert.Eventually(t, func() bool {
-		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
-		resp, err := httpc.Get(metricsURL)
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", metricsURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return false
-		}
-		decoder := expfmt.SampleDecoder{
-			Dec:  expfmt.NewDecoder(resp.Body, expfmt.FmtText),
-			Opts: &expfmt.DecodeOptions{},
-		}
-
-		var v model.Vector
-		if err := decoder.Decode(&v); err != nil {
-			t.Logf("decoder failed: %v", err)
-			return false
-		}
-
-		return len(v) > 0
 	}, ingressWait, waitTick)
 }
 

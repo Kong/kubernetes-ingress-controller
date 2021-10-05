@@ -1,6 +1,6 @@
 ---
 title: Kong Gateway API
-status: implementable (see [graduation criteria](#graduation-criteria) for specifics)
+status: milestone 1 implementable (see [graduation criteria](#graduation-criteria) for specifics)
 ---
 
 # Kong Gateway API

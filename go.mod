@@ -77,8 +77,8 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.9.1
-	github.com/tidwall/match v1.0.3 // indirect
+	github.com/tidwall/gjson v1.9.2
+	github.com/tidwall/match v1.1.0 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.4 // indirect
 	github.com/tklauser/numcpus v0.2.1 // indirect
@@ -120,7 +120,7 @@ require (
 	knative.dev/networking v0.0.0-20210803181815-acdfd41c575c
 	knative.dev/pkg v0.0.0-20210902173607-844a6bc45596
 	knative.dev/serving v0.25.1
-	sigs.k8s.io/controller-runtime v0.10.1
+	sigs.k8s.io/controller-runtime v0.10.2
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.3.0
 )

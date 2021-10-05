@@ -1,6 +1,6 @@
 ---
 title: Kong Gateway API
-status: provisional
+status: milestone 1 implementable (see [graduation criteria](#graduation-criteria) for specifics)
 ---
 
 # Kong Gateway API
@@ -14,6 +14,7 @@ status: provisional
   - [User Stories](#user-stories)
 - [Design Details](#design-details)
   - [Test Plan](#test-plan)
+  - [Graduation Criteria](#graduation-criteria)
 - [Production Readiness](#production-readiness)
   - [Feature Enablement and Rollback](#feature-enablement-and-rollback)
 - [Drawbacks](#drawbacks)
@@ -116,7 +117,7 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
   name: acme-lb
 spec:
-  controller: konghq.com/gateway-controller
+  controllerName: konghq.com/gateway-controller
 ```
 
 This will be instrumented by the controller manager as a flag, though the above will be the default case when
@@ -129,10 +130,16 @@ manager --gateway-class konghq.com/gateway-controller
 ##### Additional Considerations
 
 - It's up to the operator whether they want a single or multiple controllers responsible for their `GatewayClasses`, for some high end deployments an entirely separate manager can be spun up but will need to have a distinct `--gateway-class`
-- If someone mutates the specification for a `GatewayClass` such as to drop the `controller: <tag>` which enables our support of it, the controller will stop managing related resources and will clean out the Kong Gateway's relevant configurations
+- If someone mutates the specification for a `GatewayClass` such as to drop the `controllerName: <tag>` which enables our support of it, the controller will stop managing related resources and will clean out the Kong Gateway's relevant configurations
 - TODO: Note that there's [some discussion][gateway-823] we've started upstream for some of the nuances with multi-tenancy, as there's currently limited documentation upstream on the matter. Before we consider this KEP `implementable` we need to make sure we get resolution there.
 
 [gateway-823]:https://github.com/kubernetes-sigs/gateway-api/discussions/823
+
+#### Validating Webhook
+
+**NOTE**: required for milestone 1 in [graduation criteria](#graduation-criteria)
+
+For the first iteration of our Gateway API support we will have some limits on functionality that would best be codified. For all Gateway related APIs, but particularly the `Gateway` API itself a custom webhook will be added to validate resources. The result of which is that end-users will receive an upfront error when they post configurations with options that are not yet supported (see the sections below for components and features that are still TODO).
 
 #### Gateway Controller
 
@@ -146,7 +153,7 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
   name: default-match-example
 spec:
-  controller: acme.io/gateway-controller
+  controllerName: acme.io/gateway-controller
 ---
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -171,32 +178,58 @@ spec:
     port: 80
 ```
 
-There will be two operational modes for this controller which indicate whether a `Gateway` object is to be provisioned and have its lifecycle managed (we will call this "pre-provisioned" mode) or whether an existing gateway will be utilized (we will call this "in-cluster" mode).
+There will be two operational modes for this controller which indicate whether a `Gateway` object is to be provisioned and have its lifecycle managed (we will call this "provisioned" mode) or an existing gateway (we will call this "existing" mode).
 
-##### Operational Mode 1: In-Cluster Gateways
+##### Operational Mode 1: Existing Gateways
+
+**NOTE**: required for milestone 1 in [graduation criteria](#graduation-criteria)
 
 Historically the KIC has relied on an existing Kong Gateway to already be deployed (commonly managed as a `Deployment` via the [Helm Chart][chart]) which the controller integrates with via the [Kong Admin API][kong-admin-api], and the connection and authorization information for that API was passed to the controller manager via command line flags. This operational mode follows the historical legacy of the KIC by allowing an existing Kong Gateway on the cluster to be used as the backend for a `Gateway` object in Gateway APIs parlance.
 
-In this operational mode an operator creates a `Gateway` resource with the [spec.Addresses][gateway-spec-addrs] populated to indicate the existing backend Kong Gateway. There are multiple [Address Types][gateway-spec-addr-types] available:
+For this operational mode the `Gateway` controller will simply need to have an indication that the default singleton proxy (that is the current norm in KIC) is OK to be used as the data-plane. This is done _explicitly_ to avoid setting a default behavior that may then become the precedent, the purpose in that being to promote clear communication that this is NOT what we intend to be the default operational mode long term (the goal is to have provisioned mode be the standard long term).
 
-- `IPAddress`: a direct IP address to use to connect to the Kong Admin API
-- `Hostname`: a DNS name to resolve the IP address of the Kong Admin API
-- `Named`: this is implementation specific
+In support of explicitly configuring this mode an annotation will be added that instructs the controller to use the `--kong-admin-url` value provided to the controller manager as the indicator of where the data-plane admin API endpoint is:
 
-Most of these are self-explanatory, but we will make special use of the `Named` option to indicate the separate endpoints for the proxy endpoint as opposed to the admin API endpoint.
+```yaml
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1alpha2
+metadata:
+  annotations:
+    konghq.com/use-controller-manager-admin-url: "true"
+  name: project-1-ingress
+spec:
+  gatewayClassName: default-match-example
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+```
 
-WIP: we're currently working with upstream to get some provisions and consensus figured out on how to use the addresses to indicate a separate proxy endpoint vs administrative api.
-
-TODO: for legacy reasons we may need to include a single proxy deployment mechanism where one proxy server can host for multiple gateways, as this is how the KIC has historically operated (see the current Helm chart)
+The above example is effectively the MVP for `Gateway` support, in that it would operationally function exactly like a default KIC deployment does now (the kong proxy is in the same pod as the controller and data-plane configurations occur over the same network namespace's via localhost) while also being explicit about the operational mode which will be documentative, help maintain a separate code path for this operational mode, and enable validation code in the early iterations to provide clear errors to the end-user.
 
 [chart]:https://github.com/kong/charts
 [kong-admin-api]:https://docs.konghq.com/gateway-oss/latest/admin-api/
-[gateway-spec-addrs]:https://github.com/kubernetes-sigs/gateway-api/blob/master/apis/v1alpha2/gateway_types.go#L428
-[gateway-spec-addr-types]:https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/gateway_types.go#L452
+[anns]:https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 
-##### Operational Mode 2: Pre-Provisioned Gateways
+##### Operational Mode 2: Provisioned Gateways
 
-WIP: we're looking at support for gateway lifecycle management for the long term and this is here for posterity so readers know we're thinking about it, but in the short-term and for our initial implementation we're focused on `Operational Mode 1: In-Cluster Gateways` first and we'll come back to this mode in later iterations.
+**NOTE**: required for milestone 3 in [graduation criteria](#graduation-criteria)
+
+TODO: work on this operational mode has not been started yet. At the time of writing our [operator][kong-operator] was still unready to take on this functionality, and maintainers were not comfortable with adding this operator-style functionality to the KIC.
+
+[kong-operator]:https://github.com/kong/kong-operator
+
+###### Metrics
+
+**NOTE**: required for milestone 3 in [graduation criteria](#graduation-criteria)
+
+TODO
+
+###### Automatic Upgrades, HealthChecking and Rollbacks
+
+**NOTE**: required for milestone 3 in [graduation criteria](#graduation-criteria)
+
+TODO
 
 ##### Additional Considerations
 
@@ -204,8 +237,27 @@ WIP: we're looking at support for gateway lifecycle management for the long term
 
 #### HTTPRoute Controller
 
-The HTTPRoute controller is fairly straightforward, which backend proxy is responsible is based on which Gateway its attached to in the `parentRefs`, but then the resource otherwise
-gets parsed, converted into Kong types, and posted to `/config` like any other API resource that currently exists.
+**NOTE**: required for milestone 1 in [graduation criteria](#graduation-criteria)
+
+The HTTPRoute controller is fairly straightforward, which backend proxy is responsible is based on which Gateway its attached to in the `parentRefs`, but then the resource otherwise gets parsed (by `parser.Build()`), converted into Kong types, and posted to Kong like any other API resource that currently exists, using the `KongState`, proxy and `sendconfig` abstractions as they are used today.
+
+#### TCPRoute Controller
+
+**NOTE**: required for milestone 2 in [graduation criteria](#graduation-criteria)
+
+TODO
+
+#### UDPRoute Controller
+
+**NOTE**: required for milestone 2 in [graduation criteria](#graduation-criteria)
+
+TODO
+
+#### TLSRoute Controller
+
+**NOTE**: required for milestone 2 in [graduation criteria](#graduation-criteria)
+
+TODO
 
 ### Proxy Cache Implementation
 
@@ -260,17 +312,61 @@ In order to consider this KEP `implemented` we must have the following present:
 
 [docs]:https://docs.konghq.com/kubernetes-ingress-controller/
 
+### Graduation Criteria
+
+The following highlights milestones along the path of Gateway support maturity.
+
+Individual milestones will be marked `provisional` or `implementable` independently, in accordance with whether the design details have enough planning and specification available yet to support them, and complete milestones will be marked as `implemented`:
+
+- `provisional` - don't start work until the previous milestones have been completed **and** the [design details](#design-details) for related components and features have been completed.
+- `implementable` - this is supported by the [design details](#design-details) and is ready for work to start
+- `implemented` - the related components and functionality are already available now at the designated quality level
+
+The milestones may correlate directly with [Github Milestones][github-milestones] in the same repository.
+
+[github-milestones]:https://github.com/Kong/kubernetes-ingress-controller/milestones
+
+#### Milestone 1 - Alpha Quality - Initial HTTP Support (implementable)
+
+- [ ] our validating webhook for Gateway resources has been added and provides errors for unimplemented features
+- [ ] a `Gateway` controller implementation with basic support for "existing" operational mode is introduced
+- [ ] an initial implementation of `HTTPRoute` is added which includes support for the majority of options
+- [ ] integration tests added which cover all the supported features of `HTTPRoute`
+
+#### Milestone 2 - Alpha Quality - Extended API Support (provisional)
+
+- [ ] an initial implementation of `TCPRoute` is added which includes support for the majority of features
+- [ ] integration tests added which cover all the features of `TCPRoute`
+- [ ] an initial implementation of `UDPRoute` is added which includes support for the majority of features
+- [ ] integration tests added which cover all the features of `UDPRoute`
+- [ ] an initial implementation of `TLSRoute` is added which includes support for the majority of features
+- [ ] integration tests added which cover all the features of `TLSRoute`
+
+#### Milestone 3 - Alpha Quality - Operator Support (provisional)
+
+- [ ] operator support for provisioning and managing the lifecycle of `Gateway` resources is added
+- [ ] operator has support for automatic upgrades of provisioned `Gateways`
+- [ ] operator has support for health checking and rollback mechanisms for provisioned `Gateways`
+- [ ] operator has prometheus metrics which capture information about `Gateway` operations, including error alerts for failures e.t.c.
+- [ ] integration tests added which cover all features of `Gateway`
+
+#### Milestone 4 - Beta Quality (provisional)
+
+TODO: after we get some traction with alpha level milestones that work should start informing the beta stage and we can start filling this out.
+
 ## Production Readiness
 
 Production readiness of this feature is marked by the following requirements:
 
+- All milestones of the above `Graduation Criteria` have been completed
+- We have support for all of the [entire Gateway APIs spec][gateway-spec]
+- Our integration and E2E testing provides feature cover and strong regression protections
 - Gateway APIs themselves have reached a GA status in upstream Kubernetes
 - A version of Kubernetes which includes the Gateway APIs standard becomes GA
-- We have support for most if not all of the [entire Gateway APIs spec][gateway-spec]
-- If there's any features or implementations for Gateway APIs we explicitly choose not to support, we document that and the reasoning
-- Our integration and E2E testing provides feature cover and strong regression protections
+- Gateway API documentation is added to [our documentation][kong-docs]
 
 [gateway-spec]:https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/
+[kong-docs]:https://docs.konghq.com
 
 ### Feature Enablement and Rollback
 
@@ -282,7 +378,10 @@ Once the feature is GA according to the `Production Readiness` standards, the fl
 
 Given the direction of the upstream Kubernetes community which appears to be conforming around Gateway,
 the only drawback we've seen is the time cost we will need to pay in order to implement the API during
-a time when the API isn't GA.
+a time when the API isn't GA. As such for the initial iteration we've decided to hold back on some of
+the provisioning and lifecycle management features inherent to the Gateway APIs project (e.g. provisioning
+`Gateway` resources by deploying and maintaining new proxy `Deployments` for them) in order to spread
+time costs out.
 
 ## Alternatives
 

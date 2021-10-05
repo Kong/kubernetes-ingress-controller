@@ -148,6 +148,32 @@ go run -tags gcp ./internal/cmd/main.go \
 --kong-admin-tls-skip-verify true
 ```
 
+If you are using Kind we can leverage [extraPortMapping config](https://kind.sigs.k8s.io/docs/user/ingress/)
+```shell
+cat <<EOF | kind create cluster --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  - containerPort: 8000
+    hostPort: 8000
+    protocol: TCP
+  - containerPort: 8443
+    hostPort: 8443
+    protocol: TCP
+EOF
+
+# mapping host ports to a kong ingress container port
+kubectl patch -n kong deploy ingress-kong -p '{"spec": {"template": {"spec": {"containers": [{"name": "proxy", "ports": [{"containerPort": 8000, "hostPort": 8000, "name": "proxy", "protocol": "TCP"}, {"containerPort": 8443, "hostPort": 8443, "name": "proxy-ssl", "protocol": "TCP"}]}]}}}}'
+```
+
 ## Building
 
 Build is performed via Makefile. Depending on your

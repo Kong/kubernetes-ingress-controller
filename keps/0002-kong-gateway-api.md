@@ -239,7 +239,7 @@ TODO
 
 **NOTE**: required for milestone 1 in [graduation criteria](#graduation-criteria)
 
-The HTTPRoute controller is fairly straightforward, which backend proxy is responsible is based on which Gateway its attached to in the `parentRefs`, but then the resource otherwise gets parsed, converted into Kong types, and posted to `/config` like any other API resource that currently exists.
+The HTTPRoute controller is fairly straightforward, which backend proxy is responsible is based on which Gateway its attached to in the `parentRefs`, but then the resource otherwise gets parsed (by `parser.Build()`), converted into Kong types, and posted to Kong like any other API resource that currently exists, using the `KongState`, proxy and `sendconfig` abstractions as they are used today.
 
 #### TCPRoute Controller
 

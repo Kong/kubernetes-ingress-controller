@@ -134,18 +134,18 @@ pkill -f kubectl
 # setup proxies
 kubectl port-forward svc/kong-proxy -n kong 8443:443 2>&1 > /dev/null &
 kubectl port-forward svc/kong-proxy -n kong 8000:80 2>&1 > /dev/null &
-kubectl port-forward svc/kong-ingress-controller -n kong 8001:8001 2>&1 > /dev/null &
+kubectl port-forward deploy/ingress-kong -n kong 8444:8444 2>&1 > /dev/null &
 kubectl proxy --port=8002 2>&1 > /dev/null &
 
 export POD_NAME=`kubectl get po -n kong -o json | jq ".items[] | .metadata.name" -r | grep ingress`
 export POD_NAMESPACE=kong
 
-go run -tags gcp ./cli/ingress-controller/ \
---default-backend-service kong/kong-proxy \
+go run -tags gcp ./internal/cmd/main.go \
 --kubeconfig ~/.kube/config \
 --publish-service=kong/kong-proxy \
 --apiserver-host=http://localhost:8002 \
---kong-admin-url http://localhost:8001
+--kong-admin-url https://localhost:8444 \
+--kong-admin-tls-skip-verify true
 ```
 
 ## Building

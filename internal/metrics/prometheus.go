@@ -44,7 +44,7 @@ const (
 	TypeKey ConfigType = "type"
 )
 
-func ControllerMetricsInit() *CtrlFuncMetrics {
+func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 	controllerMetrics := &CtrlFuncMetrics{}
 
 	controllerMetrics.ConfigCounter =

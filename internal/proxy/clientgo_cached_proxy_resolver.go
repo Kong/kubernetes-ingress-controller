@@ -252,7 +252,7 @@ func (p *clientgoCachedProxyResolver) initialize() error {
 	p.kongConfig.Version = proxySemver
 	p.dbmode = dbmode
 	p.version = proxySemver
-	p.promMetrics = metrics.ControllerMetricsInit()
+	p.promMetrics = metrics.NewCtrlFuncMetrics()
 
 	return nil
 }

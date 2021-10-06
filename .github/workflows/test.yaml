@@ -132,7 +132,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.enterprise.postgres
       env:
-        KONG_ENTERPRISE_LICENSE: ${{ secrets.KONG_ENTERPRISE_LICENSE }}
+        KONG_LICENSE_DATA: ${{ secrets.KONG_ENTERPRISE_LICENSE }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v2.2.4

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,9 +18,9 @@ func TestMetricsEndpoint(t *testing.T) {
 	t.Parallel()
 
 	wantMetrics := []string{
-		"send_configuration_count",
-		"ingress_parse_count",
-		"proxy_configuration_duration_milliseconds",
+		metrics.MetricNameConfigPushCount,
+		metrics.MetricNameTranslationCount,
+		metrics.MetricNameConfigPushDuration,
 	}
 
 	assert.Eventually(t, func() bool {
@@ -48,6 +49,7 @@ func TestMetricsEndpoint(t *testing.T) {
 			}
 		}
 
+		t.Logf("INFO: all expected metrics found in /metrics: %+v", wantMetrics)
 		return true // All metrics from wantMetrics have been found in /metrics.
 	}, ingressWait, waitTick)
 }

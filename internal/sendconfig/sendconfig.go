@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
@@ -41,10 +42,8 @@ func PerformUpdate(ctx context.Context,
 	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessFalse), string(metrics.TypeKey): string(metrics.ConfigDeck)}).Inc()
 		return oldSHA, err
 	}
-	promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessTrue), string(metrics.TypeKey): string(metrics.ConfigDeck)}).Inc()
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
 		// use the previous SHA to determine whether or not to perform an update
@@ -57,19 +56,42 @@ func PerformUpdate(ctx context.Context,
 		}
 	}
 
+	var metricsConfigType metrics.ConfigType
+
+	timeStart := time.Now()
 	if inMemory {
+		metricsConfigType = metrics.ConfigDBLess
 		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
 	} else {
+		metricsConfigType = metrics.ConfigDeck
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
 	}
+	timeEnd := time.Now()
+
 	if err != nil {
 		return nil, err
+		promMetrics.ConfigPushCount.With(prometheus.Labels{
+			string(metrics.SuccessKey): string(metrics.SuccessFalse),
+			string(metrics.TypeKey):    string(metricsConfigType),
+		}).Inc()
+		promMetrics.ConfigPushDuration.With(prometheus.Labels{
+			string(metrics.SuccessKey): string(metrics.SuccessFalse),
+			string(metrics.TypeKey):    string(metricsConfigType),
+		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	}
 
 	if newSHA != nil && !skipUpdateCR {
 		kongConfig.ConfigDone <- *targetContent
 	}
 
+	promMetrics.ConfigPushCount.With(prometheus.Labels{
+		string(metrics.SuccessKey): string(metrics.SuccessTrue),
+		string(metrics.TypeKey):    string(metricsConfigType),
+	}).Inc()
+	promMetrics.ConfigPushDuration.With(prometheus.Labels{
+		string(metrics.SuccessKey): string(metrics.SuccessTrue),
+		string(metrics.TypeKey):    string(metricsConfigType),
+	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }

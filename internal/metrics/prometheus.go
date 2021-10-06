@@ -38,37 +38,43 @@ const (
 	TypeKey string = "type"
 )
 
+const (
+	MetricNameConfigPushCount    = "ingress_controller_configuration_push_count"
+	MetricNameTranslationCount   = "ingress_controller_translation_count"
+	MetricNameConfigPushDuration = "ingress_controller_configuration_push_duration_milliseconds"
+)
+
 func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 	controllerMetrics := &CtrlFuncMetrics{}
 
 	controllerMetrics.ConfigPushCount =
 		prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "ingress_controller_configuration_push_count",
+				Name: MetricNameConfigPushCount,
 				Help: "Count of successful/failed configuration pushes to Kong. `" +
 					TypeKey + "` describes the configuration protocol (" + ConfigDBLess + " or " +
 					ConfigDeck + ") in use. `" +
 					SuccessKey + "` describes whether there were unrecoverable errors (`" +
 					SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
 			},
-			[]string{"success", "type"},
+			[]string{SuccessKey, TypeKey},
 		)
 
 	controllerMetrics.TranslationCount =
 		prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "ingress_controller_translation_count",
+				Name: MetricNameTranslationCount,
 				Help: "Count of translations from Kubernetes state to Kong state. `" +
 					SuccessKey + "` describes whether there were unrecoverable errors (`" +
 					SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
 			},
-			[]string{"success"},
+			[]string{SuccessKey},
 		)
 
 	controllerMetrics.ConfigPushDuration =
 		prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name: "ingress_controller_configuration_push_duration_milliseconds",
+				Name: MetricNameConfigPushDuration,
 				Help: "How long it took to push the configuration to Kong, in milliseconds. `" +
 					TypeKey + "` describes the configuration protocol (" + ConfigDBLess + " or " +
 					ConfigDeck + ") in use. `" +
@@ -76,7 +82,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 					SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
 				Buckets: prometheus.ExponentialBuckets(100, 1.33, 30),
 			},
-			[]string{"success", "type"},
+			[]string{SuccessKey, TypeKey},
 		)
 
 	metrics.Registry.MustRegister(controllerMetrics.ConfigPushCount, controllerMetrics.TranslationCount, controllerMetrics.ConfigPushDuration)

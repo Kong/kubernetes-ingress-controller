@@ -79,7 +79,6 @@ func UpdateKongAdminSimple(ctx context.Context,
 	timedCtx, cancel := context.WithTimeout(ctx, proxyRequestTimeout)
 	defer cancel()
 
-	start := time.Now()
 	configSHA, err := PerformUpdate(timedCtx,
 		deprecatedLogger, &kongConfig,
 		kongConfig.InMemory, enableReverseSync,

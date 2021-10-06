@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/model"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
@@ -16,33 +15,27 @@ type CtrlFuncMetrics struct {
 	TranslationCount *prometheus.CounterVec
 
 	// ConfigPushDuration records the duration of each successful configuration sync.
-	ConfigPushDuration prometheus.Histogram
+	ConfigPushDuration *prometheus.HistogramVec
 }
-
-// Success indicates the results of a function/operation
-type Success string
 
 const (
 	// SuccessTrue operation successfully
-	SuccessTrue Success = "true"
+	SuccessTrue string = "true"
 	// SuccessFalse operation failed
-	SuccessFalse Success = "false"
+	SuccessFalse string = "false"
 
 	// SuccessKey success label within metrics
-	SuccessKey model.LabelName = "success"
+	SuccessKey string = "success"
 )
 
-type ConfigType string
-
 const (
-
 	// ConfigDBLess says post config to proxy
-	ConfigDBLess ConfigType = "db-less"
+	ConfigDBLess string = "db-less"
 	// ConfigDeck says generate deck
-	ConfigDeck ConfigType = "deck"
+	ConfigDeck string = "deck"
 
 	// TypeKey type label within metrics
-	TypeKey model.LabelName = "type"
+	TypeKey string = "type"
 )
 
 func NewCtrlFuncMetrics() *CtrlFuncMetrics {
@@ -73,7 +66,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		)
 
 	controllerMetrics.ConfigPushDuration =
-		prometheus.NewHistogram(
+		prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name: "ingress_controller_configuration_push_duration_milliseconds",
 				Help: "How long it took to push the configuration to Kong, in milliseconds. `" +

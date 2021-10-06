@@ -56,8 +56,7 @@ func PerformUpdate(ctx context.Context,
 		}
 	}
 
-	var metricsConfigType metrics.ConfigType
-
+	var metricsConfigType string
 	timeStart := time.Now()
 	if inMemory {
 		metricsConfigType = metrics.ConfigDBLess
@@ -71,12 +70,12 @@ func PerformUpdate(ctx context.Context,
 	if err != nil {
 		return nil, err
 		promMetrics.ConfigPushCount.With(prometheus.Labels{
-			string(metrics.SuccessKey): string(metrics.SuccessFalse),
-			string(metrics.TypeKey):    string(metricsConfigType),
+			metrics.SuccessKey: metrics.SuccessFalse,
+			metrics.TypeKey:    metricsConfigType,
 		}).Inc()
 		promMetrics.ConfigPushDuration.With(prometheus.Labels{
-			string(metrics.SuccessKey): string(metrics.SuccessFalse),
-			string(metrics.TypeKey):    string(metricsConfigType),
+			metrics.SuccessKey: metrics.SuccessFalse,
+			metrics.TypeKey:    metricsConfigType,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	}
 

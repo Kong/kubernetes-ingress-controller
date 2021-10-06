@@ -1,6 +1,6 @@
 # Table of Contents
 
- - [2.0.0](#200---tba)
+ - [2.0.0](#200---20211007)
  - [1.3.3](#133---20211001)
  - [1.3.2](#132---20210812)
  - [1.3.1](#131---20210603)
@@ -32,7 +32,7 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.0] - TBA
+## [2.0.0] - 2021/10/07
 
 **NOTE**: This changelog entry was compiled from every changelog entry in the
   `alpha` and `beta` pre-releases of `2.0.0`. If you're looking for the interim

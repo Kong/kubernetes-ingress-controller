@@ -48,12 +48,12 @@ func UpdateKongAdminSimple(ctx context.Context,
 	kongstate, err := parser.Build(deprecatedLogger, storer)
 	if err != nil {
 		promMetrics.TranslationCount.With(prometheus.Labels{
-			string(metrics.SuccessKey): string(metrics.SuccessFalse),
+			metrics.SuccessKey: metrics.SuccessFalse,
 		}).Inc()
 		return nil, err
 	}
 	promMetrics.TranslationCount.With(prometheus.Labels{
-		string(metrics.SuccessKey): string(metrics.SuccessTrue),
+		metrics.SuccessKey: metrics.SuccessTrue,
 	}).Inc()
 	var diagnosticConfig *file.Content
 

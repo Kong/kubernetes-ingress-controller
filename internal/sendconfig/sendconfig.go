@@ -68,7 +68,6 @@ func PerformUpdate(ctx context.Context,
 	timeEnd := time.Now()
 
 	if err != nil {
-		return nil, err
 		promMetrics.ConfigPushCount.With(prometheus.Labels{
 			metrics.SuccessKey:  metrics.SuccessFalse,
 			metrics.ProtocolKey: metricsProtocol,
@@ -77,6 +76,7 @@ func PerformUpdate(ctx context.Context,
 			metrics.SuccessKey:  metrics.SuccessFalse,
 			metrics.ProtocolKey: metricsProtocol,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+		return nil, err
 	}
 
 	if newSHA != nil && !skipUpdateCR {
@@ -84,12 +84,12 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
-		string(metrics.SuccessKey):  string(metrics.SuccessTrue),
-		string(metrics.ProtocolKey): string(metricsProtocol),
+		metrics.SuccessKey:  metrics.SuccessTrue,
+		metrics.ProtocolKey: metricsProtocol,
 	}).Inc()
 	promMetrics.ConfigPushDuration.With(prometheus.Labels{
-		string(metrics.SuccessKey):  string(metrics.SuccessTrue),
-		string(metrics.ProtocolKey): string(metricsProtocol),
+		metrics.SuccessKey:  metrics.SuccessTrue,
+		metrics.ProtocolKey: metricsProtocol,
 	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil

@@ -6,36 +6,34 @@ import (
 )
 
 type CtrlFuncMetrics struct {
-	// ConfigPushCount counts the events of sending configuration to Kong,
-	// using metric fields to distinguish between DB-less or DB-mode syncs,
-	// and to tell successes from failures.
+	// ConfigPushCount is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushCount *prometheus.CounterVec
 
-	// TranslationCount counts the events of converting resources from Kubernetes to a KongState.
+	// TranslationCount is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	TranslationCount *prometheus.CounterVec
 
-	// ConfigPushDuration records the duration of each successful configuration sync.
+	// ConfigPushDuration is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushDuration *prometheus.HistogramVec
 }
 
 const (
-	// SuccessTrue operation successfully
+	// SuccessTrue indicates that the operation was successful.
 	SuccessTrue string = "true"
-	// SuccessFalse operation failed
+	// SuccessTrue indicates that the operation was not successful.
 	SuccessFalse string = "false"
 
-	// SuccessKey success label within metrics
+	// SuccessKey defines the key of the metric label indicating success/failure of an operation.
 	SuccessKey string = "success"
 )
 
 const (
-	// ConfigDBLess says post config to proxy
-	ConfigDBLess string = "db-less"
-	// ConfigDeck says generate deck
-	ConfigDeck string = "deck"
+	// ProtocolDBLess indicates that configuration was sent to Kong using the DB-less protocol (POST /config).
+	ProtocolDBLess string = "db-less"
+	// ProtocolDeck indicates that configuration was sent to Kong using the DB mode protocol (deck sync).
+	ProtocolDeck string = "deck"
 
-	// TypeKey type label within metrics
-	TypeKey string = "type"
+	// ProtocolKey defines the key of the metric label indicating which protocol KIC used to configure Kong.
+	ProtocolKey string = "protocol"
 )
 
 const (
@@ -52,12 +50,12 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 			prometheus.CounterOpts{
 				Name: MetricNameConfigPushCount,
 				Help: "Count of successful/failed configuration pushes to Kong. `" +
-					TypeKey + "` describes the configuration protocol (" + ConfigDBLess + " or " +
-					ConfigDeck + ") in use. `" +
+					ProtocolKey + "` describes the configuration protocol (" + ProtocolDBLess + " or " +
+					ProtocolDeck + ") in use. `" +
 					SuccessKey + "` describes whether there were unrecoverable errors (`" +
 					SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
 			},
-			[]string{SuccessKey, TypeKey},
+			[]string{SuccessKey, ProtocolKey},
 		)
 
 	controllerMetrics.TranslationCount =
@@ -76,13 +74,13 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 			prometheus.HistogramOpts{
 				Name: MetricNameConfigPushDuration,
 				Help: "How long it took to push the configuration to Kong, in milliseconds. `" +
-					TypeKey + "` describes the configuration protocol (" + ConfigDBLess + " or " +
-					ConfigDeck + ") in use. `" +
+					ProtocolKey + "` describes the configuration protocol (" + ProtocolDBLess + " or " +
+					ProtocolDeck + ") in use. `" +
 					SuccessKey + "` describes whether there were unrecoverable errors (`" +
 					SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
 				Buckets: prometheus.ExponentialBuckets(100, 1.33, 30),
 			},
-			[]string{SuccessKey, TypeKey},
+			[]string{SuccessKey, ProtocolKey},
 		)
 
 	metrics.Registry.MustRegister(controllerMetrics.ConfigPushCount, controllerMetrics.TranslationCount, controllerMetrics.ConfigPushDuration)

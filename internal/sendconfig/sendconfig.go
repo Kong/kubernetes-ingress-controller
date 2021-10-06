@@ -56,13 +56,13 @@ func PerformUpdate(ctx context.Context,
 		}
 	}
 
-	var metricsConfigType string
+	var metricsProtocol string
 	timeStart := time.Now()
 	if inMemory {
-		metricsConfigType = metrics.ConfigDBLess
+		metricsProtocol = metrics.ProtocolDBLess
 		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
 	} else {
-		metricsConfigType = metrics.ConfigDeck
+		metricsProtocol = metrics.ProtocolDeck
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
 	}
 	timeEnd := time.Now()
@@ -70,12 +70,12 @@ func PerformUpdate(ctx context.Context,
 	if err != nil {
 		return nil, err
 		promMetrics.ConfigPushCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessFalse,
-			metrics.TypeKey:    metricsConfigType,
+			metrics.SuccessKey:  metrics.SuccessFalse,
+			metrics.ProtocolKey: metricsProtocol,
 		}).Inc()
 		promMetrics.ConfigPushDuration.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessFalse,
-			metrics.TypeKey:    metricsConfigType,
+			metrics.SuccessKey:  metrics.SuccessFalse,
+			metrics.ProtocolKey: metricsProtocol,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	}
 
@@ -84,12 +84,12 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
-		string(metrics.SuccessKey): string(metrics.SuccessTrue),
-		string(metrics.TypeKey):    string(metricsConfigType),
+		string(metrics.SuccessKey):  string(metrics.SuccessTrue),
+		string(metrics.ProtocolKey): string(metricsProtocol),
 	}).Inc()
 	promMetrics.ConfigPushDuration.With(prometheus.Labels{
-		string(metrics.SuccessKey): string(metrics.SuccessTrue),
-		string(metrics.TypeKey):    string(metricsConfigType),
+		string(metrics.SuccessKey):  string(metrics.SuccessTrue),
+		string(metrics.ProtocolKey): string(metricsProtocol),
 	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil

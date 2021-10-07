@@ -2,7 +2,7 @@
 # Configuration
 # ------------------------------------------------------------------------------
 
-TAG?=2.0.0-beta.2
+TAG?=2.0.0
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
 REPO_URL=github.com/kong/kubernetes-ingress-controller
@@ -214,6 +214,14 @@ test.integration.postgres:
 .PHONY: test.integration.legacy
 test.integration.legacy: container
 	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
+
+.PHONY: test.e2e
+test.e2e:
+	GOFLAGS="-tags=e2e_tests" go test -v \
+		-race \
+		-parallel $(NCPU) \
+		-timeout 30m \
+		./test/e2e/...
 
 # ------------------------------------------------------------------------------
 # Operations

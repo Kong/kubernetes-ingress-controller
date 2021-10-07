@@ -1,3 +1,4 @@
+namespace: kong
 resources:
 - namespace.yaml
 - ../crd
@@ -6,6 +7,3 @@ resources:
 - serviceaccount.yaml
 - validation-service.yaml
 - kong-ingress-dbless.yaml
-namespace: kong
-patchesStrategicMerge:
-- kong-ingress-crd-spec.yaml

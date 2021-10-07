@@ -32,10 +32,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return err
 	}
 	setupLog := ctrl.Log.WithName("setup")
-	setupLog.Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
-	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
-
-	setupLog.Info("building the manager runtime scheme and loading apis into the scheme")
+	setupLog.V(util.DebugLevel).Info("starting controller manager", "release", Release, "repo", Repo, "commit", Commit)
+	setupLog.V(util.DebugLevel).Info("the ingress class name has been set", "value", c.IngressClassName)
+	setupLog.V(util.DebugLevel).Info("building the manager runtime scheme and loading apis into the scheme")
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
@@ -61,13 +60,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to start controller manager: %w", err)
 	}
 
-	setupLog.Info("configuring and building the proxy cache server")
+	setupLog.Info("Starting Proxy Cache Server")
 	proxy, err := setupProxyServer(ctx, setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
 	if err != nil {
 		return fmt.Errorf("unable to start proxy cache server: %w", err)
 	}
 
-	setupLog.Info("deploying all enabled controllers")
+	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(mgr, proxy, c)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
@@ -82,7 +81,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	//+kubebuilder:scaffold:builder
 
-	setupLog.Info("enabling health checks")
+	setupLog.Info("Starting health check servers")
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
@@ -96,7 +95,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	if c.AnonymousReports {
-		setupLog.Info("running anonymous reports")
+		setupLog.Info("Starting anonymous reports")
 		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, Release); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}
@@ -105,12 +104,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	if c.UpdateStatus {
-		setupLog.Info("status updates enabled, status update routine is being started in the background.")
+		setupLog.Info("Starting resource status updater")
 		go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
 	} else {
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("Starting manager")
 	return mgr.Start(ctx)
 }

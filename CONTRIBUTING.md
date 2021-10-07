@@ -134,18 +134,44 @@ pkill -f kubectl
 # setup proxies
 kubectl port-forward svc/kong-proxy -n kong 8443:443 2>&1 > /dev/null &
 kubectl port-forward svc/kong-proxy -n kong 8000:80 2>&1 > /dev/null &
-kubectl port-forward svc/kong-ingress-controller -n kong 8001:8001 2>&1 > /dev/null &
+kubectl port-forward deploy/ingress-kong -n kong 8444:8444 2>&1 > /dev/null &
 kubectl proxy --port=8002 2>&1 > /dev/null &
 
 export POD_NAME=`kubectl get po -n kong -o json | jq ".items[] | .metadata.name" -r | grep ingress`
 export POD_NAMESPACE=kong
 
-go run -tags gcp ./cli/ingress-controller/ \
---default-backend-service kong/kong-proxy \
+go run -tags gcp ./internal/cmd/main.go \
 --kubeconfig ~/.kube/config \
 --publish-service=kong/kong-proxy \
 --apiserver-host=http://localhost:8002 \
---kong-admin-url http://localhost:8001
+--kong-admin-url https://localhost:8444 \
+--kong-admin-tls-skip-verify true
+```
+
+If you are using Kind we can leverage [extraPortMapping config](https://kind.sigs.k8s.io/docs/user/ingress/)
+```shell
+cat <<EOF | kind create cluster --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  - containerPort: 8000
+    hostPort: 8000
+    protocol: TCP
+  - containerPort: 8443
+    hostPort: 8443
+    protocol: TCP
+EOF
+
+# mapping host ports to a kong ingress container port
+kubectl patch -n kong deploy ingress-kong -p '{"spec": {"template": {"spec": {"containers": [{"name": "proxy", "ports": [{"containerPort": 8000, "hostPort": 8000, "name": "proxy", "protocol": "TCP"}, {"containerPort": 8443, "hostPort": 8443, "name": "proxy-ssl", "protocol": "TCP"}]}]}}}}'
 ```
 
 ## Building
@@ -195,14 +221,27 @@ Please check the [deployment guide](https://docs.konghq.com/kubernetes-ingress-c
 
 ## Testing
 
-To run unit-tests, just run
+You can run the unit tests by running:
 
 ```console
-$ cd $GOPATH/src/github.com/kong/kubernetes-ingress-controller
 $ make test
 ```
 
-To run integration tests, see the [integration test readme](test/integration/README.md).
+For integration tests run:
+
+```console
+$ make test.integration
+```
+
+And for E2E tests run:
+
+```console
+$ make test.e2e
+```
+
+Note that the `integration` and `e2e` tests require a local container runtime
+and will utilize a sizable amount of system resources as one or many local
+Kubernetes clusters will be spun up in containers and tested against.
 
 ## Releasing
 

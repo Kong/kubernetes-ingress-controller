@@ -20,8 +20,10 @@ spec:
         description: KongIngress is the Schema for the kongingresses API
         properties:
           proxy:
-            description: Service represents a Service in Kong. Read https://getkong.org/docs/0.13.x/admin-api/#Service-object
             properties:
+              path:
+                type: string
+                pattern: ^/.*$
               connect_timeout:
                 minimum: 0
                 type: integer
@@ -170,7 +172,7 @@ spec:
                           tcp_failures:
                             minimum: 0
                             type: integer
-                          timeouts:
+                          timeout:
                             minimum: 0
                             type: integer
                         type: object
@@ -211,7 +213,7 @@ spec:
                           tcp_failures:
                             minimum: 0
                             type: integer
-                          timeouts:
+                          timeout:
                             minimum: 0
                             type: integer
                         type: object

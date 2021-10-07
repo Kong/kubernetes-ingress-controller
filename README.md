@@ -27,7 +27,7 @@ For a quick start, just deploy KIC 2.0 beta to your cluster:
 $ kubectl apply -f "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/deploy/single-v2/all-in-one-dbless.yaml"
 ```
 
-See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller-beta) for Kong Ingress Controller 2.0 beta.
+See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller) for Kong Ingress Controller 2.0 beta.
 
 ## Features
 
@@ -54,7 +54,7 @@ See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller-be
 ## Get started
 
 You can use
-[Minikube](https://kubernetes.io/docs/setup/minikube/)
+[Minikube, Kind](https://kubernetes.io/docs/tasks/tools/)
 on your local machine or use
 a hosted k8s service like
 [GKE](https://cloud.google.com/kubernetes-engine/).
@@ -78,6 +78,12 @@ to start using Ingress in your Kubernetes cluster.
 
 > Note: Kong Enterprise users, please follow along our
 [enterprise guide][k4k8s-enterprise-setup] to setup the enterprise version.
+
+## Contributing
+
+We ❤️  pull requests, and we’re continually working hard to make it as easy as possible for developers to contribute. Before beginning development with the Kong Ingress, please familiarize yourself with the following developer resources:
+- [CONTRIBUTING](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md) and [COPYRIGHT](https://github.com/Kong/kong/blob/master/COPYRIGHT)
 
 ## Documentation
 

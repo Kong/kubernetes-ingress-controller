@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
@@ -41,28 +42,40 @@ func PerformUpdate(ctx context.Context,
 	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessFalse), string(metrics.TypeKey): string(metrics.ConfigDeck)}).Inc()
 		return oldSHA, err
 	}
-	promMetrics.ConfigCounter.With(prometheus.Labels{string(metrics.SuccessKey): string(metrics.SuccessTrue), string(metrics.TypeKey): string(metrics.ConfigDeck)}).Inc()
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
 		// use the previous SHA to determine whether or not to perform an update
 		if equalSHA(oldSHA, newSHA) {
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Infof("sha %s has been reported", hex.EncodeToString(newSHA))
+				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
 			}
-			log.Info("no configuration change, skipping sync to kong")
+			log.Debug("no configuration change, skipping sync to kong")
 			return oldSHA, nil
 		}
 	}
 
+	var metricsProtocol string
+	timeStart := time.Now()
 	if inMemory {
+		metricsProtocol = metrics.ProtocolDBLess
 		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
 	} else {
+		metricsProtocol = metrics.ProtocolDeck
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
 	}
+	timeEnd := time.Now()
+
 	if err != nil {
+		promMetrics.ConfigPushCount.With(prometheus.Labels{
+			metrics.SuccessKey:  metrics.SuccessFalse,
+			metrics.ProtocolKey: metricsProtocol,
+		}).Inc()
+		promMetrics.ConfigPushDuration.With(prometheus.Labels{
+			metrics.SuccessKey:  metrics.SuccessFalse,
+			metrics.ProtocolKey: metricsProtocol,
+		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 		return nil, err
 	}
 
@@ -70,6 +83,14 @@ func PerformUpdate(ctx context.Context,
 		kongConfig.ConfigDone <- *targetContent
 	}
 
+	promMetrics.ConfigPushCount.With(prometheus.Labels{
+		metrics.SuccessKey:  metrics.SuccessTrue,
+		metrics.ProtocolKey: metricsProtocol,
+	}).Inc()
+	promMetrics.ConfigPushDuration.With(prometheus.Labels{
+		metrics.SuccessKey:  metrics.SuccessTrue,
+		metrics.ProtocolKey: metricsProtocol,
+	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }

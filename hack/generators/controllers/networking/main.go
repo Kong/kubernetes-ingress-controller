@@ -350,6 +350,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
@@ -408,7 +409,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			log.Info("deleted {{.Type}} object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("deleted {{.Type}} object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
 			if err := r.Proxy.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -416,11 +417,11 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -436,7 +437,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 {{if .AcceptsIngressClassNameAnnotation}}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
-		log.Info("object missing ingress class, ensuring it's removed from configuration", req.Namespace, req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		if err := r.Proxy.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}

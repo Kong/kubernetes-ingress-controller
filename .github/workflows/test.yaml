@@ -34,11 +34,10 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup golangci-lint
-      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1
-
     - name: Run golangci-lint
-      run: make lint
+      uses: golangci/golangci-lint-action@v2
+      with: 
+        version: v1.41.1
 
     - name: Verify manifest consistency
       run: make verify.manifests

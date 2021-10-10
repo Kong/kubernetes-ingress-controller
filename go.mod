@@ -10,7 +10,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.7.0
+	github.com/kong/deck v1.8.2
 	github.com/kong/go-kong v0.22.0
 	github.com/kong/kubernetes-testing-framework v0.8.0
 	github.com/lithammer/dedent v1.1.0
@@ -42,11 +42,11 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
-	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
+	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cenkalti/backoff/v4 v4.1.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -56,9 +56,9 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.5.0 // indirect
-	github.com/fatih/color v1.11.0 // indirect
+	github.com/fatih/color v1.12.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
-	github.com/go-ole/go-ole v1.2.4 // indirect
+	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -90,13 +90,13 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.21.4 // indirect
+	github.com/shirou/gopsutil/v3 v3.21.8 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/tklauser/go-sysconf v0.3.4 // indirect
-	github.com/tklauser/numcpus v0.2.1 // indirect
+	github.com/tklauser/go-sysconf v0.3.9 // indirect
+	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect

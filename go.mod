@@ -23,7 +23,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.9.2
+	github.com/tidwall/gjson v1.9.3
 	google.golang.org/api v0.58.0
 	google.golang.org/genproto v0.0.0-20211005153810-c76a74d43a8e
 	k8s.io/api v0.22.2
@@ -93,7 +93,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.21.4 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
-	github.com/tidwall/match v1.1.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.4 // indirect
 	github.com/tklauser/numcpus v0.2.1 // indirect

@@ -22,7 +22,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/sethvargo/go-password/password"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/test/utils"
 )
@@ -37,24 +36,16 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
-	kongAdminPwd := ""
 	extraControllerArgs := []string{}
 	if kongEnterpriseEnabled == "true" {
 		licenseJSON := os.Getenv("KONG_LICENSE_DATA")
 		if licenseJSON == "" {
 			exitOnErr(fmt.Errorf(("KONG_LICENSE_DATA must be set for Enterprise tests")))
 		}
-		password, err := password.Generate(10, 5, 0, false, false)
-		if err != nil {
-			kongAdminPwd = KongTestPassword
-		} else {
-			kongAdminPwd = password
-		}
-		extraControllerArgs = append(extraControllerArgs, fmt.Sprintf("--kong-admin-token=%s", kongAdminPwd))
+		extraControllerArgs = append(extraControllerArgs, fmt.Sprintf("--kong-admin-token=%s", kongTestPassword))
 		extraControllerArgs = append(extraControllerArgs, "--kong-workspace=notdefault")
-		fmt.Printf("INFO: using Kong admin password %s\n", kongAdminPwd)
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
-			WithProxyEnterpriseSuperAdminPassword(kongAdminPwd).
+			WithProxyEnterpriseSuperAdminPassword(kongTestPassword).
 			WithProxyAdminServiceTypeLoadBalancer()
 	}
 

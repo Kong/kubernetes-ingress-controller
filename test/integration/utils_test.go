@@ -148,8 +148,9 @@ const (
 	// problems setting up the testing environment and/or cluster.
 	ExitCodeEnvSetupFailed = 104
 
-	// Kong Admin test password
-	KongTestPassword = "password"
+	// kongTestPassword is used as a password only within the context of transient integration test runs
+	// and is left static to help developers debug failures in those testing environments.
+	kongTestPassword = "password"
 )
 
 // -----------------------------------------------------------------------------

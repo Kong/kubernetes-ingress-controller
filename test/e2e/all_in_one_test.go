@@ -74,7 +74,7 @@ var (
 // ensure that things are up and running.
 // -----------------------------------------------------------------------------
 
-const dblessPath = "../../deploy/single-v2/all-in-one-dbless.yaml"
+const dblessPath = "../../deploy/single/all-in-one-dbless.yaml"
 
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
@@ -100,10 +100,10 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	verifyIngress(ctx, t, env)
 }
 
-const entDBLESSPath = "../../deploy/single-v2/all-in-one-enterprise-dbless.yaml"
+const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml"
 
 func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
-	t.Log("configuring all-in-one-enterprise-dbless.yaml manifest test")
+	t.Log("configuring all-in-one-dbless-k4k8s-enterprise.yaml manifest test")
 	if enterpriseLicenseSecretYAML == "" {
 		t.Skipf("no license available to test enterprise: %s was not provided", enterpriseLicenseSecretYAMLVar)
 	}
@@ -139,7 +139,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	verifyEnterprise(ctx, t, env, adminPassword)
 }
 
-const postgresPath = "../../deploy/single-v2/all-in-one-postgres.yaml"
+const postgresPath = "../../deploy/single/all-in-one-postgres.yaml"
 
 func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
@@ -168,10 +168,10 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	verifyIngress(ctx, t, env)
 }
 
-const entPostgresPath = "../../deploy/single-v2/all-in-one-enterprise-postgres.yaml"
+const entPostgresPath = "../../deploy/single/all-in-one-postgres-enterprise.yaml"
 
 func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
-	t.Log("configuring all-in-one-enterprise-postgres.yaml manifest test")
+	t.Log("configuring all-in-one-postgres-enterprise.yaml manifest test")
 	if enterpriseLicenseSecretYAML == "" {
 		t.Skipf("no license available to test enterprise: %s was not provided", enterpriseLicenseSecretYAMLVar)
 	}

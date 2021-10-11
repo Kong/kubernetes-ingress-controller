@@ -177,7 +177,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 test.all: test test.integration
 
 .PHONY: test.integration
-test.integration: test.integration.dbless test.integration.postgres
+test.integration: test.integration.enterprise.postgres  test.integration.dbless test.integration.postgres
 
 .PHONY: test
 test:
@@ -209,6 +209,18 @@ test.integration.postgres:
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.postgres.out \
+		./test/integration
+
+# TODO: ditto above https://github.com/Kong/kubernetes-ingress-controller/issues/1324
+.PHONY: test.integration.enterprise.postgres
+test.integration.enterprise.postgres:
+	@./scripts/check-container-environment.sh
+	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" go test -v \
+		-timeout 15m \
+		-parallel $(NCPU) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.enterprisepostgres.out \
 		./test/integration
 
 .PHONY: test.integration.legacy

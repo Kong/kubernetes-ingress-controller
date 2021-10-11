@@ -36,9 +36,23 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder := kong.NewBuilder()
+	extraControllerArgs := []string{}
+	if kongEnterpriseEnabled == "true" {
+		licenseJSON := os.Getenv("KONG_LICENSE_DATA")
+		if licenseJSON == "" {
+			exitOnErr(fmt.Errorf(("KONG_LICENSE_DATA must be set for Enterprise tests")))
+		}
+		extraControllerArgs = append(extraControllerArgs, fmt.Sprintf("--kong-admin-token=%s", kongTestPassword))
+		extraControllerArgs = append(extraControllerArgs, "--kong-workspace=notdefault")
+		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
+			WithProxyEnterpriseSuperAdminPassword(kongTestPassword).
+			WithProxyAdminServiceTypeLoadBalancer()
+	}
+
 	if dbmode == "postgres" {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
+
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
@@ -124,7 +138,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 		fmt.Println("INFO: starting the controller manager")
-		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(),
+		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", ingressClass),
 			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
 			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
@@ -134,7 +148,9 @@ func TestMain(m *testing.M) {
 			"--dump-config",
 			"--log-level=trace",
 			"--debug-log-reduce-redundancy",
-		))
+		}
+		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
+		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))
 	}
 
 	fmt.Println("INFO: running final testing environment checks")

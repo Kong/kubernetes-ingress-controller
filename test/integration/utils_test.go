@@ -114,6 +114,9 @@ var (
 	// to persist after the test for inspection. This has a nil effect when an existing cluster
 	// is provided, as cleanup is not performed for existing clusters.
 	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
+
+	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true"
+	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
 )
 
 // -----------------------------------------------------------------------------
@@ -144,6 +147,10 @@ const (
 	// ExitCodeEnvSetupFailed is a generic exit code that can be used as a fallback for general
 	// problems setting up the testing environment and/or cluster.
 	ExitCodeEnvSetupFailed = 104
+
+	// kongTestPassword is used as a password only within the context of transient integration test runs
+	// and is left static to help developers debug failures in those testing environments.
+	kongTestPassword = "password"
 )
 
 // -----------------------------------------------------------------------------

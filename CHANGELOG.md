@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.0.1](#201---20211011)
  - [2.0.0](#200---20211007)
  - [1.3.3](#133---20211001)
  - [1.3.2](#132---20210812)
@@ -31,6 +32,18 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.0.1] - 2021/10/11
+#### Added
+
+- The ingress controller version now gets logged on startup.
+  [#1911](https://github.com/Kong/kubernetes-ingress-controller/pull/1911)
+
+#### Fixed
+
+- Fixed an issue reading workspace information with RBAC permissions that
+  only allow access to the specified workspace.
+  [#1900](https://github.com/Kong/kubernetes-ingress-controller/issues/1900)
 
 ## [2.0.0] - 2021/10/07
 
@@ -1253,6 +1266,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.2...v2.0.0
 [1.3.3]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.2...1.3.3
 [1.3.2]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2

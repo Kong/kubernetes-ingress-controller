@@ -34,6 +34,10 @@
  - [0.0.4 and prior](#004-and-prior)
 
 ## [2.0.1] - 2021/10/11
+#### Added
+
+- The ingress controller version now gets logged on startup.
+  [#1911](https://github.com/Kong/kubernetes-ingress-controller/pull/1911)
 
 #### Fixed
 

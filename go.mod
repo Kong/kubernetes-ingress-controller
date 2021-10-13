@@ -51,7 +51,7 @@ require (
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/kong/deck v1.7.0
 	github.com/kong/go-kong v0.22.0
-	github.com/kong/kubernetes-testing-framework v0.8.1
+	github.com/kong/kubernetes-testing-framework v0.8.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect

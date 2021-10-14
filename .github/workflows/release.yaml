@@ -151,6 +151,19 @@ jobs:
           echo "" >> $GITHUB_ENV
           echo 'type=semver,pattern={{major}}.{{minor}}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
+      - name: Add Red Hat standard tags
+        run: |
+          echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=ref,event=branch,suffix=-redhat' >> $GITHUB_ENV
+          echo 'type=semver,pattern={{version}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Add Red Hat major.minor tag
+        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        run: |
+          echo 'REDHAT_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo 'type=semver,pattern={{major}}.{{minor}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
@@ -171,6 +184,14 @@ jobs:
         with:
           images: kong/kubernetes-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
+      - name: Docker meta (redhat)
+        id: meta_redhat
+        uses: docker/metadata-action@v3.3.0
+        with:
+          images: kong/kubernetes-ingress-controller
+          flavor: |
+            latest=false
+          tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
         env:
           TAG: ${{ steps.meta.outputs.version }}
@@ -194,4 +215,16 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
+          target: distroless
+      - name: Build and push Red Hat
+        id: docker_build_redhat
+        env:
+          TAG: ${{ steps.meta_redhat.outputs.version }}
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta_redhat.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: redhat
 

@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.7.0
 	github.com/kong/go-kong v0.22.0
-	github.com/kong/kubernetes-testing-framework v0.8.1
+	github.com/kong/kubernetes-testing-framework v0.8.3
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.43
 	github.com/mitchellh/mapstructure v1.4.2
@@ -107,7 +107,7 @@ require (
 	go.uber.org/zap v1.19.0 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/net v0.0.0-20211008194852-3b03d305991f // indirect
-	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
+	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect

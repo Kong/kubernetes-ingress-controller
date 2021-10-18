@@ -219,12 +219,14 @@ jobs:
       - name: Build and push Red Hat
         id: docker_build_redhat
         env:
-          TAG: ${{ steps.meta_redhat.outputs.version }}
+          TAG: ${{ steps.meta.outputs.version }}
         uses: docker/build-push-action@v2
         with:
           push: true
           file: Dockerfile
           tags: ${{ steps.meta_redhat.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
+          build-args: |
+            TAG=${{ env.TAG }}
           target: redhat
 

@@ -72,9 +72,7 @@ We ❤️  pull requests, and we’re continually working hard to make it as eas
 
 ## Documentation
 
-All documentation around Kong Ingress Controller is present in this
-repository inside the [docs][docs] directory.
-Pull Requests are welcome for additions and corrections.
+All documentation around Kong Ingress Controller is present in the [kong/docs.konghq.com](https://github.com/kong/docs.konghq.com) repository. Pull Requests are welcome for additions and corrections.
 
 ## Guides and Tutorials
 

@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
 )
 
 type IngressAPI int

@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/cmd/rootcmd"
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"

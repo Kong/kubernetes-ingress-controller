@@ -6,10 +6,10 @@ import (
 
 	"github.com/bombsimon/logrusr"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/internal/diagnostics"
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 const (

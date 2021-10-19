@@ -28,10 +28,10 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
-	testutils "github.com/kong/kubernetes-ingress-controller/test/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/utils"
 )
 
 var (

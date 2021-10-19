@@ -109,13 +109,8 @@ on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
 ### Community meetings
 
-You can join monthly meetings hosted by the maintainers of the project
-to ask questions, provide feedback or just come and say hello.
-The meeting takes place on every second Tuesday of the month
-at 10 am Pacific time.
-Please submit your contact details on the
-[online meetups](https://konghq.com/online-meetups/) page to receive
-meeting invite and Zoom links to join the meeting.
+You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback or just to listen and hang out.
+See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and receive meeting invites and [Zoom](https://zoom.us) links.
 
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/

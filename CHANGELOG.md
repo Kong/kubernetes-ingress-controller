@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.0.2](#203---tbd)
  - [2.0.2](#202---20211014)
  - [2.0.1](#201---20211011)
  - [2.0.0](#200---20211007)
@@ -33,6 +34,14 @@
  - [0.1.0](#010---20180817)
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.0.3] - TBD
+
+#### Fixed
+
+- Debug logging for resource status updates have been fixed to ensure that
+  debug output isn't silently lost and to fix some formatting issues.
+  [#1930](https://github.com/Kong/kubernetes-ingress-controller/pull/1930)
 
 ## [2.0.2] - 2021/10/14
 
@@ -1273,6 +1282,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.2...v2.0.0

@@ -12,7 +12,6 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
-	"github.com/prometheus/common/log"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,14 +107,13 @@ func UpdateStatuses(
 
 	for _, svc := range targetContent.Services {
 		for _, plugin := range svc.Plugins {
-			log.V(util.DebugLevel).Info("\n service host %s name %s plugin enablement %v\n", *svc.Service.Host, *svc.Service.Name, *svc.Plugins[0].Enabled)
 			if *plugin.Enabled {
 				if config, ok := plugin.Config["add"]; ok {
 					for _, header := range config.(map[string]interface{})["headers"].([]interface{}) {
 						if strings.HasPrefix(header.(string), "Knative-Serving-") {
-							log.Info("knative service updated. update knative CR condition and status...")
+							log.V(util.DebugLevel).Info("knative service updated. update knative CR condition and status...")
 							if err := UpdateKnativeIngress(ctx, log, svc, kubeConfig, ips, hostname); err != nil {
-								return fmt.Errorf("failed to update knative ingress err %w", err)
+								return fmt.Errorf("failed to update knative ingress: %w", err)
 							}
 						}
 					}
@@ -126,11 +124,11 @@ func UpdateStatuses(
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
 			if err := UpdateTCPIngress(ctx, log, svc, kiccli, ips); err != nil {
-				return fmt.Errorf("failed to update tcp ingress. err %w", err)
+				return fmt.Errorf("failed to update tcp ingress: %w", err)
 			}
 		case "udp":
 			if err := UpdateUDPIngress(ctx, log, svc, kiccli, ips); err != nil {
-				return fmt.Errorf("failed to update udp ingress. err %w", err)
+				return fmt.Errorf("failed to update udp ingress: %w", err)
 			}
 
 		case "http":
@@ -139,15 +137,15 @@ func UpdateStatuses(
 			// TODO: this can go away once we drop support for Kubernetes older than v1.19
 			if kubernetesVersion.Major >= uint64(1) && kubernetesVersion.Minor > uint64(18) {
 				if err := UpdateIngress(ctx, log, svc, cli, ips); err != nil {
-					return fmt.Errorf("failed to update ingressv1. err %w", err)
+					return fmt.Errorf("failed to update ingressv1: %w", err)
 				}
 			} else {
 				if err := UpdateIngressLegacy(ctx, log, svc, cli, ips); err != nil {
-					return fmt.Errorf("failed to update ingressv1. err %w", err)
+					return fmt.Errorf("failed to update ingressv1: %w", err)
 				}
 			}
 		default:
-			log.Info("protocol " + proto + " is not supported")
+			log.V(util.DebugLevel).Info("protocol " + proto + " has no status update handler")
 		}
 	}
 
@@ -168,7 +166,7 @@ func toKnativeLBStatus(coreLBStatus []apiv1.LoadBalancerIngress) []knative.LoadB
 // UpdateIngress networking v1 ingress status
 func UpdateIngress(
 	ctx context.Context,
-	logger logr.Logger,
+	log logr.Logger,
 	svc file.FService,
 	cli *clientset.Clientset,
 	ips []string,
@@ -177,7 +175,7 @@ func UpdateIngress(
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Debugf("updating status for v1.Ingress route name %s  namespace %s", name, namespace)
+		log.V(util.DebugLevel).Info("updating status for v1/Ingress", "namespace", namespace, "name", name)
 
 		ingCli := cli.NetworkingV1().Ingresses(namespace)
 		retry := 0
@@ -185,11 +183,11 @@ func UpdateIngress(
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
 				if errors.IsNotFound(err) {
-					log.Debugf("failed to retrieve Ingress V1: the object (%s/%s) is gone, status update stopped.", namespace, name)
+					log.V(util.DebugLevel).Info("failed to retrieve v1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
 
-				log.Errorf("failed to fetch Ingress %v/%v due to error: %v. retrying...", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to fetch v1/Ingress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
 				retry++
 				time.Sleep(statusUpdateWaitTick)
 				continue
@@ -201,7 +199,7 @@ func UpdateIngress(
 
 			status = SliceToStatus(ips)
 			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update ingress v1 skipped")
+				log.V(util.DebugLevel).Info("no change in status, skipping updates for v1/Ingress", "namespace", namespace, "name", name)
 				return nil
 			}
 
@@ -212,20 +210,21 @@ func UpdateIngress(
 				break
 			}
 			if errors.IsNotFound(err) {
-				log.Debugf("failed to update Ingress V1 status because the object (%s/%s) is gone, status update stopped.", namespace, name)
+				log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
 			if errors.IsConflict(err) {
-				log.Debugf("failed to update Ingress V1 status because the object (%s/%s) changed: %v retrying...", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
-				log.Errorf("failed to update Ingress V1 status. %v. retrying...", err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
 			}
 			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
+
+		log.V(util.DebugLevel).Info("updated status for v1/Ingress", "namespace", namespace, "name", name)
 	}
 
-	log.Debugf("successfully updated networkingv1 Ingress status")
 	return nil
 }
 
@@ -233,7 +232,7 @@ func UpdateIngress(
 // TODO: this can be removed once we no longer support old kubernetes < v1.19
 func UpdateIngressLegacy(
 	ctx context.Context,
-	logger logr.Logger,
+	log logr.Logger,
 	svc file.FService,
 	cli *clientset.Clientset,
 	ips []string,
@@ -242,7 +241,7 @@ func UpdateIngressLegacy(
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Debugf("updating status for v1beta1.Ingress route name %s  namespace %s", name, namespace)
+		log.V(util.DebugLevel).Info("updating status for v1beta1/Ingress", "namespace", namespace, "name", name)
 
 		ingCli := cli.NetworkingV1beta1().Ingresses(namespace)
 		retry := 0
@@ -250,11 +249,11 @@ func UpdateIngressLegacy(
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
 				if errors.IsNotFound(err) {
-					log.Debugf("failed to retrieve Legacy Ingress: the object (%s/%s) is gone, status update stopped.", namespace, name)
+					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
 
-				log.Errorf("failed to fetch Ingress %v/%v due to error: %v. retrying...", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to fetch v1beta1/Ingress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
 				retry++
 				time.Sleep(statusUpdateWaitTick)
 				continue
@@ -266,7 +265,7 @@ func UpdateIngressLegacy(
 
 			status = SliceToStatus(ips)
 			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update ingress v1beta1 skipped")
+				log.V(util.DebugLevel).Info("no change in status, skipping updates for v1beta1/Ingress", "namespace", namespace, "name", name)
 				return nil
 			}
 
@@ -277,42 +276,44 @@ func UpdateIngressLegacy(
 				break
 			}
 			if errors.IsNotFound(err) {
-				log.Debugf("failed to update Ingress V1 status because the object (%s/%s) is gone, status update stopped.", namespace, name)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
 			if errors.IsConflict(err) {
-				log.Debugf("failed to update Ingress V1Beta1 status because the object (%s/%s) changed: %v retrying...", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
-				log.Errorf("failed to update Ingress V1Beta1 status. %v. retrying...", err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
 			}
 			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
+
+		log.V(util.DebugLevel).Info("updated status for v1beta1/Ingress", "namespace", namespace, "name", name)
 	}
 
-	log.Debugf("successfully updated networkingv1beta1 Ingress status")
 	return nil
 }
 
 // UpdateUDPIngress update udp ingress status
-func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
+func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
 	ips []string) error {
 	for _, route := range svc.Routes {
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Debugf("updating UDP ingress route name %s namespace %s", name, namespace)
+		log.V(util.DebugLevel).Info("updating status for v1beta1/UDPIngress", "namespace", namespace, "name", name)
+
 		ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
 		retry := 0
 		for retry < statusUpdateRetry {
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
 				if errors.IsNotFound(err) {
-					log.Debugf("failed to retrieve UDPIngress: the object (%s/%s) is gone, status update stopped.", namespace, name)
+					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/UDPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
 
-				log.Errorf("failed to fetch UDP Ingress %v/%v due to error: %v", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to fetch v1beta1/UDPIngress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
 				time.Sleep(statusUpdateWaitTick)
 				retry++
 				continue
@@ -324,7 +325,7 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 
 			status = SliceToStatus(ips)
 			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update udp ingress skipped")
+				log.V(util.DebugLevel).Info("no change in status, skipping updates for v1beta1/UDPIngress", "namespace", namespace, "name", name)
 				return nil
 			}
 
@@ -335,30 +336,32 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				break
 			}
 			if errors.IsNotFound(err) {
-				log.Debugf("failed to update UDPIngress status because the object (%s/%s) is gone, status update stopped.", namespace, name)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
 			if errors.IsConflict(err) {
-				log.Debugf("failed to update UDPIngress status because the object (%s/%s) changed: %v retrying...", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
-				log.Errorf("failed to update UDPIngress status. %v. retrying...", err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
 			}
 			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
+
+		log.V(util.DebugLevel).Info("updated status for v1beta1/UDPIngress", "namespace", namespace, "name", name)
 	}
-	log.Debugf("successfully updated UDPIngress status")
+
 	return nil
 }
 
 // UpdateTCPIngress TCP ingress status
-func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
+func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
 	ips []string) error {
 	for _, route := range svc.Routes {
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Debugf("Updating TCP ingress route name %s namespace %s", name, namespace)
+		log.V(util.DebugLevel).Info("updating status for v1beta1/TCPIngress", "namespace", namespace, "name", name)
 
 		ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
 
@@ -367,11 +370,11 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
 				if errors.IsNotFound(err) {
-					log.Debugf("failed to retrieve TCPIngress: the object (%s/%s) is gone, status update stopped.", namespace, name)
+					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/TCPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
 
-				log.Errorf("failed to fetch TCPIngress %v/%v due to error: %v", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to fetch v1beta1/TCPIngress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
 				time.Sleep(statusUpdateWaitTick)
 				retry++
 				continue
@@ -380,7 +383,7 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 			curIPs := curIng.Status.LoadBalancer.Ingress
 			status := SliceToStatus(ips)
 			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update tcp ingress skipped")
+				log.V(util.DebugLevel).Info("no change in status, skipping updates for v1beta1/TCPIngress", "namespace", namespace, "name", name)
 				return nil
 			}
 
@@ -390,33 +393,34 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				break
 			}
 			if errors.IsNotFound(err) {
-				log.Debugf("failed to update TCPIngress status because the object (%s/%s) is gone, status update stopped.", namespace, name)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
 			if errors.IsConflict(err) {
-				log.Debugf("failed to update TCPIngress status because the object (%s/%s) changed: %v retrying...", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
-				log.Errorf("failed to update TCPIngress status. %v. retrying...", err)
+				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
 			}
 			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
+
+		log.V(util.DebugLevel).Info("updated status for v1beta1/TCPIngress", "namespace", namespace, "name", name)
 	}
 
-	log.Debugf("Successfully updated TCPIngress status")
 	return nil
 }
 
 var ingressCondSet = knativeApis.NewLivingConditionSet()
 
 // UpdateKnativeIngress update knative ingress status
-func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FService, kubeCfg *rest.Config,
+func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FService, kubeCfg *rest.Config,
 	ips []string, hostname string) error {
 	for _, route := range svc.Routes {
 		routeInf := strings.Split(*((*route).Name), ".")
 		namespace := routeInf[0]
 		name := routeInf[1]
-		log.Debugf("Updating Knative route name %s namespace %s", name, namespace)
+		log.V(util.DebugLevel).Info("updating status for knative/Ingress", "namespace", namespace, "name", name)
 
 		knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
 		if err != nil {
@@ -429,11 +433,11 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 			curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
 				if errors.IsNotFound(err) {
-					log.Debugf("failed to retrieve Knative Ingress: the object (%s/%s) is gone, status update stopped.", namespace, name)
+					log.V(util.DebugLevel).Info("failed to retrieve knative/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
 
-				log.Errorf("failed to fetch Knative Ingress %v/%v due to error: %v", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to fetch knative/Ingress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
 				time.Sleep(statusUpdateWaitTick)
 				retry++
 				continue
@@ -446,7 +450,7 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 			status = SliceToStatus(ips)
 			if ingressSliceEqual(status, curIPs) &&
 				curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-				log.Debugf("no change in status, update knative ingress skipped")
+				log.V(util.DebugLevel).Info("no change in status, skipping updates for knative/Ingress", "namespace", namespace, "name", name)
 				return nil
 			}
 
@@ -467,20 +471,21 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 				break
 			}
 			if errors.IsNotFound(err) {
-				log.Debugf("failed to update Knative Ingress status because the object (%s/%s) is gone, status update stopped.", namespace, name)
+				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
 			if errors.IsConflict(err) {
-				log.Debugf("failed to update Knative Ingress status because the object (%s/%s) changed: %v. retrying...", namespace, name, err)
+				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
-				log.Errorf("failed to update Knative Ingress status. %v. retrying...", err)
+				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
 			}
 			time.Sleep(statusUpdateWaitTick)
 			retry++
 		}
+
+		log.V(util.DebugLevel).Info("updated status for knative/Ingress", "namespace", namespace, "name", name)
 	}
 
-	log.Debugf("successfully updated knative ingress status")
 	return nil
 }
 
@@ -500,7 +505,6 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		log.Infof("running address err %v", err)
 		return nil, "", err
 	}
 

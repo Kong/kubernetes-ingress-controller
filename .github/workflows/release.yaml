@@ -7,6 +7,7 @@ on:
       - 'main'
     tags:
       - 'v2.*'
+  workflow_dispatch: {}
 
 jobs:
 

@@ -42,6 +42,10 @@
 - Debug logging for resource status updates have been fixed to ensure that
   debug output isn't silently lost and to fix some formatting issues.
   [#1930](https://github.com/Kong/kubernetes-ingress-controller/pull/1930)
+- Fixed a bug where Ingress resources would not be able to receive status
+  updates containing relevant addresses in environments where LoadBalancer
+  type services provision slowly.
+  [#1931](https://github.com/Kong/kubernetes-ingress-controller/pull/1931)
 
 ## [2.0.2] - 2021/10/14
 

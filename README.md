@@ -14,21 +14,6 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
 
-## ✨ KIC 2.0 is in public beta! ✨
-
-We're happy to announce that Kong Ingress Controller 2.0 is in public beta.
-
-This new release comes with a major internal rearchitecture, and the following added features:
-- Support for UDP ingress resources and the new `UDPIngress` CRD,
-- Ingress controller runtime metrics compatible with Prometheus, for easier monitoring and alerting.
-
-For a quick start, just deploy KIC 2.0 beta to your cluster:
-```console
-$ kubectl apply -f "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/deploy/single-v2/all-in-one-dbless.yaml"
-```
-
-See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller) for Kong Ingress Controller 2.0 beta.
-
 ## Features
 
 - **Ingress routing**

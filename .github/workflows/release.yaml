@@ -7,7 +7,11 @@ on:
       - 'main'
     tags:
       - 'v2.*'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      noimages:
+        description: 'disable image builds and only run the tests'
+        required: false
 
 jobs:
 
@@ -93,6 +97,7 @@ jobs:
   # ----------------------------------------------------------------------------
 
   build-push-images:
+    if: github.event.inputs.noimages != "true"
     needs: [test-current-kubernetes, test-previous-kubernetes]
     environment: 'Docker Push'
     runs-on: ubuntu-latest

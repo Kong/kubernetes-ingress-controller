@@ -97,7 +97,7 @@ jobs:
   # ----------------------------------------------------------------------------
 
   build-push-images:
-    if: ${{ github.event.inputs.noimages != "true" }}
+    if: ${{ github.event.inputs.noimages != 'true' }}
     needs: [test-current-kubernetes, test-previous-kubernetes]
     environment: 'Docker Push'
     runs-on: ubuntu-latest

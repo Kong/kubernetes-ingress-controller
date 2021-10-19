@@ -6,9 +6,9 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
 type ingressRules struct {

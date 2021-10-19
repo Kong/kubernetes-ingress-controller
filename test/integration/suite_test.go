@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
-	testutils "github.com/kong/kubernetes-ingress-controller/test/utils"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/utils"
 )
 
 // -----------------------------------------------------------------------------

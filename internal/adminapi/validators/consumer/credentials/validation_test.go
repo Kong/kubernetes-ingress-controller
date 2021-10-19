@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/adminapi/validators"
-	"github.com/kong/kubernetes-ingress-controller/internal/adminapi/validators/consumer/credentials"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators/consumer/credentials"
 )
 
 func TestUniqueConstraintsValidation(t *testing.T) {

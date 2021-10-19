@@ -35,6 +35,14 @@
  - [0.0.5](#005---20180602)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.0.4] - TBD
+
+#### Added
+
+- Go Module V2 has been published so that APIs and Clients
+  can be imported from external Golang projects.
+  [#1936](https://github.com/Kong/kubernetes-ingress-controller/pull/1936)
+
 ## [2.0.3] - 2021/10/19
 
 #### Fixed

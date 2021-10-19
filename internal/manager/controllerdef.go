@@ -10,10 +10,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/internal/proxy"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
+	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // -----------------------------------------------------------------------------

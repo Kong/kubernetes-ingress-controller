@@ -41,10 +41,25 @@ func PullConfigUpdate(
 	publishService string,
 	publishAddresses []string,
 ) {
-	ips, hostname, err := RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
-	if err != nil {
-		log.Error(err, "failed to determine kong proxy external ips/hostnames.")
-		return
+	var hostname string
+	var ips []string
+	for {
+		var err error
+		ips, hostname, err = RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
+		if err != nil {
+			// in the case that a LoadBalancer type service is being used for the Kong Proxy
+			// we must wait until the IP address if fully provisioned before we will be able
+			// to use the reference IPs/Hosts from that LoadBalancer to update resource status addresses.
+			if err.Error() == proxyLBNotReadyMessage {
+				log.V(util.InfoLevel).Info("LoadBalancer type Service for the Kong proxy is not yet provisioned, waiting...", "service", publishService)
+				time.Sleep(time.Second)
+				continue
+			}
+
+			log.Error(err, "failed to determine kong proxy external ips/hostnames.")
+			return
+		}
+		break
 	}
 
 	cli, err := clientset.NewForConfig(kubeConfig)
@@ -489,6 +504,8 @@ func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FServic
 	return nil
 }
 
+const proxyLBNotReadyMessage = "LoadBalancer service for proxy is not yet ready"
+
 // RunningAddresses retrieve cluster loader balance IP or hostaddress using networking
 func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string,
 	publishAddresses []string) ([]string, string, error) {
@@ -514,6 +531,10 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 	//nolint:exhaustive
 	switch svc.Spec.Type {
 	case apiv1.ServiceTypeLoadBalancer:
+		if len(svc.Status.LoadBalancer.Ingress) < 1 {
+			return addrs, hostname, fmt.Errorf(proxyLBNotReadyMessage)
+		}
+
 		for _, ip := range svc.Status.LoadBalancer.Ingress {
 			if ip.IP == "" {
 				addrs = append(addrs, ip.Hostname)

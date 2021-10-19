@@ -3,8 +3,6 @@ name: release
 
 on:
   push:
-    branches:
-      - 'main'
     tags:
       - 'v2.*'
   workflow_dispatch:
@@ -20,7 +18,6 @@ jobs:
   # ----------------------------------------------------------------------------
 
   test-current-kubernetes:
-    if: ${{ contains(github.ref, 'tags') }} # run only for tags
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -52,7 +49,6 @@ jobs:
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
 
   test-previous-kubernetes:
-    if: ${{ contains(github.ref, 'tags') }} # run only for tags
     environment: gcloud
     runs-on: ubuntu-latest
     strategy:

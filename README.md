@@ -14,21 +14,6 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
 
-## ✨ KIC 2.0 is in public beta! ✨
-
-We're happy to announce that Kong Ingress Controller 2.0 is in public beta.
-
-This new release comes with a major internal rearchitecture, and the following added features:
-- Support for UDP ingress resources and the new `UDPIngress` CRD,
-- Ingress controller runtime metrics compatible with Prometheus, for easier monitoring and alerting.
-
-For a quick start, just deploy KIC 2.0 beta to your cluster:
-```console
-$ kubectl apply -f "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/deploy/single-v2/all-in-one-dbless.yaml"
-```
-
-See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller) for Kong Ingress Controller 2.0 beta.
-
 ## Features
 
 - **Ingress routing**
@@ -87,9 +72,7 @@ We ❤️  pull requests, and we’re continually working hard to make it as eas
 
 ## Documentation
 
-All documentation around Kong Ingress Controller is present in this
-repository inside the [docs][docs] directory.
-Pull Requests are welcome for additions and corrections.
+All documentation around Kong Ingress Controller is present in the [kong/docs.konghq.com](https://github.com/kong/docs.konghq.com) repository. Pull Requests are welcome for additions and corrections.
 
 ## Guides and Tutorials
 
@@ -126,13 +109,8 @@ on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
 ### Community meetings
 
-You can join monthly meetings hosted by the maintainers of the project
-to ask questions, provide feedback or just come and say hello.
-The meeting takes place on every second Tuesday of the month
-at 10 am Pacific time.
-Please submit your contact details on the
-[online meetups](https://konghq.com/online-meetups/) page to receive
-meeting invite and Zoom links to join the meeting.
+You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback or just to listen and hang out.
+See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and receive meeting invites and [Zoom](https://zoom.us) links.
 
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/

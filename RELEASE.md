@@ -27,8 +27,8 @@ For this step we're going to start with the `main` branch to create our release 
 - [ ] ensure that you have up to date copy of `main`: `git fetch --all`
 - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
 - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
-- [ ] ensure base manifest versions use the new version and update manifest files: `./hack/build-single-manifests.sh`
 - [ ] update the `TAG` variable in the `Makefile` to the new version release and commit the change
+- [ ] ensure base manifest versions use the new version and update manifest files: `make manifests`
 - [ ] ensure that the Kubernetes versions provisioned in the cloud (GKE, etc.) as part of the release CI pipeline are up to date
   - [ ] remove any versions that are no longer supported by the cloud provider, or the release pipeline will fail
 - [ ] push the branch up to the remote: `git push --set-upstream origin release/x.y.z`
@@ -37,7 +37,7 @@ For this step we're going to start with the `main` branch to create our release 
 
 **For all releases**
 
-- [ ] Open a PR from your branch to `main` (patch)
+- [ ] Open a PR from your branch to `main`
 - [ ] Once the PR is merged, tag your release: `git fetch --all && git tag origin/main 1.3.1 && git push origin --tags`
 - [ ] Wait for CI to build images and push them to Docker Hub
 

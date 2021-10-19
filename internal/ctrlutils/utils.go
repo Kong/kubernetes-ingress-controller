@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's

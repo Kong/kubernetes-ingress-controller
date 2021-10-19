@@ -15,9 +15,10 @@ jobs:
           - 'v1.21.2'
           - 'v1.22.0'
         istio-version:
-          - 'v1.11.3'
+          - 'v1.11.4'
+          - 'v1.10.5'
+          - 'v1.9.9'
     steps:
-
     - name: setup golang
       uses: actions/setup-go@v2
       with:

@@ -7,6 +7,11 @@ on:
       - 'main'
     tags:
       - 'v2.*'
+  workflow_dispatch:
+    inputs:
+      noimages:
+        description: 'disable image builds and only run the tests'
+        required: false
 
 jobs:
 
@@ -87,46 +92,12 @@ jobs:
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
-  test-e2e:
-    if: ${{ contains(github.ref, 'tags') }} # run only for tags
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        kubernetes-version:
-          - 'v1.21.2'
-          - 'v1.22.0'
-        istio-version:
-          - 'v1.11.3'
-    steps:
-      - name: setup golang
-        uses: actions/setup-go@v2
-        with:
-          go-version: '^1.17'
-
-      - name: cache go modules
-        uses: actions/cache@v2.1.6
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
-      - name: checkout repository
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: test e2e
-        run: make test.e2e
-        env:
-          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes_version }}
-          ISTIO_VERSION: ${{ matrix.istio_version }}
-
   # ----------------------------------------------------------------------------
   # Release Image Builds
   # ----------------------------------------------------------------------------
 
   build-push-images:
+    if: github.event.inputs.noimages != "true"
     needs: [test-current-kubernetes, test-previous-kubernetes]
     environment: 'Docker Push'
     runs-on: ubuntu-latest

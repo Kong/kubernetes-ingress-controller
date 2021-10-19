@@ -1,0 +1,46 @@
+name: e2e tests
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  e2e-tests:
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kubernetes-version:
+          - 'v1.21.2'
+          - 'v1.22.0'
+        istio-version:
+          - 'v1.11.3'
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.17'
+
+    - name: cache go modules
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: run e2e tests
+      run: make test.e2e
+      env:
+        KONG_ENTERPRISE_LICENSE_SECRET: ${{ secrets.KONG_ENTERPRISE_LICENSE_SECRET }}
+        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes_version }}
+        ISTIO_VERSION: ${{ matrix.istio_version }}
+        NCPU: 2 # it was found that github actions (specifically) did not seem to perform well when spawning
+                # multiple kind clusters within a single job so this is hardcoded to 2 to ensure a limit of 2 clusters at any one point.

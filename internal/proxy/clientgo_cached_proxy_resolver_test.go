@@ -17,9 +17,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func Test_FetchCustomEntities(t *testing.T) {

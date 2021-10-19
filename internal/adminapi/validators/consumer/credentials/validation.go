@@ -2,7 +2,7 @@
 package credentials
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/internal/adminapi/validators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators"
 )
 
 // -----------------------------------------------------------------------------

@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 var decoder = codecs.UniversalDeserializer()

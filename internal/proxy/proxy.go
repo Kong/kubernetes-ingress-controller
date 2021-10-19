@@ -7,10 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------

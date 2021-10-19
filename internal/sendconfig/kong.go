@@ -5,7 +5,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // Kong Represents a Kong client and connection information

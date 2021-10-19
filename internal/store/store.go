@@ -41,9 +41,9 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 const (

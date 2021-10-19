@@ -72,9 +72,9 @@ clean:
 .PHONY: build
 build: generate fmt vet lint
 	go build -a -o bin/manager -ldflags "-s -w \
-		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Release=$(TAG) \
-		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/internal/manager.Repo=$(REPO_INFO)" internal/cmd/main.go
+		-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager.Release=$(TAG) \
+		-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager.Commit=$(COMMIT) \
+		-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager.Repo=$(REPO_INFO)" internal/cmd/main.go
 
 .PHONY: imports
 imports:
@@ -145,13 +145,13 @@ generate.controllers: controller-gen
 generate.clientsets: client-gen
 	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
-		--input-base github.com/kong/kubernetes-ingress-controller/pkg/apis/  \
+		--input-base github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/  \
 		--input configuration/v1,configuration/v1beta1 \
 		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
-		--output-package github.com/kong/kubernetes-ingress-controller/pkg/
+		--output-package github.com/kong/kubernetes-ingress-controller/v2/pkg/
 	@rm -rf pkg/clientset/
-	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/pkg/clientset pkg/
+	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset pkg/
 	@rm -rf client-gen-tmp/
 
 # ------------------------------------------------------------------------------

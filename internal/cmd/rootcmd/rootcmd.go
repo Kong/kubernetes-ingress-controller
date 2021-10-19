@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
 
 var cfg manager.Config

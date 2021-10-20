@@ -30,9 +30,9 @@ require (
 	k8s.io/apiextensions-apiserver v0.22.2
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.2
-	knative.dev/networking v0.0.0-20210803181815-acdfd41c575c
-	knative.dev/pkg v0.0.0-20210902173607-844a6bc45596
-	knative.dev/serving v0.25.1
+	knative.dev/networking v0.0.0-20210914225408-69ad45454096
+	knative.dev/pkg v0.0.0-20210919202233-5ae482141474
+	knative.dev/serving v0.26.0
 	sigs.k8s.io/controller-runtime v0.10.2
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -61,7 +61,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
-	github.com/google/go-containerregistry v0.5.2-0.20210709161016-b448abac9a70 // indirect
+	github.com/google/go-containerregistry v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.1 // indirect

@@ -18,6 +18,16 @@ We maintain some integration tests with 3rd party components which we need to ma
 
 An issue exists to automate the above actions: https://github.com/Kong/kubernetes-ingress-controller/issues/1886
 
+## Release Testing
+
+**For all releases**
+
+We currently provide a suite of tests with an extensive matrix of component versions (see `.github/workflows/release-test.yaml`).
+
+Prior to any release open the [workflow page](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release-test.yaml) and trigger a test run against `main`.
+
+**Wait for tests to pass before continuing with any release**, if any problems are found hold on the release until patches are provided and then run the tests again.
+
 ## Release Branch
 
 **For all releases**

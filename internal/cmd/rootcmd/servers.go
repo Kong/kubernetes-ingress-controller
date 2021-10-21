@@ -26,10 +26,14 @@ func StartAdmissionServer(ctx context.Context, c *manager.Config) error {
 	if err != nil {
 		return err
 	}
+
 	if c.AdmissionServer.ListenAddr == "off" {
 		log.Info("admission webhook server disabled")
 		return nil
 	}
+
+	logger := log.WithField("component", "admission-server")
+
 	kubeclient, err := c.GetKubeClient()
 	if err != nil {
 		return err
@@ -45,6 +49,7 @@ func StartAdmissionServer(ctx context.Context, c *manager.Config) error {
 			Logger:       log,
 			SecretGetter: &util.SecretGetterFromK8s{Reader: kubeclient},
 		},
+		Logger: logger,
 	})
 	if err != nil {
 		return err

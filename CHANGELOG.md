@@ -54,6 +54,9 @@
   updates containing relevant addresses in environments where LoadBalancer
   type services provision slowly.
   [#1931](https://github.com/Kong/kubernetes-ingress-controller/pull/1931)
+- Fixed a bug where the admission server's logger was missing, resulting in 
+  panics when the admission server tried logging. 
+  [#1954](https://github.com/Kong/kubernetes-ingress-controller/issues/1954)
 
 ## [2.0.2] - 2021/10/14
 

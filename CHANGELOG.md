@@ -43,6 +43,11 @@
   can be imported from external Golang projects.
   [#1936](https://github.com/Kong/kubernetes-ingress-controller/pull/1936)
 
+#### Fixed
+- Fixed a bug where the admission server's logger was missing, resulting in 
+  panics when the admission server tried logging. 
+  [#1954](https://github.com/Kong/kubernetes-ingress-controller/issues/1954)  
+
 ## [2.0.3] - 2021/10/19
 
 #### Fixed

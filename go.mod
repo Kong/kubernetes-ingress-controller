@@ -23,7 +23,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.9.4
+	github.com/tidwall/gjson v1.10.0
 	google.golang.org/api v0.58.0
 	google.golang.org/genproto v0.0.0-20211008145708-270636b82663
 	k8s.io/api v0.22.2

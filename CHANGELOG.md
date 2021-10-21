@@ -1,6 +1,7 @@
 # Table of Contents
 
- - [2.0.2](#203---20211019)
+ - [2.0.4](#204---TBD)
+ - [2.0.3](#203---20211019)
  - [2.0.2](#202---20211014)
  - [2.0.1](#201---20211011)
  - [2.0.0](#200---20211007)
@@ -44,9 +45,13 @@
   [#1936](https://github.com/Kong/kubernetes-ingress-controller/pull/1936)
 
 #### Fixed
-- Fixed a bug where the admission server's logger was missing, resulting in 
-  panics when the admission server tried logging. 
-  [#1954](https://github.com/Kong/kubernetes-ingress-controller/issues/1954)  
+
+- Fixed a bug where the admission server's logger was missing, resulting in
+  panics when the admission server tried logging.
+  [#1954](https://github.com/Kong/kubernetes-ingress-controller/issues/1954)
+- Fixed a bug where version reported for the controller manager was missing
+  due to incorrect linker flags in container builds.
+  [#1943](https://github.com/Kong/kubernetes-ingress-controller/issues/1943)
 
 ## [2.0.3] - 2021/10/19
 
@@ -1299,6 +1304,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.0.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0...v2.0.1

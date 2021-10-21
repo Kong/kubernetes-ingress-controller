@@ -110,6 +110,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
 	flagSet.DurationVar(&c.SyncPeriod, "sync-period", time.Hour*48, `Relist and confirm cloud resources this often`) // 48 hours derived from controller-runtime defaults
 
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientKey, "kong-admin-tls-client-key", "", "mTLS client key for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientCert, "kong-admin-tls-client-cert", "", "mTLS client certificate for authentication.")
+
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")

@@ -18,6 +18,8 @@ type HTTPClientOpts struct {
 	CACertPath    string
 	CACert        string
 	Headers       []string
+	TLSClientCert string
+	TLSClientKey  string
 }
 
 // MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
@@ -41,6 +43,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		return nil, fmt.Errorf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
 			"are set; please remove one or the other")
 	}
+
 	if opts.CACert != "" {
 		certPool := x509.NewCertPool()
 		ok := certPool.AppendCertsFromPEM([]byte(opts.CACert))
@@ -50,6 +53,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		}
 		tlsConfig.RootCAs = certPool
 	}
+
 	if opts.CACertPath != "" {
 		certPath := opts.CACertPath
 		certPool := x509.NewCertPool()
@@ -64,6 +68,16 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		}
 		tlsConfig.RootCAs = certPool
 	}
+
+	if opts.TLSClientCert != "" && opts.TLSClientKey != "" {
+		// Read the key pair to create certificate
+		cert, err := tls.LoadX509KeyPair(opts.TLSClientCert, opts.TLSClientKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load client certificate: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
 	defaultTransport.TLSClientConfig = tlsConfig.Clone()
 	c := http.DefaultClient
 	// BUG: this overwrites the DefaultClient instance!

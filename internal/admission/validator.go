@@ -16,6 +16,7 @@ import (
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer configurationv1.KongConsumer) (bool, string, error)
 	ValidatePlugin(ctx context.Context, plugin configurationv1.KongPlugin) (bool, string, error)
+	ValidateClusterPlugin(ctx context.Context, plugin configurationv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(secret corev1.Secret) (bool, string, error)
 }
 
@@ -91,6 +92,35 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 		return false, ErrTextPluginConfigViolatesSchema, err
 	}
 	return isValid, "", nil
+}
+
+// ValidateClusterPlugin transfers relevant fields from a KongClusterPlugin into a KongPlugin and then returns
+// the result of ValidatePlugin for the derived KongPlugin
+func (validator KongHTTPValidator) ValidateClusterPlugin(ctx context.Context,
+	k8sPlugin configurationv1.KongClusterPlugin) (bool, string, error) {
+	derived := configurationv1.KongPlugin{
+		TypeMeta:    k8sPlugin.TypeMeta,
+		ObjectMeta:  k8sPlugin.ObjectMeta,
+		ConsumerRef: k8sPlugin.ConsumerRef,
+		Disabled:    k8sPlugin.Disabled,
+		Config:      k8sPlugin.Config,
+		PluginName:  k8sPlugin.PluginName,
+		RunOn:       k8sPlugin.RunOn,
+		Protocols:   k8sPlugin.Protocols,
+	}
+	if k8sPlugin.ConfigFrom != nil {
+		ref := configurationv1.ConfigSource{
+			SecretValue: configurationv1.SecretValueFromSource{
+				Secret: k8sPlugin.ConfigFrom.SecretValue.Secret,
+				Key:    k8sPlugin.ConfigFrom.SecretValue.Key,
+			},
+		}
+		derived.ConfigFrom = &ref
+		derived.ObjectMeta.Namespace = k8sPlugin.ConfigFrom.SecretValue.Namespace
+	} else {
+		derived.ObjectMeta.Namespace = "default"
+	}
+	return validator.ValidatePlugin(ctx, derived)
 }
 
 var (

@@ -37,6 +37,11 @@ func (v KongFakeValidator) ValidatePlugin(_ context.Context,
 	return v.Result, v.Message, v.Error
 }
 
+func (v KongFakeValidator) ValidateClusterPlugin(_ context.Context,
+	k8sPlugin configuration.KongClusterPlugin) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
 func (v KongFakeValidator) ValidateCredential(
 	secret corev1.Secret) (bool, string, error) {
 	return v.Result, v.Message, v.Error

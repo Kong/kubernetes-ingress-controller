@@ -72,9 +72,9 @@ clean:
 .PHONY: build
 build: generate fmt vet lint
 	go build -a -o bin/manager -ldflags "-s -w \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager.Release=$(TAG) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager.Repo=$(REPO_INFO)" internal/cmd/main.go
+		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$(TAG) \
+		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$(COMMIT) \
+		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
 
 .PHONY: imports
 imports:

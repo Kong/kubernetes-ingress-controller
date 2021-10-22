@@ -10,11 +10,11 @@ package metadata
 
 var (
 	// Release returns the release version, generally a semver like v2.0.0.
-	Release = "UNKNOWN"
+	Release = "NOT_SET"
 
 	// Repo returns the git repository URL
-	Repo = "UNKNOWN"
+	Repo = "NOT_SET"
 
 	// Commit returns the SHA from the current branch HEAD
-	Commit = "UNKNOWN"
+	Commit = "NOT_SET"
 )

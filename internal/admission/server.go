@@ -161,6 +161,11 @@ var (
 		Version:  configuration.SchemeGroupVersion.Version,
 		Resource: "kongplugins",
 	}
+	clusterPluginGVResource = meta.GroupVersionResource{
+		Group:    configuration.SchemeGroupVersion.Group,
+		Version:  configuration.SchemeGroupVersion.Version,
+		Resource: "kongclusterplugins",
+	}
 	secretGVResource = meta.GroupVersionResource{
 		Group:    corev1.SchemeGroupVersion.Group,
 		Version:  corev1.SchemeGroupVersion.Version,
@@ -222,6 +227,19 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 		}
 
 		ok, message, err = a.Validator.ValidatePlugin(ctx, plugin)
+		if err != nil {
+			return nil, err
+		}
+	case clusterPluginGVResource:
+		plugin := configuration.KongClusterPlugin{}
+		deserializer := codecs.UniversalDeserializer()
+		_, _, err = deserializer.Decode(request.Object.Raw,
+			nil, &plugin)
+		if err != nil {
+			return nil, err
+		}
+
+		ok, message, err = a.Validator.ValidateClusterPlugin(ctx, plugin)
 		if err != nil {
 			return nil, err
 		}

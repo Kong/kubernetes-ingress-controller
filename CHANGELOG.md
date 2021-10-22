@@ -54,6 +54,8 @@
   [#1943](https://github.com/Kong/kubernetes-ingress-controller/issues/1943)
 - The admission controller now also validates KongClusterPlugin resources.
   [#1764](https://github.com/Kong/kubernetes-ingress-controller/issues/1764)
+- Fixed a segfault when the version reporter failed to initialize.
+  [#1961](https://github.com/Kong/kubernetes-ingress-controller/issues/1961)
 
 ## [2.0.3] - 2021/10/19
 

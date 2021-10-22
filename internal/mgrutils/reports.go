@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -69,7 +70,10 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 	}
 
 	// run the reporter in the background
-	reporter := util.Reporter{Info: info}
+	reporter := util.Reporter{
+		Info:   info,
+		Logger: logrus.New(),
+	}
 	go reporter.Run(ctx.Done())
 
 	return nil

@@ -119,8 +119,7 @@ manifests: manifests.crds manifests.single
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=build/config/crd/bases
-	go run hack/generators/manifests/main.go --input-directory build/config/crd/bases/ --output-directory config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks

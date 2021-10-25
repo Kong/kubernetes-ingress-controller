@@ -14,7 +14,6 @@ spec:
     listKind: UDPIngressList
     plural: udpingresses
     singular: udpingress
-  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

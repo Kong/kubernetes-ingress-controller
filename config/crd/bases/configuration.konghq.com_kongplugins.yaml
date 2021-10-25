@@ -1,6 +1,11 @@
+
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
   name: kongplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -11,7 +16,6 @@ spec:
     shortNames:
     - kp
     singular: kongplugin
-  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -38,6 +42,11 @@ spec:
       openAPIV3Schema:
         description: KongPlugin is the Schema for the kongplugins API
         properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
           config:
             description: Config contains the plugin configuration.
             type: object
@@ -45,12 +54,35 @@ spec:
           configFrom:
             description: ConfigFrom references a secret containing the plugin configuration.
             properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource
+                  this object represents. Servers may infer this from the endpoint
+                  the client submits requests to. Cannot be updated. In CamelCase.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                type: string
               secretKeyRef:
                 description: SecretValueFromSource represents the source of a secret
                   value
                 properties:
+                  apiVersion:
+                    description: 'APIVersion defines the versioned schema of this
+                      representation of an object. Servers should convert recognized
+                      schemas to the latest internal value, and may reject unrecognized
+                      values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                    type: string
                   key:
                     description: the key containing the value
+                    type: string
+                  kind:
+                    description: 'Kind is a string value representing the REST resource
+                      this object represents. Servers may infer this from the endpoint
+                      the client submits requests to. Cannot be updated. In CamelCase.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                     type: string
                   name:
                     description: the secret containing the key
@@ -60,9 +92,19 @@ spec:
                 - name
                 type: object
             type: object
+          consumerRef:
+            description: ConsumerRef is a reference to a particular consumer
+            type: string
           disabled:
             description: Disabled set if the plugin is disabled or not
             type: boolean
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the
               config
@@ -71,14 +113,6 @@ spec:
             description: Protocols configures plugin to run on requests received on
               specific protocols.
             items:
-              enum:
-              - http
-              - https
-              - grpc
-              - grpcs
-              - tcp
-              - tls
-              - udp
               type: string
             type: array
           run_on:

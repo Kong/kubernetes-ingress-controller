@@ -14,7 +14,6 @@ spec:
     listKind: TCPIngressList
     plural: tcpingresses
     singular: tcpingress
-  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

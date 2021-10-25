@@ -1,6 +1,11 @@
+
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
   name: kongingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -11,7 +16,6 @@ spec:
     shortNames:
     - ki
     singular: kongingress
-  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -19,14 +23,27 @@ spec:
       openAPIV3Schema:
         description: KongIngress is the Schema for the kongingresses API
         properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
           proxy:
+            description: KongIngressService contains KongIngress service configuration
             properties:
-              path:
-                type: string
-                pattern: ^/.*$
               connect_timeout:
                 minimum: 0
                 type: integer
+              path:
+                pattern: ^/.*$
+                type: string
               protocol:
                 enum:
                 - http
@@ -48,7 +65,7 @@ spec:
                 type: integer
             type: object
           route:
-            description: Route represents a Route in Kong. Read https://getkong.org/docs/0.13.x/admin-api/#Route-object
+            description: KongIngressRoute contains KongIngress route configuration
             properties:
               headers:
                 additionalProperties:
@@ -71,25 +88,11 @@ spec:
                 type: boolean
               protocols:
                 items:
-                  enum:
-                  - http
-                  - https
-                  - grpc
-                  - grpcs
-                  - tcp
-                  - tls
-                  - udp
                   type: string
                 type: array
               regex_priority:
                 type: integer
               request_buffering:
-                description: "Kong buffers requests and responses by default. Buffering
-                  is not always desired, for instance if large payloads are being
-                  proxied using HTTP 1.1 chunked encoding. \n The request and response
-                  route buffering options are enabled by default and allow the user
-                  to disable buffering if desired for their use case. \n SEE ALSO:
-                  - https://github.com/Kong/kong/pull/6057 - https://docs.konghq.com/2.2.x/admin-api/#route-object"
                 type: boolean
               response_buffering:
                 type: boolean
@@ -101,7 +104,7 @@ spec:
                 type: boolean
             type: object
           upstream:
-            description: Upstream represents an Upstream in Kong.
+            description: KongIngressUpstream contains KongIngress upstream configuration
             properties:
               algorithm:
                 enum:
@@ -130,7 +133,6 @@ spec:
                       probing.
                     properties:
                       concurrency:
-                        minimum: 1
                         type: integer
                       healthy:
                         description: Healthy configures thresholds and HTTP status
@@ -141,17 +143,17 @@ spec:
                               type: integer
                             type: array
                           interval:
-                            minimum: 0
                             type: integer
                           successes:
-                            minimum: 0
                             type: integer
                         type: object
                       http_path:
-                        pattern: ^/.*$
                         type: string
+                      https_sni:
+                        type: string
+                      https_verify_certificate:
+                        type: boolean
                       timeout:
-                        minimum: 0
                         type: integer
                       type:
                         type: string
@@ -160,20 +162,16 @@ spec:
                           codes to mark targets unhealthy.
                         properties:
                           http_failures:
-                            minimum: 0
                             type: integer
                           http_statuses:
                             items:
                               type: integer
                             type: array
                           interval:
-                            minimum: 0
                             type: integer
                           tcp_failures:
-                            minimum: 0
                             type: integer
-                          timeout:
-                            minimum: 0
+                          timeouts:
                             type: integer
                         type: object
                     type: object
@@ -190,36 +188,32 @@ spec:
                               type: integer
                             type: array
                           interval:
-                            minimum: 0
                             type: integer
                           successes:
-                            minimum: 0
                             type: integer
                         type: object
+                      type:
+                        type: string
                       unhealthy:
                         description: Unhealthy configures thresholds and HTTP status
                           codes to mark targets unhealthy.
                         properties:
                           http_failures:
-                            minimum: 0
                             type: integer
                           http_statuses:
                             items:
                               type: integer
                             type: array
                           interval:
-                            minimum: 0
                             type: integer
                           tcp_failures:
-                            minimum: 0
                             type: integer
-                          timeout:
-                            minimum: 0
+                          timeouts:
                             type: integer
                         type: object
                     type: object
                   threshold:
-                    type: integer
+                    type: number
                 type: object
               host_header:
                 type: string

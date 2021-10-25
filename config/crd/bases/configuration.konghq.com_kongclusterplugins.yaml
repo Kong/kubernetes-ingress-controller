@@ -1,6 +1,11 @@
+
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
   name: kongclusterplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -11,7 +16,6 @@ spec:
     shortNames:
     - kcp
     singular: kongclusterplugin
-  preserveUnknownFields: false
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -38,6 +42,11 @@ spec:
       openAPIV3Schema:
         description: KongClusterPlugin is the Schema for the kongclusterplugins API
         properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
           config:
             description: Config contains the plugin configuration.
             type: object
@@ -45,12 +54,35 @@ spec:
           configFrom:
             description: ConfigFrom references a secret containing the plugin configuration.
             properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource
+                  this object represents. Servers may infer this from the endpoint
+                  the client submits requests to. Cannot be updated. In CamelCase.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                type: string
               secretKeyRef:
                 description: NamespacedSecretValueFromSource represents the source
                   of a secret value specifying the secret namespace
                 properties:
+                  apiVersion:
+                    description: 'APIVersion defines the versioned schema of this
+                      representation of an object. Servers should convert recognized
+                      schemas to the latest internal value, and may reject unrecognized
+                      values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                    type: string
                   key:
                     description: the key containing the value
+                    type: string
+                  kind:
+                    description: 'Kind is a string value representing the REST resource
+                      this object represents. Servers may infer this from the endpoint
+                      the client submits requests to. Cannot be updated. In CamelCase.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                     type: string
                   name:
                     description: the secret containing the key
@@ -70,6 +102,13 @@ spec:
           disabled:
             description: Disabled set if the plugin is disabled or not
             type: boolean
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the
               config
@@ -78,14 +117,6 @@ spec:
             description: Protocols configures plugin to run on requests received on
               specific protocols.
             items:
-              enum:
-              - http
-              - https
-              - grpc
-              - grpcs
-              - tcp
-              - tls
-              - udp
               type: string
             type: array
           run_on:

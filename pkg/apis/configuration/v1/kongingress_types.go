@@ -49,37 +49,48 @@ type KongIngressList struct {
 }
 
 // KongIngressService contains KongIngress service configuration
-// It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress
+//+ It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress
 type KongIngressService struct {
-	Protocol       *string `json:"protocol,omitempty" yaml:"protocol,omitempty"`
-	Path           *string `json:"path,omitempty" yaml:"path,omitempty"`
-	Retries        *int    `json:"retries,omitempty" yaml:"retries,omitempty"`
-	ConnectTimeout *int    `json:"connect_timeout,omitempty" yaml:"connect_timeout,omitempty"`
-	ReadTimeout    *int    `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty"`
-	WriteTimeout   *int    `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty"`
+	//+kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
+	Protocol *string `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	//+kubebuilder:validation:Pattern=^/.*$
+	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
+	//+kubebuilder:validation:Minimum=0
+	Retries *int `json:"retries,omitempty" yaml:"retries,omitempty"`
+	//+kubebuilder:validation:Minimum=0
+	ConnectTimeout *int `json:"connect_timeout,omitempty" yaml:"connect_timeout,omitempty"`
+	//+kubebuilder:validation:Minimum=0
+	ReadTimeout *int `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty"`
+	//+kubebuilder:validation:Minimum=0
+	WriteTimeout *int `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty"`
 }
 
 // KongIngressRoute contains KongIngress route configuration
-// It contains the subset of go-kong.kong.Route fields supported by kongstate.Route.overrideByKongIngress
+//+ It contains the subset of go-kong.kong.Route fields supported by kongstate.Route.overrideByKongIngress
 type KongIngressRoute struct {
-	Methods                 []*string           `json:"methods,omitempty" yaml:"methods,omitempty"`
-	Headers                 map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
-	Protocols               []*string           `json:"protocols,omitempty" yaml:"protocols,omitempty"`
-	RegexPriority           *int                `json:"regex_priority,omitempty" yaml:"regex_priority,omitempty"`
-	StripPath               *bool               `json:"strip_path,omitempty" yaml:"strip_path,omitempty"`
-	PreserveHost            *bool               `json:"preserve_host,omitempty" yaml:"preserve_host,omitempty"`
-	HTTPSRedirectStatusCode *int                `json:"https_redirect_status_code,omitempty" yaml:"https_redirect_status_code,omitempty"`
-	PathHandling            *string             `json:"path_handling,omitempty" yaml:"path_handling,omitempty"`
-	SNIs                    []*string           `json:"snis,omitempty" yaml:"snis,omitempty"`
-	RequestBuffering        *bool               `json:"request_buffering,omitempty" yaml:"request_buffering,omitempty"`
-	ResponseBuffering       *bool               `json:"response_buffering,omitempty" yaml:"response_buffering,omitempty"`
+	Methods []*string           `json:"methods,omitempty" yaml:"methods,omitempty"`
+	Headers map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	//+ TODO Protocols needs to be a slice of an alias type to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
+	//+ For some reason trying to do this breaks deepcopy generation
+	Protocols               []*string `json:"protocols,omitempty" yaml:"protocols,omitempty"`
+	RegexPriority           *int      `json:"regex_priority,omitempty" yaml:"regex_priority,omitempty"`
+	StripPath               *bool     `json:"strip_path,omitempty" yaml:"strip_path,omitempty"`
+	PreserveHost            *bool     `json:"preserve_host,omitempty" yaml:"preserve_host,omitempty"`
+	HTTPSRedirectStatusCode *int      `json:"https_redirect_status_code,omitempty" yaml:"https_redirect_status_code,omitempty"`
+	//+kubebuilder:validation:Enum=v0;v1
+	PathHandling      *string   `json:"path_handling,omitempty" yaml:"path_handling,omitempty"`
+	SNIs              []*string `json:"snis,omitempty" yaml:"snis,omitempty"`
+	RequestBuffering  *bool     `json:"request_buffering,omitempty" yaml:"request_buffering,omitempty"`
+	ResponseBuffering *bool     `json:"response_buffering,omitempty" yaml:"response_buffering,omitempty"`
 }
 
 // KongIngressUpstream contains KongIngress upstream configuration
-// It contains the subset of go-kong.kong.Upstream fields supported by kongstate.Upstream.overrideByKongIngress
+//+ It contains the subset of go-kong.kong.Upstream fields supported by kongstate.Upstream.overrideByKongIngress
 type KongIngressUpstream struct {
-	HostHeader         *string           `json:"host_header,omitempty" yaml:"host_header,omitempty"`
-	Algorithm          *string           `json:"algorithm,omitempty" yaml:"algorithm,omitempty"`
+	HostHeader *string `json:"host_header,omitempty" yaml:"host_header,omitempty"`
+	//+kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections
+	Algorithm *string `json:"algorithm,omitempty" yaml:"algorithm,omitempty"`
+	//+kubebuilder:validation:Minimum=10
 	Slots              *int              `json:"slots,omitempty" yaml:"slots,omitempty"`
 	Healthchecks       *kong.Healthcheck `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	HashOn             *string           `json:"hash_on,omitempty" yaml:"hash_on,omitempty"`

@@ -279,7 +279,7 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 		r.Headers = ir.Headers
 	}
 	if len(ir.Protocols) != 0 {
-		r.Protocols = cloneStringPointerSlice(ir.Protocols...)
+		r.Protocols = protocolPointersToStringPointers(ir.Protocols)
 	}
 	if ir.RegexPriority != nil {
 		r.RegexPriority = kong.Int(*ir.RegexPriority)

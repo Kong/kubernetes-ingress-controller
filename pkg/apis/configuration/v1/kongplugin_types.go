@@ -62,8 +62,7 @@ type KongPlugin struct {
 
 	// Protocols configures plugin to run on requests received on specific
 	// protocols.
-	//+ TODO Protocols needs to be a slice of an alias type to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
-	Protocols []string `json:"protocols,omitempty"`
+	Protocols []KongProtocol `json:"protocols,omitempty"`
 }
 
 //+kubebuilder:object:root=true

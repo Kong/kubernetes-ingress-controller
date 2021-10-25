@@ -88,6 +88,14 @@ spec:
                 type: boolean
               protocols:
                 items:
+                  enum:
+                  - http
+                  - https
+                  - grpc
+                  - grpcs
+                  - tcp
+                  - tls
+                  - udp
                   type: string
                 type: array
               regex_priority:

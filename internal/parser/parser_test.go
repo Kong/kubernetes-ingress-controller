@@ -254,7 +254,7 @@ func TestGlobalPlugin(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"foo1": "bar1"}`),
@@ -383,7 +383,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -403,7 +403,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							// explicitly none, this should not get rendered
 						},
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -417,7 +417,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -507,7 +507,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							"global": "true",
 						},
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -521,7 +521,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -602,7 +602,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							"global": "true",
 						},
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
@@ -619,7 +619,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
@@ -757,7 +757,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							"global": "true",
 						},
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -771,7 +771,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  []string{"http"},
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -2117,7 +2117,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Namespace: "foo-ns",
 				},
 				Route: &configurationv1.KongIngressRoute{
-					Protocols:               kong.StringSlice("https"),
+					Protocols:               configurationv1.ProtocolSlice("https"),
 					HTTPSRedirectStatusCode: kong.Int(308),
 				},
 			},
@@ -2195,7 +2195,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Namespace: "foo-ns",
 				},
 				Route: &configurationv1.KongIngressRoute{
-					Protocols:               kong.StringSlice("https"),
+					Protocols:               configurationv1.ProtocolSlice("https"),
 					HTTPSRedirectStatusCode: kong.Int(308),
 				},
 			},
@@ -2356,7 +2356,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Namespace: "foo-ns",
 				},
 				PluginName: "key-auth",
-				Protocols:  []string{"http"},
+				Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"foo": "bar", "knative": "yo"}`),
 				},
@@ -3390,7 +3390,7 @@ func TestPluginAnnotations(t *testing.T) {
 					Namespace: "default",
 				},
 				PluginName: "key-auth",
-				Protocols:  []string{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{
 					"foo": "bar",
@@ -3481,7 +3481,7 @@ func TestPluginAnnotations(t *testing.T) {
 					Namespace: "default",
 				},
 				PluginName: "basic-auth",
-				Protocols:  []string{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
@@ -3494,7 +3494,7 @@ func TestPluginAnnotations(t *testing.T) {
 					Namespace: "default",
 				},
 				PluginName: "key-auth",
-				Protocols:  []string{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
@@ -3565,7 +3565,7 @@ func TestPluginAnnotations(t *testing.T) {
 					Namespace: "default",
 				},
 				PluginName: "basic-auth",
-				Protocols:  []string{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"foo": "bar"}`),
 				},

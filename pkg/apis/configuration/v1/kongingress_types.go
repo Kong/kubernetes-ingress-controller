@@ -68,15 +68,13 @@ type KongIngressService struct {
 // KongIngressRoute contains KongIngress route configuration
 //+ It contains the subset of go-kong.kong.Route fields supported by kongstate.Route.overrideByKongIngress
 type KongIngressRoute struct {
-	Methods []*string           `json:"methods,omitempty" yaml:"methods,omitempty"`
-	Headers map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
-	//+ TODO Protocols needs to be a slice of an alias type to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
-	//+ For some reason trying to do this breaks deepcopy generation
-	Protocols               []*string `json:"protocols,omitempty" yaml:"protocols,omitempty"`
-	RegexPriority           *int      `json:"regex_priority,omitempty" yaml:"regex_priority,omitempty"`
-	StripPath               *bool     `json:"strip_path,omitempty" yaml:"strip_path,omitempty"`
-	PreserveHost            *bool     `json:"preserve_host,omitempty" yaml:"preserve_host,omitempty"`
-	HTTPSRedirectStatusCode *int      `json:"https_redirect_status_code,omitempty" yaml:"https_redirect_status_code,omitempty"`
+	Methods                 []*string           `json:"methods,omitempty" yaml:"methods,omitempty"`
+	Headers                 map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Protocols               []*KongProtocol     `json:"protocols,omitempty" yaml:"protocols,omitempty"`
+	RegexPriority           *int                `json:"regex_priority,omitempty" yaml:"regex_priority,omitempty"`
+	StripPath               *bool               `json:"strip_path,omitempty" yaml:"strip_path,omitempty"`
+	PreserveHost            *bool               `json:"preserve_host,omitempty" yaml:"preserve_host,omitempty"`
+	HTTPSRedirectStatusCode *int                `json:"https_redirect_status_code,omitempty" yaml:"https_redirect_status_code,omitempty"`
 	//+kubebuilder:validation:Enum=v0;v1
 	PathHandling      *string   `json:"path_handling,omitempty" yaml:"path_handling,omitempty"`
 	SNIs              []*string `json:"snis,omitempty" yaml:"snis,omitempty"`

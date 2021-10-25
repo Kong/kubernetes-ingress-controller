@@ -64,7 +64,7 @@ func (in *KongClusterPlugin) DeepCopyInto(out *KongClusterPlugin) {
 	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
-		*out = make([]string, len(*in))
+		*out = make([]KongProtocol, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -284,11 +284,11 @@ func (in *KongIngressRoute) DeepCopyInto(out *KongIngressRoute) {
 	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
-		*out = make([]*string, len(*in))
+		*out = make([]*KongProtocol, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(string)
+				*out = new(KongProtocol)
 				**out = **in
 			}
 		}
@@ -474,7 +474,7 @@ func (in *KongPlugin) DeepCopyInto(out *KongPlugin) {
 	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
-		*out = make([]string, len(*in))
+		*out = make([]KongProtocol, len(*in))
 		copy(*out, *in)
 	}
 }

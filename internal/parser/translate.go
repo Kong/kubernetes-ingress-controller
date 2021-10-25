@@ -73,12 +73,14 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(false),
-						PreserveHost:  kong.Bool(true),
-						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(0),
+						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:             kong.StringSlice(path),
+						StripPath:         kong.Bool(false),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(0),
+						RequestBuffering:  kong.Bool(true),
+						ResponseBuffering: kong.Bool(true),
 					},
 				}
 				if host != "" {
@@ -154,12 +156,14 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 		r := kongstate.Route{
 			Ingress: util.FromK8sObject(&ingress),
 			Route: kong.Route{
-				Name:          kong.String(ingress.Namespace + "." + ingress.Name),
-				Paths:         kong.StringSlice("/"),
-				StripPath:     kong.Bool(false),
-				PreserveHost:  kong.Bool(true),
-				Protocols:     kong.StringSlice("http", "https"),
-				RegexPriority: kong.Int(0),
+				Name:              kong.String(ingress.Namespace + "." + ingress.Name),
+				Paths:             kong.StringSlice("/"),
+				StripPath:         kong.Bool(false),
+				PreserveHost:      kong.Bool(true),
+				Protocols:         kong.StringSlice("http", "https"),
+				RegexPriority:     kong.Int(0),
+				RequestBuffering:  kong.Bool(true),
+				ResponseBuffering: kong.Bool(true),
 			},
 		}
 		service.Routes = append(service.Routes, r)
@@ -223,12 +227,14 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-						Paths:         paths,
-						StripPath:     kong.Bool(false),
-						PreserveHost:  kong.Bool(true),
-						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(priorityForPath[pathType]),
+						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:             paths,
+						StripPath:         kong.Bool(false),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(priorityForPath[pathType]),
+						RequestBuffering:  kong.Bool(true),
+						ResponseBuffering: kong.Bool(true),
 					},
 				}
 				if rule.Host != "" {
@@ -301,12 +307,14 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 		r := kongstate.Route{
 			Ingress: util.FromK8sObject(&ingress),
 			Route: kong.Route{
-				Name:          kong.String(ingress.Namespace + "." + ingress.Name),
-				Paths:         kong.StringSlice("/"),
-				StripPath:     kong.Bool(false),
-				PreserveHost:  kong.Bool(true),
-				Protocols:     kong.StringSlice("http", "https"),
-				RegexPriority: kong.Int(0),
+				Name:              kong.String(ingress.Namespace + "." + ingress.Name),
+				Paths:             kong.StringSlice("/"),
+				StripPath:         kong.Bool(false),
+				PreserveHost:      kong.Bool(true),
+				Protocols:         kong.StringSlice("http", "https"),
+				RegexPriority:     kong.Int(0),
+				RequestBuffering:  kong.Bool(true),
+				ResponseBuffering: kong.Bool(true),
 			},
 		}
 		service.Routes = append(service.Routes, r)
@@ -511,12 +519,14 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(false),
-						PreserveHost:  kong.Bool(true),
-						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(0),
+						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:             kong.StringSlice(path),
+						StripPath:         kong.Bool(false),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(0),
+						RequestBuffering:  kong.Bool(true),
+						ResponseBuffering: kong.Bool(true),
 					},
 				}
 				r.Hosts = kong.StringSlice(hosts...)

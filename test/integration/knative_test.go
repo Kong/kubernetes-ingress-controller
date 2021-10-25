@@ -166,7 +166,6 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)
-		t.Logf("resp <%v> ", resp.StatusCode)
 		if err != nil {
 			return false
 		}

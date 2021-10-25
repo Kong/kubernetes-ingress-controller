@@ -20,6 +20,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/sethvargo/go-password/password"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,7 +92,9 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	}
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer env.Cleanup(ctx)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
 
 	t.Log("deploying kong components")
 	deployKong(ctx, t, env, dblessPath)
@@ -120,7 +123,9 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	}
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer env.Cleanup(ctx)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
 
 	t.Log("generating a superuser password")
 	adminPassword, adminPasswordSecretYAML, err := generateAdminPasswordSecret()
@@ -156,7 +161,9 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	}
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer env.Cleanup(ctx)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
 
 	t.Log("deploying kong components")
 	deployKong(ctx, t, env, postgresPath)
@@ -188,7 +195,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	}
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer env.Cleanup(ctx)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
 
 	t.Log("generating a superuser password")
 	adminPassword, adminPasswordSecretYAML, err := generateAdminPasswordSecret()
@@ -237,8 +246,9 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	require.NoError(t, <-env.WaitForReady(ctx))
 
 	t.Log("creating the kong namespace")
+	kubeconfigFilename := kubeconfigFile.Name()
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "create", "namespace", namespace)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "create", "namespace", namespace)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
@@ -246,7 +256,7 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	t.Logf("deploying any supplemental manifests (found: %d)", len(additionalManifests))
 	for _, manifest := range additionalManifests {
 		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "apply", "-f", "-")
+		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 		cmd.Stdout = stdout
 		cmd.Stderr = stderr
 		stdin, err := cmd.StdinPipe()
@@ -260,7 +270,7 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 
 	t.Logf("deploying the %s manifest to the cluster", strings.TrimPrefix(manifestPath, "../../"))
 	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "apply", "-f", manifestPath)
+	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", manifestPath)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))

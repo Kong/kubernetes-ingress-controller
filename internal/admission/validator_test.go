@@ -376,3 +376,124 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 		})
 	}
 }
+
+func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
+	store, _ := store.NewFakeStore(store.FakeObjects{})
+	type args struct {
+		plugin configurationv1.KongClusterPlugin
+	}
+	tests := []struct {
+		name        string
+		PluginSvc   kong.AbstractPluginService
+		args        args
+		wantOK      bool
+		wantMessage string
+		wantErr     bool
+	}{
+		{
+			name:      "plugin is valid",
+			PluginSvc: &fakePluginSvc{valid: true},
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name:      "plugin is not valid",
+			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("plugin lacks required field")},
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginConfigViolatesSchema,
+			wantErr:     true,
+		},
+		{
+			name:      "plugin lacks plugin name",
+			PluginSvc: &fakePluginSvc{},
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginNameEmpty,
+			wantErr:     false,
+		},
+		{
+			name:      "plugin has invalid configuration",
+			PluginSvc: &fakePluginSvc{},
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{{}`),
+					},
+				},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginConfigInvalid,
+			wantErr:     true,
+		},
+		{
+			name:      "plugin has both Config and ConfigFrom",
+			PluginSvc: &fakePluginSvc{},
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"key_names": "whatever"}`),
+					},
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "key-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginUsesBothConfigTypes,
+			wantErr:     false,
+		},
+		{
+			name:      "plugin ConfigFrom references non-existent Secret",
+			PluginSvc: &fakePluginSvc{},
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+							Key:       "key-auth-config",
+							Secret:    "conf-secret",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginSecretConfigUnretrievable,
+			wantErr:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validator := KongHTTPValidator{
+				SecretGetter: store,
+				PluginSvc:    tt.PluginSvc,
+			}
+			got, got1, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("KongHTTPValidator.ValidatePlugin() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.wantOK {
+				t.Errorf("KongHTTPValidator.ValidatePlugin() got = %v, want %v", got, tt.wantOK)
+			}
+			if got1 != tt.wantMessage {
+				t.Errorf("KongHTTPValidator.ValidatePlugin() got1 = %v, want %v", got1, tt.wantMessage)
+			}
+		})
+	}
+}

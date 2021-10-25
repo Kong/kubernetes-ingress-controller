@@ -304,7 +304,7 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 				SNIs = append(SNIs, kong.String(SNI))
 			} else {
 				// SNI is not a valid hostname
-				log.WithField("kongroute", ir.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
+				log.WithField("kongroute", r.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
 				return
 			}
 		}

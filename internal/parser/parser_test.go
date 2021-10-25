@@ -2099,7 +2099,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "https-only",
 					Namespace: "foo-ns",
 				},
-				Route: &kong.Route{
+				Route: &configurationv1.KongIngressRoute{
 					Protocols:               kong.StringSlice("https"),
 					HTTPSRedirectStatusCode: kong.Int(308),
 				},
@@ -2177,7 +2177,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "https-only",
 					Namespace: "foo-ns",
 				},
-				Route: &kong.Route{
+				Route: &configurationv1.KongIngressRoute{
 					Protocols:               kong.StringSlice("https"),
 					HTTPSRedirectStatusCode: kong.Int(308),
 				},

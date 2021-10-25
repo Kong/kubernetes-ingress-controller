@@ -45,13 +45,38 @@ func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngres
 	if kongIngress == nil || kongIngress.Upstream == nil {
 		return
 	}
-
-	// The upstream within the KongIngress has no name.
-	// As this overwrites the entire upstream object, we must restore the
-	// original name after.
-	name := *u.Upstream.Name
-	u.Upstream = *kongIngress.Upstream.DeepCopy()
-	u.Name = &name
+	k := kongIngress.Upstream
+	if k.HostHeader != nil {
+		u.HostHeader = kong.String(*k.HostHeader)
+	}
+	if k.Algorithm != nil {
+		u.Algorithm = kong.String(*k.Algorithm)
+	}
+	if k.Slots != nil {
+		u.Slots = kong.Int(*k.Slots)
+	}
+	if k.Healthchecks != nil {
+		u.Healthchecks = k.Healthchecks
+	}
+	if k.HashOn != nil {
+		u.HashOn = kong.String(*k.HashOn)
+	}
+	if k.HashFallback != nil {
+		u.HashFallback = kong.String(*k.HashFallback)
+	}
+	if k.HashOnHeader != nil {
+		u.HashOnHeader = kong.String(*k.HashOnHeader)
+	}
+	if k.HashFallbackHeader != nil {
+		u.HashFallbackHeader = kong.String(*k.HashFallbackHeader)
+	}
+	if k.HashOnCookie != nil {
+		u.HashOnCookie = kong.String(*k.HashOnCookie)
+	}
+	if k.HashOnCookiePath != nil {
+		u.HashOnCookiePath = kong.String(*k.HashOnCookiePath)
+	}
+	// TODO client certificate handling
 }
 
 // override sets Upstream fields by KongIngress first, then by annotation

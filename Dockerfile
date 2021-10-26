@@ -14,6 +14,9 @@ COPY pkg/ pkg/
 COPY internal/ internal/
 
 # Build
+ARG TAG
+ARG COMMIT
+ARG REPO_INFO
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary

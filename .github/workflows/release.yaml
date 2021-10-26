@@ -75,10 +75,6 @@ jobs:
             latest=false
           tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
-        env:
-          TAG: ${{ steps.meta.outputs.version }}
-          COMMIT: ${{ github.sha }}
-          REPO_INFO: https://github.com/${{ github.repository }}.git
         id: docker_build_binary
         uses: docker/build-push-action@v2
         with:
@@ -87,6 +83,10 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           target: builder
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push
         id: docker_build
         env:

@@ -7,12 +7,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/cmd/version"
 )
 
 var cfg manager.Config
 
 func init() {
 	rootCmd.Flags().AddFlagSet(cfg.FlagSet())
+	rootCmd.AddCommand(version.NewVersionCmd())
 }
 
 var rootCmd = &cobra.Command{

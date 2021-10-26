@@ -14,7 +14,11 @@ COPY pkg/ pkg/
 COPY internal/ internal/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
+ARG BUILD_TAG
+ARG BUILD_COMMIT
+ARG BUILD_DATE
+ARG BUILD_VERSION
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/pkg/version.gitTag=$BUILD_TAG -X github.com/kong/kubernetes-ingress-controller/v2/pkg/version.gitCommit=$BUILD_COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/pkg/version.buildDate=$BUILD_DATE -X github.com/kong/kubernetes-ingress-controller/v2/pkg/version.version=$BUILD_VERSION" ./internal/cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
@@ -27,11 +31,11 @@ ENTRYPOINT ["/manager"]
 
 # Build UBI image
 FROM registry.access.redhat.com/ubi8/ubi AS redhat
-ARG TAG
+ARG BUILD_TAG
 
 LABEL name="Kong Ingress Controller" \
       vendor="Kong" \
-      version="$TAG" \
+      version="$BUILD_TAG" \
       release="1" \
       url="https://github.com/Kong/kubernetes-ingress-controller" \
       summary="Kong for Kubernetes Ingress" \

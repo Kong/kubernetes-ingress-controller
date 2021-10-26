@@ -4,7 +4,6 @@
 
 TAG?=2.0.4
 REGISTRY?=kong
-REPO_INFO=$(shell git config --get remote.origin.url)
 REPO_URL=github.com/kong/kubernetes-ingress-controller
 IMGNAME?=kubernetes-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
@@ -15,10 +14,17 @@ NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 # Setup
 # ------------------------------------------------------------------------------
 
-REPO_INFO=$(shell git config --get remote.origin.url)
-ifndef COMMIT
-  COMMIT := $(shell git rev-parse --short HEAD)
-endif
+BUILD_INFO_GIT_TAG ?= $(shell git describe --tags 2>/dev/null || echo unknown)
+BUILD_INFO_GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+BUILD_INFO_BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" || echo unknown)
+BUILD_INFO_VERSION ?= $(shell prefix=$$(echo $(BUILD_INFO_GIT_TAG) | cut -c 1); if [ "$${prefix}" = "v" ]; then echo $(BUILD_INFO_GIT_TAG) | cut -c 2- ; else echo $(BUILD_INFO_GIT_TAG) ; fi)
+
+build_info_fields := \
+	version=$(BUILD_INFO_VERSION) \
+	gitTag=$(BUILD_INFO_GIT_TAG) \
+	gitCommit=$(BUILD_INFO_GIT_COMMIT) \
+	buildDate=$(BUILD_INFO_BUILD_DATE)
+build_info_ld_flags := $(foreach entry,$(build_info_fields), -X github.com/kong/kubernetes-ingress-controller/v2/pkg/version.$(entry))
 
 export GO111MODULE=on
 
@@ -71,10 +77,7 @@ clean:
 
 .PHONY: build
 build: generate fmt vet lint
-	go build -a -o bin/manager -ldflags "-s -w \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$(TAG) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
+	go build -a -o bin/manager -ldflags "-s -w $(build_info_ld_flags) internal/cmd/main.go
 
 .PHONY: imports
 imports:
@@ -162,9 +165,11 @@ generate.clientsets: client-gen
 container:
 	docker build \
     -f Dockerfile \
-    --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
-    --build-arg REPO_INFO=${REPO_INFO} \
-    -t ${IMAGE}:${TAG} .
+    --build-arg BUILD_TAG=${BUILD_INFO_GIT_TAG} \
+	--build-arg BUILD_COMMIT=${BUILD_INFO_GIT_COMMIT} \
+	--build-arg BUILD_DATE=${BUILD_INFO_BUILD_DATE} \
+	--build-arg BUILD_VERSION=${BUILD_INFO_VERSION} \
+    -t ${IMAGE}:${BUILD_INFO_GIT_TAG} .
 
 # ------------------------------------------------------------------------------
 # Test
@@ -225,7 +230,7 @@ test.integration.enterprise.postgres:
 
 .PHONY: test.integration.legacy
 test.integration.legacy: container
-	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
+	KIC_IMAGE="${IMAGE}:${BUILD_INFO_GIT_TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
 
 .PHONY: test.e2e
 test.e2e:

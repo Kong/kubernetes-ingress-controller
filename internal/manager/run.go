@@ -15,11 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kic_version "github.com/kong/kubernetes-ingress-controller/v2/pkg/version"
 )
 
 // -----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return err
 	}
 	setupLog := ctrl.Log.WithName("setup")
-	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
+	setupLog.Info("starting controller manager", "version", kic_version.Build.Version)
 	setupLog.V(util.DebugLevel).Info("the ingress class name has been set", "value", c.IngressClassName)
 	setupLog.V(util.DebugLevel).Info("building the manager runtime scheme and loading apis into the scheme")
 	scheme := runtime.NewScheme()
@@ -97,7 +97,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 
 	if c.AnonymousReports {
 		setupLog.Info("Starting anonymous reports")
-		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, metadata.Release); err != nil {
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, kic_version.Build.Version); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}
 	} else {

@@ -65,18 +65,59 @@ Thus:
 - if the list includes `next` but no release tags: the fix/enhancement will come in the nearest minor release.
 - if the list includes `main` but no release tags: the fix/enhancement will come in the nearest patch release.
 
+# Enhancements
+
+Documenting and communicating the motivation for major enhancements in the Kong Kubernetes Ingress Controller (KIC) is done using an upstream Kubernetes process referred to as [Kubernetes Enhancement Proposals (KEPs)][kep].
+
+[kep]:https://github.com/kubernetes/enhancements
+
+## New Enhancement Proposals
+
+When starting a new enhancement proposal use the upstream [KEP Template][template] file as the starting point for your KEP, and follow the instructions therein.
+
+Initially you can remove a lot of the scaffolding in the template for the first `provisional` iteration and focus on establishing the following sections:
+
+- Summary
+- Motivation
+- Goals
+- User Stories
+
+In general the maintainers here feel establishing these things in a KEP should be done _prior to any technical writeups_ but this is a soft rule.
+
+[template]:https://github.com/kubernetes/enhancements/blob/master/keps/NNNN-kep-template/README.md
+
 ## Development environment
 
 ## Environment
 
 - Golang version matching our [`Dockerfile`](./Dockerfile) installed
-- Access to a k8s cluster, you can use Minikube or GKE
-- make
-- Docker (for building)
+- [Kubebuilder][kubebuilder]
+- [GNU Make][make]
+- [Docker][docker] (for building)
+- Access to a Kubernetes cluster (we use [KIND][kind] for development)
+
+[kubebuilder]:https://kubebuilder.io/
+[make]:https://www.gnu.org/software/make/
+[docker]:https://docs.docker.com/
+[kind]:https://github.com/kubernetes-sigs/kind
 
 ## Dependencies
 
 The build uses dependencies are managed by [go modules](https://blog.golang.org/using-go-modules)
+
+## Developing
+
+Development of our [Kubernetes Controllers][ctrl] and [APIs][kapi] is managed through the [Kubebuilder SDK][kubebuilder].
+
+Prior to developing we recommend you read through the [Makefile](/Makefile) directives related to generation of API configurations, and run through the [Kubebuilder Quickstart Documentation][kbquick] documentation in order to familiarize yourself with how the command line works, how to add new APIs and controllers, and how to update existing APIs.
+
+Make sure you're [generally familiar with Kubernetes Controllers as a concept, and how to build them][kbctrl].
+
+[ctrl]:https://kubernetes.io/docs/concepts/architecture/controller/
+[kapi]:https://kubernetes.io/docs/concepts/overview/kubernetes-api/
+[kubebuilder]:https://kubebuilder.io/
+[kbquick]:https://kubebuilder.io/quick-start.html
+[kbctrl]:https://kubebuilder.io/cronjob-tutorial/controller-overview.html
 
 ## Running in dev mode
 
@@ -93,18 +134,44 @@ pkill -f kubectl
 # setup proxies
 kubectl port-forward svc/kong-proxy -n kong 8443:443 2>&1 > /dev/null &
 kubectl port-forward svc/kong-proxy -n kong 8000:80 2>&1 > /dev/null &
-kubectl port-forward svc/kong-ingress-controller -n kong 8001:8001 2>&1 > /dev/null &
+kubectl port-forward deploy/ingress-kong -n kong 8444:8444 2>&1 > /dev/null &
 kubectl proxy --port=8002 2>&1 > /dev/null &
 
 export POD_NAME=`kubectl get po -n kong -o json | jq ".items[] | .metadata.name" -r | grep ingress`
 export POD_NAMESPACE=kong
 
-go run -tags gcp ./cli/ingress-controller/ \
---default-backend-service kong/kong-proxy \
+go run -tags gcp ./internal/cmd/main.go \
 --kubeconfig ~/.kube/config \
 --publish-service=kong/kong-proxy \
 --apiserver-host=http://localhost:8002 \
---kong-admin-url http://localhost:8001
+--kong-admin-url https://localhost:8444 \
+--kong-admin-tls-skip-verify true
+```
+
+If you are using Kind we can leverage [extraPortMapping config](https://kind.sigs.k8s.io/docs/user/ingress/)
+```shell
+cat <<EOF | kind create cluster --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  - containerPort: 8000
+    hostPort: 8000
+    protocol: TCP
+  - containerPort: 8443
+    hostPort: 8443
+    protocol: TCP
+EOF
+
+# mapping host ports to a kong ingress container port
+kubectl patch -n kong deploy ingress-kong -p '{"spec": {"template": {"spec": {"containers": [{"name": "proxy", "ports": [{"containerPort": 8000, "hostPort": 8000, "name": "proxy", "protocol": "TCP"}, {"containerPort": 8443, "hostPort": 8443, "name": "proxy-ssl", "protocol": "TCP"}]}]}}}}'
 ```
 
 ## Building
@@ -154,14 +221,27 @@ Please check the [deployment guide](https://docs.konghq.com/kubernetes-ingress-c
 
 ## Testing
 
-To run unit-tests, just run
+You can run the unit tests by running:
 
 ```console
-$ cd $GOPATH/src/github.com/kong/kubernetes-ingress-controller
 $ make test
 ```
 
-To run integration tests, see the [integration test readme](test/integration/README.md).
+For integration tests run:
+
+```console
+$ make test.integration
+```
+
+And for E2E tests run:
+
+```console
+$ make test.e2e
+```
+
+Note that the `integration` and `e2e` tests require a local container runtime
+and will utilize a sizable amount of system resources as one or many local
+Kubernetes clusters will be spun up in containers and tested against.
 
 ## Releasing
 

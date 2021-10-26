@@ -4,9 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
 
-# Kong for Kubernetes
-
-⚠️ **Due to Bintray image registries going out of service, we've moved our Docker images to [Docker Hub](https://hub.docker.com/r/kong/kubernetes-ingress-controller/tags).** ⚠️
+# Kong Ingress Controller for Kubernetes
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
@@ -14,7 +12,7 @@ load balancing and more in Kong
 for Kubernetes Services, all using
 Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
-[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main/next branch builds**](#mainnext-branch-builds) | [**Seeking help**](#seeking-help)
+[**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
 
 ## Features
 
@@ -41,7 +39,7 @@ Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 ## Get started
 
 You can use
-[Minikube](https://kubernetes.io/docs/setup/minikube/)
+[Minikube, Kind](https://kubernetes.io/docs/tasks/tools/)
 on your local machine or use
 a hosted k8s service like
 [GKE](https://cloud.google.com/kubernetes-engine/).
@@ -66,32 +64,30 @@ to start using Ingress in your Kubernetes cluster.
 > Note: Kong Enterprise users, please follow along our
 [enterprise guide][k4k8s-enterprise-setup] to setup the enterprise version.
 
+## Contributing
+
+We ❤️  pull requests, and we’re continually working hard to make it as easy as possible for developers to contribute. Before beginning development with the Kong Ingress, please familiarize yourself with the following developer resources:
+- [CONTRIBUTING](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md) and [COPYRIGHT](https://github.com/Kong/kong/blob/master/COPYRIGHT)
+
 ## Documentation
 
-All documentation around Kong Ingress Controller is present in this
-repository inside the [docs][docs] directory.
-Pull Requests are welcome for additions and corrections.
+All documentation around Kong Ingress Controller is present in the [kong/docs.konghq.com](https://github.com/kong/docs.konghq.com) repository. Pull Requests are welcome for additions and corrections.
 
 ## Guides and Tutorials
 
 Please browse through [guides][guides] to get started or understand how to configure
 a specific setting with Kong Ingress Controller.
 
-## main/next branch builds
+## main branch builds
 
-Pre-release builds of the `main` and `next` branches are available from the
+Pre-release builds of the `main` branch are available from the
 [kong-ingress-controller repository][docker-images] hosted on Docker Hub:
 
-`main` contains unreleased patch code for the current release:
+`main` contains unreleased new features for upcoming minor and major releases:
 
 ```
 docker pull kong/kubernetes-ingress-controller:main
-```
-
-`next` contains unreleased new features for upcoming minor and major releases:
-
-```
-docker pull kong/kubernetes-ingress-controller:next
 ```
 
 ## Seeking help
@@ -113,13 +109,8 @@ on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
 ### Community meetings
 
-You can join monthly meetings hosted by the maintainers of the project
-to ask questions, provide feedback or just come and say hello.
-The meeting takes place on every second Tuesday of the month
-at 10 am Pacific time.
-Please submit your contact details on the
-[online meetups](https://konghq.com/online-meetups/) page to receive
-meeting invite and Zoom links to join the meeting.
+You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback or just to listen and hang out.
+See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and receive meeting invites and [Zoom](https://zoom.us) links.
 
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/

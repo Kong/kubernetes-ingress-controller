@@ -15,7 +15,7 @@ kubectl create secret tls kong-validation-webhook -n kong \
 kubectl patch deploy -n kong ingress-kong \
   -p '{"spec":{"template":{"spec":{"containers":[{"name":"ingress-controller","env":[{"name":"CONTROLLER_ADMISSION_WEBHOOK_LISTEN","value":":8080"}],"volumeMounts":[{"name":"validation-webhook","mountPath":"/admission-webhook"}]}],"volumes":[{"secret":{"secretName":"kong-validation-webhook"},"name":"validation-webhook"}]}}}}'
 # configure k8s apiserver to send validations to the webhook
-echo "apiVersion: admissionregistration.k8s.io/v1beta1
+echo "apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: kong-validations
@@ -23,7 +23,7 @@ webhooks:
 - name: validations.kong.konghq.com
   failurePolicy: Fail
   sideEffects: None
-  admissionReviewVersions: [\"v1beta1\", \"v1\"]
+  admissionReviewVersions: [\"v1\", \"v1beta1\"]
   rules:
   - apiGroups:
     - configuration.konghq.com

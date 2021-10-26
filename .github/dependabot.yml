@@ -2,11 +2,13 @@ version: 2
 updates:
 - package-ecosystem: gomod
   directory: /
-  target-branch: next
   schedule:
     interval: daily
 - package-ecosystem: github-actions
   directory: /
-  target-branch: next
+  schedule:
+    interval: daily
+- package-ecosystem: docker
+  directory: /
   schedule:
     interval: daily

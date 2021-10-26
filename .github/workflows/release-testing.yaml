@@ -1,0 +1,70 @@
+name: release-testing
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test-current-kubernetes:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kubernetes-version:
+          - 'v1.22.0'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17'
+      - name: cache go modules
+        uses: actions/cache@v2.1.6
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
+
+  test-previous-kubernetes:
+    environment: gcloud
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        minor:
+          - '19'
+          - '20'
+          - '21'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17'
+      - name: cache go modules
+        uses: actions/cache@v2.1.6
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
+        run: ./hack/e2e/run-tests.sh
+        env:
+          KUBERNETES_MAJOR_VERSION: 1
+          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}

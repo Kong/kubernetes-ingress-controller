@@ -86,6 +86,12 @@ In general the maintainers here feel establishing these things in a KEP should b
 
 [template]:https://github.com/kubernetes/enhancements/blob/master/keps/NNNN-kep-template/README.md
 
+## Feature Gates
+
+New features should be added to the [Feature Gates][kic-fg] documentation and `internal/manager/feature_gates.go`.
+
+[kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
+
 ## Development environment
 
 ## Environment

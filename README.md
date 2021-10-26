@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
 
-# Kong Ingress Controller for Kubernetes
+# Kong Ingress Controller for Kubernetes (KIC)
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,

@@ -24,7 +24,7 @@ export GO111MODULE=on
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
@@ -52,7 +52,7 @@ endef
 # Build
 # ------------------------------------------------------------------------------
 
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,allowDangerousTypes=true"
+CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin

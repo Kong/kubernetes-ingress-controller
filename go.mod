@@ -26,10 +26,10 @@ require (
 	github.com/tidwall/gjson v1.10.2
 	google.golang.org/api v0.59.0
 	google.golang.org/genproto v0.0.0-20211008145708-270636b82663
-	k8s.io/api v0.22.2
-	k8s.io/apiextensions-apiserver v0.22.2
-	k8s.io/apimachinery v0.22.2
-	k8s.io/client-go v0.22.2
+	k8s.io/api v0.22.3
+	k8s.io/apiextensions-apiserver v0.22.3
+	k8s.io/apimachinery v0.22.3
+	k8s.io/client-go v0.22.3
 	knative.dev/networking v0.0.0-20210914225408-69ad45454096
 	knative.dev/pkg v0.0.0-20210919202233-5ae482141474
 	knative.dev/serving v0.26.0
@@ -118,7 +118,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/component-base v0.22.2 // indirect
+	k8s.io/component-base v0.22.3 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect

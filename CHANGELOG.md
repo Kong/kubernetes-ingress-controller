@@ -47,6 +47,9 @@
 - `hash_secret` strings in OAuth2 credentials now correctly convert to bools
   in the generated Kong configuration.
   [#1984](https://github.com/Kong/kubernetes-ingress-controller/issues/1984)
+- Fixed an issue where the admission controller returned an incorrect
+  status code for invalid plugin configuration.
+  [#1980](https://github.com/Kong/kubernetes-ingress-controller/issues/1980)
 
 ## [2.0.4] - 2021/10/22
 

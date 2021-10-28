@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -87,9 +88,14 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
 	}
-	isValid, err := validator.PluginSvc.Validate(ctx, &plugin)
+	isValid, msg, err := validator.PluginSvc.Validate(ctx, &plugin)
 	if err != nil {
-		return false, ErrTextPluginConfigViolatesSchema, err
+		return false, ErrTextPluginConfigValidationFailed, err
+	}
+	// this doesn't work yet, since Validate still returns an "error" for informational stuff
+	// fixing that requires a breaking go-kong change
+	if !isValid {
+		return isValid, fmt.Sprintf(ErrTextPluginConfigViolatesSchema, msg), nil
 	}
 	return isValid, "", nil
 }

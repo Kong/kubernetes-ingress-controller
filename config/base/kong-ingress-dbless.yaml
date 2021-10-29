@@ -100,7 +100,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.0.4
+        image: kong/kubernetes-ingress-controller:2.0.5
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook

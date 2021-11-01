@@ -315,6 +315,20 @@ func Test_FillConsumersAndCredentials(t *testing.T) {
 				"key":          []byte("whatever"),
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "barCredSecret",
+				Namespace: "default",
+			},
+			Data: map[string][]byte{
+				"kongCredType":  []byte("oauth2"),
+				"name":          []byte("whatever"),
+				"client_id":     []byte("whatever"),
+				"client_secret": []byte("whatever"),
+				"redirect_uris": []byte("http://example.com"),
+				"hash_secret":   []byte("true"),
+			},
+		},
 	}
 	consumers := []*configurationv1.KongConsumer{
 		{
@@ -329,6 +343,7 @@ func Test_FillConsumersAndCredentials(t *testing.T) {
 			CustomID: "foo",
 			Credentials: []string{
 				"fooCredSecret",
+				"barCredSecret",
 			},
 		},
 	}
@@ -344,6 +359,17 @@ func Test_FillConsumersAndCredentials(t *testing.T) {
 				CustomID: kong.String("foo"),
 			},
 			KeyAuths: []*KeyAuth{{kong.KeyAuth{Key: kong.String("whatever")}}},
+			Oauth2Creds: []*Oauth2Credential{
+				{
+					kong.Oauth2Credential{
+						Name:         kong.String("whatever"),
+						ClientID:     kong.String("whatever"),
+						ClientSecret: kong.String("whatever"),
+						HashSecret:   kong.Bool(true),
+						RedirectURIs: []*string{kong.String("http://example.com")},
+					},
+				},
+			},
 		}},
 		Version: semver.MustParse("2.3.2"),
 	}
@@ -356,5 +382,9 @@ func Test_FillConsumersAndCredentials(t *testing.T) {
 		assert.Equal(t, want.Consumers[0].Consumer.Username, state.Consumers[0].Consumer.Username)
 		assert.Equal(t, want.Consumers[0].Consumer.CustomID, state.Consumers[0].Consumer.CustomID)
 		assert.Equal(t, want.Consumers[0].KeyAuths[0].Key, state.Consumers[0].KeyAuths[0].Key)
+		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].ClientID, state.Consumers[0].Oauth2Creds[0].ClientID)
+		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].ClientSecret, state.Consumers[0].Oauth2Creds[0].ClientSecret)
+		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].HashSecret, state.Consumers[0].Oauth2Creds[0].HashSecret)
+		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].RedirectURIs, state.Consumers[0].Oauth2Creds[0].RedirectURIs)
 	})
 }

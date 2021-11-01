@@ -55,6 +55,9 @@
 - Fixed a bug where version reported for the controller manager was missing
   due to incorrect linker flags and missing build args in image builds.
   [#1943](https://github.com/Kong/kubernetes-ingress-controller/issues/1943)
+- `hash_secret` strings in OAuth2 credentials now correctly convert to bools
+  in the generated Kong configuration.
+  [#1984](https://github.com/Kong/kubernetes-ingress-controller/issues/1984)
 
 ## [2.0.4] - 2021/10/22
 

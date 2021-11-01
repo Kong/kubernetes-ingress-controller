@@ -15,7 +15,7 @@ import (
 )
 
 // RunReport runs the anonymous data report and reports any errors that have occurred.
-func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kong, kicVersion string) error {
+func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kong, kicVersion string, featureGates map[string]bool) error {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
 	// This data helps inform us what versions, features, e.t.c. end-users are actively using which helps to inform
@@ -67,6 +67,7 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 		Hostname:          hostname,
 		ID:                uuid,
 		KongDB:            kongDB,
+		FeatureGates:      featureGates,
 	}
 
 	// run the reporter in the background

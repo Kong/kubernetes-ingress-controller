@@ -92,8 +92,6 @@ func (validator KongHTTPValidator) ValidatePlugin(ctx context.Context,
 	if err != nil {
 		return false, ErrTextPluginConfigValidationFailed, err
 	}
-	// this doesn't work yet, since Validate still returns an "error" for informational stuff
-	// fixing that requires a breaking go-kong change
 	if !isValid {
 		return isValid, fmt.Sprintf(ErrTextPluginConfigViolatesSchema, msg), nil
 	}

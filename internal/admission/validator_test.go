@@ -30,11 +30,12 @@ type fakePluginSvc struct {
 	kong.AbstractPluginService
 
 	err   error
+	msg   string
 	valid bool
 }
 
-func (f *fakePluginSvc) Validate(ctx context.Context, plugin *kong.Plugin) (bool, error) {
-	return f.valid, f.err
+func (f *fakePluginSvc) Validate(ctx context.Context, plugin *kong.Plugin) (bool, string, error) {
+	return f.valid, f.msg, f.err
 }
 
 func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
@@ -283,13 +284,13 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 		},
 		{
 			name:      "plugin is not valid",
-			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("plugin lacks required field")},
+			PluginSvc: &fakePluginSvc{valid: false, msg: "now where could my pipe be"},
 			args: args{
 				plugin: configurationv1.KongPlugin{PluginName: "foo"},
 			},
 			wantOK:      false,
-			wantMessage: ErrTextPluginConfigViolatesSchema,
-			wantErr:     true,
+			wantMessage: fmt.Sprintf(ErrTextPluginConfigViolatesSchema, "now where could my pipe be"),
+			wantErr:     false,
 		},
 		{
 			name:      "plugin lacks plugin name",
@@ -355,6 +356,16 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			wantMessage: ErrTextPluginSecretConfigUnretrievable,
 			wantErr:     true,
 		},
+		{
+			name:      "failed to retrieve validation info",
+			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("everything broke")},
+			args: args{
+				plugin: configurationv1.KongPlugin{PluginName: "foo"},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginConfigValidationFailed,
+			wantErr:     true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -402,13 +413,13 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 		},
 		{
 			name:      "plugin is not valid",
-			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("plugin lacks required field")},
+			PluginSvc: &fakePluginSvc{valid: false, msg: "now where could my pipe be"},
 			args: args{
 				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
 			},
 			wantOK:      false,
-			wantMessage: ErrTextPluginConfigViolatesSchema,
-			wantErr:     true,
+			wantMessage: fmt.Sprintf(ErrTextPluginConfigViolatesSchema, "now where could my pipe be"),
+			wantErr:     false,
 		},
 		{
 			name:      "plugin lacks plugin name",
@@ -474,6 +485,16 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginSecretConfigUnretrievable,
+			wantErr:     true,
+		},
+		{
+			name:      "failed to retrieve validation info",
+			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("everything broke")},
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextPluginConfigValidationFailed,
 			wantErr:     true,
 		},
 	}

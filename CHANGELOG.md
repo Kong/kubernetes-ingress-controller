@@ -39,11 +39,25 @@
 
 ## [2.0.5] - TBD
 
+#### Added
+
+- [Feature Gates][k8s-fg] have been added to the controller manager in order to
+  enable alpha/beta/experimental features and provide documentation about those
+  features and their maturity over time. For more information see the
+  [KIC Feature Gates Documentation][kic-fg].
+  [#1970](https://github.com/Kong/kubernetes-ingress-controller/pull/1970)
+
+[k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+[kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
+
 #### Fixed
 
 - Fixed a bug where version reported for the controller manager was missing
   due to incorrect linker flags and missing build args in image builds.
   [#1943](https://github.com/Kong/kubernetes-ingress-controller/issues/1943)
+- `hash_secret` strings in OAuth2 credentials now correctly convert to bools
+  in the generated Kong configuration.
+  [#1984](https://github.com/Kong/kubernetes-ingress-controller/issues/1984)
 
 ## [2.0.4] - 2021/10/22
 

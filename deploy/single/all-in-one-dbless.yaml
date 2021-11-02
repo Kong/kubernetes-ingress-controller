@@ -114,6 +114,7 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:
@@ -183,6 +184,7 @@ spec:
             description: Username unique username of the consumer.
             type: string
         type: object
+        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:
@@ -424,6 +426,7 @@ spec:
                 type: integer
             type: object
         type: object
+        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:
@@ -554,6 +557,7 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:
@@ -740,6 +744,7 @@ spec:
                 type: object
             type: object
         type: object
+        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:
@@ -894,6 +899,7 @@ spec:
                 type: object
             type: object
         type: object
+        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:

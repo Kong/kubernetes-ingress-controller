@@ -42,6 +42,7 @@ type UDPIngressList struct {
 //+kubebuilder:validation:Optional
 //+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+//+kubebuilder:pruning:PreserveUnknownFields
 
 // UDPIngress is the Schema for the udpingresses API
 type UDPIngress struct {

@@ -160,9 +160,19 @@ generate.clientsets: client-gen
 
 .PHONY: container
 container:
-	docker build \
+	docker buildx build \
     -f Dockerfile \
+    --target distroless \
     --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+    --build-arg REPO_INFO=${REPO_INFO} \
+    -t ${IMAGE}:${TAG} .
+
+.PHONY: container
+debug-container:
+	docker buildx build \
+    -f Dockerfile \
+    --target debug \
+    --build-arg TAG=${TAG}-debug --build-arg COMMIT=${COMMIT} \
     --build-arg REPO_INFO=${REPO_INFO} \
     -t ${IMAGE}:${TAG} .
 

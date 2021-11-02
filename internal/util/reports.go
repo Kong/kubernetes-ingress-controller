@@ -26,6 +26,7 @@ type Info struct {
 	Hostname          string
 	KongDB            string
 	ID                string
+	FeatureGates      map[string]bool
 }
 
 // Reporter sends anonymous reports of runtime properties and

@@ -42,6 +42,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
 
+	setupLog.Info("getting enabled options and features")
+	featureGates, err := setupFeatureGates(setupLog, c)
+	if err != nil {
+		return fmt.Errorf("failed to configure feature gates: %w", err)
+	}
+
 	setupLog.Info("getting the kubernetes client configuration")
 	kubeconfig, err := c.GetKubeconfig()
 	if err != nil {
@@ -68,7 +74,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	setupLog.Info("Starting Enabled Controllers")
-	controllers, err := setupControllers(mgr, proxy, c)
+	controllers, err := setupControllers(mgr, proxy, c, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}
@@ -97,7 +103,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 
 	if c.AnonymousReports {
 		setupLog.Info("Starting anonymous reports")
-		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, metadata.Release); err != nil {
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, metadata.Release, featureGates); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}
 	} else {

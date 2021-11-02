@@ -19,6 +19,21 @@ ARG COMMIT
 ARG REPO_INFO
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
 
+# Build a manager binary with debug symbols and download Delve
+FROM builder as builder-delve
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager-debug -gcflags=all="-N -l" -ldflags "-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
+
+# Create an image that runs a debug build with a Delve remote server on port 2345
+FROM golang:1.17 AS debug
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+# We want all source so Delve file location operations work
+COPY --from=builder-delve /workspace/ /workspace/
+USER 65532:65532
+
+ENTRYPOINT ["/go/bin/dlv"]
+CMD ["exec", "--continue", "--accept-multiclient",  "--headless", "--api-version=2", "--listen=:2345", "--log", "/workspace/manager-debug"]
+
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot AS distroless

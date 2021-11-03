@@ -38,10 +38,8 @@ func TestMain(m *testing.M) {
 	kongbuilder := kong.NewBuilder()
 	extraControllerArgs := []string{}
 	if kongEnterpriseEnabled == "true" {
-		licenseJSON := os.Getenv("KONG_LICENSE_DATA")
-		if licenseJSON == "" {
-			exitOnErr(fmt.Errorf(("KONG_LICENSE_DATA must be set for Enterprise tests")))
-		}
+		licenseJSON, err := kong.GetLicenseJSONFromEnv()
+		exitOnErr(err)
 		extraControllerArgs = append(extraControllerArgs, fmt.Sprintf("--kong-admin-token=%s", kongTestPassword))
 		extraControllerArgs = append(extraControllerArgs, "--kong-workspace=notdefault")
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).

@@ -15,13 +15,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/utils"
 )
@@ -121,7 +121,7 @@ func TestMain(m *testing.M) {
 	testCases, err := identifyTestCasesForDir("./")
 	exitOnErr(err)
 	for _, testCase := range testCases {
-		namespaceForTestCase, err := generators.GenerateNamespace(ctx, env.Cluster(), testCase)
+		namespaceForTestCase, err := clusters.GenerateNamespace(ctx, env.Cluster(), testCase)
 		exitOnErr(err)
 		namespaces[testCase] = namespaceForTestCase
 		watchNamespaces = fmt.Sprintf("%s,%s", watchNamespaces, namespaceForTestCase.Name)

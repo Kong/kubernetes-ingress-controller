@@ -173,6 +173,72 @@ func TestIngressEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
+func TestGRPCIngressEssentials(t *testing.T) {
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("grpcbin", "moul/grpcbin", 9001)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the deployment %s", deployment.Name)
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	// as of KTF 0.9,0 NewServiceForDeployment doesn't initialize annotations itself, need to do it outside
+	service.ObjectMeta.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.ProtocolKey: "grpc"}
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the service %s", service.Name)
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	kubernetesVersion, err := env.Cluster().Version()
+	require.NoError(t, err)
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/", map[string]string{
+		annotations.IngressClassKey:                             ingressClass,
+		annotations.AnnotationPrefix + annotations.ProtocolsKey: "grpc,grpcs",
+		annotations.AnnotationPrefix + annotations.StripPathKey: "false",
+	}, service)
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+
+	defer func() {
+		t.Log("cleaning up Ingress resource")
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
+			if !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		}
+	}()
+
+	t.Log("waiting for updated ingress status to include IP")
+	require.Eventually(t, func() bool {
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress)
+		if err != nil {
+			return false
+		}
+		return len(lbstatus.Ingress) > 0
+	}, ingressWait, waitTick)
+
+	// So far this only tests that the ingress is created and receives status information, to confirm the fix for
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/1991
+	// It does not test routing, though the status implementation implies it (we only add status after we confirm
+	// configuration is present in the proxy). This test could be expanded to better confirm routing with a suitable
+	// gRPC test client.
+
+	t.Log("deleting Ingress")
+	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
+}
+
 func TestIngressClassNameSpec(t *testing.T) {
 	t.Parallel()
 	ns, cleanup := namespace(t)

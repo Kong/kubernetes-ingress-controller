@@ -6,7 +6,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -52,17 +52,6 @@ const (
 	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
 	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
 	adminAPIWait = time.Minute * 2
-)
-
-var (
-	// enterpriseLicenseSecretYAMLVar is the name of the ENV var used to pass an
-	// enterprise license to the tests.
-	enterpriseLicenseSecretYAMLVar = "KONG_ENTERPRISE_LICENSE_SECRET"
-
-	// enterpriseLicenseSecretYAML is the full YAML manifest of a license secret needed
-	// in order to support an enterprise deployment of Kong via the KIC.
-	// This value must be provided via the environment for enterprise tests.
-	enterpriseLicenseSecretYAML = os.Getenv(enterpriseLicenseSecretYAMLVar)
 )
 
 // -----------------------------------------------------------------------------
@@ -107,8 +96,8 @@ const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.ya
 
 func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	t.Log("configuring all-in-one-dbless-k4k8s-enterprise.yaml manifest test")
-	if enterpriseLicenseSecretYAML == "" {
-		t.Skipf("no license available to test enterprise: %s was not provided", enterpriseLicenseSecretYAMLVar)
+	if os.Getenv(kong.LicenseDataEnvVar) == "" {
+		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -131,8 +120,12 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	adminPassword, adminPasswordSecretYAML, err := generateAdminPasswordSecret()
 	require.NoError(t, err)
 
+	t.Log("generating a license secret")
+	licenseSecret, err := kong.GetLicenseSecretFromEnv()
+	require.NoError(t, err)
+
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, entDBLESSPath, enterpriseLicenseSecretYAML, adminPasswordSecretYAML)
+	deployKong(ctx, t, env, entDBLESSPath, licenseSecret, adminPasswordSecretYAML)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env)
@@ -179,8 +172,8 @@ const entPostgresPath = "../../deploy/single/all-in-one-postgres-enterprise.yaml
 
 func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres-enterprise.yaml manifest test")
-	if enterpriseLicenseSecretYAML == "" {
-		t.Skipf("no license available to test enterprise: %s was not provided", enterpriseLicenseSecretYAMLVar)
+	if os.Getenv(kong.LicenseDataEnvVar) == "" {
+		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -200,11 +193,15 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	}()
 
 	t.Log("generating a superuser password")
-	adminPassword, adminPasswordSecretYAML, err := generateAdminPasswordSecret()
+	adminPassword, adminPasswordSecret, err := generateAdminPasswordSecret()
+	require.NoError(t, err)
+
+	t.Log("generating a license secret")
+	licenseSecret, err := kong.GetLicenseSecretFromEnv()
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, entPostgresPath, enterpriseLicenseSecretYAML, adminPasswordSecretYAML)
+	deployKong(ctx, t, env, entPostgresPath, licenseSecret, adminPasswordSecret)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -228,7 +225,7 @@ const (
 	adminServiceName = "kong-admin"
 )
 
-func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifestPath string, additionalManifests ...string) {
+func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifestPath string, additionalSecrets ...*corev1.Secret) {
 	t.Log("creating a tempfile for kubeconfig")
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
@@ -253,19 +250,10 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	cmd.Stderr = stderr
 	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
 
-	t.Logf("deploying any supplemental manifests (found: %d)", len(additionalManifests))
-	for _, manifest := range additionalManifests {
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		stdin, err := cmd.StdinPipe()
+	t.Logf("deploying any supplemental secrets (found: %d)", len(additionalSecrets))
+	for _, secret := range additionalSecrets {
+		_, err := env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, secret, metav1.CreateOptions{})
 		require.NoError(t, err)
-		written, err := io.WriteString(stdin, manifest)
-		require.NoError(t, err)
-		require.Equal(t, written, len(manifest))
-		require.NoError(t, stdin.Close())
-		require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
 	}
 
 	t.Logf("deploying the %s manifest to the cluster", strings.TrimPrefix(manifestPath, "../../"))
@@ -422,22 +410,21 @@ const (
 	adminPasswordSecretName = "kong-enterprise-superuser-password"
 )
 
-func generateAdminPasswordSecret() (string, string, error) {
+func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 	adminPassword, err := password.Generate(64, 10, 10, false, false)
 	if err != nil {
-		return "", "", err
+		return "", nil, err
 	}
-	adminPasswordB64 := base64.StdEncoding.EncodeToString([]byte(adminPassword))
-	adminPasswordSecretYAML := fmt.Sprintf(`---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: %s
-  namespace: kong
-type: Opaque
-data:
-  password: %s`, adminPasswordSecretName, adminPasswordB64)
-	return adminPassword, adminPasswordSecretYAML, nil
+
+	return adminPassword, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: adminPasswordSecretName,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"password": []byte(adminPassword),
+		},
+	}, nil
 }
 
 // exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the

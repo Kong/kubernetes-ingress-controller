@@ -1,43 +1,45 @@
 # Table of Contents
 
- - [2.0.5](#205---20211102)
- - [2.0.4](#204---20211022)
- - [2.0.3](#203---20211019)
- - [2.0.2](#202---20211014)
- - [2.0.1](#201---20211011)
- - [2.0.0](#200---20211007)
- - [1.3.3](#133---20211001)
- - [1.3.2](#132---20210812)
- - [1.3.1](#131---20210603)
- - [1.3.0](#130---20210527)
- - [1.2.0](#120---20210324)
- - [1.1.1](#111---20210107)
- - [1.1.0](#110---20201209)
- - [1.0.0](#100---20201005)
- - [0.10.0](#0100---20200915)
- - [0.9.1](#091---20200608)
- - [0.9.0](#090---20200526)
- - [0.8.1](#081---20200415)
- - [0.8.0](#080---20200325)
- - [0.7.1](#071---20200131)
- - [0.7.0](#070---20200106)
- - [0.6.2](#062---20191113)
- - [0.6.1](#061---20191009)
- - [0.6.0](#060---20190917)
- - [0.5.0](#050---20190625)
- - [0.4.0](#040---20190424)
- - [0.3.0](#030---20190108)
- - [0.2.2](#022---20181109)
- - [0.1.3](#013---20181109)
- - [0.2.1](#021---20181026)
- - [0.1.2](#012---20181026)
- - [0.1.1](#011---20180926)
- - [0.2.0](#020---20180921)
- - [0.1.0](#010---20180817)
- - [0.0.5](#005---20180602)
+ - [2.0.5](#205)
+ - [2.0.4](#204)
+ - [2.0.3](#203)
+ - [2.0.2](#202)
+ - [2.0.1](#201)
+ - [2.0.0](#200)
+ - [1.3.3](#133)
+ - [1.3.2](#132)
+ - [1.3.1](#131)
+ - [1.3.0](#130)
+ - [1.2.0](#120)
+ - [1.1.1](#111)
+ - [1.1.0](#110)
+ - [1.0.0](#100)
+ - [0.10.0](#0100)
+ - [0.9.1](#091)
+ - [0.9.0](#090)
+ - [0.8.1](#081)
+ - [0.8.0](#080)
+ - [0.7.1](#071)
+ - [0.7.0](#070)
+ - [0.6.2](#062)
+ - [0.6.1](#061)
+ - [0.6.0](#060)
+ - [0.5.0](#050)
+ - [0.4.0](#040)
+ - [0.3.0](#030)
+ - [0.2.2](#022)
+ - [0.1.3](#013)
+ - [0.2.1](#021)
+ - [0.1.2](#012)
+ - [0.1.1](#011)
+ - [0.2.0](#020)
+ - [0.1.0](#010)
+ - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.0.5] - 2021/11/02
+## [2.0.5]
+
+> Release date: 2021/11/02
 
 #### Added
 
@@ -62,7 +64,9 @@
   status code for invalid plugin configuration.
   [#1980](https://github.com/Kong/kubernetes-ingress-controller/issues/1980)
 
-## [2.0.4] - 2021/10/22
+## [2.0.4]
+
+> Release date: 2021/10/22
 
 #### Added
 
@@ -80,7 +84,9 @@
 - Fixed a segfault when the version reporter failed to initialize.
   [#1961](https://github.com/Kong/kubernetes-ingress-controller/issues/1961)
 
-## [2.0.3] - 2021/10/19
+## [2.0.3]
+
+> Release date: 2021/10/19
 
 #### Fixed
 
@@ -92,13 +98,17 @@
   type services provision slowly.
   [#1931](https://github.com/Kong/kubernetes-ingress-controller/pull/1931)
 
-## [2.0.2] - 2021/10/14
+## [2.0.2]
+
+> Release date: 2021/10/14
 
 #### Added
 
 - Builds now produce Red Hat UBI-based images.
 
-## [2.0.1] - 2021/10/11
+## [2.0.1]
+
+> Release date: 2021/10/11
 #### Added
 
 - The ingress controller version now gets logged on startup.
@@ -110,7 +120,9 @@
   only allow access to the specified workspace.
   [#1900](https://github.com/Kong/kubernetes-ingress-controller/issues/1900)
 
-## [2.0.0] - 2021/10/07
+## [2.0.0]
+
+> Release date: 2021/10/07
 
 **NOTE**: This changelog entry was compiled from every changelog entry in the
   `alpha` and `beta` pre-releases of `2.0.0`. If you're looking for the interim
@@ -310,7 +322,9 @@ previous `v1.3.x` releases to this release.
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
 
-## [1.3.3] - 2021/10/01
+## [1.3.3]
+
+> Release date: 2021/10/01
 
 #### Fixed
 
@@ -319,7 +333,9 @@ previous `v1.3.x` releases to this release.
 - Fixed a panic when sorting consumers.
   [#1658](https://github.com/Kong/kubernetes-ingress-controller/pull/1658)
 
-## [1.3.2] - 2021/08/12
+## [1.3.2]
+
+> Release date: 2021/08/12
 
 #### Under the hood
 
@@ -327,7 +343,9 @@ previous `v1.3.x` releases to this release.
   [#1691](https://github.com/Kong/kubernetes-ingress-controller/pull/1691/)
 - Update Kong images to 2.5.
 
-## [1.3.1] - 2021/06/03
+## [1.3.1]
+
+> Release date: 2021/06/03
 
 #### Fixed
 
@@ -338,7 +356,9 @@ previous `v1.3.x` releases to this release.
 - Upgraded CI dependencies
 - Some cleanup iterations on RELEASE.md release process
 
-## [1.3.0] - 2021/05/27
+## [1.3.0]
+
+> Release date: 2021/05/27
 
 #### Added
 
@@ -355,7 +375,9 @@ previous `v1.3.x` releases to this release.
 
 - Upgraded various dependencies.
 
-## [1.2.0] - 2021/03/24
+## [1.2.0]
+
+> Release date: 2021/03/24
 
 #### Added
 
@@ -403,7 +425,9 @@ previous `v1.3.x` releases to this release.
   dependency updates.
 - Upgraded almost all Go library dependencies (from now on, using Dependabot to ensure that minor releases use the newest versions available).
 
-## [1.1.1] - 2021/01/07
+## [1.1.1]
+
+> Release date: 2021/01/07
 
 #### Fixed
 
@@ -414,7 +438,9 @@ previous `v1.3.x` releases to this release.
 
 - Removed Helm 2 installation instructions because Helm 2 is EOL. Use Helm 3 instead. [#993](https://github.com/Kong/kubernetes-ingress-controller/pull/993)
 
-## [1.1.0] - 2020/12/09
+## [1.1.0]
+
+> Release date: 2020/12/09
 
 #### Breaking changes
 
@@ -451,7 +477,9 @@ previous `v1.3.x` releases to this release.
 - Credentials that lack critical fields no longer result in a panic.
   [#944](https://github.com/Kong/kubernetes-ingress-controller/pull/944)
 
-## [1.0.0] - 2020/10/05
+## [1.0.0]
+
+> Release date: 2020/10/05
 
 #### Breaking changes
 
@@ -494,7 +522,9 @@ previous `v1.3.x` releases to this release.
 - EKS documentation now uses hostnames rather than IP addresses.
   [#877](https://github.com/Kong/kubernetes-ingress-controller/pull/877)
 
-## [0.10.0] - 2020/09/15
+## [0.10.0]
+
+> Release date: 2020/09/15
 
 #### Breaking changes
 
@@ -589,14 +619,18 @@ previous `v1.3.x` releases to this release.
 - Updated Go build configuration to use Go 1.15.
   [#816](https://github.com/Kong/kubernetes-ingress-controller/pull/816)
 
-## [0.9.1] - 2020/06/08
+## [0.9.1]
+
+> Release date: 2020/06/08
 
 #### Fixed
 
 - Parse TLS section of Knative Ingress resources
   [#721](https://github.com/Kong/kubernetes-ingress-controller/pull/721)
 
-## [0.9.0] - 2020/05/26
+## [0.9.0]
+
+> Release date: 2020/05/26
 
 #### Breaking change
 
@@ -653,7 +687,9 @@ provided by other means in such architectures.
 - Ingress rules with consecutive slashes (`//`) are now ignored
   [#663](https://github.com/Kong/kubernetes-ingress-controller/pull/663)
 
-## [0.8.1] - 2020/04/15
+## [0.8.1]
+
+> Release date: 2020/04/15
 
 #### Added
 
@@ -672,7 +708,9 @@ provided by other means in such architectures.
 - Correctly set Knative Ingress Status
   [#600](https://github.com/Kong/kubernetes-ingress-controller/pull/600)
 
-## [0.8.0] - 2020/03/25
+## [0.8.0]
+
+> Release date: 2020/03/25
 
 #### Breaking changes
 
@@ -740,7 +778,9 @@ Please read the annotations document for new annotations.
 - Alpine docker image has been upgraded to 3.11.
   [#567](https://github.com/Kong/kubernetes-ingress-controller/pull/567)
 
-## [0.7.1] - 2020/01/31
+## [0.7.1]
+
+> Release date: 2020/01/31
 
 #### Summary
 
@@ -762,7 +802,9 @@ This releases contains bug-fixes only. All users are advised to upgrade.
 - Do not send multiple update events for a single CRD update
   [#514](https://github.com/Kong/kubernetes-ingress-controller/issues/514)
 
-## [0.7.0] - 2020/01/06
+## [0.7.0]
+
+> Release date: 2020/01/06
 
 #### Summary
 
@@ -871,21 +913,27 @@ authentication, DB-less deployment by default and performance improvements.
 
 - decK has been bumped up to v0.6.2.
 
-## [0.6.2] - 2019/11/13
+## [0.6.2]
+
+> Release date: 2019/11/13
 
 #### Summary
 
 This is a minor patch release to fix version parsing issue with new
 Kong Enterprise packages.
 
-## [0.6.1] - 2019/10/09
+## [0.6.1]
+
+> Release date: 2019/10/09
 
 #### Summary
 
 This is a minor patch release to update Kong Ingress Controller's
 Docker image to use a non-root by default.
 
-## [0.6.0] - 2019/09/17
+## [0.6.0]
+
+> Release date: 2019/09/17
 
 #### Summary
 
@@ -950,7 +998,9 @@ Kong 1.3 additions and enhancements to documentation and deployments.
 - Credentials sync has been moved into decK and decK has been bumped up
   to v0.5.1.
 
-## [0.5.0] - 2019/06/25
+## [0.5.0]
+
+> Release date: 2019/06/25
 
 #### Summary
 
@@ -1003,7 +1053,9 @@ and numerous bug-fixes and enhancements.
 - Kubernetes client-go library has been updated to v1.14.1.
 - Makefile and Dockerfiles have been simplified.
 
-## [0.4.0] - 2019/04/24
+## [0.4.0]
+
+> Release date: 2019/04/24
 
 #### Summary
 
@@ -1078,7 +1130,9 @@ Please read the changelog and test in your environment.
   to Kong, fixing numerous bugs and making Ingress Controller code saner
   and easier to maintain.
 
-## [0.3.0] - 2019/01/08
+## [0.3.0]
+
+> Release date: 2019/01/08
 
 #### Breaking Changes
 
@@ -1115,7 +1169,9 @@ Please read the changelog and test in your environment.
    [#211](https://github.com/Kong/kubernetes-ingress-controller/pull/211)
 
 
-## [0.2.2] - 2018/11/09
+## [0.2.2]
+
+> Release date: 2018/11/09
 
 #### Fixed
 
@@ -1133,7 +1189,9 @@ Please read the changelog and test in your environment.
    [#188](https://github.com/Kong/kubernetes-ingress-controller/pull/188)
 
 
-## [0.1.3] - 2018/11/09
+## [0.1.3]
+
+> Release date: 2018/11/09
 
 #### Fixed
 
@@ -1146,7 +1204,9 @@ Please read the changelog and test in your environment.
    [#196](https://github.com/Kong/kubernetes-ingress-controller/pull/196)
 
 
-## [0.2.1] - 2018/10/26
+## [0.2.1]
+
+> Release date: 2018/10/26
 
 #### Added
 
@@ -1183,7 +1243,9 @@ Please read the changelog and test in your environment.
    [#168](https://github.com/Kong/kubernetes-ingress-controller/pull/168)
 
 
-## [0.1.2] - 2018/10/26
+## [0.1.2]
+
+> Release date: 2018/10/26
 
 #### Deprecated
 
@@ -1235,7 +1297,9 @@ Please read the changelog and test in your environment.
    [#169](https://github.com/Kong/kubernetes-ingress-controller/pull/169)
 
 
-## [0.1.1] - 2018/09/26
+## [0.1.1]
+
+> Release date: 2018/09/26
 
 #### Fixed
 
@@ -1243,7 +1307,9 @@ Please read the changelog and test in your environment.
    The dash(`-`) didn't go well with the semver parsing
    [#141](https://github.com/Kong/kubernetes-ingress-controller/pull/141)
 
-## [0.2.0] - 2018/09/21
+## [0.2.0]
+
+> Release date: 2018/09/21
 
 #### Breaking Changes
 
@@ -1291,7 +1357,9 @@ Please read the changelog and test in your environment.
    [#118](https://github.com/Kong/kubernetes-ingress-controller/pull/118)
 
 
-## [0.1.0] - 2018/08/17
+## [0.1.0]
+
+> Release date: 2018/08/17
 
 #### Breaking Changes
 
@@ -1320,7 +1388,9 @@ Please read the changelog and test in your environment.
    [#92](https://github.com/Kong/kubernetes-ingress-controller/pull/92)
 
 
-## [v0.0.5] - 2018/06/02
+## [v0.0.5]
+
+> Release date: 2018/06/02
 
 #### Added
 

@@ -13,8 +13,10 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	pb "github.com/moul/pb/grpcbin/go-grpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -192,7 +194,7 @@ func TestGRPCIngressEssentials(t *testing.T) {
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	// as of KTF 0.9,0 NewServiceForDeployment doesn't initialize annotations itself, need to do it outside
-	service.ObjectMeta.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.ProtocolKey: "grpc"}
+	service.ObjectMeta.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.ProtocolKey: "grpcs"}
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -229,11 +231,25 @@ func TestGRPCIngressEssentials(t *testing.T) {
 		return len(lbstatus.Ingress) > 0
 	}, ingressWait, waitTick)
 
-	// So far this only tests that the ingress is created and receives status information, to confirm the fix for
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/1991
-	// It does not test routing, though the status implementation implies it (we only add status after we confirm
-	// configuration is present in the proxy). This test could be expanded to better confirm routing with a suitable
-	// gRPC test client.
+	// this never finishes
+	// DummyUnary returns a "connection closed before server preface received" error
+	t.Log("waiting for routes from Ingress to be operational")
+	require.Eventually(t, func() bool {
+		conn, err := grpc.Dial(fmt.Sprintf("%s:%s", proxyURL.Hostname(), "443"), grpc.WithInsecure())
+		if err != nil {
+			t.Logf("error connecting to %s:%s: %v", proxyURL.Hostname(), "443", err)
+			return false
+		}
+		defer conn.Close()
+		client := pb.NewGRPCBinClient(conn)
+		res, err := client.Index(ctx, &pb.EmptyMessage{})
+		if err != nil {
+			t.Logf("failed to send gRPC request: %v", err)
+			return false
+		}
+		t.Logf("received gRPC response: %v", res)
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("deleting Ingress")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))

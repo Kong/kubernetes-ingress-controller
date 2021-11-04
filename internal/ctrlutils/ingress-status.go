@@ -146,7 +146,7 @@ func UpdateStatuses(
 				return fmt.Errorf("failed to update udp ingress: %w", err)
 			}
 
-		case "http":
+		case "http", "https", "grpc", "grpcs":
 			// if the cluster is on a very old version, we fall back to legacy Ingress support
 			// for compatibility with clusters older than v1.19.x.
 			// TODO: this can go away once we drop support for Kubernetes older than v1.19

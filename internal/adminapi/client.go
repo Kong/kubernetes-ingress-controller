@@ -43,7 +43,6 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		return nil, fmt.Errorf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
 			"are set; please remove one or the other")
 	}
-
 	if opts.CACert != "" {
 		certPool := x509.NewCertPool()
 		ok := certPool.AppendCertsFromPEM([]byte(opts.CACert))

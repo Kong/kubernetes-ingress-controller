@@ -215,7 +215,7 @@ func TestGRPCIngressEssentials(t *testing.T) {
 		t.Log("cleaning up Ingress resource")
 		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
 			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		}
 	}()

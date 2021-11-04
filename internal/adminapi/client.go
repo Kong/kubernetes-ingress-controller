@@ -53,7 +53,6 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		}
 		tlsConfig.RootCAs = certPool
 	}
-
 	if opts.CACertPath != "" {
 		certPath := opts.CACertPath
 		certPool := x509.NewCertPool()

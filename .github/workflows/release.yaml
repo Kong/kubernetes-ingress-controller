@@ -62,23 +62,19 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.5.0
+        uses: docker/metadata-action@v3.6.0
         with:
           images: kong/kubernetes-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.3.0
+        uses: docker/metadata-action@v3.6.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
             latest=false
           tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
-        env:
-          TAG: ${{ steps.meta.outputs.version }}
-          COMMIT: ${{ github.sha }}
-          REPO_INFO: https://github.com/${{ github.repository }}.git
         id: docker_build_binary
         uses: docker/build-push-action@v2
         with:
@@ -87,10 +83,12 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           target: builder
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push
         id: docker_build
-        env:
-          TAG: ${{ steps.meta.outputs.version }}
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -98,6 +96,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           target: distroless
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push Red Hat
         id: docker_build_redhat
         env:
@@ -108,6 +110,8 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.meta_redhat.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
-          build-args: |
-            TAG=${{ env.TAG }}
           target: redhat
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git

@@ -59,7 +59,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
+func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, featureGates map[string]bool) ([]ControllerDef, error) {
 	// Choose the best API version of Ingress to inform which ingress controller to enable.
 	var ingressPicker ingressControllerStrategy
 	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
@@ -196,8 +196,14 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]Cont
 				IngressClassName: c.IngressClassName,
 			},
 		},
+		// ---------------------------------------------------------------------------
+		// Other Controllers
+		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.KnativeIngressEnabled,
+			// knative is a special case because it existed before we added feature gates functionality
+			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
+			// any feature gate configuration. See FEATURE_GATES.md for more information.
+			Enabled: featureGates["Knative"] || c.KnativeIngressEnabled,
 			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
 				Group:    knativev1alpha1.SchemeGroupVersion.Group,
 				Version:  knativev1alpha1.SchemeGroupVersion.Version,

@@ -11,7 +11,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 // -----------------------------------------------------------------------------
@@ -60,7 +59,7 @@ func DeployControllerManagerForCluster(ctx context.Context, cluster clusters.Clu
 
 	// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 	// generate a temporary kubeconfig since we're going to be using the helm CLI
-	kubeconfig, err := generators.TempKubeconfig(cluster)
+	kubeconfig, err := clusters.TempKubeconfig(cluster)
 	if err != nil {
 		return err
 	}

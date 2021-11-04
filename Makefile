@@ -2,7 +2,7 @@
 # Configuration
 # ------------------------------------------------------------------------------
 
-TAG?=2.0.4
+TAG?=2.0.5
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
 REPO_URL=github.com/kong/kubernetes-ingress-controller
@@ -160,9 +160,19 @@ generate.clientsets: client-gen
 
 .PHONY: container
 container:
-	docker build \
+	docker buildx build \
     -f Dockerfile \
+    --target distroless \
     --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+    --build-arg REPO_INFO=${REPO_INFO} \
+    -t ${IMAGE}:${TAG} .
+
+.PHONY: container
+debug-container:
+	docker buildx build \
+    -f Dockerfile \
+    --target debug \
+    --build-arg TAG=${TAG}-debug --build-arg COMMIT=${COMMIT} \
     --build-arg REPO_INFO=${REPO_INFO} \
     -t ${IMAGE}:${TAG} .
 

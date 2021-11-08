@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/utils"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -146,6 +146,7 @@ func TestMain(m *testing.M) {
 			"--dump-config",
 			"--log-level=trace",
 			"--debug-log-reduce-redundancy",
+			"--feature-gates=Gateway=true",
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
 		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))

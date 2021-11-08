@@ -13,6 +13,7 @@ import (
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metadata"
@@ -41,6 +42,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
 
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := setupFeatureGates(setupLog, c)
@@ -61,7 +63,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts := setupControllerOptions(setupLog, c, scheme)
+	controllerOpts, err := setupControllerOptions(setupLog, c, scheme)
+	if err != nil {
+		return fmt.Errorf("unable to setup controller options: %w", err)
+	}
+
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
 		return fmt.Errorf("unable to start controller manager: %w", err)

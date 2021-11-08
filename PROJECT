@@ -52,4 +52,13 @@ resources:
   kind: UDPIngress
   path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: networking.k8s.io
+  group: gateway
+  kind: Gateway
+  path: github.com/kubernetes-sigs/gateway-api/apis/v1alpha2
+  version: v1alpha2
 version: "3"

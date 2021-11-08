@@ -53,9 +53,13 @@ under the `resources` block for the `configuration.konghq.com` API group.
   features and their maturity over time. For more information see the
   [KIC Feature Gates Documentation][kic-fg].
   [#1970](https://github.com/Kong/kubernetes-ingress-controller/pull/1970)
+- a Gateway controller has been added in support of [Gateway APIs][gwapi].
+  This controller is foundational and doesn't serve any end-user purpose alone.
+  [#1945](https://github.com/Kong/kubernetes-ingress-controller/issues/1945)
 
 [k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 [kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
+[gwapi]:https://github.com/kubernetes-sigs/gateway-api
 
 #### Fixed
 

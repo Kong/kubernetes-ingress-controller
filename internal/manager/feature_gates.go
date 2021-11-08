@@ -35,5 +35,6 @@ func setupFeatureGates(setupLog logr.Logger, c *Config) (map[string]bool, error)
 func getFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
 		"Knative": false,
+		"Gateway": false,
 	}
 }

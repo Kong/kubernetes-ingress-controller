@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -63,6 +64,11 @@ type Proxy interface {
 	// IsReady returns true if the proxy is considered ready.
 	// A ready proxy has configuration available and can handle traffic.
 	IsReady() bool
+
+	// Listeners retrieves the currently configured listeners from the
+	// underlying proxy so that callers can gather this metadata to
+	// know which ports and protocols are in use by the proxy.
+	Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error)
 }
 
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API

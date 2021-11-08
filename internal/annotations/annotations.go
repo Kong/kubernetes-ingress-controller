@@ -54,6 +54,14 @@ const (
 	ResponseBuffering    = "/response-buffering"
 	HostAliasesKey       = "/host-aliases"
 
+	// GatewayUnmanagedAnnotation is an annotation used on a Gateway resource to
+	// indicate that the Gateway should be reconciled according to unmanaged
+	// mode.
+	//
+	// NOTE: it's currently required that this annotation be present on all Gateway
+	// resources: "unmanaged" mode is the only supported mode at this time.
+	GatewayUnmanagedAnnotation = "/gateway-unmanaged"
+
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
@@ -243,4 +251,11 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 		return nil, false
 	}
 	return strings.Split(val, ","), true
+}
+
+// ExtractUnmanagedGatewayMode extracts the value of the unmanaged gateway
+// mode annotation.
+func ExtractUnmanagedGatewayMode(anns map[string]string) (string, bool) {
+	s, ok := anns[AnnotationPrefix+GatewayUnmanagedAnnotation]
+	return s, ok
 }

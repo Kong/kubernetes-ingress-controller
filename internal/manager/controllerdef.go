@@ -9,8 +9,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -215,6 +217,26 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Scheme:           mgr.GetScheme(),
 				Proxy:            proxy,
 				IngressClassName: c.IngressClassName,
+			},
+		},
+		// ---------------------------------------------------------------------------
+		// GatewayAPI Controllers
+		// ---------------------------------------------------------------------------
+		{
+			Enabled: featureGates["Gateway"],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "gateways",
+				}}.CRDExists,
+			Controller: &gateway.GatewayReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("Gateway"),
+				Scheme:          mgr.GetScheme(),
+				Proxy:           proxy,
+				PublishService:  c.PublishService,
+				WatchNamespaces: c.WatchNamespaces,
 			},
 		},
 	}

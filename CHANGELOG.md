@@ -44,7 +44,7 @@
 **Note:** the admission webhook updates are _not_ applied automatically by the
 upgrade. If you set one up previously, you should edit it (`kubectl edit
 validatingwebhookconfiguration kong-validations` and add `kongclusterplugins`
-under the `resources` block fro the `configuration.konghq.com` apiGroup.
+under the `resources` block for the `configuration.konghq.com` API group.
 
 #### Added
 

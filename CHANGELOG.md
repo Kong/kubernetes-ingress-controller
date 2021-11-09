@@ -90,6 +90,9 @@ under the `resources` block for the `configuration.konghq.com` API group.
   [#2012](https://github.com/Kong/kubernetes-ingress-controller/issues/2012)
 - The template admission webhook configuration now includes KongClusterPlugins.
   [#2000](https://github.com/Kong/kubernetes-ingress-controller/issues/2000)
+- Failures to set up the status update subsystem no longer block the update
+  loop.
+  [#2005](https://github.com/Kong/kubernetes-ingress-controller/issues/2005)
 
 #### Under the hood
 

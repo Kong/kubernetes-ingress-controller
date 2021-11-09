@@ -2,6 +2,7 @@ package ctrlutils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -13,8 +14,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -32,6 +34,53 @@ const (
 	statusUpdateWaitTick = time.Second
 )
 
+var (
+	errLBNotReady = errors.New("LoadBalancer service has no IPs assigned")
+)
+
+type statusConfig struct {
+	ready             bool
+	cli               *clientset.Clientset
+	versionInfo       *version.Info
+	kubernetesVersion semver.Version
+	kiccli            *kicclientset.Clientset
+}
+
+type statusInfo struct {
+	ready    bool
+	ips      []string
+	hostname string
+}
+
+func newStatusConfig(kubeConfig *rest.Config) (statusConfig, error) {
+	cli, err := clientset.NewForConfig(kubeConfig)
+	if err != nil {
+		return statusConfig{ready: false}, err
+	}
+
+	versionInfo, err := cli.ServerVersion()
+	if err != nil {
+		return statusConfig{ready: false}, err
+	}
+
+	kubernetesVersion, err := semver.Parse(strings.TrimPrefix(versionInfo.String(), "v"))
+	if err != nil {
+		return statusConfig{ready: false}, err
+	}
+
+	kiccli, err := kicclientset.NewForConfig(kubeConfig)
+	if err != nil {
+		return statusConfig{ready: false}, err
+	}
+	return statusConfig{
+		ready:             true,
+		cli:               cli,
+		versionInfo:       versionInfo,
+		kubernetesVersion: kubernetesVersion,
+		kiccli:            kiccli,
+	}, nil
+}
+
 // PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
 func PullConfigUpdate(
 	ctx context.Context,
@@ -41,62 +90,44 @@ func PullConfigUpdate(
 	publishService string,
 	publishAddresses []string,
 ) {
-	var hostname string
-	var ips []string
-	for {
-		var err error
-		ips, hostname, err = RunningAddresses(ctx, kubeConfig, publishService, publishAddresses)
-		if err != nil {
-			// in the case that a LoadBalancer type service is being used for the Kong Proxy
-			// we must wait until the IP address if fully provisioned before we will be able
-			// to use the reference IPs/Hosts from that LoadBalancer to update resource status addresses.
-			if err.Error() == proxyLBNotReadyMessage {
-				log.V(util.InfoLevel).Info("LoadBalancer type Service for the Kong proxy is not yet provisioned, waiting...", "service", publishService)
-				time.Sleep(time.Second)
-				continue
-			}
-
-			log.Error(err, "failed to determine kong proxy external ips/hostnames.")
-			return
-		}
-		break
-	}
-
-	cli, err := clientset.NewForConfig(kubeConfig)
-	if err != nil {
-		log.Error(err, "failed to create k8s client.")
-		return
-	}
-
-	versionInfo, err := cli.ServerVersion()
-	if err != nil {
-		log.Error(err, "failed to retrieve cluster version")
-		return
-	}
-
-	kubernetesVersion, err := semver.Parse(strings.TrimPrefix(versionInfo.String(), "v"))
-	if err != nil {
-		log.Error(err, "could not parse cluster version")
-		return
-	}
-
-	kiccli, err := kicclientset.NewForConfig(kubeConfig)
-	if err != nil {
-		log.Error(err, "failed to create kong ingress client.")
-		return
-	}
-
+	cfg := statusConfig{ready: false}
+	status := statusInfo{ready: false}
 	var wg sync.WaitGroup
+	var err error
 	for {
 		select {
 		case updateDone := <-kongConfig.ConfigDone:
-			log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
-			wg.Add(1)
-			go func() {
-				if err := UpdateStatuses(ctx, &updateDone, log, cli, kiccli, &wg, ips, hostname, kubeConfig, kubernetesVersion); err != nil {
-					log.Error(err, "failed to update resource statuses")
+			if !cfg.ready {
+				cfg, err = newStatusConfig(kubeConfig)
+				if err != nil {
+					log.Error(err, "failed to initialize status updater")
 				}
-			}()
+			}
+			if !status.ready {
+				status, err = runningAddresses(ctx, kubeConfig, publishService, publishAddresses)
+				if err != nil {
+					if errors.Is(err, errLBNotReady) {
+						// Separate this into a debug log since it's expected in environments that cannot provision
+						// LoadBalancers (which we request by default), and will spam logs otherwise.
+						log.V(util.DebugLevel).Info("LoadBalancer type Service for the Kong proxy has no IPs", "service", publishService)
+					} else {
+						log.Error(err, "failed to look up status info for Kong proxy Service", "service", publishService)
+					}
+				}
+			}
+
+			if cfg.ready && status.ready {
+				log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
+				wg.Add(1)
+				go func() {
+					if err := UpdateStatuses(ctx, &updateDone, log, cfg.cli, cfg.kiccli, &wg, status.ips,
+						status.hostname, kubeConfig, cfg.kubernetesVersion); err != nil {
+						log.Error(err, "failed to update resource statuses")
+					}
+				}()
+			} else {
+				log.V(util.DebugLevel).Info("config or publish service information unavailable, skipping status update")
+			}
 		case <-ctx.Done():
 			log.Info("stop status update channel.")
 			wg.Wait()
@@ -204,7 +235,7 @@ func UpdateIngress(
 	for retry < statusUpdateRetry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
-			if errors.IsNotFound(err) {
+			if apiErrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to retrieve v1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 				return nil
 			}
@@ -231,11 +262,11 @@ func UpdateIngress(
 		if err == nil {
 			break
 		}
-		if errors.IsNotFound(err) {
+		if apiErrors.IsNotFound(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 			return nil
 		}
-		if errors.IsConflict(err) {
+		if apiErrors.IsConflict(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 		} else {
 			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -270,7 +301,7 @@ func UpdateIngressLegacy(
 	for retry < statusUpdateRetry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
-			if errors.IsNotFound(err) {
+			if apiErrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to retrieve v1beta1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 				return nil
 			}
@@ -297,11 +328,11 @@ func UpdateIngressLegacy(
 		if err == nil {
 			break
 		}
-		if errors.IsNotFound(err) {
+		if apiErrors.IsNotFound(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 			return nil
 		}
-		if errors.IsConflict(err) {
+		if apiErrors.IsConflict(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 		} else {
 			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -329,7 +360,7 @@ func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 		for retry < statusUpdateRetry {
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
-				if errors.IsNotFound(err) {
+				if apiErrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/UDPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
@@ -356,11 +387,11 @@ func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 			if err == nil {
 				break
 			}
-			if errors.IsNotFound(err) {
+			if apiErrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
-			if errors.IsConflict(err) {
+			if apiErrors.IsConflict(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -390,7 +421,7 @@ func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 		for retry < statusUpdateRetry {
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
-				if errors.IsNotFound(err) {
+				if apiErrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/TCPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
@@ -413,11 +444,11 @@ func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 			if err == nil {
 				break
 			}
-			if errors.IsNotFound(err) {
+			if apiErrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
-			if errors.IsConflict(err) {
+			if apiErrors.IsConflict(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -453,7 +484,7 @@ func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FServic
 		for retry < statusUpdateRetry {
 			curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
-				if errors.IsNotFound(err) {
+				if apiErrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve knative/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
@@ -491,11 +522,11 @@ func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FServic
 			if err == nil {
 				break
 			}
-			if errors.IsNotFound(err) {
+			if apiErrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
-			if errors.IsConflict(err) {
+			if apiErrors.IsConflict(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
 				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -510,25 +541,23 @@ func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FServic
 	return nil
 }
 
-const proxyLBNotReadyMessage = "LoadBalancer service for proxy is not yet ready"
-
-// RunningAddresses retrieve cluster loader balance IP or hostaddress using networking
-func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string,
-	publishAddresses []string) ([]string, string, error) {
+// runningAddresses retrieve cluster loader balance IP or hostaddress using networking
+func runningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService string,
+	publishAddresses []string) (statusInfo, error) {
 	addrs := []string{}
 	if len(publishAddresses) > 0 {
 		addrs = append(addrs, publishAddresses...)
-		return addrs, "", nil
+		return statusInfo{ready: true, ips: addrs, hostname: ""}, nil
 	}
 	namespace, name, err := util.ParseNameNS(publishService)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to retrieve service for status: %w", err)
+		return statusInfo{ready: false, ips: addrs, hostname: ""}, fmt.Errorf("unable to retrieve service for status: %w", err)
 	}
 
 	CoreClient, _ := clientset.NewForConfig(kubeCfg)
 	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return nil, "", err
+		return statusInfo{ready: false, ips: addrs, hostname: ""}, err
 	}
 
 	clusterDomain := network.GetClusterDomainName()
@@ -538,7 +567,7 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 	switch svc.Spec.Type {
 	case apiv1.ServiceTypeLoadBalancer:
 		if len(svc.Status.LoadBalancer.Ingress) < 1 {
-			return addrs, hostname, fmt.Errorf(proxyLBNotReadyMessage)
+			return statusInfo{ready: false, ips: addrs, hostname: ""}, errLBNotReady
 		}
 
 		for _, ip := range svc.Status.LoadBalancer.Ingress {
@@ -550,9 +579,9 @@ func RunningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 		}
 
 		addrs = append(addrs, svc.Spec.ExternalIPs...)
-		return addrs, hostname, nil
+		return statusInfo{ready: true, ips: addrs, hostname: hostname}, nil
 	default:
-		return addrs, hostname, nil
+		return statusInfo{ready: true, ips: addrs, hostname: hostname}, nil
 	}
 }
 

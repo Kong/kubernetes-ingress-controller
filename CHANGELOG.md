@@ -37,6 +37,20 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.1.0]
+
+> Release date: TBD
+
+**Note:** the admission webhook updates are _not_ applied automatically by the
+upgrade. If you set one up previously, you should edit it (`kubectl edit
+validatingwebhookconfiguration kong-validations` and add `kongclusterplugins`
+under the `resources` block for the `configuration.konghq.com` API group.
+
+#### Fixed
+
+- The template admission webhook configuration now includes KongClusterPlugins.
+  [#2000](https://github.com/Kong/kubernetes-ingress-controller/issues/2000)
+
 ## [2.0.5]
 
 > Release date: 2021/11/02
@@ -1390,6 +1404,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.5...v2.1.0
 [2.0.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.2...v2.0.3

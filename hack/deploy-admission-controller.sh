@@ -35,6 +35,7 @@ webhooks:
     resources:
     - kongconsumers
     - kongplugins
+    - kongclusterplugins
   - apiGroups:
     - ''
     apiVersions:

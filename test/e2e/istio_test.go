@@ -29,9 +29,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/utils"
 )
 
 var (

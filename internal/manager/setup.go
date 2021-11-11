@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bombsimon/logrusr"
@@ -42,7 +43,24 @@ func setupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme) ctrl.Options {
+func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme) (ctrl.Options, error) {
+	// some controllers may require additional namespaces to be cached and this
+	// is currently done using the global manager client cache.
+	//
+	// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2004
+	requiredCacheNamespaces := make([]string, 0)
+
+	// if publish service has been provided the namespace for it should be
+	// watched so that controllers can see updates to the service.
+	if c.PublishService != "" {
+		publishServiceSplit := strings.SplitN(c.PublishService, "/", 3)
+		if len(publishServiceSplit) != 2 {
+			return ctrl.Options{}, fmt.Errorf("--publish-service was expected to be in format <namespace>/<name> but got %s", c.PublishService)
+		}
+		requiredCacheNamespaces = append(requiredCacheNamespaces, publishServiceSplit[0])
+	}
+
+	// configure the general controller options
 	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
@@ -52,23 +70,23 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 		LeaderElectionID:       c.LeaderElectionID,
 		SyncPeriod:             &c.SyncPeriod,
 	}
-	// determine how to configure namespace watchers
-	switch len(c.WatchNamespaces) {
-	case 0:
-		// watch all namespaces
+
+	// configure the controller caching options
+	if len(c.WatchNamespaces) == 0 {
+		// if there are no configured watch namespaces, then we're watching ALL namespaces
+		// and we don't have to bother individually caching any particular namespaces
 		controllerOpts.Namespace = corev1.NamespaceAll
-	case 1:
-		// watch one namespace
-		controllerOpts.Namespace = c.WatchNamespaces[0]
-	default:
+	} else {
+		// in all other cases we are a multi-namespace setup and must watch all the
+		// c.WatchNamespaces and additionalNamespacesToCache defined namespaces.
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
 		logger.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespaces)
-		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(c.WatchNamespaces)
+		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(append(c.WatchNamespaces, requiredCacheNamespaces...))
 	}
 
-	return controllerOpts
+	return controllerOpts, nil
 }
 
 func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendconfig.Kong, error) {

@@ -175,6 +175,10 @@ func (p *clientgoCachedProxyResolver) IsReady() bool {
 	return true
 }
 
+func (p *clientgoCachedProxyResolver) Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
+	return p.kongConfig.Client.Listeners(ctx)
+}
+
 // -----------------------------------------------------------------------------
 // Client Go Cached Proxy Resolver - Private Methods - Servers
 // -----------------------------------------------------------------------------

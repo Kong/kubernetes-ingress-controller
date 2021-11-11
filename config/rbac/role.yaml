@@ -205,6 +205,34 @@ rules:
 - apiGroups:
   - networking.k8s.io
   resources:
+  - gatewayclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - gatewayclasses/status
+  verbs:
+  - get
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - gateways
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - gateways/status
+  verbs:
+  - get
+- apiGroups:
+  - networking.k8s.io
+  resources:
   - ingresses
   verbs:
   - get

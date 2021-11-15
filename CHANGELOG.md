@@ -48,6 +48,12 @@ under the `resources` block for the `configuration.konghq.com` API group.
 
 #### Fixed
 
+- Fixed an issue where statuses would not update properly when a single service
+  had multiple Ingress resources associated with it.
+  [#2013](https://github.com/Kong/kubernetes-ingress-controller/pull/2013)
+- Fixed an issue where statuses would not update for Ingress resources with
+  periods in the name.
+  [#2012](https://github.com/Kong/kubernetes-ingress-controller/issues/2012)
 - The template admission webhook configuration now includes KongClusterPlugins.
   [#2000](https://github.com/Kong/kubernetes-ingress-controller/issues/2000)
 

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/kustomize/api/krusty"
@@ -37,6 +39,8 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------
@@ -71,7 +75,10 @@ var imageOverride = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
 // ensure that things are up and running.
 // -----------------------------------------------------------------------------
 
-const dblessPath = "../../deploy/single/all-in-one-dbless.yaml"
+const (
+	dblessPath = "../../deploy/single/all-in-one-dbless.yaml"
+	dblessURL  = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
+)
 
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
@@ -103,6 +110,57 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
+}
+
+func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
+	curTag, err := getCurrentGitTag("")
+	require.NoError(t, err)
+	preTag, err := getPreviousGitTag("", curTag)
+	require.NoError(t, err)
+	if curTag.Patch != 0 || len(curTag.Pre) > 0 {
+		t.Skipf("%v not a new minor version, skipping upgrade test", curTag)
+	}
+	oldManifest, err := http.Get(fmt.Sprintf(dblessURL, preTag.Major, preTag.Minor))
+	require.NoError(t, err)
+	defer oldManifest.Body.Close()
+
+	t.Log("configuring all-in-one-dbless.yaml manifest test")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.Parse(clusterVersionStr)
+		require.NoError(t, err)
+		builder.WithKubernetesVersion(clusterVersion)
+	}
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
+	t.Log("deploying previous minor version kong manifest")
+	deployKong(ctx, t, env, oldManifest.Body)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
+
+	t.Log("deploying current kong manifest")
+
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest)
 	verifyIngress(ctx, t, env)
 }
 
@@ -137,6 +195,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 }
 
@@ -186,6 +245,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	exposeAdminAPI(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
 	t.Log("verifying enterprise mode was enabled properly")
@@ -227,6 +287,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 }
 
@@ -276,6 +337,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
 	t.Log("this deployment used enterprise kong, verifying that enterprise functionality was set up properly")
@@ -307,27 +369,29 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	written, err := kubeconfigFile.Write(kubeconfig)
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)
+	kubeconfigFilename := kubeconfigFile.Name()
 
 	t.Log("waiting for testing environment to be ready")
 	require.NoError(t, <-env.WaitForReady(ctx))
 
 	t.Log("creating the kong namespace")
-	kubeconfigFilename := kubeconfigFile.Name()
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "create", "namespace", namespace)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}
+	_, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if !kerrors.IsAlreadyExists(err) {
+		require.NoError(t, err)
+	}
 
 	t.Logf("deploying any supplemental secrets (found: %d)", len(additionalSecrets))
 	for _, secret := range additionalSecrets {
 		_, err := env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, secret, metav1.CreateOptions{})
-		require.NoError(t, err)
+		if !kerrors.IsAlreadyExists(err) {
+			require.NoError(t, err)
+		}
 	}
 
 	t.Log("deploying the manifest to the cluster")
-	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Stdin = manifest
@@ -341,11 +405,13 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	}, kongComponentWait, time.Second)
 }
 
-func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+func deployIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+	c, err := clientset.NewForConfig(env.Cluster().Config())
+	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
@@ -353,15 +419,33 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
+	getString := "GET"
+	king := &kongv1.KongIngress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "testki",
+			Namespace: corev1.NamespaceDefault,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Route: &kongv1.KongIngressRoute{
+			Methods: []*string{&getString},
+		},
+	}
+	king, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king,
+		metav1.CreateOptions{})
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
+		"konghq.com/override":       "testki",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
+}
 
+func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
 	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
@@ -419,7 +503,19 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
 			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+			if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
+				return false
+			}
+		}
+		// verify the KongIngress method restriction
+		fakeData := url.Values{}
+		fakeData.Set("foo", "bar")
+		resp, err = httpc.PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
+		if err != nil {
+			return false
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			return true
 		}
 		return false
 	}, ingressWait, time.Second)
@@ -651,4 +747,35 @@ func kustomizeManifest(path string) ([]byte, error) {
 		return []byte{}, err
 	}
 	return m.AsYaml()
+}
+
+func getCurrentGitTag(path string) (semver.Version, error) {
+	cmd := exec.Command("git", "describe", "--tags")
+	cmd.Dir = path
+	tagBytes, _ := cmd.Output()
+	tag, err := semver.ParseTolerant(string(tagBytes))
+	if err != nil {
+		return semver.Version{}, err
+	}
+	return tag, nil
+}
+
+func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) {
+	var tags []semver.Version
+	cmd := exec.Command("git", "tag")
+	cmd.Dir = path
+	tagsBytes, _ := cmd.Output()
+	foo := strings.Split(string(tagsBytes), "\n")
+	for _, tag := range foo {
+		ver, err := semver.ParseTolerant(tag)
+		if err == nil {
+			tags = append(tags, ver)
+		}
+	}
+	sort.Slice(tags, func(i, j int) bool { return tags[i].LT(tags[j]) })
+	curIndex := sort.Search(len(tags), func(i int) bool { return tags[i].EQ(cur) })
+	if curIndex == 0 {
+		return tags[curIndex], nil
+	}
+	return tags[curIndex-1], nil
 }

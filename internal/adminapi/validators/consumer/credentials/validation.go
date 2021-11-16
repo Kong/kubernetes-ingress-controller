@@ -9,6 +9,40 @@ import (
 //  Validation - Public Functions
 // -----------------------------------------------------------------------------
 
+// ValidateCredentials performs basic validation on a credential secret given
+// the Kubernetes secret which contains credentials data.
+func ValidateCredentials(consumerName string, secret *corev1.Secret) error {
+	// the indication of credential type is required to be present on all credentials.
+	credentialTypeB, ok := secret.Data[TypeKey]
+	if !ok {
+		return fmt.Errorf("missing required key %s", TypeKey)
+	}
+	credentialType := string(credentialTypeB)
+
+	// verify that the credential type provided is valid
+	if !SupportedTypes.Has(credentialType) {
+		return fmt.Errorf("invalid credential type %s", secret.Data[TypeKey])
+	}
+
+	// it's not valid to have a secret that ONLY has a type
+	if len(secret.Data) == 1 {
+		return fmt.Errorf("invalid credentials secret, no data present")
+	}
+
+	// verify that all required fields are present
+	var missingFields []string
+	for _, field := range CredTypeToFields[credentialType] {
+		if _, ok := secret.Data[field]; !ok {
+			missingFields = append(missingFields, field)
+		}
+	}
+	if len(missingFields) > 0 {
+		return fmt.Errorf("missing required field(s): %s", strings.Join(missingFields, ", "))
+	}
+
+	return nil
+}
+
 // IsKeyUniqueConstrained indicates whether or not a given key and its type there
 // are unique constraints in place.
 func IsKeyUniqueConstrained(keyType, key string) (constrained bool) {

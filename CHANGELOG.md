@@ -63,6 +63,10 @@ under the `resources` block for the `configuration.konghq.com` API group.
 
 #### Fixed
 
+- The validating webhook now validates unique key constraints for KongConsumer
+  credentials secrets on update of secrets, and on create or update of
+  KongConsumers.
+  [#729](https://github.com/Kong/kubernetes-ingress-controller/issues/729)
 - Fixed an issue where statuses would not update properly when a single service
   had multiple Ingress resources associated with it.
   [#2013](https://github.com/Kong/kubernetes-ingress-controller/pull/2013)

@@ -63,9 +63,6 @@ var (
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
 	ingressClass = "kongtests"
 
-	// elsewhere is the name of an alternative namespace
-	elsewhere = "elsewhere"
-
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed
 	controllerNamespace = "kong-system"
 
@@ -76,7 +73,7 @@ var (
 	// NOTE: more namespaces will be loaded dynamically by the test.Main
 	//       during runtime. In general, avoid adding hardcoded namespaces
 	//       to this list as that's reserved for special cases.
-	watchNamespaces = elsewhere
+	watchNamespaces = fmt.Sprintf("%s,%s", extraIngressNamespace, extraWebhookNamespace)
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.

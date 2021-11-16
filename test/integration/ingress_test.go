@@ -25,6 +25,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
+// extraIngressNamespace is the name of an alternative namespace used for ingress tests
+const extraIngressNamespace = "elsewhere"
+
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
 	ns, cleanup := namespace(t)
@@ -392,7 +395,7 @@ func TestIngressNamespaces(t *testing.T) {
 	t.Parallel()
 
 	t.Log("creating extra testing namespaces")
-	elsewhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: elsewhere}}
+	elsewhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: extraIngressNamespace}}
 	nowhere := "nowhere"
 	nowhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nowhere}}
 	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, nowhereNamespace, metav1.CreateOptions{})
@@ -409,27 +412,27 @@ func TestIngressNamespaces(t *testing.T) {
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", httpBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	elsewhereDeployment, err := env.Cluster().Client().AppsV1().Deployments(elsewhere).Create(ctx, deployment, metav1.CreateOptions{})
+	elsewhereDeployment, err := env.Cluster().Client().AppsV1().Deployments(extraIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 	nowhereDeployment, err := env.Cluster().Client().AppsV1().Deployments(nowhere).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", elsewhereDeployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(elsewhere).Delete(ctx, elsewhereDeployment.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(extraIngressNamespace).Delete(ctx, elsewhereDeployment.Name, metav1.DeleteOptions{}))
 		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(nowhere).Delete(ctx, nowhereDeployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(elsewhere).Create(ctx, service, metav1.CreateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(extraIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	_, err = env.Cluster().Client().CoreV1().Services(nowhere).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(elsewhere).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(extraIngressNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 		assert.NoError(t, env.Cluster().Client().CoreV1().Services(nowhere).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
@@ -444,12 +447,12 @@ func TestIngressNamespaces(t *testing.T) {
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), elsewhere, elsewhereIngress))
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), extraIngressNamespace, elsewhereIngress))
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), nowhere, nowhereIngress))
 
 	defer func() {
 		t.Log("ensuring that Ingress resources are cleaned up")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), elsewhere, elsewhereIngress); err != nil {
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), extraIngressNamespace, elsewhereIngress); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}

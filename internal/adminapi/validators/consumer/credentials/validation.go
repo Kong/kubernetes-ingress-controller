@@ -2,7 +2,10 @@
 package credentials
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators"
+	"fmt"
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // -----------------------------------------------------------------------------
@@ -98,10 +101,41 @@ type Credential struct {
 // constraints on their respective types.
 type Index map[string]map[string]map[string]struct{}
 
-// Add will attempt to add a new Credential to the CredentialsTypeMap.
-// If that new credential is in violation of any constraints based on the
-// credentials already stored in the map, an error will be thrown.
-func (cs Index) Add(newCred Credential) error {
+// ValidateCredentialsForUniqueKeyConstraints will attempt to add a new Credential to the CredentialsTypeMap
+// and will validate it for both normal structure validation and for
+// unique key constraint violations.
+func (cs Index) ValidateCredentialsForUniqueKeyConstraints(consumerName string, secret *corev1.Secret) error {
+	// the indication of credential type is required to be present on all credentials.
+	credentialTypeB, ok := secret.Data[TypeKey]
+	if !ok {
+		return fmt.Errorf("missing required key %s", TypeKey)
+	}
+	credentialType := string(credentialTypeB)
+
+	// the additional key/values are optional, but must be validated
+	// for unique constraint violations. Using an index of credentials
+	// validation will be checked on any Add() to the index, so errors
+	// from this include the unique key constraint errors.
+	for k, v := range secret.Data {
+		if err := cs.add(Credential{
+			ConsumerName:      consumerName,
+			ConsumerNamespace: secret.Namespace,
+			Type:              credentialType,
+			Key:               k,
+			Value:             string(v),
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Valdating Index - Private Methods
+// -----------------------------------------------------------------------------
+
+func (cs Index) add(newCred Credential) error {
 	// retrieve all the keys which are constrained for this type
 	constraints, ok := uniqueKeyConstraints[newCred.Type]
 	if !ok {
@@ -113,22 +147,20 @@ func (cs Index) Add(newCred Credential) error {
 	for _, constrainedKey := range constraints {
 		if newCred.Key == constrainedKey { // this key has constraints on it, we need to check for violations
 			if _, ok := cs[newCred.Type][newCred.Key][newCred.Value]; ok {
-				return validators.UniqueConstraintViolationError{
-					ObjectType:      "KongConsumer",
-					ObjectName:      newCred.ConsumerName,
-					ObjectNamespace: newCred.ConsumerNamespace,
-					Type:            newCred.Type,
-					Key:             newCred.Key,
-				}
+				return fmt.Errorf("unique key constraint violated for %s", newCred.Key)
 			}
 		}
 	}
 
-	// if we make it here there's been no constraint violation, add it to the index
+	// if needed, initialize the index
 	if cs[newCred.Type] == nil {
-		// if needed, initialize the index
 		cs[newCred.Type] = map[string]map[string]struct{}{newCred.Key: {newCred.Value: {}}}
 	}
+	if cs[newCred.Type][newCred.Key] == nil {
+		cs[newCred.Type][newCred.Key] = make(map[string]struct{})
+	}
+
+	// if we make it here there's been no constraint violation, add it to the index
 	cs[newCred.Type][newCred.Key][newCred.Value] = struct{}{}
 
 	return nil

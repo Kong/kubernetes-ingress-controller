@@ -15,8 +15,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -149,4 +151,41 @@ func setupProxyServer(ctx context.Context,
 		timeoutDuration,
 		diagnostic,
 		sendconfig.UpdateKongAdminSimple)
+}
+
+func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerClient client.Client) error {
+	log, err := util.MakeLogger(managerConfig.LogLevel, managerConfig.LogFormat)
+	if err != nil {
+		return err
+	}
+
+	if managerConfig.AdmissionServer.ListenAddr == "off" {
+		log.Info("admission webhook server disabled")
+		return nil
+	}
+
+	logger := log.WithField("component", "admission-server")
+
+	kongclient, err := managerConfig.GetKongClient(ctx)
+	if err != nil {
+		return err
+	}
+	srv, err := admission.MakeTLSServer(&managerConfig.AdmissionServer, &admission.RequestHandler{
+		Validator: admission.NewKongHTTPValidator(
+			kongclient.Consumers,
+			kongclient.Plugins,
+			log,
+			managerClient,
+			managerConfig.IngressClassName,
+		),
+		Logger: logger,
+	})
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := srv.ListenAndServeTLS("", "")
+		log.WithError(err).Error("admission webhook server stopped")
+	}()
+	return nil
 }

@@ -257,9 +257,18 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 			break
 		}
 
-		ok, message, err = a.Validator.ValidateCredential(secret)
-		if err != nil {
-			return nil, err
+		// secrets are only validated on update because they must be referenced by a
+		// managed consumer in order for us to validate them, and because credentials
+		// validation also happens at the consumer side of the reference so a
+		// credentials secret can not be referenced without being validated.
+		switch request.Operation {
+		case admission.Update:
+			ok, message, err = a.Validator.ValidateCredential(context.Background(), secret)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("unknown operation '%v'", string(request.Operation))
 		}
 	default:
 		return nil, fmt.Errorf("unknown resource type to validate: %s/%s %s",

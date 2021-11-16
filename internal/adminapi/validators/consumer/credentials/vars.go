@@ -19,3 +19,27 @@ var SupportedTypes = sets.NewString(
 	"oauth2",
 	"acl",
 )
+
+var (
+	KeyAuthFields    = []string{"key"}
+	BasicAuthFields  = []string{"username", "password"}
+	HMACAuthFields   = []string{"username", "secret"}
+	JWTAuthFields    = []string{"algorithm", "rsa_public_key", "key", "secret"}
+	MTLsAuthFields   = []string{"subject_name"}
+	OAUTH2AuthFields = []string{"name", "client_id", "client_secret", "redirect_uris"}
+	ACLAuthFields    = []string{"group"}
+)
+
+var CredTypeToFields = map[string][]string{
+	"key-auth":             KeyAuthFields,
+	"keyauth_credential":   KeyAuthFields,
+	"basic-auth":           BasicAuthFields,
+	"basicauth_credential": BasicAuthFields,
+	"hmac-auth":            HMACAuthFields,
+	"hmacauth_credential":  HMACAuthFields,
+	"jwt":                  JWTAuthFields,
+	"jwt_secret":           JWTAuthFields,
+	"oauth2":               OAUTH2AuthFields,
+	"acl":                  ACLAuthFields,
+	"mtls-auth":            MTLsAuthFields,
+}

@@ -15,6 +15,8 @@ import (
 // KongHTTPValidator - Private Functions
 // -----------------------------------------------------------------------------
 
+// listManagedConsumersReferencingCredentialsSecret takes a Secret and a list of KongConsumers.
+// It returns a list of KongConsumers that reference that Secret as a credential
 func listManagedConsumersReferencingCredentialsSecret(secret corev1.Secret, managedConsumers []*kongv1.KongConsumer) []*kongv1.KongConsumer {
 	// determine if this credential is being actively referenced by a consumer
 	consumersWhichReferenceSecret := make([]*kongv1.KongConsumer, 0)

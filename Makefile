@@ -201,7 +201,7 @@ test:
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -v -race \
-		-timeout 15m \
+		-timeout 20m \
 		-parallel $(NCPU) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
@@ -214,7 +214,7 @@ test.integration.dbless:
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v \
-		-timeout 15m \
+		-timeout 20m \
 		-parallel $(NCPU) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
@@ -226,7 +226,7 @@ test.integration.postgres:
 test.integration.enterprise.postgres:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" go test -v \
-		-timeout 15m \
+		-timeout 20m \
 		-parallel $(NCPU) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \

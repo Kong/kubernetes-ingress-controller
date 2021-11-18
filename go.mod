@@ -26,10 +26,10 @@ require (
 	github.com/tidwall/gjson v1.11.0
 	google.golang.org/api v0.60.0
 	google.golang.org/genproto v0.0.0-20211021150943-2b146023228c
-	k8s.io/api v0.22.3
-	k8s.io/apiextensions-apiserver v0.22.3
-	k8s.io/apimachinery v0.22.3
-	k8s.io/client-go v0.22.3
+	k8s.io/api v0.22.4
+	k8s.io/apiextensions-apiserver v0.22.4
+	k8s.io/apimachinery v0.22.4
+	k8s.io/client-go v0.22.4
 	knative.dev/networking v0.0.0-20211101215640-8c71a2708e7d
 	knative.dev/pkg v0.0.0-20211101212339-96c0204a70dc
 	knative.dev/serving v0.27.0
@@ -52,7 +52,7 @@ require (
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v20.10.9+incompatible // indirect
+	github.com/docker/docker v20.10.10+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.9.10-0.20210907150352-cf90f659a021 // indirect
@@ -123,9 +123,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/component-base v0.22.3 // indirect
-	k8s.io/klog/v2 v2.9.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
-	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
+	k8s.io/component-base v0.22.4 // indirect
+	k8s.io/klog/v2 v2.10.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20211109043538-20434351676c // indirect
+	k8s.io/utils v0.0.0-20210820185131-d34e5cb4466e // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 )

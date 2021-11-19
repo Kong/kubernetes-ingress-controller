@@ -525,7 +525,7 @@ func TestValidationWebhook(t *testing.T) {
 			credentials: []*corev1.Secret{
 				{
 					TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-					ObjectMeta: metav1.ObjectMeta{Name: "basic-auth"},
+					ObjectMeta: metav1.ObjectMeta{Name: "basic-auth-with-missing-fields"},
 					StringData: map[string]string{"kongCredType": "basic-auth", "username": "foo"},
 				},
 			},

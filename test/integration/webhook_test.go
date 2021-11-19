@@ -520,6 +520,16 @@ func TestValidationWebhook(t *testing.T) {
 			wantErr:        true,
 			wantPartialErr: "unique key constraint violated for username",
 		},
+		{
+			name: "secret with missing fields",
+			obj: corev1.Secret{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+				ObjectMeta: metav1.ObjectMeta{Name: "basic-auth"},
+				StringData: map[string]string{"kongCredType": "basic-auth", "username": "foo"},
+			},
+			wantErr:        true,
+			wantPartialErr: "missing required field(s): password",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, credential := range tt.credentials {

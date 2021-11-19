@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -172,7 +172,7 @@ func namespace(t *testing.T) (*corev1.Namespace, func()) {
 	}
 
 	cleanup := func() {
-		assert.NoError(t, generators.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
+		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
 	}
 
 	return namespace, cleanup

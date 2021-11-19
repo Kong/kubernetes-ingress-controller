@@ -120,7 +120,9 @@ func UpdateStatuses(
 ) error {
 	defer wg.Done()
 
+	log.V(util.DebugLevel).Info("found services for status update", "count", len(targetContent.Services))
 	for _, svc := range targetContent.Services {
+		log.V(util.DebugLevel).Info("handling service for status update", "name", svc.Name, "protocol", svc.Protocol)
 		for _, plugin := range svc.Plugins {
 			if *plugin.Enabled {
 				if config, ok := plugin.Config["add"]; ok {
@@ -146,17 +148,21 @@ func UpdateStatuses(
 				return fmt.Errorf("failed to update udp ingress: %w", err)
 			}
 
-		case "http":
+		case "http", "https", "grpc", "grpcs":
 			// if the cluster is on a very old version, we fall back to legacy Ingress support
 			// for compatibility with clusters older than v1.19.x.
 			// TODO: this can go away once we drop support for Kubernetes older than v1.19
 			if kubernetesVersion.Major >= uint64(1) && kubernetesVersion.Minor > uint64(18) {
-				if err := UpdateIngress(ctx, log, svc, cli, ips); err != nil {
-					return fmt.Errorf("failed to update ingressv1: %w", err)
+				for _, route := range svc.Routes {
+					if err := UpdateIngress(ctx, log, route, cli, ips); err != nil {
+						return fmt.Errorf("failed to update ingressv1: %w", err)
+					}
 				}
 			} else {
-				if err := UpdateIngressLegacy(ctx, log, svc, cli, ips); err != nil {
-					return fmt.Errorf("failed to update ingressv1: %w", err)
+				for _, route := range svc.Routes {
+					if err := UpdateIngressLegacy(ctx, log, route, cli, ips); err != nil {
+						return fmt.Errorf("failed to update ingressv1: %w", err)
+					}
 				}
 			}
 		default:
@@ -182,63 +188,63 @@ func toKnativeLBStatus(coreLBStatus []apiv1.LoadBalancerIngress) []knative.LoadB
 func UpdateIngress(
 	ctx context.Context,
 	log logr.Logger,
-	svc file.FService,
+	route *file.FRoute,
 	cli *clientset.Clientset,
 	ips []string,
 ) error {
-	for _, route := range svc.Routes {
-		routeInf := strings.Split(*((*route).Name), ".")
-		namespace := routeInf[0]
-		name := routeInf[1]
-		log.V(util.DebugLevel).Info("updating status for v1/Ingress", "namespace", namespace, "name", name)
+	log.V(util.DebugLevel).Info("handling status updates for kong route", "route", route.Name)
+	routeInf := strings.Split(*((*route).Name), ".")
+	routeInf = routeInf[:len(routeInf)-1] // strip the last element to leave only the Ingress namespace/name reference for the route
+	namespace := routeInf[0]
+	name := strings.Join(routeInf[1:], ".") // there may be multiple parts because route names can contain periods
 
-		ingCli := cli.NetworkingV1().Ingresses(namespace)
-		retry := 0
-		for retry < statusUpdateRetry {
-			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
-			if err != nil || curIng == nil {
-				if errors.IsNotFound(err) {
-					log.V(util.DebugLevel).Info("failed to retrieve v1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
-					return nil
-				}
-
-				log.V(util.DebugLevel).Info("failed to fetch v1/Ingress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
-				retry++
-				time.Sleep(statusUpdateWaitTick)
-				continue
-			}
-
-			var status []apiv1.LoadBalancerIngress
-			sort.SliceStable(status, lessLoadBalancerIngress(status))
-			curIPs := curIng.Status.LoadBalancer.Ingress
-
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) {
-				log.V(util.DebugLevel).Info("no change in status, skipping updates for v1/Ingress", "namespace", namespace, "name", name)
-				return nil
-			}
-
-			curIng.Status.LoadBalancer.Ingress = status
-
-			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
-			if err == nil {
-				break
-			}
+	log.V(util.DebugLevel).Info("updating status for v1/Ingress", "namespace", namespace, "name", name)
+	ingCli := cli.NetworkingV1().Ingresses(namespace)
+	retry := 0
+	for retry < statusUpdateRetry {
+		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
 			if errors.IsNotFound(err) {
-				log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
+				log.V(util.DebugLevel).Info("failed to retrieve v1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 				return nil
 			}
-			if errors.IsConflict(err) {
-				log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
-			} else {
-				log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
-			}
-			time.Sleep(statusUpdateWaitTick)
+
+			log.V(util.DebugLevel).Info("failed to fetch v1/Ingress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
 			retry++
+			time.Sleep(statusUpdateWaitTick)
+			continue
 		}
 
-		log.V(util.DebugLevel).Info("updated status for v1/Ingress", "namespace", namespace, "name", name)
+		var status []apiv1.LoadBalancerIngress
+		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		curIPs := curIng.Status.LoadBalancer.Ingress
+
+		status = SliceToStatus(ips)
+		if ingressSliceEqual(status, curIPs) {
+			log.V(util.DebugLevel).Info("no change in status, skipping updates for v1/Ingress", "namespace", namespace, "name", name)
+			return nil
+		}
+
+		curIng.Status.LoadBalancer.Ingress = status
+
+		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		if err == nil {
+			break
+		}
+		if errors.IsNotFound(err) {
+			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
+			return nil
+		}
+		if errors.IsConflict(err) {
+			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
+		} else {
+			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
+		}
+		time.Sleep(statusUpdateWaitTick)
+		retry++
 	}
+
+	log.V(util.DebugLevel).Info("updated status for v1/Ingress", "namespace", namespace, "name", name)
 
 	return nil
 }
@@ -248,63 +254,63 @@ func UpdateIngress(
 func UpdateIngressLegacy(
 	ctx context.Context,
 	log logr.Logger,
-	svc file.FService,
+	route *file.FRoute,
 	cli *clientset.Clientset,
 	ips []string,
 ) error {
-	for _, route := range svc.Routes {
-		routeInf := strings.Split(*((*route).Name), ".")
-		namespace := routeInf[0]
-		name := routeInf[1]
-		log.V(util.DebugLevel).Info("updating status for v1beta1/Ingress", "namespace", namespace, "name", name)
+	log.V(util.DebugLevel).Info("handling status updates for kong route", "route", route.Name)
+	routeInf := strings.Split(*((*route).Name), ".")
+	routeInf = routeInf[:len(routeInf)-1] // strip the last element to leave only the Ingress namespace/name reference for the route
+	namespace := routeInf[0]
+	name := strings.Join(routeInf[1:], ".") // there may be multiple parts because route names can contain periods
 
-		ingCli := cli.NetworkingV1beta1().Ingresses(namespace)
-		retry := 0
-		for retry < statusUpdateRetry {
-			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
-			if err != nil || curIng == nil {
-				if errors.IsNotFound(err) {
-					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
-					return nil
-				}
-
-				log.V(util.DebugLevel).Info("failed to fetch v1beta1/Ingress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
-				retry++
-				time.Sleep(statusUpdateWaitTick)
-				continue
-			}
-
-			var status []apiv1.LoadBalancerIngress
-			sort.SliceStable(status, lessLoadBalancerIngress(status))
-			curIPs := curIng.Status.LoadBalancer.Ingress
-
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) {
-				log.V(util.DebugLevel).Info("no change in status, skipping updates for v1beta1/Ingress", "namespace", namespace, "name", name)
-				return nil
-			}
-
-			curIng.Status.LoadBalancer.Ingress = status
-
-			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
-			if err == nil {
-				break
-			}
+	log.V(util.DebugLevel).Info("updating status for v1beta1/Ingress", "namespace", namespace, "name", name)
+	ingCli := cli.NetworkingV1beta1().Ingresses(namespace)
+	retry := 0
+	for retry < statusUpdateRetry {
+		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+		if err != nil || curIng == nil {
 			if errors.IsNotFound(err) {
-				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
+				log.V(util.DebugLevel).Info("failed to retrieve v1beta1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 				return nil
 			}
-			if errors.IsConflict(err) {
-				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
-			} else {
-				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
-			}
-			time.Sleep(statusUpdateWaitTick)
+
+			log.V(util.DebugLevel).Info("failed to fetch v1beta1/Ingress due to error, retrying...", "namespace", namespace, "name", name, "error", err.Error())
 			retry++
+			time.Sleep(statusUpdateWaitTick)
+			continue
 		}
 
-		log.V(util.DebugLevel).Info("updated status for v1beta1/Ingress", "namespace", namespace, "name", name)
+		var status []apiv1.LoadBalancerIngress
+		sort.SliceStable(status, lessLoadBalancerIngress(status))
+		curIPs := curIng.Status.LoadBalancer.Ingress
+
+		status = SliceToStatus(ips)
+		if ingressSliceEqual(status, curIPs) {
+			log.V(util.DebugLevel).Info("no change in status, skipping updates for v1beta1/Ingress", "namespace", namespace, "name", name)
+			return nil
+		}
+
+		curIng.Status.LoadBalancer.Ingress = status
+
+		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		if err == nil {
+			break
+		}
+		if errors.IsNotFound(err) {
+			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
+			return nil
+		}
+		if errors.IsConflict(err) {
+			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
+		} else {
+			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
+		}
+		time.Sleep(statusUpdateWaitTick)
+		retry++
 	}
+
+	log.V(util.DebugLevel).Info("updated status for v1beta1/Ingress", "namespace", namespace, "name", name)
 
 	return nil
 }

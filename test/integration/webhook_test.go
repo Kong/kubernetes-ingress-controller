@@ -522,10 +522,12 @@ func TestValidationWebhook(t *testing.T) {
 		},
 		{
 			name: "secret with missing fields",
-			obj: corev1.Secret{
-				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-				ObjectMeta: metav1.ObjectMeta{Name: "basic-auth"},
-				StringData: map[string]string{"kongCredType": "basic-auth", "username": "foo"},
+			credentials: []*corev1.Secret{
+				{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+					ObjectMeta: metav1.ObjectMeta{Name: "basic-auth"},
+					StringData: map[string]string{"kongCredType": "basic-auth", "username": "foo"},
+				},
 			},
 			wantErr:        true,
 			wantPartialErr: "missing required field(s): password",

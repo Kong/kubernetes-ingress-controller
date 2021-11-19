@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.0.6](#206)
  - [2.0.5](#205)
  - [2.0.4](#204)
  - [2.0.3](#203)
@@ -41,6 +42,38 @@
 
 > Release date: TBD
 
+**Note:** the admission webhook updates originally released in [2.0.6](#206)
+are _not_ applied automatically by the upgrade. If you set one up previously,
+you should edit it (`kubectl edit validatingwebhookconfiguration
+kong-validations` and add `kongclusterplugins` under the `resources` block for
+the `configuration.konghq.com` API group.
+
+#### Added
+
+- [Feature Gates][k8s-fg] have been added to the controller manager in order to
+  enable alpha/beta/experimental features and provide documentation about those
+  features and their maturity over time. For more information see the
+  [KIC Feature Gates Documentation][kic-fg].
+  [#1970](https://github.com/Kong/kubernetes-ingress-controller/pull/1970)
+- a Gateway controller has been added in support of [Gateway APIs][gwapi].
+  This controller is foundational and doesn't serve any end-user purpose alone.
+  [#1945](https://github.com/Kong/kubernetes-ingress-controller/issues/1945)
+
+[k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+[kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
+[gwapi]:https://github.com/kubernetes-sigs/gateway-api
+
+#### Fixed
+
+- The validating webhook now validates unique key constraints for KongConsumer
+  credentials secrets on update of secrets, and on create or update of
+  KongConsumers.
+  [#729](https://github.com/Kong/kubernetes-ingress-controller/issues/729)
+
+## [2.0.6]
+
+> Release date: 2021/11/19
+
 **Note:** the admission webhook updates are _not_ applied automatically by the
 upgrade. If you set one up previously, you should edit it (`kubectl edit
 validatingwebhookconfiguration kong-validations` and add `kongclusterplugins`
@@ -56,6 +89,11 @@ under the `resources` block for the `configuration.konghq.com` API group.
   [#2012](https://github.com/Kong/kubernetes-ingress-controller/issues/2012)
 - The template admission webhook configuration now includes KongClusterPlugins.
   [#2000](https://github.com/Kong/kubernetes-ingress-controller/issues/2000)
+
+#### Under the hood
+
+- Updated several Go dependencies. See `go.mod` in the [diff][2.0.6] for details.
+
 
 ## [2.0.5]
 
@@ -1410,7 +1448,8 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.5...v2.1.0
+[2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.1.0
+[2.0.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.5...v2.0.6
 [2.0.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.2...v2.0.3

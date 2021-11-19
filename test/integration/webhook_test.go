@@ -522,6 +522,19 @@ func TestValidationWebhook(t *testing.T) {
 		},
 		{
 			name: "secret with missing fields",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: ingressClass,
+					},
+				},
+				Username: "missingpassword",
+				CustomID: uuid.NewString(),
+				Credentials: []string{
+					"basic-auth-with-missing-fields",
+				},
+			},
 			credentials: []*corev1.Secret{
 				{
 					TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},

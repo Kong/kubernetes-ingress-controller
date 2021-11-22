@@ -14,7 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	apiv1 "k8s.io/api/core/v1"
-	apiErrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	clientset "k8s.io/client-go/kubernetes"
@@ -235,7 +235,7 @@ func UpdateIngress(
 	for retry < statusUpdateRetry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
-			if apiErrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to retrieve v1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 				return nil
 			}
@@ -262,11 +262,11 @@ func UpdateIngress(
 		if err == nil {
 			break
 		}
-		if apiErrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 			return nil
 		}
-		if apiErrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 		} else {
 			log.V(util.DebugLevel).Info("failed to update the status for v1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -301,7 +301,7 @@ func UpdateIngressLegacy(
 	for retry < statusUpdateRetry {
 		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
-			if apiErrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to retrieve v1beta1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 				return nil
 			}
@@ -328,11 +328,11 @@ func UpdateIngressLegacy(
 		if err == nil {
 			break
 		}
-		if apiErrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 			return nil
 		}
-		if apiErrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 		} else {
 			log.V(util.DebugLevel).Info("failed to update the status for v1beta1/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -360,7 +360,7 @@ func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 		for retry < statusUpdateRetry {
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
-				if apiErrors.IsNotFound(err) {
+				if apierrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/UDPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
@@ -387,11 +387,11 @@ func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 			if err == nil {
 				break
 			}
-			if apiErrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
-			if apiErrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/UDPIngress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -421,7 +421,7 @@ func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 		for retry < statusUpdateRetry {
 			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
-				if apiErrors.IsNotFound(err) {
+				if apierrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/TCPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
@@ -444,11 +444,11 @@ func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 			if err == nil {
 				break
 			}
-			if apiErrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
-			if apiErrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
 				log.V(util.DebugLevel).Info("failed to update the status for v1beta1/TCPIngress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)
@@ -484,7 +484,7 @@ func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FServic
 		for retry < statusUpdateRetry {
 			curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
-				if apiErrors.IsNotFound(err) {
+				if apierrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve knative/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
 					return nil
 				}
@@ -522,11 +522,11 @@ func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FServic
 			if err == nil {
 				break
 			}
-			if apiErrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object because it is gone, status update stopped", "namespace", namespace, "name", name)
 				return nil
 			}
-			if apiErrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object because the object has changed: retrying...", "namespace", namespace, "name", name)
 			} else {
 				log.V(util.DebugLevel).Info("failed to update the status for knative/Ingress object due to an unexpected error, retrying...", "namespace", namespace, "name", name)

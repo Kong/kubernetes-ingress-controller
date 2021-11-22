@@ -57,9 +57,9 @@ const (
 	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
 	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
 	adminAPIWait = time.Minute * 2
-
-	imageOverrideEnvVar = "TEST_KONG_CONTROLLER_IMAGE_OVERRIDE"
 )
+
+var imageOverride = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
 
 // -----------------------------------------------------------------------------
 // All-In-One Manifest Tests - Suite
@@ -82,7 +82,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(os.Getenv(imageOverrideEnvVar)); err == nil {
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -114,7 +114,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
-	if b, err := loadimage.NewBuilder().WithImage(os.Getenv(imageOverrideEnvVar)); err == nil {
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -150,7 +150,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(os.Getenv(imageOverrideEnvVar)); err == nil {
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -197,7 +197,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(os.Getenv(imageOverrideEnvVar)); err == nil {
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -236,7 +236,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(os.Getenv(imageOverrideEnvVar)); err == nil {
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -577,7 +577,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 // returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
 // the original provided path
 func getTestManifestPath(t *testing.T, baseManifestPath string) string {
-	imagetag := os.Getenv(imageOverrideEnvVar)
+	imagetag := imageOverride
 	if imagetag == "" {
 		return baseManifestPath
 	}

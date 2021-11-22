@@ -383,14 +383,15 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 				}
 			}
 		}
-		require.NotZero(t, len(extAddrs)+len(intAddrs))
 		// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
 		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
 		// in their absence
 		if len(extAddrs) > 0 {
 			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
-		} else {
+		} else if len(intAddrs) > 0 {
 			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
+		} else {
+			assert.Fail(t, "both extAddrs and intAddrs are empty")
 		}
 	}
 

@@ -40,10 +40,10 @@ var (
 
 type statusConfig struct {
 	ready             bool
-	cli               *clientset.Clientset
+	client            *clientset.Clientset
 	versionInfo       *version.Info
 	kubernetesVersion semver.Version
-	kiccli            *kicclientset.Clientset
+	kicClient         *kicclientset.Clientset
 }
 
 type statusInfo struct {
@@ -53,12 +53,12 @@ type statusInfo struct {
 }
 
 func newStatusConfig(kubeConfig *rest.Config) (statusConfig, error) {
-	cli, err := clientset.NewForConfig(kubeConfig)
+	client, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
 		return statusConfig{ready: false}, err
 	}
 
-	versionInfo, err := cli.ServerVersion()
+	versionInfo, err := client.ServerVersion()
 	if err != nil {
 		return statusConfig{ready: false}, err
 	}
@@ -68,16 +68,16 @@ func newStatusConfig(kubeConfig *rest.Config) (statusConfig, error) {
 		return statusConfig{ready: false}, err
 	}
 
-	kiccli, err := kicclientset.NewForConfig(kubeConfig)
+	kicClient, err := kicclientset.NewForConfig(kubeConfig)
 	if err != nil {
 		return statusConfig{ready: false}, err
 	}
 	return statusConfig{
 		ready:             true,
-		cli:               cli,
+		client:            client,
 		versionInfo:       versionInfo,
 		kubernetesVersion: kubernetesVersion,
-		kiccli:            kiccli,
+		kicClient:         kicClient,
 	}, nil
 }
 
@@ -120,7 +120,7 @@ func PullConfigUpdate(
 				log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
 				wg.Add(1)
 				go func() {
-					if err := UpdateStatuses(ctx, &updateDone, log, cfg.cli, cfg.kiccli, &wg, status.ips,
+					if err := UpdateStatuses(ctx, &updateDone, log, cfg.client, cfg.kicClient, &wg, status.ips,
 						status.hostname, kubeConfig, cfg.kubernetesVersion); err != nil {
 						log.Error(err, "failed to update resource statuses")
 					}
@@ -141,8 +141,8 @@ func UpdateStatuses(
 	ctx context.Context,
 	targetContent *file.Content,
 	log logr.Logger,
-	cli *clientset.Clientset,
-	kiccli *kicclientset.Clientset,
+	client *clientset.Clientset,
+	kicClient *kicclientset.Clientset,
 	wg *sync.WaitGroup,
 	ips []string,
 	hostname string,
@@ -171,11 +171,11 @@ func UpdateStatuses(
 
 		switch proto := *svc.Protocol; proto {
 		case "tcp":
-			if err := UpdateTCPIngress(ctx, log, svc, kiccli, ips); err != nil {
+			if err := UpdateTCPIngress(ctx, log, svc, kicClient, ips); err != nil {
 				return fmt.Errorf("failed to update tcp ingress: %w", err)
 			}
 		case "udp":
-			if err := UpdateUDPIngress(ctx, log, svc, kiccli, ips); err != nil {
+			if err := UpdateUDPIngress(ctx, log, svc, kicClient, ips); err != nil {
 				return fmt.Errorf("failed to update udp ingress: %w", err)
 			}
 
@@ -185,13 +185,13 @@ func UpdateStatuses(
 			// TODO: this can go away once we drop support for Kubernetes older than v1.19
 			if kubernetesVersion.Major >= uint64(1) && kubernetesVersion.Minor > uint64(18) {
 				for _, route := range svc.Routes {
-					if err := UpdateIngress(ctx, log, route, cli, ips); err != nil {
+					if err := UpdateIngress(ctx, log, route, client, ips); err != nil {
 						return fmt.Errorf("failed to update ingressv1: %w", err)
 					}
 				}
 			} else {
 				for _, route := range svc.Routes {
-					if err := UpdateIngressLegacy(ctx, log, route, cli, ips); err != nil {
+					if err := UpdateIngressLegacy(ctx, log, route, client, ips); err != nil {
 						return fmt.Errorf("failed to update ingressv1: %w", err)
 					}
 				}
@@ -220,7 +220,7 @@ func UpdateIngress(
 	ctx context.Context,
 	log logr.Logger,
 	route *file.FRoute,
-	cli *clientset.Clientset,
+	client *clientset.Clientset,
 	ips []string,
 ) error {
 	log.V(util.DebugLevel).Info("handling status updates for kong route", "route", route.Name)
@@ -230,10 +230,10 @@ func UpdateIngress(
 	name := strings.Join(routeInf[1:], ".") // there may be multiple parts because route names can contain periods
 
 	log.V(util.DebugLevel).Info("updating status for v1/Ingress", "namespace", namespace, "name", name)
-	ingCli := cli.NetworkingV1().Ingresses(namespace)
+	ingClient := client.NetworkingV1().Ingresses(namespace)
 	retry := 0
 	for retry < statusUpdateRetry {
-		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+		curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
 			if apierrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to retrieve v1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
@@ -258,7 +258,7 @@ func UpdateIngress(
 
 		curIng.Status.LoadBalancer.Ingress = status
 
-		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			break
 		}
@@ -286,7 +286,7 @@ func UpdateIngressLegacy(
 	ctx context.Context,
 	log logr.Logger,
 	route *file.FRoute,
-	cli *clientset.Clientset,
+	client *clientset.Clientset,
 	ips []string,
 ) error {
 	log.V(util.DebugLevel).Info("handling status updates for kong route", "route", route.Name)
@@ -296,10 +296,10 @@ func UpdateIngressLegacy(
 	name := strings.Join(routeInf[1:], ".") // there may be multiple parts because route names can contain periods
 
 	log.V(util.DebugLevel).Info("updating status for v1beta1/Ingress", "namespace", namespace, "name", name)
-	ingCli := cli.NetworkingV1beta1().Ingresses(namespace)
+	ingClient := client.NetworkingV1beta1().Ingresses(namespace)
 	retry := 0
 	for retry < statusUpdateRetry {
-		curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+		curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
 			if apierrors.IsNotFound(err) {
 				log.V(util.DebugLevel).Info("failed to retrieve v1beta1/Ingress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
@@ -324,7 +324,7 @@ func UpdateIngressLegacy(
 
 		curIng.Status.LoadBalancer.Ingress = status
 
-		_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+		_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 		if err == nil {
 			break
 		}
@@ -347,7 +347,7 @@ func UpdateIngressLegacy(
 }
 
 // UpdateUDPIngress update udp ingress status
-func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
+func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, kicClient *kicclientset.Clientset,
 	ips []string) error {
 	for _, route := range svc.Routes {
 		routeInf := strings.Split(*((*route).Name), ".")
@@ -355,10 +355,10 @@ func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 		name := routeInf[1]
 		log.V(util.DebugLevel).Info("updating status for v1beta1/UDPIngress", "namespace", namespace, "name", name)
 
-		ingCli := kiccli.ConfigurationV1beta1().UDPIngresses(namespace)
+		ingClient := kicClient.ConfigurationV1beta1().UDPIngresses(namespace)
 		retry := 0
 		for retry < statusUpdateRetry {
-			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+			curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
 				if apierrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/UDPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
@@ -383,7 +383,7 @@ func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 
 			curIng.Status.LoadBalancer.Ingress = status
 
-			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err == nil {
 				break
 			}
@@ -407,7 +407,7 @@ func UpdateUDPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 }
 
 // UpdateTCPIngress TCP ingress status
-func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, kiccli *kicclientset.Clientset,
+func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, kicClient *kicclientset.Clientset,
 	ips []string) error {
 	for _, route := range svc.Routes {
 		routeInf := strings.Split(*((*route).Name), ".")
@@ -415,11 +415,11 @@ func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 		name := routeInf[1]
 		log.V(util.DebugLevel).Info("updating status for v1beta1/TCPIngress", "namespace", namespace, "name", name)
 
-		ingCli := kiccli.ConfigurationV1beta1().TCPIngresses(namespace)
+		ingClient := kicClient.ConfigurationV1beta1().TCPIngresses(namespace)
 
 		retry := 0
 		for retry < statusUpdateRetry {
-			curIng, err := ingCli.Get(ctx, name, metav1.GetOptions{})
+			curIng, err := ingClient.Get(ctx, name, metav1.GetOptions{})
 			if err != nil || curIng == nil {
 				if apierrors.IsNotFound(err) {
 					log.V(util.DebugLevel).Info("failed to retrieve v1beta1/TCPIngress: the object is gone, quitting status updates", "namespace", namespace, "name", name)
@@ -440,7 +440,7 @@ func UpdateTCPIngress(ctx context.Context, log logr.Logger, svc file.FService, k
 			}
 
 			curIng.Status.LoadBalancer.Ingress = status
-			_, err = ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
+			_, err = ingClient.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err == nil {
 				break
 			}
@@ -474,11 +474,11 @@ func UpdateKnativeIngress(ctx context.Context, log logr.Logger, svc file.FServic
 		name := routeInf[1]
 		log.V(util.DebugLevel).Info("updating status for knative/Ingress", "namespace", namespace, "name", name)
 
-		knativeCli, err := knativeversioned.NewForConfig(kubeCfg)
+		knativeClient, err := knativeversioned.NewForConfig(kubeCfg)
 		if err != nil {
 			return fmt.Errorf("failed to generate knative client. err %w", err)
 		}
-		ingClient := knativeCli.NetworkingV1alpha1().Ingresses(namespace)
+		ingClient := knativeClient.NetworkingV1alpha1().Ingresses(namespace)
 
 		retry := 0
 		for retry < statusUpdateRetry {
@@ -554,8 +554,8 @@ func runningAddresses(ctx context.Context, kubeCfg *rest.Config, publishService 
 		return statusInfo{ready: false, ips: addrs, hostname: ""}, fmt.Errorf("unable to retrieve service for status: %w", err)
 	}
 
-	CoreClient, _ := clientset.NewForConfig(kubeCfg)
-	svc, err := CoreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	coreClient, _ := clientset.NewForConfig(kubeCfg)
+	svc, err := coreClient.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return statusInfo{ready: false, ips: addrs, hostname: ""}, err
 	}

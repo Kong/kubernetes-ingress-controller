@@ -98,7 +98,9 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, getTestManifestPath(t, dblessPath))
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	verifyIngress(ctx, t, env)
@@ -130,7 +132,9 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, getTestManifestPath(t, dblessPath))
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	verifyIngress(ctx, t, env)
@@ -174,7 +178,9 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, getTestManifestPath(t, entDBLESSPath), licenseSecret, adminPasswordSecretYAML)
+	manifest, err := getTestManifest(t, entDBLESSPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env)
@@ -213,7 +219,9 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, getTestManifestPath(t, postgresPath))
+	manifest, err := getTestManifest(t, postgresPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -260,7 +268,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, getTestManifestPath(t, entPostgresPath), licenseSecret, adminPasswordSecret)
+	manifest, err := getTestManifest(t, entPostgresPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecret)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -284,7 +294,7 @@ const (
 	adminServiceName = "kong-admin"
 )
 
-func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifestPath string, additionalSecrets ...*corev1.Secret) {
+func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) {
 	t.Log("creating a tempfile for kubeconfig")
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
@@ -315,11 +325,12 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 		require.NoError(t, err)
 	}
 
-	t.Logf("deploying the %s manifest to the cluster", strings.TrimPrefix(manifestPath, "../../"))
+	t.Log("deploying the manifest to the cluster")
 	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", manifestPath)
+	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
+	cmd.Stdin = manifest
 	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
 
 	t.Log("waiting for kong to be ready")
@@ -573,27 +584,27 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	return service
 }
 
-// getTestManifestPath checks if a controller image override is set. If not, it returns the original provided path.
+// getTestManifest checks if a controller image override is set. If not, it returns the original provided path.
 // If an override is set, it runs a kustomize patch that replaces the controller image with the override image and
 // returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
 // the original provided path
-func getTestManifestPath(t *testing.T, baseManifestPath string) string {
+func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 	imagetag := imageOverride
 	if imagetag == "" {
-		return baseManifestPath
+		return os.Open(baseManifestPath)
 	}
 	split := strings.Split(imagetag, ":")
 	if len(split) != 2 {
 		t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
-		return baseManifestPath
+		return os.Open(baseManifestPath)
 	}
 	modified, err := patchControllerImage(baseManifestPath, split[0], split[1])
 	if err != nil {
 		t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
-		return baseManifestPath
+		return os.Open(baseManifestPath)
 	}
-	t.Logf("using modified %v manifest at %v", baseManifestPath, modified)
-	return modified
+	t.Logf("using modified %v manifest", baseManifestPath)
+	return modified, nil
 }
 
 const imageKustomizationContents = `resources:
@@ -606,39 +617,30 @@ images:
 
 // patchControllerImage takes a manifest, image, and tag and runs kustomize to replace the
 // kong/kubernetes-ingress-controller image with the provided image. It returns the location of kustomize's output
-func patchControllerImage(baseManifestPath string, image string, tag string) (string, error) {
+func patchControllerImage(baseManifestPath string, image string, tag string) (io.Reader, error) {
 	workDir, err := os.MkdirTemp("", "kictest.")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer os.RemoveAll(workDir)
 	orig, err := ioutil.ReadFile(baseManifestPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	err = ioutil.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0600)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	kustomization := []byte(fmt.Sprintf(imageKustomizationContents, image, tag))
 	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0600)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	kustomized, err := kustomizeManifest(workDir)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	out, err := os.CreateTemp("", "kictest.")
-	if err != nil {
-		return "", err
-	}
-	err = os.WriteFile(out.Name(), kustomized, 0600)
-	if err != nil {
-		return "", err
-	}
-
-	return out.Name(), nil
+	return bytes.NewReader(kustomized), nil
 }
 
 // kustomizeManifest runs kustomize on a path and returns the YAML output

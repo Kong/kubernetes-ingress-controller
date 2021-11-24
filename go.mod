@@ -3,7 +3,7 @@ module github.com/kong/kubernetes-ingress-controller/v2
 go 1.17
 
 require (
-	cloud.google.com/go/container v0.1.0
+	cloud.google.com/go/container v1.0.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr v1.1.0

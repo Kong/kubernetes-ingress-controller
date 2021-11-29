@@ -644,4 +644,37 @@ func TestValidationWebhook(t *testing.T) {
 	require.NoError(t, kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToInvalidCredentials.Name, metav1.DeleteOptions{}))
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
 	require.NoError(t, err)
+
+	t.Log("verifying that a JWT credential which has keys with missing values fails validation")
+	invalidJWTName := uuid.NewString()
+	invalidJWT := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: invalidJWTName,
+		},
+		StringData: map[string]string{
+			"kongCredType":   "jwt",
+			"algorithm":      "RS256",
+			"key":            "",
+			"rsa_public_key": "",
+			"secret":         "",
+		},
+	}
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidJWT, metav1.CreateOptions{})
+	require.NoError(t, err)
+	jwtConsumer := &kongv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Username: "bad-jwt-consumer",
+		CustomID: uuid.NewString(),
+		Credentials: []string{
+			invalidJWTName,
+		},
+	}
+	_, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, jwtConsumer, metav1.CreateOptions{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
 }

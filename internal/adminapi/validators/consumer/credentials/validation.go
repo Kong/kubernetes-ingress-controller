@@ -34,13 +34,29 @@ func ValidateCredentials(consumerName string, secret *corev1.Secret) error {
 
 	// verify that all required fields are present
 	var missingFields []string
+	var missingDataFields []string
 	for _, field := range CredTypeToFields[credentialType] {
-		if _, ok := secret.Data[field]; !ok {
+		// verify whether the required field is missing
+		requiredData, ok := secret.Data[field]
+		if !ok {
 			missingFields = append(missingFields, field)
+			continue
+		}
+
+		// verify whether the required field is present, but missing data
+		if len(requiredData) < 1 {
+			missingDataFields = append(missingDataFields, field)
 		}
 	}
+
+	// report on any required fields that were missing
 	if len(missingFields) > 0 {
 		return fmt.Errorf("missing required field(s): %s", strings.Join(missingFields, ", "))
+	}
+
+	// report on any required fields that were present, but were missing actual data
+	if len(missingDataFields) > 0 {
+		return fmt.Errorf("some fields were invalid due to missing data: %s", strings.Join(missingDataFields, ", "))
 	}
 
 	return nil

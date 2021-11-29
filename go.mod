@@ -23,7 +23,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.11.0
+	github.com/tidwall/gjson v1.12.0
 	google.golang.org/api v0.60.0
 	google.golang.org/genproto v0.0.0-20211021150943-2b146023228c
 	k8s.io/api v0.22.4
@@ -33,7 +33,7 @@ require (
 	k8s.io/component-base v0.22.4
 	knative.dev/networking v0.0.0-20211101215640-8c71a2708e7d
 	knative.dev/pkg v0.0.0-20211101212339-96c0204a70dc
-	knative.dev/serving v0.27.0
+	knative.dev/serving v0.27.1
 	sigs.k8s.io/controller-runtime v0.10.3
 	sigs.k8s.io/gateway-api v0.4.0
 	sigs.k8s.io/yaml v1.3.0

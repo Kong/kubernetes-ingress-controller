@@ -60,6 +60,13 @@ var (
 	// See: https://github.com/postmanlabs/httpbin
 	httpBinImage = "kennethreitz/httpbin"
 
+	// tcpEchoImage echoes TCP text sent to it after printing out basic information about its environment, e.g.
+	// Welcome, you are connected to node kind-control-plane.
+	// Running on Pod tcp-echo-58ccd6b78d-hn9t8.
+	// In namespace foo.
+	// With IP address 10.244.0.13.
+	tcpEchoImage = "cjimti/go-echo"
+
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
 	ingressClass = "kongtests"
 

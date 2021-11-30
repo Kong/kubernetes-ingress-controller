@@ -24,7 +24,6 @@ cloud.google.com/go v0.83.0/go.mod h1:Z7MJUsANfY0pYPdw0lbnivPx4/vhy/e2FEkSkF7vAV
 cloud.google.com/go v0.84.0/go.mod h1:RazrYuxIK6Kb7YrzzhPoLmCVzl7Sup4NrbKPg8KHSUM=
 cloud.google.com/go v0.87.0/go.mod h1:TpDYlFy7vuLzZMMZ+B6iRiELaY7z/gJPaqbMx6mlWcY=
 cloud.google.com/go v0.90.0/go.mod h1:kRX0mNRHe0e2rC6oNakvwQqzyDmg57xJ+SZU1eT2aDQ=
-cloud.google.com/go v0.92.1/go.mod h1:cMc7asehN84LBi1JGTHo4n8wuaGuNAZ7lR7b1YNJBrE=
 cloud.google.com/go v0.93.3/go.mod h1:8utlLll2EF5XMAV15woO4lSbWQlk8rer9aLOfLh7+YI=
 cloud.google.com/go v0.94.1/go.mod h1:qAlAugsXlC+JWO+Bke5vCtc9ONxjQT3drlTTnAplMW4=
 cloud.google.com/go v0.97.0 h1:3DXvAyifywvq64LfkKaMOmkWPS1CikIQdMe2lY9vxU8=
@@ -35,7 +34,6 @@ cloud.google.com/go/bigquery v1.4.0/go.mod h1:S8dzgnTigyfTmLBfrtrhyYhwRxG72rYxvf
 cloud.google.com/go/bigquery v1.5.0/go.mod h1:snEHRnqQbz117VIFhE8bmtwIDY80NLUZUMb4Nv6dBIg=
 cloud.google.com/go/bigquery v1.7.0/go.mod h1://okPTzCYNXSlb24MZs83e2Do+h+VXtc4gLoIoXIAPc=
 cloud.google.com/go/bigquery v1.8.0/go.mod h1:J5hqkt3O0uAFnINi6JXValWIb1v0goeZM77hZzJN/fQ=
-cloud.google.com/go/container v0.1.0/go.mod h1:1rrp90HFUViXnpvafHiTaaAxNscrHiFgfUCEiEHBlEk=
 cloud.google.com/go/container v1.0.0 h1:k3IMcHEEJR4pQmj4/gNeUuA4azhW7i2RPX8xGhyneZw=
 cloud.google.com/go/container v1.0.0/go.mod h1:EQLhTDFhzVXTX6TmjfNqa3/ikbCzjGlZcGY67exUnlY=
 cloud.google.com/go/datastore v1.0.0/go.mod h1:LXYbyblFSglQ5pkeyhO+Qmw7ukd3C+pD7TKLgZqpHYE=
@@ -563,7 +561,6 @@ github.com/google/pprof v0.0.0-20210226084205-cbba55b83ad5/go.mod h1:kpwsk12EmLe
 github.com/google/pprof v0.0.0-20210601050228-01bbb1931b22/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/pprof v0.0.0-20210609004039-a478d1d731e9/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
-github.com/google/pprof v0.0.0-20210804190019-f964ff605595/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=
 github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510/go.mod h1:pupxD2MaaD3pAXIBCelhxNneeOaAeabZDe5s4K6zSpQ=
@@ -699,8 +696,8 @@ github.com/kong/deck v1.7.0/go.mod h1:o2letQaSpXVnDNoXehEibOF6q7v46qtbsKOCC+1owA
 github.com/kong/go-kong v0.19.0/go.mod h1:HyNtOxzh/tzmOV//ccO5NAdmrCnq8b86YUPjmdy5aog=
 github.com/kong/go-kong v0.24.0 h1:uX3oq3lYq6t/+ZtlmSM1R/ookjpe/B390I7h7GS/mPs=
 github.com/kong/go-kong v0.24.0/go.mod h1:LEv2jsUFcGHpN3Ocmcya81yJOZSsMydXo4aLfiGYmbQ=
-github.com/kong/kubernetes-testing-framework v0.10.0 h1:yS9wDZFqd9akbX0qJ0W260PQxaWGf8i5nK8DfRKZMoY=
-github.com/kong/kubernetes-testing-framework v0.10.0/go.mod h1:q9x9PPdQbBzD68st/Pm75/4Oi4qR1+dD+U9uormYhyI=
+github.com/kong/kubernetes-testing-framework v0.10.1-0.20211130000528-fc2466b00f28 h1:sX1I8Hzd8hL/pLEMSRkavr9Wyj85r7ITnzhewSFHIho=
+github.com/kong/kubernetes-testing-framework v0.10.1-0.20211130000528-fc2466b00f28/go.mod h1:7078IjVjSm//td/WiDkG+E2wam/ca292EM/NSNgu/qo=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

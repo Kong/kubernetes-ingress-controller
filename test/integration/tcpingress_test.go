@@ -297,3 +297,152 @@ func TestTCPIngressTLS(t *testing.T) {
 		}, ingressWait, waitTick)
 	}
 }
+
+func TestTCPIngressTLSPassthrough(t *testing.T) {
+	t.Parallel()
+	t.Log("locking TLS port")
+	tlsMutex.Lock()
+	defer func() {
+		t.Log("unlocking TLS port")
+		tlsMutex.Unlock()
+	}()
+
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
+	t.Log("setting up the TCPIngress TLS passthrough tests")
+	testName := "tlspass"
+	c, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("configuring secrets")
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "certs",
+			Namespace: ns.Name,
+		},
+		Data: map[string][]byte{
+			"tls.crt": []byte(tlsPairs[0].Cert),
+			"tls.key": []byte(tlsPairs[0].Key),
+		},
+	}
+
+	t.Log("deploying secrets")
+	secret, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secret, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	t.Log("deploying Redis with certificate")
+	container := generators.NewContainer(testName, redisImage, 6379)
+	container.VolumeMounts = []corev1.VolumeMount{
+		{
+			Name:      "certificates",
+			MountPath: "/opt/certs",
+		},
+	}
+	container.Env = []corev1.EnvVar{
+		{
+			Name:  "REDIS_TLS_ENABLED",
+			Value: "true",
+		},
+		{
+			Name:  "REDIS_TLS_PORT",
+			Value: "6379",
+		},
+		{
+			Name:  "REDIS_TLS_CA_FILE",
+			Value: "/opt/certs/tls.crt",
+		},
+		{
+			Name:  "REDIS_TLS_CERT_FILE",
+			Value: "/opt/certs/tls.crt",
+		},
+		{
+			Name:  "REDIS_TLS_KEY_FILE",
+			Value: "/opt/certs/tls.key",
+		},
+		{
+			Name:  "REDIS_PASSWORD",
+			Value: "garbage",
+		},
+	}
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
+		{
+			Name: "certificates",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secret.Name,
+				},
+			},
+		},
+	}
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the deployment %s", deployment.Name)
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the service %s", service.Name)
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Log("adding TCPIngress")
+	tcp := &kongv1beta1.TCPIngress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "redis",
+			Namespace: ns.Name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey:                             ingressClass,
+				annotations.AnnotationPrefix + annotations.ProtocolsKey: "tls_passthrough",
+			},
+		},
+		Spec: kongv1beta1.TCPIngressSpec{
+			Rules: []kongv1beta1.IngressRule{
+				{
+					Host: "redis.example",
+					Port: 8899,
+					Backend: kongv1beta1.IngressBackend{
+						ServiceName: service.Name,
+						ServicePort: 6379,
+					},
+				},
+			},
+		},
+	}
+	tcp, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
+	require.NoError(t, err)
+	defer func() {
+		t.Log("ensuring that TCPIngress is cleaned up", tcp.Name)
+		if err := c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		}
+	}()
+
+	t.Log("verifying TCP Ingress for redis.example operational")
+	require.Eventually(t, func() bool {
+		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
+			InsecureSkipVerify: true,
+			ServerName:         "redis.example",
+		})
+		if err != nil {
+			return false
+		}
+		defer conn.Close()
+		err = conn.Handshake()
+		if err != nil {
+			return false
+		}
+		cert := conn.ConnectionState().PeerCertificates[0]
+		return cert.Subject.CommonName == "secure-foo-bar"
+	}, ingressWait, waitTick)
+}

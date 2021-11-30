@@ -67,6 +67,9 @@ var (
 	// With IP address 10.244.0.13.
 	tcpEchoImage = "cjimti/go-echo"
 
+	// redisImage is Redis
+	redisImage = "bitnami/redis"
+
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
 	ingressClass = "kongtests"
 

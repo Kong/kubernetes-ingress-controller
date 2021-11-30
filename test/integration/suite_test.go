@@ -52,6 +52,7 @@ func TestMain(m *testing.M) {
 	}
 
 	kongbuilder.WithControllerDisabled()
+	kongbuilder.WithProxyImage("kong/kong", "latest")
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
 

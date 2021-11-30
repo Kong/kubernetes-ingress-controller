@@ -296,6 +296,27 @@ func TestTCPIngressTLS(t *testing.T) {
 			return false
 		}, ingressWait, waitTick)
 	}
+
+	tcpY.Spec.Rules[0].Backend.ServiceName = testServiceSuffixes[0]
+	tcpY, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Update(ctx, tcpY, metav1.UpdateOptions{})
+	require.Eventually(t, func() bool {
+		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
+			InsecureSkipVerify: true,
+			ServerName:         fmt.Sprintf("%s.example", testServiceSuffixes[0]),
+		})
+		require.NoError(t, err)
+		defer conn.Close()
+		resp := make([]byte, 512)
+		conn.SetDeadline(time.Now().Add(time.Second * 5))
+		_, err = conn.Read(resp)
+		if err != nil {
+			return false
+		}
+		if strings.Contains(string(resp), testServiceSuffixes[0]) {
+			return true
+		}
+		return false
+	}, ingressWait, waitTick)
 }
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {

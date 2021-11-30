@@ -282,7 +282,9 @@ func TestTCPIngressTLS(t *testing.T) {
 				InsecureSkipVerify: true,
 				ServerName:         fmt.Sprintf("%s.example", i),
 			})
-			require.NoError(t, err)
+			if err != nil {
+				return false
+			}
 			defer conn.Close()
 			resp := make([]byte, 512)
 			conn.SetDeadline(time.Now().Add(time.Second * 5))
@@ -298,13 +300,16 @@ func TestTCPIngressTLS(t *testing.T) {
 	}
 
 	tcpY.Spec.Rules[0].Backend.ServiceName = testServiceSuffixes[0]
-	tcpY, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Update(ctx, tcpY, metav1.UpdateOptions{})
+	// Update wipes out tcpY if actually assigned, breaking the deferred delete. we have no use for it, so discard it
+	_, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Update(ctx, tcpY, metav1.UpdateOptions{})
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
 			InsecureSkipVerify: true,
 			ServerName:         fmt.Sprintf("%s.example", testServiceSuffixes[0]),
 		})
-		require.NoError(t, err)
+		if err != nil {
+			return false
+		}
 		defer conn.Close()
 		resp := make([]byte, 512)
 		conn.SetDeadline(time.Now().Add(time.Second * 5))

@@ -9,10 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -24,9 +26,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/kustomize/api/krusty"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -54,6 +59,8 @@ const (
 	adminAPIWait = time.Minute * 2
 )
 
+var imageOverride = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
+
 // -----------------------------------------------------------------------------
 // All-In-One Manifest Tests - Suite
 //
@@ -73,7 +80,12 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	builder := environments.NewBuilder().WithAddons(metallb.New())
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.Parse(clusterVersionStr)
 		require.NoError(t, err)
@@ -86,7 +98,43 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, dblessPath)
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	verifyIngress(ctx, t, env)
+}
+
+// Unsatisfied LoadBalancers have special handling, see
+// https://github.com/Kong/kubernetes-ingress-controller/issues/2001
+func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
+	t.Log("configuring all-in-one-dbless.yaml manifest test")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	addons := []clusters.Addon{}
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.Parse(clusterVersionStr)
+		require.NoError(t, err)
+		builder.WithKubernetesVersion(clusterVersion)
+	}
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
+	t.Log("deploying kong components")
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	verifyIngress(ctx, t, env)
@@ -104,7 +152,12 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	builder := environments.NewBuilder().WithAddons(metallb.New())
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.Parse(clusterVersionStr)
 		require.NoError(t, err)
@@ -125,7 +178,9 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, entDBLESSPath, licenseSecret, adminPasswordSecretYAML)
+	manifest, err := getTestManifest(t, entDBLESSPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env)
@@ -146,7 +201,12 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	builder := environments.NewBuilder().WithAddons(metallb.New())
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.Parse(clusterVersionStr)
 		require.NoError(t, err)
@@ -159,7 +219,9 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, postgresPath)
+	manifest, err := getTestManifest(t, postgresPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -180,7 +242,12 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	builder := environments.NewBuilder().WithAddons(metallb.New())
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.Parse(clusterVersionStr)
 		require.NoError(t, err)
@@ -201,7 +268,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	deployKong(ctx, t, env, entPostgresPath, licenseSecret, adminPasswordSecret)
+	manifest, err := getTestManifest(t, entPostgresPath)
+	require.NoError(t, err)
+	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecret)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -225,7 +294,7 @@ const (
 	adminServiceName = "kong-admin"
 )
 
-func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifestPath string, additionalSecrets ...*corev1.Secret) {
+func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) {
 	t.Log("creating a tempfile for kubeconfig")
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
@@ -256,11 +325,12 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 		require.NoError(t, err)
 	}
 
-	t.Logf("deploying the %s manifest to the cluster", strings.TrimPrefix(manifestPath, "../../"))
+	t.Log("deploying the manifest to the cluster")
 	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", manifestPath)
+	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
+	cmd.Stdin = manifest
 	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
 
 	t.Log("waiting for kong to be ready")
@@ -295,10 +365,48 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 	t.Log("finding the kong proxy service ip")
 	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
-	require.Len(t, svc.Status.LoadBalancer.Ingress, 1)
-	proxyIP := svc.Status.LoadBalancer.Ingress[0].IP
+	proxyIP := ""
+	require.NotEqual(t, svc.Spec.Type, svc.Spec.ClusterIP)
+	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+		if len(svc.Status.LoadBalancer.Ingress) > 0 {
+			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
+		}
+	}
+	// the above failed to find an address. either the LB didn't provision or we're using a NodePort
+	if proxyIP == "" {
+		var port int32
+		for _, sport := range svc.Spec.Ports {
+			if sport.Name == "kong-proxy" || sport.Name == "proxy" {
+				port = sport.NodePort
+			}
+		}
+		var extAddrs []string
+		var intAddrs []string
+		nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		for _, node := range nodes.Items {
+			for _, naddr := range node.Status.Addresses {
+				if naddr.Type == corev1.NodeExternalIP {
+					extAddrs = append(extAddrs, naddr.Address)
+				}
+				if naddr.Type == corev1.NodeInternalIP {
+					extAddrs = append(intAddrs, naddr.Address)
+				}
+			}
+		}
+		// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
+		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
+		// in their absence
+		if len(extAddrs) > 0 {
+			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
+		} else if len(intAddrs) > 0 {
+			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
+		} else {
+			assert.Fail(t, "both extAddrs and intAddrs are empty")
+		}
+	}
 
-	t.Log("waiting for routes from Ingress to be operational")
+	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
 	httpc := http.Client{Timeout: time.Second * 10}
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
@@ -474,4 +582,73 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	}, time.Minute, time.Second)
 
 	return service
+}
+
+// getTestManifest checks if a controller image override is set. If not, it returns the original provided path.
+// If an override is set, it runs a kustomize patch that replaces the controller image with the override image and
+// returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
+// the original provided path
+func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
+	imagetag := imageOverride
+	if imagetag == "" {
+		return os.Open(baseManifestPath)
+	}
+	split := strings.Split(imagetag, ":")
+	if len(split) != 2 {
+		t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
+		return os.Open(baseManifestPath)
+	}
+	modified, err := patchControllerImage(baseManifestPath, split[0], split[1])
+	if err != nil {
+		t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
+		return os.Open(baseManifestPath)
+	}
+	t.Logf("using modified %v manifest", baseManifestPath)
+	return modified, nil
+}
+
+const imageKustomizationContents = `resources:
+- base.yaml
+images:
+- name: kong/kubernetes-ingress-controller
+  newName: %v
+  newTag: '%v'
+`
+
+// patchControllerImage takes a manifest, image, and tag and runs kustomize to replace the
+// kong/kubernetes-ingress-controller image with the provided image. It returns the location of kustomize's output
+func patchControllerImage(baseManifestPath string, image string, tag string) (io.Reader, error) {
+	workDir, err := os.MkdirTemp("", "kictest.")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(workDir)
+	orig, err := ioutil.ReadFile(baseManifestPath)
+	if err != nil {
+		return nil, err
+	}
+	err = ioutil.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0600)
+	if err != nil {
+		return nil, err
+	}
+	kustomization := []byte(fmt.Sprintf(imageKustomizationContents, image, tag))
+	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0600)
+	if err != nil {
+		return nil, err
+	}
+	kustomized, err := kustomizeManifest(workDir)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(kustomized), nil
+}
+
+// kustomizeManifest runs kustomize on a path and returns the YAML output
+func kustomizeManifest(path string) ([]byte, error) {
+	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+	m, err := k.Run(filesys.MakeFsOnDisk(), path)
+	if err != nil {
+		return []byte{}, err
+	}
+	return m.AsYaml()
 }

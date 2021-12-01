@@ -66,6 +66,8 @@ the `configuration.konghq.com` API group.
 
 #### Fixed
 
+- The validating webhook now validates that required fields data is not empty
+  [#1993](https://github.com/Kong/kubernetes-ingress-controller/issues/1993)
 - The validating webhook now validates unique key constraints for KongConsumer
   credentials secrets on update of secrets, and on create or update of
   KongConsumers.

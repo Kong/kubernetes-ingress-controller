@@ -49,7 +49,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -62,13 +62,13 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.6.0
+        uses: docker/metadata-action@v3.6.1
         with:
           images: kong/kubernetes-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.6.0
+        uses: docker/metadata-action@v3.6.1
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |

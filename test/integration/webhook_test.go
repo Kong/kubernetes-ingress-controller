@@ -33,7 +33,7 @@ const extraWebhookNamespace = "webhookextra"
 // that we consider a large number and is used to generate background
 // consumers for testing validation (since validation relies on listing all
 // consumers from the controller runtime cached client).
-const highEndConsumerUsageCount = 250
+const highEndConsumerUsageCount = 50
 
 func TestValidationWebhook(t *testing.T) {
 	t.Parallel()
@@ -196,6 +196,10 @@ func TestValidationWebhook(t *testing.T) {
 				}
 			}()
 		}
+	}
+
+	for i := 0; i < highEndConsumerUsageCount; i++ {
+		consumerName := fmt.Sprintf("background-noise-consumer-%d", i)
 
 		// create the consumer referencing its credentials
 		consumer := &kongv1.KongConsumer{
@@ -212,7 +216,13 @@ func TestValidationWebhook(t *testing.T) {
 			credentialName := fmt.Sprintf("%s-credential-%d", consumerName, j)
 			consumer.Credentials = append(consumer.Credentials, credentialName)
 		}
-		_, err = kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Create(ctx, consumer, metav1.CreateOptions{})
+		assert.Eventually(t, func() bool {
+			_, err = kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Create(ctx, consumer, metav1.CreateOptions{})
+			if err != nil {
+				t.Logf("failed to create consumer, will retry: %s", err)
+			}
+			return err == nil
+		}, time.Second*10, time.Second*1)
 		require.NoError(t, err)
 		defer func() {
 			if err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Delete(ctx, consumerName, metav1.DeleteOptions{}); err != nil {

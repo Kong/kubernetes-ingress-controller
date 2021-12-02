@@ -32,7 +32,6 @@ import (
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 //+kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
 //+kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
-//+kubebuilder:pruning:PreserveUnknownFields
 
 // KongPlugin is the Schema for the kongplugins API
 type KongPlugin struct {

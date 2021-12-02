@@ -58,7 +58,6 @@ spec:
             description: Username unique username of the consumer.
             type: string
         type: object
-        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:

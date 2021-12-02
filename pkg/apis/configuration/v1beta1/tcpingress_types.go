@@ -29,7 +29,6 @@ import (
 //+kubebuilder:validation:Optional
 //+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
-//+kubebuilder:pruning:PreserveUnknownFields
 
 // TCPIngress is the Schema for the tcpingresses API
 type TCPIngress struct {

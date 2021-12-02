@@ -175,7 +175,6 @@ spec:
                 type: object
             type: object
         type: object
-        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
     subresources:

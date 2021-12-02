@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 )
@@ -35,7 +36,7 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to deploy kong CRDs STDOUT=(%s) STDERR=(%s): %w", stdout.String(), stderr.String(), err)
+		return fmt.Errorf("failed to deploy kong CRDs STDOUT=(%s) STDERR=(%s): %w", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
 	}
 	kongCRDYAML := stdout.String()
 
@@ -46,7 +47,7 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to deploy kong CRDs STDOUT=(%s) STDERR=(%s): %w", stdout.String(), stderr.String(), err)
+		return fmt.Errorf("failed to deploy gateway CRDs STDOUT=(%s) STDERR=(%s): %w", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
 	}
 	gatewayCRDYAML := stdout.String()
 

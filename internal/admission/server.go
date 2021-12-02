@@ -15,6 +15,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -171,6 +172,11 @@ var (
 		Version:  corev1.SchemeGroupVersion.Version,
 		Resource: "secrets",
 	}
+	gatewayGVResource = meta.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "gateways",
+	}
 )
 
 func (a RequestHandler) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
@@ -269,6 +275,17 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 			}
 		default:
 			return nil, fmt.Errorf("unknown operation '%v'", string(request.Operation))
+		}
+	case gatewayGVResource:
+		gateway := gatewayv1alpha2.Gateway{}
+		deserializer := codecs.UniversalDeserializer()
+		_, _, err = deserializer.Decode(request.Object.Raw, nil, &gateway)
+		if err != nil {
+			return nil, err
+		}
+		ok, message, err = a.Validator.ValidateGateway(context.Background(), gateway)
+		if err != nil {
+			return nil, err
 		}
 	default:
 		return nil, fmt.Errorf("unknown resource type to validate: %s/%s %s",

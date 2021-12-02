@@ -14,3 +14,8 @@ const (
 	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"
 	ErrTextPluginUsesBothConfigTypes          = "plugin cannot use both Config and ConfigFrom"
 )
+
+const (
+	ErrTextCantRetrieveGatewayClass    = "gatewayclass for this gateway could not be retrieved"
+	ErrTextInvalidGatewayConfiguration = "gateway metadata and/or spec are invalid"
+)

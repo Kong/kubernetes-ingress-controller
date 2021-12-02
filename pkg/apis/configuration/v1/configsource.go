@@ -1,12 +1,9 @@
 package v1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 // ConfigSource is a wrapper around SecretValueFromSource
 //+kubebuilder:object:generate=true
 type ConfigSource struct {
-	metav1.TypeMeta `json:",inline"`
-	SecretValue     SecretValueFromSource `json:"secretKeyRef,omitempty"`
+	SecretValue SecretValueFromSource `json:"secretKeyRef,omitempty"`
 }
 
 // NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource

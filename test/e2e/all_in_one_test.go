@@ -149,14 +149,14 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
 
-	t.Log("deploying previous minor version kong manifest")
+	t.Logf("deploying previous version %s kong manifest", preTag)
 	deployKong(ctx, t, env, oldManifest.Body)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
-	t.Log("deploying current kong manifest")
+	t.Logf("deploying current version %s kong manifest", curTag)
 
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)

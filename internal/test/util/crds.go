@@ -16,11 +16,8 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	kongCRDsKustomize = "../../config/crd/"
-
-	// TODO: upstream broke their kustomize configuration, this is a temporary
-	// shim until https://github.com/kubernetes-sigs/gateway-api/pull/952 is resolved.
-	gatewayCRDsKustomize = "https://github.com/shaneutt/gateway-api/config/crd"
+	kongCRDsKustomize    = "../../config/crd/"
+	gatewayCRDsKustomize = "https://github.com/kubernetes-sigs/gateway-api/config/crd"
 )
 
 func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {

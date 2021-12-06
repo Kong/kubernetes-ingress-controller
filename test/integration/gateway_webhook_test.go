@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
 )
@@ -61,42 +63,82 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		assert.NoError(t, gatewayc.GatewayV1alpha2().GatewayClasses().Delete(ctx, gatewayClass.Name, metav1.DeleteOptions{}))
 	}()
 
-	t.Log("creating an invalid gateway to verify that validation fails")
-	gateway := &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong",
-			// the missing annotations here make the gateway invalid
+	for _, tt := range []struct {
+		name      string
+		createdGW gatewayv1alpha2.Gateway
+		patch     []byte // optional
+
+		wantCreateErr          bool
+		wantCreateErrSubstring string
+
+		wantPatchErr          bool
+		wantPatchErrSubstring string
+	}{
+		{
+			name: "missing annotation",
+			createdGW: gatewayv1alpha2.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "kong",
+					// the missing annotations here make the gateway invalid
+				},
+				Spec: gatewayv1alpha2.GatewaySpec{
+					GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
+					Listeners: []gatewayv1alpha2.Listener{{
+						Name:     "http",
+						Protocol: gatewayv1alpha2.HTTPProtocolType,
+						Port:     gatewayv1alpha2.PortNumber(80),
+					}},
+				},
+			},
+			wantCreateErr:          true,
+			wantCreateErrSubstring: "missing required annotation",
 		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "http",
-				Protocol: gatewayv1alpha2.HTTPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(80),
-			}},
+		{
+			name: "ignore if different class, then no longer ignore if updated to own class",
+			createdGW: gatewayv1alpha2.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "kong",
+					// the missing annotations here make the gateway invalid
+				},
+				Spec: gatewayv1alpha2.GatewaySpec{
+					// this gateway class is to be ignored
+					GatewayClassName: gatewayv1alpha2.ObjectName("nonexistentclass"),
+					Listeners: []gatewayv1alpha2.Listener{{
+						Name:     "http",
+						Protocol: gatewayv1alpha2.HTTPProtocolType,
+						Port:     gatewayv1alpha2.PortNumber(80),
+					}},
+				},
+			},
+			patch: []byte(fmt.Sprintf(`{"spec": {"gatewayClassName": "%s"}}`, gatewayClass.Name)),
+
+			wantCreateErr:         false,
+			wantPatchErr:          true,
+			wantPatchErrSubstring: "missing required annotation",
 		},
-	}
-	_, err = gatewayc.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gateway, metav1.CreateOptions{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "missing required annotation")
-
-	t.Log("verifying that we don't validate a gateway that belongs to another controller")
-	gateway.Spec.GatewayClassName = gatewayv1alpha2.ObjectName("nonexistentclass")
-	gateway, err = gatewayc.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gateway, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	t.Log("verifying that if we update an invalid gateway to be supported by our controller, validation fails")
-	gateway.Spec.GatewayClassName = gatewayv1alpha2.ObjectName(gatewayClass.Name)
-	_, err = gatewayc.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "missing required annotation")
-
-	defer func() {
-		t.Logf("cleaning up gateway %s", gateway.Name)
-		if err := gatewayc.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, gotCreateErr := gatewayc.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, &tt.createdGW, metav1.CreateOptions{})
+			if tt.wantCreateErr {
+				require.Error(t, gotCreateErr)
+				require.Contains(t, gotCreateErr.Error(), tt.wantCreateErrSubstring)
+			} else {
+				require.NoError(t, gotCreateErr)
 			}
-		}
-	}()
+
+			if len(tt.patch) > 0 {
+				_, gotUpdateErr := gatewayc.GatewayV1alpha2().Gateways(ns.Name).Patch(ctx, tt.createdGW.Name, types.MergePatchType, tt.patch, metav1.PatchOptions{})
+				if tt.wantPatchErr {
+					require.Error(t, gotUpdateErr)
+					require.Contains(t, gotUpdateErr.Error(), tt.wantPatchErrSubstring)
+				} else {
+					require.NoError(t, gotUpdateErr)
+				}
+			}
+
+			if err := gatewayc.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, tt.createdGW.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

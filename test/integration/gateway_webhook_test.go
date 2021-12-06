@@ -16,6 +16,7 @@ import (
 )
 
 func TestGatewayValidationWebhook(t *testing.T) {
+	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -23,11 +24,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
 	}
 
-	closer, err := ensureWebhookService()
-	assert.NoError(t, err)
-	defer closer()
-
-	closer, err = ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(
 		"kong-validations-gateway",
 		[]admregv1.RuleWithOperations{
 			{

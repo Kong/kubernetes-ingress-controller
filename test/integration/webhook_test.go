@@ -41,6 +41,7 @@ const webhookSvcName = "validations"
 const highEndConsumerUsageCount = 50
 
 func TestValidationWebhook(t *testing.T) {
+	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -58,11 +59,7 @@ func TestValidationWebhook(t *testing.T) {
 		}
 	}()
 
-	closer, err := ensureWebhookService()
-	assert.NoError(t, err)
-	defer closer()
-
-	closer, err = ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(
 		"kong-validations-consumer",
 		[]admregv1.RuleWithOperations{
 			{
@@ -608,10 +605,10 @@ func TestValidationWebhook(t *testing.T) {
 	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
 }
 
-func ensureWebhookService() (func() error, error) {
+func ensureWebhookService(name string) (func() error, error) {
 	validationsService, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
 		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
-		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
@@ -630,7 +627,7 @@ func ensureWebhookService() (func() error, error) {
 	nodeName := "aaaa"
 	endpoints, err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Create(ctx, &corev1.Endpoints{
 		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Endpoints"},
-		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -675,12 +672,18 @@ func waitForWebhookService(t *testing.T) {
 }
 
 func ensureAdmissionRegistration(configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {
+	svcName := fmt.Sprintf("webhook-%s", configResourceName)
+	svcCloser, err := ensureWebhookService(svcName)
+	if err != nil {
+		return nil, err
+	}
+
 	fail := admregv1.Fail
 	none := admregv1.SideEffectClassNone
 	webhook, err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
 		&admregv1.ValidatingWebhookConfiguration{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "admissionregistration.k8s.io/v1", Kind: "ValidatingWebhookConfiguration"},
-			ObjectMeta: metav1.ObjectMeta{Name: "kong-validations"},
+			ObjectMeta: metav1.ObjectMeta{Name: configResourceName},
 			Webhooks: []admregv1.ValidatingWebhook{
 				{
 					Name:                    "validations.kong.konghq.com",
@@ -689,7 +692,7 @@ func ensureAdmissionRegistration(configResourceName string, rules []admregv1.Rul
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					Rules:                   rules,
 					ClientConfig: admregv1.WebhookClientConfig{
-						Service:  &admregv1.ServiceReference{Namespace: controllerNamespace, Name: webhookSvcName},
+						Service:  &admregv1.ServiceReference{Namespace: controllerNamespace, Name: svcName},
 						CABundle: []byte(kongSystemServiceCert),
 					},
 				},
@@ -703,7 +706,7 @@ func ensureAdmissionRegistration(configResourceName string, rules []admregv1.Rul
 		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
-		return nil
+		return svcCloser()
 	}
 
 	return closer, nil

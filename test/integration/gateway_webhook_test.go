@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
@@ -74,6 +75,26 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		wantPatchErr          bool
 		wantPatchErrSubstring string
 	}{
+		{
+			name: "valid gateway",
+			createdGW: gatewayv1alpha2.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "kong",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation: "true",
+					},
+				},
+				Spec: gatewayv1alpha2.GatewaySpec{
+					GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
+					Listeners: []gatewayv1alpha2.Listener{{
+						Name:     "http",
+						Protocol: gatewayv1alpha2.HTTPProtocolType,
+						Port:     gatewayv1alpha2.PortNumber(80),
+					}},
+				},
+			},
+			wantCreateErr: false,
+		},
 		{
 			name: "missing annotation",
 			createdGW: gatewayv1alpha2.Gateway{

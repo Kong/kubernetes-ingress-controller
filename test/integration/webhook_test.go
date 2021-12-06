@@ -100,13 +100,6 @@ func TestValidationWebhook(t *testing.T) {
 
 	waitForWebhookService(t)
 
-	// TODO: flakes were occurring in this test because proxy readiness isn't a consistent gate mechanism
-	//       by which to determine readiness for the webhook validation tests. We will follow up on this by
-	//       improving these tests, but for now (for speed at the time of writing) we just sleep.
-	//
-	//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1442
-	time.Sleep(time.Second * 5)
-
 	t.Log("creating a gatewayclass to verify gateway validation")
 	gatewayc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

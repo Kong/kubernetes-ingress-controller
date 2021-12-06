@@ -93,7 +93,7 @@ func TestValidationWebhook(t *testing.T) {
 					},
 					ClientConfig: admregv1.WebhookClientConfig{
 						Service:  &admregv1.ServiceReference{Namespace: controllerNamespace, Name: webhookSvcName},
-						CABundle: []byte(admissionWebhookCert),
+						CABundle: []byte(kongSystemServiceCert),
 					},
 				},
 			},

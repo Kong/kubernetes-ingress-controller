@@ -16,7 +16,7 @@ const envKeyPrefix = "CONTROLLER_"
 func bindEnvVars(cmd *cobra.Command, _ []string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("environment binding failed: %w", r)
+			err = fmt.Errorf("environment binding failed: %v", r)
 		}
 	}()
 

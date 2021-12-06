@@ -5,22 +5,52 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 // -----------------------------------------------------------------------------
-// Gateway Controller - Private Functions
+// Gateway Utilities
 // -----------------------------------------------------------------------------
 
 // maxConds is the maximum number of status conditions a Gateway can have at one time.
 const maxConds = 8
+
+// isGatewayScheduled returns boolean whether or not the gateway object was scheduled
+// previously by the gateway controller.
+func isGatewayScheduled(gateway *gatewayv1alpha2.Gateway) bool {
+	for _, cond := range gateway.Status.Conditions {
+		if cond.Type == string(gatewayv1alpha2.GatewayConditionScheduled) &&
+			cond.Reason == string(gatewayv1alpha2.GatewayReasonScheduled) &&
+			cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// isGatewayReady returns boolean whether the ready condition exists
+// for the given gateway object if it matches the currently known generation of that object.
+func isGatewayReady(gateway *gatewayv1alpha2.Gateway) bool {
+	for _, cond := range gateway.Status.Conditions {
+		if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) && cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) && cond.ObservedGeneration == gateway.Generation {
+			return true
+		}
+	}
+	return false
+}
+
+// isGatewayInClassAndUnmanaged returns boolean if the provided combination of gateway and class
+// is controlled by this controller and the gateway is configured for unmanaged mode.
+func isGatewayInClassAndUnmanaged(gatewayClass *gatewayv1alpha2.GatewayClass, gateway gatewayv1alpha2.Gateway) bool {
+	_, ok := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations)
+	return ok && gatewayClass.Spec.ControllerName == ControllerName
+}
 
 // convertListenersToListenerStatuses converts all the listeners from the given gateway
 // object into ListenerStatus objects.
@@ -55,29 +85,6 @@ func convertListenersToListenerStatuses(gateway *gatewayv1alpha2.Gateway) (liste
 	return
 }
 
-// readyConditionExistsForObservedGeneration returns boolean whether the ready condition exists
-// for the given gateway object if it matches the currently known generation of that object.
-func readyConditionExistsForObservedGeneration(gateway *gatewayv1alpha2.Gateway) bool {
-	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) && cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) && cond.ObservedGeneration == gateway.Generation {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isGatewayMarkedAsScheduled returns boolean whether or not the gateway object was scheduled
-// previously by the gateway controller.
-func isGatewayMarkedAsScheduled(gateway *gatewayv1alpha2.Gateway) bool {
-	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionScheduled) && cond.Reason == string(gatewayv1alpha2.GatewayReasonScheduled) {
-			return true
-		}
-	}
-	return false
-}
-
 // getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName
 // and verifies the contents producing an error if they don't match namespace/name format.
 func getRefFromPublishService(publishService string) (types.NamespacedName, error) {
@@ -89,17 +96,6 @@ func getRefFromPublishService(publishService string) (types.NamespacedName, erro
 		Namespace: publishServiceSplit[0],
 		Name:      publishServiceSplit[1],
 	}, nil
-}
-
-// debug is an alias for the longer log.V(debugLevel).Info for convenience
-func debug(log logr.Logger, gateway *gatewayv1alpha2.Gateway, msg string, keysAndValues ...interface{}) {
-	debugLevel := util.InfoLevel // temporarily upgrading all debug to info while developing
-	keysAndValues = append([]interface{}{
-		"namespace", gateway.Namespace,
-		"name", gateway.Name,
-		"gateway-mode", "unmanaged",
-	}, keysAndValues...)
-	log.V(debugLevel).Info(msg, keysAndValues...)
 }
 
 // pruneGatewayStatusConds cleans out old status conditions if the Gateway currently has more
@@ -125,13 +121,6 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []gate
 		}
 	}
 	return
-}
-
-// isGatewayControlledAndUnmanagedMode returns boolean if the provided combination of gateway and class
-// is controlled by this controller and the gateway is configured for unmanaged mode.
-func isGatewayControlledAndUnmanagedMode(gatewayClass *gatewayv1alpha2.GatewayClass, gateway gatewayv1alpha2.Gateway) bool {
-	_, ok := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations)
-	return ok && gatewayClass.Spec.ControllerName == ControllerName
 }
 
 // areAddressesEqual determines if two lists of gateway addresses have the same contents.

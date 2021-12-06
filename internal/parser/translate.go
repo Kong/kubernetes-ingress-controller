@@ -12,6 +12,7 @@ import (
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -313,6 +314,12 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 		result.ServiceNameToServices[serviceName] = service
 	}
 
+	return result
+}
+
+func fromHTTPRoutes(log logrus.FieldLogger, httpRouteList []*gatewayv1alpha2.HTTPRoute) ingressRules {
+	result := newIngressRules()
+	// TODO: implement HTTPRoute data-plane translations
 	return result
 }
 

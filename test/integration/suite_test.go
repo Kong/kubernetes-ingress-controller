@@ -138,8 +138,8 @@ func TestMain(m *testing.M) {
 		fmt.Println("INFO: starting the controller manager")
 		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", ingressClass),
-			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
-			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
+			fmt.Sprintf("--admission-webhook-cert=%s", kongSystemServiceCert),
+			fmt.Sprintf("--admission-webhook-key=%s", kongSystemServiceKey),
 			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
 			"--admission-webhook-listen=172.17.0.1:49023",
 			"--profiling",

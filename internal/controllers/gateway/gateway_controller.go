@@ -197,7 +197,7 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}
-		if isGatewayControlledAndUnmanagedMode(gatewayClass, gateway) {
+		if isGatewayInClassAndUnmanaged(gatewayClass, gateway) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: gateway.Namespace,
@@ -314,7 +314,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
 	debug(log, gateway, "marking the gateway as scheduled")
-	if !isGatewayMarkedAsScheduled(gateway) {
+	if !isGatewayScheduled(gateway) {
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
 			Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
 			Status:             metav1.ConditionTrue,
@@ -559,7 +559,7 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
 	gateway *gatewayv1alpha2.Gateway,
 ) (bool, error) {
-	if !readyConditionExistsForObservedGeneration(gateway) {
+	if !isGatewayReady(gateway) {
 		gateway.Status.Listeners = convertListenersToListenerStatuses(gateway)
 		gateway.Status.Addresses = gateway.Spec.Addresses
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{

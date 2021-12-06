@@ -205,7 +205,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: featureGates["Knative"] || c.KnativeIngressEnabled,
+			Enabled: featureGates[gatewayFeature] || c.KnativeIngressEnabled,
 			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
 				Group:    knativev1alpha1.SchemeGroupVersion.Group,
 				Version:  knativev1alpha1.SchemeGroupVersion.Version,
@@ -223,7 +223,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 		// GatewayAPI Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates["Gateway"],
+			Enabled: featureGates[gatewayFeature],
 			AutoHandler: crdExistsChecker{
 				GVR: schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
@@ -232,11 +232,26 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				}}.CRDExists,
 			Controller: &gateway.GatewayReconciler{
 				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("Gateway"),
+				Log:             ctrl.Log.WithName("controllers").WithName(gatewayFeature),
 				Scheme:          mgr.GetScheme(),
 				Proxy:           proxy,
 				PublishService:  c.PublishService,
 				WatchNamespaces: c.WatchNamespaces,
+			},
+		},
+		{
+			Enabled: featureGates[gatewayFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "httproutes",
+				}}.CRDExists,
+			Controller: &gateway.HTTPRouteReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
 			},
 		},
 	}

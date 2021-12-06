@@ -3,12 +3,13 @@ package gateway
 import (
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
@@ -27,7 +28,7 @@ func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
 			}},
 		},
 	}
-	assert.True(t, readyConditionExistsForObservedGeneration(currentlyReadyGateway))
+	assert.True(t, isGatewayReady(currentlyReadyGateway))
 
 	t.Log("checking ready condition for previously ready gateway that has since been updated")
 	previouslyReadyGateway := &gatewayv1alpha2.Gateway{
@@ -44,7 +45,7 @@ func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
 			}},
 		},
 	}
-	assert.False(t, readyConditionExistsForObservedGeneration(previouslyReadyGateway))
+	assert.False(t, isGatewayReady(previouslyReadyGateway))
 
 	t.Log("checking ready condition for a gateway which has never been ready")
 	neverBeenReadyGateway := &gatewayv1alpha2.Gateway{
@@ -53,7 +54,7 @@ func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
 		},
 		Status: gatewayv1alpha2.GatewayStatus{},
 	}
-	assert.False(t, readyConditionExistsForObservedGeneration(neverBeenReadyGateway))
+	assert.False(t, isGatewayReady(neverBeenReadyGateway))
 }
 
 func Test_isGatewayMarkedAsScheduled(t *testing.T) {
@@ -69,11 +70,11 @@ func Test_isGatewayMarkedAsScheduled(t *testing.T) {
 			}},
 		},
 	}
-	assert.True(t, isGatewayMarkedAsScheduled(scheduledGateway))
+	assert.True(t, isGatewayScheduled(scheduledGateway))
 
 	t.Log("verifying scheduled check for gateway object which has not been scheduled")
 	unscheduledGateway := &gatewayv1alpha2.Gateway{}
-	assert.False(t, isGatewayMarkedAsScheduled(unscheduledGateway))
+	assert.False(t, isGatewayScheduled(unscheduledGateway))
 }
 
 func Test_getRefFromPublishService(t *testing.T) {
@@ -248,10 +249,10 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 	}
 
 	t.Log("verifying the results for several gateways")
-	assert.False(t, isGatewayControlledAndUnmanagedMode(controlledGatewayClass, gatewayv1alpha2.Gateway{}))
-	assert.False(t, isGatewayControlledAndUnmanagedMode(uncontrolledGatewayClass, gatewayv1alpha2.Gateway{}))
-	assert.False(t, isGatewayControlledAndUnmanagedMode(uncontrolledGatewayClass, unmanagedGateway))
-	assert.True(t, isGatewayControlledAndUnmanagedMode(controlledGatewayClass, unmanagedGateway))
+	assert.False(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, gatewayv1alpha2.Gateway{}))
+	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, gatewayv1alpha2.Gateway{}))
+	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, unmanagedGateway))
+	assert.True(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, unmanagedGateway))
 }
 
 func Test_areAddressesEqual(t *testing.T) {

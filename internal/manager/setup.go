@@ -117,8 +117,7 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 	return cfg, nil
 }
 
-func setupProxyServer(ctx context.Context,
-	logger logr.Logger, fieldLogger logrus.FieldLogger,
+func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
 	mgr manager.Manager, kongConfig sendconfig.Kong,
 	diagnostic util.ConfigDumpDiagnostic, c *Config,
 ) (proxy.Proxy, error) {
@@ -141,8 +140,7 @@ func setupProxyServer(ctx context.Context,
 		return nil, err
 	}
 
-	return proxy.NewCacheBasedProxyWithStagger(ctx,
-		fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
+	proxyServer, err := proxy.NewCacheBasedProxyWithStagger(fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
 		mgr.GetClient(),
 		kongConfig,
 		c.IngressClassName,
@@ -151,6 +149,16 @@ func setupProxyServer(ctx context.Context,
 		timeoutDuration,
 		diagnostic,
 		sendconfig.UpdateKongAdminSimple)
+	if err != nil {
+		return nil, err
+	}
+
+	err = mgr.Add(proxyServer)
+	if err != nil {
+		return nil, err
+	}
+
+	return proxyServer, nil
 }
 
 func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerClient client.Client) error {

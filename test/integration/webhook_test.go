@@ -34,6 +34,9 @@ import (
 // to run tests that need multiple namespaces.
 const extraWebhookNamespace = "webhookextra"
 
+// webhookSvcName is the name of the admission webhook service.
+const webhookSvcName = "validations"
+
 // highEndConsumerUsageCount indicates a number of consumers with credentials
 // that we consider a large number and is used to generate background
 // consumers for testing validation (since validation relies on listing all
@@ -59,62 +62,9 @@ func TestValidationWebhook(t *testing.T) {
 		}
 	}()
 
-	const webhookSvcName = "validations"
-	validationsService, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
-		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "default",
-					Port:       443,
-					TargetPort: intstr.FromInt(49023),
-				},
-			},
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err, "creating webhook service")
-
-	defer func() {
-		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
-
-	nodeName := "aaaa"
-	endpoints, err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Create(ctx, &corev1.Endpoints{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Endpoints"},
-		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
-		Subsets: []corev1.EndpointSubset{
-			{
-				Addresses: []corev1.EndpointAddress{
-					{
-						IP:       "172.17.0.1",
-						NodeName: &nodeName,
-					},
-				},
-				Ports: []corev1.EndpointPort{
-					{
-						Name:     "default",
-						Port:     49023,
-						Protocol: corev1.ProtocolTCP,
-					},
-				},
-			},
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err, "creating webhook endpoints")
-
-	defer func() {
-		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	closer, err := ensureWebhookService()
+	assert.NoError(t, err)
+	defer closer()
 
 	fail := admregv1.Fail
 	none := admregv1.SideEffectClassNone
@@ -758,4 +708,63 @@ func TestValidationWebhook(t *testing.T) {
 	_, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, jwtConsumer, metav1.CreateOptions{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
+}
+
+func ensureWebhookService() (func() error, error) {
+	validationsService, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
+		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "default",
+					Port:       443,
+					TargetPort: intstr.FromInt(49023),
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("creating webhook service: %w", err)
+	}
+
+	nodeName := "aaaa"
+	endpoints, err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Create(ctx, &corev1.Endpoints{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Endpoints"},
+		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
+		Subsets: []corev1.EndpointSubset{
+			{
+				Addresses: []corev1.EndpointAddress{
+					{
+						IP:       "172.17.0.1",
+						NodeName: &nodeName,
+					},
+				},
+				Ports: []corev1.EndpointPort{
+					{
+						Name:     "default",
+						Port:     49023,
+						Protocol: corev1.ProtocolTCP,
+					},
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("creating webhook endpoints: %w", err)
+	}
+
+	closer := func() error {
+		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+
+		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}
+
+	return closer, nil
 }

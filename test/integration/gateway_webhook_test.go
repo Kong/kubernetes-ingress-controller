@@ -24,7 +24,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	defer cleanup()
 
 	if env.Cluster().Type() != kind.KindClusterType {
-		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
+		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
 	closer, err := ensureAdmissionRegistration(

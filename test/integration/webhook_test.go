@@ -615,7 +615,7 @@ func ensureWebhookService(name string) (func() error, error) {
 				{
 					Name:       "default",
 					Port:       443,
-					TargetPort: intstr.FromInt(49023),
+					TargetPort: intstr.FromInt(admissionWebhookListenPort),
 				},
 			},
 		},
@@ -632,14 +632,14 @@ func ensureWebhookService(name string) (func() error, error) {
 			{
 				Addresses: []corev1.EndpointAddress{
 					{
-						IP:       "172.17.0.1",
+						IP:       admissionWebhookListenHost,
 						NodeName: &nodeName,
 					},
 				},
 				Ports: []corev1.EndpointPort{
 					{
 						Name:     "default",
-						Port:     49023,
+						Port:     admissionWebhookListenPort,
 						Protocol: corev1.ProtocolTCP,
 					},
 				},
@@ -666,7 +666,7 @@ func ensureWebhookService(name string) (func() error, error) {
 
 func waitForWebhookService(t *testing.T) {
 	require.Eventually(t, func() bool {
-		_, err := net.DialTimeout("tcp", "172.17.0.1:49023", 1*time.Second)
+		_, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", admissionWebhookListenHost, admissionWebhookListenPort), 1*time.Second)
 		return err == nil
 	}, ingressWait, waitTick, "waiting for the admission service to be up")
 }

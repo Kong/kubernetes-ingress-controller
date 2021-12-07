@@ -141,7 +141,7 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--admission-webhook-cert=%s", kongSystemServiceCert),
 			fmt.Sprintf("--admission-webhook-key=%s", kongSystemServiceKey),
 			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
-			"--admission-webhook-listen=172.17.0.1:49023",
+			fmt.Sprintf("--admission-webhook-listen=%s:%d", admissionWebhookListenHost, admissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
 			"--log-level=trace",

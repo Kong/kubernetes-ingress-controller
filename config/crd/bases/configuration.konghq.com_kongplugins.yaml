@@ -64,6 +64,9 @@ spec:
                   name:
                     description: the secret containing the key
                     type: string
+                required:
+                - key
+                - name
                 type: object
             type: object
           consumerRef:

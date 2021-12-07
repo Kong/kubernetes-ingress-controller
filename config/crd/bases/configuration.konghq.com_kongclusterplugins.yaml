@@ -67,6 +67,10 @@ spec:
                   namespace:
                     description: The namespace containing the secret
                     type: string
+                required:
+                - key
+                - name
+                - namespace
                 type: object
             type: object
           consumerRef:

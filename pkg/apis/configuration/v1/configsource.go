@@ -16,8 +16,10 @@ type NamespacedConfigSource struct {
 //+kubebuilder:object:generate=true
 type SecretValueFromSource struct {
 	// the secret containing the key
+	//+kubebuilder:validation:Required
 	Secret string `json:"name,omitempty"`
 	// the key containing the value
+	//+kubebuilder:validation:Required
 	Key string `json:"key,omitempty"`
 }
 
@@ -25,9 +27,12 @@ type SecretValueFromSource struct {
 //+kubebuilder:object:generate=true
 type NamespacedSecretValueFromSource struct {
 	// The namespace containing the secret
+	//+kubebuilder:validation:Required
 	Namespace string `json:"namespace,omitempty"`
 	// the secret containing the key
+	//+kubebuilder:validation:Required
 	Secret string `json:"name,omitempty"`
 	// the key containing the value
+	//+kubebuilder:validation:Required
 	Key string `json:"key,omitempty"`
 }

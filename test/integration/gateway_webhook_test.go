@@ -44,7 +44,9 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		},
 	)
 	assert.NoError(t, err, "creating webhook config")
-	defer closer()
+	defer func() {
+		assert.NoError(t, closer())
+	}()
 
 	waitForWebhookService(t)
 

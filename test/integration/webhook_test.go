@@ -31,9 +31,6 @@ import (
 // to run tests that need multiple namespaces.
 const extraWebhookNamespace = "webhookextra"
 
-// webhookSvcName is the name of the admission webhook service.
-const webhookSvcName = "validations"
-
 // highEndConsumerUsageCount indicates a number of consumers with credentials
 // that we consider a large number and is used to generate background
 // consumers for testing validation (since validation relies on listing all
@@ -81,7 +78,9 @@ func TestValidationWebhook(t *testing.T) {
 		},
 	)
 	assert.NoError(t, err, "creating webhook config")
-	defer closer()
+	defer func() {
+		assert.NoError(t, closer())
+	}()
 
 	waitForWebhookService(t)
 

@@ -161,7 +161,6 @@ func (p *clientgoCachedProxyResolver) NeedLeaderElection() bool {
 
 func (p *clientgoCachedProxyResolver) Start(ctx context.Context) error {
 	go p.startProxyUpdateServer(ctx)
-
 	return nil
 }
 

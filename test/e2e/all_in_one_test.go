@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,9 +25,12 @@ import (
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -39,6 +43,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
@@ -107,7 +112,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
-	deployKong(ctx, t, env, manifest)
+	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
@@ -192,7 +197,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
-	deployKong(ctx, t, env, manifest)
+	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
@@ -239,7 +244,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, entDBLESSPath)
 	require.NoError(t, err)
-	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
+	_ = deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env)
@@ -281,7 +286,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
 	require.NoError(t, err)
-	deployKong(ctx, t, env, manifest)
+	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -289,6 +294,116 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
+}
+
+func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
+	t.Log("configuring all-in-one-postgres.yaml manifest test")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageOverride); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.Parse(clusterVersionStr)
+		require.NoError(t, err)
+		builder.WithKubernetesVersion(clusterVersion)
+	}
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
+	t.Log("deploying kong components")
+	manifest, err := getTestManifest(t, postgresPath)
+	require.NoError(t, err)
+	deployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
+	verifyPostgres(ctx, t, env)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	verifyIngress(ctx, t, env)
+
+	t.Log("verifying that kong pods deployed properly and gathering a sample pod")
+	forDeployment := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
+	}
+	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(podList.Items))
+	initialPod := podList.Items[0]
+
+	t.Log("adding a second replica to the Kong deployment")
+	scale := &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deployment.Name,
+			Namespace: deployment.Namespace,
+		},
+		Spec: autoscalingv1.ScaleSpec{
+			Replicas: 2,
+		},
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
+		deployment.Name, scale, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying that scaling completes and the additional replicas come up")
+	require.Eventually(t, func() bool {
+		deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
+	}, kongComponentWait, time.Second)
+
+	t.Log("gathering another sample pod to verify leadership is configured appropriately")
+	podList, err = env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
+	require.NoError(t, err)
+	var secondary corev1.Pod
+	for _, pod := range podList.Items {
+		if pod.Name != initialPod.Name {
+			secondary = pod
+			break
+		}
+	}
+
+	client := &http.Client{Timeout: time.Second * 30}
+	t.Log("confirming the second replica is not the leader and is not pushing configuration")
+	forwardCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	startPortForwarder(forwardCtx, t, env, secondary, "9777", "cmetrics")
+	require.Never(t, func() bool {
+		req, err := http.NewRequest("GET", "http://localhost:9777/metrics", nil)
+		require.NoError(t, err)
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		// if we are not the leader, we run no config pushes, and this metric string will not appear
+		return strings.Contains(string(body), metrics.MetricNameConfigPushCount)
+	}, time.Minute, time.Second*10)
+
+	t.Log("deleting the original replica and current leader")
+	err = env.Cluster().Client().CoreV1().Pods(initialPod.Namespace).Delete(ctx, initialPod.Name, metav1.DeleteOptions{})
+	require.NoError(t, err)
+
+	t.Log("confirming the second replica becomes the leader and starts pushing configuration")
+	require.Eventually(t, func() bool {
+		req, err := http.NewRequest("GET", "http://localhost:9777/metrics", nil)
+		require.NoError(t, err)
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		return strings.Contains(string(body), metrics.MetricNameConfigPushCount)
+	}, time.Minute, time.Second)
 }
 
 const entPostgresPath = "../../deploy/single/all-in-one-postgres-enterprise.yaml"
@@ -331,7 +446,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, entPostgresPath)
 	require.NoError(t, err)
-	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecret)
+	_ = deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecret)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -356,7 +471,7 @@ const (
 	adminServiceName = "kong-admin"
 )
 
-func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) {
+func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
 	t.Log("creating a tempfile for kubeconfig")
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
@@ -398,11 +513,13 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
 
 	t.Log("waiting for kong to be ready")
+	var deployment *appsv1.Deployment
 	require.Eventually(t, func() bool {
-		deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
+		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
 		require.NoError(t, err)
 		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
 	}, kongComponentWait, time.Second)
+	return deployment
 }
 
 func deployIngress(ctx context.Context, t *testing.T, env environments.Environment) {
@@ -602,6 +719,35 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 	migrationJob, err := env.Cluster().Client().BatchV1().Jobs(namespace).Get(ctx, "kong-migrations", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, migrationJob.Status.Succeeded, int32(1))
+}
+
+// startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
+// ends
+func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, pod corev1.Pod, localPort,
+	targetPort string) {
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "portforward-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer os.Remove(kubeconfigFile.Name())
+	defer kubeconfigFile.Close()
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", pod.Namespace, pod.Name, "9777:cmetrics")
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	t.Logf("forwarding port %s to %s/%s:%s", localPort, pod.Namespace, pod.Name, targetPort)
+	require.NoError(t, cmd.Start(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
+	require.Eventually(t, func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", localPort))
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, kongComponentWait, time.Second)
 }
 
 // -----------------------------------------------------------------------------

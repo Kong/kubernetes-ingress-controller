@@ -68,6 +68,9 @@ the `configuration.konghq.com` API group.
 
 #### Fixed
 
+- Fixed an edge case which could theoretically remove data-plane config for
+  objects which couldn't be retrieved from the manager's cached client.
+  [#2057](https://github.com/Kong/kubernetes-ingress-controller/pull/2057)
 - The validating webhook now validates that required fields data is not empty
   [#1993](https://github.com/Kong/kubernetes-ingress-controller/issues/1993)
 - The validating webhook now validates unique key constraints for KongConsumer

@@ -7,11 +7,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
 )
 
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
@@ -99,4 +101,29 @@ func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName st
 func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 	_, err := client.RESTMapper().KindFor(gvr)
 	return !meta.IsNoMatchError(err)
+}
+
+// EnsureProxyDeleteObject is a reconciliation helper to ensure that an object is removed from
+// the backend proxy cache so that it gets removed from data-plane configurations.
+func EnsureProxyDeleteObject(proxy proxy.Proxy, obj client.Object) (ctrl.Result, error) {
+	// check whether the object is at all present in the proxy cache.
+	objectExistsInCache, err := proxy.ObjectExists(obj)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// if the object is still present in the proxy cache, we need to keep trying to
+	// remove it until its gone so that it gets removed from backend data-plane.
+	if objectExistsInCache {
+		if err := proxy.DeleteObject(obj); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// the caller should requeue until the object is no longer present in the cache
+		// to ensure removal was successful
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// if the object is not present in the proxy cache, we're all set
+	return ctrl.Result{}, nil
 }

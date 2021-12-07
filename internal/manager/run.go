@@ -62,8 +62,22 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to build the kong admin api configuration: %w", err)
 	}
 
+	kongRoot, err := kongConfig.Client.Root(ctx)
+	if err != nil {
+		return fmt.Errorf("could not retrieve Kong admin root: %w", err)
+	}
+	kongRootConfig, ok := kongRoot["configuration"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid root configuration, expected a map[string]interface{} got %T",
+			kongRoot["configuration"])
+	}
+	dbmode, ok := kongRootConfig["database"].(string)
+	if !ok {
+		return fmt.Errorf("invalid database configuration, expected a string got %T", kongRootConfig["database"])
+	}
+
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(setupLog, c, scheme)
+	controllerOpts, err := setupControllerOptions(setupLog, c, scheme, dbmode)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller options: %w", err)
 	}
@@ -80,7 +94,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	setupLog.Info("Initializing Proxy Cache Server")
 	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
 	if err != nil {
-		return fmt.Errorf("unable to start proxy cache server: %w", err)
+		return fmt.Errorf("unable to initialize proxy cache server: %w", err)
 	}
 
 	setupLog.Info("Starting Enabled Controllers")

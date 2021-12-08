@@ -49,6 +49,20 @@ you should edit it (`kubectl edit validatingwebhookconfiguration
 kong-validations`) and add `kongclusterplugins` under the `resources` block for
 the `configuration.konghq.com` API group.
 
+#### Breaking changes
+
+- You must upgrade to 2.0.x before upgrading to 2.1.x to properly handle the
+  transition from apiextensions.k8s.io/v1beta1 CRDs to apiextensions.k8s.io/v1
+  CRDSs. CRDs are now generated from their underlying Go structures to avoid
+  accidental mismatches between implementation and Kubernetes configuration.
+  KongIngresses previously included `healthchecks.passive.unhealthy.timeout`
+  and `healthchecks.active.unhealthy.timeout` fields that did not match the
+  corresponding Kong configuration and had no effect. These are now
+  `healthchecks.passive.unhealthy.timeouts` and
+  `healthchecks.active.unhealthy.timeouts`, respectively. If you use these
+  fields, you must rename them in your KongIngresses before upgrading.
+  [#1971](https://github.com/Kong/kubernetes-ingress-controller/pull/1971)
+
 #### Added
 
 - Added validation for `Gateway` objects in the admission webhook

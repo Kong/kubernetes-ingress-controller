@@ -141,6 +141,7 @@ spec:
                       probing.
                     properties:
                       concurrency:
+                        minimum: 1
                         type: integer
                       healthy:
                         description: Healthy configures thresholds and HTTP status
@@ -151,17 +152,21 @@ spec:
                               type: integer
                             type: array
                           interval:
+                            minimum: 0
                             type: integer
                           successes:
+                            minimum: 0
                             type: integer
                         type: object
                       http_path:
+                        pattern: ^/.*$
                         type: string
                       https_sni:
                         type: string
                       https_verify_certificate:
                         type: boolean
                       timeout:
+                        minimum: 0
                         type: integer
                       type:
                         type: string
@@ -170,16 +175,20 @@ spec:
                           codes to mark targets unhealthy.
                         properties:
                           http_failures:
+                            minimum: 0
                             type: integer
                           http_statuses:
                             items:
                               type: integer
                             type: array
                           interval:
+                            minimum: 0
                             type: integer
                           tcp_failures:
+                            minimum: 0
                             type: integer
                           timeouts:
+                            minimum: 0
                             type: integer
                         type: object
                     type: object
@@ -196,8 +205,10 @@ spec:
                               type: integer
                             type: array
                           interval:
+                            minimum: 0
                             type: integer
                           successes:
+                            minimum: 0
                             type: integer
                         type: object
                       type:
@@ -207,16 +218,20 @@ spec:
                           codes to mark targets unhealthy.
                         properties:
                           http_failures:
+                            minimum: 0
                             type: integer
                           http_statuses:
                             items:
                               type: integer
                             type: array
                           interval:
+                            minimum: 0
                             type: integer
                           tcp_failures:
+                            minimum: 0
                             type: integer
                           timeouts:
+                            minimum: 0
                             type: integer
                         type: object
                     type: object

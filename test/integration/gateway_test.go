@@ -20,8 +20,15 @@ import (
 )
 
 const (
-	gatewayReconcilationWait = time.Second * 10
-	unmanagedAnnotation      = annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
+	// gatewayWaitTimeToVerifyScheduling is the amount of time to wait during testing to verify
+	// whether the sheduling of a new Gateway object has occurred.
+	gatewayWaitTimeToVerifyScheduling = time.Second * 30
+
+	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
+	// parent Service to fully resolve into ready state.
+	gatewayUpdateWaitTime = time.Minute * 3
+
+	unmanagedAnnotation = annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
@@ -82,28 +89,28 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway service ref gets provisioned when placeholder is used")
 	require.Eventually(t, func() bool {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return gw.Annotations[unmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway spec gets updated to match the publish service")
 	require.Eventually(t, func() bool {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return len(gw.Spec.Listeners) == len(pubsvc.Spec.Ports) && len(gw.Spec.Addresses) > 0
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway status gets updated to match the publish service")
 	require.Eventually(t, func() bool {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway listeners get configured with L7 configurations from the data-plane")
 	require.Eventually(t, func() bool {
@@ -115,7 +122,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
 	require.Eventually(t, func() bool {
@@ -127,7 +134,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 }
 
 func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
@@ -206,7 +213,7 @@ func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 	require.Eventually(t, func() bool {
 		gw2, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw2.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -216,7 +223,7 @@ func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("triggering an update to the gateway service")
 	svc, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
@@ -254,7 +261,7 @@ func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 	require.Eventually(t, func() bool {
 		gw2, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw2.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -264,7 +271,7 @@ func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 }
 
 func TestUnmanagedGatewayControllerSupport(t *testing.T) {
@@ -327,7 +334,7 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the unsupported Gateway object does not get scheduled by the controller")
-	timeout := time.Now().Add(gatewayReconcilationWait)
+	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
 	for timeout.After(time.Now()) {
 		unsupportedGateway, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -363,7 +370,7 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayWaitTimeToVerifyScheduling, time.Second)
 }
 
 func TestUnmanagedGatewayClass(t *testing.T) {
@@ -397,7 +404,7 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway object does not get scheduled by the controller due to missing its GatewayClass")
-	timeout := time.Now().Add(gatewayReconcilationWait)
+	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
 	for timeout.After(time.Now()) {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -427,5 +434,5 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 			}
 		}
 		return false
-	}, time.Minute, time.Second)
+	}, gatewayUpdateWaitTime, time.Second)
 }

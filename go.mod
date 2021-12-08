@@ -8,10 +8,10 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-logr/logr v1.2.0
+	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.7.0
-	github.com/kong/go-kong v0.25.0
+	github.com/kong/go-kong v0.25.1
 	github.com/kong/kubernetes-testing-framework v0.10.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.43
@@ -139,7 +139,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/klog/v2 v2.30.0 // indirect
+	k8s.io/klog/v2 v2.10.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/utils v0.0.0-20210820185131-d34e5cb4466e // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect

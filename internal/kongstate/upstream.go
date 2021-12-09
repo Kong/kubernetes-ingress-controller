@@ -76,7 +76,7 @@ func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngres
 	if k.HashOnCookiePath != nil {
 		u.HashOnCookiePath = kong.String(*k.HashOnCookiePath)
 	}
-	// TODO client certificate handling
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
 }
 
 // override sets Upstream fields by KongIngress first, then by annotation

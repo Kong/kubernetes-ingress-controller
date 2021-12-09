@@ -97,13 +97,8 @@ type KongIngressUpstream struct {
 	HashFallbackHeader *string           `json:"hash_fallback_header,omitempty" yaml:"hash_fallback_header,omitempty"`
 	HashOnCookie       *string           `json:"hash_on_cookie,omitempty" yaml:"hash_on_cookie,omitempty"`
 	HashOnCookiePath   *string           `json:"hash_on_cookie_path,omitempty" yaml:"hash_on_cookie_path,omitempty"`
-	// TODO status of this in existing code is unclear. While we supported a raw dump from KongIngress.upstream
-	// into the generated upstream, the Kong upstream type only has a certificate ID field here, not a complete
-	// certificate/key pair (aka go-kong Certificate). Unclear if db-less or deck have some logic to automagically
-	// create the certificate and insert the correct ID into the upstream.
-	// We _DID NOT_ show any client cert example at https://docs.konghq.com/kubernetes-ingress-controller/1.3.x/references/custom-resources/#kongingress
-	// nor did we have tests for it
-	//ClientCertificate  *Certificate `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
+	//ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
 }
 
 func init() {

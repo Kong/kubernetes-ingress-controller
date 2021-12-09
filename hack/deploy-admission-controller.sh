@@ -44,6 +44,15 @@ webhooks:
     - UPDATE
     resources:
     - secrets
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - 'v1alpha2'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
   clientConfig:
     service:
       namespace: kong

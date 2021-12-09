@@ -4,26 +4,28 @@
 package integration
 
 const (
-	admissionWebhookCert = `-----BEGIN CERTIFICATE-----
-MIIDIDCCAgigAwIBAgIUCRzHAvZF4+Roul3QHLsqCLs9ZLMwDQYJKoZIhvcNAQEL
-BQAwMzELMAkGA1UEBhMCUEwxJDAiBgNVBAMMG3ZhbGlkYXRpb25zLmtvbmctc3lz
-dGVtLnN2YzAgFw0yMTA1MjExOTI5MjlaGA8yMTIxMDQyNzE5MjkyOVowMzELMAkG
-A1UEBhMCUEwxJDAiBgNVBAMMG3ZhbGlkYXRpb25zLmtvbmctc3lzdGVtLnN2YzCC
-ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAOCAjc9P/NgSaCi7+xjLJDSA
-7+czwc8fxr90MvvRbsj8Lrl2wkyKJMBIP7dRlLcrBx0/1Zu8d9d8pFRRZBttXcfA
-SAGNM+J1t2dQP2RaUilZJN7Tw3UYF8iy0JD81QW5ykDXlGdwbieKRlpeb/L2uVDu
-PbHgLTk4FCkZS2TIh+7xlqisINuzPuQKe3jT5sPsljbiLJRxXSa+LnwexMcSlxTQ
-TUtHdeQbcGjfQXuzse7sehDynazsUiGcgs5hKbCjMdgrgHkMJRSqV1m/I4ZrIfon
-gIaoUuV9Wx1y95gpPKZ/3fs3F/nW7vxtf//C3wWWnA0dkIJoWYnx10gvMk/wo7EC
-AwEAAaMqMCgwJgYDVR0RBB8wHYIbdmFsaWRhdGlvbnMua29uZy1zeXN0ZW0uc3Zj
-MA0GCSqGSIb3DQEBCwUAA4IBAQBzTrDxES0gsC1GuLlyb0eeri32An4ujW62wtCE
-rYmzPpQyhX3LPGr6KZM54PRGh5PGgdf68Gls0qeTgXq8uI49i2ttwUsBA9BWi46B
-RqhUw3m0Z6p0N0y+JgIMZXzqct6gBeJ4Xg134FHeNRLLSQb3udO/o9gZv9bgmGNr
-mTjWhBeQdYUn8vcUx1XpmipClkIwvI+8kxcmC8LizuNXFmRy57nwfYq3XRL0T09j
-L9rSmC3ehyVLndD8x6hXkOkMGofLqhIzRfMrCFem9g4Xi1yo1HkwH2hZvw+3dwJJ
-UuCPFug0koLCC1XyYw0YT9vjZemy/z0JM+FCNo5I8wfTtgvA
+	// kongSystemServiceCert is a testing TLS certificate with SAN *.kong-system.svc.
+	kongSystemServiceCert = `-----BEGIN CERTIFICATE-----
+MIIDADCCAeigAwIBAgIUcwR1DfxFoRBBPojxpzXJpGDVKKgwDQYJKoZIhvcNAQEL
+BQAwKTELMAkGA1UEBhMCUEwxGjAYBgNVBAMMESoua29uZy1zeXN0ZW0uc3ZjMB4X
+DTIxMTIwNjE1MzAzNloXDTIyMDEwNTE1MzAzNlowKTELMAkGA1UEBhMCUEwxGjAY
+BgNVBAMMESoua29uZy1zeXN0ZW0uc3ZjMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+MIIBCgKCAQEA4ICNz0/82BJoKLv7GMskNIDv5zPBzx/Gv3Qy+9FuyPwuuXbCTIok
+wEg/t1GUtysHHT/Vm7x313ykVFFkG21dx8BIAY0z4nW3Z1A/ZFpSKVkk3tPDdRgX
+yLLQkPzVBbnKQNeUZ3BuJ4pGWl5v8va5UO49seAtOTgUKRlLZMiH7vGWqKwg27M+
+5Ap7eNPmw+yWNuIslHFdJr4ufB7ExxKXFNBNS0d15BtwaN9Be7Ox7ux6EPKdrOxS
+IZyCzmEpsKMx2CuAeQwlFKpXWb8jhmsh+ieAhqhS5X1bHXL3mCk8pn/d+zcX+dbu
+/G1//8LfBZacDR2QgmhZifHXSC8yT/CjsQIDAQABoyAwHjAcBgNVHREEFTATghEq
+Lmtvbmctc3lzdGVtLnN2YzANBgkqhkiG9w0BAQsFAAOCAQEAcLwLZD7Co/kQUrLZ
+sfuiMmyKi3r1XbanJqKccMOVaqh8L4odz9w0SM0AHne4vk2XMFBjmOdtxT0O9PAc
+Jh2vGbyNDaKdL5oYRzJ7j75X0FQXhtpD1iAgWb09EH2WQ90PYeYTWiIFCtM5GdA6
+L+Ardq+Cvdy9LigRkyHweDbjelEbe8SPbpbVxp8qOzu94pgclfw+zD5UsudpRYlv
+ZcYAmU5vZhpxFwHCEkzW8nUDjT3CIQ9KBaVOX2kXCkVc8Im4Bn0HTVDtd7f97PgM
+otVM+9o/Q34HJZS0KdLYHtAUH8S5oUjfIabgcp1nm7/FGwgsHp3tYISC9D4QaFCC
+jzqXYQ==
 -----END CERTIFICATE-----`
-	admissionWebhookKey = `-----BEGIN RSA PRIVATE KEY-----
+	// kongSystemServiceKey is the private key for the testing certificate kongSystemServiceCert.
+	kongSystemServiceKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA4ICNz0/82BJoKLv7GMskNIDv5zPBzx/Gv3Qy+9FuyPwuuXbC
 TIokwEg/t1GUtysHHT/Vm7x313ykVFFkG21dx8BIAY0z4nW3Z1A/ZFpSKVkk3tPD
 dRgXyLLQkPzVBbnKQNeUZ3BuJ4pGWl5v8va5UO49seAtOTgUKRlLZMiH7vGWqKwg
@@ -50,4 +52,20 @@ NhvBAoGBAPtiu+/HDixPpuFeUsoGqN46rjjyM6sG6AFjjARie+d+jZi5Q7rEfrtY
 7Oh25R61i2QlO0fTi01jK6VH6O1G+D2AciGK7cWgLCAJv4ppAA3ysbRbfL1mXS3B
 O5PMpLb3dETohTyDk7+r1UgPmKSFDs4OnO5mS1dvQGM1f3OpcgJQ
 -----END RSA PRIVATE KEY-----`
+)
+
+const (
+	// XXX (this hack is tracked in https://github.com/Kong/kubernetes-ingress-controller/issues/1613):
+	//
+	// The test process (`go test github.com/Kong/kubernetes-ingress-controller/test/integration/...`) serves the webhook
+	// endpoints to be consumed by the apiserver (so that the tests can apply a ValidatingWebhookConfiguration and test
+	// those validations).
+	// In order to make that possible, we needed to allow the apiserver (that gets spun up by the test harness) to access
+	// the system under test (which runs as a part of the `go test` process).
+	// In the constants below, we're making an audacious assumption that the host running the `go test` process is also
+	// the Docker host on the default bridge (therefore it can listen on 172.17.0.1), and that the apiserver
+	// is running within a context (such as KIND running on that same docker bridge), from which 172.17.0.1 is routable.
+	// This works if the test runs against a KIND cluster, and does not work against cloud providers (like GKE).
+	admissionWebhookListenHost = "172.17.0.1"
+	admissionWebhookListenPort = 49023
 )

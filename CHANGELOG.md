@@ -51,6 +51,8 @@ the `configuration.konghq.com` API group.
 
 #### Added
 
+- Added validation for `Gateway` objects in the admission webhook
+  [#1946](https://github.com/Kong/kubernetes-ingress-controller/issues/1946)
 - [Feature Gates][k8s-fg] have been added to the controller manager in order to
   enable alpha/beta/experimental features and provide documentation about those
   features and their maturity over time. For more information see the
@@ -66,6 +68,9 @@ the `configuration.konghq.com` API group.
 
 #### Fixed
 
+- Fixed an edge case which could theoretically remove data-plane config for
+  objects which couldn't be retrieved from the manager's cached client.
+  [#2057](https://github.com/Kong/kubernetes-ingress-controller/pull/2057)
 - The validating webhook now validates that required fields data is not empty
   [#1993](https://github.com/Kong/kubernetes-ingress-controller/issues/1993)
 - The validating webhook now validates unique key constraints for KongConsumer

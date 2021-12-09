@@ -11,11 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
@@ -23,6 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 // extraWebhookNamespace is an additional namespace used by tests when needing
@@ -41,7 +43,7 @@ func TestValidationWebhook(t *testing.T) {
 	defer cleanup()
 
 	if env.Cluster().Type() != kind.KindClusterType {
-		t.Skip("TODO: webhook tests are only supported on KIND based environments right now")
+		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
 	t.Log("creating an extra namespace for testing global consumer credentials validation")
@@ -54,120 +56,33 @@ func TestValidationWebhook(t *testing.T) {
 		}
 	}()
 
-	const webhookSvcName = "validations"
-	validationsService, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
-		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "default",
-					Port:       443,
-					TargetPort: intstr.FromInt(49023),
-				},
-			},
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err, "creating webhook service")
-
-	defer func() {
-		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
-
-	nodeName := "aaaa"
-	endpoints, err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Create(ctx, &corev1.Endpoints{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Endpoints"},
-		ObjectMeta: metav1.ObjectMeta{Name: webhookSvcName},
-		Subsets: []corev1.EndpointSubset{
+	closer, err := ensureAdmissionRegistration(
+		"kong-validations-consumer",
+		[]admregv1.RuleWithOperations{
 			{
-				Addresses: []corev1.EndpointAddress{
-					{
-						IP:       "172.17.0.1",
-						NodeName: &nodeName,
-					},
+				Rule: admregv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"secrets"},
 				},
-				Ports: []corev1.EndpointPort{
-					{
-						Name:     "default",
-						Port:     49023,
-						Protocol: corev1.ProtocolTCP,
-					},
+				Operations: []admregv1.OperationType{admregv1.Update},
+			},
+			{
+				Rule: admregv1.Rule{
+					APIGroups:   []string{"configuration.konghq.com"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"kongconsumers"},
 				},
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
 			},
 		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err, "creating webhook endpoints")
-
+	)
+	assert.NoError(t, err, "creating webhook config")
 	defer func() {
-		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
+		assert.NoError(t, closer())
 	}()
 
-	fail := admregv1.Fail
-	none := admregv1.SideEffectClassNone
-	webhook, err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
-		&admregv1.ValidatingWebhookConfiguration{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "admissionregistration.k8s.io/v1", Kind: "ValidatingWebhookConfiguration"},
-			ObjectMeta: metav1.ObjectMeta{Name: "kong-validations"},
-			Webhooks: []admregv1.ValidatingWebhook{
-				{
-					Name:                    "validations.kong.konghq.com",
-					FailurePolicy:           &fail,
-					SideEffects:             &none,
-					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					Rules: []admregv1.RuleWithOperations{
-						{
-							Rule: admregv1.Rule{
-								APIGroups:   []string{""},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"secrets"},
-							},
-							Operations: []admregv1.OperationType{admregv1.Update},
-						},
-						{
-							Rule: admregv1.Rule{
-								APIGroups:   []string{"configuration.konghq.com"},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"kongconsumers"},
-							},
-							Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-						},
-					},
-					ClientConfig: admregv1.WebhookClientConfig{
-						Service:  &admregv1.ServiceReference{Namespace: controllerNamespace, Name: webhookSvcName},
-						CABundle: []byte(admissionWebhookCert),
-					},
-				},
-			},
-		}, metav1.CreateOptions{})
-	require.NoError(t, err, "creating webhook config")
-	require.Eventually(t, func() bool {
-		_, err := net.DialTimeout("tcp", "172.17.0.1:49023", 1*time.Second)
-		return err == nil
-	}, ingressWait, waitTick, "waiting for the admission service to be up")
-
-	defer func() {
-		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
-
-	// TODO: flakes were occurring in this test because proxy readiness isn't a consistent gate mechanism
-	//       by which to determine readiness for the webhook validation tests. We will follow up on this by
-	//       improving these tests, but for now (for speed at the time of writing) we just sleep.
-	//
-	//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1442
-	time.Sleep(time.Second * 5)
+	waitForWebhookService(t)
 
 	t.Log("creating a large number of consumers on the cluster to verify the performance of the cached client during validation")
 	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
@@ -687,4 +602,111 @@ func TestValidationWebhook(t *testing.T) {
 	_, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, jwtConsumer, metav1.CreateOptions{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
+}
+
+func ensureWebhookService(name string) (func() error, error) {
+	validationsService, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "default",
+					Port:       443,
+					TargetPort: intstr.FromInt(admissionWebhookListenPort),
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("creating webhook service: %w", err)
+	}
+
+	nodeName := "aaaa"
+	endpoints, err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Create(ctx, &corev1.Endpoints{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Endpoints"},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Subsets: []corev1.EndpointSubset{
+			{
+				Addresses: []corev1.EndpointAddress{
+					{
+						IP:       admissionWebhookListenHost,
+						NodeName: &nodeName,
+					},
+				},
+				Ports: []corev1.EndpointPort{
+					{
+						Name:     "default",
+						Port:     admissionWebhookListenPort,
+						Protocol: corev1.ProtocolTCP,
+					},
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("creating webhook endpoints: %w", err)
+	}
+
+	closer := func() error {
+		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+
+		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}
+
+	return closer, nil
+}
+
+func waitForWebhookService(t *testing.T) {
+	require.Eventually(t, func() bool {
+		_, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", admissionWebhookListenHost, admissionWebhookListenPort), 1*time.Second)
+		return err == nil
+	}, ingressWait, waitTick, "waiting for the admission service to be up")
+}
+
+func ensureAdmissionRegistration(configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {
+	svcName := fmt.Sprintf("webhook-%s", configResourceName)
+	svcCloser, err := ensureWebhookService(svcName)
+	if err != nil {
+		return nil, err
+	}
+
+	fail := admregv1.Fail
+	none := admregv1.SideEffectClassNone
+	webhook, err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
+		&admregv1.ValidatingWebhookConfiguration{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "admissionregistration.k8s.io/v1", Kind: "ValidatingWebhookConfiguration"},
+			ObjectMeta: metav1.ObjectMeta{Name: configResourceName},
+			Webhooks: []admregv1.ValidatingWebhook{
+				{
+					Name:                    "validations.kong.konghq.com",
+					FailurePolicy:           &fail,
+					SideEffects:             &none,
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					Rules:                   rules,
+					ClientConfig: admregv1.WebhookClientConfig{
+						Service:  &admregv1.ServiceReference{Namespace: controllerNamespace, Name: svcName},
+						CABundle: []byte(kongSystemServiceCert),
+					},
+				},
+			},
+		}, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	closer := func() error {
+		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		return svcCloser()
+	}
+
+	return closer, nil
 }

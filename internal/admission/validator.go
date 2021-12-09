@@ -3,6 +3,7 @@ package admission
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
@@ -10,9 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators/consumer/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -23,6 +26,7 @@ type KongValidator interface {
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
+	ValidateGateway(ctx context.Context, gateway gatewayv1alpha2.Gateway) (bool, string, error)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -266,6 +270,38 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 		derived.ObjectMeta.Namespace = "default"
 	}
 	return validator.ValidatePlugin(ctx, derived)
+}
+
+func (validator KongHTTPValidator) ValidateGateway(
+	ctx context.Context, gateway gatewayv1alpha2.Gateway,
+) (bool, string, error) {
+	// check if the gateway declares a gateway class
+	if gateway.Spec.GatewayClassName == "" {
+		return true, "", nil
+	}
+
+	// validate the gatewayclass reference
+	gwc := gatewayv1alpha2.GatewayClass{}
+	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return true, "", nil // not managed by this controller
+		}
+		return false, ErrTextCantRetrieveGatewayClass, err
+	}
+
+	// validate whether the gatewayclass is a supported class, if not
+	// then this gateway belongs to another controller.
+	if gwc.Spec.ControllerName != gatewaycontroller.ControllerName {
+		return true, "", nil
+	}
+
+	// supported gateways currently are required to indicate they are
+	// unmanaged provisioning mode gateways.
+	if _, exists := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations); !exists {
+		return false, ErrTextInvalidGatewayConfiguration, fmt.Errorf("missing required annotation %s", annotations.GatewayUnmanagedAnnotation)
+	}
+
+	return true, "", nil
 }
 
 // -----------------------------------------------------------------------------

@@ -202,8 +202,7 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 		return nil, err
 	}
 
-	client, err := adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
-	return client, err
+	return adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
@@ -159,6 +161,38 @@ const (
 	// and is left static to help developers debug failures in those testing environments.
 	kongTestPassword = "password"
 )
+
+// -----------------------------------------------------------------------------
+// Testing Utility Functions - Kong
+// -----------------------------------------------------------------------------
+
+func getKongVersion() (semver.Version, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	req.Header.Set("kong-admin-token", kongTestPassword)
+	resp, err := client.Do(req)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	var jsonResp map[string]interface{}
+	err = json.Unmarshal(body, &jsonResp)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	version, err := kong.ParseSemanticVersion(kong.VersionFromInfo(jsonResp))
+	if err != nil {
+		return semver.Version{}, err
+	}
+	return version, nil
+}
 
 // -----------------------------------------------------------------------------
 // Testing Utility Functions - Namespaces

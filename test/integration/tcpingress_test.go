@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -302,6 +303,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	tcpY.Spec.Rules[0].Backend.ServiceName = testServiceSuffixes[0]
 	// Update wipes out tcpY if actually assigned, breaking the deferred delete. we have no use for it, so discard it
 	_, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Update(ctx, tcpY, metav1.UpdateOptions{})
+	t.Logf("verifying TCP Ingress routes to new upstream after update")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
 			InsecureSkipVerify: true,
@@ -325,6 +327,12 @@ func TestTCPIngressTLS(t *testing.T) {
 }
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {
+	version, err := getKongVersion()
+	if err != nil {
+		t.Skipf("%s: kong version unknown, skipping TLS passthrough", err)
+	} else if version.LT(semver.MustParse("2.7.0")) {
+		t.Skipf("kong version %s below minimum TLS passthrough version", version)
+	}
 	t.Parallel()
 	t.Log("locking TLS port")
 	tlsMutex.Lock()

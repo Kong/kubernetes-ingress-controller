@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/kong/go-kong/kong"
@@ -18,8 +17,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
 )
-
-var clientSetup sync.Mutex
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config
@@ -205,9 +202,7 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 		return nil, err
 	}
 
-	clientSetup.Lock()
 	client, err := adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
-	clientSetup.Unlock()
 	return client, err
 }
 

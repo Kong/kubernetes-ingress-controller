@@ -32,7 +32,6 @@ const (
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
-	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -138,7 +137,6 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 }
 
 func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
-	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -275,7 +273,6 @@ func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
 }
 
 func TestUnmanagedGatewayControllerSupport(t *testing.T) {
-	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -374,7 +371,6 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 }
 
 func TestUnmanagedGatewayClass(t *testing.T) {
-	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()
 

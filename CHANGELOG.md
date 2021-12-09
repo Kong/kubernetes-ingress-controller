@@ -91,6 +91,9 @@ the `configuration.konghq.com` API group.
   credentials secrets on update of secrets, and on create or update of
   KongConsumers.
   [#729](https://github.com/Kong/kubernetes-ingress-controller/issues/729)
+- Fixed a race condition where multiple actors may simultaneously attempt to
+  create the configured Enterprise workspaces.
+  [#2070](https://github.com/Kong/kubernetes-ingress-controller/pull/2070)
 
 ## [2.0.6]
 

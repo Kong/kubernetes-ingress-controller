@@ -2,14 +2,20 @@ package gateway
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -40,8 +46,33 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	// TODO: add watches for changes to referenced GatewayClasses and Gateways.
-	//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2077
+	// if a GatewayClass updates then we need to enqueue the linked HTTPRoutes to
+	// ensure that any route objects that may have been orphaned by that change get
+	// removed from data-plane configurations, and any routes that are now supported
+	// due to that change get added to data-plane configurations.
+	if err := c.Watch(
+		&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGatewayClass),
+		predicate.Funcs{
+			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
+			CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+			UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+			DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+		},
+	); err != nil {
+		return err
+	}
+
+	// if a Gateway updates then we need to enqueue the linked HTTPRoutes to
+	// ensure that any route objects that may have been orphaned by that change get
+	// removed from data-plane configurations, and any routes that are now supported
+	// due to that change get added to data-plane configurations.
+	if err := c.Watch(
+		&source.Kind{Type: &gatewayv1alpha2.Gateway{}},
+		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway),
+	); err != nil {
+		return err
+	}
 
 	// because of the additional burden of having to manage reference data-plane
 	// configurations for HTTPRoute objects in the underlying Kong Gateway, we
@@ -52,6 +83,137 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		&source.Kind{Type: &gatewayv1alpha2.HTTPRoute{}},
 		&handler.EnqueueRequestForObject{},
 	)
+}
+
+// -----------------------------------------------------------------------------
+// HTTPRoute Controller - Event Handlers
+// -----------------------------------------------------------------------------
+
+// listHTTPRoutesForGatewayClass is a controller-runtime event.Handler which
+// produces a list of HTTPRoutes which were bound to a Gateway which is or was
+// bound to this GatewayClass. This implementation effectively does a map-reduce
+// to determine the HTTProutes as the relationship has to be discovered entirely
+// by object reference. This relies heavily on the inherent performance benefits of
+// the cached manager client to avoid API overhead.
+func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) []reconcile.Request {
+	// verify that the object is a GatewayClass
+	gwc, ok := obj.(*gatewayv1alpha2.GatewayClass)
+	if !ok {
+		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
+		return nil
+	}
+
+	// map all Gateway objects
+	gatewayList := gatewayv1alpha2.GatewayList{}
+	if err := r.Client.List(context.Background(), &gatewayList); err != nil {
+		r.Log.Error(err, "failed to list gateway objects from the cached client")
+		return nil
+	}
+
+	// reduce for in-class Gateway objects
+	gateways := make(map[string]map[string]struct{})
+	for _, gateway := range gatewayList.Items {
+		if string(gateway.Spec.GatewayClassName) == gwc.Name {
+			_, ok := gateways[gateway.Namespace]
+			if !ok {
+				gateways[gateway.Namespace] = make(map[string]struct{})
+			}
+			gateways[gateway.Namespace][gateway.Name] = struct{}{}
+		}
+	}
+
+	// if there are no Gateways associated with this GatewayClass we can stop
+	if len(gateways) == 0 {
+		return nil
+	}
+
+	// map all HTTPRoute objects
+	httprouteList := gatewayv1alpha2.HTTPRouteList{}
+	if err := r.Client.List(context.Background(), &httprouteList); err != nil {
+		r.Log.Error(err, "failed to list httproute objects from the cached client")
+		return nil
+	}
+
+	// reduce for HTTPRoute objects bound to an in-class Gateway
+	queue := make([]reconcile.Request, 0)
+	for _, httproute := range httprouteList.Items {
+		// check the httproute's parentRefs
+		for _, parentRef := range httproute.Spec.ParentRefs {
+			// determine what namespace the parent gateway is in
+			namespace := httproute.Namespace
+			if parentRef.Namespace != nil {
+				namespace = string(*parentRef.Namespace)
+			}
+
+			// if the gateway matches one of our previously filtered gateways, enqueue the route
+			if gatewaysForNamespace, ok := gateways[namespace]; ok {
+				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
+					queue = append(queue, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: httproute.Namespace,
+							Name:      httproute.Name,
+						},
+					})
+				}
+			}
+		}
+	}
+
+	return queue
+}
+
+// listHTTPRoutesForGateway is a controller-runtime event.Handler which enqueues HTTPRoute
+// objects for changes to Gateway objects. The relationship between HTTPRoutes and their
+// Gateways (by way of .Spec.ParentRefs) must be discovered by object relation, so this
+// implementation effectively does a map reduce to determine inclusion. This relies heavily
+// on the inherent performance benefits of the cached manager client to avoid API overhead.
+//
+// NOTE: due to a race condition where a Gateway and a GatewayClass may be updated at the
+//       same time and could cause a changed Gateway object to look like it wasn't in-class
+//       while in reality it may still have active data-plane configurations because it was
+//       recently in-class, we can't reliably filter Gateway objects based on class as we
+//       can't verify that didn't change since we received the object. As such the current
+//       implementation enqueues ALL HTTPRoute objects for reconciliation every time a Gateway
+//       changes. This is not ideal, but after communicating with other members of the
+//       community this appears to be a standard approach across multiple implementations at
+//       the moment for v1alpha2. As future releases of Gateway come out we'll need to
+//       continue iterating on this and perhaps advocating for upstream changes to help avoid
+//       this kind of problem without having to enqueue extra objects.
+func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reconcile.Request {
+	// verify that the object is a Gateway
+	gw, ok := obj.(*gatewayv1alpha2.Gateway)
+	if !ok {
+		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
+		return nil
+	}
+
+	// map all HTTPRoute objects
+	httprouteList := gatewayv1alpha2.HTTPRouteList{}
+	if err := r.Client.List(context.Background(), &httprouteList); err != nil {
+		r.Log.Error(err, "failed to list httproute objects from the cached client")
+		return nil
+	}
+
+	// reduce for HTTPRoute objects bound to the Gateway
+	queue := make([]reconcile.Request, 0)
+	for _, httproute := range httprouteList.Items {
+		for _, parentRef := range httproute.Spec.ParentRefs {
+			namespace := httproute.Namespace
+			if parentRef.Namespace != nil {
+				namespace = string(*parentRef.Namespace)
+			}
+			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
+				queue = append(queue, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: httproute.Namespace,
+						Name:      httproute.Name,
+					},
+				})
+			}
+		}
+	}
+
+	return queue
 }
 
 // -----------------------------------------------------------------------------

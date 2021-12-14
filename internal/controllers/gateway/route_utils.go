@@ -31,7 +31,7 @@ func parentRefsForRoute(obj client.Object) ([]gatewayv1alpha2.ParentRef, error) 
 // Gateway APIs route object (e.g. HTTPRoute, TCPRoute, e.t.c.) from the provided cached
 // client if they match this controller. If there are no gateways present for this route
 // OR the present gateways are references to missing objects, this will return a unsupportedGW error.
-func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj client.Object) (*gatewayv1alpha2.Gateway, error) {
+func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj client.Object) ([]*gatewayv1alpha2.Gateway, error) {
 	// gather the parentrefs for this route object
 	parentRefs, err := parentRefsForRoute(obj)
 	if err != nil {
@@ -39,6 +39,7 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 	}
 
 	// search each parentRef to see if this controller is one of the supported ones
+	gateways := make([]*gatewayv1alpha2.Gateway, 0)
 	for _, parentRef := range parentRefs {
 		// gather the namespace/name for the gateway
 		namespace := obj.GetNamespace()
@@ -81,17 +82,13 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 		// if the GatewayClass matches this controller we're all set and this controller
 		// should reconcile this object.
 		if gatewayClass.Spec.ControllerName == ControllerName {
-			return &gateway, nil
+			gateways = append(gateways, &gateway)
 		}
 	}
 
-	// this is the "if all else false" fallback. If we reach this point either:
-	//
-	//  a) there are no gateways configured
-	//  b) the gateways configured are not present in the API
-	//  c) combination of a & b
-	//
-	// we provide a specific error for this condition rather than making the
-	// caller check for nil values in the gateway and class.
-	return nil, fmt.Errorf(unsupportedGW)
+	if len(gateways) == 0 {
+		return nil, fmt.Errorf(unsupportedGW)
+	}
+
+	return gateways, nil
 }

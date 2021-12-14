@@ -51,6 +51,9 @@ the `configuration.konghq.com` API group.
 
 #### Breaking changes
 
+- The `--leader-elect` flag has been removed. Leader election is now enabled or
+  disabled automatically based on the database mode.
+  [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
 - You must upgrade to 2.0.x before upgrading to 2.1.x to properly handle the
   transition from apiextensions.k8s.io/v1beta1 CRDs to apiextensions.k8s.io/v1
   CRDSs. CRDs are now generated from their underlying Go structures to avoid
@@ -77,6 +80,10 @@ the `configuration.konghq.com` API group.
   [#1945](https://github.com/Kong/kubernetes-ingress-controller/issues/1945)
 - Anonymous reports now use TLS instead of UDP.
   [#2089](https://github.com/Kong/kubernetes-ingress-controller/pull/2089)
+- The new `--election-namespace` flag sets the leader election namespace. This
+  is normally only used if a controller is running outside a Kubernetes
+  cluster.
+  [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
 
 [k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 [kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
@@ -96,6 +103,10 @@ the `configuration.konghq.com` API group.
 - Fixed a race condition where multiple actors may simultaneously attempt to
   create the configured Enterprise workspaces.
   [#2070](https://github.com/Kong/kubernetes-ingress-controller/pull/2070)
+- Fixed incorrect leader election behavior. Previously, non-leader instances
+  would still attempt to update Kong configuration, but would not scan for
+  Kubernetes resources to translate into Kong configuration.
+  [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
 
 ## [2.0.6]
 

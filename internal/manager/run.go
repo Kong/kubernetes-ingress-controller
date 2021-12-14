@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -136,7 +135,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 
 	if c.UpdateStatus {
 		setupLog.Info("Starting resource status updater")
-		go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
+		err = setupStatusUpdater(mgr, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
+		if err != nil {
+			return fmt.Errorf("could not start status updater: %w", err)
+		}
 	} else {
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}

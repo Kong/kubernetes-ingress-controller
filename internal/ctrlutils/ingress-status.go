@@ -52,6 +52,39 @@ type statusInfo struct {
 	hostname string
 }
 
+// StatusUpdater updates Kubernetes resources' status based on applied Kong configuration
+type StatusUpdater struct {
+	kongConfig       sendconfig.Kong
+	log              logr.Logger
+	kubeConfig       *rest.Config
+	publishService   string
+	publishAddresses []string
+}
+
+// NeedLeaderElection indicates if the StatusUpdater must only be run by leader controllers
+func (s *StatusUpdater) NeedLeaderElection() bool {
+	return true
+}
+
+// Start starts the status update loop
+func (s *StatusUpdater) Start(ctx context.Context) error {
+	go s.PullConfigUpdate(ctx)
+	return nil
+}
+
+// NewStatusUpdater returns a StatusUpdater with the provided fields
+func NewStatusUpdater(kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config,
+	publishService string, publishAddresses []string) *StatusUpdater {
+	updater := &StatusUpdater{
+		kongConfig:       kongConfig,
+		log:              log,
+		kubeConfig:       kubeConfig,
+		publishService:   publishService,
+		publishAddresses: publishAddresses,
+	}
+	return updater
+}
+
 func newStatusConfig(kubeConfig *rest.Config) (statusConfig, error) {
 	client, err := clientset.NewForConfig(kubeConfig)
 	if err != nil {
@@ -82,13 +115,8 @@ func newStatusConfig(kubeConfig *rest.Config) (statusConfig, error) {
 }
 
 // PullConfigUpdate is a dedicated function that process ingress/customer resource status update after configuration is updated within kong.
-func PullConfigUpdate(
+func (s *StatusUpdater) PullConfigUpdate(
 	ctx context.Context,
-	kongConfig sendconfig.Kong,
-	log logr.Logger,
-	kubeConfig *rest.Config,
-	publishService string,
-	publishAddresses []string,
 ) {
 	cfg := statusConfig{ready: false}
 	status := statusInfo{ready: false}
@@ -96,40 +124,40 @@ func PullConfigUpdate(
 	var err error
 	for {
 		select {
-		case updateDone := <-kongConfig.ConfigDone:
+		case updateDone := <-s.kongConfig.ConfigDone:
 			if !cfg.ready {
-				cfg, err = newStatusConfig(kubeConfig)
+				cfg, err = newStatusConfig(s.kubeConfig)
 				if err != nil {
-					log.Error(err, "failed to initialize status updater")
+					s.log.Error(err, "failed to initialize status updater")
 				}
 			}
 			if !status.ready {
-				status, err = runningAddresses(ctx, kubeConfig, publishService, publishAddresses)
+				status, err = runningAddresses(ctx, s.kubeConfig, s.publishService, s.publishAddresses)
 				if err != nil {
 					if errors.Is(err, errLBNotReady) {
 						// Separate this into a debug log since it's expected in environments that cannot provision
 						// LoadBalancers (which we request by default), and will spam logs otherwise.
-						log.V(util.DebugLevel).Info("LoadBalancer type Service for the Kong proxy has no IPs", "service", publishService)
+						s.log.V(util.DebugLevel).Info("LoadBalancer type Service for the Kong proxy has no IPs", "service", s.publishService)
 					} else {
-						log.Error(err, "failed to look up status info for Kong proxy Service", "service", publishService)
+						s.log.Error(err, "failed to look up status info for Kong proxy Service", "service", s.publishService)
 					}
 				}
 			}
 
 			if cfg.ready && status.ready {
-				log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
+				s.log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
 				wg.Add(1)
 				go func() {
-					if err := UpdateStatuses(ctx, &updateDone, log, cfg.client, cfg.kicClient, &wg, status.ips,
-						status.hostname, kubeConfig, cfg.kubernetesVersion); err != nil {
-						log.Error(err, "failed to update resource statuses")
+					if err := UpdateStatuses(ctx, &updateDone, s.log, cfg.client, cfg.kicClient, &wg, status.ips,
+						status.hostname, s.kubeConfig, cfg.kubernetesVersion); err != nil {
+						s.log.Error(err, "failed to update resource statuses")
 					}
 				}()
 			} else {
-				log.V(util.DebugLevel).Info("config or publish service information unavailable, skipping status update")
+				s.log.V(util.DebugLevel).Info("config or publish service information unavailable, skipping status update")
 			}
 		case <-ctx.Done():
-			log.Info("stop status update channel.")
+			s.log.Info("stop status update channel.")
 			wg.Wait()
 			return
 		}

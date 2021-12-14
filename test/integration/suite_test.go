@@ -147,6 +147,7 @@ func TestMain(m *testing.M) {
 			"--log-level=trace",
 			"--debug-log-reduce-redundancy",
 			"--feature-gates=Gateway=true",
+			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
 		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
@@ -152,6 +153,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		}
 	}()
 
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return true
+			}
+		}
+		return false
+	}, ingressWait, waitTick)
+
 	t.Log("waiting for routes from HTTPRoute to become operational")
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
@@ -174,9 +187,25 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httproute.Spec.ParentRefs
-	httproute.Spec.ParentRefs = nil
-	httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httproute, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		httproute.Spec.ParentRefs = nil
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httproute, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return false
+			}
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
 	require.Eventually(t, func() bool {
@@ -190,9 +219,25 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
-	httproute.Spec.ParentRefs = oldParentRefs
-	httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httproute, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		httproute.Spec.ParentRefs = oldParentRefs
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httproute, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return true
+			}
+		}
+		return false
+	}, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
 	require.Eventually(t, func() bool {
@@ -215,6 +260,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("deleting the GatewayClass")
 	oldGWCName := gwc.Name
 	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return false
+			}
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
@@ -239,6 +296,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	require.NoError(t, err)
 
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return true
+			}
+		}
+		return false
+	}, ingressWait, waitTick)
+
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
@@ -260,6 +329,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("deleting the Gateway")
 	oldGWName := gw.Name
 	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return false
+			}
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
@@ -292,6 +373,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
 	require.NoError(t, err)
 
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return true
+			}
+		}
+		return false
+	}, ingressWait, waitTick)
+
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
@@ -313,6 +406,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				return false
+			}
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {

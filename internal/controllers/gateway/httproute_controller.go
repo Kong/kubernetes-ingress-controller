@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -17,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
@@ -258,13 +260,26 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	// we need to pull both the GatewayClass and Gateway parent objects for
-	// the HTTPRoute to verify routing behavior and ensure compatibility with
-	// Gateway configurations.
+	// we need to pull the Gateway parent objects for the HTTPRoute to verify
+	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, httproute, "retrieving GatewayClass and Gateway for route")
-	gateway, err := getSupportedGatewayForRoute(ctx, r.Client, httproute)
+	gateways, err := getSupportedGatewayForRoute(ctx, r.Client, httproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
+			// if there's no supported Gateway then this route could have been previously
+			// supported by this controller. As such we ensure that no supported Gateway
+			// references exist in the object status any longer.
+			statusUpdated, err := r.ensureGatewayReferenceStatusRemoved(ctx, httproute)
+			if err != nil {
+				// some failure happened so we need to retry to avoid orphaned statuses
+				return ctrl.Result{}, err
+			}
+			if statusUpdated {
+				// the status did in fact needed to be updated, so no need to requeue
+				// as the status update will trigger a requeue.
+				return ctrl.Result{}, nil
+			}
+
 			// if the route doesn't have a supported Gateway+GatewayClass associated with
 			// it it's possible it became orphaned after becoming queued. In either case
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
@@ -274,13 +289,30 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	// the referenced gateway object for the HTTPRoute needs to be ready
+	// now that we know there are 1 or more supported gateways linked from
+	// this HTTPRoute, we need to ensure the status is updated accordingly
+	// before we proceed with any further configurations.
+	debug(log, httproute, "ensuring status contains Gateway associations")
+	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
+	if err != nil {
+		// don't proceed until the statuses can be updated appropriately
+		return ctrl.Result{}, err
+	}
+	if statusUpdated {
+		// if the status was updated it will trigger a follow-up reconciliation
+		// so we don't need to do anything further here.
+		return ctrl.Result{}, nil
+	}
+
+	// the referenced gateway object(s) for the HTTPRoute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
-	// requeue the object and wait until it's ready.
-	debug(log, httproute, "checking if the httproute's gateway is ready")
-	if !isGatewayReady(gateway) {
-		debug(log, httproute, "gateway for route was not ready, waiting")
-		return ctrl.Result{Requeue: true}, nil
+	// requeue the object and wait until all supported gateways are ready.
+	debug(log, httproute, "checking if the httproute's gateways are ready")
+	for _, gateway := range gateways {
+		if !isGatewayReady(gateway) {
+			debug(log, httproute, "gateway for route was not ready, waiting")
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	// finally if all matching has succeeded and the object is not being deleted,
@@ -293,4 +325,115 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// once the data-plane has accepted the HTTPRoute object, we're all set.
 	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
+// HTTPRouteReconciler - Status Helpers
+// -----------------------------------------------------------------------------
+
+// httprouteParentKind indicates the only object KIND that this HTTPRoute
+// implementation supports for route object parent references.
+var httprouteParentKind = "Gateway"
+
+// ensureGatewayReferenceStatus takes any number of Gateways that should be
+// considered "attached" to a given HTTPRoute and ensures that the status
+// for the HTTPRoute is updated appropriately.
+func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, httproute *gatewayv1alpha2.HTTPRoute, gateways ...*gatewayv1alpha2.Gateway) (bool, error) {
+	// map the existing parentStatues to avoid duplications
+	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
+	for _, existingParent := range httproute.Status.Parents {
+		namespace := httproute.Namespace
+		if existingParent.ParentRef.Namespace != nil {
+			namespace = string(*existingParent.ParentRef.Namespace)
+		}
+		existingParentCopy := existingParent
+		parentStatuses[namespace+string(existingParent.ParentRef.Name)] = &existingParentCopy
+	}
+
+	// overlay the parent ref statuses for all new gateway references
+	statusChangesWereMade := false
+	for _, gateway := range gateways {
+		// build a new status for the parent Gateway
+		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
+			ParentRef: gatewayv1alpha2.ParentRef{
+				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
+				Kind:      (*v1alpha2.Kind)(&httprouteParentKind),
+				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
+				Name:      gatewayv1alpha2.ObjectName(gateway.Name),
+			},
+			ControllerName: ControllerName,
+			Conditions: []metav1.Condition{{
+				Type:               "attached",
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: httproute.Generation,
+				LastTransitionTime: metav1.Now(),
+				Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+			}},
+		}
+
+		// if the reference already exists and doesn't require any changes
+		// then just leave it alone.
+		if existingGatewayParentStatus, exists := parentStatuses[gateway.Namespace+gateway.Name]; exists {
+			// fake the time of the existing status as this wont be equal
+			for i := range existingGatewayParentStatus.Conditions {
+				existingGatewayParentStatus.Conditions[i].LastTransitionTime = gatewayParentStatus.Conditions[0].LastTransitionTime
+			}
+
+			// other than the condition timestamps, check if the statuses are equal
+			if reflect.DeepEqual(existingGatewayParentStatus, gatewayParentStatus) {
+				continue
+			}
+		}
+
+		// otherwise overlay the new status on top the list of parentStatuses
+		parentStatuses[gateway.Namespace+gateway.Name] = gatewayParentStatus
+		statusChangesWereMade = true
+	}
+
+	// if we didn't have to actually make any changes, no status update is needed
+	if !statusChangesWereMade {
+		return false, nil
+	}
+
+	// update the httproute status with the new status references
+	httproute.Status.Parents = make([]gatewayv1alpha2.RouteParentStatus, 0, len(parentStatuses))
+	for _, parent := range parentStatuses {
+		httproute.Status.Parents = append(httproute.Status.Parents, *parent)
+	}
+
+	// update the object status in the API
+	if err := r.Status().Update(ctx, httproute); err != nil {
+		return false, err
+	}
+
+	// the status needed an update and it was updated successfully
+	return true, nil
+}
+
+// ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
+// implementation to prune status references to Gateways supported by this controller
+// in the provided HTTPRoute object.
+func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, httproute *gatewayv1alpha2.HTTPRoute) (bool, error) {
+	// drop all status references to supported Gateway objects
+	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
+	for _, status := range httproute.Status.Parents {
+		if status.ControllerName != ControllerName {
+			newStatuses = append(newStatuses, status)
+		}
+	}
+
+	// if the new list of statuses is the same length as the old
+	// nothing has changed and we're all done.
+	if len(newStatuses) == len(httproute.Status.Parents) {
+		return false, nil
+	}
+
+	// update the object status in the API
+	httproute.Status.Parents = newStatuses
+	if err := r.Status().Update(ctx, httproute); err != nil {
+		return false, err
+	}
+
+	// the status needed an update and it was updated successfully
+	return true, nil
 }

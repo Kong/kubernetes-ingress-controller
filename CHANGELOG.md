@@ -51,8 +51,9 @@ the `configuration.konghq.com` API group.
 
 #### Breaking changes
 
-- The `--leader-elect` flag has been removed. Leader election is now enabled or
-  disabled automatically based on the database mode.
+- The `--leader-elect` flag has been deprectated and will be removed in a
+  future release. Leader election is now enabled or disabled automatically
+  based on the database mode. The flag is no longer honored.
   [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
 - You must upgrade to 2.0.x before upgrading to 2.1.x to properly handle the
   transition from apiextensions.k8s.io/v1beta1 CRDs to apiextensions.k8s.io/v1

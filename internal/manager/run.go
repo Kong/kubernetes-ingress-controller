@@ -43,6 +43,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
 
+	if c.EnableLeaderElection {
+		setupLog.V(0).Info("the --leader-elect flag is deprecated and no longer has any effect: leader election is set based on the Kong database setting")
+	}
+
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := setupFeatureGates(setupLog, c)
 	if err != nil {

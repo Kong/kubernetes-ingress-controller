@@ -167,6 +167,10 @@ const (
 // -----------------------------------------------------------------------------
 
 func getKongVersion() (semver.Version, error) {
+	override := os.Getenv("TEST_KONG_VERSION_OVERRIDE")
+	if len(override) > 0 {
+		return kong.ParseSemanticVersion(override)
+	}
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
 	if err != nil {
@@ -187,11 +191,7 @@ func getKongVersion() (semver.Version, error) {
 	if err != nil {
 		return semver.Version{}, err
 	}
-	version, err := kong.ParseSemanticVersion(kong.VersionFromInfo(jsonResp))
-	if err != nil {
-		return semver.Version{}, err
-	}
-	return version, nil
+	return kong.ParseSemanticVersion(kong.VersionFromInfo(jsonResp))
 }
 
 // -----------------------------------------------------------------------------

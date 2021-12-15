@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -77,6 +78,7 @@ type Storer interface {
 
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
+	ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
@@ -108,20 +110,25 @@ type Store struct {
 // CacheStores stores cache.Store for all Kinds of k8s objects that
 // the Ingress Controller reads.
 type CacheStores struct {
+	// Core Kubernetes Stores
 	IngressV1beta1 cache.Store
 	IngressV1      cache.Store
-	TCPIngress     cache.Store
-	UDPIngress     cache.Store
+	Service        cache.Store
+	Secret         cache.Store
+	Endpoint       cache.Store
 
-	Service  cache.Store
-	Secret   cache.Store
-	Endpoint cache.Store
+	// Gateway API Stores
+	HTTPRoute cache.Store
 
+	// Kong Stores
 	Plugin        cache.Store
 	ClusterPlugin cache.Store
 	Consumer      cache.Store
 	KongIngress   cache.Store
+	TCPIngress    cache.Store
+	UDPIngress    cache.Store
 
+	// Knative Stores
 	KnativeIngress cache.Store
 
 	l *sync.RWMutex
@@ -134,6 +141,7 @@ func NewCacheStores() (c CacheStores) {
 	c.Endpoint = cache.NewStore(keyFunc)
 	c.IngressV1 = cache.NewStore(keyFunc)
 	c.IngressV1beta1 = cache.NewStore(keyFunc)
+	c.HTTPRoute = cache.NewStore(keyFunc)
 	c.KnativeIngress = cache.NewStore(keyFunc)
 	c.Plugin = cache.NewStore(keyFunc)
 	c.Secret = cache.NewStore(keyFunc)
@@ -209,6 +217,11 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	case *corev1.Endpoints:
 		return c.Endpoint.Get(obj)
 	// ----------------------------------------------------------------------------
+	// Kubernetes Gateway API Support
+	// ----------------------------------------------------------------------------
+	case *gatewayv1alpha2.HTTPRoute:
+		return c.HTTPRoute.Get(obj)
+	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
 	case *kongv1.KongPlugin:
@@ -254,6 +267,11 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Secret.Add(obj)
 	case *corev1.Endpoints:
 		return c.Endpoint.Add(obj)
+	// ----------------------------------------------------------------------------
+	// Kubernetes Gateway API Support
+	// ----------------------------------------------------------------------------
+	case *gatewayv1alpha2.HTTPRoute:
+		return c.HTTPRoute.Add(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -301,6 +319,11 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.Secret.Delete(obj)
 	case *corev1.Endpoints:
 		return c.Endpoint.Delete(obj)
+	// ----------------------------------------------------------------------------
+	// Kubernetes Gateway API Support
+	// ----------------------------------------------------------------------------
+	case *gatewayv1alpha2.HTTPRoute:
+		return c.HTTPRoute.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -431,6 +454,22 @@ func (s Store) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
 			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
 	})
 	return ingresses
+}
+
+// ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
+func (s Store) ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error) {
+	var httproutes []*gatewayv1alpha2.HTTPRoute
+	if err := cache.ListAll(s.stores.HTTPRoute, labels.NewSelector(),
+		func(ob interface{}) {
+			httproute, ok := ob.(*gatewayv1alpha2.HTTPRoute)
+			if ok {
+				httproutes = append(httproutes, httproute)
+			}
+		},
+	); err != nil {
+		return nil, err
+	}
+	return httproutes, nil
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from
@@ -719,28 +758,42 @@ func convUnstructuredObj(from, to runtime.Object) error {
 // runtime.Object into a concrete one.
 func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	switch gvk {
+	// ----------------------------------------------------------------------------
+	// Kubernetes Core APIs
+	// ----------------------------------------------------------------------------
 	case extensions.SchemeGroupVersion.WithKind("Ingress"):
 		return &extensions.Ingress{}, nil
 	case networkingv1.SchemeGroupVersion.WithKind("Ingress"):
 		return &networkingv1.Ingress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
 		return &kongv1beta1.TCPIngress{}, nil
-	case kongv1.SchemeGroupVersion.WithKind("KongIngress"):
-		return &kongv1.KongIngress{}, nil
-	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
-		return &kongv1beta1.UDPIngress{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		return &corev1.Secret{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Endpoints"):
 		return &corev1.Endpoints{}, nil
+	// ----------------------------------------------------------------------------
+	// Kubernetes Gateway APIs
+	// ----------------------------------------------------------------------------
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("HTTPRoutes"):
+		return &gatewayv1alpha2.HTTPRoute{}, nil
+	// ----------------------------------------------------------------------------
+	// Kong APIs
+	// ----------------------------------------------------------------------------
+	case kongv1.SchemeGroupVersion.WithKind("KongIngress"):
+		return &kongv1.KongIngress{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
+		return &kongv1beta1.UDPIngress{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongPlugin"):
 		return &kongv1.KongPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
 		return &kongv1.KongClusterPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongConsumer"):
 		return &kongv1.KongConsumer{}, nil
+	// ----------------------------------------------------------------------------
+	// Knative APIs
+	// ----------------------------------------------------------------------------
 	case knative.SchemeGroupVersion.WithKind("Ingress"):
 		return &knative.Ingress{}, nil
 	default:

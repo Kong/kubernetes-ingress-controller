@@ -41,13 +41,19 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	}
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 
+	httproutes, err := s.ListHTTPRoutes()
+	if err != nil {
+		log.Errorf("failed to list HTTPRoutes: %w", err)
+	}
+	parsedHTTPRoutes := fromHTTPRoutes(log, httproutes)
+
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
-	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)
+	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative, parsedHTTPRoutes)
 }
 
 // Build creates a Kong configuration from Ingress and Custom resources

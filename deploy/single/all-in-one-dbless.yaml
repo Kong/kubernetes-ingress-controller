@@ -1308,6 +1308,8 @@ spec:
           value: "off"
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "2"
+        - name: KONG_KIC
+          value: "on"
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
         - name: KONG_ADMIN_ERROR_LOG

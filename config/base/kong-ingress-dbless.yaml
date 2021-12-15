@@ -39,6 +39,8 @@ spec:
           # runtime tweaks
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "2"
+        - name: KONG_KIC
+          value: "on"
           # logging
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout

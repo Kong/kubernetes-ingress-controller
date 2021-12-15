@@ -1097,13 +1097,15 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
-			Name:          kong.String("foo-namespace.foo.00"),
-			RegexPriority: kong.Int(0),
-			StripPath:     kong.Bool(false),
-			Paths:         kong.StringSlice("/"),
-			PreserveHost:  kong.Bool(true),
-			Protocols:     kong.StringSlice("http", "https"),
-			Hosts:         kong.StringSlice("my-func.example.com"),
+			Name:              kong.String("foo-namespace.foo.00"),
+			RegexPriority:     kong.Int(0),
+			StripPath:         kong.Bool(false),
+			Paths:             kong.StringSlice("/"),
+			PreserveHost:      kong.Bool(true),
+			Protocols:         kong.StringSlice("http", "https"),
+			Hosts:             kong.StringSlice("my-func.example.com"),
+			ResponseBuffering: kong.Bool(true),
+			RequestBuffering:  kong.Bool(true),
 		}, svc.Routes[0].Route)
 		assert.Equal(kong.Plugin{
 			Name: kong.String("request-transformer"),
@@ -1140,13 +1142,15 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
-			Name:          kong.String("foo-namespace.foo.00"),
-			RegexPriority: kong.Int(0),
-			StripPath:     kong.Bool(false),
-			Paths:         kong.StringSlice("/"),
-			PreserveHost:  kong.Bool(true),
-			Protocols:     kong.StringSlice("http", "https"),
-			Hosts:         kong.StringSlice("my-func.example.com"),
+			Name:              kong.String("foo-namespace.foo.00"),
+			RegexPriority:     kong.Int(0),
+			StripPath:         kong.Bool(false),
+			Paths:             kong.StringSlice("/"),
+			PreserveHost:      kong.Bool(true),
+			Protocols:         kong.StringSlice("http", "https"),
+			Hosts:             kong.StringSlice("my-func.example.com"),
+			ResponseBuffering: kong.Bool(true),
+			RequestBuffering:  kong.Bool(true),
 		}, svc.Routes[0].Route)
 		assert.Equal(kong.Plugin{
 			Name: kong.String("request-transformer"),

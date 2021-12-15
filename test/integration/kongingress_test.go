@@ -75,7 +75,7 @@ func TestKongIngressEssentials(t *testing.T) {
 				annotations.IngressClassKey: ingressClass,
 			},
 		},
-		Proxy: &kong.Service{
+		Proxy: &kongv1.KongIngressService{
 			ReadTimeout: kong.Int(1000),
 		},
 	}

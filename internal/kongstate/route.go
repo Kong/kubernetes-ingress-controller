@@ -279,7 +279,7 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 		r.Headers = ir.Headers
 	}
 	if len(ir.Protocols) != 0 {
-		r.Protocols = cloneStringPointerSlice(ir.Protocols...)
+		r.Protocols = protocolPointersToStringPointers(ir.Protocols)
 	}
 	if ir.RegexPriority != nil {
 		r.RegexPriority = kong.Int(*ir.RegexPriority)
@@ -304,7 +304,7 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 				SNIs = append(SNIs, kong.String(SNI))
 			} else {
 				// SNI is not a valid hostname
-				log.WithField("kongroute", ir.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
+				log.WithField("kongroute", r.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
 				return
 			}
 		}

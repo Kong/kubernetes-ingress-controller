@@ -112,13 +112,22 @@ func kongPluginFromK8SClusterPlugin(
 
 		RunOn:     k8sPlugin.RunOn,
 		Disabled:  k8sPlugin.Disabled,
-		Protocols: k8sPlugin.Protocols,
+		Protocols: protocolsToStrings(k8sPlugin.Protocols),
 	}.toKongPlugin()
 	return kongPlugin, nil
 }
 
-func cloneStringPointerSlice(array ...*string) (res []*string) {
-	res = append(res, array...)
+func protocolPointersToStringPointers(protocols []*configurationv1.KongProtocol) (res []*string) {
+	for _, protocol := range protocols {
+		res = append(res, kong.String(string(*protocol)))
+	}
+	return
+}
+
+func protocolsToStrings(protocols []configurationv1.KongProtocol) (res []string) {
+	for _, protocol := range protocols {
+		res = append(res, string(protocol))
+	}
 	return
 }
 
@@ -153,7 +162,7 @@ func kongPluginFromK8SPlugin(
 
 		RunOn:     k8sPlugin.RunOn,
 		Disabled:  k8sPlugin.Disabled,
-		Protocols: k8sPlugin.Protocols,
+		Protocols: protocolsToStrings(k8sPlugin.Protocols),
 	}.toKongPlugin()
 	return kongPlugin, nil
 }

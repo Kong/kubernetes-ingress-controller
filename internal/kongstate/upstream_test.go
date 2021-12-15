@@ -38,8 +38,7 @@ func TestOverrideUpstream(t *testing.T) {
 				},
 			},
 			inKongIngresss: &configurationv1.KongIngress{
-				Upstream: &kong.Upstream{
-					Name:               kong.String("wrong.com"),
+				Upstream: &configurationv1.KongIngressUpstream{
 					HashOn:             kong.String("HashOn"),
 					HashOnCookie:       kong.String("HashOnCookie"),
 					HashOnCookiePath:   kong.String("HashOnCookiePath"),

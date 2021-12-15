@@ -791,8 +791,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1.KongClusterPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongConsumer"):
 		return &kongv1.KongConsumer{}, nil
-	case kongv1.SchemeGroupVersion.WithKind("ConfigSource"):
-		return &kongv1.ConfigSource{}, nil
 	// ----------------------------------------------------------------------------
 	// Knative APIs
 	// ----------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/bombsimon/logrusr"
+	"github.com/bombsimon/logrusr/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,7 +15,7 @@ func TestFeatureGates(t *testing.T) {
 	baseLogger := logrus.New()
 	baseLogger.SetOutput(out)
 	baseLogger.SetLevel(logrus.DebugLevel)
-	setupLog := logrusr.NewLogger(baseLogger)
+	setupLog := logrusr.New(baseLogger)
 	config := new(Config)
 
 	t.Log("verifying feature gates setup defaults when no feature gates are configured")

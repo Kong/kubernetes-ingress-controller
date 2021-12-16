@@ -4,11 +4,9 @@
 package integration
 
 import (
-	"bytes"
-	"fmt"
 	"net/http"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
@@ -24,7 +22,6 @@ import (
 )
 
 func TestHTTPRouteEssentials(t *testing.T) {
-	// TODO: make parallel later
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
@@ -152,23 +149,156 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		}
 	}()
 
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
+
 	t.Log("waiting for routes from HTTPRoute to become operational")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+
+	t.Log("removing the parentrefs from the HTTPRoute")
+	oldParentRefs := httproute.Spec.ParentRefs
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		httproute.Spec.ParentRefs = nil
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httproute, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
+
+	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+
+	t.Log("putting the parentRefs back")
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		httproute.Spec.ParentRefs = oldParentRefs
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httproute, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
+
+	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+
+	t.Log("deleting the GatewayClass")
+	oldGWCName := gwc.Name
+	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
+
+	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+
+	t.Log("putting the GatewayClass back")
+	gwc = &gatewayv1alpha2.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: oldGWCName,
+		},
+		Spec: gatewayv1alpha2.GatewayClassSpec{
+			ControllerName: gateway.ControllerName,
+		},
+	}
+	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
+
+	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+
+	t.Log("deleting the Gateway")
+	oldGWName := gw.Name
+	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
+
+	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+
+	t.Log("putting the Gateway back")
+	gw = &gatewayv1alpha2.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: oldGWName,
+			Annotations: map[string]string{
+				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
+			},
+		},
+		Spec: gatewayv1alpha2.GatewaySpec{
+			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
+			Listeners: []gatewayv1alpha2.Listener{{
+				Name:     "http",
+				Protocol: gatewayv1alpha2.HTTPProtocolType,
+				Port:     gatewayv1alpha2.PortNumber(80),
+			}},
+		},
+	}
+	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying that the Gateway gets linked to the route via status")
+	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
+
+	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+
+	t.Log("deleting both GatewayClass and Gateway rapidly")
+	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
+
+	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+}
+
+// -----------------------------------------------------------------------------
+// HTTPRoute Tests - Status Utilities
+// -----------------------------------------------------------------------------
+
+func eventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
+	require.Eventually(t, func() bool {
+		// gather a fresh copy of the HTTPRoute
+		httproute, err := c.GatewayV1alpha2().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		// determine if there is a link to a supported Gateway
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				// supported Gateway link was found
+				return true
+			}
 		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-			// Expected: "<title>httpbin.org</title>"
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
+
+		// if no link was found yet retry
 		return false
+	}, ingressWait, waitTick)
+}
+
+func eventuallyGatewayIsUnlinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
+	require.Eventually(t, func() bool {
+		// gather a fresh copy of the HTTPRoute
+		httproute, err := c.GatewayV1alpha2().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		// determine if there is a link to a supported Gateway
+		for _, parentStatus := range httproute.Status.Parents {
+			if parentStatus.ControllerName == gateway.ControllerName {
+				// a supported Gateway link was found retry
+				return false
+			}
+		}
+
+		// linked gateway is not present, all set
+		return true
 	}, ingressWait, waitTick)
 }

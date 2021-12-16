@@ -5,9 +5,11 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -131,4 +133,42 @@ func areAddressesEqual(l1 []gatewayv1alpha2.GatewayAddress, l2 []gatewayv1alpha2
 // areListenersEqual determines if two lists of gateway listeners have the same contents.
 func areListenersEqual(l1 []gatewayv1alpha2.Listener, l2 []gatewayv1alpha2.Listener) bool {
 	return reflect.DeepEqual(l1, l2)
+}
+
+// -----------------------------------------------------------------------------
+// Gateway Utils - Watch Predicate Helpers
+// -----------------------------------------------------------------------------
+
+// isGatewayClassEventInClass produces a boolean whether or not a given event which contains
+// one or more GatewayClass objects is supported by this controller according to those
+// objects ControllerName.
+func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
+	objs := make([]client.Object, 0, 2)
+	switch e := watchEvent.(type) {
+	case event.CreateEvent:
+		objs = append(objs, e.Object)
+	case event.DeleteEvent:
+		objs = append(objs, e.Object)
+	case event.GenericEvent:
+		objs = append(objs, e.Object)
+	case event.UpdateEvent:
+		objs = append(objs, e.ObjectOld)
+		objs = append(objs, e.ObjectNew)
+	default:
+		log.Error(fmt.Errorf("invalid type"), "received invalid event type in event handlers", "found", reflect.TypeOf(watchEvent))
+		return false
+	}
+
+	for _, obj := range objs {
+		gwc, ok := obj.(*gatewayv1alpha2.GatewayClass)
+		if !ok {
+			log.Error(fmt.Errorf("invalid type"), "received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
+			continue
+		}
+		if gwc.Spec.ControllerName == ControllerName {
+			return true
+		}
+	}
+
+	return false
 }

@@ -283,6 +283,35 @@ func identifyTestCasesForFile(filePath string) ([]string, error) {
 // Testing Utility Functions - HTTP Requests
 // -----------------------------------------------------------------------------
 
+// eventuallyGETPAth makes a GET request to the Kong proxy multiple times until
+// either the request starts to respond with the given status code and contents
+// present in the response body, or until timeout occurrs according to
+// ingressWait time limits. This uses only the path of for the request and does
+// not pay attention to hostname or other routing rules. This uses a "require"
+// for the desired conditions so if this request doesn't eventually succeed the
+// calling test will fail and stop.
+func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents string) { //nolint:unparam
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/%s", proxyURL, path))
+		if err != nil {
+			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, path, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == statusCode {
+			if bodyContents == "" {
+				return true
+			}
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), bodyContents)
+		}
+		return false
+	}, ingressWait, waitTick)
+}
+
 // expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
 func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bool {
 	if resp.StatusCode == http.StatusNotFound {

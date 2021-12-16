@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
@@ -59,6 +61,16 @@ var (
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
 	// See: https://github.com/postmanlabs/httpbin
 	httpBinImage = "kennethreitz/httpbin"
+
+	// tcpEchoImage echoes TCP text sent to it after printing out basic information about its environment, e.g.
+	// Welcome, you are connected to node kind-control-plane.
+	// Running on Pod tcp-echo-58ccd6b78d-hn9t8.
+	// In namespace foo.
+	// With IP address 10.244.0.13.
+	tcpEchoImage = "cjimti/go-echo"
+
+	// redisImage is Redis
+	redisImage = "bitnami/redis"
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
 	ingressClass = "kongtests"
@@ -149,6 +161,37 @@ const (
 	// and is left static to help developers debug failures in those testing environments.
 	kongTestPassword = "password"
 )
+
+// -----------------------------------------------------------------------------
+// Testing Utility Functions - Kong
+// -----------------------------------------------------------------------------
+
+func getKongVersion() (semver.Version, error) {
+	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {
+		return kong.ParseSemanticVersion(override)
+	}
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	req.Header.Set("kong-admin-token", kongTestPassword)
+	resp, err := client.Do(req)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	var jsonResp map[string]interface{}
+	err = json.Unmarshal(body, &jsonResp)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	return kong.ParseSemanticVersion(kong.VersionFromInfo(jsonResp))
+}
 
 // -----------------------------------------------------------------------------
 // Testing Utility Functions - Namespaces

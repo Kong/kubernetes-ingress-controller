@@ -167,8 +167,7 @@ const (
 // -----------------------------------------------------------------------------
 
 func getKongVersion() (semver.Version, error) {
-	override := os.Getenv("TEST_KONG_VERSION_OVERRIDE")
-	if len(override) > 0 {
+	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {
 		return kong.ParseSemanticVersion(override)
 	}
 	client := &http.Client{}

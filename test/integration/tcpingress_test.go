@@ -329,7 +329,7 @@ func TestTCPIngressTLS(t *testing.T) {
 func TestTCPIngressTLSPassthrough(t *testing.T) {
 	version, err := getKongVersion()
 	if err != nil {
-		t.Logf("attempting TLS passthrough test despite unknown kong version: %s", err)
+		t.Logf("attempting TLS passthrough test despite unknown kong version: %v", err)
 	} else if version.LT(semver.MustParse("2.7.0")) {
 		t.Skipf("kong version %s below minimum TLS passthrough version", version)
 	}

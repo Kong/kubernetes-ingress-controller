@@ -19,7 +19,7 @@ type TLSPair struct {
 }
 
 var (
-	tlsPair = TLSPair{
+	reportTestTLSCert = TLSPair{
 		Cert: `-----BEGIN CERTIFICATE-----
 MIIC2DCCAcACCQC32eFOsWpKojANBgkqhkiG9w0BAQsFADAuMRcwFQYDVQQDDA5z
 ZWN1cmUtZm9vLWJhcjETMBEGA1UECgwKa29uZ2hxLm9yZzAeFw0xODEyMTgyMTI4
@@ -240,7 +240,7 @@ func TestReporterRun(t *testing.T) {
 
 // getTLSListener builds a TLS listener using the test certificates
 func getTLSListener() (net.Listener, error) {
-	testCertificate, err := tls.X509KeyPair([]byte(tlsPair.Cert), []byte(tlsPair.Key))
+	testCertificate, err := tls.X509KeyPair([]byte(reportTestTLSCert.Cert), []byte(reportTestTLSCert.Key))
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func getTLSListener() (net.Listener, error) {
 		Certificates: []tls.Certificate{
 			testCertificate,
 		},
-		MinVersion: tls.VersionTLS12,
+		MinVersion: tls.VersionTLS13,
 	}
 	listen, err := tls.Listen("tcp", net.JoinHostPort(reportsHost, strconv.FormatUint(uint64(reportsPort), 10)), conf)
 	if err != nil {

@@ -13,7 +13,7 @@ var (
 	reportsHost  = "kong-hf.konghq.com"
 	reportsPort  = 61833
 	pingInterval = 3600
-	tlsConf      = tls.Config{MinVersion: tls.VersionTLS12}
+	tlsConf      = tls.Config{MinVersion: tls.VersionTLS13}
 	dialer       = net.Dialer{Timeout: time.Second * 30}
 )
 
@@ -88,6 +88,12 @@ func (r *Reporter) send(signal string, uptime int) {
 		strconv.FormatUint(uint64(reportsPort), 10)), &tlsConf)
 	if err != nil {
 		r.Logger.Errorf("failed to connect to reporting server: %s", err)
+		return
+	}
+	err = conn.SetDeadline(time.Now().Add(time.Minute))
+	if err != nil {
+		r.Logger.Errorf("failed to set report connection deadline: %s", err)
+		return
 	}
 	defer conn.Close()
 	_, err = conn.Write([]byte(message))

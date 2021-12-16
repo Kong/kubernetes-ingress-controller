@@ -58,6 +58,8 @@ the `configuration.konghq.com` API group.
 - a Gateway controller has been added in support of [Gateway APIs][gwapi].
   This controller is foundational and doesn't serve any end-user purpose alone.
   [#1945](https://github.com/Kong/kubernetes-ingress-controller/issues/1945)
+- Anonymous reports now use TLS instead of UDP.
+  [#2089](https://github.com/Kong/kubernetes-ingress-controller/pull/2089)
 
 [k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 [kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md

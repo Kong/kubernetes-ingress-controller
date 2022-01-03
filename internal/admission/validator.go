@@ -229,7 +229,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)
 	}
 	if len(k8sPlugin.Protocols) > 0 {
-		plugin.Protocols = kong.StringSlice(k8sPlugin.Protocols...)
+		plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
 	}
 	isValid, msg, err := validator.PluginSvc.Validate(ctx, &plugin)
 	if err != nil {

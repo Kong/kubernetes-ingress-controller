@@ -30,7 +30,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{},
+				Proxy: &configurationv1.KongIngressService{},
 			},
 			Service{
 				Service: kong.Service{
@@ -54,7 +54,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Protocol: kong.String("https"),
 				},
 			},
@@ -80,7 +80,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Retries: kong.Int(0),
 				},
 			},
@@ -107,7 +107,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Path: kong.String("/new-path"),
 				},
 			},
@@ -133,7 +133,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Retries: kong.Int(1),
 				},
 			},
@@ -160,7 +160,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					ConnectTimeout: kong.Int(100),
 					ReadTimeout:    kong.Int(100),
 					WriteTimeout:   kong.Int(100),
@@ -191,7 +191,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Protocol: kong.String("grpc"),
 				},
 			},
@@ -217,7 +217,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Protocol: kong.String("grpcs"),
 				},
 			},
@@ -243,7 +243,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Protocol: kong.String("grpcs"),
 				},
 			},
@@ -269,7 +269,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Protocol: kong.String("grpcs"),
 				},
 			},
@@ -295,7 +295,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{},
+				Proxy: &configurationv1.KongIngressService{},
 			},
 			Service{
 				Service: kong.Service{
@@ -319,7 +319,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{
+				Proxy: &configurationv1.KongIngressService{
 					Protocol: kong.String("grpcs"),
 				},
 			},
@@ -345,7 +345,7 @@ func TestOverrideService(t *testing.T) {
 				},
 			},
 			configurationv1.KongIngress{
-				Proxy: &kong.Service{},
+				Proxy: &configurationv1.KongIngressService{},
 			},
 			Service{
 				Service: kong.Service{

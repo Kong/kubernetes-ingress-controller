@@ -101,7 +101,7 @@ jobs:
       run: make test
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.0
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: coverage.unit.out
         path: coverage.unit.out
@@ -135,7 +135,7 @@ jobs:
         KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.0
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: coverage.enterprisepostgres.out
         path: coverage.enterprisepostgres.out
@@ -166,7 +166,7 @@ jobs:
       run: make test.integration.dbless
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.0
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: coverage.dbless.out
         path: coverage.dbless.out
@@ -197,7 +197,7 @@ jobs:
       run: make test.integration.postgres
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.0
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: coverage.postgres.out
         path: coverage.postgres.out

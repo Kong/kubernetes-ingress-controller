@@ -13,12 +13,14 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -45,7 +47,8 @@ func setupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme) (ctrl.Options, error) {
+func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme,
+	dbmode string) (ctrl.Options, error) {
 	// some controllers may require additional namespaces to be cached and this
 	// is currently done using the global manager client cache.
 	//
@@ -62,13 +65,22 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 		requiredCacheNamespaces = append(requiredCacheNamespaces, publishServiceSplit[0])
 	}
 
+	var leaderElection bool
+	if dbmode == "off" {
+		logger.Info("DB-less mode detected, disabling leader election")
+		leaderElection = false
+	} else {
+		logger.Info("Database mode detected, enabling leader election")
+		leaderElection = true
+	}
+
 	// configure the general controller options
 	controllerOpts := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,
-		LeaderElection:         c.EnableLeaderElection,
+		LeaderElection:         leaderElection,
 		LeaderElectionID:       c.LeaderElectionID,
 		SyncPeriod:             &c.SyncPeriod,
 	}
@@ -86,6 +98,10 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 		// from the watched namespaces only.
 		logger.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespaces)
 		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(append(c.WatchNamespaces, requiredCacheNamespaces...))
+	}
+
+	if len(c.LeaderElectionNamespace) > 0 {
+		controllerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	}
 
 	return controllerOpts, nil
@@ -117,8 +133,7 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 	return cfg, nil
 }
 
-func setupProxyServer(ctx context.Context,
-	logger logr.Logger, fieldLogger logrus.FieldLogger,
+func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
 	mgr manager.Manager, kongConfig sendconfig.Kong,
 	diagnostic util.ConfigDumpDiagnostic, c *Config,
 ) (proxy.Proxy, error) {
@@ -141,8 +156,7 @@ func setupProxyServer(ctx context.Context,
 		return nil, err
 	}
 
-	return proxy.NewCacheBasedProxyWithStagger(ctx,
-		fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
+	proxyServer, err := proxy.NewCacheBasedProxyWithStagger(fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
 		mgr.GetClient(),
 		kongConfig,
 		c.IngressClassName,
@@ -151,6 +165,16 @@ func setupProxyServer(ctx context.Context,
 		timeoutDuration,
 		diagnostic,
 		sendconfig.UpdateKongAdminSimple)
+	if err != nil {
+		return nil, err
+	}
+
+	err = mgr.Add(proxyServer)
+	if err != nil {
+		return nil, err
+	}
+
+	return proxyServer, nil
 }
 
 func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerClient client.Client) error {
@@ -188,4 +212,10 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 		log.WithError(err).Error("admission webhook server stopped")
 	}()
 	return nil
+}
+
+func setupStatusUpdater(mgr manager.Manager, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config,
+	publishService string, publishAddresses []string) error {
+	updater := ctrlutils.NewStatusUpdater(kongConfig, log, kubeConfig, publishService, publishAddresses)
+	return mgr.Add(updater)
 }

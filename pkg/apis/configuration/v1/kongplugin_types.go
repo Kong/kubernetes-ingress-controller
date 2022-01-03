@@ -62,8 +62,7 @@ type KongPlugin struct {
 
 	// Protocols configures plugin to run on requests received on specific
 	// protocols.
-	//+kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
-	Protocols []string `json:"protocols,omitempty"`
+	Protocols []KongProtocol `json:"protocols,omitempty"`
 }
 
 //+kubebuilder:object:root=true

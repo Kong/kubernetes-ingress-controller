@@ -49,13 +49,14 @@ type Config struct {
 	KongCustomEntitiesSecret string
 
 	// Kubernetes configurations
-	KubeconfigPath       string
-	IngressClassName     string
-	EnableLeaderElection bool
-	LeaderElectionID     string
-	Concurrency          int
-	FilterTags           []string
-	WatchNamespaces      []string
+	KubeconfigPath          string
+	IngressClassName        string
+	EnableLeaderElection    bool
+	LeaderElectionNamespace string
+	LeaderElectionID        string
+	Concurrency             int
+	FilterTags              []string
+	WatchNamespaces         []string
 
 	// Ingress status
 	PublishService       string
@@ -130,8 +131,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Kubernetes configurations
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
-	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
+	flagSet.StringVar(&c.LeaderElectionNamespace, "election-namespace", "", `Leader election namespace to use when running outside a cluster`)
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,

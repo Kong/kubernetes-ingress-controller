@@ -49,6 +49,24 @@ you should edit it (`kubectl edit validatingwebhookconfiguration
 kong-validations`) and add `kongclusterplugins` under the `resources` block for
 the `configuration.konghq.com` API group.
 
+#### Breaking changes
+
+- The `--leader-elect` flag has been deprectated and will be removed in a
+  future release. Leader election is now enabled or disabled automatically
+  based on the database mode. The flag is no longer honored.
+  [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
+- You must upgrade to 2.0.x before upgrading to 2.1.x to properly handle the
+  transition from apiextensions.k8s.io/v1beta1 CRDs to apiextensions.k8s.io/v1
+  CRDSs. CRDs are now generated from their underlying Go structures to avoid
+  accidental mismatches between implementation and Kubernetes configuration.
+  KongIngresses previously included `healthchecks.passive.unhealthy.timeout`
+  and `healthchecks.active.unhealthy.timeout` fields that did not match the
+  corresponding Kong configuration and had no effect. These are now
+  `healthchecks.passive.unhealthy.timeouts` and
+  `healthchecks.active.unhealthy.timeouts`, respectively. If you use these
+  fields, you must rename them in your KongIngresses before upgrading.
+  [#1971](https://github.com/Kong/kubernetes-ingress-controller/pull/1971)
+
 #### Added
 
 - Added validation for `Gateway` objects in the admission webhook
@@ -61,6 +79,12 @@ the `configuration.konghq.com` API group.
 - a Gateway controller has been added in support of [Gateway APIs][gwapi].
   This controller is foundational and doesn't serve any end-user purpose alone.
   [#1945](https://github.com/Kong/kubernetes-ingress-controller/issues/1945)
+- Anonymous reports now use TLS instead of UDP.
+  [#2089](https://github.com/Kong/kubernetes-ingress-controller/pull/2089)
+- The new `--election-namespace` flag sets the leader election namespace. This
+  is normally only used if a controller is running outside a Kubernetes
+  cluster.
+  [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
 
 [k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 [kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
@@ -80,6 +104,10 @@ the `configuration.konghq.com` API group.
 - Fixed a race condition where multiple actors may simultaneously attempt to
   create the configured Enterprise workspaces.
   [#2070](https://github.com/Kong/kubernetes-ingress-controller/pull/2070)
+- Fixed incorrect leader election behavior. Previously, non-leader instances
+  would still attempt to update Kong configuration, but would not scan for
+  Kubernetes resources to translate into Kong configuration.
+  [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
 
 ## [2.0.6]
 

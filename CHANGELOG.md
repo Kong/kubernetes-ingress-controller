@@ -41,7 +41,7 @@
 
 ## [2.1.0]
 
-> Release date: TBD
+> Release date: 2022/01/03
 
 **Note:** the admission webhook updates originally released in [2.0.6](#206)
 are _not_ applied automatically by the upgrade. If you set one up previously,
@@ -85,6 +85,12 @@ the `configuration.konghq.com` API group.
   is normally only used if a controller is running outside a Kubernetes
   cluster.
   [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
+- There is now a [Grafana dashboard](https://github.com/Kong/kubernetes-ingress-controller/blob/main/grafana.json)
+  for the controller metrics.
+  [#2035](https://github.com/Kong/kubernetes-ingress-controller/issues/2035)
+- TCPIngresses now support TLS passthrough in Kong 2.7+, by setting a
+  `konghq.com/protocols: tls_passthrough` annotation.
+  [#2041](https://github.com/Kong/kubernetes-ingress-controller/issues/2041)
 
 [k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 [kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md

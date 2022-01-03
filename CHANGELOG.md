@@ -41,7 +41,7 @@
 
 ## [2.1.0]
 
-> Release date: TBD
+> Release date: 2022/01/05
 
 **Note:** the admission webhook updates originally released in [2.0.6](#206)
 are _not_ applied automatically by the upgrade. If you set one up previously,
@@ -85,6 +85,12 @@ the `configuration.konghq.com` API group.
   is normally only used if a controller is running outside a Kubernetes
   cluster.
   [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
+- There is now a [Grafana dashboard](https://github.com/Kong/kubernetes-ingress-controller/blob/main/grafana.json)
+  for the controller metrics.
+  [#2035](https://github.com/Kong/kubernetes-ingress-controller/issues/2035)
+- TCPIngresses now support TLS passthrough in Kong 2.7+, by setting a
+  `konghq.com/protocols: tls_passthrough` annotation.
+  [#2041](https://github.com/Kong/kubernetes-ingress-controller/issues/2041)
 
 [k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 [kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
@@ -95,7 +101,7 @@ the `configuration.konghq.com` API group.
 - Fixed an edge case which could theoretically remove data-plane config for
   objects which couldn't be retrieved from the manager's cached client.
   [#2057](https://github.com/Kong/kubernetes-ingress-controller/pull/2057)
-- The validating webhook now validates that required fields data is not empty
+- The validating webhook now validates that required fields data are not empty.
   [#1993](https://github.com/Kong/kubernetes-ingress-controller/issues/1993)
 - The validating webhook now validates unique key constraints for KongConsumer
   credentials secrets on update of secrets, and on create or update of
@@ -108,6 +114,9 @@ the `configuration.konghq.com` API group.
   would still attempt to update Kong configuration, but would not scan for
   Kubernetes resources to translate into Kong configuration.
   [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
+- Configuration updates that time out now correctly report a failure.
+  [deck #529](https://github.com/Kong/deck/pull/529)
+  [#2125](https://github.com/Kong/kubernetes-ingress-controller/pull/2125)
 
 ## [2.0.6]
 

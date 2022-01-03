@@ -22,7 +22,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       containers:
       - name: proxy
-        image: kong:2.5
+        image: kong:2.7
         env:
           # servers
         - name: KONG_PROXY_LISTEN
@@ -102,7 +102,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.0.5
+        image: kong/kubernetes-ingress-controller:2.1.0
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook

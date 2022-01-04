@@ -41,7 +41,7 @@
 
 ## [2.1.0]
 
-> Release date: 2022/01/03
+> Release date: 2022/01/04
 
 **Note:** the admission webhook updates originally released in [2.0.6](#206)
 are _not_ applied automatically by the upgrade. If you set one up previously,

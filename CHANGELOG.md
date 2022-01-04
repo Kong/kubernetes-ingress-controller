@@ -101,7 +101,7 @@ the `configuration.konghq.com` API group.
 - Fixed an edge case which could theoretically remove data-plane config for
   objects which couldn't be retrieved from the manager's cached client.
   [#2057](https://github.com/Kong/kubernetes-ingress-controller/pull/2057)
-- The validating webhook now validates that required fields data is not empty
+- The validating webhook now validates that required fields data are not empty.
   [#1993](https://github.com/Kong/kubernetes-ingress-controller/issues/1993)
 - The validating webhook now validates unique key constraints for KongConsumer
   credentials secrets on update of secrets, and on create or update of
@@ -114,6 +114,9 @@ the `configuration.konghq.com` API group.
   would still attempt to update Kong configuration, but would not scan for
   Kubernetes resources to translate into Kong configuration.
   [#2053](https://github.com/Kong/kubernetes-ingress-controller/issues/2053)
+- Configuration updates that time out now correctly report a failure.
+  [deck #529](https://github.com/Kong/deck/pull/529)
+  [#2125](https://github.com/Kong/kubernetes-ingress-controller/pull/2125)
 
 ## [2.0.6]
 

@@ -880,8 +880,8 @@ github.com/klauspost/compress v1.11.13/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdY
 github.com/klauspost/compress v1.12.3/go.mod h1:8dP1Hq4DHOhN9w426knH3Rhby4rFm6D8eO+e+Dq5Gzg=
 github.com/klauspost/compress v1.13.0/go.mod h1:8dP1Hq4DHOhN9w426knH3Rhby4rFm6D8eO+e+Dq5Gzg=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
-github.com/kong/deck v1.10.0 h1:lSGbl+B/mE75TYtI92qIsg0R9fKFC1moXL52bKmocjk=
-github.com/kong/deck v1.10.0/go.mod h1:bk8MZu2kQvNzYJeQ6uF+BaUXO5ECDP1S4nFE7pP5yt0=
+github.com/kong/deck v1.10.1-0.20220105083001-d0aae63fe254 h1:rszbEJhsXthgTVA6MsvVxSQcY5PCgUV9IFi91xaA+AE=
+github.com/kong/deck v1.10.1-0.20220105083001-d0aae63fe254/go.mod h1:bk8MZu2kQvNzYJeQ6uF+BaUXO5ECDP1S4nFE7pP5yt0=
 github.com/kong/go-kong v0.25.1 h1:T3a4JvwQO//FVtj8F8xrOo689bb/ZmcvoLtBvrPaaj0=
 github.com/kong/go-kong v0.25.1 h1:T3a4JvwQO//FVtj8F8xrOo689bb/ZmcvoLtBvrPaaj0=
 github.com/kong/go-kong v0.25.1/go.mod h1:8Dl/eA8SVH3aJNOkS91J8CPf5oUHZ2+XSYvacrF5PBc=

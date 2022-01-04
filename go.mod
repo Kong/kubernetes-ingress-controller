@@ -10,7 +10,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.10.0
+	github.com/kong/deck v1.10.1-0.20220105083001-d0aae63fe254
 	github.com/kong/go-kong v0.25.1
 	github.com/kong/kubernetes-testing-framework v0.11.0
 	github.com/lithammer/dedent v1.1.0

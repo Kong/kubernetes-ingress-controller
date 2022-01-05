@@ -238,28 +238,28 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				body, _ := io.ReadAll(resp.Body)
 				t.Logf("upstream health:\n%s", body)
 			}
-			//req, _ = http.NewRequest("GET", fmt.Sprintf("%s/upstreams/",
-			//	proxyAdminURL.String()), nil)
-			//req.Header.Set("kong-admin-token", kongTestPassword)
-			//resp, err = client.Do(req)
-			//if err != nil {
-			//	t.Logf("oh no admin call failed: %v", err)
-			//} else {
-			//	defer resp.Body.Close()
-			//	body, _ := io.ReadAll(resp.Body)
-			//	t.Logf("upstream list:\n%s", body)
-			//}
-			//req, _ = http.NewRequest("GET", fmt.Sprintf("%s/services/",
-			//	proxyAdminURL.String()), nil)
-			//req.Header.Set("kong-admin-token", kongTestPassword)
-			//resp, err = client.Do(req)
-			//if err != nil {
-			//	t.Logf("oh no admin call failed: %v", err)
-			//} else {
-			//	defer resp.Body.Close()
-			//	body, _ := io.ReadAll(resp.Body)
-			//	t.Logf("service list:\n%s", body)
-			//}
+			req, _ = http.NewRequest("GET", fmt.Sprintf("%s/notdefault/upstreams/",
+				proxyAdminURL.String()), nil)
+			req.Header.Set("kong-admin-token", kongTestPassword)
+			resp, err = client.Do(req)
+			if err != nil {
+				t.Logf("oh no admin call failed: %v", err)
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				t.Logf("upstream list:\n%s", body)
+			}
+			req, _ = http.NewRequest("GET", fmt.Sprintf("%s/notdefault/services/",
+				proxyAdminURL.String()), nil)
+			req.Header.Set("kong-admin-token", kongTestPassword)
+			resp, err = client.Do(req)
+			if err != nil {
+				t.Logf("oh no admin call failed: %v", err)
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				t.Logf("service list:\n%s", body)
+			}
 
 			return strings.Contains(b.String(), lbody)
 		}
@@ -292,7 +292,80 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	//eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/%s", proxyURL, lpath))
+		if err != nil {
+			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, lpath, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == lstatus || resp.StatusCode != lstatus {
+			//if lbody == "" {
+			//	return true
+			//}
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			trunc := 100
+			if len(b.String()) < trunc {
+				trunc = len(b.String())
+			}
+			t.Logf("flake debug:\nstatus %v\nbody: %v\n", resp.StatusCode, b.String()[:trunc])
+
+			// interrogate admin API for httpbin.357216c0-45d4-44a0-bbe3-136b803be19c.80.svc
+			t.Logf("getting %s/upstreams/httpbin.%s.80.svc/targets", proxyAdminURL.String(), ns.Name)
+			client := &http.Client{}
+			req, _ := http.NewRequest("GET", fmt.Sprintf("%s/notdefault/upstreams/httpbin.%s.80.svc/targets",
+				proxyAdminURL.String(), ns.Name), nil)
+			req.Header.Set("kong-admin-token", kongTestPassword)
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Logf("oh no admin call failed: %v", err)
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				t.Logf("upstream targets:\n%s", body)
+			}
+			req, _ = http.NewRequest("GET", fmt.Sprintf("%s/notdefault/upstreams/httpbin.%s.80.svc/health",
+				proxyAdminURL.String(), ns.Name), nil)
+			req.Header.Set("kong-admin-token", kongTestPassword)
+			resp, err = client.Do(req)
+			if err != nil {
+				t.Logf("oh no admin call failed: %v", err)
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				t.Logf("upstream health:\n%s", body)
+			}
+			req, _ = http.NewRequest("GET", fmt.Sprintf("%s/notdefault/upstreams/",
+				proxyAdminURL.String()), nil)
+			req.Header.Set("kong-admin-token", kongTestPassword)
+			resp, err = client.Do(req)
+			if err != nil {
+				t.Logf("oh no admin call failed: %v", err)
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				t.Logf("upstream list:\n%s", body)
+			}
+			req, _ = http.NewRequest("GET", fmt.Sprintf("%s/notdefault/services/",
+				proxyAdminURL.String()), nil)
+			req.Header.Set("kong-admin-token", kongTestPassword)
+			resp, err = client.Do(req)
+			if err != nil {
+				t.Logf("oh no admin call failed: %v", err)
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				t.Logf("service list:\n%s", body)
+			}
+
+			return strings.Contains(b.String(), lbody)
+		}
+		return false
+	}, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
 	oldGWName := gw.Name

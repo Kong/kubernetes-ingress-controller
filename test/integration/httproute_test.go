@@ -207,7 +207,11 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
 			require.True(t, n > 0)
-			t.Logf("flake debug:\nstatus %v\nbody: %v\n", resp.StatusCode, b.String()[:100])
+			trunc := 100
+			if len(b.String()) < trunc {
+				trunc = len(b.String())
+			}
+			t.Logf("flake debug:\nstatus %v\nbody: %v\n", resp.StatusCode, b.String()[:trunc])
 
 			// interrogate admin API for httpbin.357216c0-45d4-44a0-bbe3-136b803be19c.80.svc
 			t.Logf("getting %s/upstreams/httpbin.%s.80.svc/targets", proxyAdminURL.String(), ns.Name)

@@ -282,6 +282,12 @@ previous `v1.3.x` releases to this release.
   seconds has passed to enforce rate limiting, now instead it configures a
   non-blocking [time.Ticker][go-tick] that runs at the provided seconds
   interval. Input remains a float that indicates seconds.
+- Per documentation and by design, KongClusterPlugin resources require an
+  `kubernetes.io/ingress.class` annotation, but this was not fully enforced. In
+  2.0, all KongClusterPlugin resources require this annotation set to the
+  controller's ingress class. Check your resources to confirm they are annotated
+  before upgrading.
+  [#2090](https://github.com/Kong/kubernetes-ingress-controller/issues/2090)
 
 [upgrade-1-3-to-2-0]:https://docs.konghq.com/kubernetes-ingress-controller/2.0.x/guides/upgrade/
 

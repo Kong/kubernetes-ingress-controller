@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.1.1](#211)
  - [2.1.0](#210)
  - [2.0.6](#206)
  - [2.0.5](#205)
@@ -38,6 +39,14 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.1.1]
+
+> Release date: 2022/01/05
+
+2.1.1 has no user-facing changes from 2.1.0. It updates a certificate used in
+the test environment which expired during the 2.1.0 release process.
+[#2133](https://github.com/Kong/kubernetes-ingress-controller/pull/2133)
 
 ## [2.1.0]
 

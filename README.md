@@ -4,6 +4,7 @@
 [![Codecov](https://codecov.io/gh/Kong/kubernetes-ingress-controller/branch/main/graph/badge.svg?token=S1aqcXiGEo)](https://codecov.io/gh/Kong/kubernetes-ingress-controller)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FKong%2Fkubernetes-ingress-controller.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FKong%2Fkubernetes-ingress-controller?ref=badge_shield)
 
 # Kong Ingress Controller for Kubernetes (KIC)
 
@@ -129,3 +130,7 @@ See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/
 [guides]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/overview/
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FKong%2Fkubernetes-ingress-controller.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FKong%2Fkubernetes-ingress-controller?ref=badge_large)

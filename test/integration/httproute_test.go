@@ -243,7 +243,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			} else {
 				defer resp.Body.Close()
 				body, _ := io.ReadAll(resp.Body)
-				t.Logf("upstream health:\n%s", body)
+				t.Logf("upstream list:\n%s", body)
+			}
+			req, _ = http.NewRequest("GET", fmt.Sprintf("%s/services/",
+				proxyAdminURL.String()), nil)
+			req.Header.Set("kong-admin-token", kongTestPassword)
+			resp, err = client.Do(req)
+			if err != nil {
+				t.Logf("oh no admin call failed: %v", err)
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				t.Logf("service list:\n%s", body)
 			}
 
 			return strings.Contains(b.String(), lbody)

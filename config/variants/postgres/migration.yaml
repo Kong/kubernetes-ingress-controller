@@ -20,7 +20,7 @@ spec:
         command: [ "/bin/sh", "-c", "until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: kong-migrations
-        image: kong:2.5
+        image: kong:2.7
         env:
         - name: KONG_PG_PASSWORD
           value: kong

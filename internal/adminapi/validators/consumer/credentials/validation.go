@@ -2,12 +2,65 @@
 package credentials
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators"
+	"fmt"
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // -----------------------------------------------------------------------------
 //  Validation - Public Functions
 // -----------------------------------------------------------------------------
+
+// ValidateCredentials performs basic validation on a credential secret given
+// the Kubernetes secret which contains credentials data.
+func ValidateCredentials(consumerName string, secret *corev1.Secret) error {
+	// the indication of credential type is required to be present on all credentials.
+	credentialTypeB, ok := secret.Data[TypeKey]
+	if !ok {
+		return fmt.Errorf("missing required key %s", TypeKey)
+	}
+	credentialType := string(credentialTypeB)
+
+	// verify that the credential type provided is valid
+	if !SupportedTypes.Has(credentialType) {
+		return fmt.Errorf("invalid credential type %s", secret.Data[TypeKey])
+	}
+
+	// it's not valid to have a secret that ONLY has a type
+	if len(secret.Data) == 1 {
+		return fmt.Errorf("invalid credentials secret, no data present")
+	}
+
+	// verify that all required fields are present
+	var missingFields []string
+	var missingDataFields []string
+	for _, field := range CredTypeToFields[credentialType] {
+		// verify whether the required field is missing
+		requiredData, ok := secret.Data[field]
+		if !ok {
+			missingFields = append(missingFields, field)
+			continue
+		}
+
+		// verify whether the required field is present, but missing data
+		if len(requiredData) < 1 {
+			missingDataFields = append(missingDataFields, field)
+		}
+	}
+
+	// report on any required fields that were missing
+	if len(missingFields) > 0 {
+		return fmt.Errorf("missing required field(s): %s", strings.Join(missingFields, ", "))
+	}
+
+	// report on any required fields that were present, but were missing actual data
+	if len(missingDataFields) > 0 {
+		return fmt.Errorf("some fields were invalid due to missing data: %s", strings.Join(missingDataFields, ", "))
+	}
+
+	return nil
+}
 
 // IsKeyUniqueConstrained indicates whether or not a given key and its type there
 // are unique constraints in place.
@@ -64,10 +117,41 @@ type Credential struct {
 // constraints on their respective types.
 type Index map[string]map[string]map[string]struct{}
 
-// Add will attempt to add a new Credential to the CredentialsTypeMap.
-// If that new credential is in violation of any constraints based on the
-// credentials already stored in the map, an error will be thrown.
-func (cs Index) Add(newCred Credential) error {
+// ValidateCredentialsForUniqueKeyConstraints will attempt to add a new Credential to the CredentialsTypeMap
+// and will validate it for both normal structure validation and for
+// unique key constraint violations.
+func (cs Index) ValidateCredentialsForUniqueKeyConstraints(consumerName string, secret *corev1.Secret) error {
+	// the indication of credential type is required to be present on all credentials.
+	credentialTypeB, ok := secret.Data[TypeKey]
+	if !ok {
+		return fmt.Errorf("missing required key %s", TypeKey)
+	}
+	credentialType := string(credentialTypeB)
+
+	// the additional key/values are optional, but must be validated
+	// for unique constraint violations. Using an index of credentials
+	// validation will be checked on any Add() to the index, so errors
+	// from this include the unique key constraint errors.
+	for k, v := range secret.Data {
+		if err := cs.add(Credential{
+			ConsumerName:      consumerName,
+			ConsumerNamespace: secret.Namespace,
+			Type:              credentialType,
+			Key:               k,
+			Value:             string(v),
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Valdating Index - Private Methods
+// -----------------------------------------------------------------------------
+
+func (cs Index) add(newCred Credential) error {
 	// retrieve all the keys which are constrained for this type
 	constraints, ok := uniqueKeyConstraints[newCred.Type]
 	if !ok {
@@ -79,22 +163,20 @@ func (cs Index) Add(newCred Credential) error {
 	for _, constrainedKey := range constraints {
 		if newCred.Key == constrainedKey { // this key has constraints on it, we need to check for violations
 			if _, ok := cs[newCred.Type][newCred.Key][newCred.Value]; ok {
-				return validators.UniqueConstraintViolationError{
-					ObjectType:      "KongConsumer",
-					ObjectName:      newCred.ConsumerName,
-					ObjectNamespace: newCred.ConsumerNamespace,
-					Type:            newCred.Type,
-					Key:             newCred.Key,
-				}
+				return fmt.Errorf("unique key constraint violated for %s", newCred.Key)
 			}
 		}
 	}
 
-	// if we make it here there's been no constraint violation, add it to the index
+	// if needed, initialize the index
 	if cs[newCred.Type] == nil {
-		// if needed, initialize the index
 		cs[newCred.Type] = map[string]map[string]struct{}{newCred.Key: {newCred.Value: {}}}
 	}
+	if cs[newCred.Type][newCred.Key] == nil {
+		cs[newCred.Type][newCred.Key] = make(map[string]struct{})
+	}
+
+	// if we make it here there's been no constraint violation, add it to the index
 	cs[newCred.Type][newCred.Key][newCred.Value] = struct{}{}
 
 	return nil

@@ -13,8 +13,8 @@ import (
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -41,6 +41,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
+
+	if c.EnableLeaderElection {
+		setupLog.V(0).Info("the --leader-elect flag is deprecated and no longer has any effect: leader election is set based on the Kong database setting")
+	}
 
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := setupFeatureGates(setupLog, c)
@@ -60,17 +65,39 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to build the kong admin api configuration: %w", err)
 	}
 
+	kongRoot, err := kongConfig.Client.Root(ctx)
+	if err != nil {
+		return fmt.Errorf("could not retrieve Kong admin root: %w", err)
+	}
+	kongRootConfig, ok := kongRoot["configuration"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid root configuration, expected a map[string]interface{} got %T",
+			kongRoot["configuration"])
+	}
+	dbmode, ok := kongRootConfig["database"].(string)
+	if !ok {
+		return fmt.Errorf("invalid database configuration, expected a string got %T", kongRootConfig["database"])
+	}
+
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts := setupControllerOptions(setupLog, c, scheme)
+	controllerOpts, err := setupControllerOptions(setupLog, c, scheme, dbmode)
+	if err != nil {
+		return fmt.Errorf("unable to setup controller options: %w", err)
+	}
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
 		return fmt.Errorf("unable to start controller manager: %w", err)
 	}
 
-	setupLog.Info("Starting Proxy Cache Server")
-	proxy, err := setupProxyServer(ctx, setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
+	setupLog.Info("Starting Admission Server")
+	if err := setupAdmissionServer(ctx, c, mgr.GetClient()); err != nil {
+		return err
+	}
+
+	setupLog.Info("Initializing Proxy Cache Server")
+	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
 	if err != nil {
-		return fmt.Errorf("unable to start proxy cache server: %w", err)
+		return fmt.Errorf("unable to initialize proxy cache server: %w", err)
 	}
 
 	setupLog.Info("Starting Enabled Controllers")
@@ -112,7 +139,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 
 	if c.UpdateStatus {
 		setupLog.Info("Starting resource status updater")
-		go ctrlutils.PullConfigUpdate(ctx, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
+		err = setupStatusUpdater(mgr, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
+		if err != nil {
+			return fmt.Errorf("could not start status updater: %w", err)
+		}
 	} else {
 		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}

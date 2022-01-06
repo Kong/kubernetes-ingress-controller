@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/kong/go-kong/kong"
 )
+
+var clientSetup sync.Mutex
 
 // HTTPClientOpts defines parameters that configure an HTTP client.
 type HTTPClientOpts struct {
@@ -101,6 +104,7 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	}
 
 	// if a workspace was provided, verify whether or not it exists.
+	clientSetup.Lock()
 	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
 	if err != nil {
 		return nil, fmt.Errorf("looking up workspace: %w", err)
@@ -116,6 +120,7 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 			return nil, fmt.Errorf("creating workspace: %w", err)
 		}
 	}
+	clientSetup.Unlock()
 
 	// ensure that we set the workspace appropriately
 	client.SetWorkspace(wsName)

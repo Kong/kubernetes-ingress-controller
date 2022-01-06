@@ -6,8 +6,20 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// featureGatesDocsURL provides a link to the documentation for feature gates in the KIC repository
-const featureGatesDocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
+// -----------------------------------------------------------------------------
+// Feature Gates - Vars & Consts
+// -----------------------------------------------------------------------------
+
+const (
+	// knativeFeature is the name of the feature-gate for enabling/disabling Knative
+	knativeFeature = "Knative"
+
+	// gatewayFeature is the name of the feature-gate for enabling/disabling Gateway APIs
+	gatewayFeature = "Gateway"
+
+	// featureGatesDocsURL provides a link to the documentation for feature gates in the KIC repository
+	featureGatesDocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
+)
 
 // setupFeatureGates converts feature gates to controller enablement
 func setupFeatureGates(setupLog logr.Logger, c *Config) (map[string]bool, error) {
@@ -34,6 +46,7 @@ func setupFeatureGates(setupLog logr.Logger, c *Config) (map[string]bool, error)
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func getFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
-		"Knative": false,
+		knativeFeature: false,
+		gatewayFeature: false,
 	}
 }

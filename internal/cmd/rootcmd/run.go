@@ -8,9 +8,6 @@ import (
 )
 
 func Run(ctx context.Context, c *manager.Config) error {
-	if err := StartAdmissionServer(ctx, c); err != nil {
-		return fmt.Errorf("StartAdmissionServer: %w", err)
-	}
 	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c)
 	if err != nil {
 		return fmt.Errorf("failed to start diagnostics server: %w", err)

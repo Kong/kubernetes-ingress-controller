@@ -52,10 +52,9 @@ Features that reach GA and over time become stable will be removed from this tab
 
 {{< table caption="Feature gates for features in Alpha or Beta states" >}}
 
-| Feature                    | Default | Stage | Since | Until |
-|----------------------------|---------|-------|-------|-------|
-| [Knative](#Knative)        | `true`  | Alpha | 0.8.0 | TBD   |
-| [GatewayAPI](#Gateway-API) | `false` | Alpha | TBD   | TBD   |
+| Feature | Default | Stage | Since | Until |
+|---------|---------|-------|-------|-------|
+| Knative | `true`  | Alpha | 0.8.0 | TBD   |
+| Gateway | `false` | Alpha | TBD   | TBD   |
 
 {{< /table > }}
-

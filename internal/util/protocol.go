@@ -8,4 +8,4 @@ func ValidateProtocol(protocol string) bool {
 	return match
 }
 
-var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls$`)
+var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Atcp|\Atls|\Atls_passthrough$`)

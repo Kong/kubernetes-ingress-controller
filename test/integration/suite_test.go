@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/utils"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -138,14 +138,16 @@ func TestMain(m *testing.M) {
 		fmt.Println("INFO: starting the controller manager")
 		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", ingressClass),
-			fmt.Sprintf("--admission-webhook-cert=%s", admissionWebhookCert),
-			fmt.Sprintf("--admission-webhook-key=%s", admissionWebhookKey),
+			fmt.Sprintf("--admission-webhook-cert=%s", kongSystemServiceCert),
+			fmt.Sprintf("--admission-webhook-key=%s", kongSystemServiceKey),
 			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
-			"--admission-webhook-listen=172.17.0.1:49023",
+			fmt.Sprintf("--admission-webhook-listen=%s:%d", admissionWebhookListenHost, admissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
 			"--log-level=trace",
 			"--debug-log-reduce-redundancy",
+			"--feature-gates=Gateway=true",
+			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
 		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))

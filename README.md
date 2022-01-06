@@ -1,10 +1,11 @@
 [![][kong-logo]][kong-url]
 [![Build Status](https://github.com/kong/kubernetes-ingress-controller/workflows/Test/badge.svg)](https://github.com/kong/kubernetes-ingress-controller/actions?query=branch%3Amaster+event%3Apush)
-[![codecov](https://codecov.io/gh/Kong/kubernetes-ingress-controller/branch/main/graph/badge.svg?token=S1aqcXiGEo)](https://codecov.io/gh/Kong/kubernetes-ingress-controller)
+[![Go Reference](https://pkg.go.dev/badge/github.com/kong/kubernetes-ingress-controller/v2.svg)](https://pkg.go.dev/github.com/kong/kubernetes-ingress-controller/v2)
+[![Codecov](https://codecov.io/gh/Kong/kubernetes-ingress-controller/branch/main/graph/badge.svg?token=S1aqcXiGEo)](https://codecov.io/gh/Kong/kubernetes-ingress-controller)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
 
-# Kong Ingress Controller for Kubernetes
+# Kong Ingress Controller for Kubernetes (KIC)
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
@@ -13,21 +14,6 @@ for Kubernetes Services, all using
 Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
-
-## ✨ KIC 2.0 is in public beta! ✨
-
-We're happy to announce that Kong Ingress Controller 2.0 is in public beta.
-
-This new release comes with a major internal rearchitecture, and the following added features:
-- Support for UDP ingress resources and the new `UDPIngress` CRD,
-- Ingress controller runtime metrics compatible with Prometheus, for easier monitoring and alerting.
-
-For a quick start, just deploy KIC 2.0 beta to your cluster:
-```console
-$ kubectl apply -f "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/deploy/single-v2/all-in-one-dbless.yaml"
-```
-
-See the [documentation](https://docs.konghq.com/kubernetes-ingress-controller) for Kong Ingress Controller 2.0 beta.
 
 ## Features
 
@@ -87,9 +73,7 @@ We ❤️  pull requests, and we’re continually working hard to make it as eas
 
 ## Documentation
 
-All documentation around Kong Ingress Controller is present in this
-repository inside the [docs][docs] directory.
-Pull Requests are welcome for additions and corrections.
+All documentation around Kong Ingress Controller is present in the [kong/docs.konghq.com](https://github.com/kong/docs.konghq.com) repository. Pull Requests are welcome for additions and corrections.
 
 ## Guides and Tutorials
 
@@ -126,13 +110,8 @@ on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
 ### Community meetings
 
-You can join monthly meetings hosted by the maintainers of the project
-to ask questions, provide feedback or just come and say hello.
-The meeting takes place on every second Tuesday of the month
-at 10 am Pacific time.
-Please submit your contact details on the
-[online meetups](https://konghq.com/online-meetups/) page to receive
-meeting invite and Zoom links to join the meeting.
+You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback or just to listen and hang out.
+See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and receive meeting invites and [Zoom](https://zoom.us) links.
 
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [kong]: https://konghq.com/kong-community-edition/

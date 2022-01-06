@@ -10,6 +10,7 @@ on:
       - '*'
   schedule:
     - cron: '27 0 * * 4'
+  workflow_dispatch: {}
 
 jobs:
   analyze:

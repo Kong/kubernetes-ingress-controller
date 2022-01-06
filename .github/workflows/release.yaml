@@ -1,4 +1,3 @@
-# TODO: need kubernetes latest job (test against v1.20.7 and v1.21.2): https://github.com/Kong/kubernetes-ingress-controller/issues/1616
 name: release
 
 on:
@@ -7,127 +6,10 @@ on:
       - 'main'
     tags:
       - 'v2.*'
+  workflow_dispatch: {}
 
 jobs:
-
-  # ----------------------------------------------------------------------------
-  # Release Testing
-  # ----------------------------------------------------------------------------
-
-  test-current-kubernetes:
-    if: ${{ contains(github.ref, 'tags') }} # run only for tags
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        kubernetes-version:
-          - 'v1.22.0'
-        dbmode:
-          - 'dbless'
-          - 'postgres'
-    steps:
-      - name: setup golang
-        uses: actions/setup-go@v2
-        with:
-          go-version: '^1.17'
-
-      - name: cache go modules
-        uses: actions/cache@v2.1.6
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
-      - name: checkout repository
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
-        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
-
-  test-previous-kubernetes:
-    if: ${{ contains(github.ref, 'tags') }} # run only for tags
-    environment: gcloud
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        minor:
-          - '19'
-          - '20'
-          - '21'
-        dbmode:
-          - 'dbless'
-          - 'postgres'
-    steps:
-      - name: setup golang
-        uses: actions/setup-go@v2
-        with:
-          go-version: '^1.17'
-
-      - name: cache go modules
-        uses: actions/cache@v2.1.6
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
-      - name: checkout repository
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: ./hack/e2e/run-tests.sh
-        env:
-          KUBERNETES_MAJOR_VERSION: 1
-          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-
-  test-e2e:
-    if: ${{ contains(github.ref, 'tags') }} # run only for tags
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        kubernetes-version:
-          - 'v1.21.2'
-          - 'v1.22.0'
-        istio-version:
-          - 'v1.11.3'
-    steps:
-      - name: setup golang
-        uses: actions/setup-go@v2
-        with:
-          go-version: '^1.17'
-
-      - name: cache go modules
-        uses: actions/cache@v2.1.6
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
-      - name: checkout repository
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: test e2e
-        run: make test.e2e
-        env:
-          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes_version }}
-          ISTIO_VERSION: ${{ matrix.istio_version }}
-
-  # ----------------------------------------------------------------------------
-  # Release Image Builds
-  # ----------------------------------------------------------------------------
-
   build-push-images:
-    needs: [test-current-kubernetes, test-previous-kubernetes]
     environment: 'Docker Push'
     runs-on: ubuntu-latest
     steps:
@@ -151,10 +33,23 @@ jobs:
           echo "" >> $GITHUB_ENV
           echo 'type=semver,pattern={{major}}.{{minor}}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
+      - name: Add Red Hat standard tags
+        run: |
+          echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=ref,event=branch,suffix=-redhat' >> $GITHUB_ENV
+          echo 'type=semver,pattern={{version}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Add Red Hat major.minor tag
+        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        run: |
+          echo 'REDHAT_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo 'type=semver,pattern={{major}}.{{minor}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -167,15 +62,19 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.5.0
+        uses: docker/metadata-action@v3.6.2
         with:
           images: kong/kubernetes-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
+      - name: Docker meta (redhat)
+        id: meta_redhat
+        uses: docker/metadata-action@v3.6.2
+        with:
+          images: kong/kubernetes-ingress-controller
+          flavor: |
+            latest=false
+          tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
-        env:
-          TAG: ${{ steps.meta.outputs.version }}
-          COMMIT: ${{ github.sha }}
-          REPO_INFO: https://github.com/${{ github.repository }}.git
         id: docker_build_binary
         uses: docker/build-push-action@v2
         with:
@@ -184,14 +83,35 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           target: builder
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push
         id: docker_build
-        env:
-          TAG: ${{ steps.meta.outputs.version }}
         uses: docker/build-push-action@v2
         with:
           push: true
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
-
+          target: distroless
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Build and push Red Hat
+        id: docker_build_redhat
+        env:
+          TAG: ${{ steps.meta.outputs.version }}
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta_redhat.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: redhat
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git

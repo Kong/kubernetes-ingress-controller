@@ -18,6 +18,16 @@ We maintain some integration tests with 3rd party components which we need to ma
 
 An issue exists to automate the above actions: https://github.com/Kong/kubernetes-ingress-controller/issues/1886
 
+## Release Testing
+
+**For all releases**
+
+We currently provide a suite of tests with an extensive matrix of component versions (see `.github/workflows/release-test.yaml`).
+
+Prior to any release open the [workflow page](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release-test.yaml) and trigger a test run against `main`.
+
+**Wait for tests to pass before continuing with any release**, if any problems are found hold on the release until patches are provided and then run the tests again.
+
 ## Release Branch
 
 **For all releases**
@@ -27,17 +37,16 @@ For this step we're going to start with the `main` branch to create our release 
 - [ ] ensure that you have up to date copy of `main`: `git fetch --all`
 - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
 - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
-- [ ] ensure base manifest versions use the new version and update manifest files: `./hack/build-single-manifests.sh`
-- [ ] update the `TAG` variable in the `Makefile` to the new version release and commit the change
-- [ ] ensure that the Kubernetes versions provisioned in the cloud (GKE, etc.) as part of the release CI pipeline are up to date
-  - [ ] remove any versions that are no longer supported by the cloud provider, or the release pipeline will fail
+- [ ] ensure base manifest versions use the new version and update manifest files: `make manifests`
+  - [ ] ensure that the Kubernetes versions provisioned in the cloud (GKE, etc. in `.github/workflows/release-testing.yaml`) as part of the release CI pipeline are up to date
+- [ ] remove any versions that are no longer supported by the cloud provider, or the release pipeline will fail
 - [ ] push the branch up to the remote: `git push --set-upstream origin release/x.y.z`
 
 ## Release Pull Request
 
 **For all releases**
 
-- [ ] Open a PR from your branch to `main` (patch)
+- [ ] Open a PR from your branch to `main`
 - [ ] Once the PR is merged, tag your release: `git fetch --all && git tag origin/main 1.3.1 && git push origin --tags`
 - [ ] Wait for CI to build images and push them to Docker Hub
 

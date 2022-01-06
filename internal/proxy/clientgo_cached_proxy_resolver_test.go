@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -17,9 +16,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func Test_FetchCustomEntities(t *testing.T) {
@@ -124,11 +123,8 @@ func TestIsReady(t *testing.T) {
 }
 
 func TestCaching(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	t.Log("configuring and starting a new proxy server")
-	proxyInterface, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig,
+	proxyInterface, err := NewCacheBasedProxy(logger, fakeK8sClient, fakeKongConfig,
 		"kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, time.Millisecond*300)
 	assert.NoError(t, err)
 
@@ -176,8 +172,6 @@ func TestCaching(t *testing.T) {
 }
 
 func TestProxyTimeout(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	t.Log("configuring and starting a new proxy server")
 
 	// mock the next Admin API response (which will be / to get the root config) to ensure
@@ -192,6 +186,6 @@ func TestProxyTimeout(t *testing.T) {
 	// to see the the context deadline for the http response triggered.
 	timeout := time.Millisecond * 10
 
-	_, err := NewCacheBasedProxy(ctx, logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, timeout)
+	_, err := NewCacheBasedProxy(logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, timeout)
 	assert.Contains(t, err.Error(), "context deadline exceeded")
 }

@@ -18,9 +18,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 func TestKongIngressEssentials(t *testing.T) {
@@ -75,7 +75,7 @@ func TestKongIngressEssentials(t *testing.T) {
 				annotations.IngressClassKey: ingressClass,
 			},
 		},
-		Proxy: &kong.Service{
+		Proxy: &kongv1.KongIngressService{
 			ReadTimeout: kong.Int(1000),
 		},
 	}

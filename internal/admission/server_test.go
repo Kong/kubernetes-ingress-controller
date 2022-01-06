@@ -15,8 +15,9 @@ import (
 	admission "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 var decoder = codecs.UniversalDeserializer()
@@ -37,8 +38,16 @@ func (v KongFakeValidator) ValidatePlugin(_ context.Context,
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateCredential(
-	secret corev1.Secret) (bool, string, error) {
+func (v KongFakeValidator) ValidateClusterPlugin(_ context.Context,
+	k8sPlugin configuration.KongClusterPlugin) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateGateway(ctx context.Context, gateway gatewayv1alpha2.Gateway) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

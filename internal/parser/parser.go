@@ -18,11 +18,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
@@ -41,13 +41,19 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	}
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 
+	httproutes, err := s.ListHTTPRoutes()
+	if err != nil {
+		log.Errorf("failed to list HTTPRoutes: %w", err)
+	}
+	parsedHTTPRoutes := fromHTTPRoutes(log, httproutes)
+
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
-	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)
+	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative, parsedHTTPRoutes)
 }
 
 // Build creates a Kong configuration from Ingress and Custom resources

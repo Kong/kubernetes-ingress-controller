@@ -10,8 +10,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.

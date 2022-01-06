@@ -14,14 +14,13 @@ import (
 	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
-	"github.com/kong/deck/solver"
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
 func equalSHA(a, b []byte) bool {
@@ -186,10 +185,9 @@ func onUpdateDBMode(ctx context.Context,
 	kongConfig *Kong,
 	selectorTags []string,
 ) error {
+	dumpConfig := dump.Config{SelectorTags: selectorTags}
 	// read the current state
-	rawState, err := dump.Get(ctx, kongConfig.Client, dump.Config{
-		SelectorTags: selectorTags,
-	})
+	rawState, err := dump.Get(ctx, kongConfig.Client, dumpConfig)
 	if err != nil {
 		return fmt.Errorf("loading configuration from kong: %w", err)
 	}
@@ -202,7 +200,7 @@ func onUpdateDBMode(ctx context.Context,
 	rawState, err = file.Get(targetContent, file.RenderConfig{
 		CurrentState: currentState,
 		KongVersion:  kongConfig.Version,
-	})
+	}, dumpConfig)
 	if err != nil {
 		return err
 	}
@@ -211,12 +209,16 @@ func onUpdateDBMode(ctx context.Context,
 		return err
 	}
 
-	syncer, err := diff.NewSyncer(currentState, targetState)
+	syncer, err := diff.NewSyncer(diff.SyncerOpts{
+		CurrentState:    currentState,
+		TargetState:     targetState,
+		KongClient:      kongConfig.Client,
+		SilenceWarnings: true,
+	})
 	if err != nil {
 		return fmt.Errorf("creating a new syncer: %w", err)
 	}
-	syncer.SilenceWarnings = true
-	_, errs := solver.Solve(ctx, syncer, kongConfig.Client, nil, kongConfig.Concurrency, false)
+	_, errs := syncer.Solve(ctx, kongConfig.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/assert"
 )

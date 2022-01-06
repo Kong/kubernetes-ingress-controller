@@ -16,6 +16,9 @@ func TestValidateProtocol(t *testing.T) {
 		{"https", true},
 		{"grpc", true},
 		{"grpcs", true},
+		{"tls", true},
+		{"tcp", true},
+		{"tls_passthrough", true},
 		{"grcpsfdsafdsfafdshttp", false},
 	}
 	for _, testcase := range testTable {

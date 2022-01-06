@@ -8,9 +8,9 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -279,7 +279,7 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 		r.Headers = ir.Headers
 	}
 	if len(ir.Protocols) != 0 {
-		r.Protocols = cloneStringPointerSlice(ir.Protocols...)
+		r.Protocols = protocolPointersToStringPointers(ir.Protocols)
 	}
 	if ir.RegexPriority != nil {
 		r.RegexPriority = kong.Int(*ir.RegexPriority)
@@ -304,7 +304,7 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 				SNIs = append(SNIs, kong.String(SNI))
 			} else {
 				// SNI is not a valid hostname
-				log.WithField("kongroute", ir.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
+				log.WithField("kongroute", r.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
 				return
 			}
 		}

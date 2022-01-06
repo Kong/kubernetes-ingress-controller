@@ -13,9 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/internal/kongstate"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func TestFromIngressV1beta1(t *testing.T) {
@@ -782,6 +782,60 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 				},
 			},
 		},
+		// 4
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: configurationv1beta1.TCPIngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 9000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+		// 5
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: configurationv1beta1.TCPIngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 0,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 80,
+						},
+					},
+				},
+			},
+		},
+		// 6
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: configurationv1beta1.TCPIngressSpec{
+				Rules: []configurationv1beta1.IngressRule{
+					{
+						Port: 9000,
+						Backend: configurationv1beta1.IngressBackend{
+							ServiceName: "foo-svc",
+							ServicePort: 0,
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no TCPIngress returns empty info", func(t *testing.T) {
 		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{})
@@ -843,6 +897,27 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
+	})
+	t.Run("TCPIngress without service name returns empty info", func(t *testing.T) {
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[4]})
+		assert.Equal(ingressRules{
+			ServiceNameToServices: make(map[string]kongstate.Service),
+			SecretNameToSNIs:      make(map[string][]string),
+		}, parsedInfo)
+	})
+	t.Run("TCPIngress with invalid port returns empty info", func(t *testing.T) {
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[5]})
+		assert.Equal(ingressRules{
+			ServiceNameToServices: make(map[string]kongstate.Service),
+			SecretNameToSNIs:      make(map[string][]string),
+		}, parsedInfo)
+	})
+	t.Run("empty TCPIngress with invalid service port returns empty info", func(t *testing.T) {
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[6]})
+		assert.Equal(ingressRules{
+			ServiceNameToServices: make(map[string]kongstate.Service),
+			SecretNameToSNIs:      make(map[string][]string),
+		}, parsedInfo)
 	})
 }
 
@@ -1022,13 +1097,15 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
-			Name:          kong.String("foo-namespace.foo.00"),
-			RegexPriority: kong.Int(0),
-			StripPath:     kong.Bool(false),
-			Paths:         kong.StringSlice("/"),
-			PreserveHost:  kong.Bool(true),
-			Protocols:     kong.StringSlice("http", "https"),
-			Hosts:         kong.StringSlice("my-func.example.com"),
+			Name:              kong.String("foo-namespace.foo.00"),
+			RegexPriority:     kong.Int(0),
+			StripPath:         kong.Bool(false),
+			Paths:             kong.StringSlice("/"),
+			PreserveHost:      kong.Bool(true),
+			Protocols:         kong.StringSlice("http", "https"),
+			Hosts:             kong.StringSlice("my-func.example.com"),
+			ResponseBuffering: kong.Bool(true),
+			RequestBuffering:  kong.Bool(true),
 		}, svc.Routes[0].Route)
 		assert.Equal(kong.Plugin{
 			Name: kong.String("request-transformer"),
@@ -1065,13 +1142,15 @@ func TestFromKnativeIngress(t *testing.T) {
 			Retries:        kong.Int(5),
 		}, svc.Service)
 		assert.Equal(kong.Route{
-			Name:          kong.String("foo-namespace.foo.00"),
-			RegexPriority: kong.Int(0),
-			StripPath:     kong.Bool(false),
-			Paths:         kong.StringSlice("/"),
-			PreserveHost:  kong.Bool(true),
-			Protocols:     kong.StringSlice("http", "https"),
-			Hosts:         kong.StringSlice("my-func.example.com"),
+			Name:              kong.String("foo-namespace.foo.00"),
+			RegexPriority:     kong.Int(0),
+			StripPath:         kong.Bool(false),
+			Paths:             kong.StringSlice("/"),
+			PreserveHost:      kong.Bool(true),
+			Protocols:         kong.StringSlice("http", "https"),
+			Hosts:             kong.StringSlice("my-func.example.com"),
+			ResponseBuffering: kong.Bool(true),
+			RequestBuffering:  kong.Bool(true),
 		}, svc.Routes[0].Route)
 		assert.Equal(kong.Plugin{
 			Name: kong.String("request-transformer"),

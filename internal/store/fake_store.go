@@ -8,10 +8,11 @@ import (
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func keyFunc(obj interface{}) (string, error) {
@@ -30,6 +31,7 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
+	HTTPRoute          []*gatewayv1alpha2.HTTPRoute
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*configurationv1beta1.UDPIngress
 	Services           []*apiv1.Service
@@ -59,6 +61,12 @@ func NewFakeStore(
 	for _, ingress := range objects.IngressesV1 {
 		err := ingressV1Store.Add(ingress)
 		if err != nil {
+			return nil, err
+		}
+	}
+	httprouteStore := cache.NewStore(keyFunc)
+	for _, httproute := range objects.HTTPRoute {
+		if err := httprouteStore.Add(httproute); err != nil {
 			return nil, err
 		}
 	}
@@ -136,6 +144,7 @@ func NewFakeStore(
 		stores: CacheStores{
 			IngressV1beta1: ingressV1beta1Store,
 			IngressV1:      ingressV1Store,
+			HTTPRoute:      httprouteStore,
 			TCPIngress:     tcpIngressStore,
 			UDPIngress:     udpIngressStore,
 			Service:        serviceStore,

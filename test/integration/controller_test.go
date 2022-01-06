@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
 
 func TestHealthEndpoint(t *testing.T) {

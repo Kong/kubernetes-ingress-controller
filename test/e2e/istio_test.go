@@ -303,19 +303,6 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return verifyStatusForURL(appStatusOKUrl, http.StatusTooManyRequests) == nil
 	}, time.Minute*3, time.Second)
-
-	t.Log("exceeding the rate-limit and verifying that kiali health metrics pick up on it")
-	require.Eventually(t, func() bool {
-		if err := verifyStatusForURL(appStatusOKUrl, http.StatusTooManyRequests); err != nil {
-			return false
-		}
-		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, kongAddon.Namespace(), "ingress-controller-kong"); err != nil {
-			return false
-		}
-		inboundHTTPRequests = health.Requests.Inbound.HTTP
-		rateLimitedRequests, ok := inboundHTTPRequests[strconv.Itoa(http.StatusTooManyRequests)]
-		return ok && (rateLimitedRequests > 0.0)
-	}, time.Minute*3, time.Second)
 }
 
 // -----------------------------------------------------------------------------

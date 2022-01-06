@@ -34,6 +34,9 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Setup yq
+      run: go install github.com/mikefarah/yq/v4@latest
+
     - name: Setup golangci-lint
       run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1
 

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -398,6 +399,36 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 	migrationJob, err := env.Cluster().Client().BatchV1().Jobs(namespace).Get(ctx, "kong-migrations", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, migrationJob.Status.Succeeded, int32(1))
+}
+
+// startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
+// ends
+func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, pod corev1.Pod, localPort,
+	targetPort string) {
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "portforward-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer os.Remove(kubeconfigFile.Name())
+	defer kubeconfigFile.Close()
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", pod.Namespace, pod.Name, "9777:cmetrics")
+	t.Logf("forwarding port %s to %s/%s:%s", localPort, pod.Namespace, pod.Name, targetPort)
+	if startErr := cmd.Start(); startErr != nil {
+		startOutput, outputErr := cmd.Output()
+		assert.NoError(t, outputErr)
+		require.NoError(t, startErr, string(startOutput))
+	}
+	require.Eventually(t, func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", localPort))
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, kongComponentWait, time.Second)
 }
 
 // -----------------------------------------------------------------------------

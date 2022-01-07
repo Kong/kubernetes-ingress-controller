@@ -26,6 +26,15 @@ func fromHTTPRoutes(log logrus.FieldLogger, httpRouteList []*gatewayv1alpha2.HTT
 			hostnames = append(hostnames, kong.String(string(hostname)))
 		}
 
+		// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
+		// validation at this level as well as a fallback so that if routes are posted which
+		// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
+		// at least try to provide a helpful message about the situation in the manager logs.
+		if len(spec.Rules) < 1 {
+			log.Errorf("HTTPRoute %s/%s can't be routed: no rules provided", httproute.Namespace, httproute.Name)
+			continue
+		}
+
 		// each rule may represent a different set of backend services that will be accepting
 		// traffic, so we make separate routes and Kong services for every present rule.
 		for _, rule := range spec.Rules {

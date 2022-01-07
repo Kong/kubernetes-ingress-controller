@@ -43,67 +43,99 @@ func fromHTTPRoutes(log logrus.FieldLogger, httpRouteList []*gatewayv1alpha2.HTT
 			// Therefore we treat each match rule as a separate Kong Route, so we iterate through
 			// all matches to determine all the routes that will be needed for the services.
 			var routes []kongstate.Route
-			for matchNumber, match := range rule.Matches {
-				// determine the name of the route, identify it as a route that belongs
-				// to a Kubernetes HTTPRoute object.
-				routeName := kong.String(fmt.Sprintf(
-					"httproute.%s.%s.%d",
-					httproute.Namespace,
-					httproute.Name,
-					matchNumber, // TODO: avoid route thrash from re-ordering?
-				))
+			if len(rule.Matches) > 0 {
+				for matchNumber, match := range rule.Matches {
+					// determine the name of the route, identify it as a route that belongs
+					// to a Kubernetes HTTPRoute object.
+					routeName := kong.String(fmt.Sprintf(
+						"httproute.%s.%s.%d",
+						httproute.Namespace,
+						httproute.Name,
+						matchNumber, // TODO: avoid route thrash from re-ordering?
+					))
 
-				// TODO: implement query param matches
-				if len(match.QueryParams) > 0 {
-					errmsg := "query param matches are not yet supported"
-					log.Errorf("HTTPRoute %s/%s can't be routed for match %+v: %s", errmsg)
-					continue
+					// TODO: implement query param matches
+					if len(match.QueryParams) > 0 {
+						errmsg := "query param matches are not yet supported"
+						log.Errorf("HTTPRoute %s/%s can't be routed for match %+v: %s", errmsg)
+						continue
+					}
+
+					// TODO: implement regex path matches
+					if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression {
+						errmsg := "regular expression path matches are not yet supported"
+						log.Errorf("HTTPRoute %s/%s can't be routed for match %+v: %s", errmsg)
+						continue
+					}
+
+					// build the route object using the method and pathing information
+					r := kongstate.Route{
+						Ingress: objectInfo,
+						Route: kong.Route{
+							Name:         routeName,
+							Protocols:    kong.StringSlice("http", "https"),
+							PreserveHost: kong.Bool(true),
+						},
+					}
+
+					// attach any hostnames associated with the httproute
+					if len(hostnames) > 0 {
+						r.Hosts = hostnames
+					}
+
+					// configure path matching information about the route if paths
+					// matching was defined.
+					if match.Path != nil {
+						// determine the path match values
+						r.Route.Paths = []*string{match.Path.Value}
+
+						// determine whether path stripping needs to be enabled
+						r.Route.StripPath = kong.Bool(match.Path.Type == nil || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix)
+					}
+
+					// configure method matching information about the route if method
+					// matching was defined.
+					if match.Method != nil {
+						r.Route.Methods = append(r.Route.Methods, kong.String(string(*match.Method)))
+					}
+
+					// convert header matching from HTTPRoute to Route format
+					headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(match.Headers)
+					if err != nil {
+						log.Errorf("HTTPRoute %s/%s can't be routed for match %+v: %w", err)
+						continue
+					}
+					if len(headers) > 0 {
+						r.Route.Headers = headers
+					}
+
+					// add the route to the list of routes for the service(s)
+					routes = append(routes, r)
+					log.Debugf("generated route %s for HTTPRoute %s/%s", routeName, httproute.Namespace, httproute.Name)
 				}
-
-				// TODO: implement regex path matches
-				if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression {
-					errmsg := "regular expression path matches are not yet supported"
-					log.Errorf("HTTPRoute %s/%s can't be routed for match %+v: %s", errmsg)
-					continue
-				}
-
-				// build the route object using the method and pathing information
+			} else {
+				// it's acceptable for an HTTPRoute to have no matches in the rulesets,
+				// but only backends as long as there are hostnames. In this case, we
+				// match all traffic based on the hostname and leave all other routing
+				// options default.
 				r := kongstate.Route{
 					Ingress: objectInfo,
 					Route: kong.Route{
-						Name:         routeName,
+						Name:         kong.String(fmt.Sprintf("httproute.%s.%s.0", httproute.Namespace, httproute.Name)),
 						Protocols:    kong.StringSlice("http", "https"),
 						PreserveHost: kong.Bool(true),
-						Hosts:        hostnames,
 					},
 				}
-				log.Debugf("generated route %s for HTTPRoute %s/%s", routeName, httproute.Namespace, httproute.Name)
 
-				// configure path matching information about the route if paths
-				// matching was defined.
-				if match.Path != nil {
-					// determine the path match values
-					r.Route.Paths = []*string{match.Path.Value}
-
-					// determine whether path stripping needs to be enabled
-					r.Route.StripPath = kong.Bool(match.Path.Type == nil || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix)
-				}
-
-				// configure method matching information about the route if method
-				// matching was defined.
-				if match.Method != nil {
-					r.Route.Methods = append(r.Route.Methods, kong.String(string(*match.Method)))
-				}
-
-				// convert header matching from HTTPRoute to Route format
-				headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(match.Headers)
-				if err != nil {
-					log.Errorf("HTTPRoute %s/%s can't be routed for match %+v: %w", err)
+				// however in this case there must actually be some present hostnames
+				// configured for the HTTPRoute or else it's not valid.
+				if len(hostnames) == 0 {
+					log.Errorf("HTTPRoute %s/%s can't be routed: no match rules or hostnames specified", httproute.Namespace, httproute.Name)
 					continue
 				}
-				r.Route.Headers = headers
 
-				// add the route to the list of routes for the service(s)
+				// otherwise apply the hostnames to the route
+				r.Hosts = append(r.Hosts, hostnames...)
 				routes = append(routes, r)
 			}
 

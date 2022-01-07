@@ -45,7 +45,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list HTTPRoutes: %w", err)
 	}
-	parsedHTTPRoutes := fromHTTPRoutes(log, httproutes)
+	parsedHTTPRoutes := ingressRulesFromHTTPRoutes(log, httproutes)
 
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {

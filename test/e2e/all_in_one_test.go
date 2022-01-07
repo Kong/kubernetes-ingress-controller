@@ -113,11 +113,28 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
-	_ = deployKong(ctx, t, env, manifest)
+	deployment := deployKong(ctx, t, env, manifest)
+
+	forDeployment := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
+	}
+	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(podList.Items))
+	pod := podList.Items[0]
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
+
+	t.Log("killing Kong process to simulate a crash and container restart")
+	killKong(ctx, t, env, &pod)
+
+	// TODO this is _working_ currently, even though we lack the feature to push config when empty.
+	// need to investigate why it's still viable despite the crash
+	t.Log("confirming that routes are restored after crash")
+	verifyIngress(ctx, t, env)
+
 }
 
 func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
@@ -720,6 +737,42 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 	migrationJob, err := env.Cluster().Client().BatchV1().Jobs(namespace).Get(ctx, "kong-migrations", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, migrationJob.Status.Succeeded, int32(1))
+}
+
+// killKong kills the Kong container in a given Pod and returns when it has restarted
+func killKong(ctx context.Context, t *testing.T, env environments.Environment, pod *corev1.Pod) {
+	var orig, after int32
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name == "proxy" {
+			orig = status.RestartCount
+		}
+	}
+	t.Logf("kong container has %v restart currently", orig)
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "kill-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer os.Remove(kubeconfigFile.Name())
+	defer kubeconfigFile.Close()
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "exec", "-n", pod.Namespace, pod.Name, "--", "kill", "1")
+	require.NoError(t, cmd.Run())
+	require.Eventually(t, func() bool {
+		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.Name == "proxy" {
+				if status.RestartCount > orig {
+					after = status.RestartCount
+					return true
+				}
+			}
+		}
+		return false
+	}, kongComponentWait, time.Second)
+	t.Logf("kong container has %v restart after kill", after)
 }
 
 // startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context

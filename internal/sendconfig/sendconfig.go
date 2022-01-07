@@ -50,8 +50,18 @@ func PerformUpdate(ctx context.Context,
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
 				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
 			}
-			log.Debug("no configuration change, skipping sync to kong")
-			return oldSHA, nil
+			// TODO un-fake this once new go-kong functionality is available
+			ready := true
+			//ready, err := kongConfig.Client.Info.IsConfigReady()
+			//if err != nil {
+			//	log.Errorf("checking config status failed: %w", err)
+			//	log.Debug("configuration state unknown, skipping sync to kong")
+			//	return oldSHA, nil
+			//}
+			if ready {
+				log.Debug("no configuration change, skipping sync to kong")
+				return oldSHA, nil
+			}
 		}
 	}
 

@@ -16,7 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-func Test_fromHTTPRoutes(t *testing.T) {
+func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
 	pathMatchRegex := gatewayv1alpha2.PathMatchRegularExpression
@@ -287,7 +287,6 @@ func Test_fromHTTPRoutes(t *testing.T) {
 			},
 			errMsgs: []string{
 				"query param matches are not yet supported",
-				"HTTPRoute default/basic-httproute can't be routed: no valid rules provided",
 			},
 		},
 		{
@@ -327,11 +326,10 @@ func Test_fromHTTPRoutes(t *testing.T) {
 			},
 			errMsgs: []string{
 				"regular expression path matches are not yet supported",
-				"HTTPRoute default/basic-httproute can't be routed: no valid rules provided",
 			},
 		},
 		{
-			msg: "an HTTPRoute with a mixture of unsupported and supported match options is best effort routing",
+			msg: "an HTTPRoute with a mixture of unsupported and supported match options can't be routed",
 			routes: []*gatewayv1alpha2.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
@@ -370,50 +368,8 @@ func Test_fromHTTPRoutes(t *testing.T) {
 				},
 			}},
 			expected: ingressRules{
-				SecretNameToSNIs: SecretNameToSNIs{},
-				ServiceNameToServices: map[string]kongstate.Service{
-					"default.fake-service.80": {
-						Service: kong.Service{ // only 1 service should be created
-							ConnectTimeout: kong.Int(60000),
-							Host:           kong.String("fake-service.default.80.svc"),
-							Name:           kong.String("default.fake-service.80"),
-							Path:           kong.String("/"),
-							Port:           kong.Int(80),
-							Protocol:       kong.String("http"),
-							ReadTimeout:    kong.Int(60000),
-							Retries:        kong.Int(5),
-							WriteTimeout:   kong.Int(60000),
-						},
-						Backend: kongstate.ServiceBackend{
-							Name: "fake-service",
-							Port: kongstate.PortDef{
-								Mode:   kongstate.PortMode(1),
-								Number: 80,
-							},
-						},
-						Namespace: "default",
-						Routes: []kongstate.Route{{ // only 1 route should be created
-							Route: kong.Route{
-								Name: kong.String("httproute.default.basic-httproute.1"),
-								Paths: []*string{
-									kong.String("/httpbin"),
-								},
-								PreserveHost: kong.Bool(true),
-								Protocols: []*string{
-									kong.String("http"),
-									kong.String("https"),
-								},
-								StripPath: kong.Bool(true),
-							},
-							Ingress: util.K8sObjectInfo{
-								Name:        "basic-httproute",
-								Namespace:   corev1.NamespaceDefault,
-								Annotations: make(map[string]string),
-							},
-						}},
-						K8sService: corev1.Service{},
-					},
-				},
+				SecretNameToSNIs:      SecretNameToSNIs{},
+				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
 			errMsgs: []string{
 				"regular expression path matches are not yet supported",
@@ -424,7 +380,7 @@ func Test_fromHTTPRoutes(t *testing.T) {
 		logger, output := newTestLoggerForTranslators()
 
 		// verify that we receive the expected values
-		assert.Equal(t, tt.expected, fromHTTPRoutes(logger, tt.routes), tt.msg)
+		assert.Equal(t, tt.expected, ingressRulesFromHTTPRoutes(logger, tt.routes), tt.msg)
 
 		// verify that we receive the expected logged error messages (if any)
 		for _, errMsg := range tt.errMsgs {

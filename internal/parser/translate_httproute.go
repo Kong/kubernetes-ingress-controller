@@ -139,6 +139,14 @@ func fromHTTPRoutes(log logrus.FieldLogger, httpRouteList []*gatewayv1alpha2.HTT
 				routes = append(routes, r)
 			}
 
+			// if there are no routes (this can happen if only unsupported match options are
+			// provided) then we'll avoid doing anything with the backendRefs.
+			if len(routes) == 0 {
+				log.Errorf("HTTPRoute %s/%s can't be routed: no valid rules provided", httproute.Namespace, httproute.Name)
+				continue
+			}
+			log.Debugf("HTTPRoute %s/%s required %d kong routes to configure", httproute.Namespace, httproute.Name, len(routes))
+
 			// once all routes have been determined based on matching rules
 			// we determine the Services they actually route to.
 			for _, backendRef := range rule.BackendRefs {

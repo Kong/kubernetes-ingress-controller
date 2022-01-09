@@ -16,13 +16,15 @@ var clientSetup sync.Mutex
 
 // HTTPClientOpts defines parameters that configure an HTTP client.
 type HTTPClientOpts struct {
-	TLSSkipVerify bool
-	TLSServerName string
-	CACertPath    string
-	CACert        string
-	Headers       []string
-	TLSClientCert string
-	TLSClientKey  string
+	TLSSkipVerify     bool
+	TLSServerName     string
+	CACertPath        string
+	CACert            string
+	Headers           []string
+	TLSClientCertPath string
+	TLSClientCert     string
+	TLSClientKeyPath  string
+	TLSClientKey      string
 }
 
 // MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
@@ -70,11 +72,27 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		tlsConfig.RootCAs = certPool
 	}
 
+	if opts.TLSClientCertPath != "" && opts.TLSClientKeyPath != "" {
+		tlsClientCertPath := opts.TLSClientCertPath
+		tlsClientCert, err := os.ReadFile(tlsClientCertPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read kong-admin-tls-client-cert-file from path '%s': %w", tlsClientCertPath, err)
+		}
+		opts.TLSClientCert = string(tlsClientCert)
+
+		tlsClientKeyPath := opts.TLSClientKeyPath
+		tlsClientKey, err := os.ReadFile(tlsClientKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read kong-admin-tls-client-key-file from path '%s': %w", tlsClientKeyPath, err)
+		}
+		opts.TLSClientKey = string(tlsClientKey)
+	}
+
 	if opts.TLSClientCert != "" && opts.TLSClientKey != "" {
 		// Read the key pair to create certificate
-		cert, err := tls.LoadX509KeyPair(opts.TLSClientCert, opts.TLSClientKey)
+		cert, err := tls.X509KeyPair([]byte(opts.TLSClientCert), []byte(opts.TLSClientKey))
 		if err != nil {
-			return nil, fmt.Errorf("failed to load client certificate: %w", err)
+			return nil, fmt.Errorf("failed to load kong-admin-tls-client-cert and kong-admin-tls-client-key certificate: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}

@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	//"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/kustomize/api/krusty"
@@ -735,11 +736,12 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", pod.Namespace, pod.Name, "9777:cmetrics")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
 	t.Logf("forwarding port %s to %s/%s:%s", localPort, pod.Namespace, pod.Name, targetPort)
-	require.NoError(t, cmd.Start(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
+	if startErr := cmd.Start(); startErr != nil {
+		startOutput, outputErr := cmd.Output()
+		assert.NoError(t, outputErr)
+		require.NoError(t, startErr, string(startOutput))
+	}
 	require.Eventually(t, func() bool {
 		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", localPort))
 		if err == nil {

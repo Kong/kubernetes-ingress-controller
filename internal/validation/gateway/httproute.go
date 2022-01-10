@@ -55,7 +55,8 @@ func ValidateHTTPRoute(httproute *gatewayv1alpha2.HTTPRoute, attachedGateways ..
 // for a given gateway listener which it is linked to.
 func validateHTTPRouteListener(listener *gatewayv1alpha2.Listener) error {
 	// verify that the listener supports HTTPRoute objects
-	if listener.AllowedRoutes != nil { // if there are no allowed routes, assume all are allowed
+	if listener.AllowedRoutes != nil && // if there are no allowed routes, assume all are allowed
+		len(listener.AllowedRoutes.Kinds) > 0 { // if there are no allowed kinds, assume all are allowed
 		// search each of the allowedRoutes in the listener to verify that HTTPRoute is supported
 		supported := false
 		for _, allowedKind := range listener.AllowedRoutes.Kinds {

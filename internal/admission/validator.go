@@ -339,7 +339,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 
 		// pull the referenced GatewayClass object from the Gateway
 		gatewayClass := gatewayv1alpha2.GatewayClass{}
-		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: "test"}, &gatewayClass); err != nil {
+		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 			return false, fmt.Sprintf("couldn't retrieve referenced gatewayclass %s", gateway.Spec.GatewayClassName), err
 		}
 

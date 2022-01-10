@@ -84,8 +84,10 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 
 	t.Log("verifying header match conversions")
 	for _, tt := range tests {
-		output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input)
-		assert.Equal(t, tt.err, err)
-		assert.Equal(t, tt.output, output, tt.msg)
+		t.Run(tt.msg, func(t *testing.T) {
+			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input)
+			assert.Equal(t, tt.err, err)
+			assert.Equal(t, tt.output, output)
+		})
 	}
 }

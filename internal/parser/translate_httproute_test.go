@@ -376,16 +376,66 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 			},
 		},
 	} {
-		// generate a logger so we can capture logged errors
-		logger, output := newTestLoggerForTranslators()
+		t.Run(tt.msg, func(t *testing.T) {
+			// generate a logger so we can capture logged errors
+			logger, output := newTestLoggerForTranslators()
 
-		// verify that we receive the expected values
-		assert.Equal(t, tt.expected, ingressRulesFromHTTPRoutes(logger, tt.routes), tt.msg)
+			// verify that we receive the expected values
+			assert.Equal(t, tt.expected, ingressRulesFromHTTPRoutes(logger, tt.routes))
 
-		// verify that we receive the expected logged error messages (if any)
-		for _, errMsg := range tt.errMsgs {
-			assert.True(t, strings.Contains(output.String(), errMsg))
-		}
+			// verify that we receive the expected logged error messages (if any)
+			for _, errMsg := range tt.errMsgs {
+				assert.True(t, strings.Contains(output.String(), errMsg))
+			}
+		})
+	}
+}
+
+func Test_getHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
+	for _, tt := range []struct {
+		msg      string
+		input    *gatewayv1alpha2.HTTPRoute
+		expected []*string
+	}{
+		{
+			msg:      "an HTTPRoute with no hostnames produces no hostnames",
+			input:    &gatewayv1alpha2.HTTPRoute{},
+			expected: []*string{},
+		},
+		{
+			msg: "an HTTPRoute with a single hostname produces a list with that one hostname",
+			input: &gatewayv1alpha2.HTTPRoute{
+				Spec: gatewayv1alpha2.HTTPRouteSpec{
+					Hostnames: []gatewayv1alpha2.Hostname{
+						"konghq.com",
+					},
+				},
+			},
+			expected: []*string{
+				kong.String("konghq.com"),
+			},
+		},
+		{
+			msg: "an HTTPRoute with multiple hostnames produces a list with the same hostnames",
+			input: &gatewayv1alpha2.HTTPRoute{
+				Spec: gatewayv1alpha2.HTTPRouteSpec{
+					Hostnames: []gatewayv1alpha2.Hostname{
+						"konghq.com",
+						"www.konghq.com",
+						"docs.konghq.com",
+					},
+				},
+			},
+			expected: []*string{
+				kong.String("konghq.com"),
+				kong.String("www.konghq.com"),
+				kong.String("docs.konghq.com"),
+			},
+		},
+	} {
+		t.Run(tt.msg, func(t *testing.T) {
+			assert.Equal(t, tt.expected, getHTTPRouteHostnamesAsSliceOfStringPointers(tt.input))
+		})
 	}
 }
 

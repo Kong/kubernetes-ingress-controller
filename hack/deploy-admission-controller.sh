@@ -55,9 +55,11 @@ webhooks:
     apiVersions:
     - 'v1alpha2'
     operations:
+    - CREATE
     - UPDATE
     resources:
     - gateways
+    - httproutes
   clientConfig:
     service:
       namespace: kong

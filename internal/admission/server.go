@@ -177,6 +177,11 @@ var (
 		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 		Resource: "gateways",
 	}
+	httprouteGVResource = meta.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "httproutes",
+	}
 )
 
 func (a RequestHandler) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
@@ -284,6 +289,17 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 			return nil, err
 		}
 		ok, message, err = a.Validator.ValidateGateway(context.Background(), gateway)
+		if err != nil {
+			return nil, err
+		}
+	case httprouteGVResource:
+		httproute := gatewayv1alpha2.HTTPRoute{}
+		deserializer := codecs.UniversalDeserializer()
+		_, _, err = deserializer.Decode(request.Object.Raw, nil, &httproute)
+		if err != nil {
+			return nil, err
+		}
+		ok, message, err = a.Validator.ValidateHTTPRoute(context.Background(), httproute)
 		if err != nil {
 			return nil, err
 		}

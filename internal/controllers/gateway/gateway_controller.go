@@ -219,10 +219,10 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 // Gateway Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gateways,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gateways/status,verbs=get
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gatewayclasses/status,verbs=get
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

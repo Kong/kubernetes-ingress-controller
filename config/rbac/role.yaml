@@ -203,7 +203,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - networking.k8s.io
+  - gateway.networking.k8s.io
   resources:
   - gatewayclasses
   verbs:
@@ -211,27 +211,29 @@ rules:
   - list
   - watch
 - apiGroups:
-  - networking.k8s.io
+  - gateway.networking.k8s.io
   resources:
   - gatewayclasses/status
   verbs:
   - get
 - apiGroups:
-  - networking.k8s.io
+  - gateway.networking.k8s.io
   resources:
   - gateways
   verbs:
   - get
   - list
   - watch
+  - update # needed to supported "unmanaged gateway" mode
 - apiGroups:
-  - networking.k8s.io
+  - gateway.networking.k8s.io
   resources:
   - gateways/status
   verbs:
   - get
+  - update
 - apiGroups:
-  - networking.k8s.io
+  - gateway.networking.k8s.io
   resources:
   - httproutes
   verbs:
@@ -239,11 +241,12 @@ rules:
   - list
   - watch
 - apiGroups:
-  - networking.k8s.io
+  - gateway.networking.k8s.io
   resources:
   - httproutes/status
   verbs:
   - get
+  - update
 - apiGroups:
   - networking.k8s.io
   resources:

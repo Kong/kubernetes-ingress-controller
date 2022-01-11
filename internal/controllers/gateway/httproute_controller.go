@@ -222,8 +222,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reco
 // HTTPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=httproutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=httproutes/status,verbs=get
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

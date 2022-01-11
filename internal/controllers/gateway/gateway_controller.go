@@ -95,7 +95,8 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	} else {
 		fromSelector := gatewayv1alpha2.NamespacesFromSelector
 		namespaces.From = &fromSelector
-		// TODO: this will be fully implemented when HTTPRoute support is added
+		// TODO: this will be fully implemented when namespacing support is complete
+		//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2080
 	}
 	r.allowedRoutes.Namespaces = &namespaces
 

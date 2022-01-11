@@ -274,7 +274,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 		// credentials secret can not be referenced without being validated.
 		switch request.Operation {
 		case admission.Update:
-			ok, message, err = a.Validator.ValidateCredential(context.Background(), secret)
+			ok, message, err = a.Validator.ValidateCredential(ctx, secret)
 			if err != nil {
 				return nil, err
 			}
@@ -288,7 +288,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 		if err != nil {
 			return nil, err
 		}
-		ok, message, err = a.Validator.ValidateGateway(context.Background(), gateway)
+		ok, message, err = a.Validator.ValidateGateway(ctx, gateway)
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +299,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 		if err != nil {
 			return nil, err
 		}
-		ok, message, err = a.Validator.ValidateHTTPRoute(context.Background(), httproute)
+		ok, message, err = a.Validator.ValidateHTTPRoute(ctx, httproute)
 		if err != nil {
 			return nil, err
 		}

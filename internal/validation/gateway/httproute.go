@@ -105,8 +105,10 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 // Validation - HTTPRoute - Private Utility Functions
 // -----------------------------------------------------------------------------
 
-// getParentRefForHTTPRouteGateway produces the parentRef that links to a given Gateway
-// object given the HTTPRoute object which links to it.
+// getParentRefForHTTPRouteGateway extracts an existing parentRef from an HTTPRoute
+// which links to the provided Gateway if available. If the provided Gateway is not
+// actually referenced by parentRef in the provided HTTPRoute this is considered
+// invalid input and will produce an error.
 func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (parentRef *gatewayv1alpha2.ParentRef, err error) {
 	// search all the parentRefs on the HTTPRoute to find one that matches the Gateway
 	for _, ref := range httproute.Spec.ParentRefs {
@@ -116,7 +118,7 @@ func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gatew
 			namespace = string(*ref.Namespace)
 		}
 
-		// match the gateway with it's parentRef
+		// match the gateway with its parentRef
 		if gateway.Namespace == namespace && gateway.Name == string(ref.Name) {
 			copyRef := ref
 			parentRef = &copyRef

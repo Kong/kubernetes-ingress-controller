@@ -11,14 +11,20 @@ import (
 // Logging Utilities
 // -----------------------------------------------------------------------------
 
-// debug is an alias for the longer log.V(debugLevel).Info for convenience
+// debug is an alias for the longer log.V(util.DebugLevel).Info for convenience
 func debug(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) {
-	// temporarily upgrading all debug to info while developing
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/1988
-	debugLevel := util.InfoLevel
 	keysAndValues = append([]interface{}{
 		"namespace", obj.GetNamespace(),
 		"name", obj.GetName(),
 	}, keysAndValues...)
-	log.V(debugLevel).Info(msg, keysAndValues...)
+	log.V(util.DebugLevel).Info(msg, keysAndValues...)
+}
+
+// info is an alias for the longer log.V(util.InfoLevel).Info for convenience
+func info(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) {
+	keysAndValues = append([]interface{}{
+		"namespace", obj.GetNamespace(),
+		"name", obj.GetName(),
+	}, keysAndValues...)
+	log.V(util.InfoLevel).Info(msg, keysAndValues...)
 }

@@ -187,22 +187,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - networking.internal.knative.dev
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.internal.knative.dev
-  resources:
-  - ingresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses
@@ -216,6 +200,7 @@ rules:
   - gatewayclasses/status
   verbs:
   - get
+  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
@@ -223,8 +208,8 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
-  - update # needed to supported "unmanaged gateway" mode
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
@@ -246,6 +231,22 @@ rules:
   - httproutes/status
   verbs:
   - get
+  - update
+- apiGroups:
+  - networking.internal.knative.dev
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.internal.knative.dev
+  resources:
+  - ingresses/status
+  verbs:
+  - get
+  - patch
   - update
 - apiGroups:
   - networking.k8s.io

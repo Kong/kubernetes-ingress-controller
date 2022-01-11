@@ -21,52 +21,61 @@ func ingressRulesFromHTTPRoutes(log logrus.FieldLogger, httpRouteList []*gateway
 	result := newIngressRules()
 
 	for _, httproute := range httpRouteList {
-		// first we grab the spec and gather some metdata about the object
-		spec := httproute.Spec
-
-		// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
-		// validation at this level as well as a fallback so that if routes are posted which
-		// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
-		// at least try to provide a helpful message about the situation in the manager logs.
-		if len(spec.Rules) < 1 {
-			log.Errorf("HTTPRoute %s/%s can't be routed: no rules provided", httproute.Namespace, httproute.Name)
-			continue
-		}
-
-		// each rule may represent a different set of backend services that will be accepting
-		// traffic, so we make separate routes and Kong services for every present rule.
-		for _, rule := range spec.Rules {
-			// TODO: add this to a generic HTTPRoute validation, and then we should probably
-			//       simply be calling validation on each httproute object at the begininning
-			//       of the topmost list.
-			if len(rule.BackendRefs) == 0 {
-				log.Errorf("HTTPRoute %s/%s can't be routed: missing backendRef in rule", httproute.Namespace, httproute.Name)
-				continue
-			}
-
-			// TODO: support multiple backend refs
-			if len(rule.BackendRefs) > 1 {
-				log.Errorf("HTTPRoute %s/%s can't be routed: multiple backendRefs are not yet supported", httproute.Namespace, httproute.Name)
-				continue
-			}
-
-			// determine the routes needed to route traffic to services for this rule
-			routes, err := generateKongRoutesFromHTTPRouteRule(httproute, rule)
-			if err != nil {
-				log.Errorf("HTTPRoute %s/%s can't be routed: %s", httproute.Namespace, httproute.Name, err)
-				continue
-			}
-
-			// create a service and attach the routes to it
-			service := generateKongServiceFromHTTPRouteBackendRef(result, httproute, rule.BackendRefs[0])
-			service.Routes = append(service.Routes, routes...)
-
-			// cache the service to avoid duplicates in further loop iterations
-			result.ServiceNameToServices[*service.Service.Name] = service
+		if err := ingressRulesFromHTTPRoute(&result, httproute); err != nil {
+			// we log the error here instead of returning it for historical reasons
+			// and because this allows other HTTPRoute objects to be resolved. This
+			// loop structure was common at the time of writing but needs significant
+			// refactor.
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2130
+			log.Errorf("HTTPRoute %s/%s can't be routed: %s", httproute.Namespace, httproute.Name, err)
 		}
 	}
 
 	return result
+}
+
+func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {
+	// first we grab the spec and gather some metdata about the object
+	spec := httproute.Spec
+
+	// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
+	// validation at this level as well as a fallback so that if routes are posted which
+	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
+	// at least try to provide a helpful message about the situation in the manager logs.
+	if len(spec.Rules) == 0 {
+		return fmt.Errorf("no rules provided")
+	}
+
+	// each rule may represent a different set of backend services that will be accepting
+	// traffic, so we make separate routes and Kong services for every present rule.
+	for _, rule := range spec.Rules {
+		// TODO: add this to a generic HTTPRoute validation, and then we should probably
+		//       simply be calling validation on each httproute object at the begininning
+		//       of the topmost list.
+		if len(rule.BackendRefs) == 0 {
+			return fmt.Errorf("missing backendRef in rule")
+		}
+
+		// TODO: support multiple backend refs
+		if len(rule.BackendRefs) > 1 {
+			return fmt.Errorf("multiple backendRefs are not yet supported")
+		}
+
+		// determine the routes needed to route traffic to services for this rule
+		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, rule)
+		if err != nil {
+			return err
+		}
+
+		// create a service and attach the routes to it
+		service := generateKongServiceFromHTTPRouteBackendRef(result, httproute, rule.BackendRefs[0])
+		service.Routes = append(service.Routes, routes...)
+
+		// cache the service to avoid duplicates in further loop iterations
+		result.ServiceNameToServices[*service.Service.Name] = service
+	}
+
+	return nil
 }
 
 // -----------------------------------------------------------------------------
@@ -85,7 +94,12 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayv1alpha2.HTT
 }
 
 // generateKongRoutesFromHTTPRouteRule converts an HTTPRoute rule to one or more
-// Kong Route objects to route traffic to services.
+// Kong Route objects to route traffic to services. This function will accept an
+// HTTPRoute that does not include any matches as long as it includes hostnames
+// to route traffic to the backend service with, in this case it will use the default
+// path prefix routing option for that service in addition to hostname routing.
+// If an HTTPRoute is provided that has matches that include any unsupported matching
+// configurations, this will produce an error and the route is considered invalid.
 func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, rule gatewayv1alpha2.HTTPRouteRule) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
@@ -190,7 +204,7 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 
 // generateKongServiceFromHTTPRouteBackendRef converts a provided backendRef for an HTTPRoute
 // into a kong.Service so that routes for that object can be attached to the Service.
-func generateKongServiceFromHTTPRouteBackendRef(result ingressRules, httproute *gatewayv1alpha2.HTTPRoute, backendRef gatewayv1alpha2.HTTPBackendRef) kongstate.Service {
+func generateKongServiceFromHTTPRouteBackendRef(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute, backendRef gatewayv1alpha2.HTTPBackendRef) kongstate.Service {
 	// determine the service namespace
 	// TODO: need to add validation to restrict namespaces in backendRefs
 	namespace := httproute.Namespace

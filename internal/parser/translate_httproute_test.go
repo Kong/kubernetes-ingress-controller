@@ -29,8 +29,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 		errMsgs  []string
 	}{
 		{
-			msg:    "an empty list of HTTPRoutes should produce no ingress rules",
-			routes: make([]*gatewayv1alpha2.HTTPRoute, 0),
+			msg: "an empty list of HTTPRoutes should produce no ingress rules",
 			expected: ingressRules{
 				SecretNameToSNIs:      SecretNameToSNIs{},
 				ServiceNameToServices: make(map[string]kongstate.Service),
@@ -238,7 +237,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},
-					Rules: []gatewayv1alpha2.HTTPRouteRule{},
 				},
 			}},
 			expected: ingressRules{

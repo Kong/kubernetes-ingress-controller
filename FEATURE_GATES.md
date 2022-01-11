@@ -34,6 +34,14 @@ An additional **warning** for end-users who are reading this documentation and t
 [api-ref]:https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 [kic-guides]:https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/overview/
 
+### Documentation
+
+If you're looking for documentation for `Alpha` maturity features you can find feature preview documentation [here in this repo](/FEATURE_PREVIEW_DOCUMENTATION.md).
+
+Once a feature graduates from `Alpha` to `Beta` maturity these preview docs will be moved to the main [Kong Documentation][kong-docs].
+
+[kong-docs]:https://github.com/kong/docs.konghq.com
+
 ### Feature gates for graduated or deprecated features
 
 {{< table caption="Feature Gates for Graduated or Deprecated Features" >}}

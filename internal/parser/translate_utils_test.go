@@ -9,7 +9,6 @@ import (
 )
 
 func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
-	t.Log("defining available header matching types for gateway")
 	regexType := gatewayv1alpha2.HeaderMatchRegularExpression
 	exactType := gatewayv1alpha2.HeaderMatchExact
 
@@ -79,6 +78,10 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 				"Content-Type":   {"audio/vorbis", "audio/mpeg"},
 				"Content-Length": {"999999999"},
 			},
+		},
+		{
+			msg:    "an empty list of headers will produce no converted headers",
+			output: map[string][]string{},
 		},
 	}
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
@@ -17,21 +16,18 @@ import (
 
 // ingressRulesFromHTTPRoutes processes a list of HTTPRoute objects and translates
 // then into Kong configuration objects.
-func ingressRulesFromHTTPRoutes(log logrus.FieldLogger, httpRouteList []*gatewayv1alpha2.HTTPRoute) ingressRules {
+func ingressRulesFromHTTPRoutes(httpRouteList []*gatewayv1alpha2.HTTPRoute) (ingressRules, []error) {
 	result := newIngressRules()
 
+	var errs []error
 	for _, httproute := range httpRouteList {
 		if err := ingressRulesFromHTTPRoute(&result, httproute); err != nil {
-			// we log the error here instead of returning it for historical reasons
-			// and because this allows other HTTPRoute objects to be resolved. This
-			// loop structure was common at the time of writing but needs significant
-			// refactor.
-			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2130
-			log.Errorf("HTTPRoute %s/%s can't be routed: %s", httproute.Namespace, httproute.Name, err)
+			err = fmt.Errorf("HTTPRoute %s/%s can't be routed: %w", httproute.Namespace, httproute.Name, err)
+			errs = append(errs, err)
 		}
 	}
 
-	return result
+	return result, errs
 }
 
 func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {

@@ -109,7 +109,7 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 // which links to the provided Gateway if available. If the provided Gateway is not
 // actually referenced by parentRef in the provided HTTPRoute this is considered
 // invalid input and will produce an error.
-func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (parentRef *gatewayv1alpha2.ParentRef, err error) {
+func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (*gatewayv1alpha2.ParentRef, error) {
 	// search all the parentRefs on the HTTPRoute to find one that matches the Gateway
 	for _, ref := range httproute.Spec.ParentRefs {
 		// determine the namespace for the gateway reference
@@ -121,16 +121,12 @@ func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gatew
 		// match the gateway with its parentRef
 		if gateway.Namespace == namespace && gateway.Name == string(ref.Name) {
 			copyRef := ref
-			parentRef = &copyRef
+			return &copyRef, nil
 		}
 	}
 
 	// if no matches could be found then the input is invalid
-	if parentRef == nil {
-		err = fmt.Errorf("no parentRef matched gateway %s/%s", gateway.Namespace, gateway.Name)
-	}
-
-	return
+	return nil, fmt.Errorf("no parentRef matched gateway %s/%s", gateway.Namespace, gateway.Name)
 }
 
 // getListenersForHTTPRouteValidation determines if ALL http listeners should be used for validation

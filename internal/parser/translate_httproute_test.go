@@ -2,7 +2,7 @@ package parser
 
 import (
 	"bytes"
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -26,7 +26,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 		msg      string
 		routes   []*gatewayv1alpha2.HTTPRoute
 		expected ingressRules
-		errMsgs  []string
+		errs     []error
 	}{
 		{
 			msg: "an empty list of HTTPRoutes should produce no ingress rules",
@@ -142,8 +142,8 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				SecretNameToSNIs:      SecretNameToSNIs{},
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
-			errMsgs: []string{
-				"HTTPRoute default/basic-httproute can't be routed: no match rules or hostnames specified",
+			errs: []error{
+				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("no match rules or hostnames specified")),
 			},
 		},
 		{
@@ -243,8 +243,8 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				SecretNameToSNIs:      SecretNameToSNIs{},
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
-			errMsgs: []string{
-				"HTTPRoute default/basic-httproute can't be routed: no rules provided",
+			errs: []error{
+				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("no rules provided")),
 			},
 		},
 		{
@@ -283,8 +283,8 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				SecretNameToSNIs:      SecretNameToSNIs{},
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
-			errMsgs: []string{
-				"query param matches are not yet supported",
+			errs: []error{
+				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("query param matches are not yet supported")),
 			},
 		},
 		{
@@ -322,8 +322,8 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				SecretNameToSNIs:      SecretNameToSNIs{},
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
-			errMsgs: []string{
-				"regular expression path matches are not yet supported",
+			errs: []error{
+				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("regular expression path matches are not yet supported")),
 			},
 		},
 		{
@@ -369,22 +369,20 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				SecretNameToSNIs:      SecretNameToSNIs{},
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
-			errMsgs: []string{
-				"regular expression path matches are not yet supported",
+			errs: []error{
+				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("regular expression path matches are not yet supported")),
 			},
 		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
-			// generate a logger so we can capture logged errors
-			logger, output := newTestLoggerForTranslators()
+			// generate the ingress rules
+			ingressRules, errs := ingressRulesFromHTTPRoutes(tt.routes)
 
 			// verify that we receive the expected values
-			assert.Equal(t, tt.expected, ingressRulesFromHTTPRoutes(logger, tt.routes))
+			assert.Equal(t, tt.expected, ingressRules)
 
-			// verify that we receive the expected logged error messages (if any)
-			for _, errMsg := range tt.errMsgs {
-				assert.True(t, strings.Contains(output.String(), errMsg))
-			}
+			// verify that we receive any and all expected errors
+			assert.Equal(t, tt.errs, errs)
 		})
 	}
 }

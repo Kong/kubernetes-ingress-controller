@@ -24,8 +24,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.12.1
-	google.golang.org/api v0.64.0
-	google.golang.org/genproto v0.0.0-20220106162220-2482ccee2e38
+	google.golang.org/api v0.65.0
+	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368
 	k8s.io/api v0.23.0-alpha.1
 	k8s.io/apiextensions-apiserver v0.22.4
 	k8s.io/apimachinery v0.23.0-alpha.1
@@ -35,14 +35,14 @@ require (
 	knative.dev/pkg v0.0.0-20211206113427-18589ac7627e
 	knative.dev/serving v0.28.0
 	sigs.k8s.io/controller-runtime v0.10.3
-	sigs.k8s.io/gateway-api v0.4.0
+	sigs.k8s.io/gateway-api v0.4.1
 	sigs.k8s.io/kustomize/api v0.10.1
 	sigs.k8s.io/kustomize/kyaml v0.13.0
 	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
-	cloud.google.com/go v0.99.0 // indirect
+	cloud.google.com/go/compute v0.1.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect

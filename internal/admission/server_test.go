@@ -51,6 +51,10 @@ func (v KongFakeValidator) ValidateGateway(ctx context.Context, gateway gatewayv
 	return v.Result, v.Message, v.Error
 }
 
+func (v KongFakeValidator) ValidateHTTPRoute(ctx context.Context, gateway gatewayv1alpha2.HTTPRoute) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
 func TestServeHTTPBasic(t *testing.T) {
 	assert := assert.New(t)
 	res := httptest.NewRecorder()

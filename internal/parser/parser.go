@@ -45,7 +45,17 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list HTTPRoutes: %w", err)
 	}
-	parsedHTTPRoutes := fromHTTPRoutes(log, httproutes)
+	parsedHTTPRoutes, errs := ingressRulesFromHTTPRoutes(httproutes)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			// we log the error here instead of returning it for historical reasons
+			// and because this allows other HTTPRoute objects to be resolved. This
+			// loop structure was common at the time of writing but needs significant
+			// refactor.
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2130
+			log.Errorf(err.Error())
+		}
+	}
 
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {

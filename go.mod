@@ -24,8 +24,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.12.1
-	google.golang.org/api v0.64.0
-	google.golang.org/genproto v0.0.0-20220106162220-2482ccee2e38
+	google.golang.org/api v0.65.0
+	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368
 	k8s.io/api v0.23.0-alpha.1
 	k8s.io/apiextensions-apiserver v0.22.4
 	k8s.io/apimachinery v0.23.0-alpha.1
@@ -42,7 +42,7 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.99.0 // indirect
+	cloud.google.com/go/compute v0.1.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect

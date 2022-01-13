@@ -222,8 +222,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reco
 // HTTPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=httproutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=httproutes/status,verbs=get
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -244,6 +244,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+	debug(log, httproute, "processing httproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
 	// to drop all relevant routes from its configuration, regardless of whether or
@@ -324,6 +325,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// once the data-plane has accepted the HTTPRoute object, we're all set.
+	info(log, httproute, "httproute has been configured on the data-plane")
 	return ctrl.Result{}, nil
 }
 

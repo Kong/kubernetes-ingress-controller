@@ -95,7 +95,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	} else {
 		fromSelector := gatewayv1alpha2.NamespacesFromSelector
 		namespaces.From = &fromSelector
-		// TODO: this will be fully implemented when HTTPRoute support is added
+		// TODO: this currently doesn't handle namespace restrictions and instead all
+		//       namespaces are currently allowed. This will be implemented in an
+		//       upcoming iteration.
+		//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2080
 	}
 	r.allowedRoutes.Namespaces = &namespaces
 
@@ -219,10 +222,10 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 // Gateway Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gateways,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gateways/status,verbs=get
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=gatewayclasses/status,verbs=get
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -239,6 +242,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{Requeue: true}, err
 	}
+	debug(log, gateway, "processing gateway")
 
 	// though our watch configuration eliminates reconciliation of unsupported gateways it's
 	// technically possible for the gatewayclass configuration of a gateway to change in
@@ -313,7 +317,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
-	debug(log, gateway, "marking the gateway as scheduled")
+	info(log, gateway, "marking gateway as scheduled")
 	if !isGatewayScheduled(gateway) {
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
 			Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
@@ -374,7 +378,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, nil
 	}
 
-	debug(log, gateway, "gateway was up to date and required no further changes")
+	info(log, gateway, "gateway provisioning complete")
 	return ctrl.Result{}, nil
 }
 

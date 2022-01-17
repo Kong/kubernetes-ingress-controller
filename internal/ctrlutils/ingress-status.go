@@ -48,6 +48,7 @@ type statusConfig struct {
 
 type statusInfo struct {
 	ready    bool
+	latest   time.Time
 	ips      []string
 	hostname string
 }
@@ -119,12 +120,21 @@ func (s *StatusUpdater) PullConfigUpdate(
 	ctx context.Context,
 ) {
 	cfg := statusConfig{ready: false}
-	status := statusInfo{ready: false}
+	status := statusInfo{ready: false, latest: time.Unix(0, 0)}
 	var wg sync.WaitGroup
 	var err error
 	for {
 		select {
 		case updateDone := <-s.kongConfig.ConfigDone:
+			// we retry to update based on configs we cannot handle due to lack of LB addresses, but we only ever care
+			// about the latest config. If we've since received something newer, discard the outdated retries
+			if updateDone.Timestamp.Before(status.latest) {
+				s.log.V(util.DebugLevel).Info(fmt.Sprintf("received outdated config from %v before latest at %v, skipping",
+					updateDone.Timestamp, status.latest))
+				continue
+			} else {
+				status.latest = updateDone.Timestamp
+			}
 			if !cfg.ready {
 				cfg, err = newStatusConfig(s.kubeConfig)
 				if err != nil {
@@ -142,13 +152,15 @@ func (s *StatusUpdater) PullConfigUpdate(
 						s.log.Error(err, "failed to look up status info for Kong proxy Service", "service", s.publishService)
 					}
 				}
+				time.Sleep(time.Minute * 1)
+				s.kongConfig.ConfigDone <- updateDone
 			}
 
 			if cfg.ready && status.ready {
 				s.log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
 				wg.Add(1)
 				go func() {
-					if err := UpdateStatuses(ctx, &updateDone, s.log, cfg.client, cfg.kicClient, &wg, status.ips,
+					if err := UpdateStatuses(ctx, &updateDone.Config, s.log, cfg.client, cfg.kicClient, &wg, status.ips,
 						status.hostname, s.kubeConfig, cfg.kubernetesVersion); err != nil {
 						s.log.Error(err, "failed to update resource statuses")
 					}

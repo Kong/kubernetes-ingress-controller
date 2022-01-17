@@ -208,7 +208,11 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {
-	return clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+	config, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+	// Disable k8s client rate-limiting
+	config.QPS = -1
+	config.RateLimiter = nil
+	return config, err
 }
 
 func (c *Config) GetKubeClient() (client.Client, error) {

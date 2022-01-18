@@ -9,6 +9,7 @@
  - [2.0.2](#202)
  - [2.0.1](#201)
  - [2.0.0](#200)
+ - [1.3.4](#134)
  - [1.3.3](#133)
  - [1.3.2](#132)
  - [1.3.1](#131)
@@ -433,6 +434,15 @@ previous `v1.3.x` releases to this release.
 [controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
+
+## [1.3.4]
+
+> Release date: 2022/01/19
+
+#### Under the hood
+
+- Anonymous reports now use TLS instead of UDP.
+  [#2089](https://github.com/Kong/kubernetes-ingress-controller/pull/2089)
 
 ## [1.3.3]
 
@@ -1521,6 +1531,7 @@ Please read the changelog and test in your environment.
 [2.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.2...v2.0.0
+[1.3.4]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.3...1.3.4
 [1.3.3]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.2...1.3.3
 [1.3.2]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1

@@ -81,16 +81,19 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
 			// we don't support queryparam matching rules
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2152
 			if len(match.QueryParams) != 0 {
 				return fmt.Errorf("queryparam matching is not yet supported for httproute")
 			}
 
 			// we don't support regex path matching rules
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2153
 			if match.Path != nil && match.Path.Type != nil && *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression {
 				return fmt.Errorf("regex path matching is not yet supported for httproute")
 			}
 
 			// we don't support regex header matching rules
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2154
 			for _, hdr := range match.Headers {
 				if hdr.Type != nil && *hdr.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
 					return fmt.Errorf("regex header matching is not yet supported for httproute")

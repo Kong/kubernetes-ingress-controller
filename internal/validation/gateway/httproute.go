@@ -100,6 +100,12 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 				}
 			}
 		}
+
+		// we don't currently support multiple backendRefs
+		// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2166
+		if len(rule.BackendRefs) > 1 {
+			return fmt.Errorf("multiple backendRefs is not yet supported for httproute")
+		}
 	}
 	return nil
 }

@@ -103,7 +103,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		builder.WithKubernetesVersion(clusterVersion)
 	}
@@ -148,7 +148,7 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		builder.WithKubernetesVersion(clusterVersion)
 	}
@@ -188,7 +188,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		builder.WithKubernetesVersion(clusterVersion)
 	}
@@ -227,7 +227,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		builder.WithKubernetesVersion(clusterVersion)
 	}
@@ -277,7 +277,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		builder.WithKubernetesVersion(clusterVersion)
 	}
@@ -314,7 +314,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		builder.WithKubernetesVersion(clusterVersion)
 	}
@@ -429,7 +429,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		builder.WithKubernetesVersion(clusterVersion)
 	}

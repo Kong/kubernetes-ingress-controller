@@ -2,6 +2,7 @@
 
  - [2.1.1](#211)
  - [2.1.0](#210)
+ - [2.0.7](#207)
  - [2.0.6](#206)
  - [2.0.5](#205)
  - [2.0.4](#204)
@@ -137,6 +138,15 @@ the `configuration.konghq.com` API group.
   [deck #529](https://github.com/Kong/deck/pull/529)
   [#2125](https://github.com/Kong/kubernetes-ingress-controller/pull/2125)
 
+## [2.0.7]
+
+> Release date: 2022/01/19
+
+#### Under the hood
+
+- Anonymous reports now use TLS instead of UDP.
+  [#2089](https://github.com/Kong/kubernetes-ingress-controller/pull/2089)
+
 ## [2.0.6]
 
 > Release date: 2021/11/19
@@ -156,9 +166,6 @@ under the `resources` block for the `configuration.konghq.com` API group.
   [#2012](https://github.com/Kong/kubernetes-ingress-controller/issues/2012)
 - The template admission webhook configuration now includes KongClusterPlugins.
   [#2000](https://github.com/Kong/kubernetes-ingress-controller/issues/2000)
-- Failures to set up the status update subsystem no longer block the update
-  loop.
-  [#2005](https://github.com/Kong/kubernetes-ingress-controller/issues/2005)
 
 #### Under the hood
 
@@ -1532,7 +1539,9 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.1.0
+[2.0.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.0.7
 [2.0.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.5...v2.0.6
 [2.0.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.3...v2.0.4

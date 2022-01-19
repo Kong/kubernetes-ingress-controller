@@ -123,7 +123,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		}
 
 		// do the basic credentials validation
-		if err := credsvalidation.ValidateCredentials(consumer.Name, secret); err != nil {
+		if err := credsvalidation.ValidateCredentials(secret); err != nil {
 			return false, ErrTextConsumerCredentialValidationFailed, err
 		}
 

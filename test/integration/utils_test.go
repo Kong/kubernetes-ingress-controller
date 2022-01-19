@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,8 +18,9 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -60,11 +62,18 @@ var (
 	// See: https://github.com/postmanlabs/httpbin
 	httpBinImage = "kennethreitz/httpbin"
 
+	// tcpEchoImage echoes TCP text sent to it after printing out basic information about its environment, e.g.
+	// Welcome, you are connected to node kind-control-plane.
+	// Running on Pod tcp-echo-58ccd6b78d-hn9t8.
+	// In namespace foo.
+	// With IP address 10.244.0.13.
+	tcpEchoImage = "cjimti/go-echo"
+
+	// redisImage is Redis
+	redisImage = "bitnami/redis"
+
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
 	ingressClass = "kongtests"
-
-	// elsewhere is the name of an alternative namespace
-	elsewhere = "elsewhere"
 
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed
 	controllerNamespace = "kong-system"
@@ -76,7 +85,7 @@ var (
 	// NOTE: more namespaces will be loaded dynamically by the test.Main
 	//       during runtime. In general, avoid adding hardcoded namespaces
 	//       to this list as that's reserved for special cases.
-	watchNamespaces = elsewhere
+	watchNamespaces = fmt.Sprintf("%s,%s", extraIngressNamespace, extraWebhookNamespace)
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
@@ -154,6 +163,37 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// Testing Utility Functions - Kong
+// -----------------------------------------------------------------------------
+
+func getKongVersion() (semver.Version, error) {
+	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {
+		return kong.ParseSemanticVersion(override)
+	}
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	req.Header.Set("kong-admin-token", kongTestPassword)
+	resp, err := client.Do(req)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	var jsonResp map[string]interface{}
+	err = json.Unmarshal(body, &jsonResp)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	return kong.ParseSemanticVersion(kong.VersionFromInfo(jsonResp))
+}
+
+// -----------------------------------------------------------------------------
 // Testing Utility Functions - Namespaces
 // -----------------------------------------------------------------------------
 
@@ -172,7 +212,7 @@ func namespace(t *testing.T) (*corev1.Namespace, func()) {
 	}
 
 	cleanup := func() {
-		assert.NoError(t, generators.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
+		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
 	}
 
 	return namespace, cleanup
@@ -241,6 +281,35 @@ func identifyTestCasesForFile(filePath string) ([]string, error) {
 // -----------------------------------------------------------------------------
 // Testing Utility Functions - HTTP Requests
 // -----------------------------------------------------------------------------
+
+// eventuallyGETPAth makes a GET request to the Kong proxy multiple times until
+// either the request starts to respond with the given status code and contents
+// present in the response body, or until timeout occurrs according to
+// ingressWait time limits. This uses only the path of for the request and does
+// not pay attention to hostname or other routing rules. This uses a "require"
+// for the desired conditions so if this request doesn't eventually succeed the
+// calling test will fail and stop.
+func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents string) { //nolint:unparam
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/%s", proxyURL, path))
+		if err != nil {
+			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, path, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == statusCode {
+			if bodyContents == "" {
+				return true
+			}
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), bodyContents)
+		}
+		return false
+	}, ingressWait, waitTick)
+}
 
 // expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
 func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bool {

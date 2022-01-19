@@ -15,6 +15,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -171,6 +172,16 @@ var (
 		Version:  corev1.SchemeGroupVersion.Version,
 		Resource: "secrets",
 	}
+	gatewayGVResource = meta.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "gateways",
+	}
+	httprouteGVResource = meta.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "httproutes",
+	}
 )
 
 func (a RequestHandler) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
@@ -257,7 +268,38 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 			break
 		}
 
-		ok, message, err = a.Validator.ValidateCredential(secret)
+		// secrets are only validated on update because they must be referenced by a
+		// managed consumer in order for us to validate them, and because credentials
+		// validation also happens at the consumer side of the reference so a
+		// credentials secret can not be referenced without being validated.
+		switch request.Operation {
+		case admission.Update:
+			ok, message, err = a.Validator.ValidateCredential(ctx, secret)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("unknown operation '%v'", string(request.Operation))
+		}
+	case gatewayGVResource:
+		gateway := gatewayv1alpha2.Gateway{}
+		deserializer := codecs.UniversalDeserializer()
+		_, _, err = deserializer.Decode(request.Object.Raw, nil, &gateway)
+		if err != nil {
+			return nil, err
+		}
+		ok, message, err = a.Validator.ValidateGateway(ctx, gateway)
+		if err != nil {
+			return nil, err
+		}
+	case httprouteGVResource:
+		httproute := gatewayv1alpha2.HTTPRoute{}
+		deserializer := codecs.UniversalDeserializer()
+		_, _, err = deserializer.Decode(request.Object.Raw, nil, &httproute)
+		if err != nil {
+			return nil, err
+		}
+		ok, message, err = a.Validator.ValidateHTTPRoute(ctx, httproute)
 		if err != nil {
 			return nil, err
 		}

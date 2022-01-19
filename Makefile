@@ -2,7 +2,7 @@
 # Configuration
 # ------------------------------------------------------------------------------
 
-TAG?=2.0.4
+TAG?=$(shell git describe --tags)
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)
 REPO_URL=github.com/kong/kubernetes-ingress-controller
@@ -24,7 +24,7 @@ export GO111MODULE=on
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
@@ -52,7 +52,7 @@ endef
 # Build
 # ------------------------------------------------------------------------------
 
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,allowDangerousTypes=true"
+CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -104,8 +104,12 @@ verify.repo:
 verify.diff:
 	./hack/verify-diff.sh
 
+.PHONY: verify.diff
+verify.versions:
+	./hack/verify-versions.sh
+
 .PHONY: verify.manifests
-verify.manifests: verify.repo manifests manifests.single verify.diff
+verify.manifests: verify.repo manifests manifests.single verify.diff verify.versions
 
 .PHONY: verify.generators
 verify.generators: verify.repo generate verify.diff
@@ -119,8 +123,7 @@ manifests: manifests.crds manifests.single
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=build/config/crd/bases
-	go run hack/generators/manifests/main.go --input-directory build/config/crd/bases/ --output-directory config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
@@ -160,9 +163,19 @@ generate.clientsets: client-gen
 
 .PHONY: container
 container:
-	docker build \
+	docker buildx build \
     -f Dockerfile \
+    --target distroless \
     --build-arg TAG=${TAG} --build-arg COMMIT=${COMMIT} \
+    --build-arg REPO_INFO=${REPO_INFO} \
+    -t ${IMAGE}:${TAG} .
+
+.PHONY: container
+debug-container:
+	docker buildx build \
+    -f Dockerfile \
+    --target debug \
+    --build-arg TAG=${TAG}-debug --build-arg COMMIT=${COMMIT} \
     --build-arg REPO_INFO=${REPO_INFO} \
     -t ${IMAGE}:${TAG} .
 
@@ -191,7 +204,7 @@ test:
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -v -race \
-		-timeout 15m \
+		-timeout 20m \
 		-parallel $(NCPU) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
@@ -204,7 +217,7 @@ test.integration.dbless:
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v \
-		-timeout 15m \
+		-timeout 20m \
 		-parallel $(NCPU) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
@@ -216,7 +229,7 @@ test.integration.postgres:
 test.integration.enterprise.postgres:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" go test -v \
-		-timeout 15m \
+		-timeout 20m \
 		-parallel $(NCPU) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \

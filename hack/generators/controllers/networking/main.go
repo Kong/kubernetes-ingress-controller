@@ -342,6 +342,7 @@ import (
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -402,20 +403,12 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Type}})
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		obj.Namespace = req.Namespace
-		obj.Name = req.Name
-		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
-		if err != nil {
-			return ctrl.Result{}, err
+		if errors.IsNotFound(err) {
+			obj.Namespace = req.Namespace
+			obj.Name = req.Name
+			return ctrlutils.EnsureProxyDeleteObject(r.Proxy, obj)
 		}
-		if objectExistsInCache {
-			log.V(util.DebugLevel).Info("deleted {{.Type}} object remains in proxy cache, removing", "namespace", req.Namespace, "name", req.Name)
-			if err := r.Proxy.DeleteObject(obj); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
-		}
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 

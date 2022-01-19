@@ -178,15 +178,15 @@ spec:
     port: 80
 ```
 
-There will be two operational modes for this controller which indicate whether a `Gateway` object is to be provisioned and have its lifecycle managed (we will call this "provisioned" mode) or an existing gateway (we will call this "existing" mode).
+There will be two operational modes for this controller which indicate whether a `Gateway` object is to be provisioned and have its lifecycle managed (we will call this "managed" mode) or an existing gateway (we will call this "unmanaged" mode).
 
-##### Operational Mode 1: Existing Gateways
+##### Operational Mode 1: Unmanaged Gateways
 
 **NOTE**: required for milestone 1 in [graduation criteria](#graduation-criteria)
 
 Historically the KIC has relied on an existing Kong Gateway to already be deployed (commonly managed as a `Deployment` via the [Helm Chart][chart]) which the controller integrates with via the [Kong Admin API][kong-admin-api], and the connection and authorization information for that API was passed to the controller manager via command line flags. This operational mode follows the historical legacy of the KIC by allowing an existing Kong Gateway on the cluster to be used as the backend for a `Gateway` object in Gateway APIs parlance.
 
-For this operational mode the `Gateway` controller will simply need to have an indication that the default singleton proxy (that is the current norm in KIC) is OK to be used as the data-plane. This is done _explicitly_ to avoid setting a default behavior that may then become the precedent, the purpose in that being to promote clear communication that this is NOT what we intend to be the default operational mode long term (the goal is to have provisioned mode be the standard long term).
+For this operational mode the `Gateway` controller will simply need to have an indication that the default singleton proxy (that is the current norm in KIC) is OK to be used as the data-plane. This is done _explicitly_ to avoid setting a default behavior that may then become the precedent, the purpose in that being to promote clear communication that this is NOT what we intend to be the default operational mode long term (the goal is to have managed mode be the standard long term).
 
 In support of explicitly configuring this mode an annotation will be added that instructs the controller to use the `--kong-admin-url` value provided to the controller manager as the indicator of where the data-plane admin API endpoint is:
 
@@ -195,7 +195,7 @@ kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
   annotations:
-    konghq.com/use-controller-manager-admin-url: "true"
+    konghq.com/gateway-unmanaged: "true"
   name: project-1-ingress
 spec:
   gatewayClassName: default-match-example
@@ -211,7 +211,7 @@ The above example is effectively the MVP for `Gateway` support, in that it would
 [kong-admin-api]:https://docs.konghq.com/gateway-oss/latest/admin-api/
 [anns]:https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 
-##### Operational Mode 2: Provisioned Gateways
+##### Operational Mode 2: Managed Gateways
 
 **NOTE**: required for milestone 3 in [graduation criteria](#graduation-criteria)
 
@@ -329,7 +329,7 @@ The milestones may correlate directly with [Github Milestones][github-milestones
 #### Milestone 1 - Alpha Quality - Initial HTTP Support (implementable)
 
 - [ ] our validating webhook for Gateway resources has been added and provides errors for unimplemented features
-- [ ] a `Gateway` controller implementation with basic support for "existing" operational mode is introduced
+- [ ] a `Gateway` controller implementation with basic support for "unmanaged" operational mode is introduced
 - [ ] an initial implementation of `HTTPRoute` is added which includes support for the majority of options
 - [ ] integration tests added which cover all the supported features of `HTTPRoute`
 
@@ -370,9 +370,7 @@ Production readiness of this feature is marked by the following requirements:
 
 ### Feature Enablement and Rollback
 
-The Gateway API support will be disabled by default prior to GA and enabled by using `--enable-controller-gateway`.
-
-Once the feature is GA according to the `Production Readiness` standards, the flag will be enabled by default instead.
+The Gateway API support will be disabled by default prior to GA and enabled by using `--feature-gates=Gateway=true`.
 
 ## Drawbacks
 

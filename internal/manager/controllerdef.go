@@ -9,8 +9,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -59,7 +61,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]ControllerDef, error) {
+func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, featureGates map[string]bool) ([]ControllerDef, error) {
 	// Choose the best API version of Ingress to inform which ingress controller to enable.
 	var ingressPicker ingressControllerStrategy
 	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
@@ -196,8 +198,14 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]Cont
 				IngressClassName: c.IngressClassName,
 			},
 		},
+		// ---------------------------------------------------------------------------
+		// Other Controllers
+		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.KnativeIngressEnabled,
+			// knative is a special case because it existed before we added feature gates functionality
+			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
+			// any feature gate configuration. See FEATURE_GATES.md for more information.
+			Enabled: featureGates[gatewayFeature] || c.KnativeIngressEnabled,
 			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
 				Group:    knativev1alpha1.SchemeGroupVersion.Group,
 				Version:  knativev1alpha1.SchemeGroupVersion.Version,
@@ -209,6 +217,41 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config) ([]Cont
 				Scheme:           mgr.GetScheme(),
 				Proxy:            proxy,
 				IngressClassName: c.IngressClassName,
+			},
+		},
+		// ---------------------------------------------------------------------------
+		// GatewayAPI Controllers
+		// ---------------------------------------------------------------------------
+		{
+			Enabled: featureGates[gatewayFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "gateways",
+				}}.CRDExists,
+			Controller: &gateway.GatewayReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName(gatewayFeature),
+				Scheme:          mgr.GetScheme(),
+				Proxy:           proxy,
+				PublishService:  c.PublishService,
+				WatchNamespaces: c.WatchNamespaces,
+			},
+		},
+		{
+			Enabled: featureGates[gatewayFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "httproutes",
+				}}.CRDExists,
+			Controller: &gateway.HTTPRouteReconciler{
+				Client: mgr.GetClient(),
+				Log:    ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
+				Scheme: mgr.GetScheme(),
+				Proxy:  proxy,
 			},
 		},
 	}

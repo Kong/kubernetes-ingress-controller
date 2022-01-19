@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	cliflag "k8s.io/component-base/cli/flag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
@@ -48,13 +49,14 @@ type Config struct {
 	KongCustomEntitiesSecret string
 
 	// Kubernetes configurations
-	KubeconfigPath       string
-	IngressClassName     string
-	EnableLeaderElection bool
-	LeaderElectionID     string
-	Concurrency          int
-	FilterTags           []string
-	WatchNamespaces      []string
+	KubeconfigPath          string
+	IngressClassName        string
+	EnableLeaderElection    bool
+	LeaderElectionNamespace string
+	LeaderElectionID        string
+	Concurrency             int
+	FilterTags              []string
+	WatchNamespaces         []string
 
 	// Ingress status
 	PublishService       string
@@ -81,6 +83,9 @@ type Config struct {
 	EnableProfiling     bool
 	EnableConfigDumps   bool
 	DumpSensitiveConfig bool
+
+	// Feature Gates
+	FeatureGates map[string]bool
 }
 
 // -----------------------------------------------------------------------------
@@ -126,8 +131,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Kubernetes configurations
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
-	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
+	flagSet.StringVar(&c.LeaderElectionNamespace, "election-namespace", "", `Leader election namespace to use when running outside a cluster`)
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
@@ -174,6 +180,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/", DiagnosticsPort))
 	flagSet.BoolVar(&c.EnableConfigDumps, "dump-config", false, fmt.Sprintf("Enable config dumps via web interface host:%v/debug/config", DiagnosticsPort))
 	flagSet.BoolVar(&c.DumpSensitiveConfig, "dump-sensitive-config", false, "Include credentials and TLS secrets in configs exposed with --dump-config")
+
+	// Feature Gates (see FEATURE_GATES.md)
+	flagSet.Var(cliflag.NewMapStringBool(&c.FeatureGates), "feature-gates", "A set of key=value pairs that describe feature gates for alpha/beta/experimental features. "+
+		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s", featureGatesDocsURL))
 
 	// Deprecated (to be removed in future releases)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,

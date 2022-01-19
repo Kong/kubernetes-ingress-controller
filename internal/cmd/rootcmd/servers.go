@@ -4,9 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/bombsimon/logrusr"
+	"github.com/bombsimon/logrusr/v2"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -21,52 +20,12 @@ const (
 	DiagnosticConfigBufferDepth = 3
 )
 
-func StartAdmissionServer(ctx context.Context, c *manager.Config) error {
-	log, err := util.MakeLogger(c.LogLevel, c.LogFormat)
-	if err != nil {
-		return err
-	}
-
-	if c.AdmissionServer.ListenAddr == "off" {
-		log.Info("admission webhook server disabled")
-		return nil
-	}
-
-	logger := log.WithField("component", "admission-server")
-
-	kubeclient, err := c.GetKubeClient()
-	if err != nil {
-		return err
-	}
-	kongclient, err := c.GetKongClient(ctx)
-	if err != nil {
-		return err
-	}
-	srv, err := admission.MakeTLSServer(&c.AdmissionServer, &admission.RequestHandler{
-		Validator: admission.KongHTTPValidator{
-			ConsumerSvc:  kongclient.Consumers,
-			PluginSvc:    kongclient.Plugins,
-			Logger:       log,
-			SecretGetter: &util.SecretGetterFromK8s{Reader: kubeclient},
-		},
-		Logger: logger,
-	})
-	if err != nil {
-		return err
-	}
-	go func() {
-		err := srv.ListenAndServeTLS("", "")
-		log.WithError(err).Error("admission webhook server stopped")
-	}()
-	return nil
-}
-
 func StartDiagnosticsServer(ctx context.Context, port int, c *manager.Config) (diagnostics.Server, error) {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
 		return diagnostics.Server{}, err
 	}
-	logger := logrusr.NewLogger(deprecatedLogger)
+	logger := logrusr.New(deprecatedLogger)
 
 	if !c.EnableProfiling && !c.EnableConfigDumps {
 		logger.Info("diagnostics server disabled")

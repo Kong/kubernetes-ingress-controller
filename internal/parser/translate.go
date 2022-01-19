@@ -73,12 +73,14 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(false),
-						PreserveHost:  kong.Bool(true),
-						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(0),
+						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:             kong.StringSlice(path),
+						StripPath:         kong.Bool(false),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(0),
+						RequestBuffering:  kong.Bool(true),
+						ResponseBuffering: kong.Bool(true),
 					},
 				}
 				if host != "" {
@@ -97,13 +99,13 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 							Host: kong.String(rule.Backend.ServiceName +
 								"." + ingress.Namespace + "." +
 								rule.Backend.ServicePort.String() + ".svc"),
-							Port:           kong.Int(80),
+							Port:           kong.Int(DefaultHTTPPort),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
-							ConnectTimeout: kong.Int(60000),
-							ReadTimeout:    kong.Int(60000),
-							WriteTimeout:   kong.Int(60000),
-							Retries:        kong.Int(5),
+							ConnectTimeout: kong.Int(DefaultServiceTimeout),
+							ReadTimeout:    kong.Int(DefaultServiceTimeout),
+							WriteTimeout:   kong.Int(DefaultServiceTimeout),
+							Retries:        kong.Int(DefaultRetries),
 						},
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
@@ -137,12 +139,12 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 					Host: kong.String(defaultBackend.ServiceName + "." +
 						ingress.Namespace + "." +
 						defaultBackend.ServicePort.String() + ".svc"),
-					Port:           kong.Int(80),
+					Port:           kong.Int(DefaultHTTPPort),
 					Protocol:       kong.String("http"),
-					ConnectTimeout: kong.Int(60000),
-					ReadTimeout:    kong.Int(60000),
-					WriteTimeout:   kong.Int(60000),
-					Retries:        kong.Int(5),
+					ConnectTimeout: kong.Int(DefaultServiceTimeout),
+					ReadTimeout:    kong.Int(DefaultServiceTimeout),
+					WriteTimeout:   kong.Int(DefaultServiceTimeout),
+					Retries:        kong.Int(DefaultRetries),
 				},
 				Namespace: ingress.Namespace,
 				Backend: kongstate.ServiceBackend{
@@ -154,12 +156,14 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 		r := kongstate.Route{
 			Ingress: util.FromK8sObject(&ingress),
 			Route: kong.Route{
-				Name:          kong.String(ingress.Namespace + "." + ingress.Name),
-				Paths:         kong.StringSlice("/"),
-				StripPath:     kong.Bool(false),
-				PreserveHost:  kong.Bool(true),
-				Protocols:     kong.StringSlice("http", "https"),
-				RegexPriority: kong.Int(0),
+				Name:              kong.String(ingress.Namespace + "." + ingress.Name),
+				Paths:             kong.StringSlice("/"),
+				StripPath:         kong.Bool(false),
+				PreserveHost:      kong.Bool(true),
+				Protocols:         kong.StringSlice("http", "https"),
+				RegexPriority:     kong.Int(0),
+				RequestBuffering:  kong.Bool(true),
+				ResponseBuffering: kong.Bool(true),
 			},
 		}
 		service.Routes = append(service.Routes, r)
@@ -223,12 +227,14 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-						Paths:         paths,
-						StripPath:     kong.Bool(false),
-						PreserveHost:  kong.Bool(true),
-						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(priorityForPath[pathType]),
+						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:             paths,
+						StripPath:         kong.Bool(false),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(priorityForPath[pathType]),
+						RequestBuffering:  kong.Bool(true),
+						ResponseBuffering: kong.Bool(true),
 					},
 				}
 				if rule.Host != "" {
@@ -245,13 +251,13 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 							Name: kong.String(serviceName),
 							Host: kong.String(fmt.Sprintf("%s.%s.%s.svc", rulePath.Backend.Service.Name, ingress.Namespace,
 								port.CanonicalString())),
-							Port:           kong.Int(80),
+							Port:           kong.Int(DefaultHTTPPort),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
-							ConnectTimeout: kong.Int(60000),
-							ReadTimeout:    kong.Int(60000),
-							WriteTimeout:   kong.Int(60000),
-							Retries:        kong.Int(5),
+							ConnectTimeout: kong.Int(DefaultServiceTimeout),
+							ReadTimeout:    kong.Int(DefaultServiceTimeout),
+							WriteTimeout:   kong.Int(DefaultServiceTimeout),
+							Retries:        kong.Int(DefaultRetries),
 						},
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
@@ -284,12 +290,12 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 					Name: kong.String(serviceName),
 					Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", defaultBackend.Service.Name, ingress.Namespace,
 						defaultBackend.Service.Port.Number)),
-					Port:           kong.Int(80),
+					Port:           kong.Int(DefaultHTTPPort),
 					Protocol:       kong.String("http"),
-					ConnectTimeout: kong.Int(60000),
-					ReadTimeout:    kong.Int(60000),
-					WriteTimeout:   kong.Int(60000),
-					Retries:        kong.Int(5),
+					ConnectTimeout: kong.Int(DefaultServiceTimeout),
+					ReadTimeout:    kong.Int(DefaultServiceTimeout),
+					WriteTimeout:   kong.Int(DefaultServiceTimeout),
+					Retries:        kong.Int(DefaultRetries),
 				},
 				Namespace: ingress.Namespace,
 				Backend: kongstate.ServiceBackend{
@@ -301,12 +307,14 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 		r := kongstate.Route{
 			Ingress: util.FromK8sObject(&ingress),
 			Route: kong.Route{
-				Name:          kong.String(ingress.Namespace + "." + ingress.Name),
-				Paths:         kong.StringSlice("/"),
-				StripPath:     kong.Bool(false),
-				PreserveHost:  kong.Bool(true),
-				Protocols:     kong.StringSlice("http", "https"),
-				RegexPriority: kong.Int(0),
+				Name:              kong.String(ingress.Namespace + "." + ingress.Name),
+				Paths:             kong.StringSlice("/"),
+				StripPath:         kong.Bool(false),
+				PreserveHost:      kong.Bool(true),
+				Protocols:         kong.StringSlice("http", "https"),
+				RegexPriority:     kong.Int(0),
+				RequestBuffering:  kong.Bool(true),
+				ResponseBuffering: kong.Bool(true),
 			},
 		}
 		service.Routes = append(service.Routes, r)
@@ -380,12 +388,12 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 						Name: kong.String(serviceName),
 						Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", rule.Backend.ServiceName, ingress.Namespace,
 							rule.Backend.ServicePort)),
-						Port:           kong.Int(80),
+						Port:           kong.Int(DefaultHTTPPort),
 						Protocol:       kong.String("tcp"),
-						ConnectTimeout: kong.Int(60000),
-						ReadTimeout:    kong.Int(60000),
-						WriteTimeout:   kong.Int(60000),
-						Retries:        kong.Int(5),
+						ConnectTimeout: kong.Int(DefaultServiceTimeout),
+						ReadTimeout:    kong.Int(DefaultServiceTimeout),
+						WriteTimeout:   kong.Int(DefaultServiceTimeout),
+						Retries:        kong.Int(DefaultRetries),
 					},
 					Namespace: ingress.Namespace,
 					Backend: kongstate.ServiceBackend{
@@ -511,12 +519,14 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 						// 2. Is it guaranteed that the order is stable?
 						// Meaning, the routes will always appear in the same
 						// order?
-						Name:          kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-						Paths:         kong.StringSlice(path),
-						StripPath:     kong.Bool(false),
-						PreserveHost:  kong.Bool(true),
-						Protocols:     kong.StringSlice("http", "https"),
-						RegexPriority: kong.Int(0),
+						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:             kong.StringSlice(path),
+						StripPath:         kong.Bool(false),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(0),
+						RequestBuffering:  kong.Bool(true),
+						ResponseBuffering: kong.Bool(true),
 					},
 				}
 				r.Hosts = kong.StringSlice(hosts...)
@@ -541,13 +551,13 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 						Service: kong.Service{
 							Name:           kong.String(serviceName),
 							Host:           kong.String(serviceHost),
-							Port:           kong.Int(80),
+							Port:           kong.Int(DefaultHTTPPort),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
-							ConnectTimeout: kong.Int(60000),
-							ReadTimeout:    kong.Int(60000),
-							WriteTimeout:   kong.Int(60000),
-							Retries:        kong.Int(5),
+							ConnectTimeout: kong.Int(DefaultServiceTimeout),
+							ReadTimeout:    kong.Int(DefaultServiceTimeout),
+							WriteTimeout:   kong.Int(DefaultServiceTimeout),
+							Retries:        kong.Int(DefaultRetries),
 						},
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{

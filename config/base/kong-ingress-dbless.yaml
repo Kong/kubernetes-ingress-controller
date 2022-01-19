@@ -22,7 +22,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       containers:
       - name: proxy
-        image: kong:2.5
+        image: kong:2.7
         env:
           # servers
         - name: KONG_PROXY_LISTEN
@@ -39,6 +39,8 @@ spec:
           # runtime tweaks
         - name: KONG_NGINX_WORKER_PROCESSES
           value: "2"
+        - name: KONG_KIC
+          value: "on"
           # logging
         - name: KONG_ADMIN_ACCESS_LOG
           value: /dev/stdout
@@ -100,7 +102,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.0.4
+        image: kong/kubernetes-ingress-controller:2.1.1
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook

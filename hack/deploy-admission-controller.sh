@@ -21,6 +21,12 @@ metadata:
   name: kong-validations
 webhooks:
 - name: validations.kong.konghq.com
+  objectSelector:
+    matchExpressions:
+    - key: owner
+      operator: NotIn
+      values:
+      - helm
   failurePolicy: Fail
   sideEffects: None
   admissionReviewVersions: [\"v1\", \"v1beta1\"]
@@ -35,15 +41,25 @@ webhooks:
     resources:
     - kongconsumers
     - kongplugins
+    - kongclusterplugins
   - apiGroups:
     - ''
     apiVersions:
     - 'v1'
     operations:
-    - CREATE
     - UPDATE
     resources:
     - secrets
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - 'v1alpha2'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+    - httproutes
   clientConfig:
     service:
       namespace: kong

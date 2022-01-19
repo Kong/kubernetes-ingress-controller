@@ -2,16 +2,17 @@ package kongstate
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators/consumer/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -85,6 +86,19 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				// and remove this workaround
 				if k == "redirect_uris" {
 					credConfig[k] = strings.Split(string(v), ",")
+					continue
+				}
+				// TODO this is a kongCredType-agnostic mutation that should only apply to Oauth2 credentials.
+				// However, the credential-specific code after deals only in interface{}s, and we can't fix individual
+				// keys. To handle this properly we'd need to refactor the types used in all following code.
+				if k == "hash_secret" {
+					boolVal, err := strconv.ParseBool(string(v))
+					if err != nil {
+						log.Errorf("failed to parse hash_secret to bool: %v. defaulting to false", err)
+						credConfig[k] = false
+					} else {
+						credConfig[k] = boolVal
+					}
 					continue
 				}
 				credConfig[k] = string(v)

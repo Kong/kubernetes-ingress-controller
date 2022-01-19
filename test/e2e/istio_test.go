@@ -29,9 +29,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/utils"
 )
 
 var (
@@ -302,19 +302,6 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("intentionally using up the current rate-limit availability")
 	require.Eventually(t, func() bool {
 		return verifyStatusForURL(appStatusOKUrl, http.StatusTooManyRequests) == nil
-	}, time.Minute*3, time.Second)
-
-	t.Log("exceeding the rate-limit and verifying that kiali health metrics pick up on it")
-	require.Eventually(t, func() bool {
-		if err := verifyStatusForURL(appStatusOKUrl, http.StatusTooManyRequests); err != nil {
-			return false
-		}
-		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, kongAddon.Namespace(), "ingress-controller-kong"); err != nil {
-			return false
-		}
-		inboundHTTPRequests = health.Requests.Inbound.HTTP
-		rateLimitedRequests, ok := inboundHTTPRequests[strconv.Itoa(http.StatusTooManyRequests)]
-		return ok && (rateLimitedRequests > 0.0)
 	}, time.Minute*3, time.Second)
 }
 

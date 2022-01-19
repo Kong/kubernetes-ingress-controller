@@ -41,13 +41,29 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	}
 	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 
+	httproutes, err := s.ListHTTPRoutes()
+	if err != nil {
+		log.Errorf("failed to list HTTPRoutes: %w", err)
+	}
+	parsedHTTPRoutes, errs := ingressRulesFromHTTPRoutes(httproutes)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			// we log the error here instead of returning it for historical reasons
+			// and because this allows other HTTPRoute objects to be resolved. This
+			// loop structure was common at the time of writing but needs significant
+			// refactor.
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2130
+			log.Errorf(err.Error())
+		}
+	}
+
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
 
-	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)
+	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative, parsedHTTPRoutes)
 }
 
 // Build creates a Kong configuration from Ingress and Custom resources

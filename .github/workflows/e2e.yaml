@@ -25,7 +25,7 @@ jobs:
         go-version: '^1.17'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -40,8 +40,9 @@ jobs:
     - name: run e2e tests
       run: make test.e2e
       env:
-        KONG_ENTERPRISE_LICENSE_SECRET: ${{ secrets.KONG_ENTERPRISE_LICENSE_SECRET }}
+        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+        KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
         KONG_CLUSTER_VERSION: ${{ matrix.kubernetes_version }}
         ISTIO_VERSION: ${{ matrix.istio_version }}
-        NCPU: 2 # it was found that github actions (specifically) did not seem to perform well when spawning
-                # multiple kind clusters within a single job so this is hardcoded to 2 to ensure a limit of 2 clusters at any one point.
+        NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+                # multiple kind clusters within a single job, so only 1 is allowed at a time.

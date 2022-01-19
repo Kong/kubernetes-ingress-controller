@@ -111,7 +111,7 @@ on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 ### Preview and Experimental Features
 
 At any time the KIC may include features or options that are considered
-experimental and wont be enabled by default, nor available in the [Kong
+experimental and are not enabled by default, nor available in the [Kong
 Documentation Site][kongdocs].
 
 If you're a developer/enthusiast who's interested in testing or helping to

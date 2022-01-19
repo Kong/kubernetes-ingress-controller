@@ -7,8 +7,8 @@ coverage:
   # Ensure that the Codecov check is green regardless of the coverage number.
   # This is because our current coverage pipeline is unstable and is
   # causing fluctuations in coverage numbers being reported across runs.
-  # Also, I don't 100% believe that this is an effective way of communicating
-  # a coverage problem on a PR.
+  # Also @mflendrich and @shaneutt agree that this is not a 100% effective way
+  # to communicate coverage problem on a PR.
   range: "0..100"
   status:
     project:

@@ -135,7 +135,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		// validate unique key constraints. That index should omit the secrets that
 		// are referenced by this consumer to avoid duplication.
 		if _, ok := ignoredSecrets[consumer.Namespace]; !ok {
-			ignoredSecrets[consumer.Namespace] = make(map[string]struct{})
+			ignoredSecrets[consumer.Namespace] = make(map[string]struct{}, len(consumer.Credentials))
 		}
 		ignoredSecrets[consumer.Namespace][secretName] = struct{}{}
 	}
@@ -194,12 +194,12 @@ func (validator KongHTTPValidator) ValidateCredential(
 	}
 
 	// now that we know at least one managed consumer is referencing this
-	// secret we perform the base level credentials secret validation.
+	// secret we perform the base-level credentials secret validation.
 	if err := credsvalidation.ValidateCredentials(&secret); err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err
 	}
 
-	// if base level validation passes we move on to create an index of
+	// if base-level validation passes we move on to create an index of
 	// all managed credentials so that we can verify that the updates to
 	// this secret are not in violation of any unique key constraints.
 	ignoreSecrets := map[string]map[string]struct{}{secret.Namespace: {secret.Name: {}}}

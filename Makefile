@@ -1,4 +1,4 @@
-TAG?=1.3.3
+TAG?=1.3.4
 RG_TAG?=2.0.0-alpha.1
 REGISTRY?=kong
 REPO_INFO=$(shell git config --get remote.origin.url)

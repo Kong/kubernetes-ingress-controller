@@ -114,7 +114,7 @@ At any time the KIC may include features or options that are considered
 experimental and are not enabled by default, nor available in the [Kong
 Documentation Site][kongdocs].
 
-To try out new features that are behind feature gates, please see
+To try out new features that are behind feature gates, please see the
 preview features in [FEATURE_GATES.md][fgates] and documentation for these
 preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 

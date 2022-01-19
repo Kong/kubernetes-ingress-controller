@@ -42,6 +42,15 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.1.2]
+
+> Release date: TBD
+
+- Fixed an issue where validation could fail for credentials secrets if the
+  `value` for a unique constrained `key` were updated in place while linked
+  to a managed `KongConsumer`.
+  [#2190](https://github.com/Kong/kubernetes-ingress-controller/issues/2190)
+
 ## [2.1.1]
 
 > Release date: 2022/01/05

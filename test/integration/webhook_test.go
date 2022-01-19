@@ -559,6 +559,11 @@ func TestValidationWebhook(t *testing.T) {
 	_, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, validConsumerLinkedToInvalidCredentials, metav1.CreateOptions{})
 	require.NoError(t, err)
 
+	t.Log("verifying that the valid credentials which include a unique-constrained key can be updated in place")
+	validCredential.Data["value"] = []byte("newpassword")
+	validCredential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
 	t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
 	validCredential.Data["kongCredType"] = []byte("invalid-auth")
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})

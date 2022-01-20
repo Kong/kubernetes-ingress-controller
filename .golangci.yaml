@@ -15,6 +15,7 @@ linters:
   - errorlint
   - exhaustive
   - exportloopref
+  - gci
   - gofmt
   - goimports
   - gosec
@@ -36,7 +37,11 @@ linters:
   - unparam
   - varcheck
   - wastedassign
+linters-settings:
+  gci:
+    local-prefixes: github.com/kong/kubernetes-ingress-controller/v2
 issues:
+  fix: true
   exclude-rules:
   - linters:
     - staticcheck

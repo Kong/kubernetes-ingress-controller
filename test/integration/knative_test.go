@@ -16,14 +16,14 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	knativenetworkingversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	"knative.dev/pkg/apis"
-	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
-	knativeversioned "knative.dev/serving/pkg/client/clientset/versioned"
 )
 
 const (
@@ -38,8 +38,14 @@ func TestKnativeIngress(t *testing.T) {
 	defer cleanup()
 
 	t.Log("generating a knative clientset")
-	knativec, err := knativeversioned.NewForConfig(env.Cluster().Config())
+	dynamicClient, err := dynamic.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
+	knativeGVR := schema.GroupVersionResource{
+		Group:    "serving.knative.dev",
+		Version:  "v1",
+		Resource: "services",
+	}
+	knativeClient := dynamicClient.Resource(knativeGVR).Namespace(ns.Name)
 
 	t.Logf("configure knative network for ingress class %s", ingressClass)
 	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", ingressClass))
@@ -48,15 +54,40 @@ func TestKnativeIngress(t *testing.T) {
 	require.NoError(t, configKnativeDomain(ctx, proxyURL.Hostname(), knative.DefaultNamespace, env.Cluster()))
 
 	t.Log("deploying a native service to test routing")
-	var service *knservingv1.Service
+	service := &unstructured.Unstructured{}
+	service.SetUnstructuredContent(map[string]interface{}{
+		"apiVersion": "serving.knative.dev/v1",
+		"kind":       "Service",
+		"metadata": map[string]interface{}{
+			"name":      "helloworld-go",
+			"namespace": ns.Name,
+		},
+		"spec": map[string]interface{}{
+			"template": map[string]interface{}{
+				"spec": map[string]interface{}{
+					"containers": []map[string]interface{}{
+						{
+							"image": "gcr.io/knative-samples/helloworld-go",
+							"env": []map[string]interface{}{
+								{
+									"name":  "TARGET",
+									"value": "Go Sample v1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
 	require.Eventually(t, func() bool {
-		service, err = installKnativeSrv(ctx, ns.Name, knativec)
+		_, err = knativeClient.Create(ctx, service, metav1.CreateOptions{})
 		return err == nil
 	}, knativeWaitTime, waitTick, true)
 
 	defer func() {
 		t.Log("cleaning up knative services used for testing")
-		assert.NoError(t, knativec.ServingV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, knativeClient.Delete(ctx, "helloworld-go", metav1.DeleteOptions{}))
 	}()
 
 	t.Log("Test knative service using kong.")
@@ -66,36 +97,6 @@ func TestKnativeIngress(t *testing.T) {
 // -----------------------------------------------------------------------------
 // Knative Deployment Functions
 // -----------------------------------------------------------------------------
-
-func installKnativeSrv(ctx context.Context, nsn string, knativec *knativeversioned.Clientset) (*knservingv1.Service, error) {
-	// generate the knative service resource
-	tobeDeployedService := &knservingv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helloworld-go",
-			Namespace: nsn,
-		},
-		Spec: knservingv1.ServiceSpec{
-			ConfigurationSpec: knservingv1.ConfigurationSpec{
-				Template: knservingv1.RevisionTemplateSpec{
-					Spec: knservingv1.RevisionSpec{
-						PodSpec: v1.PodSpec{
-							Containers: []v1.Container{
-								{
-									Image: "gcr.io/knative-samples/helloworld-go",
-									Env: []corev1.EnvVar{
-										{
-											Name:  "TARGET",
-											Value: "Go Sample v1",
-										}}}}}}}}}}
-
-	// deploy the new service to the cluster
-	service, err := knativec.ServingV1().Services(nsn).Create(ctx, tobeDeployedService, metav1.CreateOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create knative service. %w", err)
-	}
-
-	return service, nil
-}
 
 func configKnativeDomain(ctx context.Context, proxy, nsn string, cluster clusters.Cluster) error {
 	// generate the new config-domain configmap

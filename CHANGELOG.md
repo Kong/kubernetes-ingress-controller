@@ -2,6 +2,7 @@
 
  - [2.1.1](#211)
  - [2.1.0](#210)
+ - [2.0.7](#207)
  - [2.0.6](#206)
  - [2.0.5](#205)
  - [2.0.4](#204)
@@ -9,6 +10,7 @@
  - [2.0.2](#202)
  - [2.0.1](#201)
  - [2.0.0](#200)
+ - [1.3.4](#134)
  - [1.3.3](#133)
  - [1.3.2](#132)
  - [1.3.1](#131)
@@ -39,6 +41,15 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.1.2]
+
+> Release date: TBD
+
+- Fixed an issue where validation could fail for credentials secrets if the
+  `value` for a unique constrained `key` were updated in place while linked
+  to a managed `KongConsumer`.
+  [#2190](https://github.com/Kong/kubernetes-ingress-controller/issues/2190)
 
 ## [2.1.1]
 
@@ -127,6 +138,15 @@ the `configuration.konghq.com` API group.
   [deck #529](https://github.com/Kong/deck/pull/529)
   [#2125](https://github.com/Kong/kubernetes-ingress-controller/pull/2125)
 
+## [2.0.7]
+
+> Release date: 2022/01/19
+
+#### Under the hood
+
+- Anonymous reports now use TLS instead of UDP.
+  [#2089](https://github.com/Kong/kubernetes-ingress-controller/pull/2089)
+
 ## [2.0.6]
 
 > Release date: 2021/11/19
@@ -146,9 +166,6 @@ under the `resources` block for the `configuration.konghq.com` API group.
   [#2012](https://github.com/Kong/kubernetes-ingress-controller/issues/2012)
 - The template admission webhook configuration now includes KongClusterPlugins.
   [#2000](https://github.com/Kong/kubernetes-ingress-controller/issues/2000)
-- Failures to set up the status update subsystem no longer block the update
-  loop.
-  [#2005](https://github.com/Kong/kubernetes-ingress-controller/issues/2005)
 
 #### Under the hood
 
@@ -433,6 +450,15 @@ previous `v1.3.x` releases to this release.
 [controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
 [go]:https://golang.org
 [ktf]:https://github.com/kong/kubernetes-testing-framework
+
+## [1.3.4]
+
+> Release date: 2022/01/19
+
+#### Under the hood
+
+- Anonymous reports now use TLS instead of UDP.
+  [#2089](https://github.com/Kong/kubernetes-ingress-controller/pull/2089)
 
 ## [1.3.3]
 
@@ -1513,7 +1539,9 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.1.0
+[2.0.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.0.7
 [2.0.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.5...v2.0.6
 [2.0.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.3...v2.0.4
@@ -1521,6 +1549,7 @@ Please read the changelog and test in your environment.
 [2.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.0-beta.2...v2.0.0
+[1.3.4]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.3...1.3.4
 [1.3.3]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.2...1.3.3
 [1.3.2]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.1...1.3.2
 [1.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/1.3.0...1.3.1

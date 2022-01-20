@@ -48,7 +48,6 @@ type statusConfig struct {
 
 type statusInfo struct {
 	ready    bool
-	latest   time.Time
 	ips      []string
 	hostname string
 }
@@ -120,20 +119,23 @@ func (s *StatusUpdater) PullConfigUpdate(
 	ctx context.Context,
 ) {
 	cfg := statusConfig{ready: false}
-	status := statusInfo{ready: false, latest: time.Unix(0, 0)}
+	status := statusInfo{ready: false}
+	latest := time.Unix(0, 0)
 	var wg sync.WaitGroup
 	var err error
 	for {
 		select {
 		case updateDone := <-s.kongConfig.ConfigDone:
+			s.log.V(util.DebugLevel).Info("status handler received config", "timestamp", updateDone.Timestamp,
+				"latest", latest)
 			// we retry to update based on configs we cannot handle due to lack of LB addresses, but we only ever care
 			// about the latest config. If we've since received something newer, discard the outdated retries
-			if updateDone.Timestamp.Before(status.latest) {
-				s.log.V(util.DebugLevel).Info(fmt.Sprintf("received outdated config from %v before latest at %v, skipping",
-					updateDone.Timestamp, status.latest))
+			if updateDone.Timestamp.Before(latest) {
+				s.log.V(util.DebugLevel).Info("received outdated config, skipping",
+					"outdated", updateDone.Timestamp, "newer", latest)
 				continue
 			} else {
-				status.latest = updateDone.Timestamp
+				latest = updateDone.Timestamp
 			}
 			if !cfg.ready {
 				cfg, err = newStatusConfig(s.kubeConfig)
@@ -152,8 +154,11 @@ func (s *StatusUpdater) PullConfigUpdate(
 						s.log.Error(err, "failed to look up status info for Kong proxy Service", "service", s.publishService)
 					}
 				}
-				time.Sleep(time.Minute * 1)
-				s.kongConfig.ConfigDone <- updateDone
+				go func() {
+					time.Sleep(time.Minute * 1)
+					s.kongConfig.ConfigDone <- updateDone
+					s.log.V(util.DebugLevel).Info("retrying update", "timestamp", updateDone.Timestamp)
+				}()
 			}
 
 			if cfg.ready && status.ready {

@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
@@ -359,7 +358,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentRef{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      (*v1alpha2.Kind)(&httprouteParentKind),
+				Kind:      (*gatewayv1alpha2.Kind)(&httprouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.Name),
 			},

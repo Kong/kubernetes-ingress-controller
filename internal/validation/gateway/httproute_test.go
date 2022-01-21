@@ -17,6 +17,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 	defaultGWNamespace := gatewayv1alpha2.Namespace(corev1.NamespaceDefault)
 	pathMatchRegex := gatewayv1alpha2.PathMatchRegularExpression
 	headerMatchRegex := gatewayv1alpha2.HeaderMatchRegularExpression
+	exampleGroup := gatewayv1alpha2.Group("example")
+	podKind := gatewayv1alpha2.Kind("Pod")
 
 	for _, tt := range []struct {
 		msg           string
@@ -357,6 +359,185 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid:         false,
 			validationMsg: "httproute spec did not pass validation",
 			err:           fmt.Errorf("regex header matching is not yet supported for httproute"),
+		},
+		{
+			msg: "if an HTTPRoute defines more than one backendref for a single rule this is unsupported",
+			route: &gatewayv1alpha2.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayv1alpha2.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+						ParentRefs: []gatewayv1alpha2.ParentRef{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayv1alpha2.HTTPRouteRule{{
+						Matches: []gatewayv1alpha2.HTTPRouteMatch{{
+							Headers: []gatewayv1alpha2.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
+							{
+								BackendRef: gatewayv1alpha2.BackendRef{
+									BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+										Namespace: &defaultGWNamespace,
+										Name:      "service1",
+									},
+								},
+							},
+							{
+								BackendRef: gatewayv1alpha2.BackendRef{
+									BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+										Namespace: &defaultGWNamespace,
+										Name:      "service2",
+									},
+								},
+							},
+						},
+					}},
+				},
+			},
+			gateways: []*gatewayv1alpha2.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
+				},
+				Spec: gatewayv1alpha2.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{{
+						Name:     "http",
+						Port:     80,
+						Protocol: gatewayv1alpha2.HTTPProtocolType,
+						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+								Group: &group,
+								Kind:  "HTTPRoute",
+							}},
+						},
+					}},
+				},
+			}},
+			valid:         false,
+			validationMsg: "httproute spec did not pass validation",
+			err:           fmt.Errorf("multiple backendRefs is not yet supported for httproute"),
+		},
+		{
+			msg: "we don't support any group except core kubernetes for backendRefs",
+			route: &gatewayv1alpha2.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayv1alpha2.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+						ParentRefs: []gatewayv1alpha2.ParentRef{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayv1alpha2.HTTPRouteRule{{
+						Matches: []gatewayv1alpha2.HTTPRouteMatch{{
+							Headers: []gatewayv1alpha2.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
+							{
+								BackendRef: gatewayv1alpha2.BackendRef{
+									BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+										Group:     &exampleGroup,
+										Kind:      &podKind,
+										Namespace: &defaultGWNamespace,
+										Name:      "service1",
+									},
+								},
+							},
+						},
+					}},
+				},
+			},
+			gateways: []*gatewayv1alpha2.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
+				},
+				Spec: gatewayv1alpha2.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{{
+						Name:     "http",
+						Port:     80,
+						Protocol: gatewayv1alpha2.HTTPProtocolType,
+						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+								Group: &group,
+								Kind:  "HTTPRoute",
+							}},
+						},
+					}},
+				},
+			}},
+			valid:         false,
+			validationMsg: "httproute spec did not pass validation",
+			err:           fmt.Errorf("example is not a supported group for httproute backendRefs, only core is supported"),
+		},
+		{
+			msg: "we don't support any core kind except Service for backendRefs",
+			route: &gatewayv1alpha2.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayv1alpha2.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+						ParentRefs: []gatewayv1alpha2.ParentRef{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayv1alpha2.HTTPRouteRule{{
+						Matches: []gatewayv1alpha2.HTTPRouteMatch{{
+							Headers: []gatewayv1alpha2.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
+							{
+								BackendRef: gatewayv1alpha2.BackendRef{
+									BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+										Kind:      &podKind,
+										Namespace: &defaultGWNamespace,
+										Name:      "service1",
+									},
+								},
+							},
+						},
+					}},
+				},
+			},
+			gateways: []*gatewayv1alpha2.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
+				},
+				Spec: gatewayv1alpha2.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{{
+						Name:     "http",
+						Port:     80,
+						Protocol: gatewayv1alpha2.HTTPProtocolType,
+						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+								Group: &group,
+								Kind:  "HTTPRoute",
+							}},
+						},
+					}},
+				},
+			}},
+			valid:         false,
+			validationMsg: "httproute spec did not pass validation",
+			err:           fmt.Errorf("Pod is not a supported kind for httproute backendRefs, only Service is supported"),
 		},
 	} {
 		valid, validMsg, err := ValidateHTTPRoute(tt.route, tt.gateways...)

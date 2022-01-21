@@ -40,6 +40,7 @@ jobs:
     - name: run e2e tests
       run: make test.e2e
       env:
+        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
         KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
         KONG_CLUSTER_VERSION: ${{ matrix.kubernetes_version }}
         ISTIO_VERSION: ${{ matrix.istio_version }}

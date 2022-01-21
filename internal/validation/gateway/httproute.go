@@ -81,20 +81,39 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
 			// we don't support queryparam matching rules
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2152
 			if len(match.QueryParams) != 0 {
 				return fmt.Errorf("queryparam matching is not yet supported for httproute")
 			}
 
 			// we don't support regex path matching rules
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2153
 			if match.Path != nil && match.Path.Type != nil && *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression {
 				return fmt.Errorf("regex path matching is not yet supported for httproute")
 			}
 
 			// we don't support regex header matching rules
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2154
 			for _, hdr := range match.Headers {
 				if hdr.Type != nil && *hdr.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
 					return fmt.Errorf("regex header matching is not yet supported for httproute")
 				}
+			}
+		}
+
+		// we don't currently support multiple backendRefs
+		// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2166
+		if len(rule.BackendRefs) > 1 {
+			return fmt.Errorf("multiple backendRefs is not yet supported for httproute")
+		}
+
+		// we don't support any backendRef types except Kubernetes Services
+		for _, ref := range rule.BackendRefs {
+			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" {
+				return fmt.Errorf("%s is not a supported group for httproute backendRefs, only core is supported", *ref.BackendRef.Group)
+			}
+			if ref.BackendRef.Kind != nil && *ref.BackendRef.Kind != "Service" {
+				return fmt.Errorf("%s is not a supported kind for httproute backendRefs, only Service is supported", *ref.BackendRef.Kind)
 			}
 		}
 	}

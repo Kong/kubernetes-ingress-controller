@@ -53,7 +53,9 @@ func TestMain(m *testing.M) {
 
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
-	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
+	knativeBuilder := knative.NewBuilder()
+	knativeAddon := knativeBuilder.Build()
+	builder := environments.NewBuilder().WithAddons(kongAddon, knativeAddon)
 
 	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster != "" {

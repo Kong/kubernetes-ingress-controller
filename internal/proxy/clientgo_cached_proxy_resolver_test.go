@@ -6,15 +6,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"

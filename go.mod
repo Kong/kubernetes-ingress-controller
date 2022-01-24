@@ -16,7 +16,7 @@ require (
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.45
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.0
 	github.com/prometheus/common v0.32.1
 	github.com/sethvargo/go-password v0.2.0
 	github.com/sirupsen/logrus v1.8.1
@@ -26,11 +26,11 @@ require (
 	github.com/tidwall/gjson v1.13.0
 	google.golang.org/api v0.65.0
 	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368
-	k8s.io/api v0.23.0
-	k8s.io/apiextensions-apiserver v0.23.0
-	k8s.io/apimachinery v0.23.0
-	k8s.io/client-go v0.23.0
-	k8s.io/component-base v0.23.0
+	k8s.io/api v0.23.2
+	k8s.io/apiextensions-apiserver v0.23.2
+	k8s.io/apimachinery v0.23.2
+	k8s.io/client-go v0.23.2
+	k8s.io/component-base v0.23.2
 	knative.dev/networking v0.0.0-20211209101835-8ef631418fc0
 	knative.dev/pkg v0.0.0-20211206113427-18589ac7627e
 	knative.dev/serving v0.28.1
@@ -102,7 +102,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.11 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
@@ -127,7 +127,7 @@ require (
 	golang.org/x/net v0.0.0-20220105145211-5b0dc2dfae98 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
@@ -144,5 +144,5 @@ require (
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )

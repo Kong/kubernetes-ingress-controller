@@ -1,0 +1,78 @@
+name: e2e tests (targeted)
+
+on:
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+    inputs:
+      kubernetes-version:
+        description: 'Kubernetes version to test with'
+        required: true
+        default: 'v1.23.1'
+      istio-version:
+        description: 'Istio version to test with'
+        required: true
+        default: 'v1.12.2'
+      controller-image:
+        description: 'KIC Docker image to test with. The default "localhost:5000/kong/kubernetes-ingress-controller:ci" builds an image from the dispatch branch'
+        required: true
+        default: 'localhost:5000/kong/kubernetes-ingress-controller:ci'
+
+jobs:
+  e2e-tests:
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+    steps:
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.17'
+
+    - name: cache go modules
+      uses: actions/cache@v2.1.7
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Set up QEMU
+      if: ${{ github.event.inputs.controller-image == 'localhost:5000/kong/kubernetes-ingress-controller:ci' }}
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      if: ${{ github.event.inputs.controller-image == 'localhost:5000/kong/kubernetes-ingress-controller:ci' }}
+      uses: docker/setup-buildx-action@v1
+      with:
+        driver-opts: network=host
+
+    - name: Build and push to local registry
+      if: ${{ github.event.inputs.controller-image == 'localhost:5000/kong/kubernetes-ingress-controller:ci' }}
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        file: Dockerfile
+        tags: localhost:5000/kong/kubernetes-ingress-controller:ci
+        target: distroless
+
+    - name: run e2e tests
+      run: make test.e2e
+      env:
+        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ github.event.inputs.controller-image }}
+        KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
+        KONG_CLUSTER_VERSION: ${{ github.event.inputs.kubernetes-version }}
+        ISTIO_VERSION: ${{ github.event.inputs.istio-version }}
+        NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+                # multiple kind clusters within a single job, so only 1 is allowed at a time.

@@ -186,9 +186,7 @@ There will be two operational modes for this controller which indicate whether a
 
 Historically the KIC has relied on an existing Kong Gateway to already be deployed (commonly managed as a `Deployment` via the [Helm Chart][chart]) which the controller integrates with via the [Kong Admin API][kong-admin-api], and the connection and authorization information for that API was passed to the controller manager via command line flags. This operational mode follows the historical legacy of the KIC by allowing an existing Kong Gateway on the cluster to be used as the backend for a `Gateway` object in Gateway APIs parlance.
 
-For this operational mode the `Gateway` controller will simply need to have an indication that the default singleton proxy (that is the current norm in KIC) is OK to be used as the data-plane. This is done _explicitly_ to avoid setting a default behavior that may then become the precedent, the purpose in that being to promote clear communication that this is NOT what we intend to be the default operational mode long term (the goal is to have managed mode be the standard long term).
-
-In support of explicitly configuring this mode an annotation will be added that instructs the controller to use the `--kong-admin-url` value provided to the controller manager as the indicator of where the data-plane admin API endpoint is:
+We will support an "unmanaged" gateway mode, which will be defined via an annotation:
 
 ```yaml
 kind: Gateway
@@ -205,11 +203,27 @@ spec:
     port: 80
 ```
 
-The above example is effectively the MVP for `Gateway` support, in that it would operationally function exactly like a default KIC deployment does now (the kong proxy is in the same pod as the controller and data-plane configurations occur over the same network namespace's via localhost) while also being explicit about the operational mode which will be documentative, help maintain a separate code path for this operational mode, and enable validation code in the early iterations to provide clear errors to the end-user.
+In this mode the `Gateway` resource is simply a metadata reference to the
+Kubernetes `Service` which is used for the Kong Gateway traffic, as defined
+by the KIC command line flag `--publish-service` (and that flag is required
+for unmanaged Gateway mode to be enabled).
+
+The KIC Gateway controller will be responsible for watching the Kubernetes
+`Service` belonging to the Kong Gateway `Deployment` and derive the `Gateway`
+listeners, ports, and protocols (which routes like `HTTPRoute` need to attach
+to) from that `Service` object.
+
+If the `Service` object is updated to include new available ports and/or
+protocols (e.g. a human operator performs a `helm upgrade` which changes the
+Kong Gateway configuration) the KIC Gateway Controller will reconfigure the
+gateways listener specification accordingly.
+
+Direct manipulation of the `Gateway` object in this mode will have no effect:
+the KIC Gateway Controller will always update the resource to be derivative of
+the `Service` object.
 
 [chart]:https://github.com/kong/charts
 [kong-admin-api]:https://docs.konghq.com/gateway-oss/latest/admin-api/
-[anns]:https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 
 ##### Operational Mode 2: Managed Gateways
 

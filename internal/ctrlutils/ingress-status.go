@@ -30,9 +30,12 @@ import (
 )
 
 const (
+	// configUpdateRetryWait is the time the status system waits before it retries processing a config update
 	configUpdateRetryWait = time.Minute * 1
-	statusUpdateRetry     = 3
-	statusUpdateWaitTick  = time.Second
+	// statusUpdateRetry is the number of times the status subsystem will retry updating an Ingress via the K8S API
+	statusUpdateRetry = 3
+	// statusUpdateWaitTick is the time between Ingress update retries
+	statusUpdateWaitTick = time.Second
 )
 
 var (
@@ -157,7 +160,8 @@ func (s *StatusUpdater) PullConfigUpdate(
 				go func() {
 					time.Sleep(configUpdateRetryWait)
 					s.kongConfig.ConfigDone <- updateDone
-					s.log.V(util.DebugLevel).Info("retrying update", "timestamp", updateDone.Timestamp)
+					s.log.V(util.InfoLevel).Info("retrying update", "timestamp", updateDone.Timestamp,
+						"after", configUpdateRetryWait.String())
 				}()
 			}
 

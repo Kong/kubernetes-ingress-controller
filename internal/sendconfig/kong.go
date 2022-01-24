@@ -1,12 +1,20 @@
 package sendconfig
 
 import (
+	"time"
+
 	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
+
+// KongConfigUpdate is a Kong configuration and the time it was generated
+type KongConfigUpdate struct {
+	Timestamp time.Time
+	Config    file.Content
+}
 
 // Kong Represents a Kong client and connection information
 type Kong struct {
@@ -28,5 +36,5 @@ type Kong struct {
 	Concurrency int
 
 	// configuration update
-	ConfigDone chan file.Content
+	ConfigDone chan *KongConfigUpdate
 }

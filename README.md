@@ -108,6 +108,20 @@ Kubernetes Slack server.
 If you've spotted a bug, please open an issue
 on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
+### Preview and Experimental Features
+
+At any time the KIC may include features or options that are considered
+experimental and are not enabled by default, nor available in the [Kong
+Documentation Site][kongdocs].
+
+To try out new features that are behind feature gates, please see the
+preview features in [FEATURE_GATES.md][fgates] and documentation for these
+preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
+
+[kongdocs]:https://docs.konghq.com
+[fgates]:/FEATURE_GATES.md
+[fpreview]:/FEATURE_PREVIEW_DOCUMENTATION.md
+
 ### Community meetings
 
 You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback or just to listen and hang out.

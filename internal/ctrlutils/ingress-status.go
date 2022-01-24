@@ -30,8 +30,9 @@ import (
 )
 
 const (
-	statusUpdateRetry    = 3
-	statusUpdateWaitTick = time.Second
+	configUpdateRetryWait = time.Minute * 1
+	statusUpdateRetry     = 3
+	statusUpdateWaitTick  = time.Second
 )
 
 var (
@@ -120,22 +121,21 @@ func (s *StatusUpdater) PullConfigUpdate(
 ) {
 	cfg := statusConfig{ready: false}
 	status := statusInfo{ready: false}
-	latest := time.Unix(0, 0)
+	var latestUpdate time.Time
 	var wg sync.WaitGroup
 	var err error
 	for {
 		select {
 		case updateDone := <-s.kongConfig.ConfigDone:
-			s.log.V(util.DebugLevel).Info("status handler received config", "timestamp", updateDone.Timestamp,
-				"latest", latest)
+			s.log.V(util.DebugLevel).Info("status handler received config", "timestamp", updateDone.Timestamp)
 			// we retry to update based on configs we cannot handle due to lack of LB addresses, but we only ever care
-			// about the latest config. If we've since received something newer, discard the outdated retries
-			if updateDone.Timestamp.Before(latest) {
+			// about the latestUpdate config. If we've since received something newer, discard the outdated retries
+			if updateDone.Timestamp.Before(latestUpdate) {
 				s.log.V(util.DebugLevel).Info("received outdated config, skipping",
-					"outdated", updateDone.Timestamp, "newer", latest)
+					"outdated", updateDone.Timestamp, "newer", latestUpdate)
 				continue
 			} else {
-				latest = updateDone.Timestamp
+				latestUpdate = updateDone.Timestamp
 			}
 			if !cfg.ready {
 				cfg, err = newStatusConfig(s.kubeConfig)
@@ -155,7 +155,7 @@ func (s *StatusUpdater) PullConfigUpdate(
 					}
 				}
 				go func() {
-					time.Sleep(time.Minute * 1)
+					time.Sleep(configUpdateRetryWait)
 					s.kongConfig.ConfigDone <- updateDone
 					s.log.V(util.DebugLevel).Info("retrying update", "timestamp", updateDone.Timestamp)
 				}()

@@ -71,7 +71,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		WithKiali()
 	if istioVersionStr != "" {
 		t.Logf("a specific version of istio was requested: %s", istioVersionStr)
-		istioVersion, err := semver.Parse(istioVersionStr)
+		istioVersion, err := semver.ParseTolerant(istioVersionStr)
 		require.NoError(t, err)
 		istioBuilder.WithVersion(istioVersion)
 	}
@@ -80,7 +80,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("deploying a testing environment and Kubernetes cluster with Istio enabled")
 	envBuilder := environments.NewBuilder().WithAddons(metallbAddon, kongAddon, istioAddon)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		envBuilder.WithKubernetesVersion(clusterVersion)
 	}

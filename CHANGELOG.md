@@ -50,6 +50,9 @@
   `value` for a unique constrained `key` were updated in place while linked
   to a managed `KongConsumer`.
   [#2190](https://github.com/Kong/kubernetes-ingress-controller/issues/2190)
+- Kubernetes client rate limiting can now be configured using `--apiserver-qps`
+  (default 100) and `--apiserver-burst` (default 300) settings. Defaults have
+  been increased to prevent ratelimiting under normal loads.
 
 ## [2.1.1]
 

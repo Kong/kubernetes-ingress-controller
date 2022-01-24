@@ -76,10 +76,6 @@ build: generate fmt vet lint
 		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$(COMMIT) \
 		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
 
-.PHONY: imports
-imports:
-	@find ./ -type f -name '*.go' -exec goimports -local $(REPO_URL) -w {} \;
-
 .PHONY: fmt
 fmt:
 	go fmt ./...
@@ -90,7 +86,7 @@ vet:
 
 .PHONY: lint
 lint: verify.tidy
-	golangci-lint run ./...
+	golangci-lint run -v
 
 .PHONY: verify.tidy
 verify.tidy:

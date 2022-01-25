@@ -33,7 +33,7 @@ require (
 	k8s.io/component-base v0.23.2
 	knative.dev/networking v0.0.0-20211209101835-8ef631418fc0
 	knative.dev/pkg v0.0.0-20211206113427-18589ac7627e
-	knative.dev/serving v0.28.1
+	knative.dev/serving v0.28.2
 	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/gateway-api v0.4.1
 	sigs.k8s.io/kustomize/api v0.10.1

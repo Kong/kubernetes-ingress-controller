@@ -83,7 +83,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		tlsClientKeyPath := opts.TLSClientKeyPath
 		tlsClientKey, err := os.ReadFile(tlsClientKeyPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read kong-admin-tls-client-key-file from path '%s': %w", tlsClientKeyPath, err)
+			return nil, fmt.Errorf("failed to read key file %s: %w", tlsClientKeyPath, err)
 		}
 		opts.TLSClientKey = string(tlsClientKey)
 	}

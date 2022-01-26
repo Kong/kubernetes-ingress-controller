@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
 )
 

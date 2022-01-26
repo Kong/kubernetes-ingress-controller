@@ -28,7 +28,7 @@ var caPrivateKeyPEM *bytes.Buffer
 var certPEM *bytes.Buffer
 var certPrivateKeyPEM *bytes.Buffer
 
-func TestMakeHTTPClient(t *testing.T) {
+func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 
 	buildTLS(t)
 

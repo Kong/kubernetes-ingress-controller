@@ -80,16 +80,16 @@ func TestMakeHTTPClientWithFilePaths(t *testing.T) {
 	require.Len(t, certPrivateKeyPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
-	var opts = HTTPClientOpts{
-		true,
-		"",
-		caFile.Name(),
-		"",
-		nil,
-		certFile.Name(),
-		"",
-		certPrivateKeyFile.Name(),
-		"",
+	opts := HTTPClientOpts{
+		TLSSkipVerify: false,
+		TLSServerName: "",
+		CACertPath: caFile.Name(),
+		CACert: "",
+		Headers: nil,
+		TLSClientCertPath: certFile.Name(),
+		TLSClientCert: "",
+		TLSClientKeyPath: certPrivateKeyFile.Name(),
+		TLSClientKey: "",
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)

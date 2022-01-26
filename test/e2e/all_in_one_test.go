@@ -75,6 +75,8 @@ const (
 	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
 	// parent Service to fully resolve into ready state.
 	gatewayUpdateWaitTime = time.Minute * 3
+
+	gatewayCRDsURL = "github.com/kubernetes-sigs/gateway-api/config/crd"
 )
 
 var (

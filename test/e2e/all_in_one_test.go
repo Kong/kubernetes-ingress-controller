@@ -130,6 +130,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("updating kong deployment to enable Gateway feature gate")
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
@@ -137,31 +139,9 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		}
 	}
 
-	t.Log("gathering pod metadata including start time from kong components")
-	forDeployment := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
-	}
-
-	// Annoyingly, metav1.Time.Now() in the test may desync from the time in-cluster, so we need to extract this
-	// directly from the Pod
-	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(podList.Items), 1)
-	preUpdateTimestamp := podList.Items[0].Status.StartTime
-
 	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
 		deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
-	require.Eventually(t, func() bool {
-		podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
-		require.NoError(t, err)
-		for _, pod := range podList.Items {
-			if pod.Status.StartTime.Before(preUpdateTimestamp) || pod.Status.StartTime.Equal(preUpdateTimestamp) {
-				return false
-			}
-		}
-		return true
-	}, kongComponentWait, time.Second)
 
 	t.Log("verifying controller updates associated Gateway resoures")
 	gw := deployGateway(ctx, t, env)

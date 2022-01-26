@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"

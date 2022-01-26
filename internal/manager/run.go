@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metadata"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/mgrutils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"

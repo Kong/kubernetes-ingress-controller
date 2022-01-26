@@ -98,7 +98,7 @@ const (
 )
 
 func TestDeployAllInOneDBLESSGateway(t *testing.T) {
-	t.Log("configuring all-in-one-dbless.yaml manifest test")
+	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -106,9 +106,9 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
-		addons = append(addons, b.Build())
-	}
+	b, err := loadimage.NewBuilder().WithImage(imageLoad)
+	require.NoError(t, err)
+	addons = append(addons, b.Build())
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
@@ -117,11 +117,14 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	}
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+
 	defer func() {
+		t.Logf("cleaning up environment for cluster %s", env.Cluster().Name())
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
 
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.0"))
+	t.Log("deploying Gateway APIs CRDs from %s", gatewayCRDsURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), gatewayCRDsURL))
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
@@ -134,7 +137,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		}
 	}
 
-	t.Log("deploying kong components")
+	t.Log("gathering pod metadata including start time from kong components")
 	forDeployment := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
 	}
@@ -683,7 +686,7 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 
 func deployGateway(ctx context.Context, t *testing.T, env environments.Environment) *gatewayv1alpha2.Gateway {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	supportedGatewayClass := &gatewayv1alpha2.GatewayClass{
@@ -1163,6 +1166,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
 			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
+			t.Logf("found loadbalancer IP for the Kong Proxy: %s", proxyIP)
 		}
 	}
 	// the above failed to find an address. either the LB didn't provision or we're using a NodePort

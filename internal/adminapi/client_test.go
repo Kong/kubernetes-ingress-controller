@@ -36,15 +36,15 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 	}
 
 	var opts = HTTPClientOpts{
-		true,
-		"",
-		"",
-		caPEM.String(),
-		nil,
-		"",
-		certPEM.String(),
-		"",
-		certPrivateKeyPEM.String(),
+		TLSSkipVerify:     true,
+		TLSServerName:     "",
+		CACertPath:        "",
+		CACert:            caPEM.String(),
+		Headers:           nil,
+		TLSClientCertPath: "",
+		TLSClientCert:     caPEM.String(),
+		TLSClientKeyPath:  "",
+		TLSClientKey:      certPrivateKeyPEM.String(),
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)

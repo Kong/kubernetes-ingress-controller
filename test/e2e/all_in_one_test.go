@@ -125,7 +125,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
 
-	t.Log("deploying Gateway APIs CRDs from %s", gatewayCRDsURL)
+	t.Logf("deploying Gateway APIs CRDs from %s", gatewayCRDsURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), gatewayCRDsURL))
 
 	t.Log("deploying kong components")

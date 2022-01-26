@@ -108,9 +108,9 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	b, err := loadimage.NewBuilder().WithImage(imageLoad)
-	require.NoError(t, err)
-	addons = append(addons, b.Build())
+	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+		addons = append(addons, b.Build())
+	}
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)

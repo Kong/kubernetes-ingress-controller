@@ -66,11 +66,11 @@ func TestMakeHTTPClientWithFilePaths(t *testing.T) {
 	caFile.Write(caPEM.Bytes())
 	defer os.Remove(caFile.Name())
 
-	certFile, err := ioutil.TempFile("", "cert.crt")
-	if err != nil {
-		t.Errorf("Fail to create CA certificate file - %s", err.Error())
-	}
-	certFile.Write(certPEM.Bytes())
+	caFile, err := os.CreateTemp(os.TempDir(), "cert.crt")
+	require.NoError(t, err)
+	writtenBytes, err = certFile.Write(certPEM.Bytes())
+	require.NoError(t, err)
+	require.Len(t, certPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
 	certPrivateKeyFile, err := os.CreateTemp(os.TempDir(), "cert.key")

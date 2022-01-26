@@ -20,17 +20,20 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-var ca *x509.Certificate
-var caPEM *bytes.Buffer
-var caPrivateKeyPEM *bytes.Buffer
-var certPEM *bytes.Buffer
-var certPrivateKeyPEM *bytes.Buffer
 
 func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 
-	buildTLS(t)
+	var caPEM *bytes.Buffer
+	var certPEM *bytes.Buffer
+	var certPrivateKeyPEM *bytes.Buffer
+	var err error
+
+	err, caPEM, certPEM, certPrivateKeyPEM = buildTLS(t)
+	if err != nil {
+		t.Errorf("Fail to build TLS certificates - %s", err.Error())
+	}
 
 	var opts = HTTPClientOpts{
 		true,
@@ -45,65 +48,73 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)
-	if err != nil {
-		t.Errorf("Fail to make the HTTP client - %s", err.Error())
-	}
+	require.NoError(t, err)
 
 	assert.NotNil(t, httpclient)
 
-	validate(t, httpclient)
+	err = validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM)
+	require.NoError(t, err)
 
 }
 
-func TestMakeHTTPClientWithFilePaths(t *testing.T) {
+func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 
-	buildTLS(t)
+	var caPEM *bytes.Buffer
+	var certPEM *bytes.Buffer
+	var certPrivateKeyPEM *bytes.Buffer
+	var err error
 
-	caFile, err := ioutil.TempFile("", "ca.crt")
+	err, caPEM, certPEM, certPrivateKeyPEM = buildTLS(t)
+	if err != nil {
+		t.Errorf("Fail to build TLS certificates - %s", err.Error())
+	}
+
+	caFile, err := os.CreateTemp(os.TempDir(), "ca.crt")
 	require.NoError(t, err)
 	writtenBytes, err := caFile.Write(caPEM.Bytes())
 	require.NoError(t, err)
 	require.Equal(t, caPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
-	caFile, err := os.CreateTemp(os.TempDir(), "cert.crt")
+	certFile, err := os.CreateTemp(os.TempDir(), "cert.crt")
 	require.NoError(t, err)
 	writtenBytes, err = certFile.Write(certPEM.Bytes())
 	require.NoError(t, err)
-	require.Len(t, certPEM.Len(), writtenBytes)
+	require.Equal(t, certPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
 	certPrivateKeyFile, err := os.CreateTemp(os.TempDir(), "cert.key")
 	require.NoError(t, err)
 	writtenBytes, err = certPrivateKeyFile.Write(certPrivateKeyPEM.Bytes())
 	require.NoError(t, err)
-	require.Len(t, certPrivateKeyPEM.Len(), writtenBytes)
+	require.Equal(t, certPrivateKeyPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
 	opts := HTTPClientOpts{
-		TLSSkipVerify: false,
-		TLSServerName: "",
-		CACertPath: caFile.Name(),
-		CACert: "",
-		Headers: nil,
+		TLSSkipVerify:     true,
+		TLSServerName:     "",
+		CACertPath:        caFile.Name(),
+		CACert:            "",
+		Headers:           nil,
 		TLSClientCertPath: certFile.Name(),
-		TLSClientCert: "",
-		TLSClientKeyPath: certPrivateKeyFile.Name(),
-		TLSClientKey: "",
+		TLSClientCert:     "",
+		TLSClientKeyPath:  certPrivateKeyFile.Name(),
+		TLSClientKey:      "",
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)
-	if err != nil {
-		t.Errorf("Fail to make the HTTP client - %s", err.Error())
-	}
+	require.NoError(t, err)
 
 	assert.NotNil(t, httpclient)
 
-	validate(t, httpclient)
-
+	err = validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM)
+	require.NoError(t, err)
 }
 
-func buildTLS(t *testing.T) (err error) {
+func buildTLS(t *testing.T) (err error, caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPrivateKeyPEM *bytes.Buffer) {
+
+	var ca *x509.Certificate
+	var caPrivateKeyPEM *bytes.Buffer
 
 	ca = &x509.Certificate{
 		SerialNumber: big.NewInt(2022),
@@ -126,13 +137,13 @@ func buildTLS(t *testing.T) (err error) {
 	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		t.Errorf("Fail to generate CA key %s", err.Error())
-		return err
+		return err, nil, nil, nil
 	}
 
 	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivateKey.PublicKey, caPrivateKey)
 	if err != nil {
 		t.Errorf("Fail to generate CA certificate %s", err.Error())
-		return err
+		return err, nil, nil, nil
 	}
 
 	caPEM = new(bytes.Buffer)
@@ -168,13 +179,13 @@ func buildTLS(t *testing.T) (err error) {
 	certPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		t.Errorf("Fail to generate ingress key %s", err.Error())
-		return err
+		return err, nil, nil, nil
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &certPrivateKey.PublicKey, certPrivateKey)
 	if err != nil {
 		t.Errorf("Fail to generate ingress certificate %s", err.Error())
-		return err
+		return err, nil, nil, nil
 	}
 
 	certPEM = new(bytes.Buffer)
@@ -189,10 +200,14 @@ func buildTLS(t *testing.T) (err error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivateKey),
 	})
 
-	return
+	return nil, caPEM, certPEM, certPrivateKeyPEM
 }
 
-func validate(t *testing.T, httpclient *http.Client) (err error) {
+func validate(t *testing.T,
+	httpclient *http.Client,
+	caPEM *bytes.Buffer,
+	certPEM *bytes.Buffer,
+	certPrivateKeyPEM *bytes.Buffer) (err error) {
 
 	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivateKeyPEM.Bytes())
 	if err != nil {
@@ -232,7 +247,7 @@ func validate(t *testing.T, httpclient *http.Client) (err error) {
 	}
 
 	body := strings.TrimSpace(string(data[:]))
-	if body != "..." {
+	if body != successMessage {
 		t.Errorf("Invalid server response")
 		return err
 	}

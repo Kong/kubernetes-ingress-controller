@@ -210,8 +210,9 @@ func validate(t *testing.T, httpclient *http.Client) (err error) {
 		Certificates: []tls.Certificate{serverCert},
 	}
 
+	successMessage := "connection successful"
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "...")
+		fmt.Fprintln(w, successMessage)
 	}))
 	server.TLS = serverTLSConf
 	server.StartTLS()

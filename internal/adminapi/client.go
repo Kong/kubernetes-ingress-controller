@@ -76,7 +76,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		tlsClientCertPath := opts.TLSClientCertPath
 		tlsClientCert, err := os.ReadFile(tlsClientCertPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read kong-admin-tls-client-cert-file from path '%s': %w", tlsClientCertPath, err)
+			return nil, fmt.Errorf("failed to read certificate file %s: %w", tlsClientCertPath, err)
 		}
 		opts.TLSClientCert = string(tlsClientCert)
 

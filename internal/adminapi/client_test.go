@@ -60,9 +60,7 @@ func TestMakeHTTPClientWithFilePaths(t *testing.T) {
 	buildTLS(t)
 
 	caFile, err := ioutil.TempFile("", "ca.crt")
-	if err != nil {
-		t.Errorf("Fail to create CA certificate file - %s", err.Error())
-	}
+	require.NoError(t, err)
 	writtenBytes, err := caFile.Write(caPEM.Bytes())
 	require.NoError(t, err)
 	require.Equal(t, caPEM.Len(), writtenBytes)

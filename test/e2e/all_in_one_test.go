@@ -706,55 +706,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 
 func verifyGateway(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
-	t.Log("finding the kong proxy service")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
-
-	t.Log("verifying that the Gateway object gets scheduled by the controller")
-	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, cond := range gw.Status.Conditions {
-			if cond.Reason == string(gatewayv1alpha2.GatewayReasonScheduled) {
-				return true
-			}
-		}
-		return false
-	}, gatewayUpdateWaitTime, time.Second)
-
-	t.Log("verifying that the gateway service ref gets provisioned when placeholder is used")
-	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		return gw.Annotations[annotations.AnnotationPrefix+annotations.GatewayUnmanagedAnnotation] == "kong/kong-proxy"
-	}, gatewayUpdateWaitTime, time.Second)
-
-	t.Log("verifying that the gateway spec gets updated to match the publish service")
-	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		return len(gw.Spec.Listeners) == len(svc.Spec.Ports) && len(gw.Spec.Addresses) > 0
-	}, gatewayUpdateWaitTime, time.Second)
-
-	t.Log("verifying that the gateway status gets updated to match the publish service")
-	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
-	}, gatewayUpdateWaitTime, time.Second)
-
-	t.Log("verifying that the gateway listeners get configured with L7 configurations from the data-plane")
-	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, listener := range gw.Spec.Listeners {
-			if listener.Protocol == gatewayv1alpha2.HTTPProtocolType {
-				return true
-			}
-		}
-		return false
-	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
 	require.Eventually(t, func() bool {

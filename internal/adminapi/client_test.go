@@ -42,7 +42,7 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 		CACert:            caPEM.String(),
 		Headers:           nil,
 		TLSClientCertPath: "",
-		TLSClientCert:     caPEM.String(),
+		TLSClientCert:     certPEM.String(),
 		TLSClientKeyPath:  "",
 		TLSClientKey:      certPrivateKeyPEM.String(),
 	}

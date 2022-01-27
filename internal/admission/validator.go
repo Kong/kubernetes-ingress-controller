@@ -13,10 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi/validators/consumer/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
+	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
+	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -27,6 +28,7 @@ type KongValidator interface {
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
 	ValidateGateway(ctx context.Context, gateway gatewayv1alpha2.Gateway) (bool, string, error)
+	ValidateHTTPRoute(ctx context.Context, httproute gatewayv1alpha2.HTTPRoute) (bool, string, error)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -110,6 +112,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 
 	// retrieve the consumer's credentials secrets to validate them with the index
 	credentials := make([]*corev1.Secret, 0, len(consumer.Credentials))
+	ignoredSecrets := make(map[string]map[string]struct{})
 	for _, secretName := range consumer.Credentials {
 		// retrieve the credentials secret
 		secret, err := validator.SecretGetter.GetSecret(consumer.Namespace, secretName)
@@ -121,17 +124,27 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		}
 
 		// do the basic credentials validation
-		if err := credsvalidation.ValidateCredentials(consumer.Name, secret); err != nil {
+		if err := credsvalidation.ValidateCredentials(secret); err != nil {
 			return false, ErrTextConsumerCredentialValidationFailed, err
 		}
 
 		// if valid, store it so we can index it for upcoming constraints validation
 		credentials = append(credentials, secret)
+
+		// later we'll build a global index of all credentials which is needed to
+		// validate unique key constraints. That index should omit the secrets that
+		// are referenced by this consumer to avoid duplication.
+		if _, ok := ignoredSecrets[consumer.Namespace]; !ok {
+			ignoredSecrets[consumer.Namespace] = make(map[string]struct{}, len(consumer.Credentials))
+		}
+		ignoredSecrets[consumer.Namespace][secretName] = struct{}{}
 	}
 
 	// unique constraints on consumer credentials are global to all consumers
 	// and credentials, so we must build an index based on all existing credentials.
-	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers)
+	// we ignore the secrets referenced by this consumer so that the index is not
+	// testing them against themselves.
+	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers, ignoredSecrets)
 	if err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err
 	}
@@ -140,7 +153,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// credentials to ensure they're not in violation of any unique constraints.
 	for _, secret := range credentials {
 		// do the unique constraints validation of the credentials using the credentials index
-		if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(consumer.Name, secret); err != nil {
+		if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(secret); err != nil {
 			return false, ErrTextConsumerCredentialValidationFailed, err
 		}
 	}
@@ -171,26 +184,34 @@ func (validator KongHTTPValidator) ValidateCredential(
 		return false, ErrTextConsumerUnretrievable, err
 	}
 
-	// find the list of managed consumers which actually reference this secret
-	// as a credential.
-	for _, consumerWhichReferencesThisSecret := range listManagedConsumersReferencingCredentialsSecret(secret, managedConsumers) {
-		// perform basic credentials validation first
-		if err := credsvalidation.ValidateCredentials(consumerWhichReferencesThisSecret.Name, &secret); err != nil {
-			return false, ErrTextConsumerCredentialValidationFailed, err
-		}
+	// verify whether this secret is referenced by any managed consumer
+	managedConsumersWithReferences := listManagedConsumersReferencingCredentialsSecret(secret, managedConsumers)
+	if len(managedConsumersWithReferences) == 0 {
+		// if no managed consumers reference this secret, its considered
+		// unmanaged and we don't validate it unless it becomes referenced
+		// by a managed consumer at a later time.
+		return true, "", nil
+	}
 
-		// unique constraints on consumer credentials are global to all consumers
-		// and credentials, so we must build an index based on all existing credentials.
-		credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers)
-		if err != nil {
-			return false, ErrTextConsumerCredentialValidationFailed, err
-		}
+	// now that we know at least one managed consumer is referencing this
+	// secret we perform the base-level credentials secret validation.
+	if err := credsvalidation.ValidateCredentials(&secret); err != nil {
+		return false, ErrTextConsumerCredentialValidationFailed, err
+	}
 
-		// validate this new credential against an index of existing credentials
-		secretCopy := secret
-		if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(consumerWhichReferencesThisSecret.Name, &secretCopy); err != nil {
-			return false, ErrTextConsumerCredentialValidationFailed, err
-		}
+	// if base-level validation passes we move on to create an index of
+	// all managed credentials so that we can verify that the updates to
+	// this secret are not in violation of any unique key constraints.
+	ignoreSecrets := map[string]map[string]struct{}{secret.Namespace: {secret.Name: {}}}
+	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers, ignoreSecrets)
+	if err != nil {
+		return false, ErrTextConsumerCredentialValidationFailed, err
+	}
+
+	// the index is built, now validate that the newly updated secret
+	// is not in violation of any constraints.
+	if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(&secret); err != nil {
+		return false, ErrTextConsumerCredentialValidationFailed, err
 	}
 
 	return true, "", nil
@@ -302,6 +323,52 @@ func (validator KongHTTPValidator) ValidateGateway(
 	}
 
 	return true, "", nil
+}
+
+func (validator KongHTTPValidator) ValidateHTTPRoute(
+	ctx context.Context, httproute gatewayv1alpha2.HTTPRoute,
+) (bool, string, error) {
+	// in order to be sure whether or not an HTTPRoute resource is managed by this
+	// controller we disallow references to Gateway resources that do not exist.
+	var managedGateways []*gatewayv1alpha2.Gateway
+	for _, parentRef := range httproute.Spec.ParentRefs {
+		// determine the namespace of the gateway referenced via parentRef. If no
+		// explicit namespace is provided, assume the namespace of the route.
+		namespace := httproute.Namespace
+		if parentRef.Namespace != nil {
+			namespace = string(*parentRef.Namespace)
+		}
+
+		// gather the Gateway resource referenced by parentRef and fail validation
+		// if there is no such Gateway resource.
+		gateway := gatewayv1alpha2.Gateway{}
+		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      string(parentRef.Name),
+		}, &gateway); err != nil {
+			return false, fmt.Sprintf("couldn't retrieve referenced gateway %s/%s", namespace, parentRef.Name), err
+		}
+
+		// pull the referenced GatewayClass object from the Gateway
+		gatewayClass := gatewayv1alpha2.GatewayClass{}
+		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
+			return false, fmt.Sprintf("couldn't retrieve referenced gatewayclass %s", gateway.Spec.GatewayClassName), err
+		}
+
+		// determine ultimately whether the Gateway is managed by this controller implementation
+		if gatewayClass.Spec.ControllerName == gatewaycontroller.ControllerName {
+			managedGateways = append(managedGateways, &gateway)
+		}
+	}
+
+	// if there are no managed Gateways this is not a supported HTTPRoute
+	if len(managedGateways) == 0 {
+		return true, "", nil
+	}
+
+	// now that we know whether or not the HTTPRoute is linked to a managed
+	// Gateway we can run it through full validation.
+	return gatewayvalidators.ValidateHTTPRoute(&httproute, managedGateways...)
 }
 
 // -----------------------------------------------------------------------------

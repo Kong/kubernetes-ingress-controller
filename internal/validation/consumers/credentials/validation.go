@@ -14,7 +14,7 @@ import (
 
 // ValidateCredentials performs basic validation on a credential secret given
 // the Kubernetes secret which contains credentials data.
-func ValidateCredentials(consumerName string, secret *corev1.Secret) error {
+func ValidateCredentials(secret *corev1.Secret) error {
 	// the indication of credential type is required to be present on all credentials.
 	credentialTypeB, ok := secret.Data[TypeKey]
 	if !ok {
@@ -87,14 +87,6 @@ func IsKeyUniqueConstrained(keyType, key string) (constrained bool) {
 // Credential is a metadata struct to help validate the contents of
 // consumer credentials, particularly unique constraints on the underlying data.
 type Credential struct {
-	// ConsumerName indicates the name of the KongConsumer which this credential
-	// is supplied for.
-	ConsumerName string
-
-	// ConsumerNamespace indicates the namespace that the KongConsumer which this
-	// credential is supplied for.
-	ConsumerNamespace string
-
 	// Type indicates the credential type, which will reference one of the types
 	// in the SupportedTypes set.
 	Type string
@@ -120,7 +112,7 @@ type Index map[string]map[string]map[string]struct{}
 // ValidateCredentialsForUniqueKeyConstraints will attempt to add a new Credential to the CredentialsTypeMap
 // and will validate it for both normal structure validation and for
 // unique key constraint violations.
-func (cs Index) ValidateCredentialsForUniqueKeyConstraints(consumerName string, secret *corev1.Secret) error {
+func (cs Index) ValidateCredentialsForUniqueKeyConstraints(secret *corev1.Secret) error {
 	// the indication of credential type is required to be present on all credentials.
 	credentialTypeB, ok := secret.Data[TypeKey]
 	if !ok {
@@ -134,11 +126,9 @@ func (cs Index) ValidateCredentialsForUniqueKeyConstraints(consumerName string, 
 	// from this include the unique key constraint errors.
 	for k, v := range secret.Data {
 		if err := cs.add(Credential{
-			ConsumerName:      consumerName,
-			ConsumerNamespace: secret.Namespace,
-			Type:              credentialType,
-			Key:               k,
-			Value:             string(v),
+			Type:  credentialType,
+			Key:   k,
+			Value: string(v),
 		}); err != nil {
 			return err
 		}

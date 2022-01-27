@@ -30,7 +30,11 @@ import (
 )
 
 const (
-	statusUpdateRetry    = 3
+	// configUpdateRetryWait is the time the status system waits before it retries processing a config update
+	configUpdateRetryWait = time.Minute * 1
+	// statusUpdateRetry is the number of times the status subsystem will retry updating an Ingress via the K8S API
+	statusUpdateRetry = 3
+	// statusUpdateWaitTick is the time between Ingress update retries
 	statusUpdateWaitTick = time.Second
 )
 
@@ -120,11 +124,22 @@ func (s *StatusUpdater) PullConfigUpdate(
 ) {
 	cfg := statusConfig{ready: false}
 	status := statusInfo{ready: false}
+	var latestUpdate time.Time
 	var wg sync.WaitGroup
 	var err error
 	for {
 		select {
 		case updateDone := <-s.kongConfig.ConfigDone:
+			s.log.V(util.DebugLevel).Info("status handler received config", "timestamp", updateDone.Timestamp)
+			// we retry to update based on configs we cannot handle due to lack of LB addresses, but we only ever care
+			// about the latestUpdate config. If we've since received something newer, discard the outdated retries
+			if updateDone.Timestamp.Before(latestUpdate) {
+				s.log.V(util.DebugLevel).Info("received outdated config, skipping",
+					"outdated", updateDone.Timestamp, "newer", latestUpdate)
+				continue
+			} else {
+				latestUpdate = updateDone.Timestamp
+			}
 			if !cfg.ready {
 				cfg, err = newStatusConfig(s.kubeConfig)
 				if err != nil {
@@ -142,13 +157,19 @@ func (s *StatusUpdater) PullConfigUpdate(
 						s.log.Error(err, "failed to look up status info for Kong proxy Service", "service", s.publishService)
 					}
 				}
+				go func() {
+					time.Sleep(configUpdateRetryWait)
+					s.kongConfig.ConfigDone <- updateDone
+					s.log.V(util.InfoLevel).Info("retrying update", "timestamp", updateDone.Timestamp,
+						"after", configUpdateRetryWait.String())
+				}()
 			}
 
 			if cfg.ready && status.ready {
 				s.log.V(util.DebugLevel).Info("data-plane updates completed, updating resource statuses")
 				wg.Add(1)
 				go func() {
-					if err := UpdateStatuses(ctx, &updateDone, s.log, cfg.client, cfg.kicClient, &wg, status.ips,
+					if err := UpdateStatuses(ctx, &updateDone.Config, s.log, cfg.client, cfg.kicClient, &wg, status.ips,
 						status.hostname, s.kubeConfig, cfg.kubernetesVersion); err != nil {
 						s.log.Error(err, "failed to update resource statuses")
 					}

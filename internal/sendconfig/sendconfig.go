@@ -79,7 +79,11 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	if newSHA != nil && !skipUpdateCR {
-		kongConfig.ConfigDone <- *targetContent
+		update := &KongConfigUpdate{
+			Timestamp: time.Now(),
+			Config:    *targetContent,
+		}
+		kongConfig.ConfigDone <- update
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{

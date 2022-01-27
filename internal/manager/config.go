@@ -41,6 +41,8 @@ type Config struct {
 
 	// Kong Proxy configurations
 	APIServerHost            string
+	APIServerQPS             int
+	APIServerBurst           int
 	MetricsAddr              string
 	ProbeAddr                string
 	KongAdminURL             string
@@ -123,6 +125,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
+	flagSet.IntVar(&c.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second")
+	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second")
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
@@ -214,7 +218,16 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {
-	return clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+	config, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Configure k8s client rate-limiting
+	config.QPS = float32(c.APIServerQPS)
+	config.Burst = c.APIServerBurst
+
+	return config, err
 }
 
 func (c *Config) GetKubeClient() (client.Client, error) {

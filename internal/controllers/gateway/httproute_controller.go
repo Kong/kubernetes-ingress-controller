@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
@@ -222,8 +221,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reco
 // HTTPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=httproutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=httproutes/status,verbs=get
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -244,6 +243,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+	debug(log, httproute, "processing httproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
 	// to drop all relevant routes from its configuration, regardless of whether or
@@ -324,6 +324,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// once the data-plane has accepted the HTTPRoute object, we're all set.
+	info(log, httproute, "httproute has been configured on the data-plane")
 	return ctrl.Result{}, nil
 }
 
@@ -357,7 +358,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentRef{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      (*v1alpha2.Kind)(&httprouteParentKind),
+				Kind:      (*gatewayv1alpha2.Kind)(&httprouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.Name),
 			},

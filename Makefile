@@ -1,26 +1,31 @@
 # ------------------------------------------------------------------------------
-# Configuration
+# Configuration - Repository
 # ------------------------------------------------------------------------------
 
-TAG?=$(shell git describe --tags)
-REGISTRY?=kong
-REPO_INFO=$(shell git config --get remote.origin.url)
-REPO_URL=github.com/kong/kubernetes-ingress-controller
-IMGNAME?=kubernetes-ingress-controller
-IMAGE = $(REGISTRY)/$(IMGNAME)
-IMG ?= controller:latest
-NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
+REPO_URL ?= github.com/kong/kubernetes-ingress-controller
+REPO_INFO ?= $(shell git config --get remote.origin.url)
+TAG ?= $(shell git describe --tags)
 
-# ------------------------------------------------------------------------------
-# Setup
-# ------------------------------------------------------------------------------
-
-REPO_INFO=$(shell git config --get remote.origin.url)
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
 endif
 
+# ------------------------------------------------------------------------------
+# Configuration - Golang
+# ------------------------------------------------------------------------------
+
 export GO111MODULE=on
+
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+# ------------------------------------------------------------------------------
+# Configuration - Tooling
+# ------------------------------------------------------------------------------
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
@@ -51,14 +56,6 @@ endef
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
-
-CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
 
 all: build
 
@@ -114,6 +111,8 @@ verify.generators: verify.repo generate verify.diff
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
+CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
+
 .PHONY: manifests
 manifests: manifests.crds manifests.single
 
@@ -154,8 +153,12 @@ generate.clientsets: client-gen
 	@rm -rf client-gen-tmp/
 
 # ------------------------------------------------------------------------------
-# Build Images
+# Build - Container Images
 # ------------------------------------------------------------------------------
+
+REGISTRY ?= kong
+IMGNAME ?= kubernetes-ingress-controller
+IMAGE ?= $(REGISTRY)/$(IMGNAME)
 
 .PHONY: container
 container:
@@ -176,31 +179,38 @@ debug-container:
     -t ${IMAGE}:${TAG} .
 
 # ------------------------------------------------------------------------------
-# Test
+# Testing
 # ------------------------------------------------------------------------------
 
+NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 PKG_LIST = ./pkg/...,./internal/...
 KIND_CLUSTER_NAME ?= "integration-tests"
+INTEGRATION_TEST_TIMEOUT ?= "20m"
+E2E_TEST_TIMEOUT ?= "30m"
+
+.PHONY: test
+test: test.unit
 
 .PHONY: test.all
-test.all: test test.integration
+test.all: test.unit test.integration
 
 .PHONY: test.integration
 test.integration: test.integration.enterprise.postgres  test.integration.dbless test.integration.postgres
 
-.PHONY: test
-test:
+.PHONY: test.unit
+test.unit:
 	@go test -v -race \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.unit.out \
-		./...
+		./internal/... \
+		./pkg/...
 
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -v -race \
-		-timeout 20m \
+		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
 		-covermode=atomic \
@@ -212,7 +222,7 @@ test.integration.dbless:
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v \
-		-timeout 20m \
+		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
 		-covermode=atomic \
@@ -224,7 +234,7 @@ test.integration.postgres:
 test.integration.enterprise.postgres:
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" go test -v \
-		-timeout 20m \
+		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
 		-covermode=atomic \
@@ -241,11 +251,11 @@ test.e2e:
 	GOFLAGS="-tags=e2e_tests" go test -v \
 		-race \
 		-parallel $(NCPU) \
-		-timeout 30m \
+		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...
 
 # ------------------------------------------------------------------------------
-# Operations
+# Operations - Local Deployment
 # ------------------------------------------------------------------------------
 
 run: manifests generate fmt vet ## Run a controller from your host.
@@ -258,7 +268,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.

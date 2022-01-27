@@ -22,7 +22,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
 )
 
 // -----------------------------------------------------------------------------

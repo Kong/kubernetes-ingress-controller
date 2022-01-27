@@ -16,15 +16,24 @@ var clientSetup sync.Mutex
 
 // HTTPClientOpts defines parameters that configure an HTTP client.
 type HTTPClientOpts struct {
-	TLSSkipVerify     bool
-	TLSServerName     string
-	CACertPath        string
-	CACert            string
-	Headers           []string
+	// Disable verification of TLS certificate of Kong's Admin endpoint.
+	TLSSkipVerify bool
+	// SNI name to use to verify the certificate presented by Kong in TLS.
+	TLSServerName string
+	// Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.
+	CACertPath string
+	// PEM-encoded CA certificate to verify Kong's Admin SSL certificate.
+	CACert string
+	// Array of headers added to every Admin API call.
+	Headers []string
+	// mTLS client certificate file for authentication.
 	TLSClientCertPath string
-	TLSClientCert     string
-	TLSClientKeyPath  string
-	TLSClientKey      string
+	// mTLS client key file for authentication.
+	TLSClientCert string
+	// mTLS client certificate for authentication.
+	TLSClientKeyPath string
+	// mTLS client key for authentication.
+	TLSClientKey string
 }
 
 // MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
@@ -71,7 +80,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		}
 		tlsConfig.RootCAs = certPool
 	}
-	
+
 	if opts.TLSClientCertPath != "" && opts.TLSClientCert != "" {
 		return nil, fmt.Errorf("both --kong-admin-tls-client-cert-file and --kong-admin-tls-client-cert" +
 			"are set; please remove one or the other")

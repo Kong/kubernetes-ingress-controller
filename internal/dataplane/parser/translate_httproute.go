@@ -1,7 +1,11 @@
 package parser
 
 import (
+	"encoding/base32"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"hash/crc64"
 
 	"github.com/kong/go-kong/kong"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -9,6 +13,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
+
+var polyTable = crc64.MakeTable(239875375749875)
 
 // -----------------------------------------------------------------------------
 // Translate HTTPRoute - IngressRules Translation
@@ -89,6 +95,12 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayv1alpha2.HTT
 	return hostnames
 }
 
+// httpRouteInput contains all HTTPRoute features necessary to uniquely describe a derived Kong route
+type httpRouteInput struct {
+	match     gatewayv1alpha2.HTTPRouteMatch
+	hostnames []*string
+}
+
 // generateKongRoutesFromHTTPRouteRule converts an HTTPRoute rule to one or more
 // Kong Route objects to route traffic to services. This function will accept an
 // HTTPRoute that does not include any matches as long as it includes hostnames
@@ -106,16 +118,37 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 	// Therefore we treat each match rule as a separate Kong Route, so we iterate through
 	// all matches to determine all the routes that will be needed for the services.
 	var routes []kongstate.Route
+	usedNames := make(map[string]struct{})
 	if len(rule.Matches) > 0 {
-		for matchNumber, match := range rule.Matches {
+		for i, match := range rule.Matches {
 			// determine the name of the route, identify it as a route that belongs
 			// to a Kubernetes HTTPRoute object.
+			input := httpRouteInput{
+				match:     match,
+				hostnames: hostnames,
+			}
+			routeHashInput, err := json.Marshal(input)
+			if err != nil {
+				return nil, fmt.Errorf("could not marshal input for route hash: %w", err)
+			}
+			routeHash := crc64.Checksum(routeHashInput, polyTable)
+			b := make([]byte, 8)
+			binary.LittleEndian.PutUint64(b, routeHash)
+			// TODO figure out a way to make this pure alphanumeric like SHA256sums if possible
+			routeHashEncoded := base32.StdEncoding.EncodeToString(b)
+
 			routeName := kong.String(fmt.Sprintf(
-				"httproute.%s.%s.%d",
+				"httproute.%s.%s.%s",
 				httproute.Namespace,
 				httproute.Name,
-				matchNumber, // TODO: avoid route thrash from re-ordering?
+				routeHashEncoded,
 			))
+			if _, exists := usedNames[*routeName]; !exists {
+				usedNames[*routeName] = struct{}{}
+			} else {
+				// in the event of a collision, fall back to using the original index suffix
+				routeName = kong.String(fmt.Sprintf("%s.%d", *routeName, i))
+			}
 
 			// TODO: implement query param matches
 			if len(match.QueryParams) > 0 {

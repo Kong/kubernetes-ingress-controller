@@ -45,7 +45,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	}
 
 	if opts.CACertPath != "" && opts.CACert != "" {
-		return nil, fmt.Errorf("both --kong-admin-ca-cert-path and --kong-admin-ca-cert" +
+		return nil, fmt.Errorf("both --kong-admin-ca-cert-file and --kong-admin-ca-cert" +
 			"are set; please remove one or the other")
 	}
 	if opts.CACert != "" {
@@ -71,7 +71,15 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		}
 		tlsConfig.RootCAs = certPool
 	}
-
+	
+	if opts.TLSClientCertPath != "" && opts.TLSClientCert != "" {
+		return nil, fmt.Errorf("both --kong-admin-tls-client-cert-file and --kong-admin-tls-client-cert" +
+			"are set; please remove one or the other")
+	}
+	if opts.TLSClientKeyPath != "" && opts.TLSClientKey != "" {
+		return nil, fmt.Errorf("both --kong-admin-tls-client-key-file and --kong-admin-tls-client-key" +
+			"are set; please remove one or the other")
+	}
 	if opts.TLSClientCertPath != "" && opts.TLSClientKeyPath != "" {
 		tlsClientCertPath := opts.TLSClientCertPath
 		tlsClientCert, err := os.ReadFile(tlsClientCertPath)

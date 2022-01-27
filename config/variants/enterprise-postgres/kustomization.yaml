@@ -3,7 +3,6 @@ resources:
 - enterprise-resources.yaml
 patchesStrategicMerge:
 - kong-enterprise.yaml
-images:
-- name: kong
-  newName: kong/kong-gateway
-  newTag: '2.7'
+
+components:
+  - ../../image/enterprise/

@@ -7,3 +7,6 @@ resources:
 - serviceaccount.yaml
 - validation-service.yaml
 - kong-ingress-dbless.yaml
+
+components:
+  - ../image/oss

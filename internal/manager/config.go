@@ -15,7 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
 )
 
 // -----------------------------------------------------------------------------

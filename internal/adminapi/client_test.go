@@ -207,7 +207,7 @@ func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPri
 	}
 
 	certPrivateKeyPEM = new(bytes.Buffer)
-	pem.Encode(certPrivateKeyPEM, &pem.Block{
+	err = pem.Encode(certPrivateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivateKey),
 	})

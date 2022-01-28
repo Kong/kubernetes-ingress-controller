@@ -30,7 +30,7 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 	var certPrivateKeyPEM *bytes.Buffer
 	var err error
 
-	err, caPEM, certPEM, certPrivateKeyPEM = buildTLS(t)
+	caPEM, certPEM, certPrivateKeyPEM, err = buildTLS(t)
 	if err != nil {
 		t.Errorf("Fail to build TLS certificates - %s", err.Error())
 	}
@@ -64,7 +64,7 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	var certPrivateKeyPEM *bytes.Buffer
 	var err error
 
-	err, caPEM, certPEM, certPrivateKeyPEM = buildTLS(t)
+	caPEM, certPEM, certPrivateKeyPEM, err = buildTLS(t)
 	if err != nil {
 		t.Errorf("Fail to build TLS certificates - %s", err.Error())
 	}
@@ -111,7 +111,7 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func buildTLS(t *testing.T) (err error, caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPrivateKeyPEM *bytes.Buffer) {
+func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPrivateKeyPEM *bytes.Buffer, err error) {
 
 	var ca *x509.Certificate
 	var caPrivateKeyPEM *bytes.Buffer
@@ -137,13 +137,13 @@ func buildTLS(t *testing.T) (err error, caPEM *bytes.Buffer, certPEM *bytes.Buff
 	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		t.Errorf("Fail to generate CA key %s", err.Error())
-		return err, nil, nil, nil
+		return nil, nil, nil, err
 	}
 
 	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivateKey.PublicKey, caPrivateKey)
 	if err != nil {
 		t.Errorf("Fail to generate CA certificate %s", err.Error())
-		return err, nil, nil, nil
+		return nil, nil, nil, err
 	}
 
 	caPEM = new(bytes.Buffer)
@@ -151,12 +151,20 @@ func buildTLS(t *testing.T) (err error, caPEM *bytes.Buffer, certPEM *bytes.Buff
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
+	if err != nil {
+		t.Errorf("Fail to encode CA certificate %s", err.Error())
+		return nil, nil, nil, err
+	}
 
 	caPrivateKeyPEM = new(bytes.Buffer)
 	pem.Encode(caPrivateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivateKey),
 	})
+	if err != nil {
+		t.Errorf("Fail to encode CA key %s", err.Error())
+		return nil, nil, nil, err
+	}
 
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
@@ -179,13 +187,13 @@ func buildTLS(t *testing.T) (err error, caPEM *bytes.Buffer, certPEM *bytes.Buff
 	certPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		t.Errorf("Fail to generate ingress key %s", err.Error())
-		return err, nil, nil, nil
+		return nil, nil, nil, err
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &certPrivateKey.PublicKey, certPrivateKey)
 	if err != nil {
 		t.Errorf("Fail to generate ingress certificate %s", err.Error())
-		return err, nil, nil, nil
+		return nil, nil, nil, err
 	}
 
 	certPEM = new(bytes.Buffer)
@@ -193,14 +201,22 @@ func buildTLS(t *testing.T) (err error, caPEM *bytes.Buffer, certPEM *bytes.Buff
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	})
+	if err != nil {
+		t.Errorf("Fail to encode certificate %s", err.Error())
+		return nil, nil, nil, err
+	}
 
 	certPrivateKeyPEM = new(bytes.Buffer)
 	pem.Encode(certPrivateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivateKey),
 	})
+	if err != nil {
+		t.Errorf("Fail to encode key %s", err.Error())
+		return nil, nil, nil, err
+	}
 
-	return nil, caPEM, certPEM, certPrivateKeyPEM
+	return caPEM, certPEM, certPrivateKeyPEM, nil
 }
 
 func validate(t *testing.T,
@@ -223,6 +239,7 @@ func validate(t *testing.T,
 		ClientCAs:    certPool,
 		ClientAuth:   tls.RequireAnyClientCert,
 		Certificates: []tls.Certificate{serverCert},
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	successMessage := "connection successful"
@@ -238,6 +255,7 @@ func validate(t *testing.T,
 		t.Errorf("HTTP client failed to issue a GET request %s", err.Error())
 		return err
 	}
+	defer response.Body.Close()
 
 	// verify the response
 	data, err := ioutil.ReadAll(response.Body)
@@ -252,5 +270,5 @@ func validate(t *testing.T,
 		return err
 	}
 
-	return
+	return nil
 }

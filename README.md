@@ -82,13 +82,13 @@ a specific setting with Kong Ingress Controller.
 
 ## main branch builds
 
-Pre-release builds of the `main` branch are available from the
-[kong-ingress-controller repository][docker-images] hosted on Docker Hub:
+Nightly pre-release builds of the `main` branch are available from the
+[kong/nightly-ingress-controller repository][nightly-images] hosted on Docker Hub:
 
 `main` contains unreleased new features for upcoming minor and major releases:
 
 ```
-docker pull kong/kubernetes-ingress-controller:main
+docker pull kong/nightly-ingress-controller:nightly
 ```
 
 ## Seeking help
@@ -139,6 +139,7 @@ See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and
 [badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
 [badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
 [docker-images]: https://hub.docker.com/r/kong/kubernetes-ingress-controller
+[nightly-images]: https://hub.docker.com/r/kong/nightly-ingress-controller
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/

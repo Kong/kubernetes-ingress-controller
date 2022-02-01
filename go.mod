@@ -10,9 +10,9 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.2
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.10.0
-	github.com/kong/go-kong v0.27.0
-	github.com/kong/kubernetes-testing-framework v0.12.1
+	github.com/kong/deck v1.10.1-0.20220131124215-bcbe6f609eb7
+	github.com/kong/go-kong v0.25.2-0.20220126173454-9aab6cf4ade8
+	github.com/kong/kubernetes-testing-framework v0.12.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.46
 	github.com/mitchellh/mapstructure v1.4.3
@@ -104,7 +104,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.21.11 // indirect
+	github.com/shirou/gopsutil/v3 v3.21.12 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

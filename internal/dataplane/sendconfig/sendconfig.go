@@ -201,10 +201,10 @@ func onUpdateDBMode(ctx context.Context,
 	}
 
 	// read the target state
-	rawState, err = file.Get(targetContent, file.RenderConfig{
+	rawState, err = file.Get(ctx, targetContent, file.RenderConfig{
 		CurrentState: currentState,
 		KongVersion:  kongConfig.Version,
-	}, dumpConfig)
+	}, dumpConfig, kongConfig.Client)
 	if err != nil {
 		return err
 	}

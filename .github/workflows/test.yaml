@@ -101,7 +101,7 @@ jobs:
         fetch-depth: 0
 
     - name: run unit tests
-      run: make test
+      run: make test.unit
 
     - name: collect test coverage
       uses: actions/upload-artifact@v2.3.1

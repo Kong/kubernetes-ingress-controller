@@ -1,8 +1,6 @@
 name: e2e tests (targeted)
 
 on:
-  schedule:
-    - cron: '30 4 * * *'
   workflow_dispatch:
     inputs:
       kubernetes-version:

@@ -97,12 +97,12 @@ verify.repo:
 verify.diff:
 	./hack/verify-diff.sh
 
-.PHONY: verify.diff
+.PHONY: verify.versions
 verify.versions:
-	./hack/verify-versions.sh
+	./hack/verify-versions.sh $(TAG)
 
 .PHONY: verify.manifests
-verify.manifests: verify.repo manifests manifests.single verify.diff verify.versions
+verify.manifests: verify.repo manifests manifests.single verify.diff
 
 .PHONY: verify.generators
 verify.generators: verify.repo generate verify.diff

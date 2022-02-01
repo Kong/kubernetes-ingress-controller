@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+images:
+- name: kong-placeholder
+  newName: kong
+  newTag: '2.7'
+- name: kic-placeholder
+  newName: kong/kubernetes-ingress-controller
+  newTag: '2.1.1'

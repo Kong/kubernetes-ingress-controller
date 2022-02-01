@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,6 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 )
 
 func TestHTTPRouteEssentials(t *testing.T) {

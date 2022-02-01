@@ -16,7 +16,7 @@ require (
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.45
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/prometheus/client_golang v1.12.0
+	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/common v0.32.1
 	github.com/sethvargo/go-password v0.2.0
 	github.com/sirupsen/logrus v1.8.1
@@ -24,8 +24,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.13.0
-	google.golang.org/api v0.65.0
-	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368
+	google.golang.org/api v0.66.0
+	google.golang.org/genproto v0.0.0-20220114231437-d2e6a121cae0
 	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.23.3
 	k8s.io/apimachinery v0.23.3

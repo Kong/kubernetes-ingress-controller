@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/google/uuid"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +34,8 @@ import (
 
 	//"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
@@ -44,6 +47,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -67,6 +71,12 @@ const (
 	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
 	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
 	adminAPIWait = time.Minute * 2
+
+	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
+	// parent Service to fully resolve into ready state.
+	gatewayUpdateWaitTime = time.Minute * 3
+
+	gatewayCRDsURL = "github.com/kubernetes-sigs/gateway-api/config/crd"
 )
 
 var (
@@ -88,6 +98,59 @@ const (
 	dblessPath = "../../deploy/single/all-in-one-dbless.yaml"
 	dblessURL  = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
 )
+
+func TestDeployAllInOneDBLESSGateway(t *testing.T) {
+	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+		require.NoError(t, err)
+		builder.WithKubernetesVersion(clusterVersion)
+	}
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up environment for cluster %s", env.Cluster().Name())
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
+	t.Logf("deploying Gateway APIs CRDs from %s", gatewayCRDsURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), gatewayCRDsURL))
+
+	t.Log("deploying kong components")
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	deployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("updating kong deployment to enable Gateway feature gate")
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "ingress-controller" {
+			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "Gateway=true"})
+		}
+	}
+
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
+		deployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying controller updates associated Gateway resoures")
+	gw := deployGateway(ctx, t, env)
+	verifyGateway(ctx, t, env, gw)
+	deployHTTPRoute(ctx, t, env, gw)
+	verifyHTTPRoute(ctx, t, env)
+}
 
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
@@ -570,46 +633,7 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 	t.Log("finding the kong proxy service ip")
 	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
-	proxyIP := ""
-	require.NotEqual(t, svc.Spec.Type, svc.Spec.ClusterIP)
-	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
-		}
-	}
-	// the above failed to find an address. either the LB didn't provision or we're using a NodePort
-	if proxyIP == "" {
-		var port int32
-		for _, sport := range svc.Spec.Ports {
-			if sport.Name == "kong-proxy" || sport.Name == "proxy" {
-				port = sport.NodePort
-			}
-		}
-		var extAddrs []string
-		var intAddrs []string
-		nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-		require.NoError(t, err)
-		for _, node := range nodes.Items {
-			for _, naddr := range node.Status.Addresses {
-				if naddr.Type == corev1.NodeExternalIP {
-					extAddrs = append(extAddrs, naddr.Address)
-				}
-				if naddr.Type == corev1.NodeInternalIP {
-					extAddrs = append(intAddrs, naddr.Address)
-				}
-			}
-		}
-		// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
-		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
-		// in their absence
-		if len(extAddrs) > 0 {
-			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
-		} else if len(intAddrs) > 0 {
-			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
-		} else {
-			assert.Fail(t, "both extAddrs and intAddrs are empty")
-		}
-	}
+	proxyIP := getKongProxyIP(ctx, t, env, svc)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
 	httpc := http.Client{Timeout: time.Second * 10}
@@ -637,6 +661,139 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		}
 		if resp.StatusCode == http.StatusNotFound {
 			return true
+		}
+		return false
+	}, ingressWait, time.Second)
+}
+
+func deployGateway(ctx context.Context, t *testing.T, env environments.Environment) *gatewayv1alpha2.Gateway {
+	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a supported gatewayclass to the test cluster")
+	supportedGatewayClass := &gatewayv1alpha2.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayv1alpha2.GatewayClassSpec{
+			ControllerName: gateway.ControllerName,
+		},
+	}
+	supportedGatewayClass, err = gc.GatewayV1alpha2().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
+	gw := &gatewayv1alpha2.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong",
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation: "true", // trigger the unmanaged gateway mode
+			},
+		},
+		Spec: gatewayv1alpha2.GatewaySpec{
+			GatewayClassName: gatewayv1alpha2.ObjectName(supportedGatewayClass.Name),
+			Listeners: []gatewayv1alpha2.Listener{{
+				Name:     "http",
+				Protocol: gatewayv1alpha2.HTTPProtocolType,
+				Port:     gatewayv1alpha2.PortNumber(80),
+			}},
+		},
+	}
+	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
+	require.NoError(t, err)
+	return gw
+}
+
+func verifyGateway(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
+	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
+	require.Eventually(t, func() bool {
+		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, cond := range gw.Status.Conditions {
+			if cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) {
+				return true
+			}
+		}
+		return false
+	}, gatewayUpdateWaitTime, time.Second)
+}
+
+func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
+	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	assert.NoError(t, err)
+	t.Log("deploying an HTTP service to test the ingress controller and proxy")
+	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("creating an HTTPRoute for service %s with Gateway %s", service.Name, gw.Name)
+	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
+	path := "/httpbin"
+	httpPort := gatewayv1alpha2.PortNumber(80)
+	httproute := &gatewayv1alpha2.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayv1alpha2.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+				ParentRefs: []gatewayv1alpha2.ParentRef{{
+					Name: gatewayv1alpha2.ObjectName(gw.Name),
+				}},
+			},
+			Rules: []gatewayv1alpha2.HTTPRouteRule{{
+				Matches: []gatewayv1alpha2.HTTPRouteMatch{{
+					Path: &gatewayv1alpha2.HTTPPathMatch{
+						Type:  &pathMatchPrefix,
+						Value: &path,
+					},
+				}},
+				BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{
+					BackendRef: gatewayv1alpha2.BackendRef{
+						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+							Name: gatewayv1alpha2.ObjectName(service.Name),
+							Port: &httpPort,
+						},
+					},
+				}},
+			}},
+		},
+	}
+	httproute, err = gc.GatewayV1alpha2().HTTPRoutes(corev1.NamespaceDefault).Create(ctx, httproute, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+// verifyHTTPRoute verifies an HTTPRoute exposes a route at /httpbin
+// TODO this is not actually specific to HTTPRoutes. It is verifyIngress with the KongIngress removed
+// Once we support HTTPMethod HTTPRouteMatch handling, we can combine the two into a single generic function
+func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Log("finding the kong proxy service ip")
+	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
+	proxyIP := getKongProxyIP(ctx, t, env, svc)
+
+	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
+	httpc := http.Client{Timeout: time.Second * 10}
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
 	}, ingressWait, time.Second)
@@ -934,4 +1091,50 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 		return tags[curIndex], nil
 	}
 	return tags[curIndex-1], nil
+}
+
+// getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot
+func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
+	proxyIP := ""
+	require.NotEqual(t, svc.Spec.Type, svc.Spec.ClusterIP)
+	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+		if len(svc.Status.LoadBalancer.Ingress) > 0 {
+			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
+			t.Logf("found loadbalancer IP for the Kong Proxy: %s", proxyIP)
+		}
+	}
+	// the above failed to find an address. either the LB didn't provision or we're using a NodePort
+	if proxyIP == "" {
+		var port int32
+		for _, sport := range svc.Spec.Ports {
+			if sport.Name == "kong-proxy" || sport.Name == "proxy" {
+				port = sport.NodePort
+			}
+		}
+		var extAddrs []string
+		var intAddrs []string
+		nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		for _, node := range nodes.Items {
+			for _, naddr := range node.Status.Addresses {
+				if naddr.Type == corev1.NodeExternalIP {
+					extAddrs = append(extAddrs, naddr.Address)
+				}
+				if naddr.Type == corev1.NodeInternalIP {
+					extAddrs = append(intAddrs, naddr.Address)
+				}
+			}
+		}
+		// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
+		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
+		// in their absence
+		if len(extAddrs) > 0 {
+			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
+		} else if len(intAddrs) > 0 {
+			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
+		} else {
+			assert.Fail(t, "both extAddrs and intAddrs are empty")
+		}
+	}
+	return proxyIP
 }

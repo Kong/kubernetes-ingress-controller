@@ -81,6 +81,8 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		tlsConfig.RootCAs = certPool
 	}
 
+	// don't allow the caller to specify both the literal and path versions to supply the
+	// certificate and key, they must chose one or the other for each.
 	if opts.TLSClientCertPath != "" && opts.TLSClientCert != "" {
 		return nil, fmt.Errorf("both --kong-admin-tls-client-cert-file and --kong-admin-tls-client-cert" +
 			"are set; please remove one or the other")
@@ -89,14 +91,17 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		return nil, fmt.Errorf("both --kong-admin-tls-client-key-file and --kong-admin-tls-client-key" +
 			"are set; please remove one or the other")
 	}
-	if opts.TLSClientCertPath != "" && opts.TLSClientKeyPath != "" {
+
+	// if a path to the certificate or key has been provided, retrieve the file contents
+	if opts.TLSClientCertPath != "" {
 		tlsClientCertPath := opts.TLSClientCertPath
 		tlsClientCert, err := os.ReadFile(tlsClientCertPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read certificate file %s: %w", tlsClientCertPath, err)
 		}
 		opts.TLSClientCert = string(tlsClientCert)
-
+	}
+ if opts.TLSClientKeyPath != "" {
 		tlsClientKeyPath := opts.TLSClientKeyPath
 		tlsClientKey, err := os.ReadFile(tlsClientKeyPath)
 		if err != nil {
@@ -104,6 +109,15 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		}
 		opts.TLSClientKey = string(tlsClientKey)
 	}
+
+	// if the caller has supplied either the cert or the key but not both, this is
+	// erroneous input.
+	if opts.TLSClientCert != "" && opts.TLSClientKey == "" {
+		return nil, fmt.Errorf("client certificate was provided, but the client key was not")
+	}
+	if opts.TLSClientKey != "" && opts.TLSClientCert == "" {
+		return nil, fmt.Errorf("client key was provided, but the client certificate was not")
+	} 
 
 	if opts.TLSClientCert != "" && opts.TLSClientKey != "" {
 		// Read the key pair to create certificate

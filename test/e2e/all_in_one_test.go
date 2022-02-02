@@ -23,6 +23,12 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,13 +44,6 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
-
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -616,8 +615,8 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 			Methods: []*string{&getString},
 		},
 	}
-	king, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king,
-		metav1.CreateOptions{})
+	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
+	require.NoError(t, err)
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
@@ -659,10 +658,8 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		if err != nil {
 			return false
 		}
-		if resp.StatusCode == http.StatusNotFound {
-			return true
-		}
-		return false
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusNotFound
 	}, ingressWait, time.Second)
 }
 
@@ -767,7 +764,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 			}},
 		},
 	}
-	httproute, err = gc.GatewayV1alpha2().HTTPRoutes(corev1.NamespaceDefault).Create(ctx, httproute, metav1.CreateOptions{})
+	_, err = gc.GatewayV1alpha2().HTTPRoutes(corev1.NamespaceDefault).Create(ctx, httproute, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -895,7 +892,7 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 	written, err := kubeconfigFile.Write(kubeconfig)
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", pod.Namespace, pod.Name, "9777:cmetrics")
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", pod.Namespace, pod.Name, "9777:cmetrics") //nolint:gosec
 	t.Logf("forwarding port %s to %s/%s:%s", localPort, pod.Namespace, pod.Name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {
 		startOutput, outputErr := cmd.Output()
@@ -1077,7 +1074,10 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 	var tags []semver.Version
 	cmd := exec.Command("git", "tag")
 	cmd.Dir = path
-	tagsBytes, _ := cmd.Output()
+	tagsBytes, err := cmd.Output()
+	if err != nil {
+		return semver.Version{}, err
+	}
 	foo := strings.Split(string(tagsBytes), "\n")
 	for _, tag := range foo {
 		ver, err := semver.ParseTolerant(tag)

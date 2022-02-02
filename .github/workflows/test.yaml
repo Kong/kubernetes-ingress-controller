@@ -205,6 +205,42 @@ jobs:
         name: coverage.postgres.out
         path: coverage.postgres.out
 
+  # for controller manager flags and options which have wide ranging implications
+  # you can enable/disable them here to ensure the integration test suite succeeds
+  # with the alternative configuration.
+  integration-tests-extended-options:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.17'
+
+    - name: cache go modules
+      uses: actions/cache@v2.1.7
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: run integration tests
+      run: make test.integration.dbless
+      env:
+        CONTROLLER_HASHED_DATAPLANE_ROUTE_NAMES: "true"
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v2.3.1
+      with:
+        name: coverage.extendedoptions.out
+        path: coverage.dbless.out
+
   coverage:
     environment: "Configure ci"
     needs:
@@ -243,12 +279,22 @@ jobs:
         name: coverage.enterprisepostgres.out
         path: coverage.enterprisepostgres.out
 
+    - name: collect extended options test coverage artifacts
+      id: download-extendedoptions
+      uses: actions/download-artifact@v2.1.0
+      with:
+        name: coverage.extendedoptions.out
+        path: coverage.extendedoptions.out
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2.1.0
       with:
         name: combined-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ${{steps.download-unit.outputs.download-path}}/coverage.unit.out,${{steps.download-dbless.outputs.download-path}}/coverage.dbless.out,${{steps.download-postgres.outputs.download-path}}/coverage.postgres.out,
-               ${{steps.download-enterprisepostgres.outputs.download-path}}/coverage.enterprisepostgres.out
+        files: ${{steps.download-unit.outputs.download-path}}/coverage.unit.out,
+               ${{steps.download-dbless.outputs.download-path}}/coverage.dbless.out,
+               ${{steps.download-postgres.outputs.download-path}}/coverage.postgres.out,
+               ${{steps.download-enterprisepostgres.outputs.download-path}}/coverage.enterprisepostgres.out,
+               ${{steps.download-extendedoptions.outputs.download-path}}/coverage.extendedoptions.out
         fail_ci_if_error: true
         verbose: true

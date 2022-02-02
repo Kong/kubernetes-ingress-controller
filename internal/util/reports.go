@@ -30,6 +30,7 @@ type Info struct {
 	KongDB            string
 	ID                string
 	FeatureGates      map[string]bool
+	HashedRouteNames  bool
 }
 
 // Reporter sends anonymous reports of runtime properties and

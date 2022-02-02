@@ -95,7 +95,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	setupLog.Info("Initializing Proxy Cache Server")
-	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
+	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to initialize proxy cache server: %w", err)
 	}

@@ -60,9 +60,10 @@ Features that reach GA and over time become stable will be removed from this tab
 
 {{< table caption="Feature gates for features in Alpha or Beta states" >}}
 
-| Feature | Default | Stage | Since | Until |
-|---------|---------|-------|-------|-------|
-| Knative | `true`  | Alpha | 0.8.0 | TBD   |
-| Gateway | `false` | Alpha | TBD   | TBD   |
+| Feature                   | Default | Stage | Since | Until |
+|---------                  |---------|-------|-------|-------|
+| Knative                   | `true`  | Alpha | 0.8.0 | TBD   |
+| Gateway                   | `false` | Alpha | TBD   | TBD   |
+| HashedDataplaneRouteNames | `false` | Alpha | 2.2.0 | TBD   |
 
 {{< /table > }}

@@ -135,6 +135,7 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
 	mgr manager.Manager, kongConfig sendconfig.Kong,
 	diagnostic util.ConfigDumpDiagnostic, c *Config,
+	featureGates map[string]bool,
 ) (proxy.Proxy, error) {
 	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
@@ -155,6 +156,11 @@ func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
 		return nil, err
 	}
 
+	hashedDataplaneRouteNames := false
+	if v, ok := featureGates[hashedDataplaneRouteNamesFeature]; ok {
+		hashedDataplaneRouteNames = v
+	}
+
 	proxyServer, err := proxy.NewCacheBasedProxyWithStagger(fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
 		mgr.GetClient(),
 		kongConfig,
@@ -163,7 +169,9 @@ func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
 		syncTickDuration,
 		timeoutDuration,
 		diagnostic,
-		sendconfig.UpdateKongAdminSimple)
+		sendconfig.UpdateKongAdminSimple,
+		hashedDataplaneRouteNames,
+	)
 	if err != nil {
 		return nil, err
 	}

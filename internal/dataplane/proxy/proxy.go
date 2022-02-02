@@ -86,4 +86,6 @@ type KongUpdater func(ctx context.Context,
 	enableReverseSync bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	proxyRequestTimeout time.Duration,
-	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error)
+	promMetrics *metrics.CtrlFuncMetrics,
+	hashedDataplaneRouteNames bool,
+) ([]byte, error)

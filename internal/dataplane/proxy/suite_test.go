@@ -86,6 +86,7 @@ var mockKongAdmin KongUpdater = func(ctx context.Context,
 	diagnostic util.ConfigDumpDiagnostic,
 	proxyRequestTimeout time.Duration,
 	promMetrics *metrics.CtrlFuncMetrics,
+	hashedDataplaneRouteNames bool,
 ) ([]byte, error) {
 	fakeKongAdminUpdateCount(1)
 	return lastConfigSHA, nil

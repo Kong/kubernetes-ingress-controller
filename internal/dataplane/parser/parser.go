@@ -25,27 +25,27 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
-func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
-	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
-	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
+func parseAll(log logrus.FieldLogger, s store.Storer, hashedRouteNames bool) ingressRules {
+	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1(), hashedRouteNames)
+	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1(), hashedRouteNames)
 
 	tcpIngresses, err := s.ListTCPIngresses()
 	if err != nil {
 		log.Errorf("failed to list TCPIngresses: %v", err)
 	}
-	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
+	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses, hashedRouteNames)
 
 	udpIngresses, err := s.ListUDPIngresses()
 	if err != nil {
 		log.Errorf("failed to list UDPIngresses: %v", err)
 	}
-	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
+	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses, hashedRouteNames)
 
 	httproutes, err := s.ListHTTPRoutes()
 	if err != nil {
 		log.Errorf("failed to list HTTPRoutes: %w", err)
 	}
-	parsedHTTPRoutes, errs := ingressRulesFromHTTPRoutes(httproutes)
+	parsedHTTPRoutes, errs := ingressRulesFromHTTPRoutes(httproutes, hashedRouteNames)
 	if len(errs) > 0 {
 		for _, err := range errs {
 			// we log the error here instead of returning it for historical reasons
@@ -61,7 +61,7 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-	parsedKnative := fromKnativeIngress(log, knativeIngresses)
+	parsedKnative := fromKnativeIngress(log, knativeIngresses, hashedRouteNames)
 
 	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative, parsedHTTPRoutes)
 }
@@ -69,8 +69,8 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
-func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error) {
-	parsedAll := parseAll(log, s)
+func Build(log logrus.FieldLogger, s store.Storer, hashedDataplaneRouteNames bool) (*kongstate.KongState, error) {
+	parsedAll := parseAll(log, s, hashedDataplaneRouteNames)
 	parsedAll.populateServices(log, s)
 
 	var result kongstate.KongState

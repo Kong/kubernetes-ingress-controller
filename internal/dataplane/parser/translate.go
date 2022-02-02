@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -25,7 +24,7 @@ func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {
 	return fmt.Sprintf("pnum-%d", port.Number)
 }
 
-func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1.Ingress) ingressRules {
+func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1.Ingress, hashedRouteNames bool) ingressRules {
 	result := newIngressRules()
 
 	var allDefaultBackends []networkingv1beta1.Ingress
@@ -47,13 +46,17 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
 
+		// a prefix that will be used for all kong.Routes derived from the ingress rules.
+		routePrefix := fmt.Sprintf("%s.%s.%s.", IngressV1Beta1RoutePrefix, ingress.Namespace, ingress.Name)
+
+		usedRouteNames := make(map[string]struct{})
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
 			if rule.HTTP == nil {
 				continue
 			}
-			for j, rule := range rule.HTTP.Paths {
-				path := rule.Path
+			for j, rulePath := range rule.HTTP.Paths {
+				path := rulePath.Path
 
 				if strings.Contains(path, "//") {
 					log.Errorf("rule skipped: invalid path: '%v'", path)
@@ -62,18 +65,50 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				if path == "" {
 					path = "/"
 				}
+
+				// by default if hashedRouteNames is not configured we'll use the legacy
+				// convention for naming the route numerically in a sequence according to
+				// the order it was configured within the Ingress spec. The downside of
+				// this naming convention is that for use cases where the spec updates
+				// often this has the potential to cause connection thrash as routes may
+				// need to be replaced entirely to maintain the sequence.
+				routeName := fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)
+
+				// if hashed route names are requested, we use a unique hash
+				// for the name instead of a numbered sequence.
+				if hashedRouteNames {
+					// in order to determine a unique name for the route to
+					// be created we need the unique base ingress Rule with
+					// the specific HTTP path that we're making the rule for,
+					// as this is uniquely identifying information.
+					uniqueRule := rule.DeepCopy()
+					uniqueRule.HTTP.Paths = []networkingv1beta1.HTTPIngressPath{rulePath}
+
+					// determine the unique name for the route to be created,
+					// unique names help to avoid configuration thrash from
+					// route names changing due to configuration ordering.
+					var err error
+					routeName, err = getUniqIDForRouteConfig(uniqueRule)
+					if err != nil {
+						log.Errorf("rule skipped: could not determine unique name: %w", err)
+						continue
+					}
+					routeName = routePrefix + routeName
+
+					// there's technically an infinitesmal chance of a collision,
+					// if that happens add the rule order number to the name to
+					// ensure uniqueness otherwise this would create a deadlock
+					// on data-plane configurations.
+					if _, exists := usedRouteNames[routeName]; exists {
+						routeName = fmt.Sprintf("%s-%d-%d", routeName, i, j)
+					}
+					usedRouteNames[routeName] = struct{}{}
+				}
+
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:              kong.String(routeName),
 						Paths:             kong.StringSlice(path),
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),
@@ -89,16 +124,16 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				}
 
 				serviceName := ingress.Namespace + "." +
-					rule.Backend.ServiceName + "." +
-					rule.Backend.ServicePort.String()
+					rulePath.Backend.ServiceName + "." +
+					rulePath.Backend.ServicePort.String()
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
 					service = kongstate.Service{
 						Service: kong.Service{
 							Name: kong.String(serviceName),
-							Host: kong.String(rule.Backend.ServiceName +
+							Host: kong.String(rulePath.Backend.ServiceName +
 								"." + ingress.Namespace + "." +
-								rule.Backend.ServicePort.String() + ".svc"),
+								rulePath.Backend.ServicePort.String() + ".svc"),
 							Port:           kong.Int(DefaultHTTPPort),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
@@ -109,8 +144,8 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 						},
 						Namespace: ingress.Namespace,
 						Backend: kongstate.ServiceBackend{
-							Name: rule.Backend.ServiceName,
-							Port: PortDefFromIntStr(rule.Backend.ServicePort),
+							Name: rulePath.Backend.ServiceName,
+							Port: PortDefFromIntStr(rulePath.Backend.ServicePort),
 						},
 					}
 				}
@@ -173,7 +208,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 	return result
 }
 
-func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) ingressRules {
+func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress, hashedRouteNames bool) ingressRules {
 	result := newIngressRules()
 
 	var allDefaultBackends []networkingv1.Ingress
@@ -195,6 +230,10 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
 
+		// a prefix that will be used for all kong.Routes derived from the ingress rules.
+		routePrefix := fmt.Sprintf("%s.%s.%s.", IngressV1RoutePrefix, ingress.Namespace, ingress.Name)
+
+		usedRouteNames := make(map[string]struct{})
 		for i, rule := range ingressSpec.Rules {
 			if rule.HTTP == nil {
 				continue
@@ -216,18 +255,48 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 					continue
 				}
 
+				// by default if hashedRouteNames is not configured we'll use the legacy
+				// convention for naming the route numerically in a sequence according to
+				// the order it was configured within the Ingress spec. The downside of
+				// this naming convention is that for use cases where the spec updates
+				// often this has the potential to cause connection thrash as routes may
+				// need to be replaced entirely to maintain the sequence.
+				routeName := fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)
+
+				// if hashed route names are requested, we use a unique hash
+				// for the name instead of a numbered sequence.
+				if hashedRouteNames {
+					// in order to determine a unique name for the route to
+					// be created we need the unique base ingress Rule with
+					// the specific HTTP path that we're making the rule for,
+					// as this is uniquely identifying information.
+					uniqueRule := rule.DeepCopy()
+					uniqueRule.HTTP.Paths = []networkingv1.HTTPIngressPath{rulePath}
+
+					// determine the unique name for the route to be created,
+					// unique names help to avoid configuration thrash from
+					// route names changing due to configuration ordering.
+					routeName, err = getUniqIDForRouteConfig(uniqueRule)
+					if err != nil {
+						log.Errorf("rule skipped: could not determine unique name: %w", err)
+						continue
+					}
+					routeName = routePrefix + routeName
+
+					// there's technically an infinitesmal chance of a collision,
+					// if that happens add the rule order number to the name to
+					// ensure uniqueness otherwise this would create a deadlock
+					// on data-plane configurations.
+					if _, exists := usedRouteNames[routeName]; exists {
+						routeName = fmt.Sprintf("%s-%d-%d", routeName, i, j)
+					}
+					usedRouteNames[routeName] = struct{}{}
+				}
+
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:              kong.String(routeName),
 						Paths:             paths,
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),
@@ -324,7 +393,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 	return result
 }
 
-func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurationv1beta1.TCPIngress) ingressRules {
+func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurationv1beta1.TCPIngress, hashedRouteNames bool) ingressRules {
 	result := newIngressRules()
 
 	sort.SliceStable(tcpIngressList, func(i, j int) bool {
@@ -342,23 +411,52 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
+		// a prefix that will be used for all kong.Routes derived from the ingress rules.
+		routePrefix := fmt.Sprintf("%s.%s.%s.", TCPIngressV1Beta1RoutePrefix, ingress.Namespace, ingress.Name)
+
+		usedRouteNames := make(map[string]struct{})
 		for i, rule := range ingressSpec.Rules {
 			if !util.IsValidPort(rule.Port) {
 				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
 				continue
 			}
+
+			// by default if hashedRouteNames is not configured we'll use the legacy
+			// convention for naming the route numerically in a sequence according to
+			// the order it was configured within the Ingress spec. The downside of
+			// this naming convention is that for use cases where the spec updates
+			// often this has the potential to cause connection thrash as routes may
+			// need to be replaced entirely to maintain the sequence.
+			routeName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, ingress.Name, i)
+
+			// if hashed route names are requested, we use a unique hash
+			// for the name instead of a numbered sequence.
+			if hashedRouteNames {
+				// determine the unique name for the route to be created,
+				// unique names help to avoid configuration thrash from
+				// route names changing due to configuration ordering.
+				var err error
+				routeName, err = getUniqIDForRouteConfig(rule)
+				if err != nil {
+					log.Errorf("rule skipped: could not determine unique name: %w", err)
+					continue
+				}
+				routeName = routePrefix + routeName
+
+				// there's technically an infinitesmal chance of a collision,
+				// if that happens add the rule order number to the name to
+				// ensure uniqueness otherwise this would create a deadlock
+				// on data-plane configurations.
+				if _, exists := usedRouteNames[routeName]; exists {
+					routeName = fmt.Sprintf("%s-%d", routeName, i)
+				}
+				usedRouteNames[routeName] = struct{}{}
+			}
+
 			r := kongstate.Route{
 				Ingress: util.FromK8sObject(ingress),
 				Route: kong.Route{
-					// TODO (#834) Figure out a way to name the routes
-					// This is not a stable scheme
-					// 1. If a user adds a route in the middle,
-					// due to a shift, all the following routes will
-					// be PATCHED
-					// 2. Is it guaranteed that the order is stable?
-					// Meaning, the routes will always appear in the same
-					// order?
-					Name:      kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i)),
+					Name:      kong.String(routeName),
 					Protocols: kong.StringSlice("tcp", "tls"),
 					Destinations: []*kong.CIDRPort{
 						{
@@ -410,7 +508,7 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 	return result
 }
 
-func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*configurationv1beta1.UDPIngress) ingressRules {
+func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*configurationv1beta1.UDPIngress, hashedRouteNames bool) ingressRules {
 	result := newIngressRules()
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
@@ -425,6 +523,10 @@ func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*configurationv
 			"udpingress_name":      ingress.Name,
 		})
 
+		// a prefix that will be used for all kong.Routes derived from the ingress rules.
+		routePrefix := fmt.Sprintf("%s.%s.%s.", UDPIngressV1Beta1RoutePrefix, ingress.Namespace, ingress.Name)
+
+		usedRouteNames := make(map[string]struct{})
 		for i, rule := range ingressSpec.Rules {
 			// validate the ports and servicenames for the rule
 			if !util.IsValidPort(rule.Port) {
@@ -440,11 +542,43 @@ func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*configurationv
 				continue
 			}
 
+			// by default if hashedRouteNames is not configured we'll use the legacy
+			// convention for naming the route numerically in a sequence according to
+			// the order it was configured within the Ingress spec. The downside of
+			// this naming convention is that for use cases where the spec updates
+			// often this has the potential to cause connection thrash as routes may
+			// need to be replaced entirely to maintain the sequence.
+			routeName := fmt.Sprintf("%s.%s.%d.udp", ingress.Namespace, ingress.Name, i)
+
+			// if hashed route names are requested, we use a unique hash
+			// for the name instead of a numbered sequence.
+			if hashedRouteNames {
+				// determine the unique name for the route to be created,
+				// unique names help to avoid configuration thrash from
+				// route names changing due to configuration ordering.
+				var err error
+				routeName, err = getUniqIDForRouteConfig(rule)
+				if err != nil {
+					log.Errorf("rule skipped: could not determine unique name: %w", err)
+					continue
+				}
+				routeName = routePrefix + routeName
+
+				// there's technically an infinitesmal chance of a collision,
+				// if that happens add the rule order number to the name to
+				// ensure uniqueness otherwise this would create a deadlock
+				// on data-plane configurations.
+				if _, exists := usedRouteNames[routeName]; exists {
+					routeName = fmt.Sprintf("%s-%d", routeName, i)
+				}
+				usedRouteNames[routeName] = struct{}{}
+			}
+
 			// generate the kong Route based on the listen port
 			route := kongstate.Route{
 				Ingress: util.FromK8sObject(ingress),
 				Route: kong.Route{
-					Name:         kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + ".udp"),
+					Name:         kong.String(routeName),
 					Protocols:    kong.StringSlice("udp"),
 					Destinations: []*kong.CIDRPort{{Port: kong.Int(rule.Port)}},
 				},
@@ -477,7 +611,7 @@ func fromUDPIngressV1beta1(log logrus.FieldLogger, ingressList []*configurationv
 	return result
 }
 
-func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) ingressRules {
+func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress, hashedRouteNames bool) ingressRules {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
@@ -497,29 +631,65 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
 
+		// a prefix that will be used for all kong.Routes derived from the ingress rules.
+		routePrefix := fmt.Sprintf("%s.%s.%s.", KnativeIngressV1Alpha1RoutePrefix, ingress.Namespace, ingress.Name)
+
+		usedRouteNames := make(map[string]struct{})
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
 				continue
 			}
-			for j, rule := range rule.HTTP.Paths {
-				path := rule.Path
+			for j, rulePath := range rule.HTTP.Paths {
+				path := rulePath.Path
 
 				if path == "" {
 					path = "/"
 				}
+
+				// by default if hashedRouteNames is not configured we'll use the legacy
+				// convention for naming the route numerically in a sequence according to
+				// the order it was configured within the Ingress spec. The downside of
+				// this naming convention is that for use cases where the spec updates
+				// often this has the potential to cause connection thrash as routes may
+				// need to be replaced entirely to maintain the sequence.
+				routeName := fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)
+
+				// if hashed route names are requested, we use a unique hash
+				// for the name instead of a numbered sequence.
+				if hashedRouteNames {
+					// in order to determine a unique name for the route to
+					// be created we need the unique base ingress Rule with
+					// the specific HTTP path that we're making the rule for,
+					// as this is uniquely identifying information.
+					uniqueRule := rule.DeepCopy()
+					uniqueRule.HTTP.Paths = []knative.HTTPIngressPath{rulePath}
+
+					// determine the unique name for the route to be created,
+					// unique names help to avoid configuration thrash from
+					// route names changing due to configuration ordering.
+					var err error
+					routeName, err = getUniqIDForRouteConfig(uniqueRule)
+					if err != nil {
+						log.Errorf("rule skipped: could not determine unique name: %w", err)
+						continue
+					}
+					routeName = routePrefix + routeName
+
+					// there's technically an infinitesmal chance of a collision,
+					// if that happens add the rule order number to the name to
+					// ensure uniqueness otherwise this would create a deadlock
+					// on data-plane configurations.
+					if _, exists := usedRouteNames[routeName]; exists {
+						routeName = fmt.Sprintf("%s-%d-%d", routeName, i, j)
+					}
+					usedRouteNames[routeName] = struct{}{}
+				}
+
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:              kong.String(routeName),
 						Paths:             kong.StringSlice(path),
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),
@@ -531,7 +701,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 				}
 				r.Hosts = kong.StringSlice(hosts...)
 
-				knativeBackend := knativeSelectSplit(rule.Splits)
+				knativeBackend := knativeSelectSplit(rulePath.Splits)
 				serviceName := fmt.Sprintf("%s.%s.%s", knativeBackend.ServiceNamespace, knativeBackend.ServiceName,
 					knativeBackend.ServicePort.String())
 				serviceHost := fmt.Sprintf("%s.%s.%s.svc", knativeBackend.ServiceName, knativeBackend.ServiceNamespace,
@@ -543,7 +713,7 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 					for key, value := range knativeBackend.AppendHeaders {
 						headers = append(headers, key+":"+value)
 					}
-					for key, value := range rule.AppendHeaders {
+					for key, value := range rulePath.AppendHeaders {
 						headers = append(headers, key+":"+value)
 					}
 

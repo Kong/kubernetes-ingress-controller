@@ -124,7 +124,7 @@ func TestIsReady(t *testing.T) {
 func TestCaching(t *testing.T) {
 	t.Log("configuring and starting a new proxy server")
 	proxyInterface, err := NewCacheBasedProxy(logger, fakeK8sClient, fakeKongConfig,
-		"kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, time.Millisecond*300)
+		"kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, time.Millisecond*300, false)
 	assert.NoError(t, err)
 
 	t.Log("ensuring the integrity of the proxy server")
@@ -185,6 +185,6 @@ func TestProxyTimeout(t *testing.T) {
 	// to see the the context deadline for the http response triggered.
 	timeout := time.Millisecond * 10
 
-	_, err := NewCacheBasedProxy(logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, timeout)
+	_, err := NewCacheBasedProxy(logger, fakeK8sClient, fakeKongConfig, "kongtests", false, mockKongAdmin, util.ConfigDumpDiagnostic{}, timeout, false)
 	assert.Contains(t, err.Error(), "context deadline exceeded")
 }

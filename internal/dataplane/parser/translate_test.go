@@ -246,26 +246,40 @@ func TestFromIngressV1beta1(t *testing.T) {
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{})
+		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{}, false)
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
-	t.Run("simple ingress rule is parsed", func(t *testing.T) {
+	t.Run("simple ingress rule with hashed route naming disabled is parsed, and produces legacy route names", func(t *testing.T) {
 		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
 			ingressList[0],
-		})
+		}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
 
+		assert.Equal("foo-namespace.foo.00", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Name)
+		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
+		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
+	})
+	t.Run("simple ingress rule with hashed route naming enabled is parsed, and produces hashed route names", func(t *testing.T) {
+		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
+			ingressList[0],
+		}, true) // hashed route names enabled
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
+		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
+
+		assert.Equal("ingressv1beta1.foo-namespace.foo.GKL911UN6MJ94", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Name)
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
 		parsedInfo := fromIngressV1beta1(logrus.New(),
 			[]*networkingv1beta1.Ingress{ingressList[0], ingressList[2]},
+			false,
 		)
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
@@ -281,7 +295,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 	t.Run("ingress rule with TLS", func(t *testing.T) {
 		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
 			ingressList[1],
-		})
+		}, false)
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
@@ -289,7 +303,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
 		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
 			ingressList[3],
-		})
+		}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
@@ -304,7 +318,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
 		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
 			ingressList[4],
-		})
+		}, false)
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
@@ -312,20 +326,20 @@ func TestFromIngressV1beta1(t *testing.T) {
 		assert.NotPanics(func() {
 			fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
 				ingressList[5],
-			})
+			}, false)
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
 		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
 			ingressList[6],
-		})
+		}, false)
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 	})
 	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
 		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
 			ingressList[7],
-		})
+		}, false)
 		assert.Empty(parsedInfo.ServiceNameToServices)
 	})
 }
@@ -615,26 +629,40 @@ func TestFromIngressV1(t *testing.T) {
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{})
+		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{}, false)
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
-	t.Run("simple ingress rule is parsed", func(t *testing.T) {
+	t.Run("simple ingress rule with hashed route naming disabled is parsed, and produces legacy route names", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[0],
-		})
+		}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
 
+		assert.Equal("foo-namespace.foo.00", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Name)
+		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
+	})
+	t.Run("simple ingress rule with hashed route naming enabled is parsed, and produces hashed route names", func(t *testing.T) {
+		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
+			ingressList[0],
+		}, true)
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
+
+		assert.Equal("ingressv1.foo-namespace.foo.IISE72PJ2FPQC", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Name)
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(),
 			[]*networkingv1.Ingress{ingressList[0], ingressList[2]},
+			false,
 		)
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
@@ -650,7 +678,7 @@ func TestFromIngressV1(t *testing.T) {
 	t.Run("ingress rule with TLS", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[1],
-		})
+		}, false)
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
@@ -658,7 +686,7 @@ func TestFromIngressV1(t *testing.T) {
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[3],
-		})
+		}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Host)
@@ -673,7 +701,7 @@ func TestFromIngressV1(t *testing.T) {
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[4],
-		})
+		}, false)
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 	})
@@ -681,13 +709,13 @@ func TestFromIngressV1(t *testing.T) {
 		assert.NotPanics(func() {
 			fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 				ingressList[5],
-			})
+			}, false)
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[6],
-		})
+		}, false)
 		assert.Equal("foo-svc.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc",
@@ -696,13 +724,13 @@ func TestFromIngressV1(t *testing.T) {
 	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[7],
-		})
+		}, false)
 		assert.Empty(parsedInfo.ServiceNameToServices)
 	})
 	t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
 		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
 			ingressList[8],
-		})
+		}, false)
 		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-http"]
 		assert.True(ok)
 		_, ok = parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-ws"]
@@ -838,21 +866,21 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		},
 	}
 	t.Run("no TCPIngress returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{})
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{}, false)
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[0]})
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[0]}, false)
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
-	t.Run("simple TCPIngress rule is parsed", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[1]})
+	t.Run("simple TCPIngress rule with hashed route naming disabled is parsed, and produces legacy route names", func(t *testing.T) {
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[1]}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
@@ -871,8 +899,32 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		}, route.Route)
 	})
+	t.Run("simple TCPIngress rule with hashed route naming enabled is parsed, and produces hashed route names", func(t *testing.T) {
+		parsedInfo := fromTCPIngressV1beta1(
+			logrus.New(),
+			[]*configurationv1beta1.TCPIngress{tcpIngressList[1]},
+			true, // hashed route names enabled
+		)
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
+		assert.Equal("foo-svc.default.80.svc", *svc.Host)
+		assert.Equal(80, *svc.Port)
+		assert.Equal("tcp", *svc.Protocol)
+
+		assert.Equal(1, len(svc.Routes))
+		route := svc.Routes[0]
+		assert.Equal(kong.Route{
+			Name:      kong.String("tcpingressv1beta1.default.foo.VFO0SIEJA7QG6"),
+			Protocols: kong.StringSlice("tcp", "tls"),
+			Destinations: []*kong.CIDRPort{
+				{
+					Port: kong.Int(9000),
+				},
+			},
+		}, route.Route)
+	})
 	t.Run("TCPIngress rule with host is parsed", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[2]})
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[2]}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
@@ -893,27 +945,27 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		}, route.Route)
 	})
 	t.Run("TCPIngress with TLS", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[3]})
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[3]}, false)
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
 	})
 	t.Run("TCPIngress without service name returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[4]})
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[4]}, false)
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("TCPIngress with invalid port returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[5]})
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[5]}, false)
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("empty TCPIngress with invalid service port returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[6]})
+		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[6]}, false)
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
@@ -1072,17 +1124,17 @@ func TestFromKnativeIngress(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{}, false)
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[0]})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[0]}, false)
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
-	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[1]})
+	t.Run("simple ingress rule with hashed route naming disabled is parsed, and produces legacy route names", func(t *testing.T) {
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[1]}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
@@ -1118,8 +1170,49 @@ func TestFromKnativeIngress(t *testing.T) {
 
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
+	t.Run("simple ingress rule with hashed route naming enabled is parsed, and produces hashed route names", func(t *testing.T) {
+		parsedInfo := fromKnativeIngress(
+			logrus.New(),
+			[]*knative.Ingress{ingressList[1]},
+			true, // hashed route names enabled
+		)
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
+		assert.Equal(kong.Service{
+			Name:           kong.String("foo-ns.foo-svc.42"),
+			Port:           kong.Int(80),
+			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Path:           kong.String("/"),
+			Protocol:       kong.String("http"),
+			WriteTimeout:   kong.Int(60000),
+			ReadTimeout:    kong.Int(60000),
+			ConnectTimeout: kong.Int(60000),
+			Retries:        kong.Int(5),
+		}, svc.Service)
+		assert.Equal(kong.Route{
+			Name:              kong.String("knativeingressv1alpha1.foo-namespace.foo.MT6JRQENCRKN0"),
+			RegexPriority:     kong.Int(0),
+			StripPath:         kong.Bool(false),
+			Paths:             kong.StringSlice("/"),
+			PreserveHost:      kong.Bool(true),
+			Protocols:         kong.StringSlice("http", "https"),
+			Hosts:             kong.StringSlice("my-func.example.com"),
+			ResponseBuffering: kong.Bool(true),
+			RequestBuffering:  kong.Bool(true),
+		}, svc.Routes[0].Route)
+		assert.Equal(kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"add": map[string]interface{}{
+					"headers": []string{"foo:bar"},
+				},
+			},
+		}, svc.Plugins[0])
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+	})
+
 	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[3]})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[3]}, false)
 
 		assert.Equal(SecretNameToSNIs(map[string][]string{
 			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
@@ -1127,7 +1220,7 @@ func TestFromKnativeIngress(t *testing.T) {
 		}), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[2]})
+		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[2]}, false)
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{

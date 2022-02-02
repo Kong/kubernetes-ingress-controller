@@ -1,11 +1,7 @@
 package parser
 
 import (
-	"encoding/base32"
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"hash/crc64"
 
 	"github.com/kong/go-kong/kong"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -14,20 +10,18 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-var polyTable = crc64.MakeTable(239875375749875)
-
 // -----------------------------------------------------------------------------
 // Translate HTTPRoute - IngressRules Translation
 // -----------------------------------------------------------------------------
 
 // ingressRulesFromHTTPRoutes processes a list of HTTPRoute objects and translates
 // then into Kong configuration objects.
-func ingressRulesFromHTTPRoutes(httpRouteList []*gatewayv1alpha2.HTTPRoute) (ingressRules, []error) {
+func ingressRulesFromHTTPRoutes(httpRouteList []*gatewayv1alpha2.HTTPRoute, hashedRouteNames bool) (ingressRules, []error) {
 	result := newIngressRules()
 
 	var errs []error
 	for _, httproute := range httpRouteList {
-		if err := ingressRulesFromHTTPRoute(&result, httproute); err != nil {
+		if err := ingressRulesFromHTTPRoute(&result, httproute, hashedRouteNames); err != nil {
 			err = fmt.Errorf("HTTPRoute %s/%s can't be routed: %w", httproute.Namespace, httproute.Name, err)
 			errs = append(errs, err)
 		}
@@ -36,7 +30,7 @@ func ingressRulesFromHTTPRoutes(httpRouteList []*gatewayv1alpha2.HTTPRoute) (ing
 	return result, errs
 }
 
-func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {
+func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute, hashedRouteNames bool) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := httproute.Spec
 
@@ -50,7 +44,7 @@ func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.
 
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
-	for _, rule := range spec.Rules {
+	for i, rule := range spec.Rules {
 		// TODO: add this to a generic HTTPRoute validation, and then we should probably
 		//       simply be calling validation on each httproute object at the begininning
 		//       of the topmost list.
@@ -64,7 +58,7 @@ func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.
 		}
 
 		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, rule)
+		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, rule, i, hashedRouteNames)
 		if err != nil {
 			return err
 		}
@@ -95,12 +89,6 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayv1alpha2.HTT
 	return hostnames
 }
 
-// httpRouteInput contains all HTTPRoute features necessary to uniquely describe a derived Kong route
-type httpRouteInput struct {
-	match     gatewayv1alpha2.HTTPRouteMatch
-	hostnames []*string
-}
-
 // generateKongRoutesFromHTTPRouteRule converts an HTTPRoute rule to one or more
 // Kong Route objects to route traffic to services. This function will accept an
 // HTTPRoute that does not include any matches as long as it includes hostnames
@@ -108,46 +96,56 @@ type httpRouteInput struct {
 // path prefix routing option for that service in addition to hostname routing.
 // If an HTTPRoute is provided that has matches that include any unsupported matching
 // configurations, this will produce an error and the route is considered invalid.
-func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, rule gatewayv1alpha2.HTTPRouteRule) ([]kongstate.Route, error) {
+// The resulting kong.Route objects from this function will be consistently and
+// uniquely named according to the underlying match rule configurations.
+func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, rule gatewayv1alpha2.HTTPRouteRule, sequence int, hashedRouteNames bool) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
 	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
+
+	// a prefix that will be used for all kong.Routes derived from the httproute rules.
+	kongRouteNamePrefix := fmt.Sprintf("%s.%s.%s.", HTTPRouteV1Alpha2RoutePrefix, httproute.Namespace, httproute.Name)
 
 	// the HTTPRoute specification upstream specifically defines matches as
 	// independent (e.g. each match is an OR with other matches, not an AND).
 	// Therefore we treat each match rule as a separate Kong Route, so we iterate through
 	// all matches to determine all the routes that will be needed for the services.
 	var routes []kongstate.Route
-	usedNames := make(map[string]struct{})
+	usedRouteNames := make(map[string]struct{})
 	if len(rule.Matches) > 0 {
 		for i, match := range rule.Matches {
-			// determine the name of the route, identify it as a route that belongs
-			// to a Kubernetes HTTPRoute object.
-			input := httpRouteInput{
-				match:     match,
-				hostnames: hostnames,
-			}
-			routeHashInput, err := json.Marshal(input)
-			if err != nil {
-				return nil, fmt.Errorf("could not marshal input for route hash: %w", err)
-			}
-			routeHash := crc64.Checksum(routeHashInput, polyTable)
-			b := make([]byte, 8)
-			binary.LittleEndian.PutUint64(b, routeHash)
-			// TODO figure out a way to make this pure alphanumeric like SHA256sums if possible
-			routeHashEncoded := base32.StdEncoding.EncodeToString(b)
+			// by default if hashedRouteNames is not configured we'll use the legacy
+			// convention for naming the route numerically in a sequence according to
+			// the order it was configured within the Ingress spec. The downside of
+			// this naming convention is that for use cases where the spec updates
+			// often this has the potential to cause connection thrash as routes may
+			// need to be replaced entirely to maintain the sequence.
+			routeName := fmt.Sprintf("%s.%s.%d%d.httproute", httproute.Namespace, httproute.Name, sequence, i)
 
-			routeName := kong.String(fmt.Sprintf(
-				"httproute.%s.%s.%s",
-				httproute.Namespace,
-				httproute.Name,
-				routeHashEncoded,
-			))
-			if _, exists := usedNames[*routeName]; !exists {
-				usedNames[*routeName] = struct{}{}
-			} else {
-				// in the event of a collision, fall back to using the original index suffix
-				routeName = kong.String(fmt.Sprintf("%s.%d", *routeName, i))
+			// if hashed route names are requested, we use a unique hash
+			// for the name instead of a numbered sequence.
+			if hashedRouteNames {
+				// determine the unique name for the route to be created,
+				// unique names help to avoid configuration thrash from
+				// route names changing due to configuration ordering.
+				config := &httpRouteInput{
+					Hostnames: hostnames,
+					Match:     match,
+				}
+				var err error
+				routeName, err = getUniqIDForRouteConfig(config)
+				if err != nil {
+					return nil, err
+				}
+				routeName = kongRouteNamePrefix + routeName
+
+				// there's technically an infinitesmal chance of a collision,
+				// if that happens add the match order number to the name to
+				// ensure uniqueness.
+				if _, exists := usedRouteNames[routeName]; exists {
+					routeName = fmt.Sprintf("%s-%d", routeName, i)
+				}
+				usedRouteNames[routeName] = struct{}{}
 			}
 
 			// TODO: implement query param matches
@@ -164,7 +162,7 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 			r := kongstate.Route{
 				Ingress: objectInfo,
 				Route: kong.Route{
-					Name:         routeName,
+					Name:         kong.String(routeName),
 					Protocols:    kong.StringSlice("http", "https"),
 					PreserveHost: kong.Bool(true),
 				},
@@ -208,10 +206,19 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 		// but only backends as long as there are hostnames. In this case, we
 		// match all traffic based on the hostname and leave all other routing
 		// options default.
+		routeName := fmt.Sprintf("%s.%s.0", httproute.Namespace, httproute.Name)
+		if hashedRouteNames {
+			var err error
+			routeName, err = getUniqIDForRouteConfig(&httpRouteInput{Hostnames: hostnames})
+			if err != nil {
+				return nil, err
+			}
+			routeName = kongRouteNamePrefix + routeName
+		}
 		r := kongstate.Route{
 			Ingress: objectInfo,
 			Route: kong.Route{
-				Name:         kong.String(fmt.Sprintf("httproute.%s.%s.0", httproute.Namespace, httproute.Name)),
+				Name:         kong.String(routeName),
 				Protocols:    kong.StringSlice("http", "https"),
 				PreserveHost: kong.Bool(true),
 			},
@@ -274,4 +281,12 @@ func generateKongServiceFromHTTPRouteBackendRef(result *ingressRules, httproute 
 	}
 
 	return service
+}
+
+// httpRouteInput combines a match with hostnames for which that match is
+// relevant to enable serializing these contents into a JSON structure
+// which is unique for that match within it's HTTPRouteRule.
+type httpRouteInput struct {
+	Hostnames []*string                      `json:"hostnames"`
+	Match     gatewayv1alpha2.HTTPRouteMatch `json:"match"`
 }

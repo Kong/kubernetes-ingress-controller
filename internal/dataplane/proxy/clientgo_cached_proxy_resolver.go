@@ -33,12 +33,13 @@ func NewCacheBasedProxy(logger logrus.FieldLogger,
 	kongUpdater KongUpdater,
 	diagnostic util.ConfigDumpDiagnostic,
 	proxyRequestTimeout time.Duration,
+	hashedDataplaneRouteNames bool,
 ) (Proxy, error) {
 	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
 	if err != nil {
 		return nil, err
 	}
-	return NewCacheBasedProxyWithStagger(logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, proxyRequestTimeout, diagnostic, kongUpdater)
+	return NewCacheBasedProxyWithStagger(logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, proxyRequestTimeout, diagnostic, kongUpdater, hashedDataplaneRouteNames)
 }
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
@@ -53,16 +54,18 @@ func NewCacheBasedProxyWithStagger(logger logrus.FieldLogger,
 	proxyRequestTimeout time.Duration,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongUpdater KongUpdater,
+	hashedDataplaneRouteNames bool,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
 	cache := store.NewCacheStores()
 	proxy := &clientgoCachedProxyResolver{
 		cache: &cache,
 
-		kongConfig:        kongConfig,
-		kongUpdater:       kongUpdater,
-		diagnostic:        diagnostic,
-		enableReverseSync: enableReverseSync,
+		kongConfig:                kongConfig,
+		kongUpdater:               kongUpdater,
+		diagnostic:                diagnostic,
+		enableReverseSync:         enableReverseSync,
+		hashedDataplaneRouteNames: hashedDataplaneRouteNames,
 
 		deprecatedLogger: logger,
 		logger:           logrusr.New(logger),
@@ -109,10 +112,11 @@ type clientgoCachedProxyResolver struct {
 	configAppliedMutex sync.RWMutex
 
 	// kong configuration
-	kongConfig        sendconfig.Kong
-	enableReverseSync bool
-	dbmode            string
-	version           semver.Version
+	kongConfig                sendconfig.Kong
+	enableReverseSync         bool
+	dbmode                    string
+	version                   semver.Version
+	hashedDataplaneRouteNames bool
 
 	// KongCustomEntitiesSecret is a "namespace/name" Secret locator for a Secret
 	// that contains raw YAML custom entities, for use with DB-less mode
@@ -200,7 +204,7 @@ func (p *clientgoCachedProxyResolver) startProxyUpdateServer(ctx context.Context
 			return
 		case <-p.syncTicker.C:
 			updateConfigSHA, err := p.kongUpdater(ctx, p.lastConfigSHA, p.cache,
-				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic, p.proxyRequestTimeout, p.promMetrics)
+				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic, p.proxyRequestTimeout, p.promMetrics, p.hashedDataplaneRouteNames)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 				break

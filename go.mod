@@ -11,8 +11,8 @@ require (
 	github.com/go-logr/logr v1.2.2
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.10.0
-	github.com/kong/go-kong v0.25.1
-	github.com/kong/kubernetes-testing-framework v0.12.0
+	github.com/kong/go-kong v0.26.0
+	github.com/kong/kubernetes-testing-framework v0.12.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.45
 	github.com/mitchellh/mapstructure v1.4.3
@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.14.0
 	google.golang.org/api v0.66.0
-	google.golang.org/genproto v0.0.0-20220114231437-d2e6a121cae0
+	google.golang.org/genproto v0.0.0-20220118154757-00ab72f36ad5
 	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.23.3
 	k8s.io/apimachinery v0.23.3
@@ -69,7 +69,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/go-containerregistry v0.8.1-0.20220120151853-ac864e57b117 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect

@@ -1,50 +1,79 @@
 name: release
 
 on:
-  push:
-    branches:
-      - 'main'
-    tags:
-      - 'v2.*'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The version to release'
+        required: true
+      latest:
+        description: 'Whether to tag this release latest'
+        required: true
+        default: 'false'
 
 jobs:
+  verify-manifest-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mukunku/tag-exists-action@v1.0.0
+        id: check-tag
+        name: check if tag already exists
+        with:
+          tag: ${{ github.event.inputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: fail if tag already exists
+        if: ${{ steps.check-tag.outputs.exists == 'true' }}
+        run: exit 1
+      - name: checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.event.inputs.tag }}
+          version_extractor_regex: 'v(.*)$'
+      - name: Verify manifests have requested KIC tag
+        env:
+          TAG: ${{ steps.semver_parser.outputs.fullversion }}
+        run: make verify.versions
+
   build-push-images:
     environment: 'Docker Push'
+    needs: verify-manifest-tag
     runs-on: ubuntu-latest
     steps:
       - name: Parse semver string
         id: semver_parser
-        if: ${{ contains(github.ref, 'tags') }}
         uses: booxmedialtd/ws-action-parse-semver@v1
         with:
-          input_string: ${{ github.ref }}
-          version_extractor_regex: 'refs\/tags\/v(.*)$'
+          input_string: ${{ github.event.inputs.tag }}
+          version_extractor_regex: 'v(.*)$'
       - name: Add standard tags
         run: |
           echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=ref,event=branch' >> $GITHUB_ENV
-          echo 'type=semver,pattern={{version}}' >> $GITHUB_ENV
+          echo 'type=raw,value=${{ steps.semver_parser.outputs.fullversion }}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Add major.minor tag
         if: ${{ steps.semver_parser.outputs.prerelease == '' }}
         run: |
           echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
           echo "" >> $GITHUB_ENV
-          echo 'type=semver,pattern={{major}}.{{minor}}' >> $GITHUB_ENV
+          echo 'type=raw,value=${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Add Red Hat standard tags
         run: |
           echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=ref,event=branch,suffix=-redhat' >> $GITHUB_ENV
-          echo 'type=semver,pattern={{version}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'type=raw,value=${{ steps.semver_parser.outputs.fullversion }},suffix=-redhat' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Add Red Hat major.minor tag
         if: ${{ steps.semver_parser.outputs.prerelease == '' }}
         run: |
           echo 'REDHAT_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
           echo "" >> $GITHUB_ENV
-          echo 'type=semver,pattern={{major}}.{{minor}},suffix=-redhat' >> $GITHUB_ENV
+          echo 'type=raw,value=${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }},suffix=-redhat' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -65,6 +94,8 @@ jobs:
         uses: docker/metadata-action@v3.6.2
         with:
           images: kong/kubernetes-ingress-controller
+          flavor: |
+            latest=${{ github.event.inputs.latest == 'true' }}
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
@@ -115,3 +146,96 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
+
+  test-current-kubernetes:
+    runs-on: ubuntu-latest
+    needs: build-push-images
+    strategy:
+      matrix:
+        kubernetes-version:
+          - 'v1.22.0'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17'
+      - name: cache go modules
+        uses: actions/cache@v2.1.7
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
+
+  test-previous-kubernetes:
+    environment: gcloud
+    runs-on: ubuntu-latest
+    needs: build-push-images
+    strategy:
+      matrix:
+        minor:
+          - '19'
+          - '20'
+          - '21'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17'
+      - name: cache go modules
+        uses: actions/cache@v2.1.7
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
+        run: ./hack/e2e/run-tests.sh
+        env:
+          KUBERNETES_MAJOR_VERSION: 1
+          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: [build-push-images, test-current-kubernetes, test-previous-kubernetes]
+    steps:
+    - name: Parse semver string
+      id: semver_parser
+      uses: booxmedialtd/ws-action-parse-semver@v1
+      with:
+        input_string: ${{ github.event.inputs.tag }}
+        version_extractor_regex: 'v(.*)$'
+    - uses: ncipollo/release-action@v1
+      with:
+        body: |
+          #### Download Kong Ingress Controller ${{ steps.semver_parser.outputs.fullversion }}:
+
+          - [Docker Image](https://hub.docker.com/repository/docker/kong/kubernetes-ingress-controller)
+          - [Get started](https://github.com/Kong/kubernetes-ingress-controller#get-started)
+          
+          #### Links:
+          
+          - [Changelog](https://github.com/Kong/kubernetes-ingress-controller/blob/main/CHANGELOG.md#${{ steps.semver_parser.outputs.major }}${{ steps.semver_parser.outputs.minor }}${{ steps.semver_parser.outputs.patch }})
+
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.event.inputs.tag }}
+        commit: ${{ github.sha }}

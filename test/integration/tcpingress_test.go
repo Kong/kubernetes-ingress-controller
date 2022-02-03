@@ -280,7 +280,7 @@ func TestTCPIngressTLS(t *testing.T) {
 		t.Logf("verifying TCP Ingress for %s.example operational", i)
 		require.Eventually(t, func() bool {
 			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: true, //nolint:gosec
 				ServerName:         fmt.Sprintf("%s.example", i),
 			})
 			if err != nil {
@@ -288,7 +288,7 @@ func TestTCPIngressTLS(t *testing.T) {
 			}
 			defer conn.Close()
 			resp := make([]byte, 512)
-			conn.SetDeadline(time.Now().Add(time.Second * 5))
+			require.NoError(t, conn.SetDeadline(time.Now().Add(time.Second*5)))
 			_, err = conn.Read(resp)
 			if err != nil {
 				return false
@@ -300,13 +300,18 @@ func TestTCPIngressTLS(t *testing.T) {
 		}, ingressWait, waitTick)
 	}
 
-	tcpY.Spec.Rules[0].Backend.ServiceName = testServiceSuffixes[0]
 	// Update wipes out tcpY if actually assigned, breaking the deferred delete. we have no use for it, so discard it
-	_, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Update(ctx, tcpY, metav1.UpdateOptions{})
+	require.Eventually(t, func() bool {
+		tcpY, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Get(ctx, tcpY.Name, metav1.GetOptions{})
+		tcpY.Spec.Rules[0].Backend.ServiceName = testServiceSuffixes[0]
+		_, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Update(ctx, tcpY, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
 	t.Logf("verifying TCP Ingress routes to new upstream after update")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, //nolint:gosec
 			ServerName:         fmt.Sprintf("%s.example", testServiceSuffixes[0]),
 		})
 		if err != nil {
@@ -314,7 +319,7 @@ func TestTCPIngressTLS(t *testing.T) {
 		}
 		defer conn.Close()
 		resp := make([]byte, 512)
-		conn.SetDeadline(time.Now().Add(time.Second * 5))
+		require.NoError(t, conn.SetDeadline(time.Now().Add(time.Second*5)))
 		_, err = conn.Read(resp)
 		if err != nil {
 			return false
@@ -465,7 +470,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	t.Log("verifying TCP Ingress for redis.example operational")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, //nolint:gosec
 			ServerName:         "redis.example",
 		})
 		if err != nil {

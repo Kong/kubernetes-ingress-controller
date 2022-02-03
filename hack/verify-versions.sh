@@ -5,23 +5,13 @@ set -o nounset
 set -o pipefail
 
 REPO_ROOT="$(dirname "${BASH_SOURCE[0]}")/.."
-MANIFEST_ROOT="$REPO_ROOT/deploy/single"
-FAILED=0
+OSS_IMAGES="$REPO_ROOT/config/image/oss/kustomization.yaml"
 
-MANIFESTS="$MANIFEST_ROOT/*"
-for MANIFEST in ${MANIFESTS}
-do
-	CONTAINERS=$(yq eval-all ".spec.template.spec.containers[].image" "${MANIFEST}" -N)
-	INITCONTAINERS=$(yq eval-all ".spec.template.spec.initContainers[].image" "${MANIFEST}" -N)
-	KONGS=$(printf "%s\n%s" "$CONTAINERS" "$INITCONTAINERS" | sort | uniq | grep -oP "kong(\/kong-gateway)?:[\d\.]+")
-	if [ "$(echo "${KONGS}" | wc -l)" -gt 1 ]
-	then
-		echo "multiple Kong images in $MANIFEST, verify image consistency in source:"
-		echo "$KONGS"
-		FAILED=$((FAILED+1))
-	fi
-	if [ $FAILED -gt 0 ]
-	then
+EXPECTED=$1
+KIC_VERSION=$(yq eval-all '.images[] | select(.name=="kic-placeholder") | .newTag' "${OSS_IMAGES}")
+
+if [ "${EXPECTED}" != "${KIC_VERSION}" ]
+then
+		echo "KIC version in ${OSS_IMAGES} is ${KIC_VERSION}, expected ${EXPECTED}"
 		exit 1
-	fi
-done
+fi

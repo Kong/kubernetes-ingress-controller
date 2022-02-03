@@ -10,7 +10,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -29,26 +28,6 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 	}
 
 	pathMatchRegex := gatewayv1alpha2.PathMatchRegularExpression
-
-	closer, err := ensureAdmissionRegistration(
-		"kong-validations-gateway",
-		[]admregv1.RuleWithOperations{
-			{
-				Rule: admregv1.Rule{
-					APIGroups:   []string{"gateway.networking.k8s.io"},
-					APIVersions: []string{"v1alpha2"},
-					Resources:   []string{"httproutes"},
-				},
-				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-			},
-		},
-	)
-	assert.NoError(t, err, "creating webhook config")
-	defer func() {
-		assert.NoError(t, closer())
-	}()
-
-	waitForWebhookService(t)
 
 	t.Log("creating a managed gatewayclass")
 	gatewayc, err := gatewayclient.NewForConfig(env.Cluster().Config())

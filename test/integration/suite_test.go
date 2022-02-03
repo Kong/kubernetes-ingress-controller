@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -139,10 +140,10 @@ func TestMain(m *testing.M) {
 		fmt.Println("INFO: starting the controller manager")
 		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", ingressClass),
-			fmt.Sprintf("--admission-webhook-cert=%s", kongSystemServiceCert),
-			fmt.Sprintf("--admission-webhook-key=%s", kongSystemServiceKey),
+			fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
+			fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
 			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
-			fmt.Sprintf("--admission-webhook-listen=%s:%d", admissionWebhookListenHost, admissionWebhookListenPort),
+			fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
 			"--log-level=trace",
@@ -158,8 +159,51 @@ func TestMain(m *testing.M) {
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(err)
 
+	// deploy the admission webhook to the cluster if the test cluster type supports it
+	webhookCleanup := func() error { return nil }
+	if env.Cluster().Type() == kind.KindClusterType { // webhook tests currently only work on kind clusters
+		fmt.Println("INFO: deploying admission webhook")
+		webhookCleanup, err = testutils.EnsureAdmissionRegistration(ctx, env.Cluster(), controllerNamespace,
+			admregv1.RuleWithOperations{
+				Rule: admregv1.Rule{
+					APIGroups:   []string{"gateway.networking.k8s.io"},
+					APIVersions: []string{"v1alpha2"},
+					Resources:   []string{"gateways"},
+				},
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+			},
+			admregv1.RuleWithOperations{
+				Rule: admregv1.Rule{
+					APIGroups:   []string{"gateway.networking.k8s.io"},
+					APIVersions: []string{"v1alpha2"},
+					Resources:   []string{"httproutes"},
+				},
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+			},
+			admregv1.RuleWithOperations{
+				Rule: admregv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"secrets"},
+				},
+				Operations: []admregv1.OperationType{admregv1.Update},
+			},
+			admregv1.RuleWithOperations{
+				Rule: admregv1.Rule{
+					APIGroups:   []string{"configuration.konghq.com"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"kongconsumers"},
+				},
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+			},
+		)
+		exitOnErr(err)
+	}
+
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()
+
+	exitOnErr(webhookCleanup())
 
 	if keepTestCluster == "" && existingCluster == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)

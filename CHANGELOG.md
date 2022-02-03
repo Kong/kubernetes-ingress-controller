@@ -42,17 +42,29 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.1.2]
+## [2.2.0]
 
 > Release date: TBD
+
+#### Added
+
+- Kubernetes client rate limiting can now be configured using `--apiserver-qps`
+  (default 100) and `--apiserver-burst` (default 300) settings. Defaults have
+  been increased to prevent ratelimiting under normal loads.
+  [#2169](https://github.com/Kong/kubernetes-ingress-controller/issues/2169)
+- The KIC Grafana dashboard [is now published on grafana.com](https://grafana.com/grafana/dashboards/15662).
+  [#2235](https://github.com/Kong/kubernetes-ingress-controller/issues/2235)
+
+#### Fixed
 
 - Fixed an issue where validation could fail for credentials secrets if the
   `value` for a unique constrained `key` were updated in place while linked
   to a managed `KongConsumer`.
   [#2190](https://github.com/Kong/kubernetes-ingress-controller/issues/2190)
-- Kubernetes client rate limiting can now be configured using `--apiserver-qps`
-  (default 100) and `--apiserver-burst` (default 300) settings. Defaults have
-  been increased to prevent ratelimiting under normal loads.
+- The controller now retries status updates if the publish service LoadBalancer
+  has not yet provisioned. This fixes an issue where controllers would not
+  update status until the first configuration change after the LoadBalancer
+  became ready.
 
 ## [2.1.1]
 

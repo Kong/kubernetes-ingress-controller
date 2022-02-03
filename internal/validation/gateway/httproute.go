@@ -109,7 +109,7 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 
 		// we don't support any backendRef types except Kubernetes Services
 		for _, ref := range rule.BackendRefs {
-			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" {
+			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
 				return fmt.Errorf("%s is not a supported group for httproute backendRefs, only core is supported", *ref.BackendRef.Group)
 			}
 			if ref.BackendRef.Kind != nil && *ref.BackendRef.Kind != "Service" {

@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
@@ -97,7 +96,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 		Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
 			{
 				Port: 9999,
-				Backend: v1beta1.IngressBackend{
+				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[0].Port),
 				},
@@ -235,7 +234,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
 			{
 				Port: 9999,
-				Backend: v1beta1.IngressBackend{
+				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[0].Port),
 				},
@@ -299,7 +298,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		Spec: kongv1beta1.TCPIngressSpec{Rules: []kongv1beta1.IngressRule{
 			{
 				Port: 8888,
-				Backend: v1beta1.IngressBackend{
+				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[1].Port),
 				},

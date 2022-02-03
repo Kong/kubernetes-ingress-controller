@@ -11,10 +11,6 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -22,6 +18,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
 )
@@ -53,7 +52,9 @@ func TestMain(m *testing.M) {
 
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
-	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
+	knativeBuilder := knative.NewBuilder()
+	knativeAddon := knativeBuilder.Build()
+	builder := environments.NewBuilder().WithAddons(kongAddon, knativeAddon)
 
 	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster != "" {

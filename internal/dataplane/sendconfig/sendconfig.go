@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
@@ -79,7 +79,11 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	if newSHA != nil && !skipUpdateCR {
-		kongConfig.ConfigDone <- *targetContent
+		update := &KongConfigUpdate{
+			Timestamp: time.Now(),
+			Config:    *targetContent,
+		}
+		kongConfig.ConfigDone <- update
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{

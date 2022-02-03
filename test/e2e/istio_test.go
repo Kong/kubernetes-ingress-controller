@@ -15,18 +15,17 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
@@ -71,7 +70,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		WithKiali()
 	if istioVersionStr != "" {
 		t.Logf("a specific version of istio was requested: %s", istioVersionStr)
-		istioVersion, err := semver.Parse(istioVersionStr)
+		istioVersion, err := semver.ParseTolerant(istioVersionStr)
 		require.NoError(t, err)
 		istioBuilder.WithVersion(istioVersion)
 	}
@@ -80,7 +79,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("deploying a testing environment and Kubernetes cluster with Istio enabled")
 	envBuilder := environments.NewBuilder().WithAddons(metallbAddon, kongAddon, istioAddon)
 	if clusterVersionStr != "" {
-		clusterVersion, err := semver.Parse(clusterVersionStr)
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
 		envBuilder.WithKubernetesVersion(clusterVersion)
 	}

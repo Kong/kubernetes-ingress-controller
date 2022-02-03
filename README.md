@@ -82,13 +82,13 @@ a specific setting with Kong Ingress Controller.
 
 ## main branch builds
 
-Pre-release builds of the `main` branch are available from the
-[kong-ingress-controller repository][docker-images] hosted on Docker Hub:
+Nightly pre-release builds of the `main` branch are available from the
+[kong/nightly-ingress-controller repository][nightly-images] hosted on Docker Hub:
 
 `main` contains unreleased new features for upcoming minor and major releases:
 
 ```
-docker pull kong/kubernetes-ingress-controller:main
+docker pull kong/nightly-ingress-controller:nightly
 ```
 
 ## Seeking help
@@ -108,6 +108,20 @@ Kubernetes Slack server.
 If you've spotted a bug, please open an issue
 on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
 
+### Preview and Experimental Features
+
+At any time the KIC may include features or options that are considered
+experimental and are not enabled by default, nor available in the [Kong
+Documentation Site][kongdocs].
+
+To try out new features that are behind feature gates, please see the
+preview features in [FEATURE_GATES.md][fgates] and documentation for these
+preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
+
+[kongdocs]:https://docs.konghq.com
+[fgates]:/FEATURE_GATES.md
+[fpreview]:/FEATURE_PREVIEW_DOCUMENTATION.md
+
 ### Community meetings
 
 You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback or just to listen and hang out.
@@ -125,6 +139,7 @@ See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and
 [badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
 [badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
 [docker-images]: https://hub.docker.com/r/kong/kubernetes-ingress-controller
+[nightly-images]: https://hub.docker.com/r/kong/nightly-ingress-controller
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/

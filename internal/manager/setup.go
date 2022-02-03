@@ -9,7 +9,6 @@ import (
 
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
-	"github.com/kong/deck/file"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,9 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/ctrlutils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/sendconfig"
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -127,7 +126,7 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
-		ConfigDone:        make(chan file.Content),
+		ConfigDone:        make(chan *sendconfig.KongConfigUpdate),
 	}
 
 	return cfg, nil

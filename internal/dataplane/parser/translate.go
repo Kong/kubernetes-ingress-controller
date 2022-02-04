@@ -176,7 +176,7 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) ingressRules {
 	result := newIngressRules()
 
-	var allDefaultBackends []networkingv1.Ingress
+	var allDefaultBackends []*networkingv1.Ingress
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
@@ -190,7 +190,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 		})
 
 		if ingressSpec.DefaultBackend != nil {
-			allDefaultBackends = append(allDefaultBackends, *ingress)
+			allDefaultBackends = append(allDefaultBackends, ingress)
 		}
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
@@ -305,7 +305,7 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 			}
 		}
 		r := kongstate.Route{
-			Ingress: util.FromK8sObject(&ingress),
+			Ingress: util.FromK8sObject(ingress),
 			Route: kong.Route{
 				Name:              kong.String(ingress.Namespace + "." + ingress.Name),
 				Paths:             kong.StringSlice("/"),

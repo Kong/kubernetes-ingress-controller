@@ -75,6 +75,8 @@ func NewCacheBasedProxyWithStagger(logger logrus.FieldLogger,
 		syncTicker:          time.NewTicker(stagger),
 
 		configApplied: false,
+
+		client: k8s,
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -136,6 +138,8 @@ type clientgoCachedProxyResolver struct {
 	// on the logrus API.
 	deprecatedLogger logrus.FieldLogger
 	logger           logr.Logger
+
+	client client.Client
 }
 
 // -----------------------------------------------------------------------------
@@ -200,7 +204,7 @@ func (p *clientgoCachedProxyResolver) startProxyUpdateServer(ctx context.Context
 			return
 		case <-p.syncTicker.C:
 			updateConfigSHA, err := p.kongUpdater(ctx, p.lastConfigSHA, p.cache,
-				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic, p.proxyRequestTimeout, p.promMetrics)
+				p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync, p.diagnostic, p.proxyRequestTimeout, p.promMetrics, p.client)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
 				break

@@ -17,6 +17,7 @@ limitations under the License.
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -39,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -78,6 +80,7 @@ type Storer interface {
 
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
+	ListIngressesV1Alternative(client.Client) []*networkingv1.Ingress
 	ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
@@ -436,6 +439,35 @@ func (s Store) ListIngressesV1() []*networkingv1.Ingress {
 	})
 
 	return ingresses
+}
+
+// ListIngressesV1Alternative is like ListIngressesV1, but it uses a provided client
+func (s Store) ListIngressesV1Alternative(client client.Client) []*networkingv1.Ingress {
+	var filtered []*networkingv1.Ingress
+	ingressesV1 := &networkingv1.IngressList{}
+	err := client.List(context.TODO(), ingressesV1)
+	if err != nil {
+		s.logger.Errorf("failed to list networking v1 Ingresses: %v", err)
+	}
+	for i, ingress := range ingressesV1.Items {
+		if ingress.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
+			if !s.isValidIngressClass(&ingress.ObjectMeta, s.ingressV1ClassMatching) {
+				continue
+			}
+		} else {
+			if !s.isValidIngressV1Class(&ingress, s.ingressV1ClassMatching) {
+				continue
+			}
+		}
+		filtered = append(filtered, &ingressesV1.Items[i])
+	}
+
+	sort.SliceStable(filtered, func(i, j int) bool {
+		return strings.Compare(fmt.Sprintf("%s/%s", filtered[i].Namespace, filtered[i].Name),
+			fmt.Sprintf("%s/%s", filtered[j].Namespace, filtered[j].Name)) < 0
+	})
+
+	return filtered
 }
 
 // ListIngressesV1beta1 returns the list of Ingresses in the Ingress v1beta1 store.

@@ -7,6 +7,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
@@ -42,10 +43,11 @@ func UpdateKongAdminSimple(ctx context.Context,
 	diagnostic util.ConfigDumpDiagnostic,
 	proxyRequestTimeout time.Duration,
 	promMetrics *metrics.CtrlFuncMetrics,
+	client client.Client,
 ) ([]byte, error) {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*cache, ingressClassName, false, false, false, deprecatedLogger)
-	kongstate, err := parser.Build(deprecatedLogger, storer)
+	kongstate, err := parser.Build(deprecatedLogger, storer, client)
 	if err != nil {
 		promMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,

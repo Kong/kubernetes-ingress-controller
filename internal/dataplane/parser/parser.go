@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -25,9 +26,10 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
-func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
+func parseAll(log logrus.FieldLogger, s store.Storer, client client.Client) ingressRules {
 	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
-	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
+
+	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1Alternative(client))
 
 	tcpIngresses, err := s.ListTCPIngresses()
 	if err != nil {
@@ -69,8 +71,8 @@ func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
-func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error) {
-	parsedAll := parseAll(log, s)
+func Build(log logrus.FieldLogger, s store.Storer, client client.Client) (*kongstate.KongState, error) {
+	parsedAll := parseAll(log, s, client)
 	parsedAll.populateServices(log, s)
 
 	var result kongstate.KongState

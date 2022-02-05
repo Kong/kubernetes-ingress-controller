@@ -44,16 +44,23 @@
 
 ## [2.2.0]
 
-> Release date: TBD
+> Release date: 2022/02/04
 
 #### Added
 
+- Support for Kubernetes [Gateway APIs][gwapis] is now available [by enabling 
+  the `Gateway` feature gate](https://docs.konghq.com/kubernetes-ingress-controller/2.2.x/guides/using-gateway-api/).
+  This is an alpha feature, with limited support for the `HTTPRoute` API.
+  [Gateway Milestone 1][gwm1]
 - Kubernetes client rate limiting can now be configured using `--apiserver-qps`
   (default 100) and `--apiserver-burst` (default 300) settings. Defaults have
   been increased to prevent ratelimiting under normal loads.
   [#2169](https://github.com/Kong/kubernetes-ingress-controller/issues/2169)
 - The KIC Grafana dashboard [is now published on grafana.com](https://grafana.com/grafana/dashboards/15662).
   [#2235](https://github.com/Kong/kubernetes-ingress-controller/issues/2235)
+
+[gwapis]:https://github.com/kubernetes-sigs/gateway-api
+[gwm1]:https://github.com/Kong/kubernetes-ingress-controller/milestone/21
 
 #### Fixed
 
@@ -1554,6 +1561,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.1.0
 [2.0.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.0.7

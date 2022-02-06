@@ -54,8 +54,8 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	}
 
 	if opts.CACertPath != "" && opts.CACert != "" {
-		return nil, fmt.Errorf("both --kong-admin-ca-cert-file and --kong-admin-ca-cert" +
-			"are set; please remove one or the other")
+		return nil, fmt.Errorf("both --kong-admin-ca-cert-file and --kong-admin-ca-cert are set; " +
+			"please remove one or the other")
 	}
 	if opts.CACert != "" {
 		certPool := x509.NewCertPool()
@@ -84,12 +84,12 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	// don't allow the caller to specify both the literal and path versions to supply the
 	// certificate and key, they must choose one or the other for each.
 	if opts.TLSClientCertPath != "" && opts.TLSClientCert != "" {
-		return nil, fmt.Errorf("both --kong-admin-tls-client-cert-file and --kong-admin-tls-client-cert" +
-			"are set; please remove one or the other")
+		return nil, fmt.Errorf("both --kong-admin-tls-client-cert-file and --kong-admin-tls-client-certare set; " +
+			"please remove one or the other")
 	}
 	if opts.TLSClientKeyPath != "" && opts.TLSClientKey != "" {
-		return nil, fmt.Errorf("both --kong-admin-tls-client-key-file and --kong-admin-tls-client-key" +
-			"are set; please remove one or the other")
+		return nil, fmt.Errorf("both --kong-admin-tls-client-key-file and --kong-admin-tls-client-key re set; " +
+			"please remove one or the other")
 	}
 
 	// if a path to the certificate or key has been provided, retrieve the file contents

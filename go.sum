@@ -924,14 +924,14 @@ github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+o
 github.com/klauspost/compress v1.11.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/compress v1.11.13/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
-github.com/kong/deck v1.10.1-0.20220131124215-bcbe6f609eb7 h1:gl1tgXBoxvatsqiVpxnU94O6ovSIfVdUP32EM22DYHs=
-github.com/kong/deck v1.10.1-0.20220131124215-bcbe6f609eb7/go.mod h1:MTNuAZ9M0aKw52rqdbChnEiKdU0i7w5sxPHeNgZTYyk=
+github.com/kong/deck v1.10.1-0.20220207220129-178c739d68d7 h1:ec3sNxn7t1Gjk2UdCVH4lu7emF41aTtl+ByFflSkQuo=
+github.com/kong/deck v1.10.1-0.20220207220129-178c739d68d7/go.mod h1:t7It0Qt8qiFrStrN7RmgciPCFKglGESjtb1aNQ+Dc7g=
 github.com/kong/go-kong v0.25.1/go.mod h1:8Dl/eA8SVH3aJNOkS91J8CPf5oUHZ2+XSYvacrF5PBc=
 github.com/kong/go-kong v0.25.1/go.mod h1:8Dl/eA8SVH3aJNOkS91J8CPf5oUHZ2+XSYvacrF5PBc=
 github.com/kong/go-kong v0.25.1/go.mod h1:8Dl/eA8SVH3aJNOkS91J8CPf5oUHZ2+XSYvacrF5PBc=
 github.com/kong/go-kong v0.25.1/go.mod h1:8Dl/eA8SVH3aJNOkS91J8CPf5oUHZ2+XSYvacrF5PBc=
-github.com/kong/go-kong v0.25.2-0.20220126173454-9aab6cf4ade8 h1:VzxnLEma++ccIQKletYrvWHGTJjSxE2BHEBR4yhXuMs=
-github.com/kong/go-kong v0.25.2-0.20220126173454-9aab6cf4ade8/go.mod h1:BY24KgYt/o1Jtp0Mf/Vw6HDDB4EFdF0DXDk4YLlAbkw=
+github.com/kong/go-kong v0.27.0 h1:u4b/NsuiOqEIc4v/hxmK5H2X1p7RyVv6ofyNLvoW+8s=
+github.com/kong/go-kong v0.27.0/go.mod h1:bbC56mBqvnYZmzAWujmUqONXhloPWLs8r4A07uT8EzE=
 github.com/kong/kubernetes-testing-framework v0.12.0 h1:bx9gks3P/cGSzA2CcthaEFMqnJ6LbY7xWaxDHqadp2Q=
 github.com/kong/kubernetes-testing-framework v0.12.0/go.mod h1:Eh2fHPqGB5M6s+ZiPntAn9s/d5Kzkxi7qHCE49cfjV0=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
@@ -1317,7 +1317,6 @@ github.com/syndtr/gocapability v0.0.0-20170704070218-db04d3cc01c8/go.mod h1:hkRG
 github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/tchap/go-patricia v2.2.6+incompatible/go.mod h1:bmLyhP68RS6kStMGxByiQ23RP/odRBOTVjwp2cDyi6I=
-github.com/tidwall/gjson v1.13.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/gjson v1.14.0 h1:6aeJ0bzojgWLa82gDQHcx3S0Lr/O51I9bJ5nv6JFx5w=
 github.com/tidwall/gjson v1.14.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
@@ -2214,7 +2213,6 @@ k8s.io/code-generator v0.22.2/go.mod h1:eV77Y09IopzeXOJzndrDyCI88UBok2h6WxAlBwpx
 k8s.io/code-generator v0.22.4/go.mod h1:qjYl54pQ/emhkT0UxbufbREYJMWsHNNV/jSVwhYZQGw=
 k8s.io/code-generator v0.22.5/go.mod h1:sbdWCOVob+KaQ5O7xs8PNNaCTpbWVqNgA6EPwLOmRNk=
 k8s.io/code-generator v0.23.0/go.mod h1:vQvOhDXhuzqiVfM/YHp+dmg10WDZCchJVObc9MvowsE=
-k8s.io/code-generator v0.23.1/go.mod h1:V7yn6VNTCWW8GqodYCESVo95fuiEg713S8B7WacWZDA=
 k8s.io/code-generator v0.23.2/go.mod h1:S0Q1JVA+kSzTI1oUvbKAxZY/DYbA/ZUb4Uknog12ETk=
 k8s.io/code-generator v0.23.3/go.mod h1:S0Q1JVA+kSzTI1oUvbKAxZY/DYbA/ZUb4Uknog12ETk=
 k8s.io/component-base v0.18.0/go.mod h1:u3BCg0z1uskkzrnAKFzulmYaEpZF7XC9Pf/uFyb1v2c=

@@ -348,7 +348,7 @@ func TestHTTPSIngress(t *testing.T) {
 			}
 		}
 		return false
-	}, 120*time.Second, 1*time.Second, true)
+	}, statusWait, waitTick, true)
 
 	t.Log("checking second ingress status readiness")
 	assert.Eventually(t, func() bool {
@@ -363,7 +363,7 @@ func TestHTTPSIngress(t *testing.T) {
 			}
 		}
 		return false
-	}, 120*time.Second, 1*time.Second, true)
+	}, statusWait, waitTick, true)
 
 	t.Log("waiting for routes from Ingress to be operational with expected certificate")
 	assert.Eventually(t, func() bool {

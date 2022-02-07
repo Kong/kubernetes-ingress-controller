@@ -154,7 +154,7 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 			}
 		}
 		return false
-	}, 120*time.Second, 1*time.Second, true)
+	}, statusWait, waitTick, true)
 
 	url := "http://" + proxy
 	tr := &http.Transport{

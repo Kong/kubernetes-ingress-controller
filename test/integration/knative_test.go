@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,15 @@ const (
 	knativeWaitTime = time.Minute * 2
 )
 
+// knativeMinKubernetesVersion indicates the minimum Kubernetes version
+// required in order to successfully run Knative tests.
+var knativeMinKubernetesVersion = semver.MustParse("1.21.0")
+
 func TestKnativeIngress(t *testing.T) {
+	if clusterVersion.LT(knativeMinKubernetesVersion) {
+		t.Skip("knative tests can't be run on cluster versions prior to 1.21")
+	}
+
 	t.Parallel()
 	ns, cleanup := namespace(t)
 	defer cleanup()

@@ -52,9 +52,7 @@ func TestMain(m *testing.M) {
 
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
-	knativeBuilder := knative.NewBuilder()
-	knativeAddon := knativeBuilder.Build()
-	builder := environments.NewBuilder().WithAddons(kongAddon, knativeAddon)
+	builder := environments.NewBuilder().WithAddons(kongAddon)
 
 	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster != "" {
@@ -105,6 +103,15 @@ func TestMain(m *testing.M) {
 	_, err = env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Update(ctx, svc, metav1.UpdateOptions{})
 	exitOnErr(err)
 
+	clusterVersion, err = env.Cluster().Version()
+	exitOnErr(err)
+	if clusterVersion.GE(knativeMinKubernetesVersion) {
+		fmt.Printf("INFO: deploying knative addon")
+		knativeBuilder := knative.NewBuilder()
+		knativeAddon := knativeBuilder.Build()
+		exitOnErr(env.Cluster().DeployAddon(ctx, knativeAddon))
+	}
+
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	exitOnErr(<-env.WaitForReady(ctx))
 
@@ -153,10 +160,6 @@ func TestMain(m *testing.M) {
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
 		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))
 	}
-
-	fmt.Println("INFO: running final testing environment checks")
-	clusterVersion, err = env.Cluster().Version()
-	exitOnErr(err)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"os"
 	"strconv"
@@ -270,6 +271,9 @@ func runTestTLSServer(ctx context.Context, t *testing.T, listen net.Listener, re
 			conn, err := listen.Accept()
 			if err != nil {
 				// we expect "use of closed network connection" when the test ends, since it will be blocked on accept
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				t.Logf("could not accept TLS connection: %v", err)
 				return
 			}

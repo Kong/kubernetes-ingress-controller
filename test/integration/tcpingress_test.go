@@ -116,7 +116,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, 30*time.Second, 1*time.Second, true)
+	}, statusWait, waitTick, true)
 
 	t.Logf("verifying TCP Ingress %s operational", tcp.Name)
 	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", proxyURL.Hostname()))

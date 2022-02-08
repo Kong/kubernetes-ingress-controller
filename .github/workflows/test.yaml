@@ -38,7 +38,7 @@ jobs:
       run: go install github.com/mikefarah/yq/v4@latest
 
     - name: Setup golangci-lint
-      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1
+      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.42.1
 
     - name: Run golangci-lint
       run: make lint

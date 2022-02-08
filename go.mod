@@ -11,10 +11,10 @@ require (
 	github.com/go-logr/logr v1.2.2
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.10.0
-	github.com/kong/go-kong v0.26.0
+	github.com/kong/go-kong v0.27.0
 	github.com/kong/kubernetes-testing-framework v0.12.1
 	github.com/lithammer/dedent v1.1.0
-	github.com/miekg/dns v1.1.45
+	github.com/miekg/dns v1.1.46
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/common v0.32.1
@@ -24,8 +24,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.14.0
-	google.golang.org/api v0.66.0
-	google.golang.org/genproto v0.0.0-20220118154757-00ab72f36ad5
+	google.golang.org/api v0.67.0
+	google.golang.org/genproto v0.0.0-20220126215142-9970aeb2e350
 	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.23.3
 	k8s.io/apimachinery v0.23.3
@@ -36,8 +36,8 @@ require (
 	knative.dev/serving v0.29.0
 	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/gateway-api v0.4.1
-	sigs.k8s.io/kustomize/api v0.11.0
-	sigs.k8s.io/kustomize/kyaml v0.13.2
+	sigs.k8s.io/kustomize/api v0.11.1
+	sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -127,7 +127,7 @@ require (
 	golang.org/x/net v0.0.0-20220105145211-5b0dc2dfae98 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
+	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect

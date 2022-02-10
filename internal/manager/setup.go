@@ -193,7 +193,7 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 	if err != nil {
 		return err
 	}
-	srv, err := admission.MakeTLSServer(&managerConfig.AdmissionServer, &admission.RequestHandler{
+	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
 			kongclient.Consumers,
 			kongclient.Plugins,
@@ -202,7 +202,7 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 			managerConfig.IngressClassName,
 		),
 		Logger: logger,
-	})
+	}, log)
 	if err != nil {
 		return err
 	}

@@ -442,7 +442,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	t.Log("confirming the second replica is not the leader and is not pushing configuration")
 	forwardCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	startPortForwarder(forwardCtx, t, env, secondary, "9777", "cmetrics")
+	startPortForwarder(forwardCtx, t, env, secondary.Namespace, secondary.Name, "9777", "cmetrics")
 	require.Never(t, func() bool {
 		req, err := http.NewRequest("GET", "http://localhost:9777/metrics", nil)
 		require.NoError(t, err)
@@ -881,7 +881,7 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 
 // startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
 // ends
-func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, pod corev1.Pod, localPort,
+func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, localPort,
 	targetPort string) {
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
@@ -892,8 +892,9 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 	written, err := kubeconfigFile.Write(kubeconfig)
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", pod.Namespace, pod.Name, "9777:cmetrics") //nolint:gosec
-	t.Logf("forwarding port %s to %s/%s:%s", localPort, pod.Namespace, pod.Name, targetPort)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", namespace,
+		name, fmt.Sprintf("%s:%s", localPort, targetPort)) //nolint:gosec
+	t.Logf("forwarding port %s to %s/%s:%s", localPort, namespace, name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {
 		startOutput, outputErr := cmd.Output()
 		assert.NoError(t, outputErr)

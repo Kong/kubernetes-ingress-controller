@@ -162,7 +162,6 @@ func (p *clientgoCachedProxyResolver) NeedLeaderElection() bool {
 func (p *clientgoCachedProxyResolver) Start(ctx context.Context) error {
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2249
 	// This is a temporary mitigation to allow some time for controllers to populate the proxy cache
-	// It must be removed when the proxy has been migrated to the manager cache
 	time.Sleep(time.Second * 5)
 	go p.startProxyUpdateServer(ctx)
 	return nil

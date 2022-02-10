@@ -49,8 +49,9 @@
 
 #### Fixed
 
-- Added mitigation for an issue where controllers may temporarily incorrectly
-  delete configuration upon gaining leadership.
+- Added mitigation for an issue where controllers may briefly delete and
+  recreate configuration upon gaining leadership while populating their
+  Kubernetes object cache.
   [#2255](https://github.com/Kong/kubernetes-ingress-controller/pull/2255)
 
 ## [2.2.0]

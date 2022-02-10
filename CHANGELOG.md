@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.2.0](#220)
  - [2.1.1](#211)
  - [2.1.0](#210)
  - [2.0.7](#207)
@@ -41,6 +42,17 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.2.1]
+
+> Release date: TBD
+
+#### Fixed
+
+- Added mitigation for an issue where controllers may briefly delete and
+  recreate configuration upon gaining leadership while populating their
+  Kubernetes object cache.
+  [#2255](https://github.com/Kong/kubernetes-ingress-controller/pull/2255)
 
 ## [2.2.0]
 
@@ -1561,6 +1573,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.1.0

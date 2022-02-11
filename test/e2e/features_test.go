@@ -22,6 +22,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// -----------------------------------------------------------------------------
+// E2E feature tests
+//
+// These tests test features that are not easily testable using integration
+// tests due to environment requirements (e.g. needing to mount volumes) or
+// conflicts with the integration configuration.
+// -----------------------------------------------------------------------------
+
 // TLSPair is a PEM certificate+key pair
 type TLSPair struct {
 	Key, Cert string
@@ -235,4 +243,92 @@ func TestWebhookUpdate(t *testing.T) {
 		}
 		return conn.ConnectionState().PeerCertificates[0].Subject.CommonName == "second.example"
 	}, time.Minute*10, time.Second)
+}
+
+func TestDeployAllInOneDBLESSGateway(t *testing.T) {
+	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+		require.NoError(t, err)
+		builder.WithKubernetesVersion(clusterVersion)
+	}
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up environment for cluster %s", env.Cluster().Name())
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
+	t.Logf("deploying Gateway APIs CRDs from %s", gatewayCRDsURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), gatewayCRDsURL))
+
+	t.Log("deploying kong components")
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	deployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("updating kong deployment to enable Gateway feature gate")
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "ingress-controller" {
+			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "Gateway=true"})
+		}
+	}
+
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
+		deployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying controller updates associated Gateway resoures")
+	gw := deployGateway(ctx, t, env)
+	verifyGateway(ctx, t, env, gw)
+	deployHTTPRoute(ctx, t, env, gw)
+	verifyHTTPRoute(ctx, t, env)
+}
+
+// Unsatisfied LoadBalancers have special handling, see
+// https://github.com/Kong/kubernetes-ingress-controller/issues/2001
+func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
+	t.Log("configuring all-in-one-dbless.yaml manifest test")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	addons := []clusters.Addon{}
+	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithAddons(addons...)
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+		require.NoError(t, err)
+		builder.WithKubernetesVersion(clusterVersion)
+	}
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
+	t.Log("deploying kong components")
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	_ = deployKong(ctx, t, env, manifest)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
 }

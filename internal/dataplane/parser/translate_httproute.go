@@ -122,11 +122,6 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				return nil, fmt.Errorf("query param matches are not yet supported")
 			}
 
-			// TODO: implement regex path matches
-			if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression {
-				return nil, fmt.Errorf("regular expression path matches are not yet supported")
-			}
-
 			// build the route object using the method and pathing information
 			r := kongstate.Route{
 				Ingress: objectInfo,
@@ -149,7 +144,9 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				r.Route.Paths = []*string{match.Path.Value}
 
 				// determine whether path stripping needs to be enabled
-				r.Route.StripPath = kong.Bool(match.Path.Type == nil || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix)
+				r.Route.StripPath = kong.Bool(match.Path.Type == nil ||
+					*match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix ||
+					*match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression)
 			}
 
 			// configure method matching information about the route if method

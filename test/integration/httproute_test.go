@@ -110,6 +110,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
+	pathMatchRegularExpression := gatewayv1alpha2.PathMatchRegularExpression
 	httproute := &gatewayv1alpha2.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -121,12 +122,20 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				}},
 			},
 			Rules: []gatewayv1alpha2.HTTPRouteRule{{
-				Matches: []gatewayv1alpha2.HTTPRouteMatch{{
-					Path: &gatewayv1alpha2.HTTPPathMatch{
-						Type:  &pathMatchPrefix,
-						Value: kong.String("/httpbin"),
+				Matches: []gatewayv1alpha2.HTTPRouteMatch{
+					{
+						Path: &gatewayv1alpha2.HTTPPathMatch{
+							Type:  &pathMatchPrefix,
+							Value: kong.String("/httpbin"),
+						},
 					},
-				}},
+					{
+						Path: &gatewayv1alpha2.HTTPPathMatch{
+							Type:  &pathMatchRegularExpression,
+							Value: kong.String("/regex-\\d{3}-httpbin"),
+						},
+					},
+				},
 				BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{
 					BackendRef: gatewayv1alpha2.BackendRef{
 						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
@@ -155,6 +164,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
 	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "regex-123-httpbin", http.StatusOK, "<title>httpbin.org</title>")
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httproute.Spec.ParentRefs

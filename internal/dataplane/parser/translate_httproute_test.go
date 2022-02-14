@@ -209,7 +209,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 									kong.String("http"),
 									kong.String("https"),
 								},
-								StripPath: kong.Bool(true),
 							},
 							Ingress: util.K8sObjectInfo{
 								Name:        "basic-httproute",
@@ -350,7 +349,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 									kong.String("http"),
 									kong.String("https"),
 								},
-								StripPath: kong.Bool(true),
 							},
 							Ingress: util.K8sObjectInfo{
 								Name:        "basic-httproute",

@@ -142,11 +142,6 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 			if match.Path != nil {
 				// determine the path match values
 				r.Route.Paths = []*string{match.Path.Value}
-
-				// determine whether path stripping needs to be enabled
-				r.Route.StripPath = kong.Bool(match.Path.Type == nil ||
-					*match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix ||
-					*match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression)
 			}
 
 			// configure method matching information about the route if method

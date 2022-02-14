@@ -19,6 +19,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 )
 
@@ -114,6 +115,9 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	httproute := &gatewayv1alpha2.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+			},
 		},
 		Spec: gatewayv1alpha2.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
@@ -132,7 +136,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					{
 						Path: &gatewayv1alpha2.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
-							Value: kong.String("/regex-\\d{3}-httpbin"),
+							Value: kong.String(`/regex-\d{3}-httpbin`),
 						},
 					},
 				},

@@ -65,14 +65,6 @@ func fromIngressV1beta1(log logrus.FieldLogger, ingressList []*networkingv1beta1
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
 						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:             kong.StringSlice(path),
 						StripPath:         kong.Bool(false),
@@ -219,14 +211,6 @@ func fromIngressV1(log logrus.FieldLogger, ingressList []*networkingv1.Ingress) 
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
 						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:             paths,
 						StripPath:         kong.Bool(false),
@@ -350,14 +334,6 @@ func fromTCPIngressV1beta1(log logrus.FieldLogger, tcpIngressList []*configurati
 			r := kongstate.Route{
 				Ingress: util.FromK8sObject(ingress),
 				Route: kong.Route{
-					// TODO (#834) Figure out a way to name the routes
-					// This is not a stable scheme
-					// 1. If a user adds a route in the middle,
-					// due to a shift, all the following routes will
-					// be PATCHED
-					// 2. Is it guaranteed that the order is stable?
-					// Meaning, the routes will always appear in the same
-					// order?
 					Name:      kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i)),
 					Protocols: kong.StringSlice("tcp", "tls"),
 					Destinations: []*kong.CIDRPort{
@@ -511,14 +487,6 @@ func fromKnativeIngress(log logrus.FieldLogger, ingressList []*knative.Ingress) 
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						// TODO (#834) Figure out a way to name the routes
-						// This is not a stable scheme
-						// 1. If a user adds a route in the middle,
-						// due to a shift, all the following routes will
-						// be PATCHED
-						// 2. Is it guaranteed that the order is stable?
-						// Meaning, the routes will always appear in the same
-						// order?
 						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
 						Paths:             kong.StringSlice(path),
 						StripPath:         kong.Bool(false),

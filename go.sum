@@ -939,8 +939,8 @@ github.com/kong/deck v1.10.0/go.mod h1:bk8MZu2kQvNzYJeQ6uF+BaUXO5ECDP1S4nFE7pP5y
 github.com/kong/go-kong v0.25.1/go.mod h1:8Dl/eA8SVH3aJNOkS91J8CPf5oUHZ2+XSYvacrF5PBc=
 github.com/kong/go-kong v0.25.1/go.mod h1:8Dl/eA8SVH3aJNOkS91J8CPf5oUHZ2+XSYvacrF5PBc=
 github.com/kong/go-kong v0.26.0/go.mod h1:W1rTawoOanrC1j4KO3p1X1Xuwm3mQXrKby5boBUQTso=
-github.com/kong/go-kong v0.27.0 h1:u4b/NsuiOqEIc4v/hxmK5H2X1p7RyVv6ofyNLvoW+8s=
-github.com/kong/go-kong v0.27.0/go.mod h1:bbC56mBqvnYZmzAWujmUqONXhloPWLs8r4A07uT8EzE=
+github.com/kong/go-kong v0.28.0 h1:xmcuzi2N16VX1tAYP1rn4zQp4AQUmVPZvYP663xbAjc=
+github.com/kong/go-kong v0.28.0/go.mod h1:bbC56mBqvnYZmzAWujmUqONXhloPWLs8r4A07uT8EzE=
 github.com/kong/kubernetes-testing-framework v0.12.1 h1:j8HTQTP4nkKGkt2+YtpsAPinrOmT0uiNP8mASSzhSl0=
 github.com/kong/kubernetes-testing-framework v0.12.1/go.mod h1:fupa1x3EVLT+CwQNmbBaMPaEPrG7N3JlM1/4kgcxt+s=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

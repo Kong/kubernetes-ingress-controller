@@ -45,7 +45,7 @@
 
 ## [2.2.1]
 
-> Release date: TBD
+> Release date: 2022/02/15
 
 #### Fixed
 

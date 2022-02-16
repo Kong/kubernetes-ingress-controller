@@ -114,7 +114,7 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				"httproute.%s.%s.%d",
 				httproute.Namespace,
 				httproute.Name,
-				matchNumber, // TODO: avoid route thrash from re-ordering?
+				matchNumber,
 			))
 
 			// TODO: implement query param matches

@@ -3,7 +3,7 @@ module github.com/kong/kubernetes-ingress-controller/v2
 go 1.17
 
 require (
-	cloud.google.com/go/container v1.0.0
+	cloud.google.com/go/container v1.1.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/logr v1.2.2
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.10.0
-	github.com/kong/go-kong v0.27.0
+	github.com/kong/go-kong v0.28.0
 	github.com/kong/kubernetes-testing-framework v0.12.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.46
@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.14.0
 	google.golang.org/api v0.68.0
-	google.golang.org/genproto v0.0.0-20220204002441-d6cc3cc0770e
+	google.golang.org/genproto v0.0.0-20220207164111-0872dc986b00
 	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.23.3
 	k8s.io/apimachinery v0.23.3
@@ -33,7 +33,7 @@ require (
 	k8s.io/component-base v0.23.3
 	knative.dev/networking v0.0.0-20220120043934-ec785540a732
 	knative.dev/pkg v0.0.0-20220118160532-77555ea48cd4
-	knative.dev/serving v0.29.0
+	knative.dev/serving v0.29.1
 	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/gateway-api v0.4.1
 	sigs.k8s.io/kustomize/api v0.11.2
@@ -135,7 +135,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/grpc v1.43.0 // indirect
+	google.golang.org/grpc v1.44.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

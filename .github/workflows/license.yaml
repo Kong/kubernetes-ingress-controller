@@ -5,8 +5,17 @@ on:
   pull_request: {}
 
 jobs:
+  runnable:
+    runs-on: ubuntu-latest
+    outputs:
+      runnable: ${{ steps.check.outputs.result }}
+    steps:
+    - name: Check secret availability
+      id: check
+      run: echo ::set-output name=result::${{ secrets.GITHUB_TOKEN != ''}}
   licenses:
-    if: "!contains(github.event.pull_request.labels.*.name, 'ci/license/changed')"
+    needs: runnable
+    if: "!contains(github.event.pull_request.labels.*.name, 'ci/license/changed') && needs.runnable.outputs.runnable == 'true'"
     env:
       GOPATH: ${{ github.workspace }}
       GOBIN: ${{ github.workspace }}/bin

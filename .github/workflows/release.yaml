@@ -183,9 +183,9 @@ jobs:
     strategy:
       matrix:
         minor:
-          - '19'
           - '20'
           - '21'
+          - '22'
         dbmode:
           - 'dbless'
           - 'postgres'

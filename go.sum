@@ -2321,8 +2321,8 @@ knative.dev/networking v0.0.0-20220120043934-ec785540a732 h1:fUUb5NWfYm8TQkhv1uF
 knative.dev/networking v0.0.0-20220120043934-ec785540a732/go.mod h1:6cKBV/h/vIQWCPOkds/RvzUmMR8Vz6Dks2NWb0+3xks=
 knative.dev/pkg v0.0.0-20220118160532-77555ea48cd4 h1:b9aXVrcfM/ajjHE/lGvlJOHZNAR5FF2TOTLWG7eMhzQ=
 knative.dev/pkg v0.0.0-20220118160532-77555ea48cd4/go.mod h1:etVT7Tm8pSDf4RKhGk4r7j/hj3dNBpvT7bO6a6wpahs=
-knative.dev/serving v0.29.1 h1:v6zYR/mSvVt/BpiX1AvSkDzm3uUWYqYSIoLj5pE70Xo=
-knative.dev/serving v0.29.1/go.mod h1:8Ay9QjyTcqoJE+2PietSmT5/VMdSQHe5aIBhsAFOCjM=
+knative.dev/serving v0.29.2 h1:QBEUJJR7qyBm/PLu3/Z+p673ZjbffyJvD8La5OO55UE=
+knative.dev/serving v0.29.2/go.mod h1:8Ay9QjyTcqoJE+2PietSmT5/VMdSQHe5aIBhsAFOCjM=
 oras.land/oras-go v0.4.0/go.mod h1:VJcU+VE4rkclUbum5C0O7deEZbBYnsnpbGSACwTjOcg=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

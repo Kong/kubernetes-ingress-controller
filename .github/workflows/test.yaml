@@ -109,9 +109,21 @@ jobs:
         name: coverage.unit.out
         path: coverage.unit.out
 
+  runnable:
+    runs-on: ubuntu-latest
+    environment: "Configure ci"
+    outputs:
+      runnable: ${{ steps.check.outputs.result }}
+    steps:
+    - name: Check secret availability
+      id: check
+      run: echo ::set-output name=result::${{ secrets.KONG_LICENSE_DATA != ''}}
+
   integration-tests-enterprise-postgres:
     environment: "Configure ci"
     runs-on: ubuntu-latest
+    needs: runnable
+    if: "needs.runnable.outputs.runnable == 'true'"
     steps:
 
     - name: setup golang

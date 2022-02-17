@@ -18,6 +18,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
 	pathMatchRegex := gatewayv1alpha2.PathMatchRegularExpression
+	pathMatchExact := gatewayv1alpha2.PathMatchExact
 	queryMatchExact := gatewayv1alpha2.QueryParamMatchExact
 
 	for _, tt := range []struct {
@@ -302,6 +303,83 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							Path: &gatewayv1alpha2.HTTPPathMatch{
 								Type:  &pathMatchRegex,
 								Value: kong.String("/httpbin$"),
+							},
+						}},
+						BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{
+							BackendRef: gatewayv1alpha2.BackendRef{
+								BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+									Name: gatewayv1alpha2.ObjectName("fake-service"),
+									Port: &httpPort,
+								},
+							},
+						}},
+					}},
+				},
+			}},
+			expected: ingressRules{
+				SecretNameToSNIs: SecretNameToSNIs{},
+				ServiceNameToServices: map[string]kongstate.Service{
+					"default.fake-service.80": {
+						Service: kong.Service{ // only 1 service should be created
+							ConnectTimeout: kong.Int(60000),
+							Host:           kong.String("fake-service.default.80.svc"),
+							Name:           kong.String("default.fake-service.80"),
+							Path:           kong.String("/"),
+							Port:           kong.Int(80),
+							Protocol:       kong.String("http"),
+							ReadTimeout:    kong.Int(60000),
+							Retries:        kong.Int(5),
+							WriteTimeout:   kong.Int(60000),
+						},
+						Backend: kongstate.ServiceBackend{
+							Name: "fake-service",
+							Port: kongstate.PortDef{
+								Mode:   kongstate.PortMode(1),
+								Number: 80,
+							},
+						},
+						Namespace: "default",
+						Routes: []kongstate.Route{{ // only 1 route should be created
+							Route: kong.Route{
+								Name: kong.String("httproute.default.basic-httproute.0"),
+								Paths: []*string{
+									kong.String("/httpbin$"),
+								},
+								PreserveHost: kong.Bool(true),
+								Protocols: []*string{
+									kong.String("http"),
+									kong.String("https"),
+								},
+							},
+							Ingress: util.K8sObjectInfo{
+								Name:        "basic-httproute",
+								Namespace:   corev1.NamespaceDefault,
+								Annotations: make(map[string]string),
+							},
+						}},
+						K8sService: corev1.Service{},
+					},
+				},
+			},
+		},
+		{
+			msg: "an HTTPRoute with exact path matches translates to a terminated Kong regex route",
+			routes: []*gatewayv1alpha2.HTTPRoute{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayv1alpha2.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+						ParentRefs: []gatewayv1alpha2.ParentRef{{
+							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
+						}},
+					},
+					Rules: []gatewayv1alpha2.HTTPRouteRule{{
+						Matches: []gatewayv1alpha2.HTTPRouteMatch{{
+							Path: &gatewayv1alpha2.HTTPPathMatch{
+								Type:  &pathMatchExact,
+								Value: kong.String("/httpbin"),
 							},
 						}},
 						BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{

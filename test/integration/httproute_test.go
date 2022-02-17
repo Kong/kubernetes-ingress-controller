@@ -112,6 +112,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
 	pathMatchRegularExpression := gatewayv1alpha2.PathMatchRegularExpression
+	pathMatchExact := gatewayv1alpha2.PathMatchExact
 	httproute := &gatewayv1alpha2.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -137,6 +138,12 @@ func TestHTTPRouteEssentials(t *testing.T) {
 						Path: &gatewayv1alpha2.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
 							Value: kong.String(`/regex-\d{3}-httpbin`),
+						},
+					},
+					{
+						Path: &gatewayv1alpha2.HTTPPathMatch{
+							Type:  &pathMatchExact,
+							Value: kong.String(`/exact-httpbin`),
 						},
 					},
 				},
@@ -168,7 +175,11 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
 	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "httpbin/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
+		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.")
 	eventuallyGETPath(t, "regex-123-httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "exact-httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "exact-httpbina", http.StatusNotFound, "no Route matched")
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httproute.Spec.ParentRefs

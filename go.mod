@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.10.0
 	github.com/kong/go-kong v0.28.0
-	github.com/kong/kubernetes-testing-framework v0.12.1
+	github.com/kong/kubernetes-testing-framework v0.13.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.46
 	github.com/mitchellh/mapstructure v1.4.3
@@ -28,7 +28,7 @@ require (
 	google.golang.org/genproto v0.0.0-20220211171837-173942840c17
 	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.23.3
-	k8s.io/apimachinery v0.23.3
+	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.3
 	k8s.io/component-base v0.23.3
 	knative.dev/networking v0.0.0-20220120043934-ec785540a732

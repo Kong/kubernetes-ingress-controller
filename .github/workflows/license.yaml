@@ -10,9 +10,29 @@ jobs:
     outputs:
       runnable: ${{ steps.check.outputs.result }}
     steps:
-    - name: Check secret availability
+    - name: Check repo access
       id: check
-      run: echo ::set-output name=result::${{ secrets.GITHUB_TOKEN != ''}}
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+            github.hook.error("request", async (error, options) => {
+              // 403 is no access to check, 404 is access to check but not a collaborator
+              if (error.status === 403 || error.status === 404 ) {
+                return false;
+              } else {
+                throw error;
+              }
+            });
+            var result = await github.rest.repos.checkCollaborator({
+              owner: "Kong",
+              repo: "kubernetes-ingress-controller",
+              username: "${{ github.event.pull_request.user.login }}"
+            });
+            if (result.status === 204) {
+              return true
+            }
+
   licenses:
     needs: runnable
     if: "!contains(github.event.pull_request.labels.*.name, 'ci/license/changed') && needs.runnable.outputs.runnable == 'true'"

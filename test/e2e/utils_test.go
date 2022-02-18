@@ -132,11 +132,12 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		return os.Open(baseManifestPath)
 	}
 	split := strings.Split(imagetag, ":")
-	if len(split) != 2 {
+	if len(split) < 2 {
 		t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
 		return os.Open(baseManifestPath)
 	}
-	modified, err := patchControllerImage(baseManifestPath, split[0], split[1])
+	modified, err := patchControllerImage(baseManifestPath, strings.Join(split[0:len(split)-1], ":"),
+		split[len(split)-1])
 	if err != nil {
 		t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
 		return os.Open(baseManifestPath)

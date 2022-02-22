@@ -35,7 +35,27 @@ type TLSPair struct {
 	Key, Cert string
 }
 
-var (
+const (
+	// webhookKINDConfig is a KIND configuration used for TestWebhookUpdate. KIND, when running in GitHub Actions, is
+	// a bit wonky with handling Secret updates, and they do not propagate to container filesystems in a reasonable
+	// amount of time (>10m) when running this in the complete test suite, even though the actual sync frequency/update
+	// propagation should be 1m by default. These changes force Secret updates to go directly to the API server and
+	// update containers much more often. The latter causes significant performance degradation elsewhere, and Pods take
+	// much longer to start, but once they do Secret updates show up more quickly, enough for the test to complete in time.
+	webhookKINDConfig = `kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: KubeletConfiguration
+    configMapAndSecretChangeDetectionStrategy: Get
+    syncFrequency: 3s
+`
+	validationWebhookName = "kong-validation-webhook"
+	kongNamespace         = "kong"
+	// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
+	// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=second.example/'
 	tlsPairs = []TLSPair{
 		{
 			Cert: `-----BEGIN CERTIFICATE-----
@@ -85,23 +105,6 @@ PMxZ3NvEwhsJgDJ82D7OUR2G7wZtgUj/WFj14XOofpZJmhzTQrtbbuc=
 		},
 	}
 )
-
-// webhookKINDConfig is a KIND configuration used for TestWebhookUpdate. KIND, when running in GitHub Actions, is
-// a bit wonky with handling Secret updates, and they do not propagate to container filesystems in a reasonable
-// amount of time (>10m) when running this in the complete test suite, even though the actual sync frequency/update
-// propagation should be 1m by default. These changes force Secret updates to go directly to the API server and
-// update containers much more often. The latter causes significant performance degradation elsewhere, and Pods take
-// much longer to start, but once they do Secret updates show up more quickly, enough for the test to complete in time.
-const webhookKINDConfig = `kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-- role: control-plane
-  kubeadmConfigPatches:
-  - |
-    kind: KubeletConfiguration
-    configMapAndSecretChangeDetectionStrategy: Get
-    syncFrequency: 3s
-`
 
 // TestWebhookUpdate checks that the webhook updates the certificate indicated by --admission-webhook-cert-file when
 // the mounted Secret updates. This requires E2E because we can't mount Secrets with the locally-run integration
@@ -169,19 +172,19 @@ func TestWebhookUpdate(t *testing.T) {
 		},
 	}
 
-	_, err = env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, firstCertificate, metav1.CreateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Create(ctx, firstCertificate, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("exposing admission service to the test environment")
-	admission, err := env.Cluster().Client().CoreV1().Services("kong").Get(ctx, "kong-validation-webhook",
+	admission, err := env.Cluster().Client().CoreV1().Services(kongNamespace).Get(ctx, validationWebhookName,
 		metav1.GetOptions{})
 	require.NoError(t, err)
 	admission.Spec.Type = corev1.ServiceTypeLoadBalancer
-	_, err = env.Cluster().Client().CoreV1().Services("kong").Update(ctx, admission, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(kongNamespace).Update(ctx, admission, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	var admissionAddress string
 	require.Eventually(t, func() bool {
-		admission, err = env.Cluster().Client().CoreV1().Services("kong").Get(ctx, "kong-validation-webhook",
+		admission, err = env.Cluster().Client().CoreV1().Services(kongNamespace).Get(ctx, validationWebhookName,
 			metav1.GetOptions{})
 		if err != nil {
 			return false
@@ -231,7 +234,7 @@ func TestWebhookUpdate(t *testing.T) {
 	}, time.Minute*2, time.Second)
 
 	t.Log("changing certificate")
-	_, err = env.Cluster().Client().CoreV1().Secrets("kong").Update(ctx, secondCertificate, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Update(ctx, secondCertificate, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("checking second certificate")

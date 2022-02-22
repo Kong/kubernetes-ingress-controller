@@ -59,6 +59,17 @@ body:
     required: false
 - type: textarea
   attributes:
+    label: Deployment Method
+    description: |
+      example:
+        Helm Chart Version 2.7.0
+        OR Kustomize using commit <COMMIT_SHA>
+    placeholder: 'Please describe your deployment method and version here.'
+    render: shell
+  validations:
+    required: false
+- type: textarea
+  attributes:
     label: Anything else?
     description: |
       Links? References? Anything that will give us more context about the issue you are encountering!

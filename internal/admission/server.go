@@ -44,9 +44,11 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {
+	// the caller provided certificates via the ENV (certwatcher can't be used here)
 	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert != "" && sc.Key != "":
 		cert, key = []byte(sc.Cert), []byte(sc.Key)
 
+	// the caller provided explicit file paths to the certs, enable certwatcher for these paths
 	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
 		var err error
 		watcher, err = certwatcher.New(sc.CertPath, sc.KeyPath)
@@ -54,7 +56,8 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 		}
 
-	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert == "" && sc.Key == "":
+	// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
+	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
 		var err error
 		watcher, err = certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
 		if err != nil {

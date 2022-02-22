@@ -170,15 +170,15 @@ func TestWebhookUpdate(t *testing.T) {
 	}
 
 	_, err = env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, firstCertificate, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Log("exposing admission service to the test environment")
 	admission, err := env.Cluster().Client().CoreV1().Services("kong").Get(ctx, "kong-validation-webhook",
 		metav1.GetOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	admission.Spec.Type = corev1.ServiceTypeLoadBalancer
 	_, err = env.Cluster().Client().CoreV1().Services("kong").Update(ctx, admission, metav1.UpdateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var admissionAddress string
 	require.Eventually(t, func() bool {
 		admission, err = env.Cluster().Client().CoreV1().Services("kong").Get(ctx, "kong-validation-webhook",
@@ -232,7 +232,7 @@ func TestWebhookUpdate(t *testing.T) {
 
 	t.Log("changing certificate")
 	_, err = env.Cluster().Client().CoreV1().Secrets("kong").Update(ctx, secondCertificate, metav1.UpdateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Log("checking second certificate")
 	require.Eventually(t, func() bool {

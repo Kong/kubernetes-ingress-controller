@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.2.1](#221)
  - [2.2.0](#220)
  - [2.1.1](#211)
  - [2.1.0](#210)
@@ -42,6 +43,17 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.3.0]
+
+> Release date: TBD
+
+#### Fixed
+
+- Unconfigured fields now use their default value according to the Kong proxy
+  instance's reported schema. This addresses an issue where configuration
+  updates would send unnecessary requests to clear a default value.
+  [#2286](https://github.com/Kong/kubernetes-ingress-controller/pull/2286)
 
 ## [2.2.1]
 

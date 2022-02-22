@@ -47,6 +47,14 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 	// the caller provided certificates via the ENV (certwatcher can't be used here)
 	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert != "" && sc.Key != "":
 		cert, key = []byte(sc.Cert), []byte(sc.Key)
+		keyPair, err := tls.X509KeyPair(cert, key)
+		if err != nil {
+			return nil, fmt.Errorf("X509KeyPair error: %w", err)
+		}
+		return &tls.Config{
+			MinVersion:   tls.VersionTLS12,
+			Certificates: []tls.Certificate{keyPair},
+		}, nil
 
 	// the caller provided explicit file paths to the certs, enable certwatcher for these paths
 	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
@@ -68,16 +76,6 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 		return nil, fmt.Errorf("either cert/key files OR cert/key values must be provided, or none")
 	}
 
-	if watcher == nil {
-		keyPair, err := tls.X509KeyPair(cert, key)
-		if err != nil {
-			return nil, fmt.Errorf("X509KeyPair error: %w", err)
-		}
-		return &tls.Config{
-			MinVersion:   tls.VersionTLS12,
-			Certificates: []tls.Certificate{keyPair},
-		}, nil
-	}
 	go func() {
 		if err := watcher.Start(ctx); err != nil {
 			log.WithError(err).Error("certificate watcher error")

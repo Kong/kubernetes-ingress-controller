@@ -54,8 +54,11 @@ nodes:
 `
 	validationWebhookName = "kong-validation-webhook"
 	kongNamespace         = "kong"
+)
+
+var (
 	// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
-	// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=second.example/'
+	// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
 	tlsPairs = []TLSPair{
 		{
 			Cert: `-----BEGIN CERTIFICATE-----

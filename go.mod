@@ -2,6 +2,8 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.17
 
+replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
+
 require (
 	cloud.google.com/go/container v1.2.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
@@ -10,7 +12,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.2
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.10.0
+	github.com/kong/deck v1.11.0
 	github.com/kong/go-kong v0.28.1
 	github.com/kong/kubernetes-testing-framework v0.13.0
 	github.com/lithammer/dedent v1.1.0
@@ -104,7 +106,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.21.11 // indirect
+	github.com/shirou/gopsutil/v3 v3.22.1 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

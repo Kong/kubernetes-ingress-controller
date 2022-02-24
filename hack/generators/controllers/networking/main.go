@@ -80,6 +80,18 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
+		PackageImportAlias:                "netv1",
+		PackageAlias:                      "NetV1",
+		Package:                           netv1,
+		Type:                              "IngressClass",
+		Plural:                            "ingressclasses",
+		URL:                               "networking.k8s.io",
+		CacheType:                         "IngressV1",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
 		PackageImportAlias:                "netv1beta1",
 		PackageAlias:                      "NetV1Beta1",
 		Package:                           netv1beta1,

@@ -1201,6 +1201,22 @@ rules:
 - apiGroups:
   - networking.k8s.io
   resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
   - ingresses
   verbs:
   - get
@@ -1597,3 +1613,10 @@ spec:
         image: busybox
         name: wait-for-postgres
       restartPolicy: OnFailure
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kong
+spec:
+  controller: ingress-controllers.konghq.com/kong

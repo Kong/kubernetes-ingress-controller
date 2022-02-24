@@ -48,8 +48,9 @@ import (
 )
 
 const (
-	knativeIngressClassKey = "networking.knative.dev/ingress.class"
-	caCertKey              = "konghq.com/ca-cert"
+	knativeIngressClassKey     = "networking.knative.dev/ingress.class"
+	caCertKey                  = "konghq.com/ca-cert"
+	ingressClassKongController = "ingress-controllers.konghq.com/kong"
 )
 
 // ErrNotFound error is returned when a lookup results in no resource.
@@ -78,6 +79,7 @@ type Storer interface {
 
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
+	ListIngressClassesV1() []*networkingv1.IngressClass
 	ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
@@ -113,6 +115,7 @@ type CacheStores struct {
 	// Core Kubernetes Stores
 	IngressV1beta1 cache.Store
 	IngressV1      cache.Store
+	IngressClassV1 cache.Store
 	Service        cache.Store
 	Secret         cache.Store
 	Endpoint       cache.Store
@@ -140,6 +143,7 @@ func NewCacheStores() (c CacheStores) {
 	c.Consumer = cache.NewStore(keyFunc)
 	c.Endpoint = cache.NewStore(keyFunc)
 	c.IngressV1 = cache.NewStore(keyFunc)
+	c.IngressClassV1 = cache.NewStore(keyFunc)
 	c.IngressV1beta1 = cache.NewStore(keyFunc)
 	c.HTTPRoute = cache.NewStore(keyFunc)
 	c.KnativeIngress = cache.NewStore(keyFunc)
@@ -210,6 +214,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.IngressV1beta1.Get(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Get(obj)
+	case *networkingv1.IngressClass:
+		return c.IngressClassV1.Get(obj)
 	case *corev1.Service:
 		return c.Service.Get(obj)
 	case *corev1.Secret:
@@ -261,6 +267,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.IngressV1beta1.Add(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Add(obj)
+	case *networkingv1.IngressClass:
+		return c.IngressClassV1.Add(obj)
 	case *corev1.Service:
 		return c.Service.Add(obj)
 	case *corev1.Secret:
@@ -313,6 +321,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.IngressV1beta1.Delete(obj)
 	case *networkingv1.Ingress:
 		return c.IngressV1.Delete(obj)
+	case *networkingv1.IngressClass:
+		return c.IngressClassV1.Delete(obj)
 	case *corev1.Service:
 		return c.Service.Delete(obj)
 	case *corev1.Secret:
@@ -436,6 +446,29 @@ func (s Store) ListIngressesV1() []*networkingv1.Ingress {
 	})
 
 	return ingresses
+}
+
+// ListIngressClassesV1 returns the list of Ingresses in the Ingress v1 store.
+func (s Store) ListIngressClassesV1() []*networkingv1.IngressClass {
+	// filter ingress rules
+	var classes []*networkingv1.IngressClass
+	for _, item := range s.stores.IngressClassV1.List() {
+		class, ok := item.(*networkingv1.IngressClass)
+		if !ok {
+			s.logger.Warnf("listIngressClassesV1: dropping object of unexpected type: %#v", item)
+			continue
+		}
+		if class.Spec.Controller != ingressClassKongController {
+			continue
+		}
+		classes = append(classes, class)
+	}
+
+	sort.SliceStable(classes, func(i, j int) bool {
+		return strings.Compare(classes[i].Name, classes[j].Name) < 0
+	})
+
+	return classes
 }
 
 // ListIngressesV1beta1 returns the list of Ingresses in the Ingress v1beta1 store.

@@ -3,6 +3,7 @@ resources:
 - namespace.yaml
 - ../crd
 - ../rbac
+- ingressclass.yaml
 - service.yaml
 - serviceaccount.yaml
 - validation-service.yaml

@@ -48,6 +48,12 @@
 
 > Release date: TBD
 
+#### Added
+
+- Deployment manifests now include an IngressClass resource and permissions to
+  read IngressClass resources.
+  [#2292](https://github.com/Kong/kubernetes-ingress-controller/pull/2292)
+
 #### Fixed
 
 - Unconfigured fields now use their default value according to the Kong proxy

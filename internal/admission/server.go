@@ -51,7 +51,8 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 		if err != nil {
 			return nil, fmt.Errorf("X509KeyPair error: %w", err)
 		}
-		return &tls.Config{
+		return &tls.Config{ // nolint:gosec
+			MaxVersion:   tls.VersionTLS12,
 			MinVersion:   tls.VersionTLS12,
 			Certificates: []tls.Certificate{keyPair},
 		}, nil
@@ -81,7 +82,8 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 			log.WithError(err).Error("certificate watcher error")
 		}
 	}()
-	return &tls.Config{
+	return &tls.Config{ // nolint:gosec
+		MaxVersion:     tls.VersionTLS12,
 		MinVersion:     tls.VersionTLS12,
 		GetCertificate: watcher.GetCertificate,
 	}, nil

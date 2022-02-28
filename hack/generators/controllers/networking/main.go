@@ -380,7 +380,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -404,9 +404,10 @@ var controllerTemplate = `
 type {{.PackageAlias}}{{.Type}}Reconciler struct {
 	client.Client
 
+	DataplaneClient *dataplane.KongClient
+
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-	Proxy  proxy.Proxy
 {{- if or .AcceptsIngressClassNameSpec .AcceptsIngressClassNameAnnotation}}
 
 	IngressClassName string
@@ -438,7 +439,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		if errors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
-			return ctrlutils.EnsureProxyDeleteObject(r.Proxy, obj)
+			return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -447,12 +448,12 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "{{.Type}}", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.Proxy.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -463,14 +464,14 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
-		if err := r.Proxy.DeleteObject(obj); err != nil {
+		if err := r.DataplaneClient.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 {{end}}
 	// update the kong Admin API with the changes
-	if err := r.Proxy.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 

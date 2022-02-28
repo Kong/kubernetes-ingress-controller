@@ -21,7 +21,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -32,9 +32,9 @@ import (
 type HTTPRouteReconciler struct {
 	client.Client
 
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	Proxy  proxy.Proxy
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	DataplaneClient *dataplane.KongClient
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -237,7 +237,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			debug(log, httproute, "object does not exist, ensuring it is not present in the proxy cache")
 			httproute.Namespace = req.Namespace
 			httproute.Name = req.Name
-			return ctrlutils.EnsureProxyDeleteObject(r.Proxy, httproute)
+			return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, httproute)
 		}
 
 		// for any error other than 404, requeue
@@ -252,12 +252,12 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	debug(log, httproute, "checking deletion timestamp")
 	if httproute.DeletionTimestamp != nil {
 		debug(log, httproute, "httproute is being deleted, re-configuring data-plane")
-		if err := r.Proxy.DeleteObject(httproute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
 			debug(log, httproute, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, httproute, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, nil
+		return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, httproute)
 	}
 
 	// we need to pull the Gateway parent objects for the HTTPRoute to verify
@@ -266,6 +266,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	gateways, err := getSupportedGatewayForRoute(ctx, r.Client, httproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
+			debug(log, httproute, "unsupported route found, processing to verify whether it was ever supported")
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
@@ -277,6 +278,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if statusUpdated {
 				// the status did in fact needed to be updated, so no need to requeue
 				// as the status update will trigger a requeue.
+				debug(log, httproute, "unsupported route was previously supported, status was updated")
 				return ctrl.Result{}, nil
 			}
 
@@ -284,7 +286,8 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// it it's possible it became orphaned after becoming queued. In either case
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
-			return ctrlutils.EnsureProxyDeleteObject(r.Proxy, httproute)
+			debug(log, httproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
+			return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, httproute)
 		}
 		return ctrl.Result{}, err
 	}
@@ -318,7 +321,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// finally if all matching has succeeded and the object is not being deleted,
 	// we can configure it in the data-plane.
 	debug(log, httproute, "sending httproute information to the data-plane for configuration")
-	if err := r.Proxy.UpdateObject(httproute); err != nil {
+	if err := r.DataplaneClient.UpdateObject(httproute); err != nil {
 		debug(log, httproute, "failed to update object in data-plane, requeueing")
 		return ctrl.Result{}, err
 	}

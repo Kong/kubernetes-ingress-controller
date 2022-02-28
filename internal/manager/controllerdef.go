@@ -14,7 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -61,7 +61,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, featureGates map[string]bool) ([]ControllerDef, error) {
+func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient, c *Config, featureGates map[string]bool) ([]ControllerDef, error) {
 	// Choose the best API version of Ingress to inform which ingress controller to enable.
 	var ingressPicker ingressControllerStrategy
 	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
@@ -79,7 +79,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
@@ -100,7 +100,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
@@ -111,35 +111,35 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Service"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("Service"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
 			},
 		},
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1EndpointsReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Endpoints"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
 			},
 		},
 		{
 			Enabled: true,
 			Controller: &configuration.CoreV1SecretReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("Secrets"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("Secrets"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
@@ -161,26 +161,26 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
 		{
 			Enabled: c.KongIngressEnabled,
 			Controller: &configuration.KongV1KongIngressReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongIngress"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("KongIngress"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
 			},
 		},
 		{
 			Enabled: c.KongPluginEnabled,
 			Controller: &configuration.KongV1KongPluginReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
 			},
 		},
 		{
@@ -189,7 +189,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongConsumer"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
@@ -204,7 +204,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
@@ -225,7 +225,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:           mgr.GetScheme(),
-				Proxy:            proxy,
+				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
 			},
 		},
@@ -244,7 +244,7 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName(gatewayFeature),
 				Scheme:          mgr.GetScheme(),
-				Proxy:           proxy,
+				DataplaneClient: dataplaneClient,
 				PublishService:  c.PublishService,
 				WatchNamespaces: c.WatchNamespaces,
 			},
@@ -258,10 +258,10 @@ func setupControllers(mgr manager.Manager, proxy proxy.Proxy, c *Config, feature
 					Resource: "httproutes",
 				}}.CRDExists,
 			Controller: &gateway.HTTPRouteReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
-				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
 			},
 		},
 	}

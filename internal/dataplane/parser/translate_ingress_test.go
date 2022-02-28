@@ -3,15 +3,16 @@ package parser
 import (
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
 func TestFromIngressV1beta1(t *testing.T) {

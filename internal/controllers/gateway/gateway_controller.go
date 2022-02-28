@@ -22,7 +22,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -50,9 +50,9 @@ var (
 type GatewayReconciler struct { //nolint:revive
 	client.Client
 
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	Proxy  proxy.Proxy
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	DataplaneClient *dataplane.KongClient
 
 	PublishService  string
 	WatchNamespaces []string
@@ -495,7 +495,7 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 	// gather the proxy and stream listeners from the data-plane and map them
 	// to their respective ports (which will be the targetPorts of the proxy
 	// Service in Kubernetes).
-	proxyListeners, streamListeners, err := r.Proxy.Listeners(ctx)
+	proxyListeners, streamListeners, err := r.DataplaneClient.Listeners(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve listeners from the data-plane: %w", err)
 	}

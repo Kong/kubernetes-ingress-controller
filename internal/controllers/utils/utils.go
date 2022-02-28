@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
@@ -105,9 +105,9 @@ func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 
 // EnsureProxyDeleteObject is a reconciliation helper to ensure that an object is removed from
 // the backend proxy cache so that it gets removed from data-plane configurations.
-func EnsureProxyDeleteObject(proxy proxy.Proxy, obj client.Object) (ctrl.Result, error) {
+func EnsureProxyDeleteObject(dataplaneClient *dataplane.KongClient, obj client.Object) (ctrl.Result, error) {
 	// check whether the object is at all present in the proxy cache.
-	objectExistsInCache, err := proxy.ObjectExists(obj)
+	objectExistsInCache, err := dataplaneClient.ObjectExists(obj)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -115,7 +115,7 @@ func EnsureProxyDeleteObject(proxy proxy.Proxy, obj client.Object) (ctrl.Result,
 	// if the object is still present in the proxy cache, we need to keep trying to
 	// remove it until its gone so that it gets removed from backend data-plane.
 	if objectExistsInCache {
-		if err := proxy.DeleteObject(obj); err != nil {
+		if err := dataplaneClient.DeleteObject(obj); err != nil {
 			return ctrl.Result{}, err
 		}
 

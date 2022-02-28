@@ -23,9 +23,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
-func equalSHA(a, b []byte) bool {
-	return reflect.DeepEqual(a, b)
-}
+// -----------------------------------------------------------------------------
+// Sendconfig - Public Functions
+// -----------------------------------------------------------------------------
 
 // PerformUpdate writes `targetContent` and `customEntities` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
@@ -97,6 +97,10 @@ func PerformUpdate(ctx context.Context,
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }
+
+// -----------------------------------------------------------------------------
+// Sendconfig - Private Functions
+// -----------------------------------------------------------------------------
 
 func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
 	customEntitiesJSONBytes []byte) ([]byte, error) {
@@ -229,9 +233,9 @@ func onUpdateDBMode(ctx context.Context,
 	return nil
 }
 
-// -----------------------------------------------------------------------------
-// Sendconfig - Logging & Reporting Helper Functions
-// -----------------------------------------------------------------------------
+func equalSHA(a, b []byte) bool {
+	return reflect.DeepEqual(a, b)
+}
 
 var (
 	latestReportedSHA []byte

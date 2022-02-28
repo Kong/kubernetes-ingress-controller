@@ -106,7 +106,7 @@ func TestMain(m *testing.M) {
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(err)
 	if clusterVersion.GE(knativeMinKubernetesVersion) {
-		fmt.Printf("INFO: deploying knative addon")
+		fmt.Println("INFO: deploying knative addon")
 		knativeBuilder := knative.NewBuilder()
 		knativeAddon := knativeBuilder.Build()
 		exitOnErr(env.Cluster().DeployAddon(ctx, knativeAddon))

@@ -19,8 +19,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -103,18 +101,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	if err != nil {
 		return fmt.Errorf("%f is not a valid number of seconds to the timeout config for the kong client: %w", c.ProxyTimeoutSeconds, err)
 	}
-	cache := store.NewCacheStores()
-	dataplaneClient := &dataplane.KongClient{
-		Logger:            deprecatedLogger,
-		IngressClass:      c.IngressClassName,
-		Cache:             &cache,
-		KongConfig:        kongConfig,
-		EnableReverseSync: c.EnableReverseSync,
-		RequestTimeout:    timeoutDuration,
-		Diagnostic:        diagnostic,
-		PrometheusMetrics: metrics.NewCtrlFuncMetrics(),
-	}
-	if err := dataplaneClient.Initialize(); err != nil {
+	dataplaneClient, err := dataplane.NewKongClient(deprecatedLogger, timeoutDuration, c.IngressClassName, c.EnableReverseSync, diagnostic, kongConfig)
+	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
 	}
 

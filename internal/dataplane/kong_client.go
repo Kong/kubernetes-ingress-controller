@@ -191,7 +191,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*c.cache, c.ingressClass, false, false, false, c.logger)
-	kongstate, err := parser.Build(c.logger, storer)
+
+	// initialize a parser and convert the Kubernetes objects to Kong objects
+	p := parser.NewParser(c.logger, storer)
+	kongstate, err := p.Build()
 	if err != nil {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,

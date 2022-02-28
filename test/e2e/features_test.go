@@ -222,7 +222,7 @@ func TestWebhookUpdate(t *testing.T) {
 		}
 	}
 
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
 		deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 

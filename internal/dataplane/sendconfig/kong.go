@@ -10,6 +10,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
+// -----------------------------------------------------------------------------
+// Sendconfig - Public Types
+// -----------------------------------------------------------------------------
+
 // KongConfigUpdate is a Kong configuration and the time it was generated
 type KongConfigUpdate struct {
 	Timestamp time.Time

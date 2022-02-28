@@ -4,9 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
@@ -49,27 +47,9 @@ const (
 //
 // NOTE: implementations of this interface are: threadsafe, non-blocking
 type Proxy interface {
-	// UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
-	// It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
-	// A status will later be added to the object whether the configuration update succeeds or fails.
-	UpdateObject(obj client.Object) error
-
-	// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
-	// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
-	// A status will later be added to the object whether the configuration update succeeds or fails.
-	DeleteObject(obj client.Object) error
-
-	// ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
-	ObjectExists(obj client.Object) (bool, error)
-
 	// IsReady returns true if the proxy is considered ready.
 	// A ready proxy has configuration available and can handle traffic.
 	IsReady() bool
-
-	// Listeners retrieves the currently configured listeners from the
-	// underlying proxy so that callers can gather this metadata to
-	// know which ports and protocols are in use by the proxy.
-	Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error)
 
 	manager.Runnable
 	manager.LeaderElectionRunnable

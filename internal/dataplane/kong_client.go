@@ -2,9 +2,11 @@ package dataplane
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
@@ -58,8 +60,100 @@ type KongClient struct {
 	// updates to the prometheus exporter.
 	PrometheusMetrics *metrics.CtrlFuncMetrics
 
+	version       semver.Version
+	dbmode        string
 	lastConfigSHA []byte
-	updateLock    sync.Mutex
+	lock          sync.RWMutex
+}
+
+// -----------------------------------------------------------------------------
+// Dataplane Client - Kong - Public Methods
+// -----------------------------------------------------------------------------
+
+// Initialize connects to the Kong Admin API to determine metadata and set
+// configuration options based on the backend gateway's configuration.
+func (c *KongClient) Initialize() error {
+	// download the kong root configuration (and validate connectivity to the proxy API)
+	root, err := c.RootWithTimeout()
+	if err != nil {
+		return err
+	}
+
+	// pull the proxy configuration out of the root config and validate it
+	proxyConfig, ok := root["configuration"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid root configuration, expected a map[string]interface{} got %T", proxyConfig["configuration"])
+	}
+
+	// validate the database configuration for the proxy and check for supported database configurations
+	dbmode, ok := proxyConfig["database"].(string)
+	if !ok {
+		return fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
+	}
+	switch dbmode {
+	case "off", "":
+		c.KongConfig.InMemory = true
+	case "postgres":
+		c.KongConfig.InMemory = false
+	case "cassandra":
+		return fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
+	default:
+		return fmt.Errorf("%s is not a supported database backend", dbmode)
+	}
+
+	// validate the proxy version
+	proxySemver, err := kong.ParseSemanticVersion(kong.VersionFromInfo(root))
+	if err != nil {
+		return err
+	}
+
+	// store the gathered configuration options
+	c.KongConfig.Version = proxySemver
+	c.dbmode = dbmode
+
+	return nil
+}
+
+// UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
+// It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
+// A status will later be added to the object whether the configuration update succeeds or fails.
+func (c *KongClient) UpdateObject(obj client.Object) error {
+	return c.Cache.Add(obj)
+}
+
+// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
+// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
+// A status will later be added to the object whether the configuration update succeeds or fails.
+func (c *KongClient) DeleteObject(obj client.Object) error {
+	return c.Cache.Delete(obj)
+}
+
+// ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
+func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
+	_, exists, err := c.Cache.Get(obj)
+	return exists, err
+}
+
+// Listeners retrieves the currently configured listeners from the
+// underlying proxy so that callers can gather this metadata to
+// know which ports and protocols are in use by the proxy.
+func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
+	return c.KongConfig.Client.Listeners(ctx)
+}
+
+// RootWithTimeout provides the root configuration from Kong, but uses a configurable timeout to avoid long waits if the Admin API
+// is not yet ready to respond. If a timeout error occurs, the caller is responsible for providing a retry mechanism.
+func (c *KongClient) RootWithTimeout() (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.RequestTimeout)
+	defer cancel()
+	return c.KongConfig.Client.Root(ctx)
+}
+
+// DBMode indicates which database the Kong Gateway is using
+func (c *KongClient) DBMode() string {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return c.dbmode
 }
 
 // -----------------------------------------------------------------------------
@@ -70,8 +164,8 @@ type KongClient struct {
 // Kubernetes state into Kong objects and state, and then ships the
 // resulting configuration to the data-plane (Kong Admin API).
 func (c *KongClient) Update(ctx context.Context) error {
-	c.updateLock.Lock()
-	defer c.updateLock.Unlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*c.Cache, c.IngressClass, false, false, false, c.Logger)
@@ -151,43 +245,4 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// update the lastConfigSHA with the new updated checksum
 	c.lastConfigSHA = newConfigSHA
 	return nil
-}
-
-// -----------------------------------------------------------------------------
-// Dataplane Client - Kong - Public Methods
-// -----------------------------------------------------------------------------
-
-// UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
-// It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
-// A status will later be added to the object whether the configuration update succeeds or fails.
-func (c *KongClient) UpdateObject(obj client.Object) error {
-	return c.Cache.Add(obj)
-}
-
-// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
-// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
-// A status will later be added to the object whether the configuration update succeeds or fails.
-func (c *KongClient) DeleteObject(obj client.Object) error {
-	return c.Cache.Delete(obj)
-}
-
-// ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
-func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
-	_, exists, err := c.Cache.Get(obj)
-	return exists, err
-}
-
-// Listeners retrieves the currently configured listeners from the
-// underlying proxy so that callers can gather this metadata to
-// know which ports and protocols are in use by the proxy.
-func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
-	return c.KongConfig.Client.Listeners(ctx)
-}
-
-// RootWithTimeout provides the root configuration from Kong, but uses a configurable timeout to avoid long waits if the Admin API
-// is not yet ready to respond. If a timeout error occurs, the caller is responsible for providing a retry mechanism.
-func (c *KongClient) RootWithTimeout() (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.RequestTimeout)
-	defer cancel()
-	return c.KongConfig.Client.Root(ctx)
 }

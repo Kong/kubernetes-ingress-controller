@@ -6,10 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -45,10 +43,6 @@ type Synchronizer struct {
 	// dataplane client to send updates to the Kong Admin API
 	dataplaneClient Client
 
-	// kong configuration metadata
-	dbmode  string
-	version semver.Version
-
 	// server configuration, flow control, channels and utility attributes
 	stagger            time.Duration
 	syncTicker         *time.Ticker
@@ -82,11 +76,6 @@ func NewSynchronizerWithStagger(logger logrus.FieldLogger, dataplaneClient Clien
 		configApplied:   false,
 	}
 
-	// TODO: this initialization needs to move into the dataplane client
-	if err := synchronizer.initialize(); err != nil {
-		return nil, err
-	}
-
 	return synchronizer, nil
 }
 
@@ -106,7 +95,7 @@ func (p *Synchronizer) Start(ctx context.Context) error {
 func (p *Synchronizer) IsReady() bool {
 	// If the proxy is has no database, it is only ready after a successful sync
 	// Otherwise, it has no configuration loaded
-	if p.dbmode == "off" {
+	if p.dataplaneClient.DBMode() == "off" {
 		p.configAppliedMutex.RLock()
 		defer p.configAppliedMutex.RUnlock()
 		return p.configApplied
@@ -150,58 +139,6 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 // -----------------------------------------------------------------------------
 // Synchronizer - Private Methods - Helper
 // -----------------------------------------------------------------------------
-
-// initialize validates connectivity with the Kong proxy and some of the configuration options thereof
-// and populates several local attributes given retrieved configuration data from the proxy root config.
-//
-// Note: this must be run (and must succeed) in order to successfully start the cache server.
-func (p *Synchronizer) initialize() error {
-	// FIXME/TODO: technically we don't have any dataplane implementations
-	// EXCEPT Kong so this switch is here temporarily while we move the
-	// relevant functionality into the dataplane client.
-	switch dataplaneClient := p.dataplaneClient.(type) {
-	case *KongClient:
-		// download the kong root configuration (and validate connectivity to the proxy API)
-		root, err := dataplaneClient.RootWithTimeout()
-		if err != nil {
-			return err
-		}
-
-		// pull the proxy configuration out of the root config and validate it
-		proxyConfig, ok := root["configuration"].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("invalid root configuration, expected a map[string]interface{} got %T", proxyConfig["configuration"])
-		}
-		// validate the database configuration for the proxy and check for supported database configurations
-		dbmode, ok := proxyConfig["database"].(string)
-		if !ok {
-			return fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
-		}
-		switch dbmode {
-		case "off", "":
-			dataplaneClient.KongConfig.InMemory = true
-		case "postgres":
-			dataplaneClient.KongConfig.InMemory = false
-		case "cassandra":
-			return fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
-		default:
-			return fmt.Errorf("%s is not a supported database backend", dbmode)
-		}
-
-		// validate the proxy version
-		proxySemver, err := kong.ParseSemanticVersion(kong.VersionFromInfo(root))
-		if err != nil {
-			return err
-		}
-
-		// store the gathered configuration options
-		dataplaneClient.KongConfig.Version = proxySemver
-		p.dbmode = dbmode
-		p.version = proxySemver
-	}
-
-	return nil
-}
 
 // markConfigApplied marks that config has been applied
 func (p *Synchronizer) markConfigApplied() {

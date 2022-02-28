@@ -6,9 +6,10 @@ import (
 	"strconv"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
+
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/sirupsen/logrus"
 )
 
 func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {

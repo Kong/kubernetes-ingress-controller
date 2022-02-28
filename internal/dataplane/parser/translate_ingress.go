@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/sirupsen/logrus"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {

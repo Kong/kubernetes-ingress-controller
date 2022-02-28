@@ -9,9 +9,6 @@ import (
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -145,27 +142,4 @@ func (p *Synchronizer) markConfigApplied() {
 	p.configAppliedMutex.Lock()
 	defer p.configAppliedMutex.Unlock()
 	p.configApplied = true
-}
-
-// -----------------------------------------------------------------------------
-// Private Helper Functions
-// -----------------------------------------------------------------------------
-
-// fetchCustomEntities returns the value of the "config" key from a Secret (identified by a "namespace/secretName"
-// string in the store.
-func fetchCustomEntities(secretName string, store store.Storer) ([]byte, error) {
-	ns, name, err := util.ParseNameNS(secretName)
-	if err != nil {
-		return nil, fmt.Errorf("parsing kong custom entities secret: %w", err)
-	}
-	secret, err := store.GetSecret(ns, name)
-	if err != nil {
-		return nil, fmt.Errorf("fetching secret: %w", err)
-	}
-	config, ok := secret.Data["config"]
-	if !ok {
-		return nil, fmt.Errorf("'config' key not found in "+
-			"custom entities secret '%v'", secretName)
-	}
-	return config, nil
 }

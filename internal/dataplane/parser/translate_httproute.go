@@ -16,8 +16,14 @@ import (
 
 // ingressRulesFromHTTPRoutes processes a list of HTTPRoute objects and translates
 // then into Kong configuration objects.
-func ingressRulesFromHTTPRoutes(httpRouteList []*gatewayv1alpha2.HTTPRoute) (ingressRules, []error) {
+func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	result := newIngressRules()
+
+	httpRouteList, err := p.storer.ListHTTPRoutes()
+	if err != nil {
+		p.logger.Errorf("failed to list HTTPRoutes: %w", err)
+		return result
+	}
 
 	var errs []error
 	for _, httproute := range httpRouteList {
@@ -27,7 +33,17 @@ func ingressRulesFromHTTPRoutes(httpRouteList []*gatewayv1alpha2.HTTPRoute) (ing
 		}
 	}
 
-	return result, errs
+	if len(errs) > 0 {
+		for _, err := range errs {
+			// we log the error here instead of returning it for historical reasons
+			// and because this allows other HTTPRoute objects to be resolved. This
+			// loop structure was common at the time of writing but needs reworking.
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2130
+			p.logger.Errorf(err.Error())
+		}
+	}
+
+	return result
 }
 
 func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {

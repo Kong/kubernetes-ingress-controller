@@ -142,7 +142,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
 			errs: []error{
-				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("no match rules or hostnames specified")),
+				fmt.Errorf("no match rules or hostnames specified"),
 			},
 		},
 		{
@@ -242,7 +242,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
 			errs: []error{
-				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("no rules provided")),
+				fmt.Errorf("no rules provided"),
 			},
 		},
 		{
@@ -282,7 +282,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				ServiceNameToServices: make(map[string]kongstate.Service),
 			},
 			errs: []error{
-				fmt.Errorf("HTTPRoute default/basic-httproute can't be routed: %w", fmt.Errorf("query param matches are not yet supported")),
+				fmt.Errorf("query param matches are not yet supported"),
 			},
 		},
 		{
@@ -441,8 +441,16 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
-			// generate the ingress rules
-			ingressRules, errs := ingressRulesFromHTTPRoutes(tt.routes)
+			ingressRules := newIngressRules()
+
+			var errs []error
+			for _, httproute := range tt.routes {
+				// generate the ingress rules
+				err := ingressRulesFromHTTPRoute(&ingressRules, httproute)
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
 
 			// verify that we receive the expected values
 			assert.Equal(t, tt.expected, ingressRules)

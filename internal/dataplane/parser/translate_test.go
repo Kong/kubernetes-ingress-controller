@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
@@ -56,6 +57,9 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ing-with-tls",
 				Namespace: "bar-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1beta1.IngressSpec{
 				TLS: []networkingv1beta1.IngressTLS{
@@ -99,6 +103,9 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ing-with-default-backend",
 				Namespace: "bar-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1beta1.IngressSpec{
 				Backend: &networkingv1beta1.IngressBackend{
@@ -112,6 +119,9 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1beta1.IngressSpec{
 				Rules: []networkingv1beta1.IngressRule{
@@ -139,6 +149,9 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1beta1.IngressSpec{
 				Rules: []networkingv1beta1.IngressRule{
@@ -165,6 +178,9 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "baz",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1beta1.IngressSpec{
 				Rules: []networkingv1beta1.IngressRule{
@@ -180,6 +196,9 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1beta1.IngressSpec{
 				Rules: []networkingv1beta1.IngressRule{
@@ -221,6 +240,9 @@ func TestFromIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "invalid-path",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1beta1.IngressSpec{
 				Rules: []networkingv1beta1.IngressRule{
@@ -246,16 +268,28 @@ func TestFromIngressV1beta1(t *testing.T) {
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
-			ingressList[0],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{
+				ingressList[0],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
@@ -264,9 +298,13 @@ func TestFromIngressV1beta1(t *testing.T) {
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(),
-			[]*networkingv1beta1.Ingress{ingressList[0], ingressList[2]},
-		)
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{ingressList[0], ingressList[2]},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
@@ -279,17 +317,29 @@ func TestFromIngressV1beta1(t *testing.T) {
 		assert.Equal(0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
 	})
 	t.Run("ingress rule with TLS", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
-			ingressList[1],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{
+				ingressList[1],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
-			ingressList[3],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{
+				ingressList[3],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
@@ -302,30 +352,54 @@ func TestFromIngressV1beta1(t *testing.T) {
 		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
 	})
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
-			ingressList[4],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{
+				ingressList[4],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
 	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
-		assert.NotPanics(func() {
-			fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{
 				ingressList[5],
-			})
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		assert.NotPanics(func() {
+			p.ingressRulesFromIngressV1beta1()
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
-			ingressList[6],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{
+				ingressList[6],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 	})
 	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
-		parsedInfo := fromIngressV1beta1(logrus.New(), []*networkingv1beta1.Ingress{
-			ingressList[7],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*networkingv1beta1.Ingress{
+				ingressList[7],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Empty(parsedInfo.ServiceNameToServices)
 	})
 }
@@ -370,6 +444,9 @@ func TestFromIngressV1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ing-with-tls",
 				Namespace: "bar-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1.IngressSpec{
 				TLS: []networkingv1.IngressTLS{
@@ -415,6 +492,9 @@ func TestFromIngressV1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ing-with-default-backend",
 				Namespace: "bar-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1.IngressSpec{
 				DefaultBackend: &networkingv1.IngressBackend{
@@ -430,6 +510,9 @@ func TestFromIngressV1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1.IngressSpec{
 				Rules: []networkingv1.IngressRule{
@@ -459,6 +542,9 @@ func TestFromIngressV1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1.IngressSpec{
 				Rules: []networkingv1.IngressRule{
@@ -487,6 +573,9 @@ func TestFromIngressV1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "baz",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1.IngressSpec{
 				Rules: []networkingv1.IngressRule{
@@ -502,6 +591,9 @@ func TestFromIngressV1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1.IngressSpec{
 				Rules: []networkingv1.IngressRule{
@@ -547,6 +639,9 @@ func TestFromIngressV1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "invalid-path",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: networkingv1.IngressSpec{
 				Rules: []networkingv1.IngressRule{
@@ -615,16 +710,28 @@ func TestFromIngressV1(t *testing.T) {
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
-			ingressList[0],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[0],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
@@ -633,9 +740,16 @@ func TestFromIngressV1(t *testing.T) {
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(),
-			[]*networkingv1.Ingress{ingressList[0], ingressList[2]},
-		)
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[0],
+				ingressList[2],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
@@ -648,17 +762,29 @@ func TestFromIngressV1(t *testing.T) {
 		assert.Equal(0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
 	})
 	t.Run("ingress rule with TLS", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
-			ingressList[1],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[1],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
-			ingressList[3],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[3],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Host)
@@ -671,38 +797,68 @@ func TestFromIngressV1(t *testing.T) {
 		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].StripPath)
 	})
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
-			ingressList[4],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[4],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 	})
 	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
-		assert.NotPanics(func() {
-			fromIngressV1(logrus.New(), []*networkingv1.Ingress{
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
 				ingressList[5],
-			})
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		assert.NotPanics(func() {
+			p.ingressRulesFromIngressV1()
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
-			ingressList[6],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[6],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal("foo-svc.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-8000"].Host)
 	})
 	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
-			ingressList[7],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[7],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Empty(parsedInfo.ServiceNameToServices)
 	})
 	t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
-		parsedInfo := fromIngressV1(logrus.New(), []*networkingv1.Ingress{
-			ingressList[8],
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*networkingv1.Ingress{
+				ingressList[8],
+			},
 		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
 		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-http"]
 		assert.True(ok)
 		_, ok = parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-ws"]
@@ -718,6 +874,9 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 		},
 		// 1
@@ -725,6 +884,9 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
@@ -743,6 +905,9 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
@@ -762,6 +927,9 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: configurationv1beta1.TCPIngressSpec{
 				TLS: []configurationv1beta1.IngressTLS{
@@ -787,6 +955,9 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
@@ -805,6 +976,9 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
@@ -823,6 +997,9 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: configurationv1beta1.TCPIngressSpec{
 				Rules: []configurationv1beta1.IngressRule{
@@ -838,21 +1015,43 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		},
 	}
 	t.Run("no TCPIngress returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[0]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{
+				tcpIngressList[0],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("simple TCPIngress rule is parsed", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[1]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{
+				tcpIngressList[1],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
@@ -872,7 +1071,15 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		}, route.Route)
 	})
 	t.Run("TCPIngress rule with host is parsed", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[2]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{
+				tcpIngressList[2],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
@@ -893,27 +1100,59 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		}, route.Route)
 	})
 	t.Run("TCPIngress with TLS", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[3]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{
+				tcpIngressList[3],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
 	})
 	t.Run("TCPIngress without service name returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[4]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{
+				tcpIngressList[4],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("TCPIngress with invalid port returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[5]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{
+				tcpIngressList[5],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
 	})
 	t.Run("empty TCPIngress with invalid service port returns empty info", func(t *testing.T) {
-		parsedInfo := fromTCPIngressV1beta1(logrus.New(), []*configurationv1beta1.TCPIngress{tcpIngressList[6]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			TCPIngresses: []*configurationv1beta1.TCPIngress{
+				tcpIngressList[6],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
@@ -929,6 +1168,9 @@ func TestFromKnativeIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.KnativeIngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: knative.IngressSpec{
 				Rules: []knative.IngressRule{
@@ -941,6 +1183,9 @@ func TestFromKnativeIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.KnativeIngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: knative.IngressSpec{
 				Rules: []knative.IngressRule{
@@ -975,6 +1220,9 @@ func TestFromKnativeIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.KnativeIngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: knative.IngressSpec{
 				Rules: []knative.IngressRule{
@@ -1017,6 +1265,9 @@ func TestFromKnativeIngress(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.KnativeIngressClassKey: annotations.DefaultIngressClass,
+				},
 			},
 			Spec: knative.IngressSpec{
 				Rules: []knative.IngressRule{
@@ -1072,17 +1323,39 @@ func TestFromKnativeIngress(t *testing.T) {
 		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: []*knative.Ingress{},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[0]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: []*knative.Ingress{
+				ingressList[0],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[1]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: []*knative.Ingress{
+				ingressList[1],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{
@@ -1119,15 +1392,30 @@ func TestFromKnativeIngress(t *testing.T) {
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[3]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: []*knative.Ingress{
+				ingressList[3],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
 
+		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(SecretNameToSNIs(map[string][]string{
 			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
 			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
 		}), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {
-		parsedInfo := fromKnativeIngress(logrus.New(), []*knative.Ingress{ingressList[2]})
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: []*knative.Ingress{
+				ingressList[2],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(kong.Service{

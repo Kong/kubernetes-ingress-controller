@@ -114,6 +114,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		Diagnostic:        diagnostic,
 		PrometheusMetrics: metrics.NewCtrlFuncMetrics(),
 	}
+	if err := dataplaneClient.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
+	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
 	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c)

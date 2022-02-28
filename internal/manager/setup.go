@@ -20,6 +20,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -132,9 +133,12 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 	return cfg, nil
 }
 
-func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
-	mgr manager.Manager, kongConfig sendconfig.Kong,
-	diagnostic util.ConfigDumpDiagnostic, c *Config,
+func setupProxyServer(
+	logger logr.Logger,
+	fieldLogger logrus.FieldLogger,
+	mgr manager.Manager,
+	dataplaneClient dataplane.Client,
+	c *Config,
 ) (proxy.Proxy, error) {
 	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
@@ -149,21 +153,11 @@ func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
 		return nil, err
 	}
 
-	timeoutDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxyTimeoutSeconds))
-	if err != nil {
-		logger.Error(err, "%s is not a valid number of seconds to the timeout config for the kong client")
-		return nil, err
-	}
-
-	proxyServer, err := proxy.NewCacheBasedProxyWithStagger(fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
-		mgr.GetClient(),
-		kongConfig,
-		c.IngressClassName,
-		c.EnableReverseSync,
+	proxyServer, err := proxy.NewCacheBasedProxyWithStagger(
+		fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
+		dataplaneClient,
 		syncTickDuration,
-		timeoutDuration,
-		diagnostic,
-		sendconfig.UpdateKongAdminSimple)
+	)
 	if err != nil {
 		return nil, err
 	}

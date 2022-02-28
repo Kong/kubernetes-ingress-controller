@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -15,8 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -94,14 +98,31 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return err
 	}
 
+	setupLog.Info("Initializing Dataplane Client")
+	timeoutDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxyTimeoutSeconds))
+	if err != nil {
+		return fmt.Errorf("%f is not a valid number of seconds to the timeout config for the kong client: %w", c.ProxyTimeoutSeconds, err)
+	}
+	cache := store.NewCacheStores()
+	dataplaneClient := &dataplane.KongClient{
+		Logger:            deprecatedLogger,
+		IngressClass:      c.IngressClassName,
+		Cache:             &cache,
+		KongConfig:        kongConfig,
+		EnableReverseSync: c.EnableReverseSync,
+		RequestTimeout:    timeoutDuration,
+		Diagnostic:        diagnostic,
+		PrometheusMetrics: metrics.NewCtrlFuncMetrics(),
+	}
+
 	setupLog.Info("Initializing Proxy Cache Server")
-	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
+	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, dataplaneClient, c)
 	if err != nil {
 		return fmt.Errorf("unable to initialize proxy cache server: %w", err)
 	}
 
 	setupLog.Info("Starting Enabled Controllers")
-	controllers, err := setupControllers(mgr, proxy, c, featureGates)
+	controllers, err := setupControllers(mgr, dataplaneClient, c, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}

@@ -21,7 +21,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -133,17 +132,17 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 	return cfg, nil
 }
 
-func setupProxyServer(
+func setupDataplaneSynchronizer(
 	logger logr.Logger,
 	fieldLogger logrus.FieldLogger,
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
 	c *Config,
-) (proxy.Proxy, error) {
-	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
+) (*dataplane.Synchronizer, error) {
+	if c.ProxySyncSeconds < dataplane.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
 			" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
-			c.ProxySyncSeconds, proxy.DefaultSyncSeconds,
+			c.ProxySyncSeconds, dataplane.DefaultSyncSeconds,
 		))
 	}
 
@@ -153,8 +152,8 @@ func setupProxyServer(
 		return nil, err
 	}
 
-	proxyServer, err := proxy.NewCacheBasedProxyWithStagger(
-		fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
+	dataplaneSynchronizer, err := dataplane.NewSynchronizerWithStagger(
+		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
 		dataplaneClient,
 		syncTickDuration,
 	)
@@ -162,12 +161,12 @@ func setupProxyServer(
 		return nil, err
 	}
 
-	err = mgr.Add(proxyServer)
+	err = mgr.Add(dataplaneSynchronizer)
 	if err != nil {
 		return nil, err
 	}
 
-	return proxyServer, nil
+	return dataplaneSynchronizer, nil
 }
 
 func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerClient client.Client) error {

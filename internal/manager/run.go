@@ -115,10 +115,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		PrometheusMetrics: metrics.NewCtrlFuncMetrics(),
 	}
 
-	setupLog.Info("Initializing Proxy Cache Server")
-	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, dataplaneClient, c)
+	setupLog.Info("Initializing Dataplane Synchronizer")
+	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c)
 	if err != nil {
-		return fmt.Errorf("unable to initialize proxy cache server: %w", err)
+		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
 
 	setupLog.Info("Starting Enabled Controllers")
@@ -141,8 +141,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", func(_ *http.Request) error {
-		if !proxy.IsReady() {
-			return errors.New("proxy not yet configured")
+		if !synchronizer.IsReady() {
+			return errors.New("synchronizer not yet configured")
 		}
 		return nil
 	}); err != nil {

@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,8 +25,9 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 				Name:  "Content-Type",
 				Value: "^audio/*",
 			}},
-			output: nil,
-			err:    fmt.Errorf("regular expression header matches are not yet supported"),
+			output: map[string][]string{
+				"Content-Type": {kongHeaderRegexPrefix + "^audio/*"},
+			},
 		},
 		{
 			msg: "a single exact header match with no type defaults to exact type and converts properly",

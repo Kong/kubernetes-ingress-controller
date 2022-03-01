@@ -90,7 +90,6 @@ func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient
 				Client: mgr.GetClient(),
 				Log:    ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
 				Scheme: mgr.GetScheme(),
-				Proxy:  proxy,
 			},
 		},
 		{

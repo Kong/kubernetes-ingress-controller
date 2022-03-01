@@ -309,9 +309,10 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 type NetV1IngressClassReconciler struct {
 	client.Client
 
+	DataplaneClient *dataplane.KongClient
+
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-	Proxy  proxy.Proxy
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -331,7 +332,7 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if errors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
-			return ctrlutils.EnsureProxyDeleteObject(r.Proxy, obj)
+			return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -340,12 +341,12 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "IngressClass", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.Proxy.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -354,7 +355,7 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.Proxy.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
 

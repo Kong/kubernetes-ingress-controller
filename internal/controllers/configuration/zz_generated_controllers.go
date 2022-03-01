@@ -316,7 +316,6 @@ func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

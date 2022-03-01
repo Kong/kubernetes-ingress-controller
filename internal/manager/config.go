@@ -69,6 +69,7 @@ type Config struct {
 	IngressExtV1beta1Enabled bool
 	IngressNetV1beta1Enabled bool
 	IngressNetV1Enabled      bool
+	IngressClassNetV1Enabled bool
 	UDPIngressEnabled        bool
 	TCPIngressEnabled        bool
 	KongIngressEnabled       bool
@@ -155,6 +156,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Kubernetes API toggling
 	flagSet.BoolVar(&c.IngressNetV1Enabled, "enable-controller-ingress-networkingv1", true, "Enable the networking.k8s.io/v1 Ingress controller.")
+	flagSet.BoolVar(&c.IngressClassNetV1Enabled, "enable-controller-ingress-class-networkingv1", true, "Enable the networking.k8s.io/v1 IngressClass controller.")
 	flagSet.BoolVar(&c.IngressNetV1beta1Enabled, "enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
 	flagSet.BoolVar(&c.IngressExtV1beta1Enabled, "enable-controller-ingress-extensionsv1beta1", true, "Enable the extensions/v1beta1 Ingress controller.")
 	flagSet.BoolVar(&c.UDPIngressEnabled, "enable-controller-udpingress", true, "Enable the UDPIngress controller.")

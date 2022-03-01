@@ -39,6 +39,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "services",
 		URL:                               "\"\"",
 		CacheType:                         "Service",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -51,6 +52,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "endpoints",
 		URL:                               "\"\"",
 		CacheType:                         "Endpoint",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"list", "watch"},
@@ -63,6 +65,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "secrets",
 		URL:                               "\"\"",
 		CacheType:                         "Secret",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"list", "watch"},
@@ -75,8 +78,22 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		URL:                               "networking.k8s.io",
 		CacheType:                         "IngressV1",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
+		PackageImportAlias:                "netv1",
+		PackageAlias:                      "NetV1",
+		Package:                           netv1,
+		Type:                              "IngressClass",
+		Plural:                            "ingressclasses",
+		URL:                               "networking.k8s.io",
+		CacheType:                         "IngressV1",
+		NeedsStatusPermissions:            false,
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -87,6 +104,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		URL:                               "networking.k8s.io",
 		CacheType:                         "IngressV1beta1",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -99,6 +117,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		URL:                               "extensions",
 		CacheType:                         "IngressV1beta1",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -111,6 +130,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongingresses",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "KongIngress",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -123,6 +143,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongplugins",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "Plugin",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -135,6 +156,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongclusterplugins",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "ClusterPlugin",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -147,6 +169,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongconsumers",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "Consumer",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -159,6 +182,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "tcpingresses",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "TCPIngress",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -171,6 +195,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "udpingresses",
 		URL:                               "configuration.konghq.com",
 		CacheType:                         "UDPIngress",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -183,6 +208,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		URL:                               "networking.internal.knative.dev",
 		CacheType:                         "KnativeIngress",
+		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -299,6 +325,10 @@ type typeNeeded struct {
 	// AcceptsIngressClassNameSpec indicates the the object indicates the ingress.class that should support it via
 	// an attribute in its specification named .IngressClassName
 	AcceptsIngressClassNameSpec bool
+
+	// NeedsStatusPermissions indicates whether permissions for the object should also include permissions to update
+	// its status
+	NeedsStatusPermissions bool
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
@@ -394,7 +424,9 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) SetupWithManager(mgr ctrl.Manager
 }
 
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
+{{- if .NeedsStatusPermissions}}
 //+kubebuilder:rbac:groups={{.URL}},resources={{.Plural}}/status,verbs=get;update;patch
+{{- end}}
 
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

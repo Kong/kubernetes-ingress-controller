@@ -298,6 +298,66 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // -----------------------------------------------------------------------------
+// NetV1 IngressClass
+// -----------------------------------------------------------------------------
+
+// NetV1IngressClass reconciles IngressClass resources
+type NetV1IngressClassReconciler struct {
+	client.Client
+
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Proxy  proxy.Proxy
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).For(&netv1.IngressClass{}).Complete(r)
+}
+
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses,verbs=get;list;watch
+
+// Reconcile processes the watched objects
+func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("NetV1IngressClass", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(netv1.IngressClass)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		if errors.IsNotFound(err) {
+			obj.Namespace = req.Namespace
+			obj.Name = req.Name
+			return ctrlutils.EnsureProxyDeleteObject(r.Proxy, obj)
+		}
+		return ctrl.Result{}, err
+	}
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "IngressClass", "namespace", req.Namespace, "name", req.Name)
+		objectExistsInCache, err := r.Proxy.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.Proxy.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// update the kong Admin API with the changes
+	if err := r.Proxy.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
 // NetV1Beta1 Ingress
 // -----------------------------------------------------------------------------
 

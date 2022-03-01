@@ -1201,6 +1201,14 @@ rules:
 - apiGroups:
   - networking.k8s.io
   resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
   - ingresses
   verbs:
   - get
@@ -1414,3 +1422,10 @@ spec:
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
       serviceAccountName: kong-serviceaccount
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kong
+spec:
+  controller: ingress-controllers.konghq.com/kong

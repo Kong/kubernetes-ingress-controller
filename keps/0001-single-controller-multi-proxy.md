@@ -48,7 +48,9 @@ of proxy instances in DBLESS mode.
 #### Story 1
 
 As an operator with DBLESS deployed Kong I want a single controller to be able
-to manage my proxy instances.
+to manage my proxy instances so that scaling out my gateway setup doesn't
+linearly increase the Kubernetes Admin API load and I can safely allow KIC to talk
+ to the Admin API between pods.
 
 ## Alternatives
 

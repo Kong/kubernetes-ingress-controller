@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,6 +61,21 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			output: map[string][]string{
 				"Content-Type": {"audio/vorbis", "audio/mpeg"},
 			},
+		},
+		{
+			msg: "multiple header matches for the same header are rejected",
+			input: []gatewayv1alpha2.HTTPHeaderMatch{
+				{
+					Name:  "Content-Type",
+					Value: "audio/vorbis",
+				},
+				{
+					Name:  "Content-Type",
+					Value: "audio/flac",
+				},
+			},
+			output: nil,
+			err:    fmt.Errorf("multiple header matches for the same header are not allowed: Content-Type"),
 		},
 		{
 			msg: "multiple header matches with a mixture of value counts convert properly",

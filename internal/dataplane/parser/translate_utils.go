@@ -22,6 +22,10 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 	// options and otherwise converting to kong type format.
 	convertedHeaders := make(map[string][]string)
 	for _, header := range headers {
+		if _, exists := convertedHeaders[string(header.Name)]; exists {
+			return nil, fmt.Errorf("multiple header matches for the same header are not allowed: %s",
+				string(header.Name))
+		}
 		if header.Type != nil && *header.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1alpha2.HeaderMatchExact {

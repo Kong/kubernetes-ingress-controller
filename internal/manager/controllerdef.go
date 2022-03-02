@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/status"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -61,7 +62,14 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // Controller Manager - Controller Setup Functions
 // -----------------------------------------------------------------------------
 
-func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient, c *Config, featureGates map[string]bool) ([]ControllerDef, error) {
+func setupControllers(
+	mgr manager.Manager,
+	dataplaneClient *dataplane.KongClient,
+	dataplaneAddressFinder *dataplane.AddressFinder,
+	kubernetesStatusQueue *status.Queue,
+	c *Config,
+	featureGates map[string]bool,
+) ([]ControllerDef, error) {
 	// Choose the best API version of Ingress to inform which ingress controller to enable.
 	var ingressPicker ingressControllerStrategy
 	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
@@ -73,17 +81,6 @@ func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled:     c.IngressNetV1Enabled,
-			AutoHandler: ingressPicker.IsNetV1,
-			Controller: &configuration.NetV1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				IngressClassName: c.IngressClassName,
-			},
-		},
-		{
 			Enabled:     c.IngressClassNetV1Enabled,
 			AutoHandler: ingressPicker.IsNetV1,
 			Controller: &configuration.NetV1IngressClassReconciler{
@@ -93,25 +90,42 @@ func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient
 			},
 		},
 		{
+			Enabled:     c.IngressNetV1Enabled,
+			AutoHandler: ingressPicker.IsNetV1,
+			Controller: &configuration.NetV1IngressReconciler{
+				Client:                 mgr.GetClient(),
+				Log:                    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Scheme:                 mgr.GetScheme(),
+				DataplaneClient:        dataplaneClient,
+				IngressClassName:       c.IngressClassName,
+				StatusQueue:            kubernetesStatusQueue,
+				DataplaneAddressFinder: dataplaneAddressFinder,
+			},
+		},
+		{
 			Enabled:     c.IngressNetV1beta1Enabled,
 			AutoHandler: ingressPicker.IsNetV1beta1,
 			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				IngressClassName: c.IngressClassName,
+				Client:                 mgr.GetClient(),
+				Log:                    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
+				Scheme:                 mgr.GetScheme(),
+				DataplaneClient:        dataplaneClient,
+				IngressClassName:       c.IngressClassName,
+				StatusQueue:            kubernetesStatusQueue,
+				DataplaneAddressFinder: dataplaneAddressFinder,
 			},
 		},
 		{
 			Enabled:     c.IngressExtV1beta1Enabled,
 			AutoHandler: ingressPicker.IsExtV1beta1,
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				IngressClassName: c.IngressClassName,
+				Client:                 mgr.GetClient(),
+				Log:                    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
+				Scheme:                 mgr.GetScheme(),
+				DataplaneClient:        dataplaneClient,
+				IngressClassName:       c.IngressClassName,
+				StatusQueue:            kubernetesStatusQueue,
+				DataplaneAddressFinder: dataplaneAddressFinder,
 			},
 		},
 		{
@@ -147,21 +161,25 @@ func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient
 		{
 			Enabled: c.UDPIngressEnabled,
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("UDPIngress"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				IngressClassName: c.IngressClassName,
+				Client:                 mgr.GetClient(),
+				Log:                    ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+				Scheme:                 mgr.GetScheme(),
+				DataplaneClient:        dataplaneClient,
+				IngressClassName:       c.IngressClassName,
+				StatusQueue:            kubernetesStatusQueue,
+				DataplaneAddressFinder: dataplaneAddressFinder,
 			},
 		},
 		{
 			Enabled: c.TCPIngressEnabled,
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("TCPIngress"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				IngressClassName: c.IngressClassName,
+				Client:                 mgr.GetClient(),
+				Log:                    ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+				Scheme:                 mgr.GetScheme(),
+				DataplaneClient:        dataplaneClient,
+				IngressClassName:       c.IngressClassName,
+				StatusQueue:            kubernetesStatusQueue,
+				DataplaneAddressFinder: dataplaneAddressFinder,
 			},
 		},
 		{
@@ -221,11 +239,13 @@ func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient
 				Resource: "ingresses",
 			}}.CRDExists,
 			Controller: &configuration.Knativev1alpha1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				IngressClassName: c.IngressClassName,
+				Client:                 mgr.GetClient(),
+				Log:                    ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+				Scheme:                 mgr.GetScheme(),
+				DataplaneClient:        dataplaneClient,
+				IngressClassName:       c.IngressClassName,
+				StatusQueue:            kubernetesStatusQueue,
+				DataplaneAddressFinder: dataplaneAddressFinder,
 			},
 		},
 		// ---------------------------------------------------------------------------

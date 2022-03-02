@@ -36,6 +36,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
+		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			if !util.IsValidPort(rule.Port) {
 				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
@@ -90,6 +91,11 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 			}
 			service.Routes = append(service.Routes, r)
 			result.ServiceNameToServices[serviceName] = service
+			objectSuccessfullyParsed = true
+		}
+
+		if objectSuccessfullyParsed {
+			p.ReportKubernetesObjectUpdate(ingress)
 		}
 	}
 
@@ -117,6 +123,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 			"udpingress_name":      ingress.Name,
 		})
 
+		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			// validate the ports and servicenames for the rule
 			if !util.IsValidPort(rule.Port) {
@@ -163,6 +170,11 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 			}
 			service.Routes = append(service.Routes, route)
 			result.ServiceNameToServices[serviceName] = service
+			objectSuccessfullyParsed = true
+		}
+
+		if objectSuccessfullyParsed {
+			p.ReportKubernetesObjectUpdate(ingress)
 		}
 	}
 

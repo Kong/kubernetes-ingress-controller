@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -66,6 +67,12 @@ type KongClient struct {
 	// prometheusMetrics is the client for shipping metrics information
 	// updates to the prometheus exporter.
 	prometheusMetrics *metrics.CtrlFuncMetrics
+
+	// kubernetesObjectStatusQueue is an optional component which when present will
+	// send messages to status controllers indicating that the given object has
+	// been properly configured in the data-plane and status updates for that
+	// object should be applied.
+	kubernetesObjectStatusQueue *status.Queue
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -136,6 +143,14 @@ func NewKongClient(
 // Dataplane Client - Kong - Public Methods
 // -----------------------------------------------------------------------------
 
+// EnableStatusUpdates turns on status updates for Kubernetes objects which are
+// configured as part of Update() operations.
+func (c *KongClient) EnableStatusUpdates(q *status.Queue) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.kubernetesObjectStatusQueue = q
+}
+
 // UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
 // It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
@@ -195,8 +210,14 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*c.cache, c.ingressClass, false, false, false, c.logger)
 
-	// initialize a parser and convert the Kubernetes objects to Kong objects
+	// initialize a parser
+	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
 	p := parser.NewParser(c.logger, storer)
+	if c.areKubernetesStatusUpdatesEnabled() {
+		p.EnableKubernetesObjectReports()
+	}
+
+	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, err := p.Build()
 	if err != nil {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
@@ -207,8 +228,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 		metrics.SuccessKey: metrics.SuccessTrue,
 	}).Inc()
+	c.logger.Debug("successfully built data-plane configuration")
 
 	// generate the deck configuration to be applied to the admin API
+	c.logger.Debug("converting configuration to deck config")
 	targetConfig := deckgen.ToDeckContent(ctx,
 		c.logger, kongstate,
 		c.kongConfig.PluginSchemaStore,
@@ -233,6 +256,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// apply the configuration update in Kong
+	c.logger.Debug("sending configuration to Kong Admin API")
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
 	newConfigSHA, err := sendconfig.PerformUpdate(timedCtx,
@@ -244,7 +268,6 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.kongConfig.FilterTags,
 		nil,
 		c.lastConfigSHA,
-		false,
 		c.prometheusMetrics,
 	)
 	if err != nil {
@@ -270,7 +293,27 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 	}
 
+	// if object status updates are enabled publish the objects to the queue
+	// indicating that configuration has been successful.
+	if c.areKubernetesStatusUpdatesEnabled() {
+		if string(c.lastConfigSHA) != string(newConfigSHA) {
+			report := p.GenerateKubernetesObjectReport()
+			c.logger.Debugf("triggering status updates for %d configured Kubernetes objects", len(report))
+			c.kubernetesObjectStatusQueue.Publish(report...)
+		} else {
+			c.logger.Debug("no configuration change, skipping kubernetes object status updates")
+		}
+	}
+
 	// update the lastConfigSHA with the new updated checksum
 	c.lastConfigSHA = newConfigSHA
 	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Dataplane Client - Kong - Private
+// -----------------------------------------------------------------------------
+
+func (c *KongClient) areKubernetesStatusUpdatesEnabled() bool {
+	return c.kubernetesObjectStatusQueue != nil
 }

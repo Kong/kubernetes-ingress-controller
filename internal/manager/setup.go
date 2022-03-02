@@ -12,14 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -126,7 +124,6 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
-		ConfigDone:        make(chan *sendconfig.KongConfigUpdate),
 	}
 
 	return cfg, nil
@@ -204,10 +201,4 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 		log.WithError(err).Error("admission webhook server stopped")
 	}()
 	return nil
-}
-
-func setupStatusUpdater(mgr manager.Manager, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config,
-	publishService string, publishAddresses []string) error {
-	updater := ctrlutils.NewStatusUpdater(kongConfig, log, kubeConfig, publishService, publishAddresses)
-	return mgr.Add(updater)
 }

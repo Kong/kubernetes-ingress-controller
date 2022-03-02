@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -17,6 +20,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -30,7 +34,7 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) error {
-	deprecatedLogger, logger, err := setupLoggers(c)
+	deprecatedLogger, _, err := setupLoggers(c)
 	if err != nil {
 		return err
 	}
@@ -112,8 +116,63 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
 
+	var kubernetesStatusQueue *status.Queue
+	if c.UpdateStatus {
+		setupLog.Info("Starting Status Updater")
+		kubernetesStatusQueue = status.NewQueue()
+		dataplaneClient.EnableStatusUpdates(kubernetesStatusQueue)
+	} else {
+		setupLog.Info("status updates disabled, skipping status updater")
+	}
+
+	dataplaneAddressFinder := dataplane.NewAddressFinder()
+	if c.UpdateStatus {
+		setupLog.Info("Initializing DataPlane Address Finder")
+		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
+			dataplaneAddressFinder.SetOverrides(overrideAddrs)
+		} else if c.PublishService != "" {
+			parts := strings.Split(c.PublishService, "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("publish service %s is invalid, expecting <namespace>/<name>", c.PublishService)
+			}
+			nsn := types.NamespacedName{
+				Namespace: parts[0],
+				Name:      parts[1],
+			}
+			dataplaneAddressFinder.SetGetter(func() ([]string, error) {
+				svc := new(corev1.Service)
+				if err := mgr.GetClient().Get(ctx, nsn, svc); err != nil {
+					return nil, err
+				}
+
+				var addrs []string
+				switch svc.Spec.Type { //nolint:exhaustive
+				case corev1.ServiceTypeLoadBalancer:
+					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
+						if lbaddr.IP != "" {
+							addrs = append(addrs, lbaddr.IP)
+						}
+						if lbaddr.Hostname != "" {
+							addrs = append(addrs, lbaddr.Hostname)
+						}
+					}
+				default:
+					addrs = append(addrs, svc.Spec.ClusterIPs...)
+				}
+
+				if len(addrs) == 0 {
+					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s/%s", nsn.Namespace, nsn.Name)
+				}
+
+				return addrs, nil
+			})
+		} else {
+			return fmt.Errorf("status updates enabled but no method to determine data-plane addresses, need either --publish-service or --publish-status-address")
+		}
+	}
+
 	setupLog.Info("Starting Enabled Controllers")
-	controllers, err := setupControllers(mgr, dataplaneClient, c, featureGates)
+	controllers, err := setupControllers(mgr, dataplaneClient, dataplaneAddressFinder, kubernetesStatusQueue, c, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}
@@ -147,16 +206,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		}
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
-	}
-
-	if c.UpdateStatus {
-		setupLog.Info("Starting resource status updater")
-		err = setupStatusUpdater(mgr, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
-		if err != nil {
-			return fmt.Errorf("could not start status updater: %w", err)
-		}
-	} else {
-		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
 	setupLog.Info("Starting manager")

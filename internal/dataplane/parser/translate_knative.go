@@ -33,6 +33,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
 
+		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
 			if rule.HTTP == nil {
@@ -106,7 +107,12 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				}
 				service.Routes = append(service.Routes, r)
 				services[serviceName] = service
+				objectSuccessfullyParsed = true
 			}
+		}
+
+		if objectSuccessfullyParsed {
+			p.ReportKubernetesObjectUpdate(ingress)
 		}
 	}
 

@@ -13,7 +13,8 @@ import (
 // as a regex
 const kongHeaderRegexPrefix = "~*"
 
-var minRegexHeaderKongVersion = semver.MustParse("2.8.0")
+// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches
+var MinRegexHeaderKongVersion = semver.MustParse("2.8.0")
 
 // -----------------------------------------------------------------------------
 // Translate Utilities - Gateway
@@ -31,12 +32,11 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 				string(header.Name))
 		}
 		if header.Type != nil && *header.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
-			if util.GetKongVersion().LT(minRegexHeaderKongVersion) {
+			if util.GetKongVersion().LT(MinRegexHeaderKongVersion) {
 				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression",
 					util.GetKongVersion().String())
-			} else {
-				convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 			}
+			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1alpha2.HeaderMatchExact {
 			convertedHeaders[string(header.Name)] = []string{header.Value}
 		} else {

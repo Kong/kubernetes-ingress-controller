@@ -21,7 +21,11 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
+
+var emptyHeaderSet = make(map[string]string)
 
 func TestHTTPRouteEssentials(t *testing.T) {
 	ns, cleanup := namespace(t)
@@ -113,6 +117,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
 	pathMatchRegularExpression := gatewayv1alpha2.PathMatchRegularExpression
 	pathMatchExact := gatewayv1alpha2.PathMatchExact
+	headerMatchRegex := gatewayv1alpha2.HeaderMatchRegularExpression
 	httproute := &gatewayv1alpha2.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -158,6 +163,17 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			}},
 		},
 	}
+	if util.GetKongVersion().GTE(parser.MinRegexHeaderKongVersion) {
+		httproute.Spec.Rules[0].Matches = append(httproute.Spec.Rules[0].Matches, gatewayv1alpha2.HTTPRouteMatch{
+			Headers: []gatewayv1alpha2.HTTPHeaderMatch{
+				{
+					Type:  &headerMatchRegex,
+					Value: "^audio/*",
+					Name:  "Content-Type",
+				},
+			},
+		})
+	}
 	httproute, err = c.GatewayV1alpha2().HTTPRoutes(ns.Name).Create(ctx, httproute, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -174,12 +190,17 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "httpbin/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
-		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.")
-	eventuallyGETPath(t, "regex-123-httpbin", http.StatusOK, "<title>httpbin.org</title>")
-	eventuallyGETPath(t, "exact-httpbin", http.StatusOK, "<title>httpbin.org</title>")
-	eventuallyGETPath(t, "exact-httpbina", http.StatusNotFound, "no Route matched")
+		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.", emptyHeaderSet)
+	eventuallyGETPath(t, "regex-123-httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "exact-httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "exact-httpbina", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+
+	if util.GetKongVersion().GTE(parser.MinRegexHeaderKongVersion) {
+		t.Log("verifying HTTPRoute header match")
+		eventuallyGETPath(t, "", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"})
+	}
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httproute.Spec.ParentRefs
@@ -195,7 +216,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
@@ -210,7 +231,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("deleting the GatewayClass")
 	oldGWCName := gwc.Name
@@ -220,7 +241,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
 
 	t.Log("putting the GatewayClass back")
 	gwc = &gatewayv1alpha2.GatewayClass{
@@ -238,7 +259,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("deleting the Gateway")
 	oldGWName := gw.Name
@@ -248,7 +269,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
 
 	t.Log("putting the Gateway back")
 	gw = &gatewayv1alpha2.Gateway{
@@ -274,7 +295,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsLinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
@@ -284,7 +305,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, httproute.Name)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "")
+	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
 }
 
 // -----------------------------------------------------------------------------

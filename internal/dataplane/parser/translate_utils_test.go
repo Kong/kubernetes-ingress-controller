@@ -52,17 +52,6 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			},
 		},
 		{
-			msg: "a single exact header match with multiple values converts properly",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{{
-				Type:  &exactType,
-				Name:  "Content-Type",
-				Value: "audio/vorbis,audio/mpeg",
-			}},
-			output: map[string][]string{
-				"Content-Type": {"audio/vorbis", "audio/mpeg"},
-			},
-		},
-		{
 			msg: "multiple header matches for the same header are rejected",
 			input: []gatewayv1alpha2.HTTPHeaderMatch{
 				{
@@ -78,12 +67,12 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			err:    fmt.Errorf("multiple header matches for the same header are not allowed: Content-Type"),
 		},
 		{
-			msg: "multiple header matches with a mixture of value counts convert properly",
+			msg: "multiple header matches convert properly",
 			input: []gatewayv1alpha2.HTTPHeaderMatch{
 				{
 					Type:  &exactType,
 					Name:  "Content-Type",
-					Value: "audio/vorbis,audio/mpeg",
+					Value: "audio/vorbis",
 				},
 				{
 					Name:  "Content-Length",
@@ -91,7 +80,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 				},
 			},
 			output: map[string][]string{
-				"Content-Type":   {"audio/vorbis", "audio/mpeg"},
+				"Content-Type":   {"audio/vorbis"},
 				"Content-Length": {"999999999"},
 			},
 		},

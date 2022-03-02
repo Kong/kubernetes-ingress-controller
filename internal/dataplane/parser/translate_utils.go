@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"strings"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -29,10 +28,7 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 		if header.Type != nil && *header.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1alpha2.HeaderMatchExact {
-
-			// split the header values by comma
-			values := strings.Split(header.Value, ",")
-			convertedHeaders[string(header.Name)] = values
+			convertedHeaders[string(header.Name)] = []string{header.Value}
 		} else {
 			return nil, fmt.Errorf("unknown/unsupported header match type: %s", string(*header.Type))
 		}

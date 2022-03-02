@@ -48,7 +48,7 @@ jobs:
     - name: Install go-licenses
       run: go get github.com/google/go-licenses
     - name: Checkout target
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         ref: ${{ github.event.pull_request.base.ref }}
         path: ./src
@@ -57,7 +57,7 @@ jobs:
       run: go-licenses csv ./... | grep -vE "github.com/kong|golang.org/x" | sort > ${{ github.workspace }}/target_licenses.csv
       working-directory: ./src
     - name: Checkout PR
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: ./pr
         ref: ${{ github.head_ref }}

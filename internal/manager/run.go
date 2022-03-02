@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
@@ -71,6 +72,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	kongRoot, err := kongConfig.Client.Root(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve Kong admin root: %w", err)
+	}
+	kongVersion, err := kong.ParseSemanticVersion(kong.VersionFromInfo(kongRoot))
+	if err != nil {
+		setupLog.V(util.WarnLevel).Info("could not parse Kong version, version-specific behavior disabled", "error", err)
+	} else {
+		util.SetKongVersion(kongVersion)
 	}
 	kongRootConfig, ok := kongRoot["configuration"].(map[string]interface{})
 	if !ok {

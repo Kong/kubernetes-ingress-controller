@@ -3,12 +3,17 @@ package parser
 import (
 	"fmt"
 
+	"github.com/blang/semver/v4"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // kongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
 // as a regex
 const kongHeaderRegexPrefix = "~*"
+
+var minRegexHeaderKongVersion = semver.MustParse("2.8.0")
 
 // -----------------------------------------------------------------------------
 // Translate Utilities - Gateway
@@ -26,7 +31,12 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 				string(header.Name))
 		}
 		if header.Type != nil && *header.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
-			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
+			if util.GetKongVersion().LT(minRegexHeaderKongVersion) {
+				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression",
+					util.GetKongVersion().String())
+			} else {
+				convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
+			}
 		} else if header.Type == nil || *header.Type == gatewayv1alpha2.HeaderMatchExact {
 			convertedHeaders[string(header.Name)] = []string{header.Value}
 		} else {

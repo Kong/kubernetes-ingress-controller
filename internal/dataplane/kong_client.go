@@ -146,6 +146,9 @@ func (c *KongClient) UpdateObject(obj client.Object) error {
 // DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
 // The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
+//
+// under the hood the cache implementation will ignore deletions on objects
+// that are not present in the cache, so in those cases this is a no-op.
 func (c *KongClient) DeleteObject(obj client.Object) error {
 	return c.cache.Delete(obj)
 }

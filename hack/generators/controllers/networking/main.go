@@ -439,7 +439,7 @@ func (r *{{.PackageAlias}}{{.Type}}Reconciler) Reconcile(ctx context.Context, re
 		if errors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
-			return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 		}
 		return ctrl.Result{}, err
 	}

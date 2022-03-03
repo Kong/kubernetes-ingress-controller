@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
@@ -237,7 +236,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			debug(log, httproute, "object does not exist, ensuring it is not present in the proxy cache")
 			httproute.Namespace = req.Namespace
 			httproute.Name = req.Name
-			return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, httproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
 		}
 
 		// for any error other than 404, requeue
@@ -257,7 +256,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 		debug(log, httproute, "ensured object was removed from the data-plane (if ever present)")
-		return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, httproute)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
 	}
 
 	// we need to pull the Gateway parent objects for the HTTPRoute to verify
@@ -287,7 +286,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
 			debug(log, httproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
-			return ctrlutils.EnsureProxyDeleteObject(r.DataplaneClient, httproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
 		}
 		return ctrl.Result{}, err
 	}

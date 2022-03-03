@@ -48,11 +48,23 @@
 
 > Release date: TBD
 
+#### Breaking changes
+
+- HTTPRoute header matches no longer interpret CSV values as multiple match
+  values, as this was not part of the HTTPRoute specification. Multiple values
+  should use regular expressions instead.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+
 #### Added
 
 - Deployment manifests now include an IngressClass resource and permissions to
   read IngressClass resources.
   [#2292](https://github.com/Kong/kubernetes-ingress-controller/pull/2292)
+- HTTPRoute header matches now support regular expressions.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+- HTTPRoutes that define multiple matches for the same header are rejected to
+  comply with the HTTPRoute specification.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
 
 #### Fixed
 

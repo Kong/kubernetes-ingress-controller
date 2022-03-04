@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
 // extraIngressNamespace is the name of an alternative namespace used for ingress tests
@@ -620,4 +621,116 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 		}
 		return len(lbstatus.Ingress) > 0
 	}, statusWait, waitTick)
+}
+
+func TestDefaultIngressClass(t *testing.T) {
+	t.Parallel()
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the deployment %s", deployment.Name)
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the service %s", service.Name)
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Logf("creating a classless ingress for service %s", service.Name)
+	kubernetesVersion, err := env.Cluster().Version()
+	require.NoError(t, err)
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
+		"konghq.com/strip-path": "true",
+	}, service)
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+
+	defer func() {
+		t.Log("cleaning up Ingress resource")
+		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
+			if !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		}
+	}()
+
+	t.Log("ensuring Ingress does not become live")
+	require.Never(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		if resp.StatusCode != http.StatusNotFound {
+			t.Logf("unexpected status when checking Ingress status: %v", resp.StatusCode)
+			return true
+		}
+		return false
+	}, time.Minute, waitTick)
+
+	t.Logf("creating a default IngressClass for our class")
+	class := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kongtests",
+			Annotations: map[string]string{
+				"ingressclass.kubernetes.io/is-default-class": "true",
+			},
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+		},
+	}
+	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, class, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Log("cleaning up IngressClass resource")
+		if err := env.Cluster().Client().NetworkingV1().IngressClasses().Delete(ctx, class.Name,
+			metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		}
+	}()
+
+	t.Log("waiting for updated ingress status to include IP")
+	require.Eventually(t, func() bool {
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress)
+		if err != nil {
+			return false
+		}
+		return len(lbstatus.Ingress) > 0
+	}, statusWait, waitTick)
+
+	t.Log("waiting for routes from Ingress to be operational")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
+			// Expected: "<title>httpbin.org</title>"
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
 }

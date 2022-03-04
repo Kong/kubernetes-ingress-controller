@@ -76,21 +76,6 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		Group:                             "networking.k8s.io",
 		Version:                           "v1",
-		Kind:                              "Ingress",
-		PackageImportAlias:                "netv1",
-		PackageAlias:                      "NetV1",
-		Package:                           netv1,
-		Plural:                            "ingresses",
-		CacheType:                         "IngressV1",
-		NeedsStatusPermissions:            true,
-		CapableOfStatusUpdates:            true,
-		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       true,
-		RBACVerbs:                         []string{"get", "list", "watch"},
-	},
-	typeNeeded{
-		Group:                             "networking.k8s.io",
-		Version:                           "v1",
 		Kind:                              "IngressClass",
 		PackageImportAlias:                "netv1",
 		PackageAlias:                      "NetV1",
@@ -102,6 +87,7 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
+
 	typeNeeded{
 		Group:                             "networking.k8s.io",
 		Version:                           "v1beta1",
@@ -403,6 +389,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	knativeApis "knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -525,8 +512,18 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, nil
 	}
 {{if .AcceptsIngressClassNameAnnotation}}
+	// retrieve the configured IngressClass, to check if it's the default IngressClass
+	class := new(netv1.IngressClass)
+	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		// we log this without taking action to support legacy configurations that only set ingressClassName or
+		// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+		// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+		// if none exists.
+		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+	}
+
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName) {
+	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}

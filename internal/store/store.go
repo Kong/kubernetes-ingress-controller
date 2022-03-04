@@ -43,14 +43,16 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 const (
-	knativeIngressClassKey     = "networking.knative.dev/ingress.class"
-	caCertKey                  = "konghq.com/ca-cert"
-	ingressClassKongController = "ingress-controllers.konghq.com/kong"
+	knativeIngressClassKey = "networking.knative.dev/ingress.class"
+	caCertKey              = "konghq.com/ca-cert"
+	// IngressClassKongController is the string used for the Controller field of a recognized IngressClass
+	IngressClassKongController = "ingress-controllers.konghq.com/kong"
 )
 
 // ErrNotFound error is returned when a lookup results in no resource.
@@ -76,6 +78,7 @@ type Storer interface {
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
+	GetIngressClassV1(name string) (*networkingv1.IngressClass, error)
 
 	ListIngressesV1beta1() []*networkingv1beta1.Ingress
 	ListIngressesV1() []*networkingv1.Ingress
@@ -143,7 +146,7 @@ func NewCacheStores() (c CacheStores) {
 	c.Consumer = cache.NewStore(keyFunc)
 	c.Endpoint = cache.NewStore(keyFunc)
 	c.IngressV1 = cache.NewStore(keyFunc)
-	c.IngressClassV1 = cache.NewStore(keyFunc)
+	c.IngressClassV1 = cache.NewStore(clusterResourceKeyFunc)
 	c.IngressV1beta1 = cache.NewStore(keyFunc)
 	c.HTTPRoute = cache.NewStore(keyFunc)
 	c.KnativeIngress = cache.NewStore(keyFunc)
@@ -432,8 +435,17 @@ func (s Store) ListIngressesV1() []*networkingv1.Ingress {
 			if !s.isValidIngressClass(&ing.ObjectMeta, s.ingressV1ClassMatching) {
 				continue
 			}
-		} else {
+		} else if ing.Spec.IngressClassName != nil {
 			if !s.isValidIngressV1Class(ing, s.ingressV1ClassMatching) {
+				continue
+			}
+		} else {
+			class, err := s.GetIngressClassV1(s.ingressClass)
+			if err != nil {
+				s.logger.Debugf("IngressClass %s not found", s.ingressClass)
+				continue
+			}
+			if !ctrlutils.IsDefaultIngressClass(class) {
 				continue
 			}
 		}
@@ -458,7 +470,7 @@ func (s Store) ListIngressClassesV1() []*networkingv1.IngressClass {
 			s.logger.Warnf("listIngressClassesV1: dropping object of unexpected type: %#v", item)
 			continue
 		}
-		if class.Spec.Controller != ingressClassKongController {
+		if class.Spec.Controller != IngressClassKongController {
 			continue
 		}
 		classes = append(classes, class)
@@ -647,6 +659,18 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 		return nil, ErrNotFound{fmt.Sprintf("KongConsumer %v not found", key)}
 	}
 	return p.(*kongv1.KongConsumer), nil
+}
+
+// GetIngressClassV1 returns the 'name' IngressClass resource
+func (s Store) GetIngressClassV1(name string) (*networkingv1.IngressClass, error) {
+	p, exists, err := s.stores.IngressClassV1.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
+	}
+	return p.(*networkingv1.IngressClass), nil
 }
 
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class

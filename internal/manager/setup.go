@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -201,4 +202,53 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 		log.WithError(err).Error("admission webhook server stopped")
 	}()
 	return nil
+}
+
+func setupDataplaneAddressFinder(ctx context.Context, mgrc client.Client, c *Config) (*dataplane.AddressFinder, error) {
+	dataplaneAddressFinder := dataplane.NewAddressFinder()
+	if c.UpdateStatus {
+		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
+			dataplaneAddressFinder.SetOverrides(overrideAddrs)
+		} else if c.PublishService != "" {
+			parts := strings.Split(c.PublishService, "/")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("publish service %s is invalid, expecting <namespace>/<name>", c.PublishService)
+			}
+			nsn := types.NamespacedName{
+				Namespace: parts[0],
+				Name:      parts[1],
+			}
+			dataplaneAddressFinder.SetGetter(func() ([]string, error) {
+				svc := new(corev1.Service)
+				if err := mgrc.Get(ctx, nsn, svc); err != nil {
+					return nil, err
+				}
+
+				var addrs []string
+				switch svc.Spec.Type { //nolint:exhaustive
+				case corev1.ServiceTypeLoadBalancer:
+					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
+						if lbaddr.IP != "" {
+							addrs = append(addrs, lbaddr.IP)
+						}
+						if lbaddr.Hostname != "" {
+							addrs = append(addrs, lbaddr.Hostname)
+						}
+					}
+				default:
+					addrs = append(addrs, svc.Spec.ClusterIPs...)
+				}
+
+				if len(addrs) == 0 {
+					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s/%s", nsn.Namespace, nsn.Name)
+				}
+
+				return addrs, nil
+			})
+		} else {
+			return nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses, need either --publish-service or --publish-status-address")
+		}
+	}
+
+	return dataplaneAddressFinder, nil
 }

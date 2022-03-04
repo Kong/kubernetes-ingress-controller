@@ -272,7 +272,7 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 				Name: "foo",
 			},
 			Spec: networkingv1.IngressClassSpec{
-				Controller: ingressClassKongController,
+				Controller: IngressClassKongController,
 			},
 		},
 		{
@@ -280,7 +280,7 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 				Name: "bar",
 			},
 			Spec: networkingv1.IngressClassSpec{
-				Controller: ingressClassKongController,
+				Controller: IngressClassKongController,
 			},
 		},
 		{

@@ -14,6 +14,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
+const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"
+
 // HasAnnotation is a helper function to determine whether an object has a given annotation, and whether it's
 // to the value provided.
 func HasAnnotation(obj client.Object, key, expectedValue string) bool {
@@ -21,11 +23,25 @@ func HasAnnotation(obj client.Object, key, expectedValue string) bool {
 	return ok && foundValue == expectedValue
 }
 
+// IsDefaultIngressClass returns whether an IngressClass is the default IngressClass
+func IsDefaultIngressClass(obj client.Object) bool {
+	if ingressClass, ok := obj.(*netv1.IngressClass); ok {
+		return ingressClass.ObjectMeta.Annotations[defaultIngressClassAnnotation] == "true"
+	}
+	return false
+}
+
 // MatchesIngressClassName indicates whether or not an object indicates that it's supported by the ingress class name provided.
-func MatchesIngressClassName(obj client.Object, ingressClassName string) bool {
+func MatchesIngressClassName(obj client.Object, ingressClassName string, isDefault bool) bool {
 	if ing, ok := obj.(*netv1.Ingress); ok {
 		if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == ingressClassName {
 			return true
+		} else if ing.Spec.IngressClassName == nil && isDefault {
+			_, standard := obj.GetAnnotations()[annotations.IngressClassKey]
+			_, knative := obj.GetAnnotations()[annotations.KnativeIngressClassKey]
+			if !standard && !knative {
+				return true
+			}
 		}
 	}
 
@@ -43,8 +59,15 @@ func GeneratePredicateFuncsForIngressClassFilter(name string, specCheckEnabled, 
 		if annotationCheckEnabled && IsIngressClassAnnotationConfigured(obj, name) {
 			return true
 		}
-		if specCheckEnabled && IsIngressClassSpecConfigured(obj, name) {
-			return true
+		if specCheckEnabled {
+			if IsIngressClassSpecConfigured(obj, name) {
+				return true
+			}
+			if IsIngressClassSpecEmpty(obj) {
+				// we include Ingresses with _no_ ingressClassName in case we're handling the default IngressClass,
+				// and will filter them out if not in MatchesIngressClassName()
+				return true
+			}
 		}
 		return false
 	})
@@ -52,8 +75,13 @@ func GeneratePredicateFuncsForIngressClassFilter(name string, specCheckEnabled, 
 		if annotationCheckEnabled && IsIngressClassAnnotationConfigured(e.ObjectOld, name) || IsIngressClassAnnotationConfigured(e.ObjectNew, name) {
 			return true
 		}
-		if specCheckEnabled && IsIngressClassSpecConfigured(e.ObjectOld, name) || IsIngressClassSpecConfigured(e.ObjectNew, name) {
-			return true
+		if specCheckEnabled {
+			if IsIngressClassSpecConfigured(e.ObjectOld, name) || IsIngressClassSpecConfigured(e.ObjectNew, name) {
+				return true
+			}
+			if IsIngressClassSpecEmpty(e.ObjectOld) || IsIngressClassSpecEmpty(e.ObjectNew) {
+				return true
+			}
 		}
 		return false
 	}
@@ -81,7 +109,7 @@ func IsIngressClassAnnotationConfigured(obj client.Object, expectedIngressClassN
 	return false
 }
 
-// IsIngressClassAnnotationConfigured determines whether an object has IngressClassName field in its spec and whether the value
+// IsIngressClassSpecConfigured determines whether an object has IngressClassName field in its spec and whether the value
 // matches the provide IngressClassName (and is therefore an object configured to be reconciled by that class).
 func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName string) bool {
 	switch obj := obj.(type) {
@@ -93,6 +121,16 @@ func IsIngressClassSpecConfigured(obj client.Object, expectedIngressClassName st
 		return obj.Spec.IngressClassName != nil && *obj.Spec.IngressClassName == expectedIngressClassName
 	}
 	return false
+}
+
+// IsIngressClassSpecEmpty checks if a networking/v1 Ingress has no ingressClassName set
+func IsIngressClassSpecEmpty(obj client.Object) bool {
+	switch obj := obj.(type) {
+	case *netv1.Ingress:
+		return obj.Spec.IngressClassName == nil
+	default:
+		return false
+	}
 }
 
 // CRDExists returns false if CRD does not exist

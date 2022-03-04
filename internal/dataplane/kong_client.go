@@ -15,6 +15,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -66,6 +68,28 @@ type KongClient struct {
 	// prometheusMetrics is the client for shipping metrics information
 	// updates to the prometheus exporter.
 	prometheusMetrics *metrics.CtrlFuncMetrics
+
+	// kubernetesObjectReportLock is a mutex for thread-safety of
+	// kubernetes object reporting functionality.
+	kubernetesObjectReportLock sync.RWMutex
+
+	// kubernetesObjectStatusQueue is a queue that needs to be messaged whenever
+	// a Kubernetes object has had configuration for itself successfully applied
+	// to the data-plane: messages will trigger reconciliation in the control plane
+	// so that status for the objects can be updated accordingly. This is only in
+	// use when kubernetesObjectReportsEnabled is true.
+	kubernetesObjectStatusQueue *status.Queue
+
+	// kubernetesObjectReportsEnabled indicates whether the data-plane client will
+	// file reports about Kubernetes objects which are successfully configured for
+	// in the data-plane
+	kubernetesObjectReportsEnabled bool
+
+	// kubernetesObjectReportsFilter is a set of objects which were included
+	// in the most recent Update(). This can be helpful for callers to determine
+	// whether a Kubernetes object has corresponding data-plane configuration that
+	// is actively configured (e.g. to know how to set the object status).
+	kubernetesObjectReportsFilter k8sobj.Set
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -175,6 +199,38 @@ func (c *KongClient) RootWithTimeout() (map[string]interface{}, error) {
 }
 
 // -----------------------------------------------------------------------------
+// Dataplane Client - Kong - Reporting
+// -----------------------------------------------------------------------------
+
+// EnableKubernetesObjectReports turns on reporting for Kubernetes objects which are
+// configured as part of Update() operations. Enabling this makes it possible to use
+// ObjectConfigured(obj) to determine whether an object has successfully been
+// configured for on the data-plane.
+func (c *KongClient) EnableKubernetesObjectReports(q *status.Queue) {
+	c.kubernetesObjectReportLock.Lock()
+	defer c.kubernetesObjectReportLock.Unlock()
+	c.kubernetesObjectStatusQueue = q
+	c.kubernetesObjectReportsEnabled = true
+}
+
+// AreKubernetesObjectReportsEnabled returns true or false whether this client has been
+// configured to report on Kubernetes objects which have been successfully
+// configured for in the data-plane.
+func (c *KongClient) AreKubernetesObjectReportsEnabled() bool {
+	c.kubernetesObjectReportLock.RLock()
+	defer c.kubernetesObjectReportLock.RUnlock()
+	return c.kubernetesObjectReportsEnabled
+}
+
+// KubernetesObjectIsConfigured reports whether the provided object has active
+// configuration for itself successfully applied to the data-plane.
+func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) bool {
+	c.kubernetesObjectReportLock.RLock()
+	defer c.kubernetesObjectReportLock.RUnlock()
+	return c.kubernetesObjectReportsFilter.Has(obj)
+}
+
+// -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
 
@@ -195,8 +251,14 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// build the kongstate object from the Kubernetes objects in the storer
 	storer := store.New(*c.cache, c.ingressClass, false, false, false, c.logger)
 
-	// initialize a parser and convert the Kubernetes objects to Kong objects
+	// initialize a parser
+	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
 	p := parser.NewParser(c.logger, storer)
+	if c.AreKubernetesObjectReportsEnabled() {
+		p.EnableKubernetesObjectReports()
+	}
+
+	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, err := p.Build()
 	if err != nil {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
@@ -207,8 +269,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 		metrics.SuccessKey: metrics.SuccessTrue,
 	}).Inc()
+	c.logger.Debug("successfully built data-plane configuration")
 
 	// generate the deck configuration to be applied to the admin API
+	c.logger.Debug("converting configuration to deck config")
 	targetConfig := deckgen.ToDeckContent(ctx,
 		c.logger, kongstate,
 		c.kongConfig.PluginSchemaStore,
@@ -233,6 +297,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// apply the configuration update in Kong
+	c.logger.Debug("sending configuration to Kong Admin API")
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
 	newConfigSHA, err := sendconfig.PerformUpdate(timedCtx,
@@ -244,7 +309,6 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.kongConfig.FilterTags,
 		nil,
 		c.lastConfigSHA,
-		false,
 		c.prometheusMetrics,
 	)
 	if err != nil {
@@ -270,7 +334,53 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 	}
 
+	// report on configured Kubernetes objects if enabled
+	if c.AreKubernetesObjectReportsEnabled() {
+		if string(c.lastConfigSHA) != string(newConfigSHA) {
+			report := p.GenerateKubernetesObjectReport()
+			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
+			c.triggerKubernetesObjectReport(report...)
+		} else {
+			c.logger.Debug("no configuration change, skipping kubernetes object report")
+		}
+	}
+
 	// update the lastConfigSHA with the new updated checksum
 	c.lastConfigSHA = newConfigSHA
 	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Dataplane Client - Kong - Private
+// -----------------------------------------------------------------------------
+
+// triggerKubernetesObjectReport will update the KongClient with a set which
+// enables filtering for which objects are currently applied to the data-plane,
+// as well as updating the c.kubernetesObjectStatusQueue to queue those objects
+// for reconciliation so their statuses can be properly updated.
+func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
+	// first a new set of the included objects for the most recent configuration
+	// needs to be generated.
+	set := k8sobj.Set{}
+	for _, obj := range objs {
+		set.Insert(obj)
+	}
+
+	c.updateKubernetesObjectReportFilter(set)
+
+	// after the filter has been updated we signal the status queue so that the
+	// control-plane can update the Kubernetes object statuses for affected objs.
+	// this has to be done in a separate loop so that the filter is in place
+	// before the objects are enqueued, as the filter is used by the control-plane
+	for _, obj := range objs {
+		c.kubernetesObjectStatusQueue.Publish(obj)
+	}
+}
+
+// updateKubernetesObjectReportFilter overrides the internal object set with
+// a new provided set.
+func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
+	c.kubernetesObjectReportLock.Lock()
+	defer c.kubernetesObjectReportLock.Unlock()
+	c.kubernetesObjectReportsFilter = set
 }

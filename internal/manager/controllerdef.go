@@ -87,9 +87,10 @@ func setupControllers(mgr manager.Manager, dataplaneClient *dataplane.KongClient
 			Enabled:     c.IngressClassNetV1Enabled,
 			AutoHandler: ingressPicker.IsNetV1,
 			Controller: &configuration.NetV1IngressClassReconciler{
-				Client: mgr.GetClient(),
-				Log:    ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
-				Scheme: mgr.GetScheme(),
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
+				DataplaneClient: dataplaneClient,
+				Scheme:          mgr.GetScheme(),
 			},
 		},
 		{

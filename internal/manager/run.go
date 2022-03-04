@@ -17,6 +17,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -30,7 +31,7 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) error {
-	deprecatedLogger, logger, err := setupLoggers(c)
+	deprecatedLogger, _, err := setupLoggers(c)
 	if err != nil {
 		return err
 	}
@@ -112,8 +113,23 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
 
+	var kubernetesStatusQueue *status.Queue
+	if c.UpdateStatus {
+		setupLog.Info("Starting Status Updater")
+		kubernetesStatusQueue = status.NewQueue()
+		dataplaneClient.EnableKubernetesObjectReports(kubernetesStatusQueue)
+	} else {
+		setupLog.Info("status updates disabled, skipping status updater")
+	}
+
+	setupLog.Info("Initializing Dataplane Address Discovery")
+	dataplaneAddressFinder, err := setupDataplaneAddressFinder(ctx, mgr.GetClient(), c)
+	if err != nil {
+		return err
+	}
+
 	setupLog.Info("Starting Enabled Controllers")
-	controllers, err := setupControllers(mgr, dataplaneClient, c, featureGates)
+	controllers, err := setupControllers(mgr, dataplaneClient, dataplaneAddressFinder, kubernetesStatusQueue, c, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}
@@ -147,16 +163,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		}
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
-	}
-
-	if c.UpdateStatus {
-		setupLog.Info("Starting resource status updater")
-		err = setupStatusUpdater(mgr, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
-		if err != nil {
-			return fmt.Errorf("could not start status updater: %w", err)
-		}
-	} else {
-		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
 	setupLog.Info("Starting manager")

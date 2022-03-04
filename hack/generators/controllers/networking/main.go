@@ -83,7 +83,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		CacheType:                         "IngressV1",
 		NeedsStatusPermissions:            true,
-		NeedsStatusUpdates:                true,
+		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -112,7 +112,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		CacheType:                         "IngressV1beta1",
 		NeedsStatusPermissions:            true,
-		NeedsStatusUpdates:                true,
+		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -127,7 +127,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		CacheType:                         "IngressV1beta1",
 		NeedsStatusPermissions:            true,
-		NeedsStatusUpdates:                true,
+		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -198,7 +198,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "tcpingresses",
 		CacheType:                         "TCPIngress",
 		NeedsStatusPermissions:            true,
-		NeedsStatusUpdates:                true,
+		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -213,7 +213,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "udpingresses",
 		CacheType:                         "UDPIngress",
 		NeedsStatusPermissions:            true,
-		NeedsStatusUpdates:                true,
+		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -228,7 +228,7 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		CacheType:                         "KnativeIngress",
 		NeedsStatusPermissions:            true,
-		NeedsStatusUpdates:                true,
+		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -352,9 +352,9 @@ type typeNeeded struct {
 	// its status
 	NeedsStatusPermissions bool
 
-	// NeedsStatusUpdates indicates that the controllers should manage status
+	// CapableOfStatusUpdates indicates that the controllers should manage status
 	// updates for the resource.
-	NeedsStatusUpdates bool
+	CapableOfStatusUpdates bool
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
@@ -391,6 +391,8 @@ package configuration
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -404,7 +406,6 @@ import (
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	knativeApis "knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -412,7 +413,7 @@ import (
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/status"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -439,7 +440,7 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
-{{- if .NeedsStatusUpdates }}
+{{- if .CapableOfStatusUpdates }}
 
 	DataplaneAddressFinder *dataplane.AddressFinder
 	StatusQueue            *status.Queue
@@ -452,27 +453,39 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-{{- if .NeedsStatusUpdates}}
+	c, err := controller.New("{{.PackageAlias}}{{.Kind}}", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+
+{{- if .CapableOfStatusUpdates}}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		statusController := &{{.PackageAlias}}{{.Kind}}StatusReconciler{
-			Client:                 r.Client,
-			Log:                    r.Log,
-			DataplaneAddressFinder: r.DataplaneAddressFinder,
-			StatusQueue:            r.StatusQueue,
-		}
-		if err := statusController.SetupWithManager(mgr); err != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "{{.Group}}",
+				Version: "{{.Version}}",
+				Kind:    "{{.Kind}}",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
 			return err
 		}
 	}
-
 {{- end}}
 {{- if .AcceptsIngressClassNameAnnotation}}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, {{.AcceptsIngressClassNameSpec}}, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&{{.PackageImportAlias}}.{{.Kind}}{}, builder.WithPredicates(preds)).Complete(r)
-{{- else}}
-	return ctrl.NewControllerManagedBy(mgr).For(&{{.PackageImportAlias}}.{{.Kind}}{}).Complete(r)
 {{- end}}
+	return c.Watch(
+		&source.Kind{Type: &{{.PackageImportAlias}}.{{.Kind}}{}},
+		&handler.EnqueueRequestForObject{},
+{{- if .AcceptsIngressClassNameAnnotation}}
+		preds,
+{{- end}}
+	)
 }
 
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
@@ -523,86 +536,48 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
+{{- if .CapableOfStatusUpdates}}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+{{- if eq .Group "networking.internal.knative.dev"}}
+		var knativeLBIngress []knativev1alpha1.LoadBalancerIngressStatus
+		for _, addr := range addrs {
+			knativeIng := knativev1alpha1.LoadBalancerIngressStatus{
+				IP:     addr.IP,
+				Domain: addr.Hostname,
+			}
+			knativeLBIngress = append(knativeLBIngress, knativeIng)
+		}
+		ingressCondSet := knativeApis.NewLivingConditionSet()
+		if obj.Status.PublicLoadBalancer == nil || len(obj.Status.PublicLoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.PublicLoadBalancer.Ingress, knativeLBIngress) {
+			obj.Status.MarkLoadBalancerReady(knativeLBIngress, knativeLBIngress)
+			ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionReady)
+			ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionNetworkConfigured)
+			obj.Status.ObservedGeneration = obj.Generation
+{{- else}}
+		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
+			obj.Status.LoadBalancer.Ingress = addrs
+{{- end}}
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
+{{- end}}
+
 	return ctrl.Result{}, nil
 }
-{{- if .NeedsStatusUpdates}}
-
-// -----------------------------------------------------------------------------
-// {{.PackageAlias}}{{.Kind}} - Status Updater Reconciler
-// -----------------------------------------------------------------------------
-
-// {{.PackageAlias}}{{.Kind}}StatusReconciler reconciles {{.Kind}} resources
-// updating their status after the data-plane has successfully configured them
-type {{.PackageAlias}}{{.Kind}}StatusReconciler struct {
-	client.Client
-
-	Log                    logr.Logger
-	DataplaneAddressFinder *dataplane.AddressFinder
-	StatusQueue            *status.Queue
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *{{.PackageAlias}}{{.Kind}}StatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("{{.PackageAlias}}{{.Kind}}", mgr, controller.Options{
-		Reconciler: r,
-		Log:        r.Log,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-			Group:   "{{.Group}}",
-			Version: "{{.Version}}",
-			Kind:    "{{.Kind}}",
-		})},
-		&handler.EnqueueRequestForObject{},
-	)
-}
-
-//+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}}/status,verbs=get;update;patch
-
-// Reconcile processes the watched objects
-func (r *{{.PackageAlias}}{{.Kind}}StatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("{{.PackageAlias}}{{.Kind}}", req.NamespacedName)
-
-	// get the relevant object
-	obj := new({{.PackageImportAlias}}.{{.Kind}})
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		if errors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("resource queued but was deleted, skipping", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(util.DebugLevel).Info("updating status for resource", "namespace", req.Namespace, "name", req.Name)
-
-	log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-	addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-{{- if eq .Group "networking.internal.knative.dev"}}
-	var knativeLBIngress []knativev1alpha1.LoadBalancerIngressStatus
-	for _, addr := range addrs {
-		knativeIng := knativev1alpha1.LoadBalancerIngressStatus{
-			IP:     addr.IP,
-			Domain: addr.Hostname,
-		}
-		knativeLBIngress = append(knativeLBIngress, knativeIng)
-	}
-	ingressCondSet := knativeApis.NewLivingConditionSet()
-	obj.Status.MarkLoadBalancerReady(knativeLBIngress, knativeLBIngress)
-	ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionReady)
-	ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionNetworkConfigured)
-	obj.Status.ObservedGeneration = obj.Generation
-{{- else}}
-	obj.Status.LoadBalancer.Ingress = addrs
-{{- end}}
-	return ctrl.Result{}, r.Status().Update(ctx, obj)
-}
-{{- end}}
 `

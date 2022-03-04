@@ -20,6 +20,8 @@ package configuration
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -33,7 +35,6 @@ import (
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	knativeApis "knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -41,7 +42,7 @@ import (
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/status"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -62,7 +63,17 @@ type CoreV1ServiceReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Service{}).Complete(r)
+	c, err := controller.New("CoreV1Service", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Watch(
+		&source.Kind{Type: &corev1.Service{}},
+		&handler.EnqueueRequestForObject{},
+	)
 }
 
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
@@ -123,7 +134,17 @@ type CoreV1EndpointsReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Endpoints{}).Complete(r)
+	c, err := controller.New("CoreV1Endpoints", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Watch(
+		&source.Kind{Type: &corev1.Endpoints{}},
+		&handler.EnqueueRequestForObject{},
+	)
 }
 
 //+kubebuilder:rbac:groups="",resources=endpoints,verbs=list;watch
@@ -184,7 +205,17 @@ type CoreV1SecretReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Secret{}).Complete(r)
+	c, err := controller.New("CoreV1Secret", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestForObject{},
+	)
 }
 
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch
@@ -250,20 +281,32 @@ type NetV1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("NetV1Ingress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		statusController := &NetV1IngressStatusReconciler{
-			Client:                 r.Client,
-			Log:                    r.Log,
-			DataplaneAddressFinder: r.DataplaneAddressFinder,
-			StatusQueue:            r.StatusQueue,
-		}
-		if err := statusController.SetupWithManager(mgr); err != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "networking.k8s.io",
+				Version: "v1",
+				Kind:    "Ingress",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
 			return err
 		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&netv1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &netv1.Ingress{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
@@ -311,70 +354,30 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
+			obj.Status.LoadBalancer.Ingress = addrs
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
 
 	return ctrl.Result{}, nil
-}
-
-// -----------------------------------------------------------------------------
-// NetV1Ingress - Status Updater Reconciler
-// -----------------------------------------------------------------------------
-
-// NetV1IngressStatusReconciler reconciles Ingress resources
-// updating their status after the data-plane has successfully configured them
-type NetV1IngressStatusReconciler struct {
-	client.Client
-
-	Log                    logr.Logger
-	DataplaneAddressFinder *dataplane.AddressFinder
-	StatusQueue            *status.Queue
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *NetV1IngressStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("NetV1Ingress", mgr, controller.Options{
-		Reconciler: r,
-		Log:        r.Log,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-			Group:   "networking.k8s.io",
-			Version: "v1",
-			Kind:    "Ingress",
-		})},
-		&handler.EnqueueRequestForObject{},
-	)
-}
-
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
-
-// Reconcile processes the watched objects
-func (r *NetV1IngressStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("NetV1Ingress", req.NamespacedName)
-
-	// get the relevant object
-	obj := new(netv1.Ingress)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		if errors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("resource queued but was deleted, skipping", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(util.DebugLevel).Info("updating status for resource", "namespace", req.Namespace, "name", req.Name)
-
-	log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-	addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-	obj.Status.LoadBalancer.Ingress = addrs
-	return ctrl.Result{}, r.Status().Update(ctx, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -392,7 +395,17 @@ type NetV1IngressClassReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&netv1.IngressClass{}).Complete(r)
+	c, err := controller.New("NetV1IngressClass", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		&handler.EnqueueRequestForObject{},
+	)
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses,verbs=get;list;watch
@@ -457,20 +470,32 @@ type NetV1Beta1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("NetV1Beta1Ingress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		statusController := &NetV1Beta1IngressStatusReconciler{
-			Client:                 r.Client,
-			Log:                    r.Log,
-			DataplaneAddressFinder: r.DataplaneAddressFinder,
-			StatusQueue:            r.StatusQueue,
-		}
-		if err := statusController.SetupWithManager(mgr); err != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "networking.k8s.io",
+				Version: "v1beta1",
+				Kind:    "Ingress",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
 			return err
 		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&netv1beta1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &netv1beta1.Ingress{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
@@ -518,70 +543,30 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
+			obj.Status.LoadBalancer.Ingress = addrs
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
 
 	return ctrl.Result{}, nil
-}
-
-// -----------------------------------------------------------------------------
-// NetV1Beta1Ingress - Status Updater Reconciler
-// -----------------------------------------------------------------------------
-
-// NetV1Beta1IngressStatusReconciler reconciles Ingress resources
-// updating their status after the data-plane has successfully configured them
-type NetV1Beta1IngressStatusReconciler struct {
-	client.Client
-
-	Log                    logr.Logger
-	DataplaneAddressFinder *dataplane.AddressFinder
-	StatusQueue            *status.Queue
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *NetV1Beta1IngressStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("NetV1Beta1Ingress", mgr, controller.Options{
-		Reconciler: r,
-		Log:        r.Log,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-			Group:   "networking.k8s.io",
-			Version: "v1beta1",
-			Kind:    "Ingress",
-		})},
-		&handler.EnqueueRequestForObject{},
-	)
-}
-
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
-
-// Reconcile processes the watched objects
-func (r *NetV1Beta1IngressStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("NetV1Beta1Ingress", req.NamespacedName)
-
-	// get the relevant object
-	obj := new(netv1beta1.Ingress)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		if errors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("resource queued but was deleted, skipping", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(util.DebugLevel).Info("updating status for resource", "namespace", req.Namespace, "name", req.Name)
-
-	log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-	addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-	obj.Status.LoadBalancer.Ingress = addrs
-	return ctrl.Result{}, r.Status().Update(ctx, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -604,20 +589,32 @@ type ExtV1Beta1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("ExtV1Beta1Ingress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		statusController := &ExtV1Beta1IngressStatusReconciler{
-			Client:                 r.Client,
-			Log:                    r.Log,
-			DataplaneAddressFinder: r.DataplaneAddressFinder,
-			StatusQueue:            r.StatusQueue,
-		}
-		if err := statusController.SetupWithManager(mgr); err != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "extensions",
+				Version: "v1beta1",
+				Kind:    "Ingress",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
 			return err
 		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&extv1beta1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &extv1beta1.Ingress{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch
@@ -665,70 +662,30 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
+			obj.Status.LoadBalancer.Ingress = addrs
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
 
 	return ctrl.Result{}, nil
-}
-
-// -----------------------------------------------------------------------------
-// ExtV1Beta1Ingress - Status Updater Reconciler
-// -----------------------------------------------------------------------------
-
-// ExtV1Beta1IngressStatusReconciler reconciles Ingress resources
-// updating their status after the data-plane has successfully configured them
-type ExtV1Beta1IngressStatusReconciler struct {
-	client.Client
-
-	Log                    logr.Logger
-	DataplaneAddressFinder *dataplane.AddressFinder
-	StatusQueue            *status.Queue
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *ExtV1Beta1IngressStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("ExtV1Beta1Ingress", mgr, controller.Options{
-		Reconciler: r,
-		Log:        r.Log,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-			Group:   "extensions",
-			Version: "v1beta1",
-			Kind:    "Ingress",
-		})},
-		&handler.EnqueueRequestForObject{},
-	)
-}
-
-//+kubebuilder:rbac:groups=extensions,resources=ingresses/status,verbs=get;update;patch
-
-// Reconcile processes the watched objects
-func (r *ExtV1Beta1IngressStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("ExtV1Beta1Ingress", req.NamespacedName)
-
-	// get the relevant object
-	obj := new(extv1beta1.Ingress)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		if errors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("resource queued but was deleted, skipping", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(util.DebugLevel).Info("updating status for resource", "namespace", req.Namespace, "name", req.Name)
-
-	log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-	addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-	obj.Status.LoadBalancer.Ingress = addrs
-	return ctrl.Result{}, r.Status().Update(ctx, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -746,7 +703,17 @@ type KongV1KongIngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongIngress{}).Complete(r)
+	c, err := controller.New("KongV1KongIngress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Watch(
+		&source.Kind{Type: &kongv1.KongIngress{}},
+		&handler.EnqueueRequestForObject{},
+	)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses,verbs=get;list;watch
@@ -807,7 +774,17 @@ type KongV1KongPluginReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongPlugin{}).Complete(r)
+	c, err := controller.New("KongV1KongPlugin", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Watch(
+		&source.Kind{Type: &kongv1.KongPlugin{}},
+		&handler.EnqueueRequestForObject{},
+	)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=get;list;watch
@@ -870,8 +847,19 @@ type KongV1KongClusterPluginReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("KongV1KongClusterPlugin", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongClusterPlugin{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &kongv1.KongClusterPlugin{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch
@@ -940,8 +928,19 @@ type KongV1KongConsumerReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("KongV1KongConsumer", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1.KongConsumer{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &kongv1.KongConsumer{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
@@ -1013,20 +1012,32 @@ type KongV1Beta1TCPIngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("KongV1Beta1TCPIngress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		statusController := &KongV1Beta1TCPIngressStatusReconciler{
-			Client:                 r.Client,
-			Log:                    r.Log,
-			DataplaneAddressFinder: r.DataplaneAddressFinder,
-			StatusQueue:            r.StatusQueue,
-		}
-		if err := statusController.SetupWithManager(mgr); err != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1beta1",
+				Kind:    "TCPIngress",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
 			return err
 		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1beta1.TCPIngress{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &kongv1beta1.TCPIngress{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch
@@ -1074,70 +1085,30 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
+			obj.Status.LoadBalancer.Ingress = addrs
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
 
 	return ctrl.Result{}, nil
-}
-
-// -----------------------------------------------------------------------------
-// KongV1Beta1TCPIngress - Status Updater Reconciler
-// -----------------------------------------------------------------------------
-
-// KongV1Beta1TCPIngressStatusReconciler reconciles TCPIngress resources
-// updating their status after the data-plane has successfully configured them
-type KongV1Beta1TCPIngressStatusReconciler struct {
-	client.Client
-
-	Log                    logr.Logger
-	DataplaneAddressFinder *dataplane.AddressFinder
-	StatusQueue            *status.Queue
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *KongV1Beta1TCPIngressStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Beta1TCPIngress", mgr, controller.Options{
-		Reconciler: r,
-		Log:        r.Log,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-			Group:   "configuration.konghq.com",
-			Version: "v1beta1",
-			Kind:    "TCPIngress",
-		})},
-		&handler.EnqueueRequestForObject{},
-	)
-}
-
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/status,verbs=get;update;patch
-
-// Reconcile processes the watched objects
-func (r *KongV1Beta1TCPIngressStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("KongV1Beta1TCPIngress", req.NamespacedName)
-
-	// get the relevant object
-	obj := new(kongv1beta1.TCPIngress)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		if errors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("resource queued but was deleted, skipping", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(util.DebugLevel).Info("updating status for resource", "namespace", req.Namespace, "name", req.Name)
-
-	log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-	addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-	obj.Status.LoadBalancer.Ingress = addrs
-	return ctrl.Result{}, r.Status().Update(ctx, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -1160,20 +1131,32 @@ type KongV1Beta1UDPIngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("KongV1Beta1UDPIngress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		statusController := &KongV1Beta1UDPIngressStatusReconciler{
-			Client:                 r.Client,
-			Log:                    r.Log,
-			DataplaneAddressFinder: r.DataplaneAddressFinder,
-			StatusQueue:            r.StatusQueue,
-		}
-		if err := statusController.SetupWithManager(mgr); err != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1beta1",
+				Kind:    "UDPIngress",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
 			return err
 		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&kongv1beta1.UDPIngress{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &kongv1beta1.UDPIngress{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch
@@ -1221,70 +1204,30 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
+			obj.Status.LoadBalancer.Ingress = addrs
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
 
 	return ctrl.Result{}, nil
-}
-
-// -----------------------------------------------------------------------------
-// KongV1Beta1UDPIngress - Status Updater Reconciler
-// -----------------------------------------------------------------------------
-
-// KongV1Beta1UDPIngressStatusReconciler reconciles UDPIngress resources
-// updating their status after the data-plane has successfully configured them
-type KongV1Beta1UDPIngressStatusReconciler struct {
-	client.Client
-
-	Log                    logr.Logger
-	DataplaneAddressFinder *dataplane.AddressFinder
-	StatusQueue            *status.Queue
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *KongV1Beta1UDPIngressStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Beta1UDPIngress", mgr, controller.Options{
-		Reconciler: r,
-		Log:        r.Log,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-			Group:   "configuration.konghq.com",
-			Version: "v1beta1",
-			Kind:    "UDPIngress",
-		})},
-		&handler.EnqueueRequestForObject{},
-	)
-}
-
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
-
-// Reconcile processes the watched objects
-func (r *KongV1Beta1UDPIngressStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("KongV1Beta1UDPIngress", req.NamespacedName)
-
-	// get the relevant object
-	obj := new(kongv1beta1.UDPIngress)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		if errors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("resource queued but was deleted, skipping", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(util.DebugLevel).Info("updating status for resource", "namespace", req.Namespace, "name", req.Name)
-
-	log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-	addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-	obj.Status.LoadBalancer.Ingress = addrs
-	return ctrl.Result{}, r.Status().Update(ctx, obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -1307,20 +1250,32 @@ type Knativev1alpha1IngressReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("Knativev1alpha1Ingress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		statusController := &Knativev1alpha1IngressStatusReconciler{
-			Client:                 r.Client,
-			Log:                    r.Log,
-			DataplaneAddressFinder: r.DataplaneAddressFinder,
-			StatusQueue:            r.StatusQueue,
-		}
-		if err := statusController.SetupWithManager(mgr); err != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "networking.internal.knative.dev",
+				Version: "v1alpha1",
+				Kind:    "Ingress",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
 			return err
 		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
-	return ctrl.NewControllerManagedBy(mgr).For(&knativev1alpha1.Ingress{}, builder.WithPredicates(preds)).Complete(r)
+	return c.Watch(
+		&source.Kind{Type: &knativev1alpha1.Ingress{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
 }
 
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch
@@ -1368,82 +1323,42 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		var knativeLBIngress []knativev1alpha1.LoadBalancerIngressStatus
+		for _, addr := range addrs {
+			knativeIng := knativev1alpha1.LoadBalancerIngressStatus{
+				IP:     addr.IP,
+				Domain: addr.Hostname,
+			}
+			knativeLBIngress = append(knativeLBIngress, knativeIng)
+		}
+		ingressCondSet := knativeApis.NewLivingConditionSet()
+		if obj.Status.PublicLoadBalancer == nil || len(obj.Status.PublicLoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.PublicLoadBalancer.Ingress, knativeLBIngress) {
+			obj.Status.MarkLoadBalancerReady(knativeLBIngress, knativeLBIngress)
+			ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionReady)
+			ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionNetworkConfigured)
+			obj.Status.ObservedGeneration = obj.Generation
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
 
 	return ctrl.Result{}, nil
-}
-
-// -----------------------------------------------------------------------------
-// Knativev1alpha1Ingress - Status Updater Reconciler
-// -----------------------------------------------------------------------------
-
-// Knativev1alpha1IngressStatusReconciler reconciles Ingress resources
-// updating their status after the data-plane has successfully configured them
-type Knativev1alpha1IngressStatusReconciler struct {
-	client.Client
-
-	Log                    logr.Logger
-	DataplaneAddressFinder *dataplane.AddressFinder
-	StatusQueue            *status.Queue
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *Knativev1alpha1IngressStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("Knativev1alpha1Ingress", mgr, controller.Options{
-		Reconciler: r,
-		Log:        r.Log,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-			Group:   "networking.internal.knative.dev",
-			Version: "v1alpha1",
-			Kind:    "Ingress",
-		})},
-		&handler.EnqueueRequestForObject{},
-	)
-}
-
-//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;update;patch
-
-// Reconcile processes the watched objects
-func (r *Knativev1alpha1IngressStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("Knativev1alpha1Ingress", req.NamespacedName)
-
-	// get the relevant object
-	obj := new(knativev1alpha1.Ingress)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		if errors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("resource queued but was deleted, skipping", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(util.DebugLevel).Info("updating status for resource", "namespace", req.Namespace, "name", req.Name)
-
-	log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-	addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-	var knativeLBIngress []knativev1alpha1.LoadBalancerIngressStatus
-	for _, addr := range addrs {
-		knativeIng := knativev1alpha1.LoadBalancerIngressStatus{
-			IP:     addr.IP,
-			Domain: addr.Hostname,
-		}
-		knativeLBIngress = append(knativeLBIngress, knativeIng)
-	}
-	ingressCondSet := knativeApis.NewLivingConditionSet()
-	obj.Status.MarkLoadBalancerReady(knativeLBIngress, knativeLBIngress)
-	ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionReady)
-	ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionNetworkConfigured)
-	obj.Status.ObservedGeneration = obj.Generation
-	return ctrl.Result{}, r.Status().Update(ctx, obj)
 }
 
 // -----------------------------------------------------------------------------

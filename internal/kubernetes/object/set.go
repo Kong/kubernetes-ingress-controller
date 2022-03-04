@@ -14,51 +14,42 @@ type Set struct {
 	store map[gvk]map[namespace]map[name]struct{}
 }
 
-func (s Set) Insert(objs ...client.Object) Set {
+func (s *Set) Insert(objs ...client.Object) {
 	for _, obj := range objs {
-		gvk, ok := s.store[gvk(obj.GetObjectKind().GroupVersionKind().String())]
-		if !ok {
-			gvk = make(map[namespace]map[name]struct{})
+		if s.store == nil {
+			s.store = make(map[gvk]map[namespace]map[name]struct{})
 		}
 
-		namespace, ok := gvk[namespace(obj.GetNamespace())]
-		if !ok {
-			namespace = make(map[name]struct{})
+		objGVK := obj.GetObjectKind().GroupVersionKind().String()
+		objNS := obj.GetNamespace()
+		objName := obj.GetName()
+
+		if s.store[gvk(objGVK)] == nil {
+			s.store[gvk(objGVK)] = make(map[namespace]map[name]struct{})
 		}
 
-		namespace[name(obj.GetName())] = struct{}{}
+		if s.store[gvk(objGVK)][namespace(objNS)] == nil {
+			s.store[gvk(objGVK)][namespace(objNS)] = make(map[name]struct{})
+		}
+
+		s.store[gvk(objGVK)][namespace(objNS)][name(objName)] = struct{}{}
 	}
-	return s
 }
 
-func (s Set) Delete(objs ...client.Object) Set {
-	for _, obj := range objs {
-		gvk, ok := s.store[gvk(obj.GetObjectKind().GroupVersionKind().String())]
-		if !ok {
-			continue
-		}
-
-		namespace, ok := gvk[namespace(obj.GetNamespace())]
-		if !ok {
-			continue
-		}
-
-		delete(namespace, name(obj.GetName()))
-	}
-	return s
-}
-
-func (s Set) Has(obj client.Object) bool {
-	gvk, ok := s.store[gvk(obj.GetObjectKind().GroupVersionKind().String())]
+func (s *Set) Has(obj client.Object) bool {
+	gvkStr := obj.GetObjectKind().GroupVersionKind().String()
+	gvkMap, ok := s.store[gvk(gvkStr)]
 	if !ok {
 		return false
 	}
 
-	namespace, ok := gvk[namespace(obj.GetNamespace())]
+	namespaceStr := obj.GetNamespace()
+	namespaceMap, ok := gvkMap[namespace(namespaceStr)]
 	if !ok {
 		return false
 	}
 
-	_, ok = namespace[name(obj.GetName())]
+	objName := obj.GetName()
+	_, ok = namespaceMap[name(objName)]
 	return ok
 }

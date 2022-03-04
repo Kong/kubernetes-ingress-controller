@@ -75,8 +75,9 @@ type KongClient struct {
 
 	// kubernetesObjectStatusQueue is a queue that needs to be messaged whenever
 	// a Kubernetes object has had configuration for itself successfully applied
-	// to the data-plane: messages will trigger reconcilation in the control plane
-	// so that status for the objects can be updated accordingly.
+	// to the data-plane: messages will trigger reconciliation in the control plane
+	// so that status for the objects can be updated accordingly. This is only in
+	// use when kubernetesObjectReportsEnabled is true.
 	kubernetesObjectStatusQueue *status.Queue
 
 	// kubernetesObjectReportsEnabled indicates whether the data-plane client will
@@ -203,7 +204,7 @@ func (c *KongClient) RootWithTimeout() (map[string]interface{}, error) {
 
 // EnableKubernetesObjectReports turns on reporting for Kubernetes objects which are
 // configured as part of Update() operations. Enabling this makes it possible to use
-// ObjectConfigured(obj) to determine whether an object has succesfully been
+// ObjectConfigured(obj) to determine whether an object has successfully been
 // configured for on the data-plane.
 func (c *KongClient) EnableKubernetesObjectReports(q *status.Queue) {
 	c.kubernetesObjectReportLock.Lock()
@@ -213,7 +214,7 @@ func (c *KongClient) EnableKubernetesObjectReports(q *status.Queue) {
 }
 
 // AreKubernetesObjectReportsEnabled returns true or false whether this client has been
-// configured to report on Kubernetes objects which have been succesfully
+// configured to report on Kubernetes objects which have been successfully
 // configured for in the data-plane.
 func (c *KongClient) AreKubernetesObjectReportsEnabled() bool {
 	c.kubernetesObjectReportLock.RLock()
@@ -333,8 +334,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 	}
 
-	// if kubernetes object reporting is enabled publish the objects to the queue
-	// indicating that configuration has been successful.
+	// report on configured Kubernetes objects if enabled
 	if c.AreKubernetesObjectReportsEnabled() {
 		if string(c.lastConfigSHA) != string(newConfigSHA) {
 			report := p.GenerateKubernetesObjectReport()
@@ -354,6 +354,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 // Dataplane Client - Kong - Private
 // -----------------------------------------------------------------------------
 
+// triggerKubernetesObjectReport will update the KongClient with a set which
+// enables filtering for which objects are currently applied to the data-plane,
+// as well as updating the c.kubernetesObjectStatusQueue to queue those objects
+// for reconciliation so their statuses can be properly updated.
 func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
 	// first a new set of the included objects for the most recent configuration
 	// needs to be generated.
@@ -373,6 +377,8 @@ func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
 	}
 }
 
+// updateKubernetesObjectReportFilter overrides the internal object set with
+// a new provided set.
 func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
 	c.kubernetesObjectReportLock.Lock()
 	defer c.kubernetesObjectReportLock.Unlock()

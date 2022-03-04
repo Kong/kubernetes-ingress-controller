@@ -91,7 +91,6 @@ func (a *AddressFinder) GetLoadBalancerAddresses() ([]corev1.LoadBalancerIngress
 			if err := isValidHostname(addr); err != nil {
 				return nil, err
 			}
-
 			ing.Hostname = addr
 		}
 		loadBalancerAddresses = append(loadBalancerAddresses, ing)

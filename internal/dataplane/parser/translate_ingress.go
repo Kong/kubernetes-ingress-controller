@@ -38,6 +38,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
 
+		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			host := rule.Host
 			if rule.HTTP == nil {
@@ -99,7 +100,12 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				}
 				service.Routes = append(service.Routes, r)
 				result.ServiceNameToServices[serviceName] = service
+				objectSuccessfullyParsed = true
 			}
+		}
+
+		if objectSuccessfullyParsed {
+			p.ReportKubernetesObjectUpdate(ingress)
 		}
 	}
 
@@ -180,6 +186,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
 
+		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			if rule.HTTP == nil {
 				continue
@@ -245,7 +252,12 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 				}
 				service.Routes = append(service.Routes, r)
 				result.ServiceNameToServices[serviceName] = service
+				objectSuccessfullyParsed = true
 			}
+		}
+
+		if objectSuccessfullyParsed {
+			p.ReportKubernetesObjectUpdate(ingress)
 		}
 	}
 

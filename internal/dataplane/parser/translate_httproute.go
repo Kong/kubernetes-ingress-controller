@@ -30,6 +30,10 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		if err := ingressRulesFromHTTPRoute(&result, httproute); err != nil {
 			err = fmt.Errorf("HTTPRoute %s/%s can't be routed: %w", httproute.Namespace, httproute.Name, err)
 			errs = append(errs, err)
+		} else {
+			// at this point the object has been configured and can be
+			// reported as successfully parsed.
+			p.ReportKubernetesObjectUpdate(httproute)
 		}
 	}
 

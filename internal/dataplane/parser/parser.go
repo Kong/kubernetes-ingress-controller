@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -33,13 +34,18 @@ import (
 // equivalent Kong objects and configurations, producing a complete
 // state configuration for the Kong Admin API.
 type Parser struct {
-	logger logrus.FieldLogger
-	storer store.Storer
+	logger                            logrus.FieldLogger
+	storer                            store.Storer
+	reportConfiguredKubernetesObjects bool
+	configuredKubernetesObjects       []client.Object
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
 // and a Kubernetes object store.
-func NewParser(logger logrus.FieldLogger, storer store.Storer) *Parser {
+func NewParser(
+	logger logrus.FieldLogger,
+	storer store.Storer,
+) *Parser {
 	return &Parser{
 		logger: logger,
 		storer: storer,
@@ -97,6 +103,37 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 	result.CACertificates = toCACerts(p.logger, caCertSecrets)
 
 	return &result, nil
+}
+
+// -----------------------------------------------------------------------------
+// Parser - Public Methods - Kubernetes Object Reporting
+// -----------------------------------------------------------------------------
+
+// EnableKubernetesObjectReports turns on object reporting for this parser:
+// each subsequent call to Build() will track the Kubernetes objects which
+// were successfully parsed. Objects tracked this way can be retrieved by
+// calling GenerateKubernetesObjectReport().
+func (p *Parser) EnableKubernetesObjectReports() {
+	p.reportConfiguredKubernetesObjects = true
+}
+
+// ReportKubernetesObjectUpdate reports an update to a Kubernetes object if
+// updates have been requested. If the parser has not been configured to
+// report Kubernetes object updates this is a no-op.
+func (p *Parser) ReportKubernetesObjectUpdate(obj client.Object) {
+	if p.reportConfiguredKubernetesObjects {
+		p.configuredKubernetesObjects = append(p.configuredKubernetesObjects, obj)
+	}
+}
+
+// GenerateKubernetesObjectReport provides a list of all the Kubernetes objects
+// that have been successfully parsed as part of Build() calls so far. The
+// objects are consumed: the parser's internal list will be emptied once this
+// method is called, until more builds are run.
+func (p *Parser) GenerateKubernetesObjectReport() []client.Object {
+	report := p.configuredKubernetesObjects
+	p.configuredKubernetesObjects = nil
+	return report
 }
 
 // -----------------------------------------------------------------------------

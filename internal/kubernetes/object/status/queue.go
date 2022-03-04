@@ -45,11 +45,9 @@ func NewQueue() *Queue {
 
 // Publish emits a GenericEvent for the provided objects that indicates to
 // subscribers that the status of that object needs to be updated.
-func (q *Queue) Publish(objs ...client.Object) {
-	for _, obj := range objs {
-		ch := q.getChanForKind(obj.GetObjectKind().GroupVersionKind())
-		ch <- event.GenericEvent{Object: obj}
-	}
+func (q *Queue) Publish(obj client.Object) {
+	ch := q.getChanForKind(obj.GetObjectKind().GroupVersionKind())
+	ch <- event.GenericEvent{Object: obj}
 }
 
 // Subscribe provides a consumer channel where generic events for the provided

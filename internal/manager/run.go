@@ -17,7 +17,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/status"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -117,7 +117,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	if c.UpdateStatus {
 		setupLog.Info("Starting Status Updater")
 		kubernetesStatusQueue = status.NewQueue()
-		dataplaneClient.EnableStatusUpdates(kubernetesStatusQueue)
+		dataplaneClient.EnableKubernetesObjectReports(kubernetesStatusQueue)
 	} else {
 		setupLog.Info("status updates disabled, skipping status updater")
 	}

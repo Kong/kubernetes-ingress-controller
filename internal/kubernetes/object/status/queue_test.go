@@ -112,25 +112,6 @@ func TestQueue(t *testing.T) {
 	assert.Len(t, ingCH, 0)
 	assert.Len(t, tcpCH, 0)
 	assert.Len(t, udpCH, 0)
-
-	t.Log("verifying that multiple objects can be submitted with a single publish")
-	q.Publish(ing1, ing2, tcp, udp)
-	assert.Len(t, q.channels, 3)
-	assert.Len(t, ingCH, 2)
-	assert.Len(t, tcpCH, 1)
-	assert.Len(t, udpCH, 1)
-
-	t.Log("verifying that all objects can be consumed and the queue can be drained")
-	for i := 0; i < 2; i++ {
-		assert.Equal(t, ingGVK, (<-ingCH).Object.GetObjectKind().GroupVersionKind())
-	}
-	assert.Equal(t, event.GenericEvent{Object: tcp}, <-tcpCH)
-	assert.Equal(t, event.GenericEvent{Object: udp}, <-udpCH)
-	assert.Len(t, q.channels, 3)
-	assert.Len(t, ingCH, 0)
-	assert.Len(t, tcpCH, 0)
-	assert.Len(t, udpCH, 0)
-
 }
 
 // the GVKs for objects need to be initialized manually in the unit testing

@@ -15,7 +15,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/status"
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -68,11 +69,26 @@ type KongClient struct {
 	// updates to the prometheus exporter.
 	prometheusMetrics *metrics.CtrlFuncMetrics
 
-	// kubernetesObjectStatusQueue is an optional component which when present will
-	// send messages to status controllers indicating that the given object has
-	// been properly configured in the data-plane and status updates for that
-	// object should be applied.
+	// kubernetesObjectReportLock is a mutex for thread-safety of
+	// kubernetes object reporting functionality.
+	kubernetesObjectReportLock sync.RWMutex
+
+	// kubernetesObjectStatusQueue is a queue that needs to be messaged whenever
+	// a Kubernetes object has had configuration for itself successfully applied
+	// to the data-plane: messages will trigger reconcilation in the control plane
+	// so that status for the objects can be updated accordingly.
 	kubernetesObjectStatusQueue *status.Queue
+
+	// kubernetesObjectReportsEnabled indicates whether the data-plane client will
+	// file reports about Kubernetes objects which are successfully configured for
+	// in the data-plane
+	kubernetesObjectReportsEnabled bool
+
+	// kubernetesObjectReportsFilter is a set of objects which were included
+	// in the most recent Update(). This can be helpful for callers to determine
+	// whether a Kubernetes object has corresponding data-plane configuration that
+	// is actively configured (e.g. to know how to set the object status).
+	kubernetesObjectReportsFilter k8sobj.Set
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -143,14 +159,6 @@ func NewKongClient(
 // Dataplane Client - Kong - Public Methods
 // -----------------------------------------------------------------------------
 
-// EnableStatusUpdates turns on status updates for Kubernetes objects which are
-// configured as part of Update() operations.
-func (c *KongClient) EnableStatusUpdates(q *status.Queue) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.kubernetesObjectStatusQueue = q
-}
-
 // UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
 // It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
@@ -190,6 +198,38 @@ func (c *KongClient) RootWithTimeout() (map[string]interface{}, error) {
 }
 
 // -----------------------------------------------------------------------------
+// Dataplane Client - Kong - Reporting
+// -----------------------------------------------------------------------------
+
+// EnableKubernetesObjectReports turns on reporting for Kubernetes objects which are
+// configured as part of Update() operations. Enabling this makes it possible to use
+// ObjectConfigured(obj) to determine whether an object has succesfully been
+// configured for on the data-plane.
+func (c *KongClient) EnableKubernetesObjectReports(q *status.Queue) {
+	c.kubernetesObjectReportLock.Lock()
+	defer c.kubernetesObjectReportLock.Unlock()
+	c.kubernetesObjectStatusQueue = q
+	c.kubernetesObjectReportsEnabled = true
+}
+
+// AreKubernetesObjectReportsEnabled returns true or false whether this client has been
+// configured to report on Kubernetes objects which have been succesfully
+// configured for in the data-plane.
+func (c *KongClient) AreKubernetesObjectReportsEnabled() bool {
+	c.kubernetesObjectReportLock.RLock()
+	defer c.kubernetesObjectReportLock.RUnlock()
+	return c.kubernetesObjectReportsEnabled
+}
+
+// KubernetesObjectIsConfigured reports whether the provided object has active
+// configuration for itself successfully applied to the data-plane.
+func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) bool {
+	c.kubernetesObjectReportLock.RLock()
+	defer c.kubernetesObjectReportLock.RUnlock()
+	return c.kubernetesObjectReportsFilter.Has(obj)
+}
+
+// -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
 
@@ -213,7 +253,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
 	p := parser.NewParser(c.logger, storer)
-	if c.areKubernetesStatusUpdatesEnabled() {
+	if c.AreKubernetesObjectReportsEnabled() {
 		p.EnableKubernetesObjectReports()
 	}
 
@@ -293,15 +333,15 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 	}
 
-	// if object status updates are enabled publish the objects to the queue
+	// if kubernetes object reporting is enabled publish the objects to the queue
 	// indicating that configuration has been successful.
-	if c.areKubernetesStatusUpdatesEnabled() {
+	if c.AreKubernetesObjectReportsEnabled() {
 		if string(c.lastConfigSHA) != string(newConfigSHA) {
 			report := p.GenerateKubernetesObjectReport()
-			c.logger.Debugf("triggering status updates for %d configured Kubernetes objects", len(report))
-			c.kubernetesObjectStatusQueue.Publish(report...)
+			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
+			c.triggerKubernetesObjectReport(report...)
 		} else {
-			c.logger.Debug("no configuration change, skipping kubernetes object status updates")
+			c.logger.Debug("no configuration change, skipping kubernetes object report")
 		}
 	}
 
@@ -314,6 +354,27 @@ func (c *KongClient) Update(ctx context.Context) error {
 // Dataplane Client - Kong - Private
 // -----------------------------------------------------------------------------
 
-func (c *KongClient) areKubernetesStatusUpdatesEnabled() bool {
-	return c.kubernetesObjectStatusQueue != nil
+func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
+	// first a new set of the included objects for the most recent configuration
+	// needs to be generated.
+	set := k8sobj.Set{}
+	for _, obj := range objs {
+		set.Insert(obj)
+	}
+
+	c.updateKubernetesObjectReportFilter(set)
+
+	// after the filter has been updated we signal the status queue so that the
+	// control-plane can update the Kubernetes object statuses for affected objs.
+	// this has to be done in a separate loop so that the filter is in place
+	// before the objects are enqueued, as the filter is used by the control-plane
+	for _, obj := range objs {
+		c.kubernetesObjectStatusQueue.Publish(obj)
+	}
+}
+
+func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
+	c.kubernetesObjectReportLock.Lock()
+	defer c.kubernetesObjectReportLock.Unlock()
+	c.kubernetesObjectReportsFilter = set
 }

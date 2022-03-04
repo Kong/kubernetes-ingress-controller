@@ -65,7 +65,7 @@ var (
 MIICTDCCAdKgAwIBAgIUOe9HN8v1eedsZXur5uXAwJkOSG4wCgYIKoZIzj0EAwIw
 XTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
 dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEWMBQGA1UEAwwNZmlyc3QuZXhhbXBsZTAe
-Fw0yMjAyMTAxOTIzNDhaFw0zMjAyMDgxOTIzNDhaMF0xCzAJBgNVBAYTAkFVMRMw
+Fw0yMjA2MTAxOTIzNDhaFw0zMjAyMDgxOTIzNDhaMF0xCzAJBgNVBAYTAkFVMRMw
 EQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0
 eSBMdGQxFjAUBgNVBAMMDWZpcnN0LmV4YW1wbGUwdjAQBgcqhkjOPQIBBgUrgQQA
 IgNiAAR2pbLcSQhX4gD6IyPJiRN7lxZ8aPbi6qyPyjvoTJc6DPjMuJuJgkdSC8wy
@@ -229,7 +229,7 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking initial certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS13, InsecureSkipVerify: true}) // nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) // nolint:gosec
 		if err != nil {
 			return false
 		}
@@ -243,7 +243,7 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking second certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS13, InsecureSkipVerify: true}) // nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) // nolint:gosec
 		if err != nil {
 			return false
 		}

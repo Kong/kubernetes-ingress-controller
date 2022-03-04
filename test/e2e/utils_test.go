@@ -312,8 +312,7 @@ func getKubernetesLogs(t *testing.T, env environments.Environment, namespace, na
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)
 	stderr := new(bytes.Buffer)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", "-n", namespace, name,
-		"--all-containers")
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", "-n", namespace, name, "--all-containers") //nolint:gosec
 	cmd.Stderr = stderr
 	out, err := cmd.Output()
 	if err != nil {

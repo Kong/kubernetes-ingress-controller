@@ -37,7 +37,6 @@ func PerformUpdate(ctx context.Context,
 	selectorTags []string,
 	customEntities []byte,
 	oldSHA []byte,
-	skipUpdateCR bool,
 	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
@@ -76,14 +75,6 @@ func PerformUpdate(ctx context.Context,
 			metrics.ProtocolKey: metricsProtocol,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 		return nil, err
-	}
-
-	if newSHA != nil && !skipUpdateCR {
-		update := &KongConfigUpdate{
-			Timestamp: time.Now(),
-			Config:    *targetContent,
-		}
-		kongConfig.ConfigDone <- update
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{

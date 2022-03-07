@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -99,48 +98,6 @@ func TestGatewayValidationWebhook(t *testing.T) {
 				},
 			},
 			wantCreateErr: false,
-		},
-		{
-			name: "missing annotation",
-			createdGW: gatewayv1alpha2.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "kong",
-					// the missing annotations here make the gateway invalid
-				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
-					Listeners: []gatewayv1alpha2.Listener{{
-						Name:     "http",
-						Protocol: gatewayv1alpha2.HTTPProtocolType,
-						Port:     gatewayv1alpha2.PortNumber(80),
-					}},
-				},
-			},
-			wantCreateErr:          true,
-			wantCreateErrSubstring: "missing required annotation",
-		},
-		{
-			name: "ignore if different class, then no longer ignore if updated to own class",
-			createdGW: gatewayv1alpha2.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "kong",
-					// the missing annotations here make the gateway invalid
-				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					// this gateway class is to be ignored
-					GatewayClassName: gatewayv1alpha2.ObjectName("nonexistentclass"),
-					Listeners: []gatewayv1alpha2.Listener{{
-						Name:     "http",
-						Protocol: gatewayv1alpha2.HTTPProtocolType,
-						Port:     gatewayv1alpha2.PortNumber(80),
-					}},
-				},
-			},
-			patch: []byte(fmt.Sprintf(`{"spec": {"gatewayClassName": "%s"}}`, gatewayClass.Name)),
-
-			wantCreateErr:         false,
-			wantPatchErr:          true,
-			wantPatchErrSubstring: "missing required annotation",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

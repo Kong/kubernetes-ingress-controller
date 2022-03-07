@@ -18,7 +18,7 @@ const unsupportedGW = "no supported Gateway found for route"
 
 // parentRefsForRoute provides a list of the parentRefs given a Gateway APIs route object
 // (e.g. HTTPRoute, TCPRoute, e.t.c.) which refer to the Gateway resource(s) which manage it.
-func parentRefsForRoute(obj client.Object) ([]gatewayv1alpha2.ParentRef, error) {
+func parentRefsForRoute(obj client.Object) ([]gatewayv1alpha2.ParentReference, error) {
 	switch v := obj.(type) {
 	case *gatewayv1alpha2.HTTPRoute:
 		return v.Spec.ParentRefs, nil

@@ -43,7 +43,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},
@@ -119,7 +119,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},
@@ -154,7 +154,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},
@@ -231,7 +231,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},
@@ -254,7 +254,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},
@@ -294,7 +294,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},
@@ -371,7 +371,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
 					},

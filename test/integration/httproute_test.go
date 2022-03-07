@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -127,7 +127,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		},
 		Spec: gatewayv1alpha2.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-				ParentRefs: []gatewayv1alpha2.ParentRef{{
+				ParentRefs: []gatewayv1alpha2.ParentReference{{
 					Name: gatewayv1alpha2.ObjectName(gw.Name),
 				}},
 			},

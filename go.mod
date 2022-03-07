@@ -38,7 +38,7 @@ require (
 	knative.dev/pkg v0.0.0-20220222214439-083dd97300e1
 	knative.dev/serving v0.29.3
 	sigs.k8s.io/controller-runtime v0.11.1
-	sigs.k8s.io/gateway-api v0.4.1
+	sigs.k8s.io/gateway-api v0.4.1-0.20220306235253-71fee1c2808f
 	sigs.k8s.io/kustomize/api v0.11.2
 	sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/yaml v1.3.0

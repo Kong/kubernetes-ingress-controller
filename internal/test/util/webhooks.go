@@ -1,10 +1,7 @@
-//go:build integration_tests
-// +build integration_tests
-
-package integration
+package util
 
 const (
-	// kongSystemServiceCert is a testing TLS certificate with SAN *.kong-system.svc.
+	// KongSystemServiceCert is a testing TLS certificate with SAN *.kong-system.svc.
 	//
 	// created with:
 	//
@@ -23,7 +20,7 @@ const (
 	//     echo 'distinguished_name=req'; \
 	//     echo '[san]'; \
 	//     echo 'subjectAltName=DNS:*.kong-system.svc')
-	kongSystemServiceCert = `-----BEGIN CERTIFICATE-----
+	KongSystemServiceCert = `-----BEGIN CERTIFICATE-----
 MIIE5jCCAs6gAwIBAgIUCAQsA6yH5M6/LgmSg/89y4NPB8UwDQYJKoZIhvcNAQEL
 BQAwHDEaMBgGA1UEAwwRKi5rb25nLXN5c3RlbS5zdmMwHhcNMjIwMTA1MTY0MjE4
 WhcNMzExMDA1MTY0MjE4WjAcMRowGAYDVQQDDBEqLmtvbmctc3lzdGVtLnN2YzCC
@@ -52,8 +49,8 @@ ftDKUoUKvhFhetW5VsTVGESWP26LhmQ6oaz6eJPC26skKq+w2rAeZ2EU8fhBwzCX
 vv2SWWk6xtzxMyD2w3IXPlUCzpkTwkT6tC7qf5RYA/y+Qr81pbbp6q3OEQ51BaKI
 nyC7Cdnomxtx6A==
 -----END CERTIFICATE-----`
-	// kongSystemServiceKey is the private key for the testing certificate kongSystemServiceCert.
-	kongSystemServiceKey = `-----BEGIN PRIVATE KEY-----
+	// KongSystemServiceKey is the private key for the testing certificate kongSystemServiceCert.
+	KongSystemServiceKey = `-----BEGIN PRIVATE KEY-----
 MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQC+nwgZHTpTr5hq
 F8Vu2bDEA5xDSdwUQnnKOCXs29EiWBv3qVx95nl7YodBObaxdS1hlTnxj4Ev99jQ
 gBpz1S3q3IUMQFS/6a4e/vz42Jvtlr8Q4KC6rSPojnWu6Llz55eeELadKwfdOghM
@@ -119,6 +116,6 @@ const (
 	// the Docker host on the default bridge (therefore it can listen on 172.17.0.1), and that the apiserver
 	// is running within a context (such as KIND running on that same docker bridge), from which 172.17.0.1 is routable.
 	// This works if the test runs against a KIND cluster, and does not work against cloud providers (like GKE).
-	admissionWebhookListenHost = "172.17.0.1"
-	admissionWebhookListenPort = 49023
+	AdmissionWebhookListenHost = "172.17.0.1"
+	AdmissionWebhookListenPort = 49023
 )

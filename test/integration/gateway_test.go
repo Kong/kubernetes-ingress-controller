@@ -338,36 +338,6 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 		require.Len(t, unsupportedGateway.Status.Conditions, 1)
 		require.Equal(t, string(gatewayv1alpha2.GatewayReasonNotReconciled), unsupportedGateway.Status.Conditions[0].Reason)
 	}
-
-	t.Log("deploying a gateway that is not configured for unmanaged mode, but is using a supported class")
-	managedGateway := &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong-managed",
-			// missing annotation should cause failure
-		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(supportedGatewayClass.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "http",
-				Protocol: gatewayv1alpha2.HTTPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(80),
-			}},
-		},
-	}
-	managedGateway, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, managedGateway, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	t.Log("verifying that the managed Gateway object does not get scheduled due to lack of support")
-	require.Eventually(t, func() bool {
-		managedGateway, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, managedGateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, cond := range managedGateway.Status.Conditions {
-			if cond.Reason == string(gatewayv1alpha2.GatewayReasonNoResources) {
-				return true
-			}
-		}
-		return false
-	}, gatewayWaitTimeToVerifyScheduling, time.Second)
 }
 
 func TestUnmanagedGatewayClass(t *testing.T) {

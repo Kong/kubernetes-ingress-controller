@@ -316,12 +316,6 @@ func (validator KongHTTPValidator) ValidateGateway(
 		return true, "", nil
 	}
 
-	// supported gateways currently are required to indicate they are
-	// unmanaged provisioning mode gateways.
-	if _, exists := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations); !exists {
-		return false, ErrTextInvalidGatewayConfiguration, fmt.Errorf("missing required annotation %s", annotations.GatewayUnmanagedAnnotation)
-	}
-
 	return true, "", nil
 }
 

@@ -283,25 +283,16 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "validating management mode for gateway") // this will also be done by the validating webhook, this is a fallback
 	unmanagedAnnotation := annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
 	existingGatewayEnabled, ok := annotations.ExtractUnmanagedGatewayMode(gateway.GetAnnotations())
-	if !ok || existingGatewayEnabled == "" {
-		log.Error(ManagedGatewaysUnsupported, "missing required annotation, will not retry", "namespace", gateway.Namespace, "name", gateway.Name, "annotation", unmanagedAnnotation)
-		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: gateway.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonNoResources),
-			Message:            "gateway controller does not support managed gateways, cannot schedule this object",
-		})
-		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
-	}
 
 	// allow for Gateway resources to be configured with "true" in place of the publish service
 	// reference as a placeholder to automatically populate the annotation with the namespace/name
 	// that was provided to the controller manager via --publish-service.
 	debug(log, gateway, "initializing admin service annotation if unset")
-	if existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
+	if !ok || existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
 		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", unmanagedAnnotation, r.PublishService))
+		if gateway.Annotations == nil {
+			gateway.Annotations = make(map[string]string)
+		}
 		gateway.Annotations[unmanagedAnnotation] = r.PublishService
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}

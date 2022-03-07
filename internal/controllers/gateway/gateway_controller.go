@@ -29,13 +29,6 @@ import (
 // Vars & Consts
 // -----------------------------------------------------------------------------
 
-const (
-	// ControllerName is the unique identifier for this controller and is used
-	// within GatewayClass resources to indicate that this controller should
-	// support connected Gateway resources.
-	ControllerName gatewayv1alpha2.GatewayController = "konghq.com/kic-gateway-controller"
-)
-
 var (
 	// ManagedGatewaysUnsupported is an error used whenever a failure occurs
 	// due to a Gateway that is not properly configured for unmanaged mode.
@@ -134,11 +127,21 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// if an update to the gateway service occurs, we need to make sure to trigger
 	// reconciliation on all Gateway objects referenced by it (in the most common
 	// deployments this will be a single Gateway).
-	return c.Watch(
+	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
 		predicate.NewPredicateFuncs(r.isGatewayService),
-	)
+	); err != nil {
+		return err
+	}
+
+	// start the required gatewayclass controller as well
+	gwcCTRL := &GatewayClassReconciler{
+		Client: r.Client,
+		Log:    r.Log.WithName("V1Alpha2GatewayClass"),
+		Scheme: r.Scheme,
+	}
+	return gwcCTRL.SetupWithManager(mgr)
 }
 
 // -----------------------------------------------------------------------------
@@ -224,8 +227,6 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

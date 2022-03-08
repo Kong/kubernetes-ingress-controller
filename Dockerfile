@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 ### FIPS 140-2 binary
 # Build the manager binary
 # https://github.com/golang/go/tree/dev.boringcrypto/misc/boring#building-from-docker
-FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.17.7b7 as builder-fips
+FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.17.8b7 as builder-fips
 
 WORKDIR /workspace
 

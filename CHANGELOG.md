@@ -57,6 +57,9 @@
 
 #### Added
 
+- The controller manager can now be flagged with a client certificate to use
+  for mTLS authentication with the Kong Admin API.
+  [#1958](https://github.com/Kong/kubernetes-ingress-controller/issues/1958)
 - Deployment manifests now include an IngressClass resource and permissions to
   read IngressClass resources.
   [#2292](https://github.com/Kong/kubernetes-ingress-controller/pull/2292)

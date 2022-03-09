@@ -128,7 +128,7 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 // which links to the provided Gateway if available. If the provided Gateway is not
 // actually referenced by parentRef in the provided HTTPRoute this is considered
 // invalid input and will produce an error.
-func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (*gatewayv1alpha2.ParentRef, error) {
+func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (*gatewayv1alpha2.ParentReference, error) {
 	// search all the parentRefs on the HTTPRoute to find one that matches the Gateway
 	for _, ref := range httproute.Spec.ParentRefs {
 		// determine the namespace for the gateway reference

@@ -22,19 +22,12 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
 // -----------------------------------------------------------------------------
 // Vars & Consts
 // -----------------------------------------------------------------------------
-
-const (
-	// ControllerName is the unique identifier for this controller and is used
-	// within GatewayClass resources to indicate that this controller should
-	// support connected Gateway resources.
-	ControllerName gatewayv1alpha2.GatewayController = "konghq.com/kic-gateway-controller"
-)
 
 var (
 	// ManagedGatewaysUnsupported is an error used whenever a failure occurs
@@ -50,9 +43,9 @@ var (
 type GatewayReconciler struct { //nolint:revive
 	client.Client
 
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	Proxy  proxy.Proxy
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	DataplaneClient *dataplane.KongClient
 
 	PublishService  string
 	WatchNamespaces []string
@@ -134,11 +127,21 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// if an update to the gateway service occurs, we need to make sure to trigger
 	// reconciliation on all Gateway objects referenced by it (in the most common
 	// deployments this will be a single Gateway).
-	return c.Watch(
+	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
 		predicate.NewPredicateFuncs(r.isGatewayService),
-	)
+	); err != nil {
+		return err
+	}
+
+	// start the required gatewayclass controller as well
+	gwcCTRL := &GatewayClassReconciler{
+		Client: r.Client,
+		Log:    r.Log.WithName("V1Alpha2GatewayClass"),
+		Scheme: r.Scheme,
+	}
+	return gwcCTRL.SetupWithManager(mgr)
 }
 
 // -----------------------------------------------------------------------------
@@ -224,8 +227,6 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -283,25 +284,16 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "validating management mode for gateway") // this will also be done by the validating webhook, this is a fallback
 	unmanagedAnnotation := annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
 	existingGatewayEnabled, ok := annotations.ExtractUnmanagedGatewayMode(gateway.GetAnnotations())
-	if !ok || existingGatewayEnabled == "" {
-		log.Error(ManagedGatewaysUnsupported, "missing required annotation, will not retry", "namespace", gateway.Namespace, "name", gateway.Name, "annotation", unmanagedAnnotation)
-		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: gateway.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonNoResources),
-			Message:            "gateway controller does not support managed gateways, cannot schedule this object",
-		})
-		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
-	}
 
 	// allow for Gateway resources to be configured with "true" in place of the publish service
 	// reference as a placeholder to automatically populate the annotation with the namespace/name
 	// that was provided to the controller manager via --publish-service.
 	debug(log, gateway, "initializing admin service annotation if unset")
-	if existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
+	if !ok || existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
 		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", unmanagedAnnotation, r.PublishService))
+		if gateway.Annotations == nil {
+			gateway.Annotations = make(map[string]string)
+		}
 		gateway.Annotations[unmanagedAnnotation] = r.PublishService
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
@@ -495,7 +487,7 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 	// gather the proxy and stream listeners from the data-plane and map them
 	// to their respective ports (which will be the targetPorts of the proxy
 	// Service in Kubernetes).
-	proxyListeners, streamListeners, err := r.Proxy.Listeners(ctx)
+	proxyListeners, streamListeners, err := r.DataplaneClient.Listeners(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve listeners from the data-plane: %w", err)
 	}

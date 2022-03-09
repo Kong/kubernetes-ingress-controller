@@ -28,6 +28,8 @@ import (
 // extraIngressNamespace is the name of an alternative namespace used for ingress tests
 const extraIngressNamespace = "elsewhere"
 
+var statusWait = time.Minute * 3
+
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
 	ns, cleanup := namespace(t)
@@ -79,7 +81,7 @@ func TestIngressEssentials(t *testing.T) {
 			return false
 		}
 		return len(lbstatus.Ingress) > 0
-	}, ingressWait, waitTick)
+	}, statusWait, waitTick)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
@@ -231,7 +233,7 @@ func TestGRPCIngressEssentials(t *testing.T) {
 			return false
 		}
 		return len(lbstatus.Ingress) > 0
-	}, ingressWait, waitTick)
+	}, statusWait, waitTick)
 
 	// So far this only tests that the ingress is created and receives status information, to confirm the fix for
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/1991
@@ -604,7 +606,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 			return false
 		}
 		return len(lbstatus.Ingress) > 0
-	}, time.Minute, time.Second)
+	}, statusWait, waitTick)
 
 	t.Log("verifying that when a service has more than one ingress, the status updates for those beyond the first")
 	require.Eventually(t, func() bool {
@@ -617,5 +619,5 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 			return false
 		}
 		return len(lbstatus.Ingress) > 0
-	}, time.Minute, time.Second)
+	}, statusWait, waitTick)
 }

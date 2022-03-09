@@ -1,5 +1,7 @@
 # Table of Contents
 
+ - [2.2.1](#221)
+ - [2.2.0](#220)
  - [2.1.1](#211)
  - [2.1.0](#210)
  - [2.0.7](#207)
@@ -41,6 +43,49 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.3.0]
+
+> Release date: TBD
+
+#### Breaking changes
+
+- HTTPRoute header matches no longer interpret CSV values as multiple match
+  values, as this was not part of the HTTPRoute specification. Multiple values
+  should use regular expressions instead.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+
+#### Added
+
+- Deployment manifests now include an IngressClass resource and permissions to
+  read IngressClass resources.
+  [#2292](https://github.com/Kong/kubernetes-ingress-controller/pull/2292)
+- HTTPRoute header matches now support regular expressions.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+- HTTPRoutes that define multiple matches for the same header are rejected to
+  comply with the HTTPRoute specification.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+
+#### Fixed
+
+- Unconfigured fields now use their default value according to the Kong proxy
+  instance's reported schema. This addresses an issue where configuration
+  updates would send unnecessary requests to clear a default value.
+  [#2286](https://github.com/Kong/kubernetes-ingress-controller/pull/2286)
+
+## [2.2.1]
+
+> Release date: 2022/02/15
+
+#### Fixed
+
+- Added mitigation for an issue where controllers may briefly delete and
+  recreate configuration upon gaining leadership while populating their
+  Kubernetes object cache.
+  [#2255](https://github.com/Kong/kubernetes-ingress-controller/pull/2255)
+- Admission webhook certificate files now track updates to the file, and will
+  update when the corresponding Secret has changed.
+  [#2258](https://github.com/Kong/kubernetes-ingress-controller/pull/2258)
 
 ## [2.2.0]
 
@@ -1561,6 +1606,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.1.0

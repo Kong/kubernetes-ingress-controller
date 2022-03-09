@@ -68,7 +68,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name:        "testing-gateway",
 							SectionName: &nonexistentListener,
 						}},
@@ -107,7 +107,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -135,7 +135,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -171,7 +171,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -209,7 +209,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -262,7 +262,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -315,7 +315,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -369,7 +369,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -433,7 +433,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -491,7 +491,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},

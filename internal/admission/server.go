@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/sirupsen/logrus"
 	admission "k8s.io/api/admission/v1"
@@ -15,6 +14,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -40,55 +40,58 @@ type ServerConfig struct {
 	Key     string
 }
 
-func readKeyPairFiles(certPath, keyPath string) ([]byte, []byte, error) {
-	cert, err := os.ReadFile(certPath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("read cert from file %q: %w", certPath, err)
-	}
-	key, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("read key from file %q: %w", keyPath, err)
-	}
-
-	return cert, key, nil
-}
-
-func (sc *ServerConfig) toTLSConfig() (*tls.Config, error) {
+func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger) (*tls.Config, error) {
+	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {
+	// the caller provided certificates via the ENV (certwatcher can't be used here)
 	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert != "" && sc.Key != "":
 		cert, key = []byte(sc.Cert), []byte(sc.Key)
+		keyPair, err := tls.X509KeyPair(cert, key)
+		if err != nil {
+			return nil, fmt.Errorf("X509KeyPair error: %w", err)
+		}
+		return &tls.Config{ // nolint:gosec
+			MaxVersion:   tls.VersionTLS12,
+			MinVersion:   tls.VersionTLS12,
+			Certificates: []tls.Certificate{keyPair},
+		}, nil
 
+	// the caller provided explicit file paths to the certs, enable certwatcher for these paths
 	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
 		var err error
-		cert, key, err = readKeyPairFiles(sc.CertPath, sc.KeyPath)
+		watcher, err = certwatcher.New(sc.CertPath, sc.KeyPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 		}
 
-	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert == "" && sc.Key == "":
+	// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
+	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
 		var err error
-		cert, key, err = readKeyPairFiles(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
+		watcher, err = certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 		}
 
 	default:
 		return nil, fmt.Errorf("either cert/key files OR cert/key values must be provided, or none")
 	}
 
-	keyPair, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return nil, fmt.Errorf("X509KeyPair error: %w", err)
-	}
-	return &tls.Config{
-		MinVersion:   tls.VersionTLS12,
-		Certificates: []tls.Certificate{keyPair},
+	go func() {
+		if err := watcher.Start(ctx); err != nil {
+			log.WithError(err).Error("certificate watcher error")
+		}
+	}()
+	return &tls.Config{ // nolint:gosec
+		MaxVersion:     tls.VersionTLS12,
+		MinVersion:     tls.VersionTLS12,
+		GetCertificate: watcher.GetCertificate,
 	}, nil
 }
 
-func MakeTLSServer(config *ServerConfig, handler http.Handler) (*http.Server, error) {
-	tlsConfig, err := config.toTLSConfig()
+func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handler,
+	log logrus.FieldLogger) (*http.Server, error) {
+	tlsConfig, err := config.toTLSConfig(ctx, log)
 	if err != nil {
 		return nil, err
 	}

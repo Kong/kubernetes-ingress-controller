@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -25,85 +26,119 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
-func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
-	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
-	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
+// -----------------------------------------------------------------------------
+// Parser - Public Types
+// -----------------------------------------------------------------------------
 
-	tcpIngresses, err := s.ListTCPIngresses()
-	if err != nil {
-		log.Errorf("failed to list TCPIngresses: %v", err)
-	}
-	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
-
-	udpIngresses, err := s.ListUDPIngresses()
-	if err != nil {
-		log.Errorf("failed to list UDPIngresses: %v", err)
-	}
-	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
-
-	httproutes, err := s.ListHTTPRoutes()
-	if err != nil {
-		log.Errorf("failed to list HTTPRoutes: %w", err)
-	}
-	parsedHTTPRoutes, errs := ingressRulesFromHTTPRoutes(httproutes)
-	if len(errs) > 0 {
-		for _, err := range errs {
-			// we log the error here instead of returning it for historical reasons
-			// and because this allows other HTTPRoute objects to be resolved. This
-			// loop structure was common at the time of writing but needs significant
-			// refactor.
-			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2130
-			log.Errorf(err.Error())
-		}
-	}
-
-	knativeIngresses, err := s.ListKnativeIngresses()
-	if err != nil {
-		log.Errorf("failed to list Knative Ingresses: %v", err)
-	}
-	parsedKnative := fromKnativeIngress(log, knativeIngresses)
-
-	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative, parsedHTTPRoutes)
+// Parser parses Kubernetes objects and configurations into their
+// equivalent Kong objects and configurations, producing a complete
+// state configuration for the Kong Admin API.
+type Parser struct {
+	logger                            logrus.FieldLogger
+	storer                            store.Storer
+	reportConfiguredKubernetesObjects bool
+	configuredKubernetesObjects       []client.Object
 }
+
+// NewParser produces a new Parser object provided a logging mechanism
+// and a Kubernetes object store.
+func NewParser(
+	logger logrus.FieldLogger,
+	storer store.Storer,
+) *Parser {
+	return &Parser{
+		logger: logger,
+		storer: storer,
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Parser - Public Methods
+// -----------------------------------------------------------------------------
 
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
-func Build(log logrus.FieldLogger, s store.Storer) (*kongstate.KongState, error) {
-	parsedAll := parseAll(log, s)
-	parsedAll.populateServices(log, s)
+func (p *Parser) Build() (*kongstate.KongState, error) {
+	// parse and merge all rules together from all Kubernetes API sources
+	ingressRules := mergeIngressRules(
+		p.ingressRulesFromIngressV1beta1(),
+		p.ingressRulesFromIngressV1(),
+		p.ingressRulesFromTCPIngressV1beta1(),
+		p.ingressRulesFromUDPIngressV1beta1(),
+		p.ingressRulesFromKnativeIngress(),
+		p.ingressRulesFromHTTPRoutes(),
+	)
 
-	var result kongstate.KongState
+	// populate any Kubernetes Service objects relevant objects
+	ingressRules.populateServices(p.logger, p.storer)
+
 	// add the routes and services to the state
-	for _, service := range parsedAll.ServiceNameToServices {
+	var result kongstate.KongState
+	for _, service := range ingressRules.ServiceNameToServices {
 		result.Services = append(result.Services, service)
 	}
 
 	// generate Upstreams and Targets from service defs
-	result.Upstreams = getUpstreams(log, s, parsedAll.ServiceNameToServices)
+	result.Upstreams = getUpstreams(p.logger, p.storer, ingressRules.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
-	result.FillOverrides(log, s)
+	result.FillOverrides(p.logger, p.storer)
 
 	// generate consumers and credentials
-	result.FillConsumersAndCredentials(log, s)
+	result.FillConsumersAndCredentials(p.logger, p.storer)
 
 	// process annotation plugins
-	result.FillPlugins(log, s)
+	result.FillPlugins(p.logger, p.storer)
 
 	// generate Certificates and SNIs
-	result.Certificates = getCerts(log, s, parsedAll.SecretNameToSNIs)
+	result.Certificates = getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)
 
 	// populate CA certificates in Kong
 	var err error
-	caCertSecrets, err := s.ListCACerts()
+	caCertSecrets, err := p.storer.ListCACerts()
 	if err != nil {
 		return nil, err
 	}
-	result.CACertificates = toCACerts(log, caCertSecrets)
+	result.CACertificates = toCACerts(p.logger, caCertSecrets)
 
 	return &result, nil
 }
+
+// -----------------------------------------------------------------------------
+// Parser - Public Methods - Kubernetes Object Reporting
+// -----------------------------------------------------------------------------
+
+// EnableKubernetesObjectReports turns on object reporting for this parser:
+// each subsequent call to Build() will track the Kubernetes objects which
+// were successfully parsed. Objects tracked this way can be retrieved by
+// calling GenerateKubernetesObjectReport().
+func (p *Parser) EnableKubernetesObjectReports() {
+	p.reportConfiguredKubernetesObjects = true
+}
+
+// ReportKubernetesObjectUpdate reports an update to a Kubernetes object if
+// updates have been requested. If the parser has not been configured to
+// report Kubernetes object updates this is a no-op.
+func (p *Parser) ReportKubernetesObjectUpdate(obj client.Object) {
+	if p.reportConfiguredKubernetesObjects {
+		p.configuredKubernetesObjects = append(p.configuredKubernetesObjects, obj)
+	}
+}
+
+// GenerateKubernetesObjectReport provides a list of all the Kubernetes objects
+// that have been successfully parsed as part of Build() calls so far. The
+// objects are consumed: the parser's internal list will be emptied once this
+// method is called, until more builds are run.
+func (p *Parser) GenerateKubernetesObjectReport() []client.Object {
+	report := p.configuredKubernetesObjects
+	p.configuredKubernetesObjects = nil
+	return report
+}
+
+// -----------------------------------------------------------------------------
+// Parser - Private Methods
+// -----------------------------------------------------------------------------
 
 func toCACerts(log logrus.FieldLogger, caCertSecrets []*corev1.Secret) []kong.CACertificate {
 	var caCerts []kong.CACertificate

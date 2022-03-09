@@ -12,15 +12,14 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -126,20 +125,22 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
-		ConfigDone:        make(chan *sendconfig.KongConfigUpdate),
 	}
 
 	return cfg, nil
 }
 
-func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
-	mgr manager.Manager, kongConfig sendconfig.Kong,
-	diagnostic util.ConfigDumpDiagnostic, c *Config,
-) (proxy.Proxy, error) {
-	if c.ProxySyncSeconds < proxy.DefaultSyncSeconds {
+func setupDataplaneSynchronizer(
+	logger logr.Logger,
+	fieldLogger logrus.FieldLogger,
+	mgr manager.Manager,
+	dataplaneClient dataplane.Client,
+	c *Config,
+) (*dataplane.Synchronizer, error) {
+	if c.ProxySyncSeconds < dataplane.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
 			" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
-			c.ProxySyncSeconds, proxy.DefaultSyncSeconds,
+			c.ProxySyncSeconds, dataplane.DefaultSyncSeconds,
 		))
 	}
 
@@ -149,31 +150,21 @@ func setupProxyServer(logger logr.Logger, fieldLogger logrus.FieldLogger,
 		return nil, err
 	}
 
-	timeoutDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxyTimeoutSeconds))
-	if err != nil {
-		logger.Error(err, "%s is not a valid number of seconds to the timeout config for the kong client")
-		return nil, err
-	}
-
-	proxyServer, err := proxy.NewCacheBasedProxyWithStagger(fieldLogger.WithField("subsystem", "proxy-cache-resolver"),
-		mgr.GetClient(),
-		kongConfig,
-		c.IngressClassName,
-		c.EnableReverseSync,
+	dataplaneSynchronizer, err := dataplane.NewSynchronizerWithStagger(
+		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
+		dataplaneClient,
 		syncTickDuration,
-		timeoutDuration,
-		diagnostic,
-		sendconfig.UpdateKongAdminSimple)
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	err = mgr.Add(proxyServer)
+	err = mgr.Add(dataplaneSynchronizer)
 	if err != nil {
 		return nil, err
 	}
 
-	return proxyServer, nil
+	return dataplaneSynchronizer, nil
 }
 
 func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerClient client.Client) error {
@@ -193,7 +184,7 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 	if err != nil {
 		return err
 	}
-	srv, err := admission.MakeTLSServer(&managerConfig.AdmissionServer, &admission.RequestHandler{
+	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
 			kongclient.Consumers,
 			kongclient.Plugins,
@@ -202,7 +193,7 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 			managerConfig.IngressClassName,
 		),
 		Logger: logger,
-	})
+	}, log)
 	if err != nil {
 		return err
 	}
@@ -213,8 +204,51 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 	return nil
 }
 
-func setupStatusUpdater(mgr manager.Manager, kongConfig sendconfig.Kong, log logr.Logger, kubeConfig *rest.Config,
-	publishService string, publishAddresses []string) error {
-	updater := ctrlutils.NewStatusUpdater(kongConfig, log, kubeConfig, publishService, publishAddresses)
-	return mgr.Add(updater)
+func setupDataplaneAddressFinder(ctx context.Context, mgrc client.Client, c *Config) (*dataplane.AddressFinder, error) {
+	dataplaneAddressFinder := dataplane.NewAddressFinder()
+	if c.UpdateStatus {
+		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
+			dataplaneAddressFinder.SetOverrides(overrideAddrs)
+		} else if c.PublishService != "" {
+			parts := strings.Split(c.PublishService, "/")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("publish service %s is invalid, expecting <namespace>/<name>", c.PublishService)
+			}
+			nsn := types.NamespacedName{
+				Namespace: parts[0],
+				Name:      parts[1],
+			}
+			dataplaneAddressFinder.SetGetter(func() ([]string, error) {
+				svc := new(corev1.Service)
+				if err := mgrc.Get(ctx, nsn, svc); err != nil {
+					return nil, err
+				}
+
+				var addrs []string
+				switch svc.Spec.Type { //nolint:exhaustive
+				case corev1.ServiceTypeLoadBalancer:
+					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
+						if lbaddr.IP != "" {
+							addrs = append(addrs, lbaddr.IP)
+						}
+						if lbaddr.Hostname != "" {
+							addrs = append(addrs, lbaddr.Hostname)
+						}
+					}
+				default:
+					addrs = append(addrs, svc.Spec.ClusterIPs...)
+				}
+
+				if len(addrs) == 0 {
+					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s/%s", nsn.Namespace, nsn.Name)
+				}
+
+				return addrs, nil
+			})
+		} else {
+			return nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses, need either --publish-service or --publish-status-address")
+		}
+	}
+
+	return dataplaneAddressFinder, nil
 }

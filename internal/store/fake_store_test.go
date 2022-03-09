@@ -263,6 +263,41 @@ func TestFakeStoreIngressV1(t *testing.T) {
 	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 
+func TestFakeStoreIngressClassV1(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*networkingv1.IngressClass{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: ingressClassKongController,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: ingressClassKongController,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "baz",
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: "some-other-controller.example.com/controller",
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{IngressClassesV1: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	assert.Len(store.ListIngressClassesV1(), 2)
+}
+
 func TestFakeStoreListTCPIngress(t *testing.T) {
 	assert := assert.New(t)
 

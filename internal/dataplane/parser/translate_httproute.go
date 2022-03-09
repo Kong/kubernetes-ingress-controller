@@ -16,18 +16,34 @@ import (
 
 // ingressRulesFromHTTPRoutes processes a list of HTTPRoute objects and translates
 // then into Kong configuration objects.
-func ingressRulesFromHTTPRoutes(httpRouteList []*gatewayv1alpha2.HTTPRoute) (ingressRules, []error) {
+func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	result := newIngressRules()
+
+	httpRouteList, err := p.storer.ListHTTPRoutes()
+	if err != nil {
+		p.logger.Errorf("failed to list HTTPRoutes: %w", err)
+		return result
+	}
 
 	var errs []error
 	for _, httproute := range httpRouteList {
 		if err := ingressRulesFromHTTPRoute(&result, httproute); err != nil {
 			err = fmt.Errorf("HTTPRoute %s/%s can't be routed: %w", httproute.Namespace, httproute.Name, err)
 			errs = append(errs, err)
+		} else {
+			// at this point the object has been configured and can be
+			// reported as successfully parsed.
+			p.ReportKubernetesObjectUpdate(httproute)
 		}
 	}
 
-	return result, errs
+	if len(errs) > 0 {
+		for _, err := range errs {
+			p.logger.Errorf(err.Error())
+		}
+	}
+
+	return result
 }
 
 func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {
@@ -114,17 +130,12 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				"httproute.%s.%s.%d",
 				httproute.Namespace,
 				httproute.Name,
-				matchNumber, // TODO: avoid route thrash from re-ordering?
+				matchNumber,
 			))
 
 			// TODO: implement query param matches
 			if len(match.QueryParams) > 0 {
 				return nil, fmt.Errorf("query param matches are not yet supported")
-			}
-
-			// TODO: implement regex path matches
-			if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression {
-				return nil, fmt.Errorf("regular expression path matches are not yet supported")
 			}
 
 			// build the route object using the method and pathing information
@@ -142,14 +153,17 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				r.Hosts = hostnames
 			}
 
-			// configure path matching information about the route if paths
-			// matching was defined.
+			// configure path matching information about the route if paths matching was defined
+			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
+			// default it it is not. For those types, we use the path value as-is and let Kong determine the type.
+			// For exact matches, we transform the path into a regular expression that terminates after the value
 			if match.Path != nil {
-				// determine the path match values
-				r.Route.Paths = []*string{match.Path.Value}
-
-				// determine whether path stripping needs to be enabled
-				r.Route.StripPath = kong.Bool(match.Path.Type == nil || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix)
+				if *match.Path.Type == gatewayv1alpha2.PathMatchExact {
+					terminated := *match.Path.Value + "$"
+					r.Route.Paths = []*string{&terminated}
+				} else if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix {
+					r.Route.Paths = []*string{match.Path.Value}
+				}
 			}
 
 			// configure method matching information about the route if method

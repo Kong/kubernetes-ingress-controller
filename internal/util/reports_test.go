@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"os"
 	"strconv"
@@ -244,11 +245,16 @@ func getTLSListener() (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Most TLS configurations in this project use TLS 1.2 for FIPS mode compatibility
+	// This does not because it causes an unexplained test failure where the test clients do report sending data
+	// but the test server receives only an EOF/connection closed without any data. This only occurs in GitHub Actions
+	// As this test server is not shipped as part of the product, allowing 1.3 here does not affect FIPS compatibility
 	conf := &tls.Config{
 		Certificates: []tls.Certificate{
 			testCertificate,
 		},
-		MinVersion: tls.VersionTLS13,
+		MaxVersion: tls.VersionTLS13,
+		MinVersion: tls.VersionTLS12,
 	}
 	listen, err := tls.Listen("tcp", net.JoinHostPort(reportsHost, strconv.FormatUint(uint64(reportsPort), 10)), conf)
 	if err != nil {
@@ -270,20 +276,24 @@ func runTestTLSServer(ctx context.Context, t *testing.T, listen net.Listener, re
 			conn, err := listen.Accept()
 			if err != nil {
 				// we expect "use of closed network connection" when the test ends, since it will be blocked on accept
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				t.Logf("could not accept TLS connection: %v", err)
 				return
 			}
-			go handleConnection(reqs, conn)
+			go handleConnection(t, reqs, conn)
 		}
 	}
 }
 
-func handleConnection(reqs chan []byte, conn net.Conn) {
+func handleConnection(t *testing.T, reqs chan []byte, conn net.Conn) {
 	defer conn.Close()
 	buffer := make([]byte, 1024)
 	_, err := conn.Read(buffer)
 	if err != nil {
 		close(reqs)
+		t.Logf("could not read from connection: %s", err)
 	}
 	reqs <- buffer
 }

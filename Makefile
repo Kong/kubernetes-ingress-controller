@@ -192,7 +192,16 @@ E2E_TEST_TIMEOUT ?= "30m"
 test: test.unit
 
 .PHONY: test.all
-test.all: test.unit test.integration
+test.all: test.unit test.integration test.conformance
+
+.PHONY: test.conformance
+test.conformance:
+	@./scripts/check-container-environment.sh
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=conformance_tests" go test -v -race \
+		-timeout $(INTEGRATION_TEST_TIMEOUT) \
+		-parallel $(NCPU) \
+		-race \
+		./test/conformance
 
 .PHONY: test.integration
 test.integration: test.integration.enterprise.postgres  test.integration.dbless test.integration.postgres

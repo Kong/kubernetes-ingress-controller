@@ -23,9 +23,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
-func equalSHA(a, b []byte) bool {
-	return reflect.DeepEqual(a, b)
-}
+// -----------------------------------------------------------------------------
+// Sendconfig - Public Functions
+// -----------------------------------------------------------------------------
 
 // PerformUpdate writes `targetContent` and `customEntities` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
@@ -37,7 +37,6 @@ func PerformUpdate(ctx context.Context,
 	selectorTags []string,
 	customEntities []byte,
 	oldSHA []byte,
-	skipUpdateCR bool,
 	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
@@ -78,14 +77,6 @@ func PerformUpdate(ctx context.Context,
 		return nil, err
 	}
 
-	if newSHA != nil && !skipUpdateCR {
-		update := &KongConfigUpdate{
-			Timestamp: time.Now(),
-			Config:    *targetContent,
-		}
-		kongConfig.ConfigDone <- update
-	}
-
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
 		metrics.SuccessKey:  metrics.SuccessTrue,
 		metrics.ProtocolKey: metricsProtocol,
@@ -97,6 +88,10 @@ func PerformUpdate(ctx context.Context,
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }
+
+// -----------------------------------------------------------------------------
+// Sendconfig - Private Functions
+// -----------------------------------------------------------------------------
 
 func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
 	customEntitiesJSONBytes []byte) ([]byte, error) {
@@ -201,10 +196,10 @@ func onUpdateDBMode(ctx context.Context,
 	}
 
 	// read the target state
-	rawState, err = file.Get(targetContent, file.RenderConfig{
+	rawState, err = file.Get(ctx, targetContent, file.RenderConfig{
 		CurrentState: currentState,
 		KongVersion:  kongConfig.Version,
-	}, dumpConfig)
+	}, dumpConfig, kongConfig.Client)
 	if err != nil {
 		return err
 	}
@@ -229,9 +224,9 @@ func onUpdateDBMode(ctx context.Context,
 	return nil
 }
 
-// -----------------------------------------------------------------------------
-// Sendconfig - Logging & Reporting Helper Functions
-// -----------------------------------------------------------------------------
+func equalSHA(a, b []byte) bool {
+	return reflect.DeepEqual(a, b)
+}
 
 var (
 	latestReportedSHA []byte

@@ -14,7 +14,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.11.0
 	github.com/kong/go-kong v0.28.1
-	github.com/kong/kubernetes-testing-framework v0.13.0
+	github.com/kong/kubernetes-testing-framework v0.13.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.46
 	github.com/mitchellh/mapstructure v1.4.3
@@ -28,7 +28,7 @@ require (
 	github.com/tidwall/gjson v1.14.0
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	google.golang.org/api v0.71.0
-	google.golang.org/genproto v0.0.0-20220304144024-325a89244dc8
+	google.golang.org/genproto v0.0.0-20220307174427-659dce7fcb03
 	k8s.io/api v0.23.4
 	k8s.io/apiextensions-apiserver v0.23.4
 	k8s.io/apimachinery v0.23.4
@@ -48,15 +48,15 @@ require (
 	cloud.google.com/go/compute v1.5.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Microsoft/go-winio v0.5.1 // indirect
+	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/containerd/containerd v1.5.9 // indirect
+	github.com/containerd/containerd v1.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/docker/docker v20.10.12+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
@@ -129,7 +129,7 @@ require (
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
+	golang.org/x/sys v0.0.0-20220307203707-22a9840ba4d7 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect

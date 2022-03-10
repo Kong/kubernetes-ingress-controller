@@ -40,7 +40,7 @@ type KongHTTPValidator struct {
 	SecretGetter  kongstate.SecretGetter
 	ManagerClient client.Client
 
-	ingressClassMatcher func(*metav1.ObjectMeta, annotations.ClassMatching) bool
+	ingressClassMatcher func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 }
 
 // NewKongHTTPValidator provides a new KongHTTPValidator object provided a
@@ -76,7 +76,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	consumer kongv1.KongConsumer,
 ) (bool, string, error) {
 	// ignore consumers that are being managed by another controller
-	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.ExactClassMatch) {
+	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 		return true, "", nil
 	}
 
@@ -381,7 +381,8 @@ func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]
 	// reduce the consumer set to consumers managed by this controller
 	managedConsumers := make([]*kongv1.KongConsumer, 0)
 	for _, consumer := range consumers.Items {
-		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.ExactClassMatch) {
+		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey,
+			annotations.ExactClassMatch) {
 			// ignore consumers (and subsequently secrets) that are managed by other controllers
 			continue
 		}

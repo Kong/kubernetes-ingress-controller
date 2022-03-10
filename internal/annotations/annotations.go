@@ -84,25 +84,14 @@ func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMat
 	}
 }
 
-// IngressClassValidatorFunc returns a function which can validate if an Object
-// belongs to an the ingressClass or not.
-func IngressClassValidatorFunc(
-	ingressClass string) func(obj metav1.Object, handling ClassMatching) bool {
-
-	return func(obj metav1.Object, handling ClassMatching) bool {
-		ingress := obj.GetAnnotations()[IngressClassKey]
-		return validIngress(ingress, ingressClass, handling)
-	}
-}
-
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
-	ingressClass string) func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
+	ingressClass string) func(obj *metav1.ObjectMeta, annotation string, handling ClassMatching) bool {
 
-	return func(obj *metav1.ObjectMeta, handling ClassMatching) bool {
-		ingress := obj.GetAnnotations()[IngressClassKey]
-		return validIngress(ingress, ingressClass, handling)
+	return func(obj *metav1.ObjectMeta, annotation string, handling ClassMatching) bool {
+		class := obj.GetAnnotations()[annotation]
+		return validIngress(class, ingressClass, handling)
 	}
 }
 

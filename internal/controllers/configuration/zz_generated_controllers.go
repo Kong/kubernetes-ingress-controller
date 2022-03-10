@@ -39,6 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
@@ -263,6 +265,161 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // -----------------------------------------------------------------------------
+// NetV1 Ingress - Reconciler
+// -----------------------------------------------------------------------------
+
+// NetV1IngressReconciler reconciles Ingress resources
+type NetV1IngressReconciler struct {
+	client.Client
+
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	DataplaneClient *dataplane.KongClient
+
+	DataplaneAddressFinder *dataplane.AddressFinder
+	StatusQueue            *status.Queue
+
+	IngressClassName string
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("NetV1Ingress", mgr, controller.Options{
+		Reconciler: r,
+		Log:        r.Log,
+	})
+	if err != nil {
+		return err
+	}
+	// if configured, start the status updater controller
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "networking.k8s.io",
+				Version: "v1",
+				Kind:    "Ingress",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
+			return err
+		}
+	}
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
+	return c.Watch(
+		&source.Kind{Type: &netv1.Ingress{}},
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *NetV1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &netv1.IngressList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless ingresses")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
+}
+
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
+
+// Reconcile processes the watched objects
+func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("NetV1Ingress", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(netv1.Ingress)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		if errors.IsNotFound(err) {
+			obj.Namespace = req.Namespace
+			obj.Name = req.Name
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		}
+		return ctrl.Result{}, err
+	}
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	class := new(netv1.IngressClass)
+	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		// we log this without taking action to support legacy configurations that only set ingressClassName or
+		// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+		// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+		// if none exists.
+		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+	}
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	}
+
+	// update the kong Admin API with the changes
+	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
+			obj.Status.LoadBalancer.Ingress = addrs
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		} else {
+			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		}
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
 // NetV1 IngressClass - Reconciler
 // -----------------------------------------------------------------------------
 
@@ -372,12 +529,40 @@ func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return err
 		}
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		&source.Kind{Type: &netv1beta1.Ingress{}},
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *NetV1Beta1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &netv1beta1.IngressList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless ingresses")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
@@ -415,7 +600,6 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	// retrieve the configured IngressClass, to check if it's the default IngressClass
 	class := new(netv1.IngressClass)
 	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 		// we log this without taking action to support legacy configurations that only set ingressClassName or
@@ -424,9 +608,8 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// if none exists.
 		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 	}
-
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}
@@ -501,12 +684,40 @@ func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return err
 		}
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, true, true)
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		&source.Kind{Type: &extv1beta1.Ingress{}},
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *ExtV1Beta1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &extv1beta1.IngressList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless ingresses")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 //+kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch
@@ -544,7 +755,6 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	// retrieve the configured IngressClass, to check if it's the default IngressClass
 	class := new(netv1.IngressClass)
 	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 		// we log this without taking action to support legacy configurations that only set ingressClassName or
@@ -553,9 +763,8 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// if none exists.
 		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 	}
-
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}
@@ -756,12 +965,40 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 	if err != nil {
 		return err
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		&source.Kind{Type: &kongv1.KongClusterPlugin{}},
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1KongClusterPluginReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &kongv1.KongClusterPluginList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless kongclusterplugins")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch
@@ -799,7 +1036,6 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, nil
 	}
 
-	// retrieve the configured IngressClass, to check if it's the default IngressClass
 	class := new(netv1.IngressClass)
 	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 		// we log this without taking action to support legacy configurations that only set ingressClassName or
@@ -808,9 +1044,8 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		// if none exists.
 		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 	}
-
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}
@@ -847,12 +1082,40 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	if err != nil {
 		return err
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		&source.Kind{Type: &kongv1.KongConsumer{}},
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1KongConsumerReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &kongv1.KongConsumerList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless kongconsumers")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
@@ -890,7 +1153,6 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	// retrieve the configured IngressClass, to check if it's the default IngressClass
 	class := new(netv1.IngressClass)
 	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 		// we log this without taking action to support legacy configurations that only set ingressClassName or
@@ -899,9 +1161,8 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// if none exists.
 		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 	}
-
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}
@@ -954,12 +1215,40 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 			return err
 		}
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		&source.Kind{Type: &kongv1beta1.TCPIngress{}},
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1Beta1TCPIngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &kongv1beta1.TCPIngressList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless tcpingresses")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch
@@ -997,7 +1286,6 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, nil
 	}
 
-	// retrieve the configured IngressClass, to check if it's the default IngressClass
 	class := new(netv1.IngressClass)
 	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 		// we log this without taking action to support legacy configurations that only set ingressClassName or
@@ -1006,9 +1294,8 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		// if none exists.
 		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 	}
-
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}
@@ -1083,12 +1370,40 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 			return err
 		}
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		&source.Kind{Type: &kongv1beta1.UDPIngress{}},
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1Beta1UDPIngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &kongv1beta1.UDPIngressList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless udpingresses")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch
@@ -1126,7 +1441,6 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, nil
 	}
 
-	// retrieve the configured IngressClass, to check if it's the default IngressClass
 	class := new(netv1.IngressClass)
 	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 		// we log this without taking action to support legacy configurations that only set ingressClassName or
@@ -1135,9 +1449,8 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		// if none exists.
 		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 	}
-
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}
@@ -1212,12 +1525,40 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 			return err
 		}
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName, false, true)
+	err = c.Watch(
+		&source.Kind{Type: &netv1.IngressClass{}},
+		handler.EnqueueRequestsFromMapFunc(r.listClassless),
+		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+	)
+	if err != nil {
+		return err
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		&source.Kind{Type: &knativev1alpha1.Ingress{}},
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
+}
+// listClassless finds and reconciles all objects without ingress class information
+func (r *Knativev1alpha1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+	resourceList := &knativev1alpha1.IngressList{}
+	if err := r.Client.List(context.Background(), resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless ingresses")
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resource) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch
@@ -1255,7 +1596,6 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, nil
 	}
 
-	// retrieve the configured IngressClass, to check if it's the default IngressClass
 	class := new(netv1.IngressClass)
 	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 		// we log this without taking action to support legacy configurations that only set ingressClassName or
@@ -1264,9 +1604,8 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 		// if none exists.
 		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 	}
-
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
-	if !ctrlutils.MatchesIngressClassName(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	}

@@ -288,4 +288,4 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 	}
 }
 
-func fakeClassMatcher(*metav1.ObjectMeta, annotations.ClassMatching) bool { return true }
+func fakeClassMatcher(*metav1.ObjectMeta, string, annotations.ClassMatching) bool { return true }

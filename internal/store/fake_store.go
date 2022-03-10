@@ -3,6 +3,7 @@ package store
 import (
 	"reflect"
 
+	"github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -65,7 +66,7 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	ingressClassV1Store := cache.NewStore(keyFunc)
+	ingressClassV1Store := cache.NewStore(clusterResourceKeyFunc)
 	for _, ingress := range objects.IngressClassesV1 {
 		err := ingressClassV1Store.Add(ingress)
 		if err != nil {
@@ -173,6 +174,7 @@ func NewFakeStore(
 		ingressV1Beta1ClassMatching: annotations.ExactClassMatch,
 		ingressV1ClassMatching:      annotations.ExactClassMatch,
 		kongConsumerClassMatching:   annotations.ExactClassMatch,
+		logger:                      logrus.New(),
 	}
 	return s, nil
 }

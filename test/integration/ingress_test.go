@@ -19,11 +19,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 // extraIngressNamespace is the name of an alternative namespace used for ingress tests
@@ -652,7 +655,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	t.Logf("creating a classless ingress for service %s", service.Name)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/abbosiysaltanati", map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
@@ -668,12 +671,12 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Log("ensuring Ingress does not become live")
 	require.Never(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
 		}
-		if resp.StatusCode != http.StatusNotFound {
+		if resp.StatusCode < http.StatusBadRequest {
 			t.Logf("unexpected status when checking Ingress status: %v", resp.StatusCode)
 			return true
 		}
@@ -714,9 +717,37 @@ func TestDefaultIngressClass(t *testing.T) {
 		return len(lbstatus.Ingress) > 0
 	}, statusWait, waitTick)
 
+	t.Log("creating classless global KongClusterPlugin")
+	kongclusterplugin := &kongv1.KongClusterPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+			Labels: map[string]string{
+				"global": "true",
+			},
+		},
+		PluginName: "cors",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"origins": ["example.com"]}`),
+		},
+	}
+	c, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Log("cleaning up KongClusterPlugin resource")
+		if err := c.ConfigurationV1().KongClusterPlugins().Delete(ctx, kongclusterplugin.Name,
+			metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		}
+	}()
+
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -729,7 +760,9 @@ func TestDefaultIngressClass(t *testing.T) {
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
 			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+			if value, ok := resp.Header["Access-Control-Allow-Origin"]; ok {
+				return strings.Contains(b.String(), "<title>httpbin.org</title>") && value[0] == "example.com"
+			}
 		}
 		return false
 	}, ingressWait, waitTick)

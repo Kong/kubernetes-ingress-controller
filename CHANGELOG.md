@@ -70,8 +70,8 @@
   [#2292](https://github.com/Kong/kubernetes-ingress-controller/pull/2292)
 - The controller now reads IngressClass resources to determine if its
   IngressClass is the default IngressClass. If so, the controller will ingest
-  networking/v1 Ingresses that have no `ingressClassName` set and no ingress
-  class annotation.
+  resources that require a class (Ingress, KongConsumer, KongClusterPlugin,
+  etc.) but have none set.
   [#2313](https://github.com/Kong/kubernetes-ingress-controller/pull/2313)
 - HTTPRoute header matches now support regular expressions.
   [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)

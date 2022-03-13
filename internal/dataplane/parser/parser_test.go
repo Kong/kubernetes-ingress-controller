@@ -4651,4 +4651,93 @@ func TestCertificate(t *testing.T) {
 		assert.Equal(1, len(state.Certificates))
 		assert.Equal(state.Certificates[0], fooCertificate)
 	})
+	t.Run("When multiple secret exists, certificates should keed ordering", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			// 0
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "foo",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "foo",
+							Hosts:      []string{"example.com", "*.example.com"},
+						},
+					},
+				},
+			},
+			// 1
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "bar",
+							Hosts:      []string{"example.com", "*.example.com"},
+						},
+					},
+				},
+			},
+		}
+		secrets := []*corev1.Secret{
+			// 0
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:               "foo",
+					CreationTimestamp: metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)},
+					Name:              "foo",
+					Namespace:         "foo",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+			// 1
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:               "bar",
+					CreationTimestamp: metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)},
+					Name:              "bar",
+					Namespace:         "bar",
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+		}
+		store, _ := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
+		})
+
+		var states []*kongstate.KongState
+		for i := 0; i < 50; i++ {
+			p := NewParser(logrus.New(), store)
+			state, _ := p.Build()
+			states = append(states, state)
+		}
+
+		var index int
+		for k, v := range states {
+			if *states[0].Certificates[0].ID != *v.Certificates[0].ID {
+				index = k
+			}
+		}
+
+		assert.Equal(*states[0].Certificates[0].ID, *states[index].Certificates[0].ID)
+	})
+
 }

@@ -366,6 +366,11 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 		})
 		res = append(res, kongstate.Certificate{Certificate: cert.cert})
 	}
+
+	sort.SliceStable(res, func(i, j int) bool {
+		return strings.Compare(*res[i].Certificate.ID, *res[j].Certificate.ID) < 0
+	})
+
 	return res
 }
 

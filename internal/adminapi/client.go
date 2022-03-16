@@ -41,8 +41,6 @@ type HTTPClientOpts struct {
 // This problem is being left as-is during refactoring to avoid regression of untested code.
 // https://github.com/Kong/kubernetes-ingress-controller/issues/1233
 func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
-	defaultTransport := http.DefaultTransport.(*http.Transport)
-
 	var tlsConfig tls.Config
 
 	if opts.TLSSkipVerify {
@@ -128,15 +126,14 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
-	defaultTransport.TLSClientConfig = tlsConfig.Clone()
-	c := http.DefaultClient
-	// BUG: this overwrites the DefaultClient instance!
-	c.Transport = &HeaderRoundTripper{
-		headers: opts.Headers,
-		rt:      defaultTransport,
-	}
-
-	return c, nil
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tlsConfig
+	return &http.Client{
+		Transport: &HeaderRoundTripper{
+			headers: opts.Headers,
+			rt:      transport,
+		},
+	}, nil
 }
 
 // GetKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.

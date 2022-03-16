@@ -39,6 +39,10 @@ CLIENT_GEN = $(shell pwd)/bin/client-gen
 client-gen: ## Download client-gen locally if necessary.
 	$(call go-get-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen@v0.21.3)
 
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.44.2)
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -82,8 +86,8 @@ vet:
 	go vet ./...
 
 .PHONY: lint
-lint: verify.tidy
-	golangci-lint run -v
+lint: verify.tidy golangci-lint
+	$(GOLANGCI_LINT) run -v
 
 .PHONY: verify.tidy
 verify.tidy:

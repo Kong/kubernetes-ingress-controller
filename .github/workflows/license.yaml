@@ -46,7 +46,7 @@ jobs:
       with:
         go-version: '^1.18'
     - name: Install go-licenses
-      run: go get github.com/google/go-licenses
+      run: go install github.com/google/go-licenses@latest
     - name: Checkout target
       uses: actions/checkout@v3
       with:

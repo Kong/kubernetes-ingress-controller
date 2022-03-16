@@ -20,6 +20,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
+// coreDNSImage is the image and version of CoreDNS that will be used for UDP
+// testing.
+const coreDNSImage = "k8s.gcr.io/coredns/coredns:v1.8.6"
+
 func TestUDPIngressPerformance(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	cluster := env.Cluster()
@@ -40,7 +44,7 @@ func TestUDPIngressPerformance(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Log("configuring a coredns deployent to deploy for UDP testing")
-		container := generators.NewContainer("coredns", "coredns/coredns", 53)
+		container := generators.NewContainer("coredns", coreDNSImage, 53)
 		container.Ports[0].Protocol = corev1.ProtocolUDP
 		container.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
 		container.Args = []string{"-conf", "/etc/coredns/Corefile"}

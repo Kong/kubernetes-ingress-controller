@@ -68,6 +68,9 @@
 - HTTPRoutes that define multiple matches for the same header are rejected to
   comply with the HTTPRoute specification.
   [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+- Admission webhook certificate files now track updates to the file, and will
+  update when the corresponding Secret has changed.
+  [#2258](https://github.com/Kong/kubernetes-ingress-controller/pull/2258)
 
 #### Fixed
 
@@ -86,9 +89,6 @@
   recreate configuration upon gaining leadership while populating their
   Kubernetes object cache.
   [#2255](https://github.com/Kong/kubernetes-ingress-controller/pull/2255)
-- Admission webhook certificate files now track updates to the file, and will
-  update when the corresponding Secret has changed.
-  [#2258](https://github.com/Kong/kubernetes-ingress-controller/pull/2258)
 
 ## [2.2.0]
 

@@ -71,7 +71,7 @@ spec:
       - args:
         - -conf
         - /etc/coredns/Corefile
-        image: coredns/coredns
+        image: k8s.gcr.io/coredns/coredns:v1.8.6
         imagePullPolicy: IfNotPresent
         name: coredns
         ports:

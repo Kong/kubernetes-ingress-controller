@@ -27,6 +27,10 @@ import (
 
 var udpMutex sync.Mutex
 
+// coreDNSImage is the image and version of CoreDNS that will be used for UDP
+// testing.
+const coreDNSImage = "k8s.gcr.io/coredns/coredns:v1.8.6"
+
 func TestUDPIngressEssentials(t *testing.T) {
 	t.Parallel()
 	// Ensure no other UDP tests run concurrently to avoid fights over the port
@@ -52,7 +56,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	}()
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
-	container := generators.NewContainer("coredns", "coredns/coredns", 53)
+	container := generators.NewContainer("coredns", coreDNSImage, 53)
 	container.Ports[0].Protocol = corev1.ProtocolUDP
 	container.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
 	container.Args = []string{"-conf", "/etc/coredns/Corefile"}
@@ -187,7 +191,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	}()
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
-	container := generators.NewContainer("coredns", "coredns/coredns", 53)
+	container := generators.NewContainer("coredns", coreDNSImage, 53)
 	container.Ports[0].Protocol = corev1.ProtocolUDP
 	container.Ports[0].Name = "dnsudp"
 	container.Ports = append(container.Ports, corev1.ContainerPort{Name: "dnstcp", ContainerPort: 53, Protocol: corev1.ProtocolTCP})

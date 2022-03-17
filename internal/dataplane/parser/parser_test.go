@@ -2890,7 +2890,7 @@ func TestParserSecret(t *testing.T) {
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered with empty secret")
 	})
-	t.Run("duplicate certificates", func(t *testing.T) {
+	t.Run("duplicate certificates order by time", func(t *testing.T) {
 		ingresses := []*networkingv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -2982,6 +2982,133 @@ func TestParserSecret(t *testing.T) {
 				Cert: kong.String(tlsPairs[0].Cert),
 				Key:  kong.String(tlsPairs[0].Key),
 				SNIs: kong.StringSlice("foo.com", "bar.com"),
+			},
+		}, state.Certificates[0])
+	})
+	t.Run("duplicate certificates order by uid", func(t *testing.T) {
+		ingresses := []*networkingv1beta1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret2",
+							Hosts:      []string{"bar.com"},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "baz",
+					Namespace: "ns2",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: networkingv1beta1.IngressSpec{
+					TLS: []networkingv1beta1.IngressTLS{
+						{
+							SecretName: "secret3",
+							Hosts:      []string{"baz.com"},
+						},
+					},
+				},
+			},
+		}
+
+		t1, _ := time.Parse(time.RFC3339, "2006-01-02T15:05:05Z")
+		t2, _ := time.Parse(time.RFC3339, "2006-01-02T15:05:05Z")
+		t3, _ := time.Parse(time.RFC3339, "2006-01-02T15:06:05Z")
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       "3c28a22c-41e1-4cd6-9099-fd7756ffe58e",
+					Name:      "secret1",
+					Namespace: "default",
+					CreationTimestamp: metav1.Time{
+						Time: t1,
+					},
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       "2c28a22c-41e1-4cd6-9099-fd7756ffe58e",
+					Name:      "secret2",
+					Namespace: "ns1",
+					CreationTimestamp: metav1.Time{
+						Time: t2,
+					},
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       "1c28a22c-41e1-4cd6-9099-fd7756ffe58e",
+					Name:      "secret3",
+					Namespace: "ns2",
+					CreationTimestamp: metav1.Time{
+						Time: t3,
+					},
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(tlsPairs[0].Cert),
+					"tls.key": []byte(tlsPairs[0].Key),
+				},
+			},
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: ingresses,
+			Secrets:          secrets,
+		})
+		assert.Nil(err)
+		p := NewParser(logrus.New(), store)
+		state, err := p.Build()
+		assert.Nil(err)
+		assert.NotNil(state)
+		assert.Equal(1, len(state.Certificates),
+			"certificates are de-duplicated")
+
+		sort.SliceStable(state.Certificates[0].SNIs, func(i, j int) bool {
+			return strings.Compare(*state.Certificates[0].SNIs[i],
+				*state.Certificates[0].SNIs[j]) > 0
+		})
+		assert.Equal(kongstate.Certificate{
+			Certificate: kong.Certificate{
+				ID:   kong.String("2c28a22c-41e1-4cd6-9099-fd7756ffe58e"),
+				Cert: kong.String(tlsPairs[0].Cert),
+				Key:  kong.String(tlsPairs[0].Key),
+				SNIs: kong.StringSlice("foo.com", "baz.com", "bar.com"),
 			},
 		}, state.Certificates[0])
 	})

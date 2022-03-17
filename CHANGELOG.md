@@ -78,6 +78,10 @@
   instance's reported schema. This addresses an issue where configuration
   updates would send unnecessary requests to clear a default value.
   [#2286](https://github.com/Kong/kubernetes-ingress-controller/pull/2286)
+- Certificate selection for hostnames is no longer random if both certificate
+  Secrets have the same creation timestamp, and no longer results in
+  unnecessary configuration updates.
+  [#2338](https://github.com/Kong/kubernetes-ingress-controller/pull/2338)
 
 ## [2.2.1]
 

@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM golang:1.17 as builder
+FROM golang:1.18.0 as builder
 
 WORKDIR /workspace
 
@@ -50,7 +50,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager-
 
 ### Debug
 # Create an image that runs a debug build with a Delve remote server on port 2345
-FROM golang:1.17 AS debug
+FROM golang:1.18.0 AS debug
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 # We want all source so Delve file location operations work
 COPY --from=builder-delve /workspace/ /workspace/

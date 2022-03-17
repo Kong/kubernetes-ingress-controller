@@ -345,8 +345,12 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 				CreationTimestamp: secret.CreationTimestamp,
 			}
 		} else {
+			secretID := string(secret.UID)
 			if kongCert.CreationTimestamp.After(secret.CreationTimestamp.Time) {
-				kongCert.cert.ID = kong.String(string(secret.UID))
+				kongCert.cert.ID = kong.String(secretID)
+				kongCert.CreationTimestamp = secret.CreationTimestamp
+			} else if kongCert.CreationTimestamp.Time.Equal(secret.CreationTimestamp.Time) && (kongCert.cert.ID == nil || *kongCert.cert.ID > secretID) {
+				kongCert.cert.ID = kong.String(secretID)
 				kongCert.CreationTimestamp = secret.CreationTimestamp
 			}
 		}

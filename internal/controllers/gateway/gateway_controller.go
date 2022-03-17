@@ -437,11 +437,12 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	addresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(svc.Spec.ClusterIPs))
 	listeners := make([]gatewayv1alpha2.Listener, 0, len(svc.Spec.Ports))
 	for _, clusterIP := range svc.Spec.ClusterIPs {
+		addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
+			Type:  &gatewayIPAddrType,
+			Value: clusterIP,
+		})
+
 		for _, port := range svc.Spec.Ports {
-			addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
-				Type:  &gatewayIPAddrType,
-				Value: clusterIP,
-			})
 			listeners = append(listeners, gatewayv1alpha2.Listener{
 				Name:          gatewayv1alpha2.SectionName(port.Name),
 				Protocol:      gatewayv1alpha2.ProtocolType(port.Protocol),

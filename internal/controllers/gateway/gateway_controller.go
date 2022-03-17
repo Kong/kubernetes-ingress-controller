@@ -461,19 +461,21 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		}
 
 		// otherwise gather any IPs or Hosts provisioned for the LoadBalancer
-		// and record them as Gateway Addresses.
+		// and record them as Gateway Addresses. The LoadBalancer addresses
+		// are pre-pended to the address list to make them prominent, as they
+		// are often the most common address used for traffic.
 		for _, ingress := range svc.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
-				addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
+				addresses = append([]gatewayv1alpha2.GatewayAddress{{
 					Type:  &gatewayIPAddrType,
 					Value: ingress.IP,
-				})
+				}}, addresses...)
 			}
 			if ingress.Hostname != "" {
-				addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
+				addresses = append([]gatewayv1alpha2.GatewayAddress{{
 					Type:  &gatewayHostAddrType,
 					Value: ingress.Hostname,
-				})
+				}}, addresses...)
 			}
 		}
 	}

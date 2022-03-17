@@ -57,6 +57,11 @@
 
 #### Added
 
+- `Gateway` resources which have a `LoadBalancer` address among their list of
+  addresses will have those addresses listed on the top for convenience, and
+  so that those addresses are made prominent in the `kubectl get gateways`
+  short view.
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
 - The controller manager can now be flagged with a client certificate to use
   for mTLS authentication with the Kong Admin API.
   [#1958](https://github.com/Kong/kubernetes-ingress-controller/issues/1958)
@@ -74,6 +79,18 @@
 
 #### Fixed
 
+- Status updates for `HTTPRoute` objects no longer mark the resource as
+  `ConditionRouteAccepted` until the object has been successfully configured
+  in Kong Gateway at least once, as long as `--update-status`
+  is enabled (enabled by default).
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
+- Status updates for `HTTPRoute` now properly use the `ConditionRouteAccepted`
+  value for parent `Gateway` conditions when the route becomes configured in
+  the `Gateway` rather than the previous random `"attached"` string.
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
+- Fixed a minor issue where addresses on `Gateway` resources would be
+  duplicated depending on how many listeners are configured.
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
 - Unconfigured fields now use their default value according to the Kong proxy
   instance's reported schema. This addresses an issue where configuration
   updates would send unnecessary requests to clear a default value.

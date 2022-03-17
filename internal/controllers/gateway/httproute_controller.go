@@ -291,21 +291,6 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	// now that we know there are 1 or more supported gateways linked from
-	// this HTTPRoute, we need to ensure the status is updated accordingly
-	// before we proceed with any further configurations.
-	debug(log, httproute, "ensuring status contains Gateway associations")
-	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
-	if err != nil {
-		// don't proceed until the statuses can be updated appropriately
-		return ctrl.Result{}, err
-	}
-	if statusUpdated {
-		// if the status was updated it will trigger a follow-up reconciliation
-		// so we don't need to do anything further here.
-		return ctrl.Result{}, nil
-	}
-
 	// the referenced gateway object(s) for the HTTPRoute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
 	// requeue the object and wait until all supported gateways are ready.
@@ -317,12 +302,35 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	// finally if all matching has succeeded and the object is not being deleted,
-	// we can configure it in the data-plane.
-	debug(log, httproute, "sending httproute information to the data-plane for configuration")
+	// if the gateways are ready, and the HTTPRoute is destined for them, ensure that
+	// the object is pushed to the dataplane.
 	if err := r.DataplaneClient.UpdateObject(httproute); err != nil {
 		debug(log, httproute, "failed to update object in data-plane, requeueing")
 		return ctrl.Result{}, err
+	}
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		// if the dataplane client has reporting enabled (this is the default and is
+		// tied in with status updates being enabled in the controller manager) then
+		// we will wait until the object is reported as successfully configured before
+		// moving on to status updates.
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(httproute) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	// now that the object has been successfully configured for in the dataplane
+	// we can update the object status to indicate that it's now properly linked
+	// to the configured Gateways.
+	debug(log, httproute, "ensuring status contains Gateway associations")
+	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
+	if err != nil {
+		// don't proceed until the statuses can be updated appropriately
+		return ctrl.Result{}, err
+	}
+	if statusUpdated {
+		// if the status was updated it will trigger a follow-up reconciliation
+		// so we don't need to do anything further here.
+		return ctrl.Result{}, nil
 	}
 
 	// once the data-plane has accepted the HTTPRoute object, we're all set.

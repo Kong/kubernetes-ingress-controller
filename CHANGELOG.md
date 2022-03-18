@@ -72,6 +72,9 @@
   `allowedRoutes` filters are merged into generated listeners with the same
   protocol.
   [#2389](https://github.com/Kong/kubernetes-ingress-controller/issues/2389)
+- Added `--skip-ca-certificates` flag to ignore CA certificate resources for
+  [use with multi-workspace environments](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
+  [#2341](https://github.com/Kong/kubernetes-ingress-controller/issues/2341)
 
 #### Fixed
 

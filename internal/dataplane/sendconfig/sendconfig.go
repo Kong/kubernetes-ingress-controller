@@ -35,6 +35,7 @@ func PerformUpdate(ctx context.Context,
 	kongConfig *Kong,
 	inMemory bool,
 	reverseSync bool,
+	skipCACertificates bool,
 	targetContent *file.Content,
 	selectorTags []string,
 	customEntities []byte,
@@ -77,7 +78,7 @@ func PerformUpdate(ctx context.Context,
 		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
-		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags)
+		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags, skipCACertificates)
 	}
 	timeEnd := time.Now()
 
@@ -199,8 +200,9 @@ func onUpdateDBMode(ctx context.Context,
 	targetContent *file.Content,
 	kongConfig *Kong,
 	selectorTags []string,
+	skipCACertificates bool,
 ) error {
-	dumpConfig := dump.Config{SelectorTags: selectorTags}
+	dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
 	// read the current state
 	rawState, err := dump.Get(ctx, kongConfig.Client, dumpConfig)
 	if err != nil {

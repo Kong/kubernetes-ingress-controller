@@ -81,6 +81,10 @@
 - Admission webhook certificate files now track updates to the file, and will
   update when the corresponding Secret has changed.
   [#2258](https://github.com/Kong/kubernetes-ingress-controller/pull/2258)
+- The controller can now detect whether a Kong container has crashed and needs
+  a configuration push. Requires Kong 2.8+.
+  [#2343](https://github.com/Kong/kubernetes-ingress-controller/pull/2343)
+
 
 #### Fixed
 

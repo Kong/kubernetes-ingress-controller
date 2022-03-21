@@ -4,7 +4,7 @@ kind: Component
 images:
 - name: kong-placeholder
   newName: kong
-  newTag: '2.7'
+  newTag: '2.8'
 - name: kic-placeholder
   newName: kong/kubernetes-ingress-controller
   newTag: '2.2.1'

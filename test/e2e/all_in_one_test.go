@@ -101,10 +101,24 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
-	_ = deployKong(ctx, t, env, manifest)
+	deployment := deployKong(ctx, t, env, manifest)
+
+	forDeployment := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
+	}
+	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(podList.Items))
+	pod := podList.Items[0]
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
+
+	t.Log("killing Kong process to simulate a crash and container restart")
+	killKong(ctx, t, env, &pod)
+
+	t.Log("confirming that routes are restored after crash")
 	verifyIngress(ctx, t, env)
 }
 
@@ -283,6 +297,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
 	t.Log("verifying that kong pods deployed properly and gathering a sample pod")

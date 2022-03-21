@@ -22,7 +22,7 @@ jobs:
         go-version: '^1.18'
 
     - name: Cache Go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -59,7 +59,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cache Docker layers
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -85,7 +85,7 @@ jobs:
         go-version: '^1.18'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -129,7 +129,7 @@ jobs:
         go-version: '^1.18'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -162,7 +162,7 @@ jobs:
         go-version: '^1.18'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -193,7 +193,7 @@ jobs:
         go-version: '^1.18'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -224,7 +224,7 @@ jobs:
         go-version: '^1.18'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}

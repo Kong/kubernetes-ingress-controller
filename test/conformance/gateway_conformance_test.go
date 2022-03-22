@@ -76,4 +76,10 @@ func TestGatewayConformance(t *testing.T) {
 // https://github.com/Kong/kubernetes-ingress-controller/issues/2210
 var enabledGatewayConformanceTests = sets.NewString(
 	"HTTPRouteCrossNamespace",
+	// "HTTPRouteInvalidCrossNamespace" is the last one we need to get working
+	// before we can delete this set and simply run ALL, but requires:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2080
+	"HTTPRouteMatchingAcrossRoutes",
+	"HTTPRouteMatching",
+	"HTTPRouteSimpleSameNamespace",
 )

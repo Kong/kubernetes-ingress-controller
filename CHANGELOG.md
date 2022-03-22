@@ -84,6 +84,10 @@
 
 #### Fixed
 
+- Fixed an issue where duplicated route names in `HTTPRoute` resources with
+  multiple matches would cause the Kong Admin API to collide the routes into
+  one, effectively dropping routes for services beyond the first.
+  [#2345](https://github.com/Kong/kubernetes-ingress-controller/pull/2345)
 - Status updates for `HTTPRoute` objects no longer mark the resource as
   `ConditionRouteAccepted` until the object has been successfully configured
   in Kong Gateway at least once, as long as `--update-status`

@@ -88,7 +88,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
-								Name:         kong.String("httproute.default.basic-httproute.0"),
+								Name:         kong.String("httproute.default.basic-httproute.0.0"),
 								PreserveHost: kong.Bool(true),
 								Protocols: []*string{
 									kong.String("http"),
@@ -201,7 +201,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
-								Name: kong.String("httproute.default.basic-httproute.0"),
+								Name: kong.String("httproute.default.basic-httproute.0.0"),
 								Paths: []*string{
 									kong.String("/httpbin"),
 								},
@@ -341,7 +341,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
-								Name: kong.String("httproute.default.basic-httproute.0"),
+								Name: kong.String("httproute.default.basic-httproute.0.0"),
 								Paths: []*string{
 									kong.String("/httpbin$"),
 								},
@@ -418,7 +418,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
-								Name: kong.String("httproute.default.basic-httproute.0"),
+								Name: kong.String("httproute.default.basic-httproute.0.0"),
 								Paths: []*string{
 									kong.String("/httpbin$"),
 								},

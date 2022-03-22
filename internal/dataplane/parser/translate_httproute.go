@@ -60,7 +60,7 @@ func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.
 
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
-	for _, rule := range spec.Rules {
+	for ruleNumber, rule := range spec.Rules {
 		// TODO: add this to a generic HTTPRoute validation, and then we should probably
 		//       simply be calling validation on each httproute object at the begininning
 		//       of the topmost list.
@@ -74,7 +74,7 @@ func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.
 		}
 
 		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, rule)
+		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule)
 		if err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayv1alpha2.HTT
 // path prefix routing option for that service in addition to hostname routing.
 // If an HTTPRoute is provided that has matches that include any unsupported matching
 // configurations, this will produce an error and the route is considered invalid.
-func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, rule gatewayv1alpha2.HTTPRouteRule) ([]kongstate.Route, error) {
+func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, ruleNumber int, rule gatewayv1alpha2.HTTPRouteRule) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
 	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
@@ -127,9 +127,10 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 			// determine the name of the route, identify it as a route that belongs
 			// to a Kubernetes HTTPRoute object.
 			routeName := kong.String(fmt.Sprintf(
-				"httproute.%s.%s.%d",
+				"httproute.%s.%s.%d.%d",
 				httproute.Namespace,
 				httproute.Name,
+				ruleNumber,
 				matchNumber,
 			))
 
@@ -192,7 +193,7 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 		r := kongstate.Route{
 			Ingress: objectInfo,
 			Route: kong.Route{
-				Name:         kong.String(fmt.Sprintf("httproute.%s.%s.0", httproute.Namespace, httproute.Name)),
+				Name:         kong.String(fmt.Sprintf("httproute.%s.%s.0.0", httproute.Namespace, httproute.Name)),
 				Protocols:    kong.StringSlice("http", "https"),
 				PreserveHost: kong.Bool(true),
 			},

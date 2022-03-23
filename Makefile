@@ -126,7 +126,7 @@ manifests.crds: controller-gen ## Generate WebhookConfiguration, ClusterRole and
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
-	./hack/deploy/build-single-manifests.sh
+	./scripts/build-single-manifests.sh
 
 # ------------------------------------------------------------------------------
 # Build - Generators

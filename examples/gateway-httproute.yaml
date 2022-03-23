@@ -1,6 +1,6 @@
 # WARNING: Gateway APIs support is still experimental. Use as your own risk.
 #
-# NOTE: You might need to install the Gateway APIs CRDs before using this example,
+# NOTE: You need to install the Gateway APIs CRDs before using this example,
 #       they are external and can be deployed with the following one-liner:
 #
 # kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master | kubectl apply -f -
@@ -51,8 +51,6 @@ spec:
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
-  annotations:
-    konghq.com/gateway-unmanaged: "true"
   name: kong
 spec:
   gatewayClassName: kong

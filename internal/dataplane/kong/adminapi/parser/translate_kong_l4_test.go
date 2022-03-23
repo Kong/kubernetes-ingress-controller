@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )

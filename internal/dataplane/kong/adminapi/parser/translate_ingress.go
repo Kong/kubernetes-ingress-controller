@@ -10,7 +10,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 

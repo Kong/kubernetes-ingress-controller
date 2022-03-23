@@ -8,7 +8,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/kongstate"
 )
 
 func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {

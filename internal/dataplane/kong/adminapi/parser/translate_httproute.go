@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 

@@ -15,7 +15,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/kongstate"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"

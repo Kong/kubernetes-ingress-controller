@@ -22,6 +22,8 @@ func parentRefsForRoute(obj client.Object) ([]gatewayv1alpha2.ParentReference, e
 	switch v := obj.(type) {
 	case *gatewayv1alpha2.HTTPRoute:
 		return v.Spec.ParentRefs, nil
+	case *gatewayv1alpha2.UDPRoute:
+		return v.Spec.ParentRefs, nil
 	default:
 		return nil, fmt.Errorf("cant determine parent gateway for unsupported type %s", reflect.TypeOf(obj))
 	}

@@ -1,7 +1,15 @@
 ---
 title: Performance Testing
-status: provisional
+status: declined
 ---
+
+**NOTE**: this KEP is currently declined as we had other higher priorities
+          at the time of writing. However this does not mean it's never
+          going to happen, it's simply a question of when makes the most
+          sense. If you're reading this and interested in this functionality
+          please feel free to create a discussion or issue regarding your
+          use case and we can re-assess whether it makes sense to work on
+          this sooner.
 
 ## Summary
 

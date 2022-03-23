@@ -14,7 +14,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/parser"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/sendconfig"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"

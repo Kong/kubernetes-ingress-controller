@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 

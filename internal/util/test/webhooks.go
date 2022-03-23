@@ -1,4 +1,4 @@
-package util
+package test
 
 const (
 	// KongSystemServiceCert is a testing TLS certificate with SAN *.kong-system.svc.

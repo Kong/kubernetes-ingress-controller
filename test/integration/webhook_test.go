@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )

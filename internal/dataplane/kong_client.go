@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object/status"

@@ -21,7 +21,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 

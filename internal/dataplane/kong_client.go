@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/sendconfig"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/kubernetes/object"

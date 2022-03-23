@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kong/adminapi/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 

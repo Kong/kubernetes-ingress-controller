@@ -3,7 +3,7 @@ layout:
 - go.kubebuilder.io/v3
 multigroup: true
 projectName: kubernetes-ingress-controller
-repo: github.com/kong/kubernetes-ingress-controller
+repo: github.com/kong/kubernetes-ingress-controller/v2
 resources:
 - api:
     crdVersion: v1

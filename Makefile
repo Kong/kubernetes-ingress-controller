@@ -91,19 +91,19 @@ lint: verify.tidy golangci-lint
 
 .PHONY: verify.tidy
 verify.tidy:
-	./hack/verify-tidy.sh
+	./scripts/verify-tidy.sh
 
 .PHONY: verify.repo
 verify.repo:
-	./hack/verify-repo.sh
+	./scripts/verify-repo.sh
 
 .PHONY: verify.diff
 verify.diff:
-	./hack/verify-diff.sh
+	./scripts/verify-diff.sh
 
 .PHONY: verify.versions
 verify.versions:
-	./hack/verify-versions.sh $(TAG)
+	./scripts/verify-versions.sh $(TAG)
 
 .PHONY: verify.manifests
 verify.manifests: verify.repo manifests manifests.single verify.diff

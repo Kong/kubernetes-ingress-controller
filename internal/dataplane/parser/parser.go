@@ -68,6 +68,7 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 		p.ingressRulesFromUDPIngressV1beta1(),
 		p.ingressRulesFromKnativeIngress(),
 		p.ingressRulesFromHTTPRoutes(),
+		p.ingressRulesFromUDPRoutes(),
 	)
 
 	// populate any Kubernetes Service objects relevant objects

@@ -85,7 +85,7 @@ var (
 	// NOTE: more namespaces will be loaded dynamically by the test.Main
 	//       during runtime. In general, avoid adding hardcoded namespaces
 	//       to this list as that's reserved for special cases.
-	watchNamespaces = fmt.Sprintf("%s,%s", extraIngressNamespace, extraWebhookNamespace)
+	watchNamespaces = fmt.Sprintf("%s,%s,%s", extraIngressNamespace, extraWebhookNamespace, corev1.NamespaceDefault)
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.

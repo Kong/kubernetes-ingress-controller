@@ -72,3 +72,56 @@ func TestHTTPRouteExample(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 }
+
+var ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)
+
+func TestIngressExample(t *testing.T) {
+	t.Logf("applying yaml manifest %s", strings.TrimPrefix(ingressExampleManifests, examplesDIR))
+	b, err := os.ReadFile(ingressExampleManifests)
+	require.NoError(t, err)
+	manifests := replaceIngressClassInManifests(string(b))
+	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), manifests))
+
+	defer func() {
+		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), manifests))
+	}()
+
+	t.Log("waiting for ingress resource to have an address")
+	var ingAddr string
+	require.Eventually(t, func() bool {
+		ing, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, "httpbin-ingress", metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+
+		for _, lbing := range ing.Status.LoadBalancer.Ingress {
+			if lbing.IP != "" {
+				ingAddr = lbing.IP
+				return true
+			}
+		}
+
+		return false
+	}, ingressWait, waitTick)
+
+	t.Logf("verifying that the Ingress resource becomes routable")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("http://%s/", ingAddr))
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+}
+
+func replaceIngressClassInManifests(manifests string) string {
+	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, ingressClass))
+}

@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.11.0
-	github.com/kong/go-kong v0.28.1
+	github.com/kong/go-kong v0.29.0
 	github.com/kong/kubernetes-testing-framework v0.13.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.47

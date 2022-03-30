@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -84,7 +86,42 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 		// if the GatewayClass matches this controller we're all set and this controller
 		// should reconcile this object.
 		if gatewayClass.Spec.ControllerName == ControllerName {
-			gateways = append(gateways, &gateway)
+			allowedNamespaces := make(map[string]interface{})
+			// set true if we find any AllowedRoutes. there may be none, in which case any namespace is permitted
+			filtered := false
+			for _, listener := range gateway.Spec.Listeners {
+				if listener.AllowedRoutes != nil {
+					// TODO NS need to filter by kinds per https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.AllowedRoutes
+					filtered = true
+					if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromAll {
+						// we allow "all" by just stuffing the namespace we want to find into the map
+						allowedNamespaces[obj.GetNamespace()] = nil
+					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromSame {
+						allowedNamespaces[gateway.ObjectMeta.Namespace] = nil
+					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromSelector {
+						namespaces := &corev1.NamespaceList{}
+						selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+						if err != nil {
+							return nil, fmt.Errorf("failed to convert LabelSelector to Selector for gateway %s",
+								gateway.ObjectMeta.Name)
+						}
+						err = mgrc.List(ctx, namespaces,
+							&client.ListOptions{LabelSelector: selector})
+						if err != nil {
+							return nil, fmt.Errorf("could not fetch allowed namespaces for gateway %s",
+								gateway.ObjectMeta.Name)
+						}
+						for _, allowed := range namespaces.Items {
+							allowedNamespaces[allowed.ObjectMeta.Name] = nil
+						}
+					}
+				}
+			}
+
+			_, allowedNamespace := allowedNamespaces[obj.GetNamespace()]
+			if !filtered || allowedNamespace {
+				gateways = append(gateways, &gateway)
+			}
 		}
 	}
 

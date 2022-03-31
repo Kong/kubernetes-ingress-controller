@@ -2,8 +2,10 @@ package util
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -50,6 +52,11 @@ func (r *Reporter) once() {
 	serializedInfo = serializedInfo + "db=" + r.Info.KongDB + ";"
 	serializedInfo = serializedInfo + "id=" + r.Info.ID + ";"
 	serializedInfo = serializedInfo + "hn=" + r.Info.Hostname + ";"
+
+	for feature, enabled := range r.Info.FeatureGates {
+		serializedInfo = fmt.Sprintf("%sfeature-%s=%t;", serializedInfo, strings.ToLower(feature), enabled)
+	}
+
 	r.serializedInfo = serializedInfo
 }
 

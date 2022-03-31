@@ -86,6 +86,10 @@ func TestReporterOnce(t *testing.T) {
 		Hostname:          "example.local",
 		KongDB:            "off",
 		ID:                "6acb7447-eedf-4815-a193-d714c5108f7b",
+		FeatureGates: map[string]bool{
+			"Knative": false,
+			"Gateway": true,
+		},
 	}
 	reporter := Reporter{
 		Info:   info,
@@ -101,7 +105,7 @@ func TestReporterOnce(t *testing.T) {
 
 	reporter.once()
 	want := "v=kic.version;k8sv=k8s.version;kv=kong.version;db=off;" +
-		"id=6acb7447-eedf-4815-a193-d714c5108f7b;hn=example.local;"
+		"id=6acb7447-eedf-4815-a193-d714c5108f7b;hn=example.local;feature-knative=false;feature-gateway=true;"
 	assert.Equal(want, reporter.serializedInfo)
 }
 

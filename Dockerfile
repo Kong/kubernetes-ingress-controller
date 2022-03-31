@@ -11,7 +11,6 @@ COPY go.sum go.sum
 RUN go mod download
 
 COPY pkg/ pkg/
-COPY pkg/ pkg/
 COPY internal/ internal/
 
 # Build
@@ -33,7 +32,6 @@ COPY go.sum go.sum
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
 
-COPY pkg/ pkg/
 COPY pkg/ pkg/
 COPY internal/ internal/
 

@@ -81,10 +81,12 @@
 - Admission webhook certificate files now track updates to the file, and will
   update when the corresponding Secret has changed.
   [#2258](https://github.com/Kong/kubernetes-ingress-controller/pull/2258)
+- Added support for Gateway API [UDPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute)
+  resources.
+  [#2363](https://github.com/Kong/kubernetes-ingress-controller/pull/2363)
 - The controller can now detect whether a Kong container has crashed and needs
   a configuration push. Requires Kong 2.8+.
   [#2343](https://github.com/Kong/kubernetes-ingress-controller/pull/2343)
-
 
 #### Fixed
 

@@ -33,7 +33,8 @@ type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
 	IngressClassesV1   []*networkingv1.IngressClass
-	HTTPRoute          []*gatewayv1alpha2.HTTPRoute
+	HTTPRoutes         []*gatewayv1alpha2.HTTPRoute
+	UDPRoutes          []*gatewayv1alpha2.UDPRoute
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*configurationv1beta1.UDPIngress
 	Services           []*apiv1.Service
@@ -49,7 +50,8 @@ type FakeObjects struct {
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
 func NewFakeStore(
-	objects FakeObjects) (Storer, error) {
+	objects FakeObjects,
+) (Storer, error) {
 	var s Storer
 
 	ingressV1beta1Store := cache.NewStore(keyFunc)
@@ -74,8 +76,14 @@ func NewFakeStore(
 		}
 	}
 	httprouteStore := cache.NewStore(keyFunc)
-	for _, httproute := range objects.HTTPRoute {
+	for _, httproute := range objects.HTTPRoutes {
 		if err := httprouteStore.Add(httproute); err != nil {
+			return nil, err
+		}
+	}
+	udprouteStore := cache.NewStore(keyFunc)
+	for _, udproute := range objects.UDPRoutes {
+		if err := udprouteStore.Add(udproute); err != nil {
 			return nil, err
 		}
 	}
@@ -155,6 +163,7 @@ func NewFakeStore(
 			IngressV1:      ingressV1Store,
 			IngressClassV1: ingressClassV1Store,
 			HTTPRoute:      httprouteStore,
+			UDPRoute:       udprouteStore,
 			TCPIngress:     tcpIngressStore,
 			UDPIngress:     udpIngressStore,
 			Service:        serviceStore,

@@ -83,6 +83,7 @@ type Storer interface {
 	ListIngressesV1() []*networkingv1.Ingress
 	ListIngressClassesV1() []*networkingv1.IngressClass
 	ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error)
+	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
@@ -124,6 +125,7 @@ type CacheStores struct {
 
 	// Gateway API Stores
 	HTTPRoute cache.Store
+	UDPRoute  cache.Store
 
 	// Kong Stores
 	Plugin        cache.Store
@@ -148,6 +150,7 @@ func NewCacheStores() (c CacheStores) {
 	c.IngressClassV1 = cache.NewStore(clusterResourceKeyFunc)
 	c.IngressV1beta1 = cache.NewStore(keyFunc)
 	c.HTTPRoute = cache.NewStore(keyFunc)
+	c.UDPRoute = cache.NewStore(keyFunc)
 	c.KnativeIngress = cache.NewStore(keyFunc)
 	c.Plugin = cache.NewStore(keyFunc)
 	c.Secret = cache.NewStore(keyFunc)
@@ -229,6 +232,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	case *gatewayv1alpha2.HTTPRoute:
 		return c.HTTPRoute.Get(obj)
+	case *gatewayv1alpha2.UDPRoute:
+		return c.UDPRoute.Get(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -282,6 +287,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	case *gatewayv1alpha2.HTTPRoute:
 		return c.HTTPRoute.Add(obj)
+	case *gatewayv1alpha2.UDPRoute:
+		return c.UDPRoute.Add(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -336,6 +343,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	case *gatewayv1alpha2.HTTPRoute:
 		return c.HTTPRoute.Delete(obj)
+	case *gatewayv1alpha2.UDPRoute:
+		return c.UDPRoute.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -514,6 +523,22 @@ func (s Store) ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error) {
 		return nil, err
 	}
 	return httproutes, nil
+}
+
+// ListUDPRoutes returns the list of UDPRoutes in the UDPRoute cache store.
+func (s Store) ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error) {
+	var udproutes []*gatewayv1alpha2.UDPRoute
+	if err := cache.ListAll(s.stores.UDPRoute, labels.NewSelector(),
+		func(ob interface{}) {
+			udproute, ok := ob.(*gatewayv1alpha2.UDPRoute)
+			if ok {
+				udproutes = append(udproutes, udproute)
+			}
+		},
+	); err != nil {
+		return nil, err
+	}
+	return udproutes, nil
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from

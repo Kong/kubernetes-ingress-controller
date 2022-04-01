@@ -3,7 +3,7 @@ layout:
 - go.kubebuilder.io/v3
 multigroup: true
 projectName: kubernetes-ingress-controller
-repo: github.com/kong/kubernetes-ingress-controller
+repo: github.com/kong/kubernetes-ingress-controller/v2
 resources:
 - api:
     crdVersion: v1
@@ -68,6 +68,15 @@ resources:
   domain: networking.k8s.io
   group: gateway
   kind: HTTPRoute
+  path: github.com/kubernetes-sigs/gateway-api/apis/v1alpha2
+  version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: networking.k8s.io
+  group: gateway
+  kind: UDPRoute
   path: github.com/kubernetes-sigs/gateway-api/apis/v1alpha2
   version: v1alpha2
 version: "3"

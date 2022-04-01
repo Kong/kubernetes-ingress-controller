@@ -271,14 +271,46 @@ test.e2e:
 # Operations - Local Deployment
 # ------------------------------------------------------------------------------
 
-run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./internal/cmd/main.go
+# NOTE: the environment used for "make debug" or "make run" by default should
+#       have a Kong Gateway deployed into the kong-system namespace, but these
+#       defaults can be changed using the arguments below.
+#
+#       One easy way to create a testing/debugging environment that works with
+#       these defaults is to use the Kong Kubernetes Testing Framework (KTF):
+#
+#       $ ktf envs create --addon metallb --addon kong --kong-disable-controller --kong-admin-service-loadbalancer
+#
+#       KTF can be installed by following the instructions at:
+#
+#       https://github.com/kong/kubernetes-testing-framework
+
+KUBECONFIG ?= "${HOME}/.kube/config"
+KONG_NAMESPACE ?= kong-system
+KONG_PROXY_SERVICE ?= ingress-controller-kong-proxy
+KONG_ADMIN_PORT ?= 8001
+KONG_ADMIN_URL ?= "http://$(shell kubectl -n kong-system get service ingress-controller-kong-admin -o=go-template='{{range .status.loadBalancer.ingress}}{{.ip}}{{end}}'):$(KONG_ADMIN_PORT)"
+
+debug: install
+	dlv debug ./internal/cmd/main.go -- \
+		--kong-admin-url $(KONG_ADMIN_URL) \
+		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--kubeconfig $(KUBECONFIG) \
+		--feature-gates=Gateway=true
+
+run: install
+	go run ./internal/cmd/main.go \
+		--kong-admin-url $(KONG_ADMIN_URL) \
+		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--kubeconfig $(KUBECONFIG) \
+		--feature-gates=Gateway=true
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master | kubectl apply -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE}

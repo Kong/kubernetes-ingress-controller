@@ -75,6 +75,8 @@ jobs:
           echo "" >> $GITHUB_ENV
           echo 'type=raw,value=${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }},suffix=-redhat' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
@@ -114,6 +116,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           target: builder
+          platforms: linux/amd64, linux/arm64
           build-args: |
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
@@ -127,6 +130,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           target: distroless
+          platforms: linux/amd64, linux/arm64
           build-args: |
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}

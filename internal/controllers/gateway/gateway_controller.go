@@ -33,6 +33,11 @@ var (
 	// ManagedGatewaysUnsupported is an error used whenever a failure occurs
 	// due to a Gateway that is not properly configured for unmanaged mode.
 	ManagedGatewaysUnsupported = fmt.Errorf("invalid gateway spec: managed gateways are not currently supported") //nolint:revive
+	gatewayV1alpha2Group       = gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
+	protocolToRouteGroupKind   = map[corev1.Protocol]gatewayv1alpha2.RouteGroupKind{
+		corev1.ProtocolTCP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TCPRoute")},
+		corev1.ProtocolUDP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("UDPRoute")},
+	}
 )
 
 // -----------------------------------------------------------------------------
@@ -50,7 +55,6 @@ type GatewayReconciler struct { //nolint:revive
 	PublishService  string
 	WatchNamespaces []string
 
-	allowedRoutes     gatewayv1alpha2.AllowedRoutes
 	publishServiceRef types.NamespacedName
 }
 
@@ -62,38 +66,6 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
-
-	// determine the AllowedRoutes for Gateways
-	group := gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
-	r.allowedRoutes.Kinds = []gatewayv1alpha2.RouteGroupKind{
-		{
-			Group: &group,
-			Kind:  gatewayv1alpha2.Kind("HTTPRoute"),
-		},
-		{
-			Group: &group,
-			Kind:  gatewayv1alpha2.Kind("TCPRoute"),
-		},
-		{
-			Group: &group,
-			Kind:  gatewayv1alpha2.Kind("UDPRoute"),
-		},
-	}
-
-	// determine whether AllowedRoutes will come from ALL namespaces, or specific ones
-	namespaces := gatewayv1alpha2.RouteNamespaces{}
-	if len(r.WatchNamespaces) == 0 {
-		fromAll := gatewayv1alpha2.NamespacesFromAll
-		namespaces.From = &fromAll
-	} else {
-		fromSelector := gatewayv1alpha2.NamespacesFromSelector
-		namespaces.From = &fromSelector
-		// TODO: this currently doesn't handle namespace restrictions and instead all
-		//       namespaces are currently allowed. This will be implemented in an
-		//       upcoming iteration.
-		//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2080
-	}
-	r.allowedRoutes.Namespaces = &namespaces
 
 	// generate the controller object and attach it to the manager and link the reconciler object
 	c, err := controller.New("gateway-controller", mgr, controller.Options{
@@ -339,6 +311,11 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, err
 	}
 
+	gatewayListeners, err = mergeAllowedRoutes(gateway.Spec.Listeners, gatewayListeners)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	debug(log, gateway, "updating the gateway if any changes to listeners occurred")
 	isChanged, err := r.updateAddressesAndListenersSpec(ctx, gateway, gatewayAddresses, gatewayListeners)
 	if err != nil {
@@ -444,10 +421,14 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 
 		for _, port := range svc.Spec.Ports {
 			listeners = append(listeners, gatewayv1alpha2.Listener{
-				Name:          gatewayv1alpha2.SectionName(port.Name),
-				Protocol:      gatewayv1alpha2.ProtocolType(port.Protocol),
-				Port:          gatewayv1alpha2.PortNumber(port.Port),
-				AllowedRoutes: &r.allowedRoutes,
+				Name:     gatewayv1alpha2.SectionName(port.Name),
+				Protocol: gatewayv1alpha2.ProtocolType(port.Protocol),
+				Port:     gatewayv1alpha2.PortNumber(port.Port),
+				AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						protocolToRouteGroupKind[port.Protocol],
+					},
+				},
 			})
 		}
 	}
@@ -517,13 +498,28 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 		if streamListener, ok := streamListenersMap[portMapper[int(listener.Port)]]; ok {
 			if streamListener.SSL {
 				listener.Protocol = gatewayv1alpha2.TLSProtocolType
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TLSRoute")},
+					},
+				}
 			}
 		}
 		if proxyListener, ok := proxyListenersMap[portMapper[int(listener.Port)]]; ok {
 			if proxyListener.SSL {
 				listener.Protocol = gatewayv1alpha2.HTTPSProtocolType
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("HTTPRoute")},
+					},
+				}
 			} else {
 				listener.Protocol = gatewayv1alpha2.HTTPProtocolType
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("HTTPRoute")},
+					},
+				}
 			}
 		}
 		upgradedListeners = append(upgradedListeners, listener)
@@ -572,4 +568,23 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 	return false, nil
+}
+
+func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) ([]gatewayv1alpha2.Listener, error) {
+	var result []gatewayv1alpha2.Listener
+	mappings := make(map[string]gatewayv1alpha2.RouteNamespaces)
+	for _, listener := range source {
+		if _, exists := mappings[fmt.Sprintf("%s:%d", listener.Protocol, listener.Port)]; exists {
+			return nil, fmt.Errorf("multiple listeners for a single protocol/port combination are not supported: %s:%d",
+				listener.Protocol, listener.Port)
+		}
+		mappings[fmt.Sprintf("%s:%d", listener.Protocol, listener.Port)] = *listener.AllowedRoutes.Namespaces
+	}
+	for _, listener := range target {
+		if namespaces, exists := mappings[fmt.Sprintf("%s:%d", listener.Protocol, listener.Port)]; exists {
+			listener.AllowedRoutes.Namespaces = &namespaces
+		}
+		result = append(result, listener)
+	}
+	return result, nil
 }

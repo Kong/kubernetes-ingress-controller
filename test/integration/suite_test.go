@@ -148,7 +148,6 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--ingress-class=%s", ingressClass),
 			fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
 			fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
-			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
 			fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",

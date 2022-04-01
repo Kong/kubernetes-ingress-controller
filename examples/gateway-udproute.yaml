@@ -111,10 +111,6 @@ spec:
   parentRefs:
   - name: kong
   rules:
-  - matches:
-    - destinationAddresses:
-      - type: IPAddress
-        value: 192.0.2.254
-    backendRefs:
+  - backendRefs:
     - name: coredns
       port: 53

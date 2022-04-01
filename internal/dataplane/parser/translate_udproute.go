@@ -108,6 +108,9 @@ func generateKongRoutesFromUDPRouteRule(udproute *gatewayv1alpha2.UDPRoute, rule
 		// We do not intend to implement these until they are stable per https://github.com/Kong/kubernetes-ingress-controller/issues/2087#issuecomment-1079053290
 		return routes, fmt.Errorf("UDPRoute Matches are not yet supported")
 	}
+	if len(rule.BackendRefs) == 0 {
+		return routes, fmt.Errorf("UDPRoute rules must include at least one backendRef")
+	}
 	if len(rule.BackendRefs) > 1 {
 		// TODO refactor around the solution used for https://github.com/Kong/kubernetes-ingress-controller/issues/2173
 		return routes, fmt.Errorf("Support for multiple backends in UDPRoute rules is not yet supported")

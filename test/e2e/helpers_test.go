@@ -156,6 +156,8 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 			if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
 				return false
 			}
+		} else {
+			return false
 		}
 		// verify the KongIngress method restriction
 		fakeData := url.Values{}
@@ -383,4 +385,40 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 	migrationJob, err := env.Cluster().Client().BatchV1().Jobs(namespace).Get(ctx, "kong-migrations", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, migrationJob.Status.Succeeded, int32(1))
+}
+
+// killKong kills the Kong container in a given Pod and returns when it has restarted
+func killKong(ctx context.Context, t *testing.T, env environments.Environment, pod *corev1.Pod) {
+	var orig, after int32
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name == "proxy" {
+			orig = status.RestartCount
+		}
+	}
+	t.Logf("kong container has %v restart currently", orig)
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "kill-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer os.Remove(kubeconfigFile.Name())
+	defer kubeconfigFile.Close()
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "exec", "-n", pod.Namespace, pod.Name, "--", "kill", "1")
+	require.NoError(t, cmd.Run())
+	require.Eventually(t, func() bool {
+		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.Name == "proxy" {
+				if status.RestartCount > orig {
+					after = status.RestartCount
+					return true
+				}
+			}
+		}
+		return false
+	}, kongComponentWait, time.Second)
+	t.Logf("kong container has %v restart after kill", after)
 }

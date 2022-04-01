@@ -1343,7 +1343,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong:2.7
+        image: kong:2.8
         lifecycle:
           preStop:
             exec:

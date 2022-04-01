@@ -1406,7 +1406,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong/kong-gateway:2.7
+        image: kong/kong-gateway:2.8
         lifecycle:
           preStop:
             exec:
@@ -1521,7 +1521,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong/kong-gateway:2.7
+        image: kong/kong-gateway:2.8
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
 ---
@@ -1602,7 +1602,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:2.7
+        image: kong/kong-gateway:2.8
         name: kong-migrations
       imagePullSecrets:
       - name: kong-enterprise-edition-docker

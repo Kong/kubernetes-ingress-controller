@@ -13,33 +13,33 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.11.0
-	github.com/kong/go-kong v0.28.1
+	github.com/kong/go-kong v0.29.0
 	github.com/kong/kubernetes-testing-framework v0.13.2
 	github.com/lithammer/dedent v1.1.0
-	github.com/miekg/dns v1.1.47
+	github.com/miekg/dns v1.1.48
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/prometheus/client_golang v1.12.1
-	github.com/prometheus/common v0.32.1
+	github.com/prometheus/common v0.33.0
 	github.com/sethvargo/go-password v0.2.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
 	github.com/tidwall/gjson v1.14.0
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
-	google.golang.org/api v0.73.0
-	google.golang.org/genproto v0.0.0-20220310185008-1973136f34c6
+	golang.org/x/net v0.0.0-20220325170049-de3da57026de
+	google.golang.org/api v0.74.0
+	google.golang.org/genproto v0.0.0-20220324131243-acbaeb5b85eb
 	k8s.io/api v0.23.5
-	k8s.io/apiextensions-apiserver v0.23.4
+	k8s.io/apiextensions-apiserver v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v0.23.5
 	k8s.io/component-base v0.23.5
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77
-	sigs.k8s.io/controller-runtime v0.11.1
+	sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/gateway-api v0.4.1-0.20220306235253-71fee1c2808f
-	sigs.k8s.io/kustomize/api v0.11.3
-	sigs.k8s.io/kustomize/kyaml v0.13.5
+	sigs.k8s.io/kustomize/api v0.11.4
+	sigs.k8s.io/kustomize/kyaml v0.13.6
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -75,7 +75,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
+	github.com/googleapis/gax-go/v2 v2.2.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.2 // indirect
@@ -124,7 +124,7 @@ require (
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5 // indirect
+	golang.org/x/sys v0.0.0-20220328115105-d36c6a25d886 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect

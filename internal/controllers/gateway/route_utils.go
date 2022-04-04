@@ -90,8 +90,28 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 			// set true if we find any AllowedRoutes. there may be none, in which case any namespace is permitted
 			filtered := false
 			for _, listener := range gateway.Spec.Listeners {
+				// Only match if the listener type matches the protocol type
+				switch obj.(type) {
+				case *gatewayv1alpha2.HTTPRoute:
+					if !(listener.Protocol == gatewayv1alpha2.HTTPProtocolType || listener.Protocol == gatewayv1alpha2.HTTPSProtocolType) {
+						continue
+					}
+				case *gatewayv1alpha2.TCPRoute:
+					if listener.Protocol != gatewayv1alpha2.TCPProtocolType {
+						continue
+					}
+				case *gatewayv1alpha2.UDPRoute:
+					if listener.Protocol != gatewayv1alpha2.UDPProtocolType {
+						continue
+					}
+				case *gatewayv1alpha2.TLSRoute:
+					if listener.Protocol != gatewayv1alpha2.TLSProtocolType {
+						continue
+					}
+				default:
+					continue
+				}
 				if listener.AllowedRoutes != nil {
-					// TODO NS need to filter by kinds per https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.AllowedRoutes
 					filtered = true
 					if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromAll {
 						// we allow "all" by just stuffing the namespace we want to find into the map

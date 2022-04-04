@@ -453,16 +453,28 @@ func TestGatewayFilters(t *testing.T) {
 		},
 		Spec: gatewayv1alpha2.GatewaySpec{
 			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "http",
-				Protocol: gatewayv1alpha2.HTTPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(80),
-				AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-					Namespaces: &gatewayv1alpha2.RouteNamespaces{
-						From: &fromAll,
+			Listeners: []gatewayv1alpha2.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1alpha2.HTTPProtocolType,
+					Port:     gatewayv1alpha2.PortNumber(80),
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &fromAll,
+						},
 					},
 				},
-			}},
+				{
+					Name:     "https",
+					Protocol: gatewayv1alpha2.HTTPSProtocolType,
+					Port:     gatewayv1alpha2.PortNumber(443),
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &fromAll,
+						},
+					},
+				},
+			},
 		},
 	}
 	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
@@ -592,16 +604,28 @@ func TestGatewayFilters(t *testing.T) {
 	t.Log("changing to the same namespace filter")
 	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
-		Name:     "http",
-		Protocol: gatewayv1alpha2.HTTPProtocolType,
-		Port:     gatewayv1alpha2.PortNumber(80),
-		AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-			Namespaces: &gatewayv1alpha2.RouteNamespaces{
-				From: &fromSame,
+	gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+		{
+			Name:     "http",
+			Protocol: gatewayv1alpha2.HTTPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(80),
+			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+					From: &fromSame,
+				},
 			},
 		},
-	}}
+		{
+			Name:     "https",
+			Protocol: gatewayv1alpha2.HTTPSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(443),
+			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+					From: &fromSame,
+				},
+			},
+		},
+	}
 	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
@@ -614,21 +638,38 @@ func TestGatewayFilters(t *testing.T) {
 	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
-	gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
-		Name:     "http",
-		Protocol: gatewayv1alpha2.HTTPProtocolType,
-		Port:     gatewayv1alpha2.PortNumber(80),
-		AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-			Namespaces: &gatewayv1alpha2.RouteNamespaces{
-				From: &fromSelector,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						clusters.TestResourceLabel: t.Name() + "other",
+	gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+		{
+			Name:     "http",
+			Protocol: gatewayv1alpha2.HTTPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(80),
+			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+					From: &fromSelector,
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							clusters.TestResourceLabel: t.Name() + "other",
+						},
 					},
 				},
 			},
 		},
-	}}
+		{
+			Name:     "https",
+			Protocol: gatewayv1alpha2.HTTPSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(443),
+			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+					From: &fromSelector,
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							clusters.TestResourceLabel: t.Name() + "other",
+						},
+					},
+				},
+			},
+		},
+	}
 
 	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)

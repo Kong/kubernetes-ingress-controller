@@ -46,7 +46,7 @@
 
 ## [2.3.0]
 
-> Release date: TBD
+> Release date: 2022-04-05
 
 #### Breaking changes
 
@@ -1645,6 +1645,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1

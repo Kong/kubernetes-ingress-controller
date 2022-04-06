@@ -38,13 +38,13 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.6.2
+        uses: docker/metadata-action@v3.7.0
         with:
           images: kong/nightly-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.6.2
+        uses: docker/metadata-action@v3.7.0
         with:
           images: kong/nightly-ingress-controller
           flavor: |

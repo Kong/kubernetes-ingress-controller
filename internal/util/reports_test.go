@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -104,9 +105,27 @@ func TestReporterOnce(t *testing.T) {
 	go runTestTLSServer(ctx, t, listener, reqs)
 
 	reporter.once()
-	want := "v=kic.version;k8sv=k8s.version;kv=kong.version;db=off;" +
-		"id=6acb7447-eedf-4815-a193-d714c5108f7b;hn=example.local;feature-knative=false;feature-gateway=true;"
-	assert.Equal(want, reporter.serializedInfo)
+	got := make(map[string]string)
+	for _, line := range strings.Split(reporter.serializedInfo, ";") {
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, "=")
+		k, v := parts[0], parts[1]
+		got[k] = v
+	}
+
+	want := map[string]string{
+		"v":               "kic.version",
+		"k8sv":            "k8s.version",
+		"kv":              "kong.version",
+		"db":              "off",
+		"id":              "6acb7447-eedf-4815-a193-d714c5108f7b",
+		"hn":              "example.local",
+		"feature-knative": "false",
+		"feature-gateway": "true",
+	}
+	assert.Equal(want, got)
 }
 
 func TestReporterSendStart(t *testing.T) {

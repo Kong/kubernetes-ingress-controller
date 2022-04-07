@@ -251,6 +251,8 @@ func TestWebhookUpdate(t *testing.T) {
 	}, time.Minute*10, time.Second)
 }
 
+// TestDeployAllInOneDBLESSGateway tests the Gateway feature flag and the admission controller with no user-provided
+// certificate (all other tests with the controller provide certificates, so that behavior isn't tested otherwise)
 func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
 	t.Parallel()
@@ -285,11 +287,12 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
 
-	t.Log("updating kong deployment to enable Gateway feature gate")
+	t.Log("updating kong deployment to enable Gateway feature gate and admission controller")
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "Gateway=true"})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "Gateway=true"},
+				corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_LISTEN", Value: ":8080"})
 		}
 	}
 

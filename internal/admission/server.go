@@ -66,7 +66,7 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 		}
 
 	// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
-	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
+	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert == "" && sc.Key == "":
 		var err error
 		watcher, err = certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
 		if err != nil {

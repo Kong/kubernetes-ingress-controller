@@ -59,6 +59,13 @@
   annotation is set). They also now support weights to enable more
   fine-tuning of the load-balancing between those backend services.
   [#2166](https://github.com/Kong/kubernetes-ingress-controller/issues/2166)
+- `Gateway` resources now honor [`listener.allowedRoutes.namespaces`
+  filters](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.RouteNamespaces).
+  Note that the unmanaged Kong Gateway implementation populates listeners
+  automatically based on the Kong Service and Deployment, and user-provided
+  `allowedRoutes` filters are merged into generated listeners with the same
+  protocol.
+  [#2389](https://github.com/Kong/kubernetes-ingress-controller/issues/2389)
 
 ## [2.3.1]
 

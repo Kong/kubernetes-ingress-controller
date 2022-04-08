@@ -311,10 +311,11 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, err
 	}
 
-	gatewayListeners, err = mergeAllowedRoutes(gateway.Spec.Listeners, gatewayListeners)
-	if err != nil {
-		return ctrl.Result{}, err
+	if !areAllowedRoutesConsistentByProtocol(gateway.Spec.Listeners) {
+		return ctrl.Result{}, fmt.Errorf("all listeners for a protocol must use the same AllowedRoutes")
 	}
+
+	gatewayListeners = mergeAllowedRoutes(gateway.Spec.Listeners, gatewayListeners)
 
 	debug(log, gateway, "updating the gateway if any changes to listeners occurred")
 	isChanged, err := r.updateAddressesAndListenersSpec(ctx, gateway, gatewayAddresses, gatewayListeners)
@@ -570,21 +571,47 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	return false, nil
 }
 
-func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) ([]gatewayv1alpha2.Listener, error) {
+// mergeAllowedRoutes takes two sets of listeners, scans the source for AllowedRoutes filters, and copies those into
+// listeners in the target set that share the same protocol as the source listener. As implemented, it makes no attempt
+// to account for same-protocol listeners in the source set having different AllowedRoutes: it assumes
+// areAllowedRoutesConsistentByProtocol has been run first because Kong would not support multiple listeners with
+// different protocols anyway
+func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) []gatewayv1alpha2.Listener {
 	var result []gatewayv1alpha2.Listener
-	mappings := make(map[string]gatewayv1alpha2.RouteNamespaces)
+	mappings := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.RouteNamespaces)
 	for _, listener := range source {
-		if _, exists := mappings[fmt.Sprintf("%s:%d", listener.Protocol, listener.Port)]; exists {
-			return nil, fmt.Errorf("multiple listeners for a single protocol/port combination are not supported: %s:%d",
-				listener.Protocol, listener.Port)
-		}
-		mappings[fmt.Sprintf("%s:%d", listener.Protocol, listener.Port)] = *listener.AllowedRoutes.Namespaces
+		mappings[listener.Protocol] = *listener.AllowedRoutes.Namespaces
 	}
 	for _, listener := range target {
-		if namespaces, exists := mappings[fmt.Sprintf("%s:%d", listener.Protocol, listener.Port)]; exists {
+		if namespaces, exists := mappings[listener.Protocol]; exists {
+			if listener.AllowedRoutes == nil {
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{}
+			}
 			listener.AllowedRoutes.Namespaces = &namespaces
 		}
 		result = append(result, listener)
 	}
-	return result, nil
+	return result
+}
+
+// areAllowedRoutesConsistentByProtocol returns an error if a set of listeners includes multiple listeners for the same
+// protocol that do not use the same AllowedRoutes filters. Kong does not support limiting routes to a specific listen:
+// all routes are always served on all listens compatible with their protocol. As such, while we can filter the routes
+// we ingest, if we ingest routes from two incompatible filters, we will combine them into a single proxy configuration
+// It may be possible to write a new Kong plugin that checks the inbound port/address to de facto apply listen-based
+// filters in the future.
+func areAllowedRoutesConsistentByProtocol(listeners []gatewayv1alpha2.Listener) bool {
+	allowedByProtocol := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.AllowedRoutes)
+	for _, listener := range listeners {
+		var allowed gatewayv1alpha2.AllowedRoutes
+		var exists bool
+		if allowed, exists = allowedByProtocol[listener.Protocol]; !exists {
+			allowedByProtocol[listener.Protocol] = *listener.AllowedRoutes
+		} else {
+			if !reflect.DeepEqual(allowed, *listener.AllowedRoutes) {
+				return false
+			}
+		}
+	}
+	return true
 }

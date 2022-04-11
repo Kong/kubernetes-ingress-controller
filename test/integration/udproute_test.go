@@ -99,7 +99,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}()
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
-	container := generators.NewContainer("coredns", coreDNSImage, 9999)
+	container := generators.NewContainer("coredns", coreDNSImage, ktfkong.DefaultUDPServicePort)
 	container.Ports[0].Protocol = corev1.ProtocolUDP
 	container.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
 	container.Args = []string{"-conf", "/etc/coredns/Corefile"}
@@ -290,7 +290,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			Listeners: []gatewayv1alpha2.Listener{{
 				Name:     "udp",
 				Protocol: gatewayv1alpha2.UDPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(9999),
+				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort),
 			}},
 		},
 	}

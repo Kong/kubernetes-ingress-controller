@@ -13,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -134,21 +133,19 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
-		anns := ks.Services[i].K8sService.Annotations
-		kongIngress, err := getKongIngressForService(s, ks.Services[i].K8sService)
+		kongIngress, err := getKongIngressForServices(s, ks.Services[i].K8sServices)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      ks.Services[i].K8sService.Name,
-				"service_namespace": ks.Services[i].K8sService.Namespace,
-			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
+			log.Errorf("failed to fetch KongIngress resource for Services %s: %v", PrettyPrintServiceList(ks.Services[i].K8sServices), err)
+			continue
 		}
-		ks.Services[i].override(kongIngress, anns)
+
+		for _, svc := range ks.Services[i].K8sServices {
+			ks.Services[i].override(kongIngress, svc.Annotations)
+		}
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
-			var kongIngress *configurationv1.KongIngress
-			var err error
-			kongIngress, err = getKongIngressFromObjectMeta(s, &ks.Services[i].Routes[j].Ingress)
+			kongIngress, err := getKongIngressFromObjectMeta(s, &ks.Services[i].Routes[j].Ingress)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"resource_name":      ks.Services[i].Routes[j].Ingress.Name,
@@ -162,17 +159,15 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 
 	// Upstreams
 	for i := 0; i < len(ks.Upstreams); i++ {
-		kongIngress, err := getKongIngressForService(s,
-			ks.Upstreams[i].Service.K8sService)
-		anns := ks.Upstreams[i].Service.K8sService.Annotations
+		kongIngress, err := getKongIngressForServices(s, ks.Upstreams[i].Service.K8sServices)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      ks.Upstreams[i].Service.K8sService.Name,
-				"service_namespace": ks.Upstreams[i].Service.K8sService.Namespace,
-			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
+			log.Errorf("failed to fetch KongIngress resource for Services %s: %v", PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices), err)
 			continue
 		}
-		ks.Upstreams[i].override(kongIngress, anns)
+
+		for _, svc := range ks.Upstreams[i].Service.K8sServices {
+			ks.Upstreams[i].override(kongIngress, svc.Annotations)
+		}
 	}
 }
 
@@ -209,12 +204,11 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 
 	for i := range ks.Services {
 		// service
-		svc := ks.Services[i].K8sService
-		pluginList := annotations.ExtractKongPluginsFromAnnotations(
-			svc.GetAnnotations())
-		for _, pluginName := range pluginList {
-			addServiceRelation(svc.Namespace, pluginName,
-				*ks.Services[i].Name)
+		for _, svc := range ks.Services[i].K8sServices {
+			pluginList := annotations.ExtractKongPluginsFromAnnotations(svc.GetAnnotations())
+			for _, pluginName := range pluginList {
+				addServiceRelation(svc.Namespace, pluginName, *ks.Services[i].Name)
+			}
 		}
 		// route
 		for j := range ks.Services[i].Routes {

@@ -62,7 +62,7 @@ func TestHTTPRouteExample(t *testing.T) {
 
 	t.Logf("verifying that the HTTPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", gatewayAddr))
+		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
 		if err != nil {
 			return false
 		}
@@ -73,6 +73,23 @@ func TestHTTPRouteExample(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+
+	t.Logf("verifying that the backendRefs are being loadbalanced")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>Welcome to nginx!</title>")
 		}
 		return false
 	}, ingressWait, waitTick)

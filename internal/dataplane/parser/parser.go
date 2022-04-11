@@ -72,7 +72,9 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 	)
 
 	// populate any Kubernetes Service objects relevant objects
-	ingressRules.populateServices(p.logger, p.storer)
+	if err := ingressRules.populateServices(p.logger, p.storer); err != nil {
+		return nil, err
+	}
 
 	// add the routes and services to the state
 	var result kongstate.KongState
@@ -258,21 +260,81 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 }
 
 func getUpstreams(
-	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
+	log logrus.FieldLogger,
+	s store.Storer,
+	serviceMap map[string]kongstate.Service,
+) []kongstate.Upstream {
 	upstreamDedup := make(map[string]struct{}, len(serviceMap))
 	var empty struct{}
 	upstreams := make([]kongstate.Upstream, 0, len(serviceMap))
 	for _, service := range serviceMap {
-		name := fmt.Sprintf("%s.%s.%s.svc", service.Backend.Name, service.Namespace, service.Backend.Port.CanonicalString())
+		// the name of the Upstream for a service must match the service.Host
+		// as the Gateway's internal DNS resolve mechanisms will fail to properly
+		// resolve the host otherwise.
+		name := *service.Host
+
 		if _, exists := upstreamDedup[name]; !exists {
+			// populate all the kong targets for the upstream given all the backends
 			var targets []kongstate.Target
-			port, err := findPort(&service.K8sService, service.Backend.Port)
-			if err == nil {
-				targets = getServiceEndpoints(log, s, service.K8sService, port)
-			} else {
-				log.WithField("service_name", *service.Name).Warnf("skipping service - getServiceEndpoints failed: %v", err)
+			for _, backend := range service.Backends {
+				// gather the Kubernetes service for the backend
+				k8sService, ok := service.K8sServices[backend.Name]
+				if !ok {
+					log.WithField("service_name", *service.Name).Errorf("can't add target for backend %s: no kubernetes service found", backend.Name)
+					continue
+				}
+
+				// determine the port for the backend
+				port, err := findPort(k8sService, backend.PortDef)
+				if err != nil {
+					log.WithField("service_name", *service.Name).Errorf("can't find port for backend kubernetes service %s/%s: %v", k8sService.Namespace, k8sService.Name, err)
+					continue
+				}
+
+				// get the new targets for this backend service
+				newTargets := getServiceEndpoints(log, s, k8sService, port)
+
+				if len(newTargets) == 0 {
+					log.WithField("service_name", *service.Name).Errorf("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
+				}
+
+				// if weights were set for the backend then that weight needs to be
+				// distributed equally among all the targets.
+				if backend.Weight != nil && len(newTargets) != 0 {
+					// initialize the weight of the target based on the weight of the backend
+					// which governs that target (and potentially more). If the weight of the
+					// backend is 0 then this indicates an intention to drop all targets from
+					// this backend from the load-balancer and is a special situation where
+					// all derived targets will receive a weight of 0.
+					targetWeight := int(*backend.Weight)
+
+					// if the backend governing this target is not set to a weight of 0,
+					// all targets derived from the backend split the weight, therefore
+					// equally splitting the traffic load.
+					if *backend.Weight != 0 {
+						targetWeight = int(*backend.Weight) / len(newTargets)
+						// minimum weight of 1 if weight zero was not specifically set.
+						if targetWeight == 0 {
+							targetWeight = 1
+						}
+					}
+
+					for i := range newTargets {
+						newTargets[i].Weight = &targetWeight
+					}
+				}
+
+				// add the new targets to the existing pool of targets for the Upstream.
+				targets = append(targets, newTargets...)
 			}
 
+			// warn if an upstream was created with 0 targets
+			if len(targets) == 0 {
+				log.WithField("service_name", *service.Name).Warnf("no targets found to create upstream")
+			}
+
+			// define the upstream including all the newly populated targets
+			// to load-balance traffic to.
 			upstream := kongstate.Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String(name),
@@ -374,8 +436,12 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 	return res
 }
 
-func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service,
-	servicePort *corev1.ServicePort) []kongstate.Target {
+func getServiceEndpoints(
+	log logrus.FieldLogger,
+	s store.Storer,
+	svc *corev1.Service,
+	servicePort *corev1.ServicePort,
+) []kongstate.Target {
 
 	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
@@ -391,7 +457,7 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 	// check all protocols for associated endpoints
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService)
+		newEndpoints := getEndpoints(log, svc, servicePort, protocol, s.GetEndpointsForService)
 		if len(newEndpoints) > 0 {
 			endpoints = append(endpoints, newEndpoints...)
 		}
@@ -507,7 +573,7 @@ func getEndpoints(
 //       is valid for the Service and its endpoints, however we need to follow up
 //       on this as this is not technically correct and causes waste.
 //       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1429
-func listProtocols(svc corev1.Service) map[corev1.Protocol]bool {
+func listProtocols(svc *corev1.Service) map[corev1.Protocol]bool {
 	protocols := map[corev1.Protocol]bool{corev1.ProtocolTCP: true}
 	for _, port := range svc.Spec.Ports {
 		if port.Protocol != "" {

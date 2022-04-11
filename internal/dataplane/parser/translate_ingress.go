@@ -92,10 +92,10 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 							Retries:        kong.Int(DefaultRetries),
 						},
 						Namespace: ingress.Namespace,
-						Backend: kongstate.ServiceBackend{
-							Name: rule.Backend.ServiceName,
-							Port: PortDefFromIntStr(rule.Backend.ServicePort),
-						},
+						Backends: []kongstate.ServiceBackend{{
+							Name:    rule.Backend.ServiceName,
+							PortDef: PortDefFromIntStr(rule.Backend.ServicePort),
+						}},
 					}
 				}
 				service.Routes = append(service.Routes, r)
@@ -136,10 +136,10 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					Retries:        kong.Int(DefaultRetries),
 				},
 				Namespace: ingress.Namespace,
-				Backend: kongstate.ServiceBackend{
-					Name: defaultBackend.ServiceName,
-					Port: PortDefFromIntStr(defaultBackend.ServicePort),
-				},
+				Backends: []kongstate.ServiceBackend{{
+					Name:    defaultBackend.ServiceName,
+					PortDef: PortDefFromIntStr(defaultBackend.ServicePort),
+				}},
 			}
 		}
 		r := kongstate.Route{
@@ -244,10 +244,10 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 							Retries:        kong.Int(DefaultRetries),
 						},
 						Namespace: ingress.Namespace,
-						Backend: kongstate.ServiceBackend{
-							Name: rulePath.Backend.Service.Name,
-							Port: port,
-						},
+						Backends: []kongstate.ServiceBackend{{
+							Name:    rulePath.Backend.Service.Name,
+							PortDef: port,
+						}},
 					}
 				}
 				service.Routes = append(service.Routes, r)
@@ -287,10 +287,10 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					Retries:        kong.Int(DefaultRetries),
 				},
 				Namespace: ingress.Namespace,
-				Backend: kongstate.ServiceBackend{
-					Name: defaultBackend.Service.Name,
-					Port: PortDefFromServiceBackendPort(&defaultBackend.Service.Port),
-				},
+				Backends: []kongstate.ServiceBackend{{
+					Name:    defaultBackend.Service.Name,
+					PortDef: PortDefFromServiceBackendPort(&defaultBackend.Service.Port),
+				}},
 			}
 		}
 		r := kongstate.Route{

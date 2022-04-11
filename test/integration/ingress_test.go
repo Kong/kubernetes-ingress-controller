@@ -676,6 +676,7 @@ func TestDefaultIngressClass(t *testing.T) {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode < http.StatusBadRequest {
 			t.Logf("unexpected status when checking Ingress status: %v", resp.StatusCode)
 			return true

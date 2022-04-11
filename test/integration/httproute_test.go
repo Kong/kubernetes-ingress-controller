@@ -84,35 +84,56 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
-	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	container1 := generators.NewContainer("httpbin", httpBinImage, 80)
+	deployment1 := generators.NewDeploymentForContainer(container1)
+	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("deploying an extra minimal HTTP container deployment to test multiple backendRefs")
+	container2 := generators.NewContainer("nginx", "nginx", 80)
+	deployment2 := generators.NewDeploymentForContainer(container2)
+	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		if err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}); err != nil {
+		t.Log("cleaning up the deployments")
+		if err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment1.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				assert.NoError(t, err)
+			}
+		}
+		if err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
 	}()
 
-	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	t.Logf("exposing deployment %s via service", deployment1.Name)
+	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment2.Name)
+	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		if err := env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}); err != nil {
+		t.Logf("cleaning up the service %s", service1.Name)
+		if err := env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service1.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				assert.NoError(t, err)
+			}
+		}
+		if err := env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
 	}()
 
-	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
+	t.Logf("creating an httproute to access deployment %s via kong", deployment1.Name)
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
 	pathMatchRegularExpression := gatewayv1alpha2.PathMatchRegularExpression
@@ -155,7 +176,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{
 					BackendRef: gatewayv1alpha2.BackendRef{
 						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Name: gatewayv1alpha2.ObjectName(service.Name),
+							Name: gatewayv1alpha2.ObjectName(service1.Name),
 							Port: &httpPort,
 						},
 					},
@@ -201,6 +222,52 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		t.Log("verifying HTTPRoute header match")
 		eventuallyGETPath(t, "", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"})
 	}
+
+	t.Log("adding an additional backendRef to the HTTPRoute")
+	var httpbinWeight int32 = 75
+	var nginxWeight int32 = 25
+	require.Eventually(t, func() bool {
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(httproute.Namespace).Get(ctx, httproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		httproute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.HTTPBackendRef{
+			{
+				BackendRef: gatewayv1alpha2.BackendRef{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name: gatewayv1alpha2.ObjectName(service1.Name),
+						Port: &httpPort,
+					},
+					Weight: &httpbinWeight,
+				},
+			},
+			{
+				BackendRef: gatewayv1alpha2.BackendRef{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name: gatewayv1alpha2.ObjectName(service2.Name),
+						Port: &httpPort,
+					},
+					Weight: &nginxWeight,
+				},
+			},
+		}
+
+		httproute, err = c.GatewayV1alpha2().HTTPRoutes(httproute.Namespace).Update(ctx, httproute, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("WARNING: could not update httproute with an additional backendRef: %s (retrying)", err)
+			return false
+		}
+
+		return true
+	}, ingressWait, waitTick)
+
+	t.Log("verifying that weighted loadbalancing strategy is implemented properly and the nginx service is only getting 25% of the load")
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>Welcome to nginx!</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>Welcome to nginx!</title>", emptyHeaderSet)
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httproute.Spec.ParentRefs

@@ -179,10 +179,10 @@ func generateKongServiceFromUDPRouteBackendRef(result *ingressRules, udproute *g
 				Retries:        kong.Int(DefaultRetries),
 			},
 			Namespace: udproute.Namespace,
-			Backend: kongstate.ServiceBackend{
-				Name: string(backendRef.Name),
-				Port: port,
-			},
+			Backends: []kongstate.ServiceBackend{{
+				Name:    string(backendRef.Name),
+				PortDef: port,
+			}},
 		}
 	}
 

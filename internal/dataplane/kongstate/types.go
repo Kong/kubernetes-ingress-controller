@@ -23,6 +23,7 @@ type PortDef struct {
 
 	// Name is the port name as stated in the Kubernetes service. Must be set iff Mode == PortModeName.
 	Name string
+
 	// Number is the port number. Must be set iff PortMode == PortModeNumber.
 	Number int32
 }
@@ -42,9 +43,12 @@ func (p *PortDef) CanonicalString() string {
 }
 
 type ServiceBackend struct {
-	Name string
-	Port PortDef
+	Name    string
+	PortDef PortDef
+	Weight  *int32
 }
+
+type ServiceBackends []ServiceBackend
 
 // Target is a wrapper around Target object in Kong.
 type Target struct {

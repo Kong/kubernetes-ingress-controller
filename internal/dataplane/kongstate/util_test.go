@@ -1,14 +1,17 @@
 package kongstate
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -282,6 +285,216 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				return
 			}
 			assert.Equal(tt.want, got)
+		})
+	}
+}
+
+func Test_getKongIngressForServices(t *testing.T) {
+	for _, tt := range []struct {
+		name                string
+		services            map[string]*corev1.Service
+		kongIngresses       []*configurationv1.KongIngress
+		expectedKongIngress *configurationv1.KongIngress
+		expectedError       error
+	}{
+		{
+			name: "when no services are provided, no KongIngress will be provided",
+			kongIngresses: []*configurationv1.KongIngress{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongingress1",
+					Namespace: corev1.NamespaceDefault,
+				},
+			}},
+		},
+		{
+			name: "when none of the provided services have attached KongIngress resources, no KongIngress resources will be provided",
+			services: map[string]*corev1.Service{
+				"test-service1": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+				"test-service2": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service2",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			kongIngresses: []*configurationv1.KongIngress{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongingress1",
+					Namespace: corev1.NamespaceDefault,
+				},
+			}},
+		},
+		{
+			name: "if at least one KongIngress resource is attached to a Service, it will be returned",
+			services: map[string]*corev1.Service{
+				"test-service1": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service1",
+						Namespace: corev1.NamespaceDefault,
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress2",
+						},
+					},
+				},
+				"test-service2": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service2",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress2",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expectedKongIngress: &configurationv1.KongIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongingress2",
+					Namespace: corev1.NamespaceDefault,
+				},
+			},
+		},
+		{
+			name: "if multiple services have KongIngress resources this is accepted only if they're all attached to the same KongIngress",
+			services: map[string]*corev1.Service{
+				"test-service1": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service1",
+						Namespace: corev1.NamespaceDefault,
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress2",
+						},
+					},
+				},
+				"test-service2": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service2",
+						Namespace: corev1.NamespaceDefault,
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress2",
+						},
+					},
+				},
+				"test-service3": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service3",
+						Namespace: corev1.NamespaceDefault,
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress2",
+						},
+					},
+				},
+			},
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress2",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress3",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expectedKongIngress: &configurationv1.KongIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongingress2",
+					Namespace: corev1.NamespaceDefault,
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			storer, err := store.NewFakeStore(store.FakeObjects{
+				KongIngresses: tt.kongIngresses,
+			})
+			require.NoError(t, err)
+
+			kongIngress, err := getKongIngressForServices(storer, tt.services)
+			if tt.expectedError == nil {
+				assert.Equal(t, tt.expectedKongIngress, kongIngress)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError.Error())
+			}
+		})
+	}
+}
+
+func Test_prettyPrintServiceList(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		services map[string]*corev1.Service
+		expected string
+	}{
+		{
+			name:     "an empty list of services produces an empty string",
+			expected: "",
+		},
+		{
+			name: "a single service should just return the <namespace>/<name>",
+			services: map[string]*corev1.Service{
+				"test-service1": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expected: "default/test-service1",
+		},
+		{
+			name: "multiple services should be comma deliniated",
+			services: map[string]*corev1.Service{
+				"test-service1": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+				"test-service2": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service2",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+				"test-service3": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service3",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expected: "default/test-service[0-9], default/test-service[0-9], default/test-service[0-9]",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			re := regexp.MustCompile(tt.expected)
+			assert.True(t, re.MatchString(PrettyPrintServiceList(tt.services)))
 		})
 	}
 }

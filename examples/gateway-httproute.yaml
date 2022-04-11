@@ -41,6 +41,42 @@ spec:
     app: httpbin
   type: ClusterIP
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+  type: ClusterIP
+---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
@@ -62,7 +98,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: HTTPRoute
 metadata:
-  name: httpbin
+  name: httproute-testing
 spec:
   parentRefs:
   - name: kong
@@ -70,7 +106,11 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /httpbin
+        value: /httproute-testing
     backendRefs:
     - name: httpbin
       port: 80
+      weight: 75
+    - name: nginx
+      port: 8080
+      weight: 25

@@ -1,8 +1,12 @@
 package parser
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 
@@ -37,42 +41,59 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 	return result
 }
 
-func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer) {
+func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer) error {
 	// populate Kubernetes Service
 	for key, service := range ir.ServiceNameToServices {
-		k8sSvc, err := s.GetService(service.Namespace, service.Backend.Name)
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      service.Backend.Name,
-				"service_namespace": service.Namespace,
-			}).Errorf("failed to fetch service: %v", err)
+		if service.K8sServices == nil {
+			service.K8sServices = make(map[string]*corev1.Service)
 		}
-		if k8sSvc != nil {
-			service.K8sService = *k8sSvc
+
+		// collect all the Kubernetes services configured for the service backends,
+		// and all the annotations in use across all services (when applicable).
+		k8sServices, seenAnnotations := getK8sServicesForBackends(log, s, service.Namespace, service.Backends)
+
+		// if the Kubernetes services have been deemed invalid, no need to continue
+		// they will all be dropped until the problem has been rectified.
+		if !servicesAllUseTheSameKongAnnotations(log, k8sServices, seenAnnotations) {
+			return fmt.Errorf("the following Kubernetes services were all configured together as the backends "+
+				"for a Kong Service named %s: %+v. These services had disparate KongIngress overrides which is not allowed: "+
+				" when configuring multiple Kubernetes Services as backends (e.g. backendRefs in HTTPRoutes) it is required "+
+				" that all of them have matching KongIngress override annotations", *service.Name, k8sServices)
 		}
-		secretName := annotations.ExtractClientCertificate(
-			service.K8sService.GetAnnotations())
-		if secretName != "" {
-			secret, err := s.GetSecret(service.K8sService.Namespace,
-				secretName)
-			secretKey := service.K8sService.Namespace + "/" + secretName
-			// ensure that the cert is loaded into Kong
-			if _, ok := ir.SecretNameToSNIs[secretKey]; !ok {
-				ir.SecretNameToSNIs[secretKey] = []string{}
-			}
-			if err == nil {
-				service.ClientCertificate = &kong.Certificate{
-					ID: kong.String(string(secret.UID)),
+
+		for _, k8sService := range k8sServices {
+			// at this point we know the Kubernetes service itself is valid and can be
+			// used for traffic, so cache it amongst the kong Services k8s services.
+			service.K8sServices[k8sService.Name] = k8sService
+
+			// extract client certificates intended for use by the service
+			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
+			if secretName != "" {
+				secret, err := s.GetSecret(k8sService.Namespace, secretName)
+				secretKey := k8sService.Namespace + "/" + secretName
+				// ensure that the cert is loaded into Kong
+				if _, ok := ir.SecretNameToSNIs[secretKey]; !ok {
+					ir.SecretNameToSNIs[secretKey] = []string{}
 				}
-			} else {
-				log.WithFields(logrus.Fields{
-					"secret_name":      secretName,
-					"secret_namespace": service.K8sService.Namespace,
-				}).Errorf("failed to fetch secret: %v", err)
+				if err == nil {
+					service.ClientCertificate = &kong.Certificate{
+						ID: kong.String(string(secret.UID)),
+					}
+				} else {
+					log.WithFields(logrus.Fields{
+						"secret_name":      secretName,
+						"secret_namespace": k8sService.Namespace,
+					}).Errorf("failed to fetch secret: %v", err)
+				}
 			}
 		}
+
+		// Kubernetes Services have been populated for this Kong Service, so it can
+		// now be cached.
 		ir.ServiceNameToServices[key] = service
 	}
+
+	return nil
 }
 
 type SecretNameToSNIs map[string][]string
@@ -122,4 +143,84 @@ func (m SecretNameToSNIs) filterHosts(hosts []string) []string {
 		}
 	}
 	return hostsToAdd
+}
+
+func getK8sServicesForBackends(
+	log logrus.FieldLogger,
+	storer store.Storer,
+	namespace string,
+	backends kongstate.ServiceBackends,
+) ([]*corev1.Service, map[string]string) {
+	// we collect all annotations seen for this group of services so that these
+	// can be later validated.
+	seenAnnotationsForK8sServices := make(map[string]string)
+
+	// for each backend (which is a reference to a Kubernetes Service object)
+	// retreieve that backend and capture any Kong annotations its using.
+	k8sServices := make([]*corev1.Service, 0, len(backends))
+	for _, backend := range backends {
+		k8sService, err := storer.GetService(namespace, backend.Name)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"service_name":      backend.PortDef.Name,
+				"service_namespace": namespace,
+			}).Errorf("failed to fetch service: %v", err)
+			continue
+		}
+		if k8sService != nil {
+			// record all Kong annotations in use by the service
+			for k, v := range k8sService.GetAnnotations() {
+				if strings.HasPrefix(k, annotations.AnnotationPrefix) {
+					seenAnnotationsForK8sServices[k] = v
+				}
+			}
+
+			// add the service to the list of backend services
+			k8sServices = append(k8sServices, k8sService)
+		}
+	}
+
+	return k8sServices, seenAnnotationsForK8sServices
+}
+
+func servicesAllUseTheSameKongAnnotations(
+	log logrus.FieldLogger,
+	services []*corev1.Service,
+	annotations map[string]string,
+) bool {
+	match := true
+	for _, service := range services {
+		// all services grouped together via backends must have identical annotations
+		// to avoid unexpected routing behaviors.
+		//
+		// TODO: ultimately we should be able to do this validation in our normal
+		// validation layer, but we're limited at present on where and how that
+		// validation can work. We should be able to move this validation there
+		// once https://github.com/Kong/kubernetes-ingress-controller/issues/2195
+		// is resolved.
+		for k, v := range annotations {
+			valueForThisObject, ok := service.Annotations[k]
+			if !ok {
+				log.WithFields(logrus.Fields{
+					"service_name":      service.Name,
+					"service_namespace": service.Namespace,
+				}).Errorf("in the backend group of %d kubernetes services some have the %s annotation while others don't. "+
+					"this is not supported: when multiple services comprise a backend all kong annotations "+
+					"between them must be set to the same value", len(services), k)
+				match = false
+			}
+
+			if valueForThisObject != v {
+				log.WithFields(logrus.Fields{
+					"service_name":      service.Name,
+					"service_namespace": service.Namespace,
+				}).Errorf("the value of annotation %s is different between the %d services which comprise this backend. "+
+					"this is not supported: when multiple services comprise a backend all kong annotations "+
+					"between them must be set to the same value", k, len(services))
+				match = false
+			}
+		}
+	}
+
+	return match
 }

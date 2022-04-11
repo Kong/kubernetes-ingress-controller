@@ -68,11 +68,6 @@ func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.
 			return fmt.Errorf("missing backendRef in rule")
 		}
 
-		// TODO: support multiple backend refs
-		if len(rule.BackendRefs) > 1 {
-			return fmt.Errorf("multiple backendRefs are not yet supported")
-		}
-
 		// determine the routes needed to route traffic to services for this rule
 		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule)
 		if err != nil {
@@ -80,7 +75,10 @@ func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.
 		}
 
 		// create a service and attach the routes to it
-		service := generateKongServiceFromHTTPRouteBackendRef(result, httproute, rule.BackendRefs[0])
+		service, err := generateKongServiceFromHTTPRouteBackendRef(result, httproute, ruleNumber, rule.BackendRefs...)
+		if err != nil {
+			return err
+		}
 		service.Routes = append(service.Routes, routes...)
 
 		// cache the service to avoid duplicates in further loop iterations
@@ -215,22 +213,38 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 
 // generateKongServiceFromHTTPRouteBackendRef converts a provided backendRef for an HTTPRoute
 // into a kong.Service so that routes for that object can be attached to the Service.
-func generateKongServiceFromHTTPRouteBackendRef(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute, backendRef gatewayv1alpha2.HTTPBackendRef) kongstate.Service {
-	// determine the service namespace
-	// TODO: need to add validation to restrict namespaces in backendRefs
-	namespace := httproute.Namespace
-	if backendRef.Namespace != nil {
-		namespace = string(*backendRef.Namespace)
+func generateKongServiceFromHTTPRouteBackendRef(
+	result *ingressRules,
+	httproute *gatewayv1alpha2.HTTPRoute,
+	ruleNumber int,
+	backendRefs ...gatewayv1alpha2.HTTPBackendRef,
+) (kongstate.Service, error) {
+	// at least one backendRef must be present
+	if len(backendRefs) == 0 {
+		return kongstate.Service{}, fmt.Errorf("no backendRefs present for HTTPRoute %s/%s", httproute.Namespace, httproute.Name)
 	}
 
-	// determine the name of the Service
-	serviceName := fmt.Sprintf("%s.%s.%d", namespace, backendRef.Name, *backendRef.Port)
-
-	// determine the Service port
-	port := kongstate.PortDef{
-		Mode:   kongstate.PortModeByNumber,
-		Number: int32(*backendRef.Port),
+	// create a kongstate backend for each HTTPRoute backendRef
+	backends := make(kongstate.ServiceBackends, 0, len(backendRefs))
+	for _, backendRef := range backendRefs {
+		// convert each backendRef into a kongstate.ServiceBackend
+		backends = append(backends, kongstate.ServiceBackend{
+			Name: string(backendRef.Name),
+			PortDef: kongstate.PortDef{
+				Mode:   kongstate.PortModeByNumber,
+				Number: int32(*backendRef.Port),
+			},
+			Weight: backendRef.Weight,
+		})
 	}
+
+	// the service name needs to uniquely identify this service given it's list of
+	// one or more backends.
+	serviceName := fmt.Sprintf("%s.%d", getUniqueKongServiceNameForObject(httproute), ruleNumber)
+
+	// the service host needs to be a resolvable name due to legacy logic so we'll
+	// use the anchor backendRef as the basis for the name
+	serviceHost := serviceName
 
 	// check if the service is already known, and if not create it
 	service, ok := result.ServiceNameToServices[serviceName]
@@ -238,8 +252,7 @@ func generateKongServiceFromHTTPRouteBackendRef(result *ingressRules, httproute 
 		service = kongstate.Service{
 			Service: kong.Service{
 				Name:           kong.String(serviceName),
-				Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", backendRef.Name, namespace, port.CanonicalString())),
-				Port:           kong.Int(int(*backendRef.Port)),
+				Host:           kong.String(serviceHost),
 				Protocol:       kong.String("http"),
 				Path:           kong.String("/"),
 				ConnectTimeout: kong.Int(DefaultServiceTimeout),
@@ -248,12 +261,9 @@ func generateKongServiceFromHTTPRouteBackendRef(result *ingressRules, httproute 
 				Retries:        kong.Int(DefaultRetries),
 			},
 			Namespace: httproute.Namespace,
-			Backend: kongstate.ServiceBackend{
-				Name: string(backendRef.Name),
-				Port: port,
-			},
+			Backends:  backends,
 		}
 	}
 
-	return service
+	return service, nil
 }

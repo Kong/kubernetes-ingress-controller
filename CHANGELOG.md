@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.4.0](#240)
  - [2.3.1](#231)
  - [2.3.0](#230)
  - [2.2.1](#221)
@@ -45,6 +46,19 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.4.0]
+
+> Release date: TBD
+
+#### Added
+
+- `HTTPRoute` resources now support multiple `backendRefs` with a round-robin
+  load-balancing strategy applied by default across the `Endpoints` or the
+  `Services` (if the `ingress.kubernetes.io/service-upstream`
+  annotation is set). They also now support weights to enable more
+  fine-tuning of the load-balancing between those backend services.
+  [#2166](https://github.com/Kong/kubernetes-ingress-controller/issues/2166)
 
 ## [2.3.1]
 
@@ -1658,7 +1672,8 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.0...v2.3.1
+[2.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.1...v2.4.0
+[2.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.1...v2.2.0

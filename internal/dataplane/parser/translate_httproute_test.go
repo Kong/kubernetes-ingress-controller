@@ -8,11 +8,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
+
+// httprouteGVK is the GVK for HTTPRoutes, needed in unit tests because
+// we have to manually initialize objects that aren't retrieved from the
+// Kubernetes API.
+var httprouteGVK = schema.GroupVersionKind{
+	Group:   "gateway.networking.k8s.io",
+	Version: "v1alpha2",
+	Kind:    "HTTPRoute",
+}
 
 func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 	httpPort := gatewayv1alpha2.PortNumber(80)
@@ -66,25 +76,24 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 			expected: ingressRules{
 				SecretNameToSNIs: SecretNameToSNIs{},
 				ServiceNameToServices: map[string]kongstate.Service{
-					"default.fake-service.80": {
+					"httproute.default.basic-httproute.0": {
 						Service: kong.Service{ // only 1 service should be created
 							ConnectTimeout: kong.Int(60000),
-							Host:           kong.String("fake-service.default.80.svc"),
-							Name:           kong.String("default.fake-service.80"),
+							Host:           kong.String("httproute.default.basic-httproute.0"),
+							Name:           kong.String("httproute.default.basic-httproute.0"),
 							Path:           kong.String("/"),
-							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
 							WriteTimeout:   kong.Int(60000),
 						},
-						Backend: kongstate.ServiceBackend{
+						Backends: kongstate.ServiceBackends{{
 							Name: "fake-service",
-							Port: kongstate.PortDef{
+							PortDef: kongstate.PortDef{
 								Mode:   kongstate.PortMode(1),
 								Number: 80,
 							},
-						},
+						}},
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
@@ -105,7 +114,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 							},
 						}},
-						K8sService: corev1.Service{},
 					},
 				},
 			},
@@ -179,25 +187,24 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 			expected: ingressRules{
 				SecretNameToSNIs: SecretNameToSNIs{},
 				ServiceNameToServices: map[string]kongstate.Service{
-					"default.fake-service.80": {
+					"httproute.default.basic-httproute.0": {
 						Service: kong.Service{ // only 1 service should be created
 							ConnectTimeout: kong.Int(60000),
-							Host:           kong.String("fake-service.default.80.svc"),
-							Name:           kong.String("default.fake-service.80"),
+							Host:           kong.String("httproute.default.basic-httproute.0"),
+							Name:           kong.String("httproute.default.basic-httproute.0"),
 							Path:           kong.String("/"),
-							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
 							WriteTimeout:   kong.Int(60000),
 						},
-						Backend: kongstate.ServiceBackend{
+						Backends: kongstate.ServiceBackends{{
 							Name: "fake-service",
-							Port: kongstate.PortDef{
+							PortDef: kongstate.PortDef{
 								Mode:   kongstate.PortMode(1),
 								Number: 80,
 							},
-						},
+						}},
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
@@ -217,7 +224,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 							},
 						}},
-						K8sService: corev1.Service{},
 					},
 				},
 			},
@@ -319,25 +325,24 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 			expected: ingressRules{
 				SecretNameToSNIs: SecretNameToSNIs{},
 				ServiceNameToServices: map[string]kongstate.Service{
-					"default.fake-service.80": {
+					"httproute.default.basic-httproute.0": {
 						Service: kong.Service{ // only 1 service should be created
 							ConnectTimeout: kong.Int(60000),
-							Host:           kong.String("fake-service.default.80.svc"),
-							Name:           kong.String("default.fake-service.80"),
+							Host:           kong.String("httproute.default.basic-httproute.0"),
+							Name:           kong.String("httproute.default.basic-httproute.0"),
 							Path:           kong.String("/"),
-							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
 							WriteTimeout:   kong.Int(60000),
 						},
-						Backend: kongstate.ServiceBackend{
+						Backends: kongstate.ServiceBackends{{
 							Name: "fake-service",
-							Port: kongstate.PortDef{
+							PortDef: kongstate.PortDef{
 								Mode:   kongstate.PortMode(1),
 								Number: 80,
 							},
-						},
+						}},
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
@@ -357,7 +362,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 							},
 						}},
-						K8sService: corev1.Service{},
 					},
 				},
 			},
@@ -396,25 +400,24 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 			expected: ingressRules{
 				SecretNameToSNIs: SecretNameToSNIs{},
 				ServiceNameToServices: map[string]kongstate.Service{
-					"default.fake-service.80": {
+					"httproute.default.basic-httproute.0": {
 						Service: kong.Service{ // only 1 service should be created
 							ConnectTimeout: kong.Int(60000),
-							Host:           kong.String("fake-service.default.80.svc"),
-							Name:           kong.String("default.fake-service.80"),
+							Host:           kong.String("httproute.default.basic-httproute.0"),
+							Name:           kong.String("httproute.default.basic-httproute.0"),
 							Path:           kong.String("/"),
-							Port:           kong.Int(80),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
 							WriteTimeout:   kong.Int(60000),
 						},
-						Backend: kongstate.ServiceBackend{
+						Backends: kongstate.ServiceBackends{{
 							Name: "fake-service",
-							Port: kongstate.PortDef{
+							PortDef: kongstate.PortDef{
 								Mode:   kongstate.PortMode(1),
 								Number: 80,
 							},
-						},
+						}},
 						Namespace: "default",
 						Routes: []kongstate.Route{{ // only 1 route should be created
 							Route: kong.Route{
@@ -434,7 +437,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 							},
 						}},
-						K8sService: corev1.Service{},
 					},
 				},
 			},
@@ -445,6 +447,9 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 
 			var errs []error
 			for _, httproute := range tt.routes {
+				// initialize the HTTPRoute object
+				httproute.SetGroupVersionKind(httprouteGVK)
+
 				// generate the ingress rules
 				err := ingressRulesFromHTTPRoute(&ingressRules, httproute)
 				if err != nil {

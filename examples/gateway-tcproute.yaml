@@ -1,0 +1,76 @@
+# WARNING: Gateway APIs support is still experimental. Use as your own risk.
+#
+# NOTE: You need to install the Gateway APIs CRDs before using this example,
+#       they are external and can be deployed with the following one-liner:
+#
+# kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master | kubectl apply -f -
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tcpecho
+  labels:
+    app: tcpecho
+spec:
+  selector:
+    matchLabels:
+      app: tcpecho
+  template:
+    metadata:
+      labels:
+        app: tcpecho
+    spec:
+      containers:
+      - name: tcpecho
+        image: cjimti/go-echo
+        ports:
+        - containerPort: 1025
+        env:
+        - name: POD_NAME
+          value: tcproute-example-manifest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tcpecho
+spec:
+  ports:
+  - port: 8888
+    protocol: TCP
+    targetPort: 1025
+  selector:
+    app: tcpecho
+  type: ClusterIP
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1alpha2
+metadata:
+  name: kong
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1alpha2
+metadata:
+  name: kong
+spec:
+  gatewayClassName: kong
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+  - name: tcp
+    protocol: TCP
+    port: 8888
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcpecho
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - backendRefs:
+    - name: tcpecho
+      port: 8888

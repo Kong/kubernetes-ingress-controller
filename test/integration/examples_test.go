@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -127,6 +128,32 @@ func TestUDPRouteExample(t *testing.T) {
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err == nil
+	}, ingressWait, waitTick)
+}
+
+var tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
+
+func TestTCPRouteExample(t *testing.T) {
+	t.Parallel()
+
+	t.Log("locking Gateway TCP ports")
+	tcpMutex.Lock()
+	defer tcpMutex.Unlock()
+
+	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
+	b, err := os.ReadFile(tcprouteExampleManifests)
+	require.NoError(t, err)
+	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+
+	defer func() {
+		t.Logf("deleting tcproute example")
+		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+	}()
+
+	t.Log("verifying that TCPRoute becomes routable")
+	require.Eventually(t, func() bool {
+		responds, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
+		return err == nil && responds
 	}, ingressWait, waitTick)
 }
 

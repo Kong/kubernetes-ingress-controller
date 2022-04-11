@@ -53,6 +53,8 @@
 
 #### Added
 
+- `TCPRoute` resources are now supported.
+  [#2086](https://github.com/Kong/kubernetes-ingress-controller/issues/2086)
 - `HTTPRoute` resources now support multiple `backendRefs` with a round-robin
   load-balancing strategy applied by default across the `Endpoints` or the
   `Services` (if the `ingress.kubernetes.io/service-upstream`

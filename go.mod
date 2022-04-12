@@ -14,7 +14,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.11.0
 	github.com/kong/go-kong v0.29.0
-	github.com/kong/kubernetes-testing-framework v0.13.2
+	github.com/kong/kubernetes-testing-framework v0.13.3
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.48
 	github.com/mitchellh/mapstructure v1.4.3
@@ -56,7 +56,7 @@ require (
 	github.com/containerd/containerd v1.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.0+incompatible // indirect
-	github.com/docker/docker v20.10.13+incompatible // indirect
+	github.com/docker/docker v20.10.14+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect

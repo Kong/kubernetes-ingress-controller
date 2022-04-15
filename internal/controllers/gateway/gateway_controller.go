@@ -34,10 +34,6 @@ var (
 	// due to a Gateway that is not properly configured for unmanaged mode.
 	ManagedGatewaysUnsupported = fmt.Errorf("invalid gateway spec: managed gateways are not currently supported") //nolint:revive
 	gatewayV1alpha2Group       = gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
-	protocolToRouteGroupKind   = map[corev1.Protocol]gatewayv1alpha2.RouteGroupKind{
-		corev1.ProtocolTCP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TCPRoute")},
-		corev1.ProtocolUDP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("UDPRoute")},
-	}
 )
 
 // -----------------------------------------------------------------------------
@@ -294,6 +290,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 
+	if !areAllowedRoutesConsistentByProtocol(gateway.Spec.Listeners) {
+		return ctrl.Result{}, fmt.Errorf("all listeners for a protocol must use the same AllowedRoutes")
+	}
+
 	// When deployed on Kubernetes Kong can not be relied on for the address data needed for Gateway because
 	// it's commonly deployed in a way agnostic to the container network (e.g. it's simply configured with
 	// 0.0.0.0 as the address for its listeners internally). In order to get addresses we have to derive them
@@ -309,10 +309,6 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	gatewayListeners, err = r.determineListenersFromDataPlane(ctx, svc, gatewayListeners)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-
-	if !areAllowedRoutesConsistentByProtocol(gateway.Spec.Listeners) {
-		return ctrl.Result{}, fmt.Errorf("all listeners for a protocol must use the same AllowedRoutes")
 	}
 
 	gatewayListeners = mergeAllowedRoutes(gateway.Spec.Listeners, gatewayListeners)
@@ -414,6 +410,10 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	// for all service types we're going to capture the ClusterIP
 	addresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(svc.Spec.ClusterIPs))
 	listeners := make([]gatewayv1alpha2.Listener, 0, len(svc.Spec.Ports))
+	protocolToRouteGroupKind := map[corev1.Protocol]gatewayv1alpha2.RouteGroupKind{
+		corev1.ProtocolTCP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TCPRoute")},
+		corev1.ProtocolUDP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("UDPRoute")},
+	}
 	for _, clusterIP := range svc.Spec.ClusterIPs {
 		addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
 			Type:  &gatewayIPAddrType,
@@ -576,9 +576,8 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 // to account for same-protocol listeners in the source set having different AllowedRoutes: it assumes
 // areAllowedRoutesConsistentByProtocol has been run first because Kong would not support multiple listeners with
 // different protocols anyway
-func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) []gatewayv1alpha2.Listener {
-	var result []gatewayv1alpha2.Listener
-	mappings := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.RouteNamespaces)
+func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) (merged []gatewayv1alpha2.Listener) {
+	mappings := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.RouteNamespaces, len(target))
 	for _, listener := range source {
 		mappings[listener.Protocol] = *listener.AllowedRoutes.Namespaces
 	}
@@ -589,9 +588,9 @@ func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) []gatewayv1al
 			}
 			listener.AllowedRoutes.Namespaces = &namespaces
 		}
-		result = append(result, listener)
+		merged = append(merged, listener)
 	}
-	return result
+	return merged
 }
 
 // areAllowedRoutesConsistentByProtocol returns an error if a set of listeners includes multiple listeners for the same

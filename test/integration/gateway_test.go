@@ -440,7 +440,7 @@ func TestGatewayFilters(t *testing.T) {
 		}
 	}()
 
-	t.Log("deploying a gateway that only allows routes in all namespaces")
+	t.Log("deploying a gateway that allows routes in all namespaces")
 	fromSame := gatewayv1alpha2.NamespacesFromSame
 	fromAll := gatewayv1alpha2.NamespacesFromAll
 	fromSelector := gatewayv1alpha2.NamespacesFromSelector
@@ -498,7 +498,7 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
+		t.Logf("cleaning up deployments %s/%s and %s/%s", ns.Name, deployment.Name, other.Name, otherDeployment.Name)
 		if err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
@@ -519,7 +519,7 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
+		t.Logf("cleaning up the services %s/%s and %s/%s", ns.Name, service.Name, other.Name, service.Name)
 		if err := env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
@@ -629,7 +629,7 @@ func TestGatewayFilters(t *testing.T) {
 	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
-	t.Log("confirming other namespace route becomes inacessible")
+	t.Log("confirming other namespace route becomes inaccessible")
 	eventuallyGETPath(t, "otherbin", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 	t.Log("confirming same namespace route still operational")
 	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
@@ -674,7 +674,7 @@ func TestGatewayFilters(t *testing.T) {
 	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
-	t.Log("confirming wrong selector namespace route becomes inacesible")
+	t.Log("confirming wrong selector namespace route becomes inaccessible")
 	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 	t.Log("confirming right selector namespace route becomes operational")
 	eventuallyGETPath(t, "otherbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)

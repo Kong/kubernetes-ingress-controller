@@ -71,6 +71,15 @@
   protocol.
   [#2389](https://github.com/Kong/kubernetes-ingress-controller/issues/2389)
 
+#### Fixed
+- Added a mechanism to retry the initial connection to the Kong
+  Admin API on controller start to fix an issue where the controller
+  pod could crash loop on start when waiting for Gateway readiness 
+  (e.g. if the Gateway is waiting for its database to initialize). 
+  The new retry mechanism can be manually configured using the 
+  `--kong-admin-init-retries` and `--kong-admin-init-retry-delay` flags.
+  [#2274](https://github.com/Kong/kubernetes-ingress-controller/issues/2274)
+
 ## [2.3.1]
 
 > Release date: 2022-04-07

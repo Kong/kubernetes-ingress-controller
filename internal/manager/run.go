@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/kong/go-kong/kong"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -64,15 +65,30 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	setupLog.Info("getting the kong admin api client configuration")
-	kongConfig, err := setupKongConfig(ctx, setupLog, c)
+	adminClient, err := c.GetKongClient(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to build the kong admin api configuration: %w", err)
+		return fmt.Errorf("unable to build kong api client: %w", err)
 	}
 
-	kongRoot, err := kongConfig.Client.Root(ctx)
+	var kongRoot map[string]interface{}
+	err = retry.Do(
+		func() error {
+			kongRoot, err = adminClient.Root(ctx)
+			return err
+		},
+		retry.Attempts(c.KongAdminInitializationRetries),
+		retry.Delay(c.KongAdminInitializationRetryDelay),
+		retry.DelayType(retry.FixedDelay),
+		retry.OnRetry(func(n uint, err error) {
+			setupLog.Info("Retrying kong admin api client call #%d/%d after error: %w", n, c.KongAdminInitializationRetries, err)
+		}),
+	)
+
 	if err != nil {
 		return fmt.Errorf("could not retrieve Kong admin root: %w", err)
 	}
+
+	kongConfig := setupKongConfig(ctx, adminClient, setupLog, c)
 	kongVersion, err := kong.ParseSemanticVersion(kong.VersionFromInfo(kongRoot))
 	if err != nil {
 		setupLog.V(util.WarnLevel).Info("could not parse Kong version, version-specific behavior disabled", "error", err)

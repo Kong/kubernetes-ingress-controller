@@ -9,6 +9,7 @@ import (
 
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -105,12 +106,7 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 	return controllerOpts, nil
 }
 
-func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendconfig.Kong, error) {
-	kongClient, err := c.GetKongClient(ctx)
-	if err != nil {
-		return sendconfig.Kong{}, fmt.Errorf("unable to build kong api client: %w", err)
-	}
-
+func setupKongConfig(ctx context.Context, kongClient *kong.Client, logger logr.Logger, c *Config) sendconfig.Kong {
 	var filterTags []string
 	if ok, err := kongClient.Tags.Exists(ctx); err != nil {
 		logger.Error(err, "tag filtering disabled because Kong Admin API does not support tags")
@@ -119,15 +115,13 @@ func setupKongConfig(ctx context.Context, logger logr.Logger, c *Config) (sendco
 		filterTags = c.FilterTags
 	}
 
-	cfg := sendconfig.Kong{
+	return sendconfig.Kong{
 		URL:               c.KongAdminURL,
 		FilterTags:        filterTags,
 		Concurrency:       c.Concurrency,
 		Client:            kongClient,
 		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
 	}
-
-	return cfg, nil
 }
 
 func setupDataplaneSynchronizer(

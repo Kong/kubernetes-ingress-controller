@@ -32,12 +32,14 @@ type Config struct {
 	LogReduceRedundancy bool
 
 	// Kong high-level controller manager configurations
-	KongAdminAPIConfig adminapi.HTTPClientOpts
-	KongAdminToken     string
-	KongWorkspace      string
-	AnonymousReports   bool
-	EnableReverseSync  bool
-	SyncPeriod         time.Duration
+	KongAdminAPIConfig                adminapi.HTTPClientOpts
+	KongAdminInitializationRetries    uint
+	KongAdminInitializationRetryDelay time.Duration
+	KongAdminToken                    string
+	KongWorkspace                     string
+	AnonymousReports                  bool
+	EnableReverseSync                 bool
+	SyncPeriod                        time.Duration
 
 	// Kong Proxy configurations
 	APIServerHost            string
@@ -113,6 +115,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "", `PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
 
 	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil, `add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
+	flagSet.UintVar(&c.KongAdminInitializationRetries, "kong-admin-init-retries", 60, "Number of attempts that will be made initially on controller startup to connect to the Kong Admin API")
+	flagSet.DurationVar(&c.KongAdminInitializationRetryDelay, "kong-admin-init-retry-delay", time.Second*1, "The time delay between every attempt (on controller startup) to connect to the Kong Admin API")
 	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "", `The Kong Enterprise RBAC token used by the controller.`)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)

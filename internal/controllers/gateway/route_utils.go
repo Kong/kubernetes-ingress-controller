@@ -90,7 +90,11 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 			// set true if we find any AllowedRoutes. there may be none, in which case any namespace is permitted
 			filtered := false
 			for _, listener := range gateway.Spec.Listeners {
-				// Only match if the listener type matches the protocol type
+				// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2408
+				// This currently only performs a baseline filter to ensure that routes cannot match based on namespace
+				// criteria on a listener that cannot possibly handle them (e.g. an HTTPRoute should not be included
+				// based on matching a filter for a UDP listener). This needs to be expanded to an allowedRoutes.kind
+				// implementation with default allowed kinds when there's no user-specified filter.
 				switch obj.(type) {
 				case *gatewayv1alpha2.HTTPRoute:
 					if !(listener.Protocol == gatewayv1alpha2.HTTPProtocolType || listener.Protocol == gatewayv1alpha2.HTTPSProtocolType) {
@@ -146,6 +150,8 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 	}
 
 	if len(gateways) == 0 {
+		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2417 separate out various rejected reasons
+		// and apply specific statuses for those failures in the Route controllers
 		return nil, fmt.Errorf(unsupportedGW)
 	}
 

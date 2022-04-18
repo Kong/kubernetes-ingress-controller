@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -86,11 +88,72 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 		// if the GatewayClass matches this controller we're all set and this controller
 		// should reconcile this object.
 		if gatewayClass.Spec.ControllerName == ControllerName {
-			gateways = append(gateways, &gateway)
+			allowedNamespaces := make(map[string]interface{})
+			// set true if we find any AllowedRoutes. there may be none, in which case any namespace is permitted
+			filtered := false
+			for _, listener := range gateway.Spec.Listeners {
+				// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2408
+				// This currently only performs a baseline filter to ensure that routes cannot match based on namespace
+				// criteria on a listener that cannot possibly handle them (e.g. an HTTPRoute should not be included
+				// based on matching a filter for a UDP listener). This needs to be expanded to an allowedRoutes.kind
+				// implementation with default allowed kinds when there's no user-specified filter.
+				switch obj.(type) {
+				case *gatewayv1alpha2.HTTPRoute:
+					if !(listener.Protocol == gatewayv1alpha2.HTTPProtocolType || listener.Protocol == gatewayv1alpha2.HTTPSProtocolType) {
+						continue
+					}
+				case *gatewayv1alpha2.TCPRoute:
+					if listener.Protocol != gatewayv1alpha2.TCPProtocolType {
+						continue
+					}
+				case *gatewayv1alpha2.UDPRoute:
+					if listener.Protocol != gatewayv1alpha2.UDPProtocolType {
+						continue
+					}
+				case *gatewayv1alpha2.TLSRoute:
+					if listener.Protocol != gatewayv1alpha2.TLSProtocolType {
+						continue
+					}
+				default:
+					continue
+				}
+				if listener.AllowedRoutes != nil {
+					filtered = true
+					if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromAll {
+						// we allow "all" by just stuffing the namespace we want to find into the map
+						allowedNamespaces[obj.GetNamespace()] = nil
+					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromSame {
+						allowedNamespaces[gateway.ObjectMeta.Namespace] = nil
+					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromSelector {
+						namespaces := &corev1.NamespaceList{}
+						selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+						if err != nil {
+							return nil, fmt.Errorf("failed to convert LabelSelector to Selector for gateway %s",
+								gateway.ObjectMeta.Name)
+						}
+						err = mgrc.List(ctx, namespaces,
+							&client.ListOptions{LabelSelector: selector})
+						if err != nil {
+							return nil, fmt.Errorf("could not fetch allowed namespaces for gateway %s",
+								gateway.ObjectMeta.Name)
+						}
+						for _, allowed := range namespaces.Items {
+							allowedNamespaces[allowed.ObjectMeta.Name] = nil
+						}
+					}
+				}
+			}
+
+			_, allowedNamespace := allowedNamespaces[obj.GetNamespace()]
+			if !filtered || allowedNamespace {
+				gateways = append(gateways, &gateway)
+			}
 		}
 	}
 
 	if len(gateways) == 0 {
+		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2417 separate out various rejected reasons
+		// and apply specific statuses for those failures in the Route controllers
 		return nil, fmt.Errorf(unsupportedGW)
 	}
 

@@ -36,6 +36,7 @@ type FakeObjects struct {
 	HTTPRoutes         []*gatewayv1alpha2.HTTPRoute
 	UDPRoutes          []*gatewayv1alpha2.UDPRoute
 	TCPRoutes          []*gatewayv1alpha2.TCPRoute
+	ReferencePolicies  []*gatewayv1alpha2.ReferencePolicy
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*configurationv1beta1.UDPIngress
 	Services           []*apiv1.Service
@@ -91,6 +92,12 @@ func NewFakeStore(
 	tcprouteStore := cache.NewStore(keyFunc)
 	for _, tcproute := range objects.UDPRoutes {
 		if err := tcprouteStore.Add(tcproute); err != nil {
+			return nil, err
+		}
+	}
+	referencepolicyStore := cache.NewStore(keyFunc)
+	for _, referencepolicy := range objects.ReferencePolicies {
+		if err := referencepolicyStore.Add(referencepolicy); err != nil {
 			return nil, err
 		}
 	}
@@ -166,17 +173,18 @@ func NewFakeStore(
 	}
 	s = Store{
 		stores: CacheStores{
-			IngressV1beta1: ingressV1beta1Store,
-			IngressV1:      ingressV1Store,
-			IngressClassV1: ingressClassV1Store,
-			HTTPRoute:      httprouteStore,
-			UDPRoute:       udprouteStore,
-			TCPRoute:       tcprouteStore,
-			TCPIngress:     tcpIngressStore,
-			UDPIngress:     udpIngressStore,
-			Service:        serviceStore,
-			Endpoint:       endpointStore,
-			Secret:         secretsStore,
+			IngressV1beta1:  ingressV1beta1Store,
+			IngressV1:       ingressV1Store,
+			IngressClassV1:  ingressClassV1Store,
+			HTTPRoute:       httprouteStore,
+			UDPRoute:        udprouteStore,
+			TCPRoute:        tcprouteStore,
+			ReferencePolicy: referencepolicyStore,
+			TCPIngress:      tcpIngressStore,
+			UDPIngress:      udpIngressStore,
+			Service:         serviceStore,
+			Endpoint:        endpointStore,
+			Secret:          secretsStore,
 
 			Plugin:        kongPluginsStore,
 			ClusterPlugin: kongClusterPluginsStore,

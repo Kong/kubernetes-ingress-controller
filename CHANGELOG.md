@@ -53,6 +53,8 @@
 
 #### Added
 
+- `UDPRoute` resources now support multiple backendRefs for load-balancing.
+  [#2405](https://github.com/Kong/kubernetes-ingress-controller/issues/2405)
 - `TCPRoute` resources now support multiple backendRefs for load-balancing.
   [#2405](https://github.com/Kong/kubernetes-ingress-controller/issues/2405)
 - `TCPRoute` resources are now supported.

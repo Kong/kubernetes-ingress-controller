@@ -397,6 +397,10 @@ const corefile = `
     loop
     reload
     loadbalance
+    hosts {
+      10.0.0.1 konghq.com
+      fallthrough
+    }
 }
 .:9999 {
     errors
@@ -416,5 +420,9 @@ const corefile = `
     loop
     reload
     loadbalance
+    hosts {
+      10.0.0.1 konghq.com
+      fallthrough
+    }
 }
 `

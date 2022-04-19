@@ -9,6 +9,7 @@ import (
 
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
+	"github.com/kong/deck/cprint"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +43,11 @@ func setupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
 
 	logger := logrusr.New(deprecatedLogger)
 	ctrl.SetLogger(logger)
+
+	if c.LogLevel != "trace" && c.LogLevel != "debug" {
+		// disable deck's per-change diff output
+		cprint.DisableOutput = true
+	}
 
 	return deprecatedLogger, logger, nil
 }

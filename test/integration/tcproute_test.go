@@ -93,46 +93,79 @@ func TestTCPRouteEssentials(t *testing.T) {
 		}
 	}()
 
-	container := generators.NewContainer("tcpecho", tcpEchoImage, tcpEchoPort)
+	t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
+	container1 := generators.NewContainer("tcpecho-1", tcpEchoImage, tcpEchoPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
-	testUUID := uuid.NewString()
-	container.Env = []corev1.EnvVar{
+	testUUID1 := uuid.NewString()
+	container1.Env = []corev1.EnvVar{
 		{
 			Name:  "POD_NAME",
-			Value: testUUID,
+			Value: testUUID1,
 		},
 	}
-	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment1 := generators.NewDeploymentForContainer(container1)
+	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("creating an additional tcpecho pod to test TCPRoute multiple backendRef loadbalancing")
+	container2 := generators.NewContainer("tcpecho-2", tcpEchoImage, tcpEchoPort)
+	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
+	testUUID2 := uuid.NewString()
+	container2.Env = []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: testUUID2,
+		},
+	}
+	deployment2 := generators.NewDeploymentForContainer(container2)
+	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+		t.Logf("cleaning up the deployments %s/%s and %s/%s", deployment1.Namespace, deployment1.Name, deployment2.Namespace, deployment2.Name)
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment1.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}))
 	}()
 
-	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	t.Logf("exposing deployment %s/%s via service", deployment1.Namespace, deployment1.Name)
+	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
 	// we have to override the ports so that we can map the default TCP port from
 	// the Kong Gateway deployment to the tcpecho port, as this is what will be
 	// used to route the traffic at the Gateway (at the time of writing, the
 	// Kong Gateway doesn't support an API for dynamically adding these ports. The
 	// ports must be added manually to the config or ENV).
-	service.Spec.Ports = []corev1.ServicePort{{
+	service1.Spec.Ports = []corev1.ServicePort{{
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       ktfkong.DefaultTCPServicePort,
 		TargetPort: intstr.FromInt(tcpEchoPort),
 	}}
-	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
+	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
+	// we have to override the ports so that we can map the default TCP port from
+	// the Kong Gateway deployment to the tcpecho port, as this is what will be
+	// used to route the traffic at the Gateway (at the time of writing, the
+	// Kong Gateway doesn't support an API for dynamically adding these ports. The
+	// ports must be added manually to the config or ENV).
+	service2.Spec.Ports = []corev1.ServicePort{{
+		Name:       "tcp",
+		Protocol:   corev1.ProtocolTCP,
+		Port:       ktfkong.DefaultTCPServicePort,
+		TargetPort: intstr.FromInt(tcpEchoPort),
+	}}
+	service2, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+		t.Logf("cleaning up the service %s", service1.Name)
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service1.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}))
 	}()
 
-	t.Logf("creating a tcproute to access deployment %s via kong", deployment.Name)
+	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
 	tcpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort)
 	tcproute := &gatewayv1alpha2.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -148,7 +181,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			Rules: []gatewayv1alpha2.TCPRouteRule{{
 				BackendRefs: []gatewayv1alpha2.BackendRef{{
 					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-						Name: gatewayv1alpha2.ObjectName(service.Name),
+						Name: gatewayv1alpha2.ObjectName(service1.Name),
 						Port: &tcpPortDefault,
 					},
 				}},
@@ -172,7 +205,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is responding properly")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
 
@@ -191,7 +224,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is no longer responding")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return responded == false && errors.Is(err, io.EOF)
 	}, ingressWait, waitTick)
 
@@ -209,7 +242,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
 
@@ -222,7 +255,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return responded == false && errors.Is(err, io.EOF)
 	}, ingressWait, waitTick)
 
@@ -243,7 +276,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
 
@@ -256,7 +289,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return responded == false && errors.Is(err, io.EOF)
 	}, ingressWait, waitTick)
 
@@ -285,7 +318,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
 
@@ -298,7 +331,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return responded == false && errors.Is(err, io.EOF)
 	}, ingressWait, waitTick)
 
@@ -339,7 +372,41 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return err == nil && responded == true
+	}, ingressWait, waitTick)
+
+	t.Log("adding an additional backendRef to the TCPRoute")
+	require.Eventually(t, func() bool {
+		tcproute, err = c.GatewayV1alpha2().TCPRoutes(ns.Name).Get(ctx, tcproute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		tcproute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{
+			{
+				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					Name: gatewayv1alpha2.ObjectName(service1.Name),
+					Port: &tcpPortDefault,
+				},
+			},
+			{
+				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					Name: gatewayv1alpha2.ObjectName(service2.Name),
+					Port: &tcpPortDefault,
+				},
+			},
+		}
+
+		tcproute, err = c.GatewayV1alpha2().TCPRoutes(ns.Name).Update(ctx, tcproute, metav1.UpdateOptions{})
+		return err == nil
+	}, ingressWait, waitTick)
+
+	t.Log("verifying that the TCPRoute is now load-balanced between two services")
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return err == nil && responded == true
+	}, ingressWait, waitTick)
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
 
@@ -352,7 +419,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID)
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return responded == false && errors.Is(err, io.EOF)
 	}, ingressWait, waitTick)
 }

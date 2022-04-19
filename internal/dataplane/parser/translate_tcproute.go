@@ -68,11 +68,6 @@ func ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayv1alpha2.TC
 			return fmt.Errorf("missing backendRef in rule")
 		}
 
-		// TODO: support multiple backend refs
-		if len(rule.BackendRefs) > 1 {
-			return fmt.Errorf("multiple backendRefs are not yet supported")
-		}
-
 		// determine the routes needed to route traffic to services for this rule
 		routes, err := generateKongRoutesFromTCPRouteRule(tcproute, ruleNumber, rule)
 		if err != nil {
@@ -80,7 +75,10 @@ func ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayv1alpha2.TC
 		}
 
 		// create a service and attach the routes to it
-		service := generateKongServiceFromTCPRouteBackendRef(result, tcproute, rule.BackendRefs[0])
+		service, err := generateKongServiceFromTCPRouteBackendRef(result, tcproute, ruleNumber, rule.BackendRefs...)
+		if err != nil {
+			return err
+		}
 		service.Routes = append(service.Routes, routes...)
 
 		// cache the service to avoid duplicates in further loop iterations
@@ -96,8 +94,11 @@ func ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayv1alpha2.TC
 
 // generateKongRoutesFromTCPRouteRule converts an TCPRoute rule to one or more
 // Kong Route objects to route traffic to services.
-func generateKongRoutesFromTCPRouteRule(tcproute *gatewayv1alpha2.TCPRoute, ruleNumber int,
-	rule gatewayv1alpha2.TCPRouteRule) ([]kongstate.Route, error) {
+func generateKongRoutesFromTCPRouteRule(
+	tcproute *gatewayv1alpha2.TCPRoute,
+	ruleNumber int,
+	rule gatewayv1alpha2.TCPRouteRule,
+) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the tcproute
 	objectInfo := util.FromK8sObject(tcproute)
 
@@ -108,13 +109,11 @@ func generateKongRoutesFromTCPRouteRule(tcproute *gatewayv1alpha2.TCPRoute, rule
 		// We do not intend to implement these until they are stable per https://github.com/Kong/kubernetes-ingress-controller/issues/2087#issuecomment-1079053290
 		return routes, fmt.Errorf("TCPRoute Matches are not yet supported")
 	}
+
 	if len(rule.BackendRefs) == 0 {
 		return routes, fmt.Errorf("TCPRoute rules must include at least one backendRef")
 	}
-	if len(rule.BackendRefs) > 1 {
-		// TODO refactor around the solution used for https://github.com/Kong/kubernetes-ingress-controller/issues/2173
-		return routes, fmt.Errorf("Support for multiple backends in TCPRoute rules is not yet supported")
-	}
+
 	routeName := kong.String(fmt.Sprintf(
 		"tcproute.%s.%s.%d.%d",
 		tcproute.Namespace,
@@ -125,9 +124,13 @@ func generateKongRoutesFromTCPRouteRule(tcproute *gatewayv1alpha2.TCPRoute, rule
 
 	// for now, TCPRoutes provide no means of specifying a destination port other than the backend target port
 	// they will once https://gateway-api.sigs.k8s.io/geps/gep-957/ is stable. in the interim, this always uses the
-	// backend target TODO also needs support for multiple backends
 	var destinations []*kong.CIDRPort
-	destinations = append(destinations, &kong.CIDRPort{Port: kong.Int(int(*rule.BackendRefs[0].Port))})
+	for _, backendRef := range rule.BackendRefs {
+		destinations = append(destinations, &kong.CIDRPort{
+			Port: kong.Int(int(*backendRef.Port)),
+		})
+	}
+
 	r := kongstate.Route{
 		Ingress: objectInfo,
 		Route: kong.Route{
@@ -137,32 +140,44 @@ func generateKongRoutesFromTCPRouteRule(tcproute *gatewayv1alpha2.TCPRoute, rule
 		},
 	}
 
-	routes = append(routes, r)
-
-	return routes, nil
+	return append(routes, r), nil
 }
 
 // generateKongServiceFromTCPRouteBackendRef converts a provided backendRef for an TCPRoute
 // into a kong.Service so that routes for that object can be attached to the Service.
-// TODO add a generic backendRef handler for all GW routes. HTTPRoute needs a wrapper because it uses a special wrapped
-// type with filters. Deferred til after https://github.com/Kong/kubernetes-ingress-controller/issues/2166 though
-// we probably shouldn't see much change to the service (just the upstream it references in Host)
-func generateKongServiceFromTCPRouteBackendRef(result *ingressRules, tcproute *gatewayv1alpha2.TCPRoute, backendRef gatewayv1alpha2.BackendRef) kongstate.Service {
-	// determine the service namespace
-	// TODO: need to add validation to restrict namespaces in backendRefs
-	namespace := tcproute.Namespace
-	if backendRef.Namespace != nil {
-		namespace = string(*backendRef.Namespace)
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2421 add a generic backendRef handler for all GW routes
+func generateKongServiceFromTCPRouteBackendRef(
+	result *ingressRules,
+	tcproute *gatewayv1alpha2.TCPRoute,
+	ruleNumber int,
+	backendRefs ...gatewayv1alpha2.BackendRef,
+) (kongstate.Service, error) {
+	// at least one backendRef must be present
+	if len(backendRefs) == 0 {
+		return kongstate.Service{}, fmt.Errorf("no backendRefs present for TCPRoute: %s/%s", tcproute.Namespace, tcproute.Name)
 	}
 
-	// determine the name of the Service
-	serviceName := fmt.Sprintf("%s.%s.%d", namespace, backendRef.Name, *backendRef.Port)
-
-	// determine the Service port
-	port := kongstate.PortDef{
-		Mode:   kongstate.PortModeByNumber,
-		Number: int32(*backendRef.Port),
+	// create a kongstate backend for each TCPRoute backendRef
+	backends := make(kongstate.ServiceBackends, 0, len(backendRefs))
+	for _, backendRef := range backendRefs {
+		// convert each backendRef into a kongstate.ServiceBackend
+		backends = append(backends, kongstate.ServiceBackend{
+			Name: string(backendRef.Name),
+			PortDef: kongstate.PortDef{
+				Mode:   kongstate.PortModeByNumber,
+				Number: int32(*backendRef.Port),
+			},
+			Weight: backendRef.Weight,
+		})
 	}
+
+	// the service name needs to uniquely identify this service given it's list of
+	// one or more backends.
+	serviceName := fmt.Sprintf("%s.%d", getUniqueKongServiceNameForObject(tcproute), ruleNumber)
+
+	// the service host needs to be a resolvable name due to legacy logic so we'll
+	// use the anchor backendRef as the basis for the name
+	serviceHost := serviceName
 
 	// check if the service is already known, and if not create it
 	service, ok := result.ServiceNameToServices[serviceName]
@@ -170,8 +185,7 @@ func generateKongServiceFromTCPRouteBackendRef(result *ingressRules, tcproute *g
 		service = kongstate.Service{
 			Service: kong.Service{
 				Name:           kong.String(serviceName),
-				Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", backendRef.Name, namespace, port.CanonicalString())),
-				Port:           kong.Int(int(*backendRef.Port)),
+				Host:           kong.String(serviceHost),
 				Protocol:       kong.String("tcp"),
 				ConnectTimeout: kong.Int(DefaultServiceTimeout),
 				ReadTimeout:    kong.Int(DefaultServiceTimeout),
@@ -179,12 +193,9 @@ func generateKongServiceFromTCPRouteBackendRef(result *ingressRules, tcproute *g
 				Retries:        kong.Int(DefaultRetries),
 			},
 			Namespace: tcproute.Namespace,
-			Backends: kongstate.ServiceBackends{{
-				Name:    string(backendRef.Name),
-				PortDef: port,
-			}},
+			Backends:  backends,
 		}
 	}
 
-	return service
+	return service, nil
 }

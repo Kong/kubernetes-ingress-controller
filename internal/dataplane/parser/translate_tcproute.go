@@ -145,9 +145,7 @@ func generateKongRoutesFromTCPRouteRule(
 
 // generateKongServiceFromTCPRouteBackendRef converts a provided backendRef for an TCPRoute
 // into a kong.Service so that routes for that object can be attached to the Service.
-// TODO add a generic backendRef handler for all GW routes. HTTPRoute needs a wrapper because it uses a special wrapped
-// type with filters. Deferred til after https://github.com/Kong/kubernetes-ingress-controller/issues/2166 though
-// we probably shouldn't see much change to the service (just the upstream it references in Host)
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2421 add a generic backendRef handler for all GW routes
 func generateKongServiceFromTCPRouteBackendRef(
 	result *ingressRules,
 	tcproute *gatewayv1alpha2.TCPRoute,

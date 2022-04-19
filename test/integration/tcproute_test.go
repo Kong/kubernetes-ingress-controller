@@ -409,6 +409,14 @@ func TestTCPRouteEssentials(t *testing.T) {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return err == nil && responded == true
+	}, ingressWait, waitTick)
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
+		return err == nil && responded == true
+	}, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))

@@ -27,7 +27,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	var errs []error
 	for _, udproute := range udpRouteList {
-		if err := ingressRulesFromUDPRoute(&result, udproute); err != nil {
+		if err := p.ingressRulesFromUDPRoute(&result, udproute); err != nil {
 			err = fmt.Errorf("UDPRoute %s/%s can't be routed: %w", udproute.Namespace, udproute.Name, err)
 			errs = append(errs, err)
 		} else {
@@ -46,7 +46,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 	return result
 }
 
-func ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayv1alpha2.UDPRoute) error {
+func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayv1alpha2.UDPRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := udproute.Spec
 
@@ -75,7 +75,7 @@ func ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayv1alpha2.UD
 		}
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromUDPRouteBackendRef(result, udproute, ruleNumber, rule.BackendRefs...)
+		service, err := p.generateKongServiceFromBackendRef(result, udproute, ruleNumber, "udp", rule.BackendRefs...)
 		if err != nil {
 			return err
 		}
@@ -139,63 +139,4 @@ func generateKongRoutesFromUDPRouteRule(udproute *gatewayv1alpha2.UDPRoute, rule
 	routes = append(routes, r)
 
 	return routes, nil
-}
-
-// generateKongServiceFromUDPRouteBackendRef converts a provided backendRef for an UDPRoute
-// into a kong.Service so that routes for that object can be attached to the Service.
-// TODO add a generic backendRef handler for all GW routes. HTTPRoute needs a wrapper because it uses a special wrapped
-// type with filters. Deferred til after https://github.com/Kong/kubernetes-ingress-controller/issues/2166 though
-// we probably shouldn't see much change to the service (just the upstream it references in Host)
-func generateKongServiceFromUDPRouteBackendRef(
-	result *ingressRules,
-	udproute *gatewayv1alpha2.UDPRoute,
-	ruleNumber int,
-	backendRefs ...gatewayv1alpha2.BackendRef,
-) (kongstate.Service, error) {
-	// at least one backendRef must be present
-	if len(backendRefs) == 0 {
-		return kongstate.Service{}, fmt.Errorf("no backendRefs present for UDPRoute: %s/%s", udproute.Namespace, udproute.Name)
-	}
-
-	// create a kongstate backend for each UDPRoute backendRef
-	backends := make(kongstate.ServiceBackends, 0, len(backendRefs))
-	for _, backendRef := range backendRefs {
-		// convert each backendRef into a kongstate.ServiceBackend
-		backends = append(backends, kongstate.ServiceBackend{
-			Name: string(backendRef.Name),
-			PortDef: kongstate.PortDef{
-				Mode:   kongstate.PortModeByNumber,
-				Number: int32(*backendRef.Port),
-			},
-			Weight: backendRef.Weight,
-		})
-	}
-
-	// the service name needs to uniquely identify this service given it's list of
-	// one or more backends.
-	serviceName := fmt.Sprintf("%s.%d", getUniqueKongServiceNameForObject(udproute), ruleNumber)
-
-	// the service host needs to be a resolvable name due to legacy logic so we'll
-	// use the anchor backendRef as the basis for the name
-	serviceHost := serviceName
-
-	// check if the service is already known, and if not create it
-	service, ok := result.ServiceNameToServices[serviceName]
-	if !ok {
-		service = kongstate.Service{
-			Service: kong.Service{
-				Name:           kong.String(serviceName),
-				Host:           kong.String(serviceHost),
-				Protocol:       kong.String("udp"),
-				ConnectTimeout: kong.Int(DefaultServiceTimeout),
-				ReadTimeout:    kong.Int(DefaultServiceTimeout),
-				WriteTimeout:   kong.Int(DefaultServiceTimeout),
-				Retries:        kong.Int(DefaultRetries),
-			},
-			Namespace: udproute.Namespace,
-			Backends:  backends,
-		}
-	}
-
-	return service, nil
 }

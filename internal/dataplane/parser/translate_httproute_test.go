@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +13,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -25,6 +27,9 @@ var httprouteGVK = schema.GroupVersionKind{
 }
 
 func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
+	fakestore, err := store.NewFakeStore(store.FakeObjects{})
+	assert.NoError(t, err)
+	p := NewParser(logrus.New(), fakestore)
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
 	pathMatchRegex := gatewayv1alpha2.PathMatchRegularExpression
@@ -81,7 +86,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							ConnectTimeout: kong.Int(60000),
 							Host:           kong.String("httproute.default.basic-httproute.0"),
 							Name:           kong.String("httproute.default.basic-httproute.0"),
-							Path:           kong.String("/"),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
@@ -192,7 +196,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							ConnectTimeout: kong.Int(60000),
 							Host:           kong.String("httproute.default.basic-httproute.0"),
 							Name:           kong.String("httproute.default.basic-httproute.0"),
-							Path:           kong.String("/"),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
@@ -330,7 +333,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							ConnectTimeout: kong.Int(60000),
 							Host:           kong.String("httproute.default.basic-httproute.0"),
 							Name:           kong.String("httproute.default.basic-httproute.0"),
-							Path:           kong.String("/"),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
@@ -405,7 +407,6 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							ConnectTimeout: kong.Int(60000),
 							Host:           kong.String("httproute.default.basic-httproute.0"),
 							Name:           kong.String("httproute.default.basic-httproute.0"),
-							Path:           kong.String("/"),
 							Protocol:       kong.String("http"),
 							ReadTimeout:    kong.Int(60000),
 							Retries:        kong.Int(5),
@@ -451,7 +452,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 				httproute.SetGroupVersionKind(httprouteGVK)
 
 				// generate the ingress rules
-				err := ingressRulesFromHTTPRoute(&ingressRules, httproute)
+				err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
 				if err != nil {
 					errs = append(errs, err)
 				}

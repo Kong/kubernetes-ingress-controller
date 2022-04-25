@@ -16,7 +16,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 
 	ingressList, err := p.storer.ListKnativeIngresses()
 	if err != nil {
-		p.logger.Errorf("failed to list Knative Ingresses: %v", err)
+		p.logger.WithError(err).Error("failed to list Knative Ingresses")
 		return result
 	}
 

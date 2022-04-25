@@ -204,7 +204,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 				paths, err := pathsFromK8s(rulePath.Path, pathType)
 				if err != nil {
-					log.Errorf("rule skipped: pathsFromK8s: %v", err)
+					log.WithError(err).Error("rule skipped: pathsFromK8s")
 					continue
 				}
 

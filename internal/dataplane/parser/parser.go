@@ -172,11 +172,11 @@ func toCACerts(log logrus.FieldLogger, caCertSecrets []*corev1.Secret) []kong.CA
 		}
 		x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
 		if err != nil {
-			log.Errorf("invalid CA certificate: failed to parse certificate: %v", err)
+			log.WithError(err).Errorf("invalid CA certificate: failed to parse certificate")
 			continue
 		}
 		if !x509Cert.IsCA {
-			log.Errorf("invalid CA certificate: certificate is missing the 'CA' basic constraint: %v", err)
+			log.WithError(err).Errorf("invalid CA certificate: certificate is missing the 'CA' basic constraint")
 			continue
 		}
 
@@ -387,7 +387,7 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 			log.WithFields(logrus.Fields{
 				"secret_name":      namespaceName[1],
 				"secret_namespace": namespaceName[0],
-			}).Logger.Errorf("failed to fetch secret: %v", err)
+			}).WithError(err).Error("failed to fetch secret")
 			continue
 		}
 		cert, key, err := getCertFromSecret(secret)
@@ -395,7 +395,7 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 			log.WithFields(logrus.Fields{
 				"secret_name":      namespaceName[1],
 				"secret_namespace": namespaceName[0],
-			}).Logger.Errorf("failed to construct certificate from secret: %v", err)
+			}).WithError(err).Error("failed to construct certificate from secret")
 			continue
 		}
 		kongCert, ok := certs[cert+key]
@@ -503,7 +503,8 @@ func getEndpoints(
 		targetPort := port.TargetPort.IntValue()
 		// check for invalid port value
 		if targetPort <= 0 {
-			log.Errorf("invalid service: invalid port: %v", targetPort)
+			err := fmt.Errorf("invalid port: %v", targetPort)
+			log.WithError(err).Error("invalid service")
 			return upsServers
 		}
 
@@ -523,7 +524,7 @@ func getEndpoints(
 	log.Debugf("fetching endpoints")
 	ep, err := getEndpoints(s.Namespace, s.Name)
 	if err != nil {
-		log.Errorf("failed to fetch endpoints: %v", err)
+		log.WithError(err).Error("failed to fetch endpoints")
 		return upsServers
 	}
 

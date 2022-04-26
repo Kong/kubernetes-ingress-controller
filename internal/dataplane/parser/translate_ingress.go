@@ -48,7 +48,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				path := rule.Path
 
 				if strings.Contains(path, "//") {
-					log.Errorf("rule skipped: invalid path: '%v'", path)
+					log.WithField("ingress_rule_path", path).Error("rule skipped: invalid path")
 					continue
 				}
 				if path == "" {
@@ -193,7 +193,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 			}
 			for j, rulePath := range rule.HTTP.Paths {
 				if strings.Contains(rulePath.Path, "//") {
-					log.Errorf("rule skipped: invalid path: '%v'", rulePath.Path)
+					log.WithField("ingress_rule_path", rulePath.Path).Errorf("rule skipped: invalid path")
 					continue
 				}
 

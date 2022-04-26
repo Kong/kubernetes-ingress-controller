@@ -184,7 +184,10 @@ func (r *Route) overrideMethods(log logrus.FieldLogger, anns map[string]string) 
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
-			log.WithField("kongroute", r.Name).Errorf("invalid method: %v", method)
+			log.WithFields(logrus.Fields{
+				"kongroute": r.Name,
+				"method":    method,
+			}).Error("invalid method")
 			return
 		}
 	}
@@ -208,7 +211,10 @@ func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
 			snis = append(snis, kong.String(sanitizedSNI))
 		} else {
 			// SNI is not a valid hostname
-			log.WithField("kongroute", r.Name).Errorf("invalid SNI: %v", sni)
+			log.WithFields(logrus.Fields{
+				"kongroute": r.Name,
+				"SNI":       sni,
+			}).Error("invalid SNI")
 			return
 		}
 	}
@@ -304,7 +310,10 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 				SNIs = append(SNIs, kong.String(SNI))
 			} else {
 				// SNI is not a valid hostname
-				log.WithField("kongroute", r.Name).Errorf("invalid SNI: %v", unsanitizedSNI)
+				log.WithFields(logrus.Fields{
+					"kongroute": r.Name,
+					"SNI":       unsanitizedSNI,
+				}).Errorf("invalid SNI")
 				return
 			}
 		}

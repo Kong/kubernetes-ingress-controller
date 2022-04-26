@@ -39,7 +39,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			if !util.IsValidPort(rule.Port) {
-				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
+				log.WithField("tcpingess_rule_port", rule.Port).Error("invalid TCPIngress: invalid port")
 				continue
 			}
 			r := kongstate.Route{
@@ -127,7 +127,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 		for i, rule := range ingressSpec.Rules {
 			// validate the ports and servicenames for the rule
 			if !util.IsValidPort(rule.Port) {
-				log.Errorf("invalid UDPIngress: invalid port: %d", rule.Port)
+				log.WithField("udpingress_rule_port", rule.Port).Error("invalid UDPIngress: invalid port")
 				continue
 			}
 			if rule.Backend.ServiceName == "" {
@@ -135,7 +135,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 				continue
 			}
 			if !util.IsValidPort(rule.Backend.ServicePort) {
-				log.Errorf("invalid UDPIngress: invalid servicePort: %d", rule.Backend.ServicePort)
+				log.WithField("udpingress_rule_serviceport", rule.Backend.ServicePort).Error("invalid UDPIngress: invalid servicePort")
 				continue
 			}
 

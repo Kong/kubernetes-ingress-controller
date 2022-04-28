@@ -17,7 +17,10 @@ COPY internal/ internal/
 ARG TAG
 ARG COMMIT
 ARG REPO_INFO
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
+ARG TARGETARCH="amd64"
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
+
 
 ### FIPS 140-2 binary
 # Build the manager binary
@@ -39,12 +42,16 @@ COPY internal/ internal/
 ARG TAG
 ARG COMMIT
 ARG REPO_INFO
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$REPO_INFO" ./internal/cmd/fips/main.go
+ARG TARGETARCH="amd64"
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/fips/main.go
 
 # Build a manager binary with debug symbols and download Delve
 FROM builder as builder-delve
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager-debug -gcflags=all="-N -l" -ldflags "-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
+ARG TARGETARCH="amd64"
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager-debug -gcflags=all="-N -l" -ldflags "-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
 
 ### Debug
 # Create an image that runs a debug build with a Delve remote server on port 2345
@@ -73,6 +80,8 @@ LABEL name="Kong Ingress Controller" \
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
+
+ARG TARGETARCH="amd64"
 
 ENTRYPOINT ["/manager"]
 

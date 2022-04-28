@@ -17,7 +17,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 
 	ingressList, err := p.storer.ListTCPIngresses()
 	if err != nil {
-		p.logger.Errorf("failed to list TCPIngresses: %v", err)
+		p.logger.WithError(err).Error("failed to list TCPIngresses")
 		return result
 	}
 
@@ -83,10 +83,10 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 						Retries:        kong.Int(DefaultRetries),
 					},
 					Namespace: ingress.Namespace,
-					Backend: kongstate.ServiceBackend{
-						Name: rule.Backend.ServiceName,
-						Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
-					},
+					Backends: []kongstate.ServiceBackend{{
+						Name:    rule.Backend.ServiceName,
+						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
+					}},
 				}
 			}
 			service.Routes = append(service.Routes, r)
@@ -107,7 +107,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 
 	ingressList, err := p.storer.ListUDPIngresses()
 	if err != nil {
-		p.logger.Errorf("failed to list UDPIngresses: %v", err)
+		p.logger.WithError(err).Errorf("failed to list UDPIngresses")
 		return result
 	}
 
@@ -162,10 +162,10 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 						Host:     kong.String(host),
 						Port:     kong.Int(rule.Backend.ServicePort),
 					},
-					Backend: kongstate.ServiceBackend{
-						Name: rule.Backend.ServiceName,
-						Port: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
-					},
+					Backends: []kongstate.ServiceBackend{{
+						Name:    rule.Backend.ServiceName,
+						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
+					}},
 				}
 			}
 			service.Routes = append(service.Routes, route)

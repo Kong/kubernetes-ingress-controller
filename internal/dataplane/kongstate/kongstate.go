@@ -13,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -77,7 +76,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			})
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
-				log.Errorf("failed to fetch secret: %v", err)
+				log.WithError(err).Error("failed to fetch secret")
 				continue
 			}
 			credConfig := map[string]interface{}{}
@@ -94,7 +93,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				if k == "hash_secret" {
 					boolVal, err := strconv.ParseBool(string(v))
 					if err != nil {
-						log.Errorf("failed to parse hash_secret to bool: %v. defaulting to false", err)
+						log.WithError(err).Errorf("failed to parse hash_secret to bool. defaulting to false")
 						credConfig[k] = false
 					} else {
 						credConfig[k] = boolVal
@@ -105,19 +104,21 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			}
 			credType, ok := credConfig["kongCredType"].(string)
 			if !ok {
-				log.Errorf("failed to provision credential: invalid credType: %v", credType)
+				err := fmt.Errorf("invalid credType: %v", credType)
+				log.WithError(err).Errorf("failed to provision credential")
 			}
 			if !credentials.SupportedTypes.Has(credType) {
-				log.Errorf("failed to provision credential: invalid credType: %v", credType)
+				err := fmt.Errorf("invalid credType: %v", credType)
+				log.WithError(err).Error("failed to provision credential")
 				continue
 			}
 			if len(credConfig) <= 1 { // 1 key of credType itself
-				log.Errorf("failed to provision credential: empty secret")
+				log.Error("failed to provision credential: empty secret")
 				continue
 			}
 			err = c.SetCredential(credType, credConfig)
 			if err != nil {
-				log.Errorf("failed to provision credential: %v", err)
+				log.WithError(err).Errorf("failed to provision credential")
 				continue
 			}
 		}
@@ -134,26 +135,24 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
-		anns := ks.Services[i].K8sService.Annotations
-		kongIngress, err := getKongIngressForService(s, ks.Services[i].K8sService)
+		kongIngress, err := getKongIngressForServices(s, ks.Services[i].K8sServices)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      ks.Services[i].K8sService.Name,
-				"service_namespace": ks.Services[i].K8sService.Namespace,
-			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
+			log.WithError(err).Errorf("failed to fetch KongIngress resource for Services %s", PrettyPrintServiceList(ks.Services[i].K8sServices))
+			continue
 		}
-		ks.Services[i].override(kongIngress, anns)
+
+		for _, svc := range ks.Services[i].K8sServices {
+			ks.Services[i].override(kongIngress, svc.Annotations)
+		}
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
-			var kongIngress *configurationv1.KongIngress
-			var err error
-			kongIngress, err = getKongIngressFromObjectMeta(s, &ks.Services[i].Routes[j].Ingress)
+			kongIngress, err := getKongIngressFromObjectMeta(s, &ks.Services[i].Routes[j].Ingress)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"resource_name":      ks.Services[i].Routes[j].Ingress.Name,
 					"resource_namespace": ks.Services[i].Routes[j].Ingress.Namespace,
-				}).Errorf("failed to fetch KongIngress resource: %v", err)
+				}).WithError(err).Errorf("failed to fetch KongIngress resource")
 			}
 
 			ks.Services[i].Routes[j].override(log, kongIngress)
@@ -162,17 +161,15 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 
 	// Upstreams
 	for i := 0; i < len(ks.Upstreams); i++ {
-		kongIngress, err := getKongIngressForService(s,
-			ks.Upstreams[i].Service.K8sService)
-		anns := ks.Upstreams[i].Service.K8sService.Annotations
+		kongIngress, err := getKongIngressForServices(s, ks.Upstreams[i].Service.K8sServices)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      ks.Upstreams[i].Service.K8sService.Name,
-				"service_namespace": ks.Upstreams[i].Service.K8sService.Namespace,
-			}).Errorf("failed to fetch KongIngress resource for Service: %v", err)
+			log.WithError(err).Errorf("failed to fetch KongIngress resource for Services %s", PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices))
 			continue
 		}
-		ks.Upstreams[i].override(kongIngress, anns)
+
+		for _, svc := range ks.Upstreams[i].Service.K8sServices {
+			ks.Upstreams[i].override(kongIngress, svc.Annotations)
+		}
 	}
 }
 
@@ -209,12 +206,11 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 
 	for i := range ks.Services {
 		// service
-		svc := ks.Services[i].K8sService
-		pluginList := annotations.ExtractKongPluginsFromAnnotations(
-			svc.GetAnnotations())
-		for _, pluginName := range pluginList {
-			addServiceRelation(svc.Namespace, pluginName,
-				*ks.Services[i].Name)
+		for _, svc := range ks.Services[i].K8sServices {
+			pluginList := annotations.ExtractKongPluginsFromAnnotations(svc.GetAnnotations())
+			for _, pluginName := range pluginList {
+				addServiceRelation(svc.Namespace, pluginName, *ks.Services[i].Name)
+			}
 		}
 		// route
 		for j := range ks.Services[i].Routes {
@@ -246,7 +242,7 @@ func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]
 			log.WithFields(logrus.Fields{
 				"kongplugin_name":      kongPluginName,
 				"kongplugin_namespace": namespace,
-			}).Errorf("failed to fetch KongPlugin: %v", err)
+			}).WithError(err).Errorf("failed to fetch KongPlugin")
 			continue
 		}
 
@@ -269,7 +265,7 @@ func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]
 
 	globalPlugins, err := globalPlugins(log, s)
 	if err != nil {
-		log.Errorf("failed to fetch global plugins: %v", err)
+		log.WithError(err).Error("failed to fetch global plugins")
 	}
 	plugins = append(plugins, globalPlugins...)
 
@@ -324,7 +320,7 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 		} else {
 			log.WithFields(logrus.Fields{
 				"kongclusterplugin_name": k8sPlugin.Name,
-			}).Errorf("failed to generate configuration from KongClusterPlugin: %v ", err)
+			}).WithError(err).Error("failed to generate configuration from KongClusterPlugin")
 		}
 	}
 	for _, plugin := range duplicates {

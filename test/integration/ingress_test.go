@@ -402,17 +402,11 @@ func TestIngressNamespaces(t *testing.T) {
 
 	t.Log("creating extra testing namespaces")
 	elsewhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: extraIngressNamespace}}
-	nowhere := "nowhere"
-	nowhereNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nowhere}}
-	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, nowhereNamespace, metav1.CreateOptions{})
-	require.NoError(t, err)
-	_, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, elsewhereNamespace, metav1.CreateOptions{})
+	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, elsewhereNamespace, metav1.CreateOptions{})
 	require.NoError(t, err)
 	defer func() {
 		t.Logf("cleaning up namespace %s", elsewhereNamespace.Name)
 		assert.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, elsewhereNamespace.Name, metav1.DeleteOptions{}))
-		t.Logf("cleaning up namespace %s", nowhereNamespace.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, nowhereNamespace.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -420,26 +414,20 @@ func TestIngressNamespaces(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(container)
 	elsewhereDeployment, err := env.Cluster().Client().AppsV1().Deployments(extraIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
-	nowhereDeployment, err := env.Cluster().Client().AppsV1().Deployments(nowhere).Create(ctx, deployment, metav1.CreateOptions{})
-	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployment %s", elsewhereDeployment.Name)
 		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(extraIngressNamespace).Delete(ctx, elsewhereDeployment.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(nowhere).Delete(ctx, nowhereDeployment.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	_, err = env.Cluster().Client().CoreV1().Services(extraIngressNamespace).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-	_, err = env.Cluster().Client().CoreV1().Services(nowhere).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service.Name)
 		assert.NoError(t, env.Cluster().Client().CoreV1().Services(extraIngressNamespace).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(nowhere).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
@@ -449,21 +437,11 @@ func TestIngressNamespaces(t *testing.T) {
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
-	nowhereIngress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/nowhere", map[string]string{
-		annotations.IngressClassKey: ingressClass,
-		"konghq.com/strip-path":     "true",
-	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), extraIngressNamespace, elsewhereIngress))
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), nowhere, nowhereIngress))
 
 	defer func() {
 		t.Log("ensuring that Ingress resources are cleaned up")
 		if err := clusters.DeleteIngress(ctx, env.Cluster(), extraIngressNamespace, elsewhereIngress); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), nowhere, nowhereIngress); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -488,16 +466,6 @@ func TestIngressNamespaces(t *testing.T) {
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
-	}, ingressWait, waitTick)
-
-	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/nowhere", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
 	}, ingressWait, waitTick)
 }
 
@@ -676,6 +644,7 @@ func TestDefaultIngressClass(t *testing.T) {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode < http.StatusBadRequest {
 			t.Logf("unexpected status when checking Ingress status: %v", resp.StatusCode)
 			return true

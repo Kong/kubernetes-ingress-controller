@@ -56,7 +56,7 @@ func PerformUpdate(ctx context.Context,
 			ready := true
 			status, err := kongConfig.Client.Status(ctx)
 			if err != nil {
-				log.Errorf("checking config status failed: %w", err)
+				log.WithError(err).Error("checking config status failed")
 				log.Debug("configuration state unknown, skipping sync to kong")
 				return oldSHA, nil
 			}
@@ -140,7 +140,7 @@ func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
 	err = json.Unmarshal(customEntitiesJSONBytes, &customEntities)
 	if err != nil {
 		// do not error out when custom entities are messed up
-		log.Errorf("failed to unmarshal custom entities from secret data: %v", err)
+		log.WithError(err).Error("failed to unmarshal custom entities from secret data")
 	} else {
 		for k, v := range customEntities {
 			if _, exists := mergeMap[k]; !exists {

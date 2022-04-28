@@ -93,7 +93,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.6.2
+        uses: docker/metadata-action@v3.7.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -101,7 +101,7 @@ jobs:
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.6.2
+        uses: docker/metadata-action@v3.7.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -157,13 +157,13 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.23.3'
+          - 'v1.23.5'
         dbmode:
           - 'dbless'
           - 'postgres'
     steps:
       - name: setup golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: '^1.18'
       - name: cache go modules
@@ -195,7 +195,7 @@ jobs:
           - 'postgres'
     steps:
       - name: setup golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: '^1.18'
       - name: cache go modules

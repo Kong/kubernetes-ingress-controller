@@ -15,11 +15,12 @@ import (
 // service and other k8s metadata.
 type Service struct {
 	kong.Service
-	Backend    ServiceBackend
-	Namespace  string
-	Routes     []Route
-	Plugins    []kong.Plugin
-	K8sService corev1.Service
+	Namespace string
+	Routes    []Route
+	Plugins   []kong.Plugin
+
+	Backends    []ServiceBackend
+	K8sServices map[string]*corev1.Service
 }
 
 // overrideByKongIngress sets Service fields by KongIngress

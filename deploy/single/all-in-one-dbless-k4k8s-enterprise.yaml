@@ -1183,6 +1183,36 @@ rules:
   - get
   - update
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - tcproutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - tcproutes/status
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - udproutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - udproutes/status
+  verbs:
+  - get
+  - update
+- apiGroups:
   - networking.internal.knative.dev
   resources:
   - ingresses
@@ -1389,7 +1419,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.2.1
+        image: kong/kubernetes-ingress-controller:2.3.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

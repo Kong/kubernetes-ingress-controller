@@ -5,13 +5,17 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,7 +63,7 @@ func TestHTTPRouteExample(t *testing.T) {
 
 	t.Logf("verifying that the HTTPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", gatewayAddr))
+		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
 		if err != nil {
 			return false
 		}
@@ -72,6 +76,84 @@ func TestHTTPRouteExample(t *testing.T) {
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
+	}, ingressWait, waitTick)
+
+	t.Logf("verifying that the backendRefs are being loadbalanced")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>Welcome to nginx!</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+}
+
+var udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
+
+func TestUDPRouteExample(t *testing.T) {
+	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpRouteExampleManifests, examplesDIR))
+	b, err := os.ReadFile(udpRouteExampleManifests)
+	// TODO as of 2022-04-01, UDPRoute does not support using a different inbound port than the outbound
+	// destination service port. Once parentRef port functionality is stable, we should remove this
+	s := string(b)
+	s = strings.ReplaceAll(s, "port: 53", "port: 9999")
+	b = []byte(s)
+	require.NoError(t, err)
+	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+
+	defer func() {
+		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+	}()
+
+	t.Logf("configuring test and setting up API clients")
+	resolver := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Second * 5,
+			}
+			return d.DialContext(ctx, network, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), 9999))
+		},
+	}
+
+	t.Logf("verifying that the UDPRoute becomes routable")
+	require.Eventually(t, func() bool {
+		_, err := resolver.LookupHost(ctx, "kernel.org")
+		return err == nil
+	}, ingressWait, waitTick)
+}
+
+var tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
+
+func TestTCPRouteExample(t *testing.T) {
+	t.Parallel()
+
+	t.Log("locking Gateway TCP ports")
+	tcpMutex.Lock()
+	defer tcpMutex.Unlock()
+
+	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
+	b, err := os.ReadFile(tcprouteExampleManifests)
+	require.NoError(t, err)
+	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+
+	defer func() {
+		t.Logf("deleting tcproute example")
+		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+	}()
+
+	t.Log("verifying that TCPRoute becomes routable")
+	require.Eventually(t, func() bool {
+		responds, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
+		return err == nil && responds
 	}, ingressWait, waitTick)
 }
 

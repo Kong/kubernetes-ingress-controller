@@ -1,0 +1,116 @@
+# WARNING: Gateway APIs support is still experimental. Use as your own risk.
+#
+# NOTE: You need to install the Gateway APIs CRDs before using this example,
+#       they are external and can be deployed with the following one-liner:
+#
+# kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master | kubectl apply -f -
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+data:
+  Corefile: |-
+    .:53 {
+        errors
+        health {
+           lameduck 5s
+        }
+        ready
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+           pods insecure
+           fallthrough in-addr.arpa ip6.arpa
+           ttl 30
+        }
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  labels:
+    app: coredns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coredns
+  template:
+    metadata:
+      labels:
+        app: coredns
+    spec:
+      containers:
+      - args:
+        - -conf
+        - /etc/coredns/Corefile
+        image: k8s.gcr.io/coredns/coredns:v1.8.6
+        imagePullPolicy: IfNotPresent
+        name: coredns
+        ports:
+        - containerPort: 53
+          protocol: UDP
+        volumeMounts:
+        - mountPath: /etc/coredns
+          name: config-volume
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: Corefile
+            path: Corefile
+          name: coredns
+        name: config-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+spec:
+  ports:
+  - port: 53
+    protocol: UDP
+    targetPort: 53
+  selector:
+    app: coredns
+  type: ClusterIP
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1alpha2
+metadata:
+  name: kong
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1alpha2
+metadata:
+  name: kong
+spec:
+  gatewayClassName: kong
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+  - name: dns
+    protocol: UDP
+    port: 53
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: coredns
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - backendRefs:
+    - name: coredns
+      port: 53

@@ -102,11 +102,13 @@ func Test_getPluginRelations(t *testing.T) {
 							Service: kong.Service{
 								Name: kong.String("foo-service"),
 							},
-							K8sService: corev1.Service{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+							K8sServices: map[string]*corev1.Service{
+								"foo-service": {
+									ObjectMeta: metav1.ObjectMeta{
+										Namespace: "ns1",
+										Annotations: map[string]string{
+											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+										},
 									},
 								},
 							},
@@ -246,11 +248,13 @@ func Test_getPluginRelations(t *testing.T) {
 							Service: kong.Service{
 								Name: kong.String("foo-service"),
 							},
-							K8sService: corev1.Service{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+							K8sServices: map[string]*corev1.Service{
+								"foo-service": {
+									ObjectMeta: metav1.ObjectMeta{
+										Namespace: "ns1",
+										Annotations: map[string]string{
+											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+										},
 									},
 								},
 							},

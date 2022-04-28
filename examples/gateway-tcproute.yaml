@@ -8,73 +8,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: httpbin
+  name: tcpecho
   labels:
-    app: httpbin
+    app: tcpecho
 spec:
   selector:
     matchLabels:
-      app: httpbin
+      app: tcpecho
   template:
     metadata:
       labels:
-        app: httpbin
+        app: tcpecho
     spec:
       containers:
-      - name: httpbin
-        image: kennethreitz/httpbin
+      - name: tcpecho
+        image: cjimti/go-echo
         ports:
-        - containerPort: 80
+        - containerPort: 1025
+        env:
+        - name: POD_NAME
+          value: tcproute-example-manifest
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    app: httpbin
-  name: httpbin
+  name: tcpecho
 spec:
   ports:
-  - port: 80
+  - port: 8888
     protocol: TCP
-    targetPort: 80
+    targetPort: 1025
   selector:
-    app: httpbin
-  type: ClusterIP
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx
-  labels:
-    app: nginx
-spec:
-  selector:
-    matchLabels:
-      app: nginx
-  template:
-    metadata:
-      labels:
-        app: nginx
-    spec:
-      containers:
-      - name: nginx
-        image: nginx
-        ports:
-        - containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: nginx
-  name: nginx
-spec:
-  ports:
-  - port: 8080
-    protocol: TCP
-    targetPort: 80
-  selector:
-    app: nginx
+    app: tcpecho
   type: ClusterIP
 ---
 kind: GatewayClass
@@ -94,23 +59,18 @@ spec:
   - name: http
     protocol: HTTP
     port: 80
+  - name: tcp
+    protocol: TCP
+    port: 8888
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: HTTPRoute
+kind: TCPRoute
 metadata:
-  name: httproute-testing
+  name: tcpecho
 spec:
   parentRefs:
   - name: kong
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /httproute-testing
-    backendRefs:
-    - name: httpbin
-      port: 80
-      weight: 75
-    - name: nginx
-      port: 8080
-      weight: 25
+  - backendRefs:
+    - name: tcpecho
+      port: 8888

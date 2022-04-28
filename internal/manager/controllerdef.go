@@ -284,6 +284,36 @@ func setupControllers(
 				DataplaneClient: dataplaneClient,
 			},
 		},
+		{
+			Enabled: featureGates[gatewayFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "udproutes",
+				}}.CRDExists,
+			Controller: &gateway.UDPRouteReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("UDPRoute"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
+			},
+		},
+		{
+			Enabled: featureGates[gatewayFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "tcproutes",
+				}}.CRDExists,
+			Controller: &gateway.TCPRouteReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("TCPRoute"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
+			},
+		},
 	}
 
 	return controllers, nil

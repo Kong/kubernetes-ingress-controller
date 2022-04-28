@@ -16,7 +16,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 
 	ingressList, err := p.storer.ListKnativeIngresses()
 	if err != nil {
-		p.logger.Errorf("failed to list Knative Ingresses: %v", err)
+		p.logger.WithError(err).Error("failed to list Knative Ingresses")
 		return result
 	}
 
@@ -89,10 +89,10 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 							Retries:        kong.Int(DefaultRetries),
 						},
 						Namespace: ingress.Namespace,
-						Backend: kongstate.ServiceBackend{
-							Name: knativeBackend.ServiceName,
-							Port: PortDefFromIntStr(knativeBackend.ServicePort),
-						},
+						Backends: []kongstate.ServiceBackend{{
+							Name:    knativeBackend.ServiceName,
+							PortDef: PortDefFromIntStr(knativeBackend.ServicePort),
+						}},
 					}
 					if len(headers) > 0 {
 						service.Plugins = append(service.Plugins, kong.Plugin{

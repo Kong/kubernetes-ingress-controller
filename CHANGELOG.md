@@ -1,5 +1,8 @@
 # Table of Contents
 
+ - [2.4.0](#240)
+ - [2.3.1](#231)
+ - [2.3.0](#230)
  - [2.2.1](#221)
  - [2.2.0](#220)
  - [2.1.1](#211)
@@ -44,9 +47,59 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.3.0]
+## [2.4.0]
 
 > Release date: TBD
+
+#### Added
+
+- `UDPRoute` resources now support multiple backendRefs for load-balancing.
+  [#2405](https://github.com/Kong/kubernetes-ingress-controller/issues/2405)
+- `TCPRoute` resources now support multiple backendRefs for load-balancing.
+  [#2405](https://github.com/Kong/kubernetes-ingress-controller/issues/2405)
+- `TCPRoute` resources are now supported.
+  [#2086](https://github.com/Kong/kubernetes-ingress-controller/issues/2086)
+- `HTTPRoute` resources now support multiple `backendRefs` with a round-robin
+  load-balancing strategy applied by default across the `Endpoints` or the
+  `Services` (if the `ingress.kubernetes.io/service-upstream`
+  annotation is set). They also now support weights to enable more
+  fine-tuning of the load-balancing between those backend services.
+  [#2166](https://github.com/Kong/kubernetes-ingress-controller/issues/2166)
+- `Gateway` resources now honor [`listener.allowedRoutes.namespaces`
+  filters](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.RouteNamespaces).
+  Note that the unmanaged Kong Gateway implementation populates listeners
+  automatically based on the Kong Service and Deployment, and user-provided
+  `allowedRoutes` filters are merged into generated listeners with the same
+  protocol.
+  [#2389](https://github.com/Kong/kubernetes-ingress-controller/issues/2389)
+
+#### Fixed
+
+- Added a mechanism to retry the initial connection to the Kong
+  Admin API on controller start to fix an issue where the controller
+  pod could crash loop on start when waiting for Gateway readiness 
+  (e.g. if the Gateway is waiting for its database to initialize). 
+  The new retry mechanism can be manually configured using the 
+  `--kong-admin-init-retries` and `--kong-admin-init-retry-delay` flags.
+  [#2274](https://github.com/Kong/kubernetes-ingress-controller/issues/2274)
+- diff logging now honors log level instead of printing at all log levels. It
+  will only print at levels `debug` and `trace`.
+  [#2422](https://github.com/Kong/kubernetes-ingress-controller/issues/2422)
+
+## [2.3.1]
+
+> Release date: 2022-04-07
+
+#### Fixed
+
+- Fixed an issue where admission controllers configured without certificates
+  would incorrectly detect invalid configuration and prevent the controller
+  from starting.
+  [#2403](https://github.com/Kong/kubernetes-ingress-controller/pull/2403)
+
+## [2.3.0]
+
+> Release date: 2022-04-05
 
 #### Breaking changes
 
@@ -81,10 +134,12 @@
 - Admission webhook certificate files now track updates to the file, and will
   update when the corresponding Secret has changed.
   [#2258](https://github.com/Kong/kubernetes-ingress-controller/pull/2258)
+- Added support for Gateway API [UDPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute)
+  resources.
+  [#2363](https://github.com/Kong/kubernetes-ingress-controller/pull/2363)
 - The controller can now detect whether a Kong container has crashed and needs
   a configuration push. Requires Kong 2.8+.
   [#2343](https://github.com/Kong/kubernetes-ingress-controller/pull/2343)
-
 
 #### Fixed
 
@@ -1643,6 +1698,9 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.1...v2.4.0
+[2.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1

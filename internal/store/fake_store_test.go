@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -712,4 +713,54 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	certs, err = store.ListCACerts()
 	assert.Nil(err)
 	assert.Len(certs, 2, "expect two secrets as CA certificates")
+}
+
+func TestFakeStoreHTTPRoute(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*gatewayv1alpha2.HTTPRoute{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.HTTPRouteSpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.HTTPRouteSpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListHTTPRoutes()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two HTTPRoutes")
+}
+
+func TestFakeStoreUDPRoute(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*gatewayv1alpha2.UDPRoute{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.UDPRouteSpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.UDPRouteSpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListUDPRoutes()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two UDPRoutes")
 }

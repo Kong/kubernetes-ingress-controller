@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -20,6 +21,10 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------
@@ -54,6 +59,7 @@ nodes:
 `
 	validationWebhookName = "kong-validation-webhook"
 	kongNamespace         = "kong"
+	admissionScriptPath   = "../../hack/deploy-admission-controller.sh"
 )
 
 var (
@@ -251,6 +257,8 @@ func TestWebhookUpdate(t *testing.T) {
 	}, time.Minute*10, time.Second)
 }
 
+// TestDeployAllInOneDBLESSGateway tests the Gateway feature flag and the admission controller with no user-provided
+// certificate (all other tests with the controller provide certificates, so that behavior isn't tested otherwise)
 func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
 	t.Parallel()
@@ -285,7 +293,13 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
 
-	t.Log("updating kong deployment to enable Gateway feature gate")
+	t.Log("running the admission webhook setup script")
+	cmd := exec.Command("bash", admissionScriptPath)
+	require.NoError(t, cmd.Run())
+
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	t.Log("updating kong deployment to enable Gateway feature gate and admission controller")
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
@@ -295,7 +309,24 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
 		deployment, metav1.UpdateOptions{})
-	require.NoError(t, err)
+
+	// vov it's easier than tracking the deployment state
+	t.Log("creating a consumer to ensure the admission webhook is online")
+	consumer := &kongv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nihoniy",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Username: "nihoniy",
+	}
+
+	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
+	require.Eventually(t, func() bool {
+		_, err = kongClient.ConfigurationV1().KongConsumers(namespace).Create(ctx, consumer, metav1.CreateOptions{})
+		return err == nil
+	}, time.Minute*2, time.Second*1)
 
 	t.Log("verifying controller updates associated Gateway resoures")
 	gw := deployGateway(ctx, t, env)

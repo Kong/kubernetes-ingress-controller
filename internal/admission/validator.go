@@ -89,7 +89,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	c, err := validator.ConsumerSvc.Get(ctx, &consumer.Username)
 	if err != nil {
 		if !kong.IsNotFoundErr(err) {
-			validator.Logger.Errorf("failed to fetch consumer from kong: %v", err)
+			validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
 			return false, ErrTextConsumerUnretrievable, err
 		}
 	}

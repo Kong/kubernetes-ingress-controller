@@ -66,7 +66,7 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 		}
 
 	// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
-	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
+	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert == "" && sc.Key == "":
 		var err error
 		watcher, err = certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
 		if err != nil {
@@ -123,32 +123,32 @@ func (a RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		a.Logger.Errorf("failed to read request from client: %v", err)
+		a.Logger.WithError(err).Error("failed to read request from client")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	review := admission.AdmissionReview{}
 	if err := json.Unmarshal(data, &review); err != nil {
-		a.Logger.Errorf("failed to parse AdmissionReview object: %v", err)
+		a.Logger.WithError(err).Error("failed to parse AdmissionReview object")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	response, err := a.handleValidation(r.Context(), *review.Request)
 	if err != nil {
-		a.Logger.Errorf("failed to run validation: %v", err)
+		a.Logger.WithError(err).Error("failed to run validation")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	review.Response = response
 	data, err = json.Marshal(review)
 	if err != nil {
-		a.Logger.Errorf("failed to marshal response: %v", err)
+		a.Logger.WithError(err).Error("failed to marshal response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(data)
 	if err != nil {
-		a.Logger.Errorf("failed to write response: %v", err)
+		a.Logger.WithError(err).Error("failed to write response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

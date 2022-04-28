@@ -98,6 +98,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 			return nil, fmt.Errorf("failed to read certificate file %s: %w", tlsClientCertPath, err)
 		}
 		opts.TLSClientCert = string(tlsClientCert)
+		pts.TLSClientCertPath = ""
 	}
 	if opts.TLSClientKeyPath != "" {
 		tlsClientKeyPath := opts.TLSClientKeyPath
@@ -106,6 +107,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 			return nil, fmt.Errorf("failed to read key file %s: %w", tlsClientKeyPath, err)
 		}
 		opts.TLSClientKey = string(tlsClientKey)
+		opts.TLSClientKeyPath = ""
 	}
 
 	// if the caller has supplied either the cert or the key but not both, this is

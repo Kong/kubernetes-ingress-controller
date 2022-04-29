@@ -90,26 +90,6 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 			"please remove one or the other")
 	}
 
-	// if a path to the certificate or key has been provided, retrieve the file contents
-	if opts.TLSClientCertPath != "" {
-		tlsClientCertPath := opts.TLSClientCertPath
-		tlsClientCert, err := os.ReadFile(tlsClientCertPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read certificate file %s: %w", tlsClientCertPath, err)
-		}
-		opts.TLSClientCert = string(tlsClientCert)
-		pts.TLSClientCertPath = ""
-	}
-	if opts.TLSClientKeyPath != "" {
-		tlsClientKeyPath := opts.TLSClientKeyPath
-		tlsClientKey, err := os.ReadFile(tlsClientKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read key file %s: %w", tlsClientKeyPath, err)
-		}
-		opts.TLSClientKey = string(tlsClientKey)
-		opts.TLSClientKeyPath = ""
-	}
-
 	// if the caller has supplied either the cert or the key but not both, this is
 	// erroneous input.
 	if opts.TLSClientCert != "" && opts.TLSClientKey == "" {
@@ -119,11 +99,36 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		return nil, fmt.Errorf("client key was provided, but the client certificate was not")
 	}
 
-	if opts.TLSClientCert != "" && opts.TLSClientKey != "" {
-		// Read the key pair to create certificate
-		cert, err := tls.X509KeyPair([]byte(opts.TLSClientCert), []byte(opts.TLSClientKey))
+	var clientCert, clientKey []byte
+	var err error
+
+	// if a path to the certificate or key has been provided, retrieve the file contents
+	if opts.TLSClientCertPath != "" {
+		tlsClientCertPath := opts.TLSClientCertPath
+		clientCert, err = os.ReadFile(tlsClientCertPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load kong-admin-tls-client-cert and kong-admin-tls-client-key certificate: %w", err)
+			return nil, fmt.Errorf("failed to read certificate file %s: %w", tlsClientCertPath, err)
+		}
+	}
+	if opts.TLSClientKeyPath != "" {
+		tlsClientKeyPath := opts.TLSClientKeyPath
+		clientKey, err = os.ReadFile(tlsClientKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read key file %s: %w", tlsClientKeyPath, err)
+		}
+	}
+	if opts.TLSClientCert != "" {
+		clientCert = []byte(opts.TLSClientCert)
+	}
+	if opts.TLSClientKey != "" {
+		clientKey = []byte(opts.TLSClientKey)
+	}
+
+	if len(clientCert) != 0 && len(clientKey) != 0 {
+		// Read the key pair to create certificate
+		cert, err := tls.X509KeyPair(clientCert, clientKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load client certificate: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}

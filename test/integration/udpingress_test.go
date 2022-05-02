@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
@@ -21,12 +22,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 var udpMutex sync.Mutex
+
+// coreDNSImage is the image and version of CoreDNS that will be used for UDP
+// testing.
+const coreDNSImage = "k8s.gcr.io/coredns/coredns:v1.8.6"
 
 func TestUDPIngressEssentials(t *testing.T) {
 	t.Parallel()
@@ -53,7 +57,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	}()
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
-	container := generators.NewContainer("coredns", "coredns/coredns", 53)
+	container := generators.NewContainer("coredns", coreDNSImage, 53)
 	container.Ports[0].Protocol = corev1.ProtocolUDP
 	container.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
 	container.Args = []string{"-conf", "/etc/coredns/Corefile"}
@@ -96,8 +100,8 @@ func TestUDPIngressEssentials(t *testing.T) {
 		},
 		Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
 			{
-				Port: 9999,
-				Backend: v1beta1.IngressBackend{
+				Port: ktfkong.DefaultUDPServicePort,
+				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[0].Port),
 				},
@@ -125,7 +129,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			d := net.Dialer{
 				Timeout: time.Second * 5,
 			}
-			return d.DialContext(ctx, network, fmt.Sprintf("%s:9999", proxyUDPURL.Hostname()))
+			return d.DialContext(ctx, network, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
 		},
 	}
 
@@ -144,7 +148,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, 30*time.Second, 1*time.Second, true)
+	}, statusWait, waitTick, true)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
@@ -188,7 +192,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	}()
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
-	container := generators.NewContainer("coredns", "coredns/coredns", 53)
+	container := generators.NewContainer("coredns", coreDNSImage, 53)
 	container.Ports[0].Protocol = corev1.ProtocolUDP
 	container.Ports[0].Name = "dnsudp"
 	container.Ports = append(container.Ports, corev1.ContainerPort{Name: "dnstcp", ContainerPort: 53, Protocol: corev1.ProtocolTCP})
@@ -234,8 +238,8 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		},
 		Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
 			{
-				Port: 9999,
-				Backend: v1beta1.IngressBackend{
+				Port: ktfkong.DefaultUDPServicePort,
+				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[0].Port),
 				},
@@ -279,11 +283,11 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			}
 		}
 		return false
-	}, 30*time.Second, 1*time.Second, true)
+	}, statusWait, waitTick, true)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:9999", proxyUDPURL.Hostname()))
+		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
 		return err == nil
 	}, ingressWait, waitTick)
 
@@ -299,7 +303,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		Spec: kongv1beta1.TCPIngressSpec{Rules: []kongv1beta1.IngressRule{
 			{
 				Port: 8888,
-				Backend: v1beta1.IngressBackend{
+				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[1].Port),
 				},
@@ -334,7 +338,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			}
 		}
 		return false
-	}, 30*time.Second, 1*time.Second, true)
+	}, statusWait, waitTick, true)
 
 	t.Logf("checking DNS to resolve via TCPIngress %s", tcp.Name)
 	assert.Eventually(t, func() bool {
@@ -344,7 +348,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 
 	t.Logf("checking DNS to resolve via UDPIngress %s still works also", udp.Name)
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:9999", proxyUDPURL.Hostname()))
+		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
 		return err == nil
 	}, ingressWait, waitTick)
 
@@ -352,7 +356,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
 	assert.NoError(t, c.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:9999", proxyUDPURL.Hostname()))
+		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
 		if err != nil {
 			if strings.Contains(err.Error(), "i/o timeout") {
 				return true
@@ -393,5 +397,32 @@ const corefile = `
     loop
     reload
     loadbalance
+    hosts {
+      10.0.0.1 konghq.com
+      fallthrough
+    }
+}
+.:9999 {
+    errors
+    health {
+       lameduck 5s
+    }
+    ready
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+       pods insecure
+       fallthrough in-addr.arpa ip6.arpa
+       ttl 30
+    }
+    forward . /etc/resolv.conf {
+       max_concurrent 1000
+    }
+    cache 30
+    loop
+    reload
+    loadbalance
+    hosts {
+      10.0.0.1 konghq.com
+      fallthrough
+    }
 }
 `

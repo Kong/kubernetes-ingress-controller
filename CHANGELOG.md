@@ -1,5 +1,10 @@
 # Table of Contents
 
+ - [2.4.0](#240)
+ - [2.3.1](#231)
+ - [2.3.0](#230)
+ - [2.2.1](#221)
+ - [2.2.0](#220)
  - [2.1.1](#211)
  - [2.1.0](#210)
  - [2.0.7](#207)
@@ -42,14 +47,168 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.1.2]
+## [2.4.0]
 
 > Release date: TBD
+
+#### Added
+
+- `UDPRoute` resources now support multiple backendRefs for load-balancing.
+  [#2405](https://github.com/Kong/kubernetes-ingress-controller/issues/2405)
+- `TCPRoute` resources now support multiple backendRefs for load-balancing.
+  [#2405](https://github.com/Kong/kubernetes-ingress-controller/issues/2405)
+- `TCPRoute` resources are now supported.
+  [#2086](https://github.com/Kong/kubernetes-ingress-controller/issues/2086)
+- `HTTPRoute` resources now support multiple `backendRefs` with a round-robin
+  load-balancing strategy applied by default across the `Endpoints` or the
+  `Services` (if the `ingress.kubernetes.io/service-upstream`
+  annotation is set). They also now support weights to enable more
+  fine-tuning of the load-balancing between those backend services.
+  [#2166](https://github.com/Kong/kubernetes-ingress-controller/issues/2166)
+- `Gateway` resources now honor [`listener.allowedRoutes.namespaces`
+  filters](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.RouteNamespaces).
+  Note that the unmanaged Kong Gateway implementation populates listeners
+  automatically based on the Kong Service and Deployment, and user-provided
+  `allowedRoutes` filters are merged into generated listeners with the same
+  protocol.
+  [#2389](https://github.com/Kong/kubernetes-ingress-controller/issues/2389)
+
+#### Fixed
+
+- Added a mechanism to retry the initial connection to the Kong
+  Admin API on controller start to fix an issue where the controller
+  pod could crash loop on start when waiting for Gateway readiness 
+  (e.g. if the Gateway is waiting for its database to initialize). 
+  The new retry mechanism can be manually configured using the 
+  `--kong-admin-init-retries` and `--kong-admin-init-retry-delay` flags.
+  [#2274](https://github.com/Kong/kubernetes-ingress-controller/issues/2274)
+- diff logging now honors log level instead of printing at all log levels. It
+  will only print at levels `debug` and `trace`.
+  [#2422](https://github.com/Kong/kubernetes-ingress-controller/issues/2422)
+
+## [2.3.1]
+
+> Release date: 2022-04-07
+
+#### Fixed
+
+- Fixed an issue where admission controllers configured without certificates
+  would incorrectly detect invalid configuration and prevent the controller
+  from starting.
+  [#2403](https://github.com/Kong/kubernetes-ingress-controller/pull/2403)
+
+## [2.3.0]
+
+> Release date: 2022-04-05
+
+#### Breaking changes
+
+- HTTPRoute header matches no longer interpret CSV values as multiple match
+  values, as this was not part of the HTTPRoute specification. Multiple values
+  should use regular expressions instead.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+
+#### Added
+
+- `Gateway` resources which have a `LoadBalancer` address among their list of
+  addresses will have those addresses listed on the top for convenience, and
+  so that those addresses are made prominent in the `kubectl get gateways`
+  short view.
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
+- The controller manager can now be flagged with a client certificate to use
+  for mTLS authentication with the Kong Admin API.
+  [#1958](https://github.com/Kong/kubernetes-ingress-controller/issues/1958)
+- Deployment manifests now include an IngressClass resource and permissions to
+  read IngressClass resources.
+  [#2292](https://github.com/Kong/kubernetes-ingress-controller/pull/2292)
+- The controller now reads IngressClass resources to determine if its
+  IngressClass is the default IngressClass. If so, the controller will ingest
+  resources that require a class (Ingress, KongConsumer, KongClusterPlugin,
+  etc.) but have none set.
+  [#2313](https://github.com/Kong/kubernetes-ingress-controller/pull/2313)
+- HTTPRoute header matches now support regular expressions.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+- HTTPRoutes that define multiple matches for the same header are rejected to
+  comply with the HTTPRoute specification.
+  [#2302](https://github.com/Kong/kubernetes-ingress-controller/pull/2302)
+- Admission webhook certificate files now track updates to the file, and will
+  update when the corresponding Secret has changed.
+  [#2258](https://github.com/Kong/kubernetes-ingress-controller/pull/2258)
+- Added support for Gateway API [UDPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute)
+  resources.
+  [#2363](https://github.com/Kong/kubernetes-ingress-controller/pull/2363)
+- The controller can now detect whether a Kong container has crashed and needs
+  a configuration push. Requires Kong 2.8+.
+  [#2343](https://github.com/Kong/kubernetes-ingress-controller/pull/2343)
+
+#### Fixed
+
+- Fixed an issue where duplicated route names in `HTTPRoute` resources with
+  multiple matches would cause the Kong Admin API to collide the routes into
+  one, effectively dropping routes for services beyond the first.
+  [#2345](https://github.com/Kong/kubernetes-ingress-controller/pull/2345)
+- Status updates for `HTTPRoute` objects no longer mark the resource as
+  `ConditionRouteAccepted` until the object has been successfully configured
+  in Kong Gateway at least once, as long as `--update-status`
+  is enabled (enabled by default).
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
+- Status updates for `HTTPRoute` now properly use the `ConditionRouteAccepted`
+  value for parent `Gateway` conditions when the route becomes configured in
+  the `Gateway` rather than the previous random `"attached"` string.
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
+- Fixed a minor issue where addresses on `Gateway` resources would be
+  duplicated depending on how many listeners are configured.
+  [#2339](https://github.com/Kong/kubernetes-ingress-controller/pull/2339)
+- Unconfigured fields now use their default value according to the Kong proxy
+  instance's reported schema. This addresses an issue where configuration
+  updates would send unnecessary requests to clear a default value.
+  [#2286](https://github.com/Kong/kubernetes-ingress-controller/pull/2286)
+- Certificate selection for hostnames is no longer random if both certificate
+  Secrets have the same creation timestamp, and no longer results in
+  unnecessary configuration updates.
+  [#2338](https://github.com/Kong/kubernetes-ingress-controller/pull/2338)
+
+## [2.2.1]
+
+> Release date: 2022/02/15
+
+#### Fixed
+
+- Added mitigation for an issue where controllers may briefly delete and
+  recreate configuration upon gaining leadership while populating their
+  Kubernetes object cache.
+  [#2255](https://github.com/Kong/kubernetes-ingress-controller/pull/2255)
+
+## [2.2.0]
+
+> Release date: 2022/02/04
+
+#### Added
+
+- Support for Kubernetes [Gateway APIs][gwapis] is now available [by enabling 
+  the `Gateway` feature gate](https://docs.konghq.com/kubernetes-ingress-controller/2.2.x/guides/using-gateway-api/).
+  This is an alpha feature, with limited support for the `HTTPRoute` API.
+  [Gateway Milestone 1][gwm1]
+- Kubernetes client rate limiting can now be configured using `--apiserver-qps`
+  (default 100) and `--apiserver-burst` (default 300) settings. Defaults have
+  been increased to prevent ratelimiting under normal loads.
+  [#2169](https://github.com/Kong/kubernetes-ingress-controller/issues/2169)
+- The KIC Grafana dashboard [is now published on grafana.com](https://grafana.com/grafana/dashboards/15662).
+  [#2235](https://github.com/Kong/kubernetes-ingress-controller/issues/2235)
+
+[gwapis]:https://github.com/kubernetes-sigs/gateway-api
+[gwm1]:https://github.com/Kong/kubernetes-ingress-controller/milestone/21
+
+#### Fixed
 
 - Fixed an issue where validation could fail for credentials secrets if the
   `value` for a unique constrained `key` were updated in place while linked
   to a managed `KongConsumer`.
   [#2190](https://github.com/Kong/kubernetes-ingress-controller/issues/2190)
+- The controller now retries status updates if the publish service LoadBalancer
+  has not yet provisioned. This fixes an issue where controllers would not
+  update status until the first configuration change after the LoadBalancer
+  became ready.
 
 ## [2.1.1]
 
@@ -1539,6 +1698,11 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.1...v2.4.0
+[2.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.1...v2.3.0
+[2.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.0...v2.2.1
+[2.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.1.0
 [2.0.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.0.6...v2.0.7

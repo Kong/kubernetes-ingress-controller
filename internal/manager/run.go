@@ -6,7 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/avast/retry-go/v4"
+	"github.com/kong/go-kong/kong"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -15,9 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metadata"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/mgrutils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
+	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -28,7 +33,7 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) error {
-	deprecatedLogger, logger, err := setupLoggers(c)
+	deprecatedLogger, _, err := setupLoggers(c)
 	if err != nil {
 		return err
 	}
@@ -60,14 +65,35 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	setupLog.Info("getting the kong admin api client configuration")
-	kongConfig, err := setupKongConfig(ctx, setupLog, c)
+	adminClient, err := c.GetKongClient(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to build the kong admin api configuration: %w", err)
+		return fmt.Errorf("unable to build kong api client: %w", err)
 	}
 
-	kongRoot, err := kongConfig.Client.Root(ctx)
+	var kongRoot map[string]interface{}
+	err = retry.Do(
+		func() error {
+			kongRoot, err = adminClient.Root(ctx)
+			return err
+		},
+		retry.Attempts(c.KongAdminInitializationRetries),
+		retry.Delay(c.KongAdminInitializationRetryDelay),
+		retry.DelayType(retry.FixedDelay),
+		retry.OnRetry(func(n uint, err error) {
+			setupLog.Info("Retrying kong admin api client call #%d/%d after error: %w", n, c.KongAdminInitializationRetries, err)
+		}),
+	)
+
 	if err != nil {
 		return fmt.Errorf("could not retrieve Kong admin root: %w", err)
+	}
+
+	kongConfig := setupKongConfig(ctx, adminClient, setupLog, c)
+	kongVersion, err := kong.ParseSemanticVersion(kong.VersionFromInfo(kongRoot))
+	if err != nil {
+		setupLog.V(util.WarnLevel).Info("could not parse Kong version, version-specific behavior disabled", "error", err)
+	} else {
+		util.SetKongVersion(kongVersion)
 	}
 	kongRootConfig, ok := kongRoot["configuration"].(map[string]interface{})
 	if !ok {
@@ -94,14 +120,39 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return err
 	}
 
-	setupLog.Info("Initializing Proxy Cache Server")
-	proxy, err := setupProxyServer(setupLog, deprecatedLogger, mgr, kongConfig, diagnostic, c)
+	setupLog.Info("Initializing Dataplane Client")
+	timeoutDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxyTimeoutSeconds))
 	if err != nil {
-		return fmt.Errorf("unable to initialize proxy cache server: %w", err)
+		return fmt.Errorf("%f is not a valid number of seconds to the timeout config for the kong client: %w", c.ProxyTimeoutSeconds, err)
+	}
+	dataplaneClient, err := dataplane.NewKongClient(deprecatedLogger, timeoutDuration, c.IngressClassName, c.EnableReverseSync, diagnostic, kongConfig)
+	if err != nil {
+		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
+	}
+
+	setupLog.Info("Initializing Dataplane Synchronizer")
+	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c)
+	if err != nil {
+		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
+	}
+
+	var kubernetesStatusQueue *status.Queue
+	if c.UpdateStatus {
+		setupLog.Info("Starting Status Updater")
+		kubernetesStatusQueue = status.NewQueue()
+		dataplaneClient.EnableKubernetesObjectReports(kubernetesStatusQueue)
+	} else {
+		setupLog.Info("status updates disabled, skipping status updater")
+	}
+
+	setupLog.Info("Initializing Dataplane Address Discovery")
+	dataplaneAddressFinder, err := setupDataplaneAddressFinder(ctx, mgr.GetClient(), c)
+	if err != nil {
+		return err
 	}
 
 	setupLog.Info("Starting Enabled Controllers")
-	controllers, err := setupControllers(mgr, proxy, c, featureGates)
+	controllers, err := setupControllers(mgr, dataplaneClient, dataplaneAddressFinder, kubernetesStatusQueue, c, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}
@@ -120,8 +171,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", func(_ *http.Request) error {
-		if !proxy.IsReady() {
-			return errors.New("proxy not yet configured")
+		if !synchronizer.IsReady() {
+			return errors.New("synchronizer not yet configured")
 		}
 		return nil
 	}); err != nil {
@@ -135,16 +186,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		}
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
-	}
-
-	if c.UpdateStatus {
-		setupLog.Info("Starting resource status updater")
-		err = setupStatusUpdater(mgr, kongConfig, logger, kubeconfig, c.PublishService, c.PublishStatusAddress)
-		if err != nil {
-			return fmt.Errorf("could not start status updater: %w", err)
-		}
-	} else {
-		setupLog.Info("WARNING: status updates were disabled, resources like Ingress objects will not receive updates to their statuses.")
 	}
 
 	setupLog.Info("Starting manager")

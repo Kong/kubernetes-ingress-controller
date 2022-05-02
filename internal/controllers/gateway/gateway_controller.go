@@ -22,24 +22,18 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
 // -----------------------------------------------------------------------------
 // Vars & Consts
 // -----------------------------------------------------------------------------
 
-const (
-	// ControllerName is the unique identifier for this controller and is used
-	// within GatewayClass resources to indicate that this controller should
-	// support connected Gateway resources.
-	ControllerName gatewayv1alpha2.GatewayController = "konghq.com/kic-gateway-controller"
-)
-
 var (
 	// ManagedGatewaysUnsupported is an error used whenever a failure occurs
 	// due to a Gateway that is not properly configured for unmanaged mode.
 	ManagedGatewaysUnsupported = fmt.Errorf("invalid gateway spec: managed gateways are not currently supported") //nolint:revive
+	gatewayV1alpha2Group       = gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
 )
 
 // -----------------------------------------------------------------------------
@@ -50,14 +44,13 @@ var (
 type GatewayReconciler struct { //nolint:revive
 	client.Client
 
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	Proxy  proxy.Proxy
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	DataplaneClient *dataplane.KongClient
 
 	PublishService  string
 	WatchNamespaces []string
 
-	allowedRoutes     gatewayv1alpha2.AllowedRoutes
 	publishServiceRef types.NamespacedName
 }
 
@@ -69,38 +62,6 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
-
-	// determine the AllowedRoutes for Gateways
-	group := gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
-	r.allowedRoutes.Kinds = []gatewayv1alpha2.RouteGroupKind{
-		{
-			Group: &group,
-			Kind:  gatewayv1alpha2.Kind("HTTPRoute"),
-		},
-		{
-			Group: &group,
-			Kind:  gatewayv1alpha2.Kind("TCPRoute"),
-		},
-		{
-			Group: &group,
-			Kind:  gatewayv1alpha2.Kind("UDPRoute"),
-		},
-	}
-
-	// determine whether AllowedRoutes will come from ALL namespaces, or specific ones
-	namespaces := gatewayv1alpha2.RouteNamespaces{}
-	if len(r.WatchNamespaces) == 0 {
-		fromAll := gatewayv1alpha2.NamespacesFromAll
-		namespaces.From = &fromAll
-	} else {
-		fromSelector := gatewayv1alpha2.NamespacesFromSelector
-		namespaces.From = &fromSelector
-		// TODO: this currently doesn't handle namespace restrictions and instead all
-		//       namespaces are currently allowed. This will be implemented in an
-		//       upcoming iteration.
-		//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2080
-	}
-	r.allowedRoutes.Namespaces = &namespaces
 
 	// generate the controller object and attach it to the manager and link the reconciler object
 	c, err := controller.New("gateway-controller", mgr, controller.Options{
@@ -134,11 +95,21 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// if an update to the gateway service occurs, we need to make sure to trigger
 	// reconciliation on all Gateway objects referenced by it (in the most common
 	// deployments this will be a single Gateway).
-	return c.Watch(
+	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
 		predicate.NewPredicateFuncs(r.isGatewayService),
-	)
+	); err != nil {
+		return err
+	}
+
+	// start the required gatewayclass controller as well
+	gwcCTRL := &GatewayClassReconciler{
+		Client: r.Client,
+		Log:    r.Log.WithName("V1Alpha2GatewayClass"),
+		Scheme: r.Scheme,
+	}
+	return gwcCTRL.SetupWithManager(mgr)
 }
 
 // -----------------------------------------------------------------------------
@@ -224,8 +195,6 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -283,25 +252,16 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "validating management mode for gateway") // this will also be done by the validating webhook, this is a fallback
 	unmanagedAnnotation := annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
 	existingGatewayEnabled, ok := annotations.ExtractUnmanagedGatewayMode(gateway.GetAnnotations())
-	if !ok || existingGatewayEnabled == "" {
-		log.Error(ManagedGatewaysUnsupported, "missing required annotation, will not retry", "namespace", gateway.Namespace, "name", gateway.Name, "annotation", unmanagedAnnotation)
-		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: gateway.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonNoResources),
-			Message:            "gateway controller does not support managed gateways, cannot schedule this object",
-		})
-		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
-	}
 
 	// allow for Gateway resources to be configured with "true" in place of the publish service
 	// reference as a placeholder to automatically populate the annotation with the namespace/name
 	// that was provided to the controller manager via --publish-service.
 	debug(log, gateway, "initializing admin service annotation if unset")
-	if existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
+	if !ok || existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
 		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", unmanagedAnnotation, r.PublishService))
+		if gateway.Annotations == nil {
+			gateway.Annotations = make(map[string]string)
+		}
 		gateway.Annotations[unmanagedAnnotation] = r.PublishService
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
@@ -330,6 +290,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 
+	if !areAllowedRoutesConsistentByProtocol(gateway.Spec.Listeners) {
+		return ctrl.Result{}, fmt.Errorf("all listeners for a protocol must use the same AllowedRoutes")
+	}
+
 	// When deployed on Kubernetes Kong can not be relied on for the address data needed for Gateway because
 	// it's commonly deployed in a way agnostic to the container network (e.g. it's simply configured with
 	// 0.0.0.0 as the address for its listeners internally). In order to get addresses we have to derive them
@@ -346,6 +310,8 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	gatewayListeners = mergeAllowedRoutes(gateway.Spec.Listeners, gatewayListeners)
 
 	debug(log, gateway, "updating the gateway if any changes to listeners occurred")
 	isChanged, err := r.updateAddressesAndListenersSpec(ctx, gateway, gatewayAddresses, gatewayListeners)
@@ -444,17 +410,26 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	// for all service types we're going to capture the ClusterIP
 	addresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(svc.Spec.ClusterIPs))
 	listeners := make([]gatewayv1alpha2.Listener, 0, len(svc.Spec.Ports))
+	protocolToRouteGroupKind := map[corev1.Protocol]gatewayv1alpha2.RouteGroupKind{
+		corev1.ProtocolTCP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TCPRoute")},
+		corev1.ProtocolUDP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("UDPRoute")},
+	}
 	for _, clusterIP := range svc.Spec.ClusterIPs {
+		addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
+			Type:  &gatewayIPAddrType,
+			Value: clusterIP,
+		})
+
 		for _, port := range svc.Spec.Ports {
-			addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
-				Type:  &gatewayIPAddrType,
-				Value: clusterIP,
-			})
 			listeners = append(listeners, gatewayv1alpha2.Listener{
-				Name:          gatewayv1alpha2.SectionName(port.Name),
-				Protocol:      gatewayv1alpha2.ProtocolType(port.Protocol),
-				Port:          gatewayv1alpha2.PortNumber(port.Port),
-				AllowedRoutes: &r.allowedRoutes,
+				Name:     gatewayv1alpha2.SectionName(port.Name),
+				Protocol: gatewayv1alpha2.ProtocolType(port.Protocol),
+				Port:     gatewayv1alpha2.PortNumber(port.Port),
+				AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						protocolToRouteGroupKind[port.Protocol],
+					},
+				},
 			})
 		}
 	}
@@ -468,19 +443,21 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		}
 
 		// otherwise gather any IPs or Hosts provisioned for the LoadBalancer
-		// and record them as Gateway Addresses.
+		// and record them as Gateway Addresses. The LoadBalancer addresses
+		// are pre-pended to the address list to make them prominent, as they
+		// are often the most common address used for traffic.
 		for _, ingress := range svc.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
-				addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
+				addresses = append([]gatewayv1alpha2.GatewayAddress{{
 					Type:  &gatewayIPAddrType,
 					Value: ingress.IP,
-				})
+				}}, addresses...)
 			}
 			if ingress.Hostname != "" {
-				addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
+				addresses = append([]gatewayv1alpha2.GatewayAddress{{
 					Type:  &gatewayHostAddrType,
 					Value: ingress.Hostname,
-				})
+				}}, addresses...)
 			}
 		}
 	}
@@ -495,7 +472,7 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 	// gather the proxy and stream listeners from the data-plane and map them
 	// to their respective ports (which will be the targetPorts of the proxy
 	// Service in Kubernetes).
-	proxyListeners, streamListeners, err := r.Proxy.Listeners(ctx)
+	proxyListeners, streamListeners, err := r.DataplaneClient.Listeners(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve listeners from the data-plane: %w", err)
 	}
@@ -522,13 +499,28 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 		if streamListener, ok := streamListenersMap[portMapper[int(listener.Port)]]; ok {
 			if streamListener.SSL {
 				listener.Protocol = gatewayv1alpha2.TLSProtocolType
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TLSRoute")},
+					},
+				}
 			}
 		}
 		if proxyListener, ok := proxyListenersMap[portMapper[int(listener.Port)]]; ok {
 			if proxyListener.SSL {
 				listener.Protocol = gatewayv1alpha2.HTTPSProtocolType
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("HTTPRoute")},
+					},
+				}
 			} else {
 				listener.Protocol = gatewayv1alpha2.HTTPProtocolType
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
+					Kinds: []gatewayv1alpha2.RouteGroupKind{
+						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("HTTPRoute")},
+					},
+				}
 			}
 		}
 		upgradedListeners = append(upgradedListeners, listener)
@@ -577,4 +569,48 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 	return false, nil
+}
+
+// mergeAllowedRoutes takes two sets of listeners, scans the source for AllowedRoutes filters, and copies those into
+// listeners in the target set that share the same protocol as the source listener. As implemented, it makes no attempt
+// to account for same-protocol listeners in the source set having different AllowedRoutes: it assumes
+// areAllowedRoutesConsistentByProtocol has been run first because Kong would not support multiple listeners with
+// different protocols anyway
+func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) (merged []gatewayv1alpha2.Listener) {
+	mappings := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.RouteNamespaces, len(target))
+	for _, listener := range source {
+		mappings[listener.Protocol] = *listener.AllowedRoutes.Namespaces
+	}
+	for _, listener := range target {
+		if namespaces, exists := mappings[listener.Protocol]; exists {
+			if listener.AllowedRoutes == nil {
+				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{}
+			}
+			listener.AllowedRoutes.Namespaces = &namespaces
+		}
+		merged = append(merged, listener)
+	}
+	return merged
+}
+
+// areAllowedRoutesConsistentByProtocol returns an error if a set of listeners includes multiple listeners for the same
+// protocol that do not use the same AllowedRoutes filters. Kong does not support limiting routes to a specific listen:
+// all routes are always served on all listens compatible with their protocol. As such, while we can filter the routes
+// we ingest, if we ingest routes from two incompatible filters, we will combine them into a single proxy configuration
+// It may be possible to write a new Kong plugin that checks the inbound port/address to de facto apply listen-based
+// filters in the future.
+func areAllowedRoutesConsistentByProtocol(listeners []gatewayv1alpha2.Listener) bool {
+	allowedByProtocol := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.AllowedRoutes)
+	for _, listener := range listeners {
+		var allowed gatewayv1alpha2.AllowedRoutes
+		var exists bool
+		if allowed, exists = allowedByProtocol[listener.Protocol]; !exists {
+			allowedByProtocol[listener.Protocol] = *listener.AllowedRoutes
+		} else {
+			if !reflect.DeepEqual(allowed, *listener.AllowedRoutes) {
+				return false
+			}
+		}
+	}
+	return true
 }

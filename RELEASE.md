@@ -12,19 +12,11 @@
 
 We maintain some integration tests with 3rd party components which we need to manually verify and update before cutting any release.
 
-- [ ] check the testing workflow (`.github/workflows/test.yaml`) and ensure that all matrix versions are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release.
+- [ ] check the testing workflow (`.github/workflows/test.yaml`) and ensure that all matrix versions (`.github/workflows/e2e.yaml` and `.github/workflows/release.yaml`) are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
   - [ ] Kubernetes
   - [ ] Istio
 
 An issue exists to automate the above actions: https://github.com/Kong/kubernetes-ingress-controller/issues/1886
-
-## Release Testing
-
-**For all releases**
-
-We currently provide a suite of tests with an extensive matrix of component versions (see `.github/workflows/release-test.yaml`).
-
-Prior to any release open the [workflow page](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release-test.yaml) and trigger a test run against `main`.
 
 **Wait for tests to pass before continuing with any release**, if any problems are found hold on the release until patches are provided and then run the tests again.
 
@@ -37,27 +29,18 @@ For this step we're going to start with the `main` branch to create our release 
 - [ ] ensure that you have up to date copy of `main`: `git fetch --all`
 - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
 - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
-- [ ] ensure base manifest versions use the new version and update manifest files: `make manifests`
-  - [ ] ensure that the Kubernetes versions provisioned in the cloud (GKE, etc. in `.github/workflows/release-testing.yaml`) as part of the release CI pipeline are up to date
-- [ ] remove any versions that are no longer supported by the cloud provider, or the release pipeline will fail
+- [ ] ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`
 - [ ] push the branch up to the remote: `git push --set-upstream origin release/x.y.z`
 
 ## Release Pull Request
 
 **For all releases**
 
-- [ ] Open a PR from your branch to `main`
-- [ ] Once the PR is merged, tag your release: `git fetch --all && git tag origin/main 1.3.1 && git push origin --tags`
-- [ ] Wait for CI to build images and push them to Docker Hub
-
-## Github Release
-
-**For all releases**
-
-- [ ] verify that CI is passing for `main` first: if there are CI errors on main they must be investigated and fixed
-- [ ] draft a new [release](https://github.com/Kong/kubernetes-ingress-controller/releases), using a title and body similar to previous releases. Use your existing tag.
-- [ ] for new `major` version releases create a new branch (e.g. `1.3.x`) from the release tag and push it
-- [ ] for `minor` and `patch` version releases rebase the release tag onto the release branch: `git checkout 1.3.x && git rebase 1.3.1 && git push`
+- [ ] Check the [latest nightly job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/nightly.yaml) to confirm that E2E is succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml).
+- [ ] Open a PR from your branch to `main`.
+- [ ] Once the PR is merged, [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml). Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
+- [ ] CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release.
+- [ ] For new major and minor version releases create a new branch (e.g. `1.3.x`) from the release tag and push it.
 
 ## Documentation
 

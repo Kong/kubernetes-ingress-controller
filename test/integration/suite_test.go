@@ -11,10 +11,6 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -22,8 +18,11 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/test/util"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
 
 // -----------------------------------------------------------------------------
@@ -53,7 +52,7 @@ func TestMain(m *testing.M) {
 
 	kongbuilder.WithControllerDisabled()
 	kongAddon := kongbuilder.Build()
-	builder := environments.NewBuilder().WithAddons(kongAddon, knative.New())
+	builder := environments.NewBuilder().WithAddons(kongAddon)
 
 	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster != "" {
@@ -104,6 +103,15 @@ func TestMain(m *testing.M) {
 	_, err = env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Update(ctx, svc, metav1.UpdateOptions{})
 	exitOnErr(err)
 
+	clusterVersion, err = env.Cluster().Version()
+	exitOnErr(err)
+	if clusterVersion.GE(knativeMinKubernetesVersion) {
+		fmt.Println("INFO: deploying knative addon")
+		knativeBuilder := knative.NewBuilder()
+		knativeAddon := knativeBuilder.Build()
+		exitOnErr(env.Cluster().DeployAddon(ctx, knativeAddon))
+	}
+
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	exitOnErr(<-env.WaitForReady(ctx))
 
@@ -138,10 +146,9 @@ func TestMain(m *testing.M) {
 		fmt.Println("INFO: starting the controller manager")
 		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", ingressClass),
-			fmt.Sprintf("--admission-webhook-cert=%s", kongSystemServiceCert),
-			fmt.Sprintf("--admission-webhook-key=%s", kongSystemServiceKey),
-			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
-			fmt.Sprintf("--admission-webhook-listen=%s:%d", admissionWebhookListenHost, admissionWebhookListenPort),
+			fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
+			fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
+			fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
 			"--log-level=trace",
@@ -152,10 +159,6 @@ func TestMain(m *testing.M) {
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
 		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))
 	}
-
-	fmt.Println("INFO: running final testing environment checks")
-	clusterVersion, err = env.Cluster().Version()
-	exitOnErr(err)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
@@ -19,10 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
-
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
@@ -619,7 +619,7 @@ func ensureWebhookService(name string) (func() error, error) {
 				{
 					Name:       "default",
 					Port:       443,
-					TargetPort: intstr.FromInt(admissionWebhookListenPort),
+					TargetPort: intstr.FromInt(testutils.AdmissionWebhookListenPort),
 				},
 			},
 		},
@@ -636,14 +636,14 @@ func ensureWebhookService(name string) (func() error, error) {
 			{
 				Addresses: []corev1.EndpointAddress{
 					{
-						IP:       admissionWebhookListenHost,
+						IP:       testutils.AdmissionWebhookListenHost,
 						NodeName: &nodeName,
 					},
 				},
 				Ports: []corev1.EndpointPort{
 					{
 						Name:     "default",
-						Port:     admissionWebhookListenPort,
+						Port:     testutils.AdmissionWebhookListenPort,
 						Protocol: corev1.ProtocolTCP,
 					},
 				},
@@ -670,7 +670,7 @@ func ensureWebhookService(name string) (func() error, error) {
 
 func waitForWebhookService(t *testing.T) {
 	require.Eventually(t, func() bool {
-		_, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", admissionWebhookListenHost, admissionWebhookListenPort), 1*time.Second)
+		_, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort), 1*time.Second)
 		return err == nil
 	}, ingressWait, waitTick, "waiting for the admission service to be up")
 }
@@ -697,7 +697,7 @@ func ensureAdmissionRegistration(configResourceName string, rules []admregv1.Rul
 					Rules:                   rules,
 					ClientConfig: admregv1.WebhookClientConfig{
 						Service:  &admregv1.ServiceReference{Namespace: controllerNamespace, Name: svcName},
-						CABundle: []byte(kongSystemServiceCert),
+						CABundle: []byte(testutils.KongSystemServiceCert),
 					},
 				},
 			},

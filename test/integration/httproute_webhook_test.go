@@ -7,17 +7,17 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 )
 
 func TestHTTPRouteValidationWebhook(t *testing.T) {
@@ -164,7 +164,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
 							Name:      gatewayv1alpha2.ObjectName(gateway.Name),
 						}},
@@ -181,7 +181,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
 							Name:      gatewayv1alpha2.ObjectName("fake-gateway"),
 						}},
@@ -206,7 +206,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 						}},
 					}},
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
 							Name:      gatewayv1alpha2.ObjectName(unmanagedGateway.Name),
 						}},

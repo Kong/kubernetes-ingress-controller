@@ -101,15 +101,9 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 			}
 		}
 
-		// we don't currently support multiple backendRefs
-		// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2166
-		if len(rule.BackendRefs) > 1 {
-			return fmt.Errorf("multiple backendRefs is not yet supported for httproute")
-		}
-
 		// we don't support any backendRef types except Kubernetes Services
 		for _, ref := range rule.BackendRefs {
-			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" {
+			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
 				return fmt.Errorf("%s is not a supported group for httproute backendRefs, only core is supported", *ref.BackendRef.Group)
 			}
 			if ref.BackendRef.Kind != nil && *ref.BackendRef.Kind != "Service" {
@@ -128,7 +122,7 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 // which links to the provided Gateway if available. If the provided Gateway is not
 // actually referenced by parentRef in the provided HTTPRoute this is considered
 // invalid input and will produce an error.
-func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (*gatewayv1alpha2.ParentRef, error) {
+func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (*gatewayv1alpha2.ParentReference, error) {
 	// search all the parentRefs on the HTTPRoute to find one that matches the Gateway
 	for _, ref := range httproute.Spec.ParentRefs {
 		// determine the namespace for the gateway reference

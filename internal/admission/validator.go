@@ -15,7 +15,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -40,7 +40,7 @@ type KongHTTPValidator struct {
 	SecretGetter  kongstate.SecretGetter
 	ManagerClient client.Client
 
-	ingressClassMatcher func(*metav1.ObjectMeta, annotations.ClassMatching) bool
+	ingressClassMatcher func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 }
 
 // NewKongHTTPValidator provides a new KongHTTPValidator object provided a
@@ -76,7 +76,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	consumer kongv1.KongConsumer,
 ) (bool, string, error) {
 	// ignore consumers that are being managed by another controller
-	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.ExactClassMatch) {
+	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 		return true, "", nil
 	}
 
@@ -89,7 +89,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	c, err := validator.ConsumerSvc.Get(ctx, &consumer.Username)
 	if err != nil {
 		if !kong.IsNotFoundErr(err) {
-			validator.Logger.Errorf("failed to fetch consumer from kong: %v", err)
+			validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
 			return false, ErrTextConsumerUnretrievable, err
 		}
 	}
@@ -316,12 +316,6 @@ func (validator KongHTTPValidator) ValidateGateway(
 		return true, "", nil
 	}
 
-	// supported gateways currently are required to indicate they are
-	// unmanaged provisioning mode gateways.
-	if _, exists := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations); !exists {
-		return false, ErrTextInvalidGatewayConfiguration, fmt.Errorf("missing required annotation %s", annotations.GatewayUnmanagedAnnotation)
-	}
-
 	return true, "", nil
 }
 
@@ -387,7 +381,8 @@ func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]
 	// reduce the consumer set to consumers managed by this controller
 	managedConsumers := make([]*kongv1.KongConsumer, 0)
 	for _, consumer := range consumers.Items {
-		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.ExactClassMatch) {
+		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey,
+			annotations.ExactClassMatch) {
 			// ignore consumers (and subsequently secrets) that are managed by other controllers
 			continue
 		}

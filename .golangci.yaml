@@ -39,7 +39,10 @@ linters:
   - wastedassign
 linters-settings:
   gci:
-    local-prefixes: github.com/kong/kubernetes-ingress-controller/v2
+    sections:
+      - standard
+      - default
+      - prefix(github.com/kong/kubernetes-ingress-controller/v2)
 issues:
   fix: true
   exclude-rules:

@@ -82,15 +82,10 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 		// TODO: unclear if we truly use IngressClassValidatorFunc anymore
 		// IngressClassValidatorFuncFromObjectMeta appears to effectively supersede it, and is what we use in store
 		// IngressClassValidatorFunc appears to be a test-only relic at this point
-		f := IngressClassValidatorFunc(test.controller)
 		fmeta := IngressClassValidatorFuncFromObjectMeta(test.controller)
 		fv1 := IngressClassValidatorFuncFromV1Ingress(test.controller)
 
-		result := f(&ing.ObjectMeta, test.classMatching)
-		if result != test.isValid {
-			t.Errorf("test %v - expected %v but %v was returned", test, test.isValid, result)
-		}
-		resultMeta := fmeta(&ing.ObjectMeta, test.classMatching)
+		resultMeta := fmeta(&ing.ObjectMeta, IngressClassKey, test.classMatching)
 		if resultMeta != test.isValid {
 			t.Errorf("meta test %v - expected %v but %v was returned", test, test.isValid, resultMeta)
 		}

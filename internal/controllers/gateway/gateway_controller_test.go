@@ -754,6 +754,270 @@ func Test_areListenersEqual(t *testing.T) {
 	}
 
 	for _, input := range inputs {
-		assert.Equal(t, input.expected, areListenersEqual(input.l1, input.l2), input.message, input.l1, input.l2)
+		assert.Equal(t, input.expected, areListenersEqual(input.l1, input.l2), input.message)
+	}
+}
+
+func Test_mergeAllowedRoutes(t *testing.T) {
+	same := gatewayv1alpha2.NamespacesFromSame
+	all := gatewayv1alpha2.NamespacesFromAll
+	inputs := []struct {
+		message  string
+		expected []gatewayv1alpha2.Listener
+		l1       []gatewayv1alpha2.Listener
+		l2       []gatewayv1alpha2.Listener
+	}{
+		{
+			message:  "empty",
+			expected: []gatewayv1alpha2.Listener(nil), // TODO what the go-isms here, shouldn't this be empty array, not whatever this is?
+			l1:       []gatewayv1alpha2.Listener{},
+			l2:       []gatewayv1alpha2.Listener{},
+		},
+		{
+			message: "single",
+			expected: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+			},
+			l1: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+			},
+			l2: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+				},
+			},
+		},
+		{
+			message: "multiple",
+			expected: []gatewayv1alpha2.Listener{
+				{
+					Name:     "one",
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Name:     "two",
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Name:     "three",
+					Protocol: gatewayv1alpha2.TCPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+			l1: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1alpha2.TCPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+			l2: []gatewayv1alpha2.Listener{
+				{
+					Name:     "one",
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+				},
+				{
+					Name:     "two",
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+				},
+				{
+					Name:     "three",
+					Protocol: gatewayv1alpha2.TCPProtocolType,
+				},
+			},
+		},
+	}
+	for _, input := range inputs {
+		assert.Equal(t, input.expected, mergeAllowedRoutes(input.l1, input.l2), input.message)
+	}
+}
+
+func Test_areAllowedRoutesConsistentByProtocol(t *testing.T) {
+	same := gatewayv1alpha2.NamespacesFromSame
+	all := gatewayv1alpha2.NamespacesFromAll
+	selector := gatewayv1alpha2.NamespacesFromSelector
+
+	inputs := []struct {
+		expected bool
+		message  string
+		l        []gatewayv1alpha2.Listener
+	}{
+		{
+			expected: true,
+			message:  "empty",
+			l:        []gatewayv1alpha2.Listener{},
+		},
+		{
+			expected: true,
+			message:  "no intersect",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1alpha2.TCPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: true,
+			message:  "same allowed for each listener with same protocol",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1alpha2.TCPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: false,
+			message:  "different allowed for listeners with same protocol",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: true,
+			message:  "same selector",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "value"},
+							},
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "value"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: false,
+			message:  "different selector",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "value"},
+							},
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1alpha2.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "notvalue"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, input := range inputs {
+		assert.Equal(t, input.expected, areAllowedRoutesConsistentByProtocol(input.l), input.message)
 	}
 }

@@ -2,8 +2,10 @@ package util
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -13,7 +15,7 @@ var (
 	reportsHost  = "kong-hf.konghq.com"
 	reportsPort  = 61833
 	pingInterval = 3600
-	tlsConf      = tls.Config{MinVersion: tls.VersionTLS13}
+	tlsConf      = tls.Config{MinVersion: tls.VersionTLS12, MaxVersion: tls.VersionTLS12} // nolint:gosec
 	dialer       = net.Dialer{Timeout: time.Second * 30}
 )
 
@@ -50,6 +52,11 @@ func (r *Reporter) once() {
 	serializedInfo = serializedInfo + "db=" + r.Info.KongDB + ";"
 	serializedInfo = serializedInfo + "id=" + r.Info.ID + ";"
 	serializedInfo = serializedInfo + "hn=" + r.Info.Hostname + ";"
+
+	for feature, enabled := range r.Info.FeatureGates {
+		serializedInfo = fmt.Sprintf("%sfeature-%s=%t;", serializedInfo, strings.ToLower(feature), enabled)
+	}
+
 	r.serializedInfo = serializedInfo
 }
 

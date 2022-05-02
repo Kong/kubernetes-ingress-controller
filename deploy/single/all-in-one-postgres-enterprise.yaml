@@ -1183,6 +1183,36 @@ rules:
   - get
   - update
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - tcproutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - tcproutes/status
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - udproutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - udproutes/status
+  verbs:
+  - get
+  - update
+- apiGroups:
   - networking.internal.knative.dev
   resources:
   - ingresses
@@ -1198,6 +1228,14 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - networking.k8s.io
   resources:
@@ -1383,7 +1421,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong/kong-gateway:2.7
+        image: kong/kong-gateway:2.8
         lifecycle:
           preStop:
             exec:
@@ -1450,7 +1488,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.1.1
+        image: kong/kubernetes-ingress-controller:2.3.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -1498,7 +1536,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong/kong-gateway:2.7
+        image: kong/kong-gateway:2.8
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
 ---
@@ -1579,7 +1617,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:2.7
+        image: kong/kong-gateway:2.8
         name: kong-migrations
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
@@ -1597,3 +1635,10 @@ spec:
         image: busybox
         name: wait-for-postgres
       restartPolicy: OnFailure
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kong
+spec:
+  controller: ingress-controllers.konghq.com/kong

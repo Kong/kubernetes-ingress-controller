@@ -67,46 +67,58 @@ to start using Ingress in your Kubernetes cluster.
 
 ## Contributing
 
-We ❤️  pull requests, and we’re continually working hard to make it as easy as possible for developers to contribute. Before beginning development with the Kong Ingress, please familiarize yourself with the following developer resources:
+We ❤️ pull requests and we’re continually working hard to make it as easy as possible for developers to contribute. Before beginning development with the Kong Ingress Controller, please familiarize yourself with the following developer resources:
 - [CONTRIBUTING](CONTRIBUTING.md)
 - [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md) and [COPYRIGHT](https://github.com/Kong/kong/blob/master/COPYRIGHT)
 
 ## Documentation
 
-All documentation around Kong Ingress Controller is present in the [kong/docs.konghq.com](https://github.com/kong/docs.konghq.com) repository. Pull Requests are welcome for additions and corrections.
+All documentation for the Kong Ingress Controller is present in the [kong/docs.konghq.com](https://github.com/kong/docs.konghq.com) repository. Pull Requests are welcome for additions and corrections.
 
 ## Guides and Tutorials
 
-Please browse through [guides][guides] to get started or understand how to configure
-a specific setting with Kong Ingress Controller.
+Please browse through the [guides][guides] to get started and to learn specific ingress controller operations.
 
 ## main branch builds
 
-Pre-release builds of the `main` branch are available from the
-[kong-ingress-controller repository][docker-images] hosted on Docker Hub:
+Nightly pre-release builds of the `main` branch are available from the
+[kong/nightly-ingress-controller repository][nightly-images] hosted on Docker Hub:
 
 `main` contains unreleased new features for upcoming minor and major releases:
 
 ```
-docker pull kong/kubernetes-ingress-controller:main
+docker pull kong/nightly-ingress-controller:nightly
 ```
 
 ## Seeking help
 
-Please search through the posts on
-[Kong Nation](https://discuss.konghq.com/c/kubernetes) as it's
-likely that another user has run into the same problem.
+Please search through the posts on the [discussions
+page](https://github.com/Kong/kubernetes-ingress-controller/discussions)
+or the [Kong Nation Forums](https://discuss.konghq.com/c/kubernetes)
+as it's likely that another user has run into the same problem.
 If you don't find an answer, please feel free to post a question.
-For a feature request, please post in
-[Feature Suggestions](https://discuss.konghq.com/c/feature-suggestions)
-category.
+
+If you've found a bug please [open an issue](https://github.com/kong/kubernetes-ingress-controller/issues).
+
+For a feature request please open an issue using the feature request template.
 
 You can also talk to the developers behind Kong in the
 [#kong](https://kubernetes.slack.com/messages/kong) channel on the
 Kubernetes Slack server.
 
-If you've spotted a bug, please open an issue
-on our [Github](https://github.com/kong/kubernetes-ingress-controller/issues).
+### Preview and Experimental Features
+
+At any time the KIC may include features or options that are considered
+experimental and are not enabled by default, nor available in the [Kong
+Documentation Site][kongdocs].
+
+To try out new features that are behind feature gates, please see the
+preview features in [FEATURE_GATES.md][fgates] and documentation for these
+preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
+
+[kongdocs]:https://docs.konghq.com
+[fgates]:/FEATURE_GATES.md
+[fpreview]:/FEATURE_PREVIEW_DOCUMENTATION.md
 
 ### Community meetings
 
@@ -122,9 +134,8 @@ See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and
 [crds]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 [faqs]: https://docs.konghq.com/kubernetes-ingress-controller/latest/faq/
 [getting-started-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/getting-started/
-[badge-travis-image]: https://travis-ci.org/Kong/kubernetes-ingress-controller.svg?branch=master
-[badge-travis-url]: https://travis-ci.org/Kong/kubernetes-ingress-controller
 [docker-images]: https://hub.docker.com/r/kong/kubernetes-ingress-controller
+[nightly-images]: https://hub.docker.com/r/kong/nightly-ingress-controller
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/

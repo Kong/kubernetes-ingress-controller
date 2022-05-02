@@ -85,7 +85,7 @@ var (
 	// NOTE: more namespaces will be loaded dynamically by the test.Main
 	//       during runtime. In general, avoid adding hardcoded namespaces
 	//       to this list as that's reserved for special cases.
-	watchNamespaces = fmt.Sprintf("%s,%s", extraIngressNamespace, extraWebhookNamespace)
+	watchNamespaces = fmt.Sprintf("%s,%s,%s", extraIngressNamespace, extraWebhookNamespace, corev1.NamespaceDefault)
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
@@ -289,9 +289,14 @@ func identifyTestCasesForFile(filePath string) ([]string, error) {
 // not pay attention to hostname or other routing rules. This uses a "require"
 // for the desired conditions so if this request doesn't eventually succeed the
 // calling test will fail and stop.
-func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents string) { //nolint:unparam
+func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents string, headers map[string]string) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, path), nil)
+	require.NoError(t, err)
+	for header, value := range headers {
+		req.Header.Set(header, value)
+	}
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/%s", proxyURL, path))
+		resp, err := httpc.Do(req)
 		if err != nil {
 			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, path, err)
 			return false

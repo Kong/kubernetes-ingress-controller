@@ -68,7 +68,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name:        "testing-gateway",
 							SectionName: &nonexistentListener,
 						}},
@@ -107,7 +107,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -135,7 +135,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -171,7 +171,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -209,7 +209,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -262,7 +262,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -315,7 +315,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -361,70 +361,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 			err:           fmt.Errorf("regex header matching is not yet supported for httproute"),
 		},
 		{
-			msg: "if an HTTPRoute defines more than one backendref for a single rule this is unsupported",
-			route: &gatewayv1alpha2.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
-							Name: "testing-gateway",
-						}},
-					},
-					Rules: []gatewayv1alpha2.HTTPRouteRule{{
-						Matches: []gatewayv1alpha2.HTTPRouteMatch{{
-							Headers: []gatewayv1alpha2.HTTPHeaderMatch{{
-								Name:  "Content-Type",
-								Value: "audio/vorbis",
-							}},
-						}},
-						BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
-							{
-								BackendRef: gatewayv1alpha2.BackendRef{
-									BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-										Namespace: &defaultGWNamespace,
-										Name:      "service1",
-									},
-								},
-							},
-							{
-								BackendRef: gatewayv1alpha2.BackendRef{
-									BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-										Namespace: &defaultGWNamespace,
-										Name:      "service2",
-									},
-								},
-							},
-						},
-					}},
-				},
-			},
-			gateways: []*gatewayv1alpha2.Gateway{{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-gateway",
-				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
-						Name:     "http",
-						Port:     80,
-						Protocol: gatewayv1alpha2.HTTPProtocolType,
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
-								Group: &group,
-								Kind:  "HTTPRoute",
-							}},
-						},
-					}},
-				},
-			}},
-			valid:         false,
-			validationMsg: "httproute spec did not pass validation",
-			err:           fmt.Errorf("multiple backendRefs is not yet supported for httproute"),
-		},
-		{
 			msg: "we don't support any group except core kubernetes for backendRefs",
 			route: &gatewayv1alpha2.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
@@ -433,7 +369,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -491,7 +427,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Spec: gatewayv1alpha2.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentRef{{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},

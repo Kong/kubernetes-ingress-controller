@@ -3,6 +3,7 @@ package store
 import (
 	"reflect"
 
+	"github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -31,7 +32,10 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 type FakeObjects struct {
 	IngressesV1beta1   []*networkingv1beta1.Ingress
 	IngressesV1        []*networkingv1.Ingress
-	HTTPRoute          []*gatewayv1alpha2.HTTPRoute
+	IngressClassesV1   []*networkingv1.IngressClass
+	HTTPRoutes         []*gatewayv1alpha2.HTTPRoute
+	UDPRoutes          []*gatewayv1alpha2.UDPRoute
+	TCPRoutes          []*gatewayv1alpha2.TCPRoute
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*configurationv1beta1.UDPIngress
 	Services           []*apiv1.Service
@@ -47,7 +51,8 @@ type FakeObjects struct {
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
 func NewFakeStore(
-	objects FakeObjects) (Storer, error) {
+	objects FakeObjects,
+) (Storer, error) {
 	var s Storer
 
 	ingressV1beta1Store := cache.NewStore(keyFunc)
@@ -64,9 +69,28 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	ingressClassV1Store := cache.NewStore(clusterResourceKeyFunc)
+	for _, ingress := range objects.IngressClassesV1 {
+		err := ingressClassV1Store.Add(ingress)
+		if err != nil {
+			return nil, err
+		}
+	}
 	httprouteStore := cache.NewStore(keyFunc)
-	for _, httproute := range objects.HTTPRoute {
+	for _, httproute := range objects.HTTPRoutes {
 		if err := httprouteStore.Add(httproute); err != nil {
+			return nil, err
+		}
+	}
+	udprouteStore := cache.NewStore(keyFunc)
+	for _, udproute := range objects.UDPRoutes {
+		if err := udprouteStore.Add(udproute); err != nil {
+			return nil, err
+		}
+	}
+	tcprouteStore := cache.NewStore(keyFunc)
+	for _, tcproute := range objects.UDPRoutes {
+		if err := tcprouteStore.Add(tcproute); err != nil {
 			return nil, err
 		}
 	}
@@ -144,7 +168,10 @@ func NewFakeStore(
 		stores: CacheStores{
 			IngressV1beta1: ingressV1beta1Store,
 			IngressV1:      ingressV1Store,
+			IngressClassV1: ingressClassV1Store,
 			HTTPRoute:      httprouteStore,
+			UDPRoute:       udprouteStore,
+			TCPRoute:       tcprouteStore,
 			TCPIngress:     tcpIngressStore,
 			UDPIngress:     udpIngressStore,
 			Service:        serviceStore,
@@ -164,6 +191,7 @@ func NewFakeStore(
 		ingressV1Beta1ClassMatching: annotations.ExactClassMatch,
 		ingressV1ClassMatching:      annotations.ExactClassMatch,
 		kongConsumerClassMatching:   annotations.ExactClassMatch,
+		logger:                      logrus.New(),
 	}
 	return s, nil
 }

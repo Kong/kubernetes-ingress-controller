@@ -15,7 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/proxy"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -32,15 +32,19 @@ type Config struct {
 	LogReduceRedundancy bool
 
 	// Kong high-level controller manager configurations
-	KongAdminAPIConfig adminapi.HTTPClientOpts
-	KongAdminToken     string
-	KongWorkspace      string
-	AnonymousReports   bool
-	EnableReverseSync  bool
-	SyncPeriod         time.Duration
+	KongAdminAPIConfig                adminapi.HTTPClientOpts
+	KongAdminInitializationRetries    uint
+	KongAdminInitializationRetryDelay time.Duration
+	KongAdminToken                    string
+	KongWorkspace                     string
+	AnonymousReports                  bool
+	EnableReverseSync                 bool
+	SyncPeriod                        time.Duration
 
 	// Kong Proxy configurations
 	APIServerHost            string
+	APIServerQPS             int
+	APIServerBurst           int
 	MetricsAddr              string
 	ProbeAddr                string
 	KongAdminURL             string
@@ -67,6 +71,7 @@ type Config struct {
 	IngressExtV1beta1Enabled bool
 	IngressNetV1beta1Enabled bool
 	IngressNetV1Enabled      bool
+	IngressClassNetV1Enabled bool
 	UDPIngressEnabled        bool
 	TCPIngressEnabled        bool
 	KongIngressEnabled       bool
@@ -108,22 +113,32 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongAdminAPIConfig.TLSServerName, "kong-admin-tls-server-name", "", "SNI name to use to verify the certificate presented by Kong in TLS.")
 	flagSet.StringVar(&c.KongAdminAPIConfig.CACertPath, "kong-admin-ca-cert-file", "", `Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.`)
 	flagSet.StringVar(&c.KongAdminAPIConfig.CACert, "kong-admin-ca-cert", "", `PEM-encoded CA certificate to verify Kong's Admin SSL certificate.`)
+
 	flagSet.StringSliceVar(&c.KongAdminAPIConfig.Headers, "kong-admin-header", nil, `add a header (key:value) to every Admin API call, this flag can be used multiple times to specify multiple headers`)
+	flagSet.UintVar(&c.KongAdminInitializationRetries, "kong-admin-init-retries", 60, "Number of attempts that will be made initially on controller startup to connect to the Kong Admin API")
+	flagSet.DurationVar(&c.KongAdminInitializationRetryDelay, "kong-admin-init-retry-delay", time.Second*1, "The time delay between every attempt (on controller startup) to connect to the Kong Admin API")
 	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "", `The Kong Enterprise RBAC token used by the controller.`)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
 	flagSet.DurationVar(&c.SyncPeriod, "sync-period", time.Hour*48, `Relist and confirm cloud resources this often`) // 48 hours derived from controller-runtime defaults
 
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientCertPath, "kong-admin-tls-client-cert-file", "", "mTLS client certificate file for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientKeyPath, "kong-admin-tls-client-key-file", "", "mTLS client key file for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientCert, "kong-admin-tls-client-cert", "", "mTLS client certificate for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientKey, "kong-admin-tls-client-key", "", "mTLS client key for authentication.")
+
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
+	flagSet.IntVar(&c.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second")
+	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second")
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
-	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", proxy.DefaultSyncSeconds,
+	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.",
 	)
-	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", proxy.DefaultProxyTimeoutSeconds,
+	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", dataplane.DefaultTimeoutSeconds,
 		"Define the rate (in seconds) in which the timeout configuration will be applied to the Kong client.",
 	)
 	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `A Secret containing custom entities for DB-less mode, in "namespace/name" format`)
@@ -151,6 +166,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Kubernetes API toggling
 	flagSet.BoolVar(&c.IngressNetV1Enabled, "enable-controller-ingress-networkingv1", true, "Enable the networking.k8s.io/v1 Ingress controller.")
+	flagSet.BoolVar(&c.IngressClassNetV1Enabled, "enable-controller-ingress-class-networkingv1", true, "Enable the networking.k8s.io/v1 IngressClass controller.")
 	flagSet.BoolVar(&c.IngressNetV1beta1Enabled, "enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
 	flagSet.BoolVar(&c.IngressExtV1beta1Enabled, "enable-controller-ingress-extensionsv1beta1", true, "Enable the extensions/v1beta1 Ingress controller.")
 	flagSet.BoolVar(&c.UDPIngressEnabled, "enable-controller-udpingress", true, "Enable the UDPIngress controller.")
@@ -186,7 +202,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s", featureGatesDocsURL))
 
 	// Deprecated (to be removed in future releases)
-	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", proxy.DefaultSyncSeconds,
+	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API (DEPRECATED, use --proxy-sync-seconds instead)",
 	)
 	flagSet.Int("stderrthreshold", 0, "DEPRECATED: has no effect and will be removed in future releases (see github issue #1297)")
@@ -208,7 +224,16 @@ func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {
-	return clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+	config, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Configure k8s client rate-limiting
+	config.QPS = float32(c.APIServerQPS)
+	config.Burst = c.APIServerBurst
+
+	return config, err
 }
 
 func (c *Config) GetKubeClient() (client.Client, error) {

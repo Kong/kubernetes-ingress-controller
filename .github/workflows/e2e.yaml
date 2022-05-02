@@ -12,20 +12,21 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.21.2'
-          - 'v1.22.0'
+          - 'v1.21.10'
+          - 'v1.22.7'
+          - 'v1.23.5'
         istio-version:
-          - 'v1.11.4'
-          - 'v1.10.5'
-          - 'v1.9.9'
+          - 'v1.13.2'
+          - 'v1.12.5'
+          - 'v1.11.8'
     steps:
     - name: setup golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
-        go-version: '^1.17'
+        go-version: '^1.18'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -33,7 +34,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 

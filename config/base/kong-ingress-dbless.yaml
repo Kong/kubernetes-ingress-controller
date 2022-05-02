@@ -22,7 +22,7 @@ spec:
       serviceAccountName: kong-serviceaccount
       containers:
       - name: proxy
-        image: kong:2.7
+        image: kong-placeholder:placeholder # This is replaced by the config/image.yaml component
         env:
           # servers
         - name: KONG_PROXY_LISTEN
@@ -102,7 +102,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.1.1
+        image: kic-placeholder:placeholder # This is replaced by the config/image.yaml component
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook

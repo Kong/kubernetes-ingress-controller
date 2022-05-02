@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -261,6 +262,41 @@ func TestFakeStoreIngressV1(t *testing.T) {
 	assert.NotNil(store)
 	assert.Len(store.ListIngressesV1(), 2)
 	assert.Len(store.ListIngressesV1beta1(), 0)
+}
+
+func TestFakeStoreIngressClassV1(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*networkingv1.IngressClass{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: IngressClassKongController,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: IngressClassKongController,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "baz",
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: "some-other-controller.example.com/controller",
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{IngressClassesV1: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	assert.Len(store.ListIngressClassesV1(), 2)
 }
 
 func TestFakeStoreListTCPIngress(t *testing.T) {
@@ -677,4 +713,54 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	certs, err = store.ListCACerts()
 	assert.Nil(err)
 	assert.Len(certs, 2, "expect two secrets as CA certificates")
+}
+
+func TestFakeStoreHTTPRoute(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*gatewayv1alpha2.HTTPRoute{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.HTTPRouteSpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.HTTPRouteSpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListHTTPRoutes()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two HTTPRoutes")
+}
+
+func TestFakeStoreUDPRoute(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*gatewayv1alpha2.UDPRoute{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.UDPRouteSpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.UDPRouteSpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListUDPRoutes()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two UDPRoutes")
 }

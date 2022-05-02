@@ -277,7 +277,7 @@ func setupControllers(
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "referencepolicies",
 				}}.CRDExists,
-			Controller: &gateway.HTTPRouteReconciler{
+			Controller: &gateway.ReferencePolicyReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("ReferencePolicy"),
 				Scheme:          mgr.GetScheme(),

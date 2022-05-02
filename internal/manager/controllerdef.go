@@ -275,6 +275,21 @@ func setupControllers(
 				GVR: schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "referencepolicies",
+				}}.CRDExists,
+			Controller: &gateway.ReferencePolicyReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("ReferencePolicy"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
+			},
+		},
+		{
+			Enabled: featureGates[gatewayFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "httproutes",
 				}}.CRDExists,
 			Controller: &gateway.HTTPRouteReconciler{

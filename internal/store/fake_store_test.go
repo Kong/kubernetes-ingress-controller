@@ -764,3 +764,28 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two UDPRoutes")
 }
+
+func TestFakeStoreReferencePolicy(t *testing.T) {
+	assert := assert.New(t)
+
+	policies := []*gatewayv1alpha2.ReferencePolicy{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.ReferencePolicySpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.ReferencePolicySpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{ReferencePolicies: policies})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListReferencePolicies()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two ReferencePolicies")
+}

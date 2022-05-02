@@ -79,4 +79,9 @@ resources:
   kind: UDPRoute
   path: github.com/kubernetes-sigs/gateway-api/apis/v1alpha2
   version: v1alpha2
+- controller: true
+  domain: networking.k8s.io
+  group: gateway
+  kind: ReferencePolicy
+  version: v1alpha2
 version: "3"

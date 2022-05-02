@@ -164,7 +164,9 @@ func NewKongClient(
 // It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
 func (c *KongClient) UpdateObject(obj client.Object) error {
-	return c.cache.Add(obj)
+	// we do a deep copy of the object here so that the caller can continue to use
+	// the original object in a threadsafe manner.
+	return c.cache.Add(obj.DeepCopyObject())
 }
 
 // DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.

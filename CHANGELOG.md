@@ -72,9 +72,16 @@
   `allowedRoutes` filters are merged into generated listeners with the same
   protocol.
   [#2389](https://github.com/Kong/kubernetes-ingress-controller/issues/2389)
+- Added `--skip-ca-certificates` flag to ignore CA certificate resources for
+  [use with multi-workspace environments](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
+  [#2341](https://github.com/Kong/kubernetes-ingress-controller/issues/2341)
 
 #### Fixed
 
+- Fixed a race condition in the newer Gateway route controllers which could
+  trigger when an object's status was updated shortly after the object was
+  cached in the dataplane client.
+  [#2446](https://github.com/Kong/kubernetes-ingress-controller/issues/2446)
 - Added a mechanism to retry the initial connection to the Kong
   Admin API on controller start to fix an issue where the controller
   pod could crash loop on start when waiting for Gateway readiness 

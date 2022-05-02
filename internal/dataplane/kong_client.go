@@ -41,6 +41,10 @@ type KongClient struct {
 	// updates to the data-plane.
 	enableReverseSync bool
 
+	// skipCACertificates disables CA certificates, to avoid fighting over configuration in multi-workspace
+	// environments. See https://github.com/Kong/deck/pull/617
+	skipCACertificates bool
+
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
 	requestTimeout time.Duration
@@ -99,20 +103,22 @@ func NewKongClient(
 	timeout time.Duration,
 	ingressClass string,
 	enableReverseSync bool,
+	skipCACertificates bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Kong,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
 	c := &KongClient{
-		logger:            logger,
-		ingressClass:      ingressClass,
-		enableReverseSync: enableReverseSync,
-		requestTimeout:    timeout,
-		diagnostic:        diagnostic,
-		prometheusMetrics: metrics.NewCtrlFuncMetrics(),
-		cache:             &cache,
-		kongConfig:        kongConfig,
+		logger:             logger,
+		ingressClass:       ingressClass,
+		enableReverseSync:  enableReverseSync,
+		skipCACertificates: skipCACertificates,
+		requestTimeout:     timeout,
+		diagnostic:         diagnostic,
+		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
+		cache:              &cache,
+		kongConfig:         kongConfig,
 	}
 
 	// download the kong root configuration (and validate connectivity to the proxy API)
@@ -164,7 +170,9 @@ func NewKongClient(
 // It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
 func (c *KongClient) UpdateObject(obj client.Object) error {
-	return c.cache.Add(obj)
+	// we do a deep copy of the object here so that the caller can continue to use
+	// the original object in a threadsafe manner.
+	return c.cache.Add(obj.DeepCopyObject())
 }
 
 // DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
@@ -305,6 +313,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		&c.kongConfig,
 		c.kongConfig.InMemory,
 		c.enableReverseSync,
+		c.skipCACertificates,
 		targetConfig,
 		c.kongConfig.FilterTags,
 		nil,

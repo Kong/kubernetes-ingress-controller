@@ -68,7 +68,7 @@ func TestBindEnvVarsValidation(t *testing.T) {
 
 	err := cmd.Execute()
 	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "bad value for var type testvar"))
+	assert.True(t, strings.Contains(err.Error(), "variable CONTROLLER_VALIDATION_TEST: bad value for var type testvar"))
 }
 
 // -----------------------------------------------------------------------------

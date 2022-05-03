@@ -259,13 +259,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		return true
 	}, ingressWait, waitTick)
 
-	t.Log("verifying that weighted loadbalancing strategy is implemented properly and the nginx service is only getting 25% of the load")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>Welcome to nginx!</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2452 need to verify weight distribution
+	t.Log("verifying that both backends receive requests")
 	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>Welcome to nginx!</title>", emptyHeaderSet)
 

@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -23,6 +25,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 var emptyHeaderSet = make(map[string]string)
@@ -133,6 +137,20 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		}
 	}()
 
+	kongplugin := &kongv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      "correlation",
+		},
+		PluginName: "correlation-id",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"header_name":"reqid", "echo_downstream": true}`),
+		},
+	}
+	require.NoError(t, err)
+	pluginClient, err := clientset.NewForConfig(env.Cluster().Config())
+	kongplugin, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
+
 	t.Logf("creating an httproute to access deployment %s via kong", deployment1.Name)
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
@@ -144,6 +162,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
 			},
 		},
 		Spec: gatewayv1alpha2.HTTPRouteSpec{
@@ -217,6 +236,19 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGETPath(t, "regex-123-httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "exact-httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "exact-httpbina", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+
+	require.Eventually(t, func() bool {
+		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "httpbin"), nil)
+		resp, err := httpc.Do(req)
+		if err != nil {
+			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, "httpbin", err)
+			return false
+		}
+		if _, ok := resp.Header["Reqid"]; ok {
+			return true
+		}
+		return false
+	}, ingressWait, waitTick)
 
 	if util.GetKongVersion().GTE(parser.MinRegexHeaderKongVersion) {
 		t.Log("verifying HTTPRoute header match")

@@ -53,7 +53,7 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 
 // isRefAllowedByPolicy checks if backendRef is permitted by the provided namespace-indexed ReferencePolicyTo set,
 // allowed. allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
-// getReferenceTosForFrom
+// getPermittedForReferencePolicyFrom
 func isRefAllowedByPolicy(backendRef gatewayv1alpha2.BackendRef,
 	allowed map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo) bool {
 	if backendRef.Namespace == nil {
@@ -76,10 +76,10 @@ func isRefAllowedByPolicy(backendRef gatewayv1alpha2.BackendRef,
 	return false
 }
 
-// getReferenceTosForFrom (TODO please, someone think of a better name for this function) takes a ReferencePolicy From
-// (a namespace, group, and kind) and returns a map from a namespace to a slice of ReferencePolicy Tos. When a To is
-// included in the slice, the key namespace has a ReferencePolicy with those Tos and the input From.
-func getReferenceTosForFrom(from gatewayv1alpha2.ReferencePolicyFrom,
+// getPermittedForReferencePolicyFrom takes a ReferencePolicy From (a namespace, group, and kind) and returns a map
+// from a namespace to a slice of ReferencePolicy Tos. When a To is included in the slice, the key namespace has a
+// ReferencePolicy with those Tos and the input From.
+func getPermittedForReferencePolicyFrom(from gatewayv1alpha2.ReferencePolicyFrom,
 	policies []*gatewayv1alpha2.ReferencePolicy) map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo {
 	allowed := make(map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo)
 	// loop over all From values in all policies. if we find a match, add all Tos to the list of Tos allowed for the
@@ -118,7 +118,7 @@ func (p *Parser) generateKongServiceFromBackendRef(
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferencePolicies for %s: %w", objName, err)
 	}
-	allowed := getReferenceTosForFrom(gatewayv1alpha2.ReferencePolicyFrom{
+	allowed := getPermittedForReferencePolicyFrom(gatewayv1alpha2.ReferencePolicyFrom{
 		Group:     gatewayv1alpha2.Group(route.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayv1alpha2.Kind(route.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayv1alpha2.Namespace(route.GetNamespace()),

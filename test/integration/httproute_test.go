@@ -31,6 +31,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -379,6 +380,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 // HTTPRoute Tests - Status Utilities
 // -----------------------------------------------------------------------------
 
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func eventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the HTTPRoute
@@ -398,6 +400,7 @@ func eventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset,
 	}, ingressWait, waitTick)
 }
 
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func eventuallyGatewayIsUnlinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the HTTPRoute

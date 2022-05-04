@@ -276,7 +276,7 @@ func Test_isRefAllowedByPolicy(t *testing.T) {
 	}
 }
 
-func Test_getReferenceTosForFrom(t *testing.T) {
+func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 	policies := []*gatewayv1alpha2.ReferencePolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -420,7 +420,7 @@ func Test_getReferenceTosForFrom(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := getReferenceTosForFrom(tt.from, policies)
+			result := getPermittedForReferencePolicyFrom(tt.from, policies)
 			assert.Equal(t, tt.result, result)
 		})
 	}

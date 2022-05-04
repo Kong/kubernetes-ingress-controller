@@ -160,7 +160,7 @@ func getK8sServicesForBackends(
 	k8sServices := make([]*corev1.Service, 0, len(backends))
 	for _, backend := range backends {
 		backendNamespace := namespace
-		if len(backend.Namespace) > 0 {
+		if backend.Namespace != "" {
 			backendNamespace = backend.Namespace
 		}
 		k8sService, err := storer.GetService(backendNamespace, backend.Name)

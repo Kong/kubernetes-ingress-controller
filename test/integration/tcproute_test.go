@@ -42,6 +42,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}()
 
 	// TODO consolidate into suite and use for all GW tests?
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -443,13 +444,11 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		tcpMutex.Unlock()
 	}()
 
-	other, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name()+"other")
+	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
-	defer func(t *testing.T) {
-		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()+"other"))
-	}(t)
 
 	// TODO consolidate into suite and use for all GW tests?
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -527,13 +526,13 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		},
 	}
 	deployment2 := generators.NewDeploymentForContainer(container2)
-	deployment2, err = env.Cluster().Client().AppsV1().Deployments(other.Name).Create(ctx, deployment2, metav1.CreateOptions{})
+	deployment2, err = env.Cluster().Client().AppsV1().Deployments(otherNs.Name).Create(ctx, deployment2, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the deployments %s/%s and %s/%s", deployment1.Namespace, deployment1.Name, deployment2.Namespace, deployment2.Name)
 		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment1.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(other.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(otherNs.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("exposing deployment %s/%s via service", deployment1.Namespace, deployment1.Name)
@@ -560,18 +559,18 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		Port:       ktfkong.DefaultTCPServicePort,
 		TargetPort: intstr.FromInt(tcpEchoPort),
 	}}
-	service2, err = env.Cluster().Client().CoreV1().Services(other.Name).Create(ctx, service2, metav1.CreateOptions{})
+	service2, err = env.Cluster().Client().CoreV1().Services(otherNs.Name).Create(ctx, service2, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the service %s", service1.Name)
 		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service1.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(other.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(otherNs.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}))
 	}()
 
 	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
 	tcpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort)
-	remoteNamespace := gatewayv1alpha2.Namespace(other.Name)
+	remoteNamespace := gatewayv1alpha2.Namespace(otherNs.Name)
 	tcproute := &gatewayv1alpha2.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
@@ -624,7 +623,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		return err == nil && responded == true
 	}, time.Second*10, time.Second)
 
-	t.Logf("creating a reference policy that permits tcproute access from %s to services in %s", ns.Name, other.Name)
+	t.Logf("creating a reference policy that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
 	policy := &gatewayv1alpha2.ReferencePolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
@@ -639,8 +638,6 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 					Namespace: gatewayv1alpha2.Namespace("garbage"),
 				},
 				{
-					// TODO is there a way to get group from the TCPRoute itself? upstream tests suggest probably no
-					// TODO also apparently tcproute.Kind is empty?
 					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 					Kind:      gatewayv1alpha2.Kind("TCPRoute"),
 					Namespace: gatewayv1alpha2.Namespace(tcproute.Namespace),
@@ -660,7 +657,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		},
 	}
 
-	policy, err = c.GatewayV1alpha2().ReferencePolicies(other.Name).Create(ctx, policy, metav1.CreateOptions{})
+	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Create(ctx, policy, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying that requests reach both the local and remote namespace echo instances")
@@ -681,7 +678,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		Name:  &serviceName,
 	}
 
-	policy, err = c.GatewayV1alpha2().ReferencePolicies(other.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -692,7 +689,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 	t.Logf("testing incorrect name does not match")
 	blueguyName := gatewayv1alpha2.ObjectName("blueguy")
 	policy.Spec.To[1].Name = &blueguyName
-	policy, err = c.GatewayV1alpha2().ReferencePolicies(other.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -703,6 +700,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 }
 
 // TODO consolidate shared util gateway linked funcs
+// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func tcpeventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the TCPRoute
@@ -722,6 +720,7 @@ func tcpeventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clients
 	}, ingressWait, waitTick)
 }
 
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func tcpeventuallyGatewayIsUnlinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the TCPRoute

@@ -29,6 +29,7 @@ For this step we're going to start with the `main` branch to create our release 
 - [ ] ensure that you have up to date copy of `main`: `git fetch --all`
 - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
 - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
+- [ ] retrieve the latest license report from FOSSA and save it to LICENSES
 - [ ] ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`
 - [ ] push the branch up to the remote: `git push --set-upstream origin release/x.y.z`
 

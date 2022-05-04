@@ -78,6 +78,13 @@
 
 #### Fixed
 
+- Unmanaged-mode `Gateway` resources which reference a `LoadBalancer` type
+  `Service` will now tolerate the IPs/Hosts for that `Service` not becoming
+  provisioned (e.g. the `LoadBalancer` implementation is broken or otherwise
+  and the `EXTERNAL-IP` is stuck in `<pending>`) and will still attempt to
+  configure `Routes` for that `Gateway` as long as the dataplane API can be
+  otherwise reached.
+  [#2413](https://github.com/Kong/kubernetes-ingress-controller/issues/2413)
 - Fixed a race condition in the newer Gateway route controllers which could
   trigger when an object's status was updated shortly after the object was
   cached in the dataplane client.

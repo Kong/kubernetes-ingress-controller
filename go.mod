@@ -27,9 +27,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
 	github.com/tidwall/gjson v1.14.1
-	golang.org/x/net v0.0.0-20220412020605-290c469a71a5
-	google.golang.org/api v0.77.0
-	google.golang.org/genproto v0.0.0-20220414192740-2d67ff6cf2b4
+	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
+	google.golang.org/api v0.78.0
+	google.golang.org/genproto v0.0.0-20220429170224-98d788798c3e
 	k8s.io/api v0.24.0
 	k8s.io/apiextensions-apiserver v0.23.5
 	k8s.io/apimachinery v0.24.0
@@ -45,7 +45,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.6.0 // indirect
+	cloud.google.com/go/compute v1.6.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
@@ -74,7 +74,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
-	github.com/google/go-cmp v0.5.7 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
@@ -127,7 +127,7 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
+	golang.org/x/sys v0.0.0-20220502124256-b6088ccd6cba // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
@@ -135,7 +135,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/grpc v1.45.0 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

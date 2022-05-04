@@ -91,6 +91,7 @@ jobs:
           tags: ${{ steps.meta_redhat.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           target: redhat
+          platforms: linux/amd64, linux/arm64
           build-args: |
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}

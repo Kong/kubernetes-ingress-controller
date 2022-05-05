@@ -6,10 +6,15 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -422,6 +427,313 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			result := getPermittedForReferencePolicyFrom(tt.from, policies)
 			assert.Equal(t, tt.result, result)
+		})
+	}
+}
+
+func Test_generateKongServiceFromBackendRef(t *testing.T) {
+	policies := []*gatewayv1alpha2.ReferencePolicy{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        uuid.NewString(),
+				Annotations: map[string]string{},
+				Namespace:   "fitrat",
+			},
+			Spec: gatewayv1alpha2.ReferencePolicySpec{
+				From: []gatewayv1alpha2.ReferencePolicyFrom{
+					{
+						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
+						Namespace: gatewayv1alpha2.Namespace("garbage"),
+					},
+					{
+						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
+						Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+					},
+					{
+						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
+						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
+					},
+				},
+				To: []gatewayv1alpha2.ReferencePolicyTo{
+					{
+						Group: gatewayv1alpha2.Group(""),
+						Kind:  gatewayv1alpha2.Kind("Service"),
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        uuid.NewString(),
+				Annotations: map[string]string{},
+				Namespace:   "cholpon",
+			},
+			Spec: gatewayv1alpha2.ReferencePolicySpec{
+				From: []gatewayv1alpha2.ReferencePolicyFrom{
+					{
+						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayv1alpha2.Kind("UDPRoute"),
+						Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+					},
+					{
+						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
+						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
+					},
+				},
+				To: []gatewayv1alpha2.ReferencePolicyTo{
+					{
+						Group: gatewayv1alpha2.Group(""),
+						Kind:  gatewayv1alpha2.Kind("Service"),
+					},
+				},
+			},
+		},
+	}
+	fakestore, err := store.NewFakeStore(store.FakeObjects{ReferencePolicies: policies})
+	assert.Nil(t, err)
+	p := NewParser(logrus.New(), fakestore)
+	// empty since we always want to actually generate a service for tests
+	// static values for the basic string format inputs since nothing interesting happens with them
+	rules := ingressRules{ServiceNameToServices: map[string]kongstate.Service{}}
+	ruleNumber := 999
+	protocol := "example"
+	port := gatewayv1alpha2.PortNumber(7777)
+	redObjName := gatewayv1alpha2.ObjectName("red-service")
+	blueObjName := gatewayv1alpha2.ObjectName("blue-service")
+	cholponNamespace := gatewayv1alpha2.Namespace("cholpon")
+	serviceKind := gatewayv1alpha2.Kind("Service")
+	serviceGroup := gatewayv1alpha2.Group("")
+	tests := []struct {
+		msg     string
+		route   client.Object
+		refs    []gatewayv1alpha2.BackendRef
+		result  kongstate.Service
+		wantErr bool
+	}{
+		{
+			msg:     "empty backend list",
+			route:   &gatewayv1alpha2.HTTPRoute{},
+			refs:    []gatewayv1alpha2.BackendRef{},
+			result:  kongstate.Service{},
+			wantErr: true,
+		},
+		{
+			msg: "all backends in route namespace",
+			route: &gatewayv1alpha2.HTTPRoute{
+				// normally the k8s api call populates TypeMeta properly, but we have no such luxuries here
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "HTTPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tong-sirlari",
+					Namespace: "cholpon",
+				},
+			},
+			refs: []gatewayv1alpha2.BackendRef{
+				{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name:  blueObjName,
+						Kind:  &serviceKind,
+						Port:  &port,
+						Group: &serviceGroup,
+					},
+				},
+				{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name:  redObjName,
+						Kind:  &serviceKind,
+						Port:  &port,
+						Group: &serviceGroup,
+					},
+				},
+			},
+			result: kongstate.Service{
+				Service: kong.Service{
+					Name:           kong.String("httproute.cholpon.tong-sirlari.999"),
+					Host:           kong.String("httproute.cholpon.tong-sirlari.999"),
+					Protocol:       kong.String(protocol),
+					ConnectTimeout: kong.Int(DefaultServiceTimeout),
+					ReadTimeout:    kong.Int(DefaultServiceTimeout),
+					WriteTimeout:   kong.Int(DefaultServiceTimeout),
+					Retries:        kong.Int(DefaultRetries),
+				},
+				Namespace: "cholpon",
+				Backends: []kongstate.ServiceBackend{
+					{
+						Name: string(blueObjName),
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: int32(port),
+						},
+					},
+					{
+						Name: string(redObjName),
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: int32(port),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			msg: "same and different ns backend",
+			route: &gatewayv1alpha2.UDPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "UDPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "padarkush",
+					Namespace: "behbudiy",
+				},
+			},
+			refs: []gatewayv1alpha2.BackendRef{
+				{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name:      blueObjName,
+						Port:      &port,
+						Kind:      &serviceKind,
+						Namespace: &cholponNamespace,
+						Group:     &serviceGroup,
+					},
+				},
+				{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name:  redObjName,
+						Port:  &port,
+						Kind:  &serviceKind,
+						Group: &serviceGroup,
+					},
+				},
+			},
+			result: kongstate.Service{
+				Service: kong.Service{
+					Name:           kong.String("udproute.behbudiy.padarkush.999"),
+					Host:           kong.String("udproute.behbudiy.padarkush.999"),
+					Protocol:       kong.String(protocol),
+					ConnectTimeout: kong.Int(DefaultServiceTimeout),
+					ReadTimeout:    kong.Int(DefaultServiceTimeout),
+					WriteTimeout:   kong.Int(DefaultServiceTimeout),
+					Retries:        kong.Int(DefaultRetries),
+				},
+				Namespace: "behbudiy",
+				Backends: []kongstate.ServiceBackend{
+					{
+						Name:      string(blueObjName),
+						Namespace: "cholpon",
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: int32(port),
+						},
+					},
+					{
+						Name: string(redObjName),
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: int32(port),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			msg: "only not permitted remote ns",
+			route: &gatewayv1alpha2.TCPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TCPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kitab-ul-atfol",
+					Namespace: "behbudiy",
+				},
+			},
+			refs: []gatewayv1alpha2.BackendRef{
+				{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name:      blueObjName,
+						Port:      &port,
+						Kind:      &serviceKind,
+						Namespace: &cholponNamespace,
+						Group:     &serviceGroup,
+					},
+				},
+			},
+			result:  kongstate.Service{},
+			wantErr: true,
+		},
+		{
+			msg: "same and different ns backend",
+			route: &gatewayv1alpha2.TCPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TCPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "muntaxabi-jugrofiyai-umumiy",
+					Namespace: "behbudiy",
+				},
+			},
+			refs: []gatewayv1alpha2.BackendRef{
+				{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name:      blueObjName,
+						Port:      &port,
+						Kind:      &serviceKind,
+						Namespace: &cholponNamespace,
+						Group:     &serviceGroup,
+					},
+				},
+				{
+					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+						Name:  redObjName,
+						Port:  &port,
+						Kind:  &serviceKind,
+						Group: &serviceGroup,
+					},
+				},
+			},
+			result: kongstate.Service{
+				Service: kong.Service{
+					Name:           kong.String("tcproute.behbudiy.muntaxabi-jugrofiyai-umumiy.999"),
+					Host:           kong.String("tcproute.behbudiy.muntaxabi-jugrofiyai-umumiy.999"),
+					Protocol:       kong.String(protocol),
+					ConnectTimeout: kong.Int(DefaultServiceTimeout),
+					ReadTimeout:    kong.Int(DefaultServiceTimeout),
+					WriteTimeout:   kong.Int(DefaultServiceTimeout),
+					Retries:        kong.Int(DefaultRetries),
+				},
+				Namespace: "behbudiy",
+				Backends: []kongstate.ServiceBackend{
+					{
+						Name: string(redObjName),
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: int32(port),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			result, err := p.generateKongServiceFromBackendRef(&rules, tt.route, ruleNumber, protocol, tt.refs...)
+			assert.Equal(t, tt.result, result)
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
 		})
 	}
 }

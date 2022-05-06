@@ -45,7 +45,7 @@ jobs:
 
     - name: Set up QEMU
       if: ${{ github.event.inputs.controller-image == 'kong/kubernetes-ingress-controller:ci' }}
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@v2
 
     - name: Set up Docker Buildx
       if: ${{ github.event.inputs.controller-image == 'kong/kubernetes-ingress-controller:ci' }}

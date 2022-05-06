@@ -36,7 +36,9 @@ spec:
           metadata:
             type: object
           proxy:
-            description: Proxy is the abstraction of each of your own upstream services.
+            description: Proxy defines additional connection options for the routes
+              to be configured in the Kong Gateway, e.g. `connection_timeout`, `retries`,
+              e.t.c.
             properties:
               connect_timeout:
                 description: The timeout in milliseconds for establishing a connection
@@ -48,7 +50,7 @@ spec:
                 pattern: ^/.*$
                 type: string
               protocol:
-                description: The protocol used to communicate with the upstream.(default:"http")
+                description: The protocol used to communicate with the upstream.
                 enum:
                 - http
                 - https
@@ -149,7 +151,8 @@ spec:
             type: object
           upstream:
             description: Upstream represents a virtual hostname and can be used to
-              loadbalance incoming requests over multiple services (targets).
+              loadbalance incoming requests over multiple targets (e.g. Kubernetes
+              `Services` can be a target, OR `Endpoints` can be targets).
             properties:
               algorithm:
                 description: Algorithm is the load balancing algorithm to use.
@@ -161,7 +164,7 @@ spec:
               hash_fallback:
                 description: 'HashFallback defines What to use as hashing input if
                   the primary hash_on does not return a hash. Accepted values are:
-                  "none", "consumer", "ip", "header", "cookie". Default: "none".'
+                  "none", "consumer", "ip", "header", "cookie".'
                 type: string
               hash_fallback_header:
                 description: HashFallbackHeader is the header name to take the value
@@ -170,8 +173,7 @@ spec:
                 type: string
               hash_on:
                 description: 'HashOn defines what to use as hashing input. Accepted
-                  values are: "none", "consumer", "ip", "header", "cookie". Default:
-                  "none".'
+                  values are: "none", "consumer", "ip", "header", "cookie".'
                 type: string
               hash_on_cookie:
                 description: The cookie name to take the value from as hash input.
@@ -292,7 +294,7 @@ spec:
                     type: number
                 type: object
               host_header:
-                description: HostHeaser is The hostname to be used as Host header
+                description: HostHeader is The hostname to be used as Host header
                   when proxying requests through Kong.
                 type: string
               slots:

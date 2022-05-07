@@ -75,6 +75,8 @@
 - Added `--skip-ca-certificates` flag to ignore CA certificate resources for
   [use with multi-workspace environments](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
   [#2341](https://github.com/Kong/kubernetes-ingress-controller/issues/2341)
+- Added description of each field of `kongIngresses` CRD.
+  [#1766](https://github.com/Kong/kubernetes-ingress-controller/issues/1766)
 
 #### Fixed
 

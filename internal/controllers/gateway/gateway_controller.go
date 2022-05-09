@@ -301,7 +301,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
 	// the data-plane's // metadata.
 	debug(log, gateway, "determining listener configurations from publish service")
-	gatewayAddresses, gatewayListeners, err := r.determineL4ListenersFromService(svc)
+	gatewayAddresses, gatewayListeners, err := r.determineL4ListenersFromService(log, svc)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -391,6 +391,7 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 // determineL4ListenersFromService generates L4 addresses and listeners for a
 // unmanaged Gateway provided the service to reference from.
 func (r *GatewayReconciler) determineL4ListenersFromService(
+	log logr.Logger,
 	svc *corev1.Service,
 ) (
 	[]gatewayv1alpha2.GatewayAddress,
@@ -439,7 +440,8 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		// if the loadbalancer IPs/Hosts haven't been provisioned yet
 		// the service is not ready and we'll need to wait.
 		if len(svc.Status.LoadBalancer.Ingress) < 1 {
-			return nil, nil, fmt.Errorf("gateway service %s/%s is not yet ready (no LoadBalancer IP/Host provisioned)", svc.Namespace, svc.Name)
+			info(log, svc, "gateway service is type LoadBalancer but has not yet been provisioned: LoadBalancer IPs can not be added to the Gateway's addresses until this is resolved")
+			return addresses, listeners, nil
 		}
 
 		// otherwise gather any IPs or Hosts provisioned for the LoadBalancer

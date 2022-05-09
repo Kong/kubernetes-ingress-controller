@@ -51,7 +51,7 @@ jobs:
     steps:
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: checkout repository
         uses: actions/checkout@v3
@@ -67,7 +67,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Verify Docker Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           push: false
           file: Dockerfile
@@ -103,7 +103,7 @@ jobs:
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
-        name: coverage.unit.out
+        name: coverage
         path: coverage.unit.out
 
   runnable:
@@ -149,7 +149,7 @@ jobs:
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
-        name: coverage.enterprisepostgres.out
+        name: coverage
         path: coverage.enterprisepostgres.out
 
   integration-tests-dbless:
@@ -180,7 +180,7 @@ jobs:
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
-        name: coverage.dbless.out
+        name: coverage
         path: coverage.dbless.out
 
   integration-tests-postgres:
@@ -211,7 +211,7 @@ jobs:
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
-        name: coverage.postgres.out
+        name: coverage
         path: coverage.postgres.out
 
   conformance-tests:
@@ -248,41 +248,19 @@ jobs:
       - "integration-tests-enterprise-postgres"
     runs-on: ubuntu-latest
     steps:
-      # TODO: deduplicate the download-artifact steps by implementing a `matrix` workflow step instead
-    - name: collect unit test coverage artifacts
-      id: download-unit
-      uses: actions/download-artifact@v3
-      with:
-        name: coverage.unit.out
-        path: coverage.unit.out
 
-    - name: collect dbless test coverage artifacts
-      id: download-dbless
+    - name: collect test coverage artifacts
+      id: download-coverage
       uses: actions/download-artifact@v3
       with:
-        name: coverage.dbless.out
-        path: coverage.dbless.out
-
-    - name: collect postgres test coverage artifacts
-      id: download-postgres
-      uses: actions/download-artifact@v3
-      with:
-        name: coverage.postgres.out
-        path: coverage.postgres.out
-
-    - name: collect enterprisepostgres test coverage artifacts
-      id: download-enterprisepostgres
-      uses: actions/download-artifact@v3
-      with:
-        name: coverage.enterprisepostgres.out
-        path: coverage.enterprisepostgres.out
+        name: coverage
+        path: coverage
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         name: combined-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ${{steps.download-unit.outputs.download-path}}/coverage.unit.out,${{steps.download-dbless.outputs.download-path}}/coverage.dbless.out,${{steps.download-postgres.outputs.download-path}}/coverage.postgres.out,
-               ${{steps.download-enterprisepostgres.outputs.download-path}}/coverage.enterprisepostgres.out
+        directory: ${{steps.download-coverage.outputs.download-path}}
         fail_ci_if_error: true
         verbose: true

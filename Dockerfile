@@ -105,6 +105,7 @@ RUN groupadd --system kic && \
 
 COPY --from=builder /workspace/manager .
 COPY LICENSE /licenses/
+COPY LICENSES /licenses/
 
 # Perform any further action as an unprivileged user.
 USER 1000

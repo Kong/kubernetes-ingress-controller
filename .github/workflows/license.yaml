@@ -1,118 +1,16 @@
-name: 'Check for license changes'
+name: 'FOSSA'
 
 on:
-  workflow_dispatch: {}
-  pull_request: {}
+  schedule:
+    - cron: '30 2 * * *'
 
 jobs:
-  runnable:
-    runs-on: ubuntu-latest
-    outputs:
-      runnable: ${{ steps.check.outputs.result }}
-    steps:
-    - name: Check repo access
-      id: check
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-            github.hook.error("request", async (error, options) => {
-              // 403 is no access to check, 404 is access to check but not a collaborator
-              if (error.status === 403 || error.status === 404 ) {
-                return false;
-              } else {
-                throw error;
-              }
-            });
-            var result = await github.rest.repos.checkCollaborator({
-              owner: "Kong",
-              repo: "kubernetes-ingress-controller",
-              username: "${{ github.event.pull_request.user.login }}"
-            });
-            if (result.status === 204) {
-              return true
-            }
-
-  licenses:
-    needs: runnable
-    if: "!contains(github.event.pull_request.labels.*.name, 'ci/license/changed') && needs.runnable.outputs.runnable == 'true'"
-    env:
-      GOPATH: ${{ github.workspace }}
-      GOBIN: ${{ github.workspace }}/bin
+  fossa-scan:
+    environment: "FOSSA"
     runs-on: ubuntu-latest
     steps:
-    - name: Setup go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.18'
-    - name: Install go-licenses
-      run: go install github.com/google/go-licenses@latest
-    - name: Checkout target
-      uses: actions/checkout@v3
-      with:
-        ref: ${{ github.event.pull_request.base.ref }}
-        path: ./src
-        fetch-depth: 0
-    - name: Generate target license report
-      run: go-licenses csv ./... | grep -vE "github.com/kong|golang.org/x" | sort > ${{ github.workspace }}/target_licenses.csv
-      working-directory: ./src
-    - name: Checkout PR
-      uses: actions/checkout@v3
-      with:
-        path: ./pr
-        ref: ${{ github.head_ref }}
-        repository: ${{ github.repository }}
-        fetch-depth: 0
-    - name: Generate PR license report
-      run: go-licenses csv ./... | grep -vE "github.com/kong|golang.org/x" | sort > ${{ github.workspace }}/pr_licenses.csv
-      working-directory: ./pr
-    - name: Compare license reports
-      id: compare_reports
-      run: |
-        echo 'DIFF_OUT<<EOF' >> $GITHUB_ENV
-        diff -u target_licenses.csv pr_licenses.csv >> $GITHUB_ENV || true
-        echo 'EOF' >> $GITHUB_ENV
-    - name: Update PR - go-license output differs
-      uses: actions/github-script@v6
-      if: ${{ env.DIFF_OUT != '' }}
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'Licenses differ between commit ' + context.sha + ' and base:\n```' + process.env.DIFF_OUT + '```'
-            })
-            github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['ci/license/changed']
-            })
-    - name: Update PR - remove unchanged label
-      continue-on-error: true
-      uses: actions/github-script@v6
-      if: ${{ env.DIFF_OUT != '' }}
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-            github.rest.issues.removeLabel({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: ['ci/license/unchanged']
-            })
-    - name: Update PR - go-license output equal
-      uses: actions/github-script@v6
-      if: ${{ env.DIFF_OUT == '' }}
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-            github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['ci/license/unchanged']
-            })
-
+      - uses: actions/checkout@v3
+      - uses: fossas/fossa-action@v1
+        with:
+          api-key: ${{secrets.fossaApiKey}}
+          branch: main

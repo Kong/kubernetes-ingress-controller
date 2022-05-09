@@ -27,7 +27,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 
 	var errs []error
 	for _, httproute := range httpRouteList {
-		if err := ingressRulesFromHTTPRoute(&result, httproute); err != nil {
+		if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
 			err = fmt.Errorf("HTTPRoute %s/%s can't be routed: %w", httproute.Namespace, httproute.Name, err)
 			errs = append(errs, err)
 		} else {
@@ -46,7 +46,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	return result
 }
 
-func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {
+func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := httproute.Spec
 
@@ -75,7 +75,12 @@ func ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.
 		}
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromHTTPRouteBackendRef(result, httproute, ruleNumber, rule.BackendRefs...)
+		var backendRefs []gatewayv1alpha2.BackendRef
+		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
+		for _, hRef := range rule.BackendRefs {
+			backendRefs = append(backendRefs, hRef.BackendRef)
+		}
+		service, err := p.generateKongServiceFromBackendRef(result, httproute, ruleNumber, "http", backendRefs...)
 		if err != nil {
 			return err
 		}
@@ -209,61 +214,4 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 	}
 
 	return routes, nil
-}
-
-// generateKongServiceFromHTTPRouteBackendRef converts a provided backendRef for an HTTPRoute
-// into a kong.Service so that routes for that object can be attached to the Service.
-func generateKongServiceFromHTTPRouteBackendRef(
-	result *ingressRules,
-	httproute *gatewayv1alpha2.HTTPRoute,
-	ruleNumber int,
-	backendRefs ...gatewayv1alpha2.HTTPBackendRef,
-) (kongstate.Service, error) {
-	// at least one backendRef must be present
-	if len(backendRefs) == 0 {
-		return kongstate.Service{}, fmt.Errorf("no backendRefs present for HTTPRoute %s/%s", httproute.Namespace, httproute.Name)
-	}
-
-	// create a kongstate backend for each HTTPRoute backendRef
-	backends := make(kongstate.ServiceBackends, 0, len(backendRefs))
-	for _, backendRef := range backendRefs {
-		// convert each backendRef into a kongstate.ServiceBackend
-		backends = append(backends, kongstate.ServiceBackend{
-			Name: string(backendRef.Name),
-			PortDef: kongstate.PortDef{
-				Mode:   kongstate.PortModeByNumber,
-				Number: int32(*backendRef.Port),
-			},
-			Weight: backendRef.Weight,
-		})
-	}
-
-	// the service name needs to uniquely identify this service given it's list of
-	// one or more backends.
-	serviceName := fmt.Sprintf("%s.%d", getUniqueKongServiceNameForObject(httproute), ruleNumber)
-
-	// the service host needs to be a resolvable name due to legacy logic so we'll
-	// use the anchor backendRef as the basis for the name
-	serviceHost := serviceName
-
-	// check if the service is already known, and if not create it
-	service, ok := result.ServiceNameToServices[serviceName]
-	if !ok {
-		service = kongstate.Service{
-			Service: kong.Service{
-				Name:           kong.String(serviceName),
-				Host:           kong.String(serviceHost),
-				Protocol:       kong.String("http"),
-				Path:           kong.String("/"),
-				ConnectTimeout: kong.Int(DefaultServiceTimeout),
-				ReadTimeout:    kong.Int(DefaultServiceTimeout),
-				WriteTimeout:   kong.Int(DefaultServiceTimeout),
-				Retries:        kong.Int(DefaultRetries),
-			},
-			Namespace: httproute.Namespace,
-			Backends:  backends,
-		}
-	}
-
-	return service, nil
 }

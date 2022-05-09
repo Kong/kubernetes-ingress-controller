@@ -39,6 +39,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}()
 
 	// TODO consolidate into suite and use for all GW tests?
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -388,6 +389,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 }
 
 // TODO consolidate shared util gateway linked funcs
+// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func udpeventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the UDPRoute
@@ -407,6 +409,7 @@ func udpeventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clients
 	}, ingressWait, waitTick)
 }
 
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func udpeventuallyGatewayIsUnlinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the UDPRoute

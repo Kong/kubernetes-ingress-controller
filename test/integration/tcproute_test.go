@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -41,6 +42,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}()
 
 	// TODO consolidate into suite and use for all GW tests?
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -432,7 +434,273 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
+func TestTCPRouteReferencePolicy(t *testing.T) {
+	ns, cleanup := namespace(t)
+	defer cleanup()
+	t.Log("locking TCP port")
+	tcpMutex.Lock()
+	defer func() {
+		t.Log("unlocking TCP port")
+		tcpMutex.Unlock()
+	}()
+
+	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
+	require.NoError(t, err)
+
+	// TODO consolidate into suite and use for all GW tests?
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
+	t.Log("deploying a supported gatewayclass to the test cluster")
+	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	gwc := &gatewayv1alpha2.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayv1alpha2.GatewayClassSpec{
+			ControllerName: gateway.ControllerName,
+		},
+	}
+	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Log("cleaning up gatewayclasses")
+		if err := c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				assert.NoError(t, err)
+			}
+		}
+	}()
+
+	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
+	gw := &gatewayv1alpha2.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong",
+			Annotations: map[string]string{
+				unmanagedAnnotation: "true",
+			},
+		},
+		Spec: gatewayv1alpha2.GatewaySpec{
+			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
+			Listeners: []gatewayv1alpha2.Listener{{
+				Name:     "tcp",
+				Protocol: gatewayv1alpha2.TCPProtocolType,
+				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort),
+			}},
+		},
+	}
+	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Log("cleaning up gateways")
+		if err := c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				assert.NoError(t, err)
+			}
+		}
+	}()
+
+	t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
+	container1 := generators.NewContainer("tcpecho-1", tcpEchoImage, tcpEchoPort)
+	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
+	testUUID1 := uuid.NewString()
+	container1.Env = []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: testUUID1,
+		},
+	}
+	deployment1 := generators.NewDeploymentForContainer(container1)
+	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("creating an additional tcpecho pod to test TCPRoute multiple backendRef loadbalancing")
+	container2 := generators.NewContainer("tcpecho-2", tcpEchoImage, tcpEchoPort)
+	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
+	testUUID2 := uuid.NewString()
+	container2.Env = []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: testUUID2,
+		},
+	}
+	deployment2 := generators.NewDeploymentForContainer(container2)
+	deployment2, err = env.Cluster().Client().AppsV1().Deployments(otherNs.Name).Create(ctx, deployment2, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the deployments %s/%s and %s/%s", deployment1.Namespace, deployment1.Name, deployment2.Namespace, deployment2.Name)
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment1.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(otherNs.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Logf("exposing deployment %s/%s via service", deployment1.Namespace, deployment1.Name)
+	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
+	// we have to override the ports so that we can map the default TCP port from
+	// the Kong Gateway deployment to the tcpecho port, as this is what will be
+	// used to route the traffic at the Gateway (at the time of writing, the
+	// Kong Gateway doesn't support an API for dynamically adding these ports. The
+	// ports must be added manually to the config or ENV).
+	service1.Spec.Ports = []corev1.ServicePort{{
+		Name:       "tcp",
+		Protocol:   corev1.ProtocolTCP,
+		Port:       ktfkong.DefaultTCPServicePort,
+		TargetPort: intstr.FromInt(tcpEchoPort),
+	}}
+	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
+	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
+	service2.Spec.Ports = []corev1.ServicePort{{
+		Name:       "tcp",
+		Protocol:   corev1.ProtocolTCP,
+		Port:       ktfkong.DefaultTCPServicePort,
+		TargetPort: intstr.FromInt(tcpEchoPort),
+	}}
+	service2, err = env.Cluster().Client().CoreV1().Services(otherNs.Name).Create(ctx, service2, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the service %s", service1.Name)
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service1.Name, metav1.DeleteOptions{}))
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(otherNs.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
+	tcpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort)
+	remoteNamespace := gatewayv1alpha2.Namespace(otherNs.Name)
+	tcproute := &gatewayv1alpha2.TCPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        uuid.NewString(),
+			Annotations: map[string]string{},
+		},
+		Spec: gatewayv1alpha2.TCPRouteSpec{
+			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+				ParentRefs: []gatewayv1alpha2.ParentReference{{
+					Name: gatewayv1alpha2.ObjectName(gw.Name),
+				}},
+			},
+			Rules: []gatewayv1alpha2.TCPRouteRule{{
+				BackendRefs: []gatewayv1alpha2.BackendRef{
+					{
+						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+							Name: gatewayv1alpha2.ObjectName(service1.Name),
+							Port: &tcpPortDefault,
+						},
+					},
+					{
+						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+							Name:      gatewayv1alpha2.ObjectName(service2.Name),
+							Namespace: &remoteNamespace,
+							Port:      &tcpPortDefault,
+						},
+					},
+				},
+			}},
+		},
+	}
+	tcproute, err = c.GatewayV1alpha2().TCPRoutes(ns.Name).Create(ctx, tcproute, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("cleaning up the tcproute %s", tcproute.Name)
+		if err := c.GatewayV1alpha2().TCPRoutes(ns.Name).Delete(ctx, tcproute.Name, metav1.DeleteOptions{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				assert.NoError(t, err)
+			}
+		}
+	}()
+
+	t.Log("verifying that only the local tcpecho is responding without a ReferencePolicy")
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return err == nil && responded == true
+	}, ingressWait*2, waitTick)
+	require.Never(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
+		return err == nil && responded == true
+	}, time.Second*10, time.Second)
+
+	t.Logf("creating a reference policy that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
+	policy := &gatewayv1alpha2.ReferencePolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        uuid.NewString(),
+			Annotations: map[string]string{},
+		},
+		Spec: gatewayv1alpha2.ReferencePolicySpec{
+			From: []gatewayv1alpha2.ReferencePolicyFrom{
+				{
+					// this isn't actually used, it's just a dummy extra from to confirm we handle multiple fine
+					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
+					Kind:      gatewayv1alpha2.Kind("TCPRoute"),
+					Namespace: gatewayv1alpha2.Namespace("garbage"),
+				},
+				{
+					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
+					Kind:      gatewayv1alpha2.Kind("TCPRoute"),
+					Namespace: gatewayv1alpha2.Namespace(tcproute.Namespace),
+				},
+			},
+			To: []gatewayv1alpha2.ReferencePolicyTo{
+				// also a dummy
+				{
+					Group: gatewayv1alpha2.Group(""),
+					Kind:  gatewayv1alpha2.Kind("Pterodactyl"),
+				},
+				{
+					Group: gatewayv1alpha2.Group(""),
+					Kind:  gatewayv1alpha2.Kind("Service"),
+				},
+			},
+		},
+	}
+
+	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Create(ctx, policy, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying that requests reach both the local and remote namespace echo instances")
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return err == nil && responded == true
+	}, ingressWait, waitTick)
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
+		return err == nil && responded == true
+	}, ingressWait, waitTick)
+
+	t.Logf("testing specific name references")
+	serviceName := gatewayv1alpha2.ObjectName(service2.ObjectMeta.Name)
+	policy.Spec.To[1] = gatewayv1alpha2.ReferencePolicyTo{
+		Kind:  gatewayv1alpha2.Kind("Service"),
+		Group: gatewayv1alpha2.Group(""),
+		Name:  &serviceName,
+	}
+
+	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
+		return err == nil && responded == true
+	}, ingressWait*2, waitTick)
+
+	t.Logf("testing incorrect name does not match")
+	blueguyName := gatewayv1alpha2.ObjectName("blueguy")
+	policy.Spec.To[1].Name = &blueguyName
+	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
+		return err != nil && responded == false
+	}, ingressWait, waitTick)
+
+}
+
 // TODO consolidate shared util gateway linked funcs
+// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func tcpeventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the TCPRoute
@@ -452,6 +720,7 @@ func tcpeventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clients
 	}, ingressWait, waitTick)
 }
 
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 func tcpeventuallyGatewayIsUnlinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
 	require.Eventually(t, func() bool {
 		// gather a fresh copy of the TCPRoute

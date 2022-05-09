@@ -75,6 +75,10 @@
 - Added `--skip-ca-certificates` flag to ignore CA certificate resources for
   [use with multi-workspace environments](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
   [#2341](https://github.com/Kong/kubernetes-ingress-controller/issues/2341)
+- Gateway API Route types now support cross-namespace BackendRefs if a
+  [ReferencePolicy](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/referencepolicy/)
+  permits them.
+  [#2451](https://github.com/Kong/kubernetes-ingress-controller/issues/2451)
 - Added description of each field of `kongIngresses` CRD.
   [#1766](https://github.com/Kong/kubernetes-ingress-controller/issues/1766)
 

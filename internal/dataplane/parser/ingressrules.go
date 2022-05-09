@@ -159,11 +159,15 @@ func getK8sServicesForBackends(
 	// retreieve that backend and capture any Kong annotations its using.
 	k8sServices := make([]*corev1.Service, 0, len(backends))
 	for _, backend := range backends {
-		k8sService, err := storer.GetService(namespace, backend.Name)
+		backendNamespace := namespace
+		if backend.Namespace != "" {
+			backendNamespace = backend.Namespace
+		}
+		k8sService, err := storer.GetService(backendNamespace, backend.Name)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"service_name":      backend.PortDef.Name,
-				"service_namespace": namespace,
+				"service_namespace": backendNamespace,
 			}).Errorf("failed to fetch service: %v", err)
 			continue
 		}

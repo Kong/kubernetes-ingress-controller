@@ -765,6 +765,56 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 	assert.Len(routes, 2, "expect two UDPRoutes")
 }
 
+func TestFakeStoreTCPRoute(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*gatewayv1alpha2.TCPRoute{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.TCPRouteSpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.TCPRouteSpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{TCPRoutes: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListTCPRoutes()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two TCPRoutes")
+}
+
+func TestFakeStoreTLSRoute(t *testing.T) {
+	assert := assert.New(t)
+
+	classes := []*gatewayv1alpha2.TLSRoute{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.TLSRouteSpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.TLSRouteSpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{TLSRoutes: classes})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListTLSRoutes()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two TLSRoutes")
+}
+
 func TestFakeStoreReferencePolicy(t *testing.T) {
 	assert := assert.New(t)
 

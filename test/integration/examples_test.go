@@ -99,6 +99,10 @@ func TestHTTPRouteExample(t *testing.T) {
 var udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
 
 func TestUDPRouteExample(t *testing.T) {
+	t.Log("locking Gateway UDP ports")
+	udpMutex.Lock()
+	defer udpMutex.Unlock()
+
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpRouteExampleManifests, examplesDIR))
 	b, err := os.ReadFile(udpRouteExampleManifests)
 	// TODO as of 2022-04-01, UDPRoute does not support using a different inbound port than the outbound
@@ -134,8 +138,6 @@ func TestUDPRouteExample(t *testing.T) {
 var tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
 
 func TestTCPRouteExample(t *testing.T) {
-	t.Parallel()
-
 	t.Log("locking Gateway TCP ports")
 	tcpMutex.Lock()
 	defer tcpMutex.Unlock()
@@ -154,6 +156,31 @@ func TestTCPRouteExample(t *testing.T) {
 	require.Eventually(t, func() bool {
 		responds, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
 		return err == nil && responds
+	}, ingressWait, waitTick)
+}
+
+var tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesDIR)
+
+func TestTLSRouteExample(t *testing.T) {
+	t.Log("locking Gateway TLS ports")
+	tlsMutex.Lock()
+	defer tlsMutex.Unlock()
+
+	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
+	b, err := os.ReadFile(tlsrouteExampleManifests)
+	require.NoError(t, err)
+	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+
+	defer func() {
+		t.Logf("deleting tlsroute example")
+		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+	}()
+
+	t.Log("verifying that TLSRoute becomes routable")
+	require.Eventually(t, func() bool {
+		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
+			"tlsroute-example-manifest", "tlsecho.kong.example")
+		return err == nil && responded
 	}, ingressWait, waitTick)
 }
 
@@ -209,8 +236,6 @@ func TestIngressExample(t *testing.T) {
 var udpingressExampleManifests = fmt.Sprintf("%s/udpingress.yaml", examplesDIR)
 
 func TestUDPIngressExample(t *testing.T) {
-	t.Parallel()
-
 	t.Log("locking Gateway UDP ports")
 	udpMutex.Lock()
 	defer udpMutex.Unlock()

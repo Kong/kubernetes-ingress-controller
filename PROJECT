@@ -84,4 +84,9 @@ resources:
   group: gateway
   kind: ReferencePolicy
   version: v1alpha2
+- controller: true
+  domain: networking.k8s.io
+  group: gateway
+  kind: TLSRoute
+  version: v1alpha2
 version: "3"

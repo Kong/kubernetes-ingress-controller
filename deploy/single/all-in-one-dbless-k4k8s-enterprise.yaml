@@ -1284,6 +1284,21 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - tlsroutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - tlsroutes/status
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
   - udproutes
   verbs:
   - get

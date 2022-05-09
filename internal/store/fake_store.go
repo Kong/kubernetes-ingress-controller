@@ -36,6 +36,7 @@ type FakeObjects struct {
 	HTTPRoutes         []*gatewayv1alpha2.HTTPRoute
 	UDPRoutes          []*gatewayv1alpha2.UDPRoute
 	TCPRoutes          []*gatewayv1alpha2.TCPRoute
+	TLSRoutes          []*gatewayv1alpha2.TLSRoute
 	ReferencePolicies  []*gatewayv1alpha2.ReferencePolicy
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*configurationv1beta1.UDPIngress
@@ -90,8 +91,14 @@ func NewFakeStore(
 		}
 	}
 	tcprouteStore := cache.NewStore(keyFunc)
-	for _, tcproute := range objects.UDPRoutes {
+	for _, tcproute := range objects.TCPRoutes {
 		if err := tcprouteStore.Add(tcproute); err != nil {
+			return nil, err
+		}
+	}
+	tlsrouteStore := cache.NewStore(keyFunc)
+	for _, tlsroute := range objects.TLSRoutes {
+		if err := tlsrouteStore.Add(tlsroute); err != nil {
 			return nil, err
 		}
 	}
@@ -179,6 +186,7 @@ func NewFakeStore(
 			HTTPRoute:       httprouteStore,
 			UDPRoute:        udprouteStore,
 			TCPRoute:        tcprouteStore,
+			TLSRoute:        tlsrouteStore,
 			ReferencePolicy: referencepolicyStore,
 			TCPIngress:      tcpIngressStore,
 			UDPIngress:      udpIngressStore,

@@ -85,6 +85,7 @@ type Storer interface {
 	ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error)
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
+	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
 	ListReferencePolicies() ([]*gatewayv1alpha2.ReferencePolicy, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
@@ -129,6 +130,7 @@ type CacheStores struct {
 	HTTPRoute       cache.Store
 	UDPRoute        cache.Store
 	TCPRoute        cache.Store
+	TLSRoute        cache.Store
 	ReferencePolicy cache.Store
 
 	// Kong Stores
@@ -156,6 +158,7 @@ func NewCacheStores() (c CacheStores) {
 	c.HTTPRoute = cache.NewStore(keyFunc)
 	c.UDPRoute = cache.NewStore(keyFunc)
 	c.TCPRoute = cache.NewStore(keyFunc)
+	c.TLSRoute = cache.NewStore(keyFunc)
 	c.ReferencePolicy = cache.NewStore(keyFunc)
 	c.KnativeIngress = cache.NewStore(keyFunc)
 	c.Plugin = cache.NewStore(keyFunc)
@@ -242,6 +245,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.UDPRoute.Get(obj)
 	case *gatewayv1alpha2.TCPRoute:
 		return c.TCPRoute.Get(obj)
+	case *gatewayv1alpha2.TLSRoute:
+		return c.TLSRoute.Get(obj)
 	case *gatewayv1alpha2.ReferencePolicy:
 		return c.ReferencePolicy.Get(obj)
 	// ----------------------------------------------------------------------------
@@ -301,6 +306,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.UDPRoute.Add(obj)
 	case *gatewayv1alpha2.TCPRoute:
 		return c.TCPRoute.Add(obj)
+	case *gatewayv1alpha2.TLSRoute:
+		return c.TLSRoute.Add(obj)
 	case *gatewayv1alpha2.ReferencePolicy:
 		return c.ReferencePolicy.Add(obj)
 	// ----------------------------------------------------------------------------
@@ -361,6 +368,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.UDPRoute.Delete(obj)
 	case *gatewayv1alpha2.TCPRoute:
 		return c.TCPRoute.Delete(obj)
+	case *gatewayv1alpha2.TLSRoute:
+		return c.TLSRoute.Delete(obj)
 	case *gatewayv1alpha2.ReferencePolicy:
 		return c.ReferencePolicy.Delete(obj)
 	// ----------------------------------------------------------------------------
@@ -573,6 +582,22 @@ func (s Store) ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error) {
 		return nil, err
 	}
 	return tcproutes, nil
+}
+
+// ListTLSRoutes returns the list of TLSRoutes in the TLSRoute cache store.
+func (s Store) ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error) {
+	var tlsroutes []*gatewayv1alpha2.TLSRoute
+	if err := cache.ListAll(s.stores.TLSRoute, labels.NewSelector(),
+		func(ob interface{}) {
+			tlsroute, ok := ob.(*gatewayv1alpha2.TLSRoute)
+			if ok {
+				tlsroutes = append(tlsroutes, tlsroute)
+			}
+		},
+	); err != nil {
+		return nil, err
+	}
+	return tlsroutes, nil
 }
 
 // ListReferencePolicies returns the list of ReferencePolicies in the ReferencePolicy cache store.

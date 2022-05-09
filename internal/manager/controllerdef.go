@@ -329,6 +329,21 @@ func setupControllers(
 				DataplaneClient: dataplaneClient,
 			},
 		},
+		{
+			Enabled: featureGates[gatewayFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "tlsroutes",
+				}}.CRDExists,
+			Controller: &gateway.TLSRouteReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("TLSRoute"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
+			},
+		},
 	}
 
 	return controllers, nil

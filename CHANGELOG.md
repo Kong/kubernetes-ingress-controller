@@ -81,6 +81,8 @@
   [#2451](https://github.com/Kong/kubernetes-ingress-controller/issues/2451)
 - Added description of each field of `kongIngresses` CRD.
   [#1766](https://github.com/Kong/kubernetes-ingress-controller/issues/1766)
+- Added support for `TLSRoute` resources.
+  [#2476](https://github.com/Kong/kubernetes-ingress-controller/issues/2476)
 
 #### Fixed
 

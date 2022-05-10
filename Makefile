@@ -189,7 +189,7 @@ debug-container:
 NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 PKG_LIST = ./pkg/...,./internal/...
 KIND_CLUSTER_NAME ?= "integration-tests"
-INTEGRATION_TEST_TIMEOUT ?= "20m"
+INTEGRATION_TEST_TIMEOUT ?= "25m"
 E2E_TEST_TIMEOUT ?= "30m"
 
 .PHONY: test

@@ -141,7 +141,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.",
 	)
 	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", dataplane.DefaultTimeoutSeconds,
-		"Define the timeout (in seconds) for all requests to Kong's Admin API",
+		"Sets the timeout (in seconds) for all requests to Kong's Admin API.",
 	)
 	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `A Secret containing custom entities for DB-less mode, in "namespace/name" format`)
 

@@ -25,6 +25,7 @@ func IsDefaultIngressClass(obj client.Object) bool {
 func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDefault bool) bool {
 	objectIngressClass := obj.GetAnnotations()[annotations.IngressClassKey]
 	objectKnativeClass := obj.GetAnnotations()[annotations.KnativeIngressClassKey]
+	objectKnativeClassAlt := obj.GetAnnotations()[annotations.KnativeIngressClassAltKey]
 	if isDefault && IsIngressClassEmpty(obj) {
 		return true
 	}
@@ -33,9 +34,12 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 			return true
 		}
 	}
-	if objectIngressClass == controllerIngressClass || objectKnativeClass == controllerIngressClass {
+
+	switch controllerIngressClass {
+	case objectIngressClass, objectKnativeClass, objectKnativeClassAlt:
 		return true
 	}
+
 	return false
 }
 
@@ -69,6 +73,9 @@ func IsIngressClassEmpty(obj client.Object) bool {
 			return false
 		}
 		if _, ok := obj.GetAnnotations()[annotations.KnativeIngressClassKey]; ok {
+			return false
+		}
+		if _, ok := obj.GetAnnotations()[annotations.KnativeIngressClassAltKey]; ok {
 			return false
 		}
 		return true

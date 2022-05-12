@@ -2101,7 +2101,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "knative-ingress-with-override",
 					Namespace: "foo-ns",
 					Annotations: map[string]string{
-						"networking.knative.dev/ingress.class":                      annotations.DefaultIngressClass,
+						"networking.knative.dev/ingress-class":                      annotations.DefaultIngressClass,
 						annotations.AnnotationPrefix + annotations.ConfigurationKey: "https-only",
 					},
 				},
@@ -2181,7 +2181,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "knative-ingress-without-override",
 					Namespace: "foo-ns",
 					Annotations: map[string]string{
-						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+						"networking.knative.dev/ingress-class": annotations.DefaultIngressClass,
 					},
 				},
 				Spec: knative.IngressSpec{
@@ -2260,7 +2260,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "knative-ingress-with-annotations",
 					Namespace: "foo-ns",
 					Annotations: map[string]string{
-						"networking.knative.dev/ingress.class":                          annotations.DefaultIngressClass,
+						"networking.knative.dev/ingress-class":                          annotations.DefaultIngressClass,
 						annotations.AnnotationPrefix + annotations.ProtocolsKey:         "https",
 						annotations.AnnotationPrefix + annotations.HTTPSRedirectCodeKey: "308",
 						annotations.AnnotationPrefix + annotations.StripPathKey:         "true",
@@ -2332,7 +2332,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Name:      "knative-ingress",
 					Namespace: "foo-ns",
 					Annotations: map[string]string{
-						"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+						"networking.knative.dev/ingress-class": annotations.DefaultIngressClass,
 					},
 				},
 				Spec: knative.IngressSpec{
@@ -2371,7 +2371,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 					Namespace: "foo-ns",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "knative-key-auth",
-						"networking.knative.dev/ingress.class":                annotations.DefaultIngressClass,
+						"networking.knative.dev/ingress-class":                annotations.DefaultIngressClass,
 					},
 				},
 			},

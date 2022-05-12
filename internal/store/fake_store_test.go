@@ -379,7 +379,7 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 				Name:      "foo",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"networking.knative.dev/ingress.class": annotations.DefaultIngressClass,
+					"networking.knative.dev/ingress-class": annotations.DefaultIngressClass,
 				},
 			},
 			Spec: knative.IngressSpec{

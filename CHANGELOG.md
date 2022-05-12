@@ -107,6 +107,8 @@
 - diff logging now honors log level instead of printing at all log levels. It
   will only print at levels `debug` and `trace`.
   [#2422](https://github.com/Kong/kubernetes-ingress-controller/issues/2422)
+- Rename kubernetes.io/ingress.class to kubernetes.io/ingress-class #2485
+  [#2485](https://github.com/Kong/kubernetes-ingress-controller/issues/2485)
 
 ## [2.3.1]
 

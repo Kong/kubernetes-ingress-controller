@@ -40,7 +40,9 @@ type HTTPRouteReconciler struct {
 func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("httproute-controller", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err

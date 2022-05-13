@@ -68,7 +68,9 @@ type CoreV1ServiceReconciler struct {
 func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("CoreV1Service", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -139,7 +141,9 @@ type CoreV1EndpointsReconciler struct {
 func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("CoreV1Endpoints", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -210,7 +214,9 @@ type CoreV1SecretReconciler struct {
 func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("CoreV1Secret", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -286,7 +292,9 @@ type NetV1IngressReconciler struct {
 func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("NetV1Ingress", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -436,7 +444,9 @@ type NetV1IngressClassReconciler struct {
 func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("NetV1IngressClass", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -511,7 +521,9 @@ type NetV1Beta1IngressReconciler struct {
 func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("NetV1Beta1Ingress", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -666,7 +678,9 @@ type ExtV1Beta1IngressReconciler struct {
 func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("ExtV1Beta1Ingress", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -816,7 +830,9 @@ type KongV1KongIngressReconciler struct {
 func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongIngress", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -887,7 +903,9 @@ type KongV1KongPluginReconciler struct {
 func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongPlugin", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -960,7 +978,9 @@ type KongV1KongClusterPluginReconciler struct {
 func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongClusterPlugin", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -1077,7 +1097,9 @@ type KongV1KongConsumerReconciler struct {
 func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongConsumer", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -1197,7 +1219,9 @@ type KongV1Beta1TCPIngressReconciler struct {
 func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1Beta1TCPIngress", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -1352,7 +1376,9 @@ type KongV1Beta1UDPIngressReconciler struct {
 func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1Beta1UDPIngress", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err
@@ -1507,7 +1533,9 @@ type Knativev1alpha1IngressReconciler struct {
 func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("Knativev1alpha1Ingress", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err

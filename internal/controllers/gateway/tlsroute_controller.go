@@ -40,7 +40,9 @@ type TLSRouteReconciler struct {
 func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("tlsroute-controller", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err

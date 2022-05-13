@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -43,7 +44,9 @@ type GatewayClassReconciler struct { //nolint:revive
 func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("V1Alpha2GatewayClass", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err

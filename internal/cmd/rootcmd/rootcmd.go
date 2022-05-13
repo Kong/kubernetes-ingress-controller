@@ -2,8 +2,6 @@
 package rootcmd
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
@@ -18,12 +16,12 @@ func init() {
 var rootCmd = &cobra.Command{
 	PersistentPreRunE: bindEnvVars,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return Run(cmd.Context(), &cfg)
+		return Run(&cfg)
 	},
 	SilenceUsage: true,
 }
 
 // Execute is the entry point to the controller manager.
-func Execute(ctx context.Context) {
-	cobra.CheckErr(rootCmd.ExecuteContext(ctx))
+func Execute() {
+	cobra.CheckErr(rootCmd.Execute())
 }

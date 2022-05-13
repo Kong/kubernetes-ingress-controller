@@ -83,6 +83,8 @@
   [#1766](https://github.com/Kong/kubernetes-ingress-controller/issues/1766)
 - Added support for `TLSRoute` resources.
   [#2476](https://github.com/Kong/kubernetes-ingress-controller/issues/2476)
+- Added `--term-delay` flag to support setting a delay before processing SIGTERM signal.
+  [#2494](https://github.com/Kong/kubernetes-ingress-controller/pull/2494)
 
 #### Fixed
 

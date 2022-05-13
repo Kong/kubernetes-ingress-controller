@@ -92,6 +92,9 @@ type Config struct {
 
 	// Feature Gates
 	FeatureGates map[string]bool
+
+	// Delay Signal Handler
+	TermDelay time.Duration
 }
 
 // -----------------------------------------------------------------------------
@@ -202,6 +205,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Feature Gates (see FEATURE_GATES.md)
 	flagSet.Var(cliflag.NewMapStringBool(&c.FeatureGates), "feature-gates", "A set of key=value pairs that describe feature gates for alpha/beta/experimental features. "+
 		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s", featureGatesDocsURL))
+
+	// SIGTERM signal delay
+	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before sending a SIGTERM signal to the Ingress Controller")
 
 	// Deprecated (to be removed in future releases)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds,

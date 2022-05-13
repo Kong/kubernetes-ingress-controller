@@ -1,0 +1,97 @@
+name:  Release
+description: Release/Pre-release of a version.
+labels: [release]
+body:
+- type: dropdown
+  id: release_type
+  attributes:
+    label: Release Type
+    description: which type of release is this release?
+    options:
+    - major release
+    - minor release
+    - patch release
+- type: textarea
+  id: release_version
+  attributes:
+    label: Release Version
+    description: Version of this release (e.g `2.4.0`)
+    placeholder:
+- type: textarea
+  id: release_tests
+  attributes:
+    label: Release Tests
+    description: Github Workflow Test Matrix Checkup
+    placeholder: |
+      **For all releases**
+
+      We maintain some integration tests with 3rd party components which we need to manually verify and update before cutting any release.
+      - [ ] check the testing workflow ([.github/workflows/test.yaml](.github/workflows/test.yaml)) and ensure that all matrix versions ([`.github/workflows/e2e.yaml`](/.github/workflows/e2e.yaml) and [`.github/workflows/release.yaml`](/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
+      - [ ] Kubernetes
+      - [ ] Istio
+       An issue exists to automate the above actions: https://github.com/Kong/kubernetes-ingress-controller/issues/1886
+      **Wait for tests to pass before continuing with any release**, if any problems are found hold on the release until patches are provided and then run the tests again.
+- type: textarea
+  id: release_branch
+  attributes:
+    label: Release Branch
+    description: Create Release Branch
+    placeholder: |
+      **For all releases**
+
+      For this step we're going to start with the `main` branch to create our release branch (e.g. `release/X.Y.Z`) which will later be submitted as a pull request back to `main`.
+      - [ ] ensure that you have up to date copy of `main`: `git fetch --all`
+      - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
+      - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
+      - [ ] retrieve the latest license report from FOSSA and save it to LICENSES
+      - [ ] ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`
+      - [ ] push the branch up to the remote: `git push --set-upstream origin release/x.y.z`
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    id: release_pr
+    label: Release Pull Request
+    description: Create a Release Pull Request
+    placeholder: |
+      **For all releases**
+
+      For this step we're going to start with the `main` branch to create our release branch (e.g. `release/X.Y.Z`) which will later be submitted as a pull request back to `main`.
+      - [ ] ensure that you have up to date copy of `main`: `git fetch --all`
+      - [ ] create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`
+      - [ ] Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
+      - [ ] retrieve the latest license report from FOSSA and save it to LICENSES
+      - [ ] ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`
+      - [ ] push the branch up to the remote: `git push --set-upstream origin release/x.y.z`
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    id: release_documents
+    label: Release documents
+    placeholder: |
+      **For major/minor releases only**
+
+      - [ ] Create a new branch in the [documentation site repo](https://github.com/Kong/docs.konghq.com).
+      - [ ] Copy `app/kubernetes-ingress-controller/OLD_VERSION` to `app/kubernetes-ingress-controller/NEW_VERSION`.
+      - [ ] Update articles in the new version as needed.
+      - [ ] Update `references/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)
+      - [ ] Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml`. Add entries for any new articles.
+      - [ ] Add a section to `app/_data/kong_versions.yml` for your version.
+      - [ ] Open a PR from your branch.
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    id: release_trouble_shooting
+    label: Manual Docker image build
+    placeholder: |
+      If the "Build and push development images" Github action is not appropriate for your release, or is not operating properly, you can build and push Docker images manually:
+
+      - [ ] Check out your release tag.
+      - [ ] Run `make container`. Note that you can set the `TAG` environment variable if you need to override the current tag in Makefile.
+      - [ ] Add additional tags for your container (e.g. `docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2.0; docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2`)
+      - [ ] Create a temporary token for the `kongbot` user (see 1Password) and log in using it.
+      - [ ] Push each of your tags (e.g. `docker push kong/kubernetes-ingress-controller:1.2.0-alpine`)
+  validations:
+    required: false

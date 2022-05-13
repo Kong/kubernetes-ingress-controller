@@ -66,7 +66,9 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// generate the controller object and attach it to the manager and link the reconciler object
 	c, err := controller.New("gateway-controller", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err

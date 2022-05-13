@@ -458,7 +458,9 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("{{.PackageAlias}}{{.Kind}}", mgr, controller.Options{
 		Reconciler: r,
-		Log:        r.Log,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
 	})
 	if err != nil {
 		return err

@@ -6,16 +6,34 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 )
 
-func serviceBackendPortToStr(port networkingv1.ServiceBackendPort) string {
-	if port.Name != "" {
-		return fmt.Sprintf("pname-%s", port.Name)
+func pathsFromK8sLegacy(path string, pathType networkingv1beta1.PathType) ([]*string, error) {
+	switch pathType {
+	case networkingv1beta1.PathTypePrefix:
+		base := strings.Trim(path, "/")
+		if base == "" {
+			return kong.StringSlice("/"), nil
+		}
+		return kong.StringSlice(
+			"/"+base+"$",
+			"/"+base+"/",
+		), nil
+	case networkingv1beta1.PathTypeExact:
+		relative := strings.TrimLeft(path, "/")
+		return kong.StringSlice("/" + relative + "$"), nil
+	case networkingv1beta1.PathTypeImplementationSpecific:
+		if path == "" {
+			return kong.StringSlice("/"), nil
+		}
+		return kong.StringSlice(path), nil
 	}
-	return fmt.Sprintf("pnum-%d", port.Number)
+
+	return nil, fmt.Errorf("unknown pathType %v", pathType)
 }
 
 func pathsFromK8s(path string, pathType networkingv1.PathType) ([]*string, error) {
@@ -40,12 +58,6 @@ func pathsFromK8s(path string, pathType networkingv1.PathType) ([]*string, error
 	}
 
 	return nil, fmt.Errorf("unknown pathType %v", pathType)
-}
-
-var priorityForPath = map[networkingv1.PathType]int{
-	networkingv1.PathTypeExact:                  300,
-	networkingv1.PathTypePrefix:                 200,
-	networkingv1.PathTypeImplementationSpecific: 100,
 }
 
 func PortDefFromServiceBackendPort(sbp *networkingv1.ServiceBackendPort) kongstate.PortDef {

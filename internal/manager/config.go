@@ -207,7 +207,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s", featureGatesDocsURL))
 
 	// SIGTERM signal delay
-	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before sending a SIGTERM signal to the Ingress Controller")
+	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before sending a SIGTERM to the Ingress Controller")
 
 	// Deprecated (to be removed in future releases)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds,

@@ -7,7 +7,10 @@ import (
 )
 
 func Run(c *manager.Config) error {
-	ctx := SetupSignalHandler(c.TermDelay)
+	ctx, err := SetupSignalHandler(c)
+	if err != nil {
+		return fmt.Errorf("failed to setup signal handler: %w", err)
+	}
 
 	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c)
 	if err != nil {

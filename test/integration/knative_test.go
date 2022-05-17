@@ -202,7 +202,7 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 			return true
 		}
 
-		t.Logf("expected HTTP 200 but got %d, with body: %s", resp.StatusCode, bodyBytes)
+		t.Logf("expected HTTP 200 but got %d, with body: %q", resp.StatusCode, bodyBytes)
 		return false
 	}, knativeWaitTime, waitTick)
 }

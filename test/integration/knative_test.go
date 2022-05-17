@@ -57,7 +57,7 @@ func TestKnativeIngress(t *testing.T) {
 	knativeClient := dynamicClient.Resource(knativeGVR).Namespace(ns.Name)
 
 	t.Logf("configure knative network for ingress class %s", ingressClass)
-	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress.class\": \"%s\"}}", ingressClass))
+	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress-class\": \"%s\"}}", ingressClass))
 	_, err = env.Cluster().Client().CoreV1().ConfigMaps(knative.DefaultNamespace).Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	require.NoError(t, err)
 	require.NoError(t, configKnativeDomain(ctx, proxyURL.Hostname(), knative.DefaultNamespace, env.Cluster()))
@@ -143,16 +143,23 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 	ingCli := knativec.NetworkingV1alpha1().Ingresses(nsn)
 	assert.Eventually(t, func() bool {
 		curIng, err := ingCli.Get(ctx, "helloworld-go", metav1.GetOptions{})
-		if err != nil || curIng == nil {
+		if err != nil {
+			t.Logf("error getting knative ingress: %v", err)
 			return false
 		}
+		if curIng == nil {
+			t.Log("getting knative ingress: got nil, want non-nil")
+			return false
+		}
+
 		conds := curIng.Status.Status.GetConditions()
 		for _, cond := range conds {
 			if cond.Type == apis.ConditionReady && cond.Status == v1.ConditionTrue {
-				t.Log("knative ingress status is ready.")
+				t.Logf("knative ingress %s/%s status is ready.", curIng.Namespace, curIng.Name)
 				return true
 			}
 		}
+		t.Logf("knative ingress %s/%s not ready yet", curIng.Namespace, curIng.Name)
 		return false
 	}, statusWait, waitTick, true)
 
@@ -177,19 +184,25 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)
 		if err != nil {
+			t.Logf("error requesting %q: %v", req.URL, err)
 			return false
 		}
 		defer resp.Body.Close()
+
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Logf("error reading response body (url: %s): %v", req.URL, err)
+			return false
+		}
+
 		if resp.StatusCode == http.StatusOK {
-			bodyBytes, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return false
-			}
 			bodyString := string(bodyBytes)
 			t.Logf(bodyString)
 			t.Log("service is successfully accessed through kong.")
 			return true
 		}
+
+		t.Logf("expected HTTP 200 but got %d, with body: %q", resp.StatusCode, bodyBytes)
 		return false
 	}, knativeWaitTime, waitTick)
 }

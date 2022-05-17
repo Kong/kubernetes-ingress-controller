@@ -672,9 +672,12 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 		labels.NewSelector(),
 		func(ob interface{}) {
 			ing, ok := ob.(*knative.Ingress)
-			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassKey,
-				s.getIngressClassHandling()) {
-				ingresses = append(ingresses, ing)
+			if ok {
+				handlingClass := s.getIngressClassHandling()
+				if s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassKey, handlingClass) ||
+					s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassDeprecatedKey, handlingClass) {
+					ingresses = append(ingresses, ing)
+				}
 			}
 		})
 	if err != nil {

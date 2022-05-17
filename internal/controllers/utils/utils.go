@@ -36,7 +36,11 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 	}
 
 	switch controllerIngressClass {
-	case objectIngressClass, objectKnativeClass, objectKnativeClassAlt:
+	case objectIngressClass:
+		return true
+	case objectKnativeClass:
+		return true
+	case objectKnativeClassAlt:
 		return true
 	}
 

@@ -107,7 +107,8 @@
 - diff logging now honors log level instead of printing at all log levels. It
   will only print at levels `debug` and `trace`.
   [#2422](https://github.com/Kong/kubernetes-ingress-controller/issues/2422)
-- Use `networking.knative.dev/ingress-class` additionally to `networking.knative.dev/ingress.class`
+- For KNative Ingress resources, KIC now reads both the new style annotation
+  `networking.knative.dev/ingress-class` and the deprecated `networking.knative.dev/ingress.class` one
   to adapt to [what has already been done in knative](https://github.com/knative/networking/pull/522).
   [#2485](https://github.com/Kong/kubernetes-ingress-controller/issues/2485)
 

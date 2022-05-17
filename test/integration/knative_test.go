@@ -148,7 +148,7 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 			return false
 		}
 		if curIng == nil {
-			t.Log("got nil when getting knative ingress")
+			t.Log("getting knative ingress: got nil, want non-nil")
 			return false
 		}
 

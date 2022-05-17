@@ -675,7 +675,7 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 			if ok {
 				handlingClass := s.getIngressClassHandling()
 				if s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassKey, handlingClass) ||
-					s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassAltKey, handlingClass) {
+					s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassDeprecatedKey, handlingClass) {
 					ingresses = append(ingresses, ing)
 				}
 			}

@@ -93,7 +93,10 @@ type Config struct {
 	// Feature Gates
 	FeatureGates map[string]bool
 
-	// Delay Signal Handler
+	// TermDelay is the time.Duration which the controller manager will wait
+	// after receiving SIGTERM or SIGINT before shutting down. This can be
+	// helpful for advanced cases with load-balancers so that the ingress
+	// controller can be gracefully removed/drained from their rotation.
 	TermDelay time.Duration
 }
 
@@ -206,8 +209,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.Var(cliflag.NewMapStringBool(&c.FeatureGates), "feature-gates", "A set of key=value pairs that describe feature gates for alpha/beta/experimental features. "+
 		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s", featureGatesDocsURL))
 
-	// SIGTERM signal delay
-	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before sending a SIGTERM to the Ingress Controller")
+	// SIGTERM or SIGINT signal delay
+	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before SIGTERM or SIGINT will shut down the Ingress Controller")
 
 	// Deprecated (to be removed in future releases)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds,

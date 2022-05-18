@@ -83,7 +83,11 @@
   [#1766](https://github.com/Kong/kubernetes-ingress-controller/issues/1766)
 - Added support for `TLSRoute` resources.
   [#2476](https://github.com/Kong/kubernetes-ingress-controller/issues/2476)
-- Added `--term-delay` flag to support setting a delay before processing SIGTERM signal.
+- Added `--term-delay` flag to support setting a time delay before processing
+  `SIGTERM` and `SIGINT` signals. This was added to specifically help in
+  situations where the Kong Gateway has a load-balancer in front of it to help
+  stagger and stabilize the shutdown procedure when the load-balancer is
+  draining or otherwise needs to remove the Gateway from it's rotation.
   [#2494](https://github.com/Kong/kubernetes-ingress-controller/pull/2494)
 
 #### Fixed

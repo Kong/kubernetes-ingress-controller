@@ -2,20 +2,22 @@ package rootcmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/bombsimon/logrusr/v2"
+
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
+var mutex sync.Mutex
 var shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
-
-var onlyOneSignalHandler = make(chan struct{})
 
 // SetupSignalHandler registers for SIGTERM and SIGINT. A context is returned
 // which is canceled on one of these signals. If a second signal is not caught, the program
@@ -23,13 +25,16 @@ var onlyOneSignalHandler = make(chan struct{})
 // the program is terminated with exit code 1.
 func SetupSignalHandler(cfg *manager.Config) (context.Context, error) {
 
+	// This will prevent multiple signal handlers from being created
+	if ok := mutex.TryLock(); !ok {
+		return nil, errors.New("signal handler can only be setup once")
+	}
+
 	deprecatedLogger, err := util.MakeLogger(cfg.LogLevel, cfg.LogFormat)
 	if err != nil {
 		return nil, err
 	}
 	logger := logrusr.New(deprecatedLogger)
-
-	close(onlyOneSignalHandler) // panics when called twice
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -38,16 +43,17 @@ func SetupSignalHandler(cfg *manager.Config) (context.Context, error) {
 	go func() {
 		<-c
 		logger.Info("Signal received, shutting down", "timeout", fmt.Sprint(cfg.TermDelay))
-		defer cancel()
 
 		select {
 		case <-time.After(cfg.TermDelay):
-			os.Exit(0)
+			cancel()
 		case <-c:
 			logger.Info("Second signal received, exiting immediately")
 			os.Exit(1) // second signal. Exit directly.
 		}
 
+		logger.Info("Second signal received, exiting immediately")
+		os.Exit(1) // second signal. Exit directly.
 	}()
 
 	return ctx, nil

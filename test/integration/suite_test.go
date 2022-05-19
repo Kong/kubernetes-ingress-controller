@@ -143,6 +143,11 @@ func TestMain(m *testing.M) {
 				exitOnErr(err)
 			}
 		}
+		fmt.Println("INFO: configuring feature gates")
+		if controllerFeatureGates == "" {
+			controllerFeatureGates = defaultFeatureGates
+		}
+		fmt.Printf("INFO: feature gates enabled: %s\n", controllerFeatureGates)
 		fmt.Println("INFO: starting the controller manager")
 		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", ingressClass),
@@ -153,7 +158,7 @@ func TestMain(m *testing.M) {
 			"--dump-config",
 			"--log-level=trace",
 			"--debug-log-reduce-redundancy",
-			"--feature-gates=Gateway=true",
+			fmt.Sprintf("--feature-gates=%s", controllerFeatureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)

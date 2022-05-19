@@ -189,8 +189,9 @@ debug-container:
 NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 PKG_LIST = ./pkg/...,./internal/...
 KIND_CLUSTER_NAME ?= "integration-tests"
-INTEGRATION_TEST_TIMEOUT ?= "25m"
-E2E_TEST_TIMEOUT ?= "30m"
+INTEGRATION_TEST_TIMEOUT ?= "45m"
+E2E_TEST_TIMEOUT ?= "45m"
+KONG_CONTROLLER_FEATURE_GATES ?= Gateway=true
 
 .PHONY: test
 test: test.unit
@@ -208,7 +209,10 @@ test.conformance:
 		./test/conformance
 
 .PHONY: test.integration
-test.integration: test.integration.enterprise.postgres  test.integration.dbless test.integration.postgres
+test.integration: test.integration.dbless test.integration.postgres
+
+.PHONY: test.integration.enterprise
+test.integration.enterprise: test.integration.enterprise.postgres
 
 .PHONY: test.unit
 test.unit:
@@ -222,7 +226,8 @@ test.unit:
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -v -race \
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
+		go test -v -race \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
@@ -234,7 +239,8 @@ test.integration.dbless:
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" go test -v \
+	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
+		go test -v \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
@@ -246,7 +252,8 @@ test.integration.postgres:
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" go test -v \
+	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
+		go test -v \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
@@ -254,10 +261,6 @@ test.integration.enterprise.postgres:
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.enterprisepostgres.out \
 		./test/integration
-
-.PHONY: test.integration.legacy
-test.integration.legacy: container
-	KIC_IMAGE="${IMAGE}:${TAG}" KUBE_VERSION=${KUBE_VERSION} ./hack/legacy/test/test.sh
 
 .PHONY: test.e2e
 test.e2e:
@@ -295,14 +298,14 @@ debug: install
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
-		--feature-gates=Gateway=true
+		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 
 run: install
 	go run ./internal/cmd/main.go \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
-		--feature-gates=Gateway=true
+		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -

@@ -150,7 +150,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}
 	require.NoError(t, err)
 	pluginClient, err := clientset.NewForConfig(env.Cluster().Config())
-	kongplugin, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
+	_, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment1.Name)
 	httpPort := gatewayv1alpha2.PortNumber(80)
@@ -240,11 +240,16 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "httpbin"), nil)
+		if err != nil {
+			t.Logf("WARNING: failed to create HTTP request: %v", err)
+			return false
+		}
 		resp, err := httpc.Do(req)
 		if err != nil {
 			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, "httpbin", err)
 			return false
 		}
+		defer resp.Body.Close()
 		if _, ok := resp.Header["Reqid"]; ok {
 			return true
 		}

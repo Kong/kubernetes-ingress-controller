@@ -11,6 +11,33 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
+// Services is a list of kongstate.Service objects with sorting enabled based
+// on a lexographical comparison of the underlying kong.Service names which are
+// always expected to be unique.
+type Services []*Service
+
+func (s Services) Len() int {
+	return len(s)
+}
+
+func (s Services) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s Services) Less(i, j int) bool {
+	a := ""
+	if s[i].Service.Name != nil {
+		a = *s[i].Service.Name
+	}
+
+	b := ""
+	if s[j].Service.Name != nil {
+		b = *s[j].Service.Name
+	}
+
+	return strings.Compare(a, b) == -1
+}
+
 // Service represents a service in Kong and holds routes associated with the
 // service and other k8s metadata.
 type Service struct {

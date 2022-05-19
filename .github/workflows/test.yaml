@@ -214,6 +214,39 @@ jobs:
         name: coverage
         path: coverage.postgres.out
 
+  integration-tests-feature-gates:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.18'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: run integration tests
+      run: make test.integration.dbless
+      env:
+        KONG_CONTROLLER_FEATURE_GATES: "Gateway=true,CombinedRoutes=true"
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.featuregates.out
+
   conformance-tests:
     runs-on: ubuntu-latest
     steps:
@@ -246,6 +279,7 @@ jobs:
       - "integration-tests-dbless"
       - "integration-tests-postgres"
       - "integration-tests-enterprise-postgres"
+      - "integration-tests-feature-gates"
     runs-on: ubuntu-latest
     steps:
 

@@ -139,6 +139,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
 
+	if enabled, ok := featureGates[combinedRoutesFeature]; ok && enabled {
+		dataplaneClient.EnableCombinedServiceRoutes()
+		setupLog.Info("combined routes mode has been enabled")
+	}
+
 	var kubernetesStatusQueue *status.Queue
 	if c.UpdateStatus {
 		setupLog.Info("Starting Status Updater")

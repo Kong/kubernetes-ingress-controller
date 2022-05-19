@@ -11,6 +11,7 @@ import (
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -187,72 +188,80 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
 
 		var objectSuccessfullyParsed bool
-		for i, rule := range ingressSpec.Rules {
-			if rule.HTTP == nil {
-				continue
+
+		if p.featureEnabledCombinedServiceRoutes {
+			for _, kongStateService := range translators.TranslateIngress(ingress) {
+				result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
 			}
-			for j, rulePath := range rule.HTTP.Paths {
-				if strings.Contains(rulePath.Path, "//") {
-					log.Errorf("rule skipped: invalid path: '%v'", rulePath.Path)
+			objectSuccessfullyParsed = true
+		} else {
+			for i, rule := range ingressSpec.Rules {
+				if rule.HTTP == nil {
 					continue
 				}
-
-				pathType := networkingv1.PathTypeImplementationSpecific
-				if rulePath.PathType != nil {
-					pathType = *rulePath.PathType
-				}
-
-				paths, err := pathsFromK8s(rulePath.Path, pathType)
-				if err != nil {
-					log.WithError(err).Error("rule skipped: pathsFromK8s")
-					continue
-				}
-
-				r := kongstate.Route{
-					Ingress: util.FromK8sObject(ingress),
-					Route: kong.Route{
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-						Paths:             paths,
-						StripPath:         kong.Bool(false),
-						PreserveHost:      kong.Bool(true),
-						Protocols:         kong.StringSlice("http", "https"),
-						RegexPriority:     kong.Int(priorityForPath[pathType]),
-						RequestBuffering:  kong.Bool(true),
-						ResponseBuffering: kong.Bool(true),
-					},
-				}
-				if rule.Host != "" {
-					r.Hosts = kong.StringSlice(rule.Host)
-				}
-
-				port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
-				serviceName := fmt.Sprintf("%s.%s.%s", ingress.Namespace, rulePath.Backend.Service.Name,
-					serviceBackendPortToStr(rulePath.Backend.Service.Port))
-				service, ok := result.ServiceNameToServices[serviceName]
-				if !ok {
-					service = kongstate.Service{
-						Service: kong.Service{
-							Name: kong.String(serviceName),
-							Host: kong.String(fmt.Sprintf("%s.%s.%s.svc", rulePath.Backend.Service.Name, ingress.Namespace,
-								port.CanonicalString())),
-							Port:           kong.Int(DefaultHTTPPort),
-							Protocol:       kong.String("http"),
-							Path:           kong.String("/"),
-							ConnectTimeout: kong.Int(DefaultServiceTimeout),
-							ReadTimeout:    kong.Int(DefaultServiceTimeout),
-							WriteTimeout:   kong.Int(DefaultServiceTimeout),
-							Retries:        kong.Int(DefaultRetries),
-						},
-						Namespace: ingress.Namespace,
-						Backends: []kongstate.ServiceBackend{{
-							Name:    rulePath.Backend.Service.Name,
-							PortDef: port,
-						}},
+				for j, rulePath := range rule.HTTP.Paths {
+					if strings.Contains(rulePath.Path, "//") {
+						log.Errorf("rule skipped: invalid path: '%v'", rulePath.Path)
+						continue
 					}
+
+					pathType := networkingv1.PathTypeImplementationSpecific
+					if rulePath.PathType != nil {
+						pathType = *rulePath.PathType
+					}
+
+					paths, err := pathsFromK8s(rulePath.Path, pathType)
+					if err != nil {
+						log.WithError(err).Error("rule skipped: pathsFromK8s")
+						continue
+					}
+
+					r := kongstate.Route{
+						Ingress: util.FromK8sObject(ingress),
+						Route: kong.Route{
+							Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+							Paths:             paths,
+							StripPath:         kong.Bool(false),
+							PreserveHost:      kong.Bool(true),
+							Protocols:         kong.StringSlice("http", "https"),
+							RegexPriority:     kong.Int(priorityForPath[pathType]),
+							RequestBuffering:  kong.Bool(true),
+							ResponseBuffering: kong.Bool(true),
+						},
+					}
+					if rule.Host != "" {
+						r.Hosts = kong.StringSlice(rule.Host)
+					}
+
+					port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
+					serviceName := fmt.Sprintf("%s.%s.%s", ingress.Namespace, rulePath.Backend.Service.Name,
+						serviceBackendPortToStr(rulePath.Backend.Service.Port))
+					service, ok := result.ServiceNameToServices[serviceName]
+					if !ok {
+						service = kongstate.Service{
+							Service: kong.Service{
+								Name: kong.String(serviceName),
+								Host: kong.String(fmt.Sprintf("%s.%s.%s.svc", rulePath.Backend.Service.Name, ingress.Namespace,
+									port.CanonicalString())),
+								Port:           kong.Int(DefaultHTTPPort),
+								Protocol:       kong.String("http"),
+								Path:           kong.String("/"),
+								ConnectTimeout: kong.Int(DefaultServiceTimeout),
+								ReadTimeout:    kong.Int(DefaultServiceTimeout),
+								WriteTimeout:   kong.Int(DefaultServiceTimeout),
+								Retries:        kong.Int(DefaultRetries),
+							},
+							Namespace: ingress.Namespace,
+							Backends: []kongstate.ServiceBackend{{
+								Name:    rulePath.Backend.Service.Name,
+								PortDef: port,
+							}},
+						}
+					}
+					service.Routes = append(service.Routes, r)
+					result.ServiceNameToServices[serviceName] = service
+					objectSuccessfullyParsed = true
 				}
-				service.Routes = append(service.Routes, r)
-				result.ServiceNameToServices[serviceName] = service
-				objectSuccessfullyParsed = true
 			}
 		}
 

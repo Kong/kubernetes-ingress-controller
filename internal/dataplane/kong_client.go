@@ -41,6 +41,12 @@ type KongClient struct {
 	// updates to the data-plane.
 	enableReverseSync bool
 
+	// enableCombinedServiceRoutes indicates that when translating Kubernetes
+	// ingress objects into Kong Admin API configuration we should disable the
+	// legacy logic which would create a single route per path and instead use
+	// the newer logic which combines them.
+	enableCombinedServiceRoutes bool
+
 	// skipCACertificates disables CA certificates, to avoid fighting over configuration in multi-workspace
 	// environments. See https://github.com/Kong/deck/pull/617
 	skipCACertificates bool
@@ -76,6 +82,10 @@ type KongClient struct {
 	// kubernetesObjectReportLock is a mutex for thread-safety of
 	// kubernetes object reporting functionality.
 	kubernetesObjectReportLock sync.RWMutex
+
+	// additionalFeaturesLock is a mutex to enable thread-safety of enabling or
+	// disabling various features.
+	additionalFeaturesLock sync.RWMutex
 
 	// kubernetesObjectStatusQueue is a queue that needs to be messaged whenever
 	// a Kubernetes object has had configuration for itself successfully applied
@@ -239,6 +249,30 @@ func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) bool {
 }
 
 // -----------------------------------------------------------------------------
+// Dataplane Client - Kong - Optional Features
+// -----------------------------------------------------------------------------
+
+// EnableCombinedServiceRoutes turns on the combined service routes feature for
+// the Kong Dataplane client.
+func (c *KongClient) EnableCombinedServiceRoutes() {
+	c.additionalFeaturesLock.Lock()
+	defer c.additionalFeaturesLock.Unlock()
+	c.enableCombinedServiceRoutes = true
+}
+
+// AreCombinedServiceRoutesEnabled determines whether the combined service
+// routes translation mode has been enabled, or if the legacy logic is being
+// used. When enabled this changes the logic to try and combine multiple paths
+// into single routes, but it also changes the names of existing routes and so
+// it should be considered disruptive as it will temporarily drop routes when
+// it's first enabled.
+func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
+	c.additionalFeaturesLock.RLock()
+	defer c.additionalFeaturesLock.RUnlock()
+	return c.enableCombinedServiceRoutes
+}
+
+// -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
 
@@ -264,6 +298,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	p := parser.NewParser(c.logger, storer)
 	if c.AreKubernetesObjectReportsEnabled() {
 		p.EnableKubernetesObjectReports()
+	}
+	if c.AreCombinedServiceRoutesEnabled() {
+		p.EnableCombinedServiceRoutes()
 	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration

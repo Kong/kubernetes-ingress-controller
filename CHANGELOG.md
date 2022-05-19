@@ -53,6 +53,23 @@
 
 #### Added
 
+- A new gated feature called `CombinedRoutes` has been added. Historically
+  a `kong.Route` would be created for _each path_ on an `Ingress` resource
+  in the phase where Kubernetes resources are translated to Kong Admin API
+  configuration. This new feature changes how `Ingress` resources are
+  translated so that a single route can be created for any unique combination
+  of ingress object, hostname, service and port which has multiple paths.
+  This option is helpful for end-users who are making near constant changes
+  to their configs (e.g. constantly adding, updating, and removing `Ingress`
+  resources) at scale, and users that have enormous numbers of paths all
+  pointing to a single Kubernetes `Service` as it can significantly reduce
+  the overall size of the dataplane configuration that is pushed to the Kong
+  Admin API. This feature is expected to be disruptive (routes may be dropped
+  briefly in postgres mode when switching to this mode) so for the moment it
+  is behind a feature gate while we continue to iterate on it and evaluate it
+  and seek a point where it would become the default behavior. Enable it with
+  the controller argument `--feature-gates=CombinedRoutes`.
+  [#2490](https://github.com/Kong/kubernetes-ingress-controller/issues/2490)
 - `UDPRoute` resources now support multiple backendRefs for load-balancing.
   [#2405](https://github.com/Kong/kubernetes-ingress-controller/issues/2405)
 - `TCPRoute` resources now support multiple backendRefs for load-balancing.

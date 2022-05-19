@@ -34,10 +34,12 @@ import (
 // equivalent Kong objects and configurations, producing a complete
 // state configuration for the Kong Admin API.
 type Parser struct {
-	logger                            logrus.FieldLogger
-	storer                            store.Storer
-	reportConfiguredKubernetesObjects bool
-	configuredKubernetesObjects       []client.Object
+	logger                      logrus.FieldLogger
+	storer                      store.Storer
+	configuredKubernetesObjects []client.Object
+
+	featureEnabledReportConfiguredKubernetesObjects bool
+	featureEnabledCombinedServiceRoutes             bool
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -119,14 +121,14 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 // were successfully parsed. Objects tracked this way can be retrieved by
 // calling GenerateKubernetesObjectReport().
 func (p *Parser) EnableKubernetesObjectReports() {
-	p.reportConfiguredKubernetesObjects = true
+	p.featureEnabledReportConfiguredKubernetesObjects = true
 }
 
 // ReportKubernetesObjectUpdate reports an update to a Kubernetes object if
 // updates have been requested. If the parser has not been configured to
 // report Kubernetes object updates this is a no-op.
 func (p *Parser) ReportKubernetesObjectUpdate(obj client.Object) {
-	if p.reportConfiguredKubernetesObjects {
+	if p.featureEnabledReportConfiguredKubernetesObjects {
 		p.configuredKubernetesObjects = append(p.configuredKubernetesObjects, obj)
 	}
 }
@@ -139,6 +141,18 @@ func (p *Parser) GenerateKubernetesObjectReport() []client.Object {
 	report := p.configuredKubernetesObjects
 	p.configuredKubernetesObjects = nil
 	return report
+}
+
+// -----------------------------------------------------------------------------
+// Parser - Public Methods - Other Optional Features
+// -----------------------------------------------------------------------------
+
+// EnableCombinedServiceRoutes changes the translation logic from the legacy
+// mode which would create a kong.Route object per each individual path on
+// an Ingress object to a mode that can combine routes for paths where the
+// service name, host and port match for those paths.
+func (p *Parser) EnableCombinedServiceRoutes() {
+	p.featureEnabledCombinedServiceRoutes = true
 }
 
 // -----------------------------------------------------------------------------

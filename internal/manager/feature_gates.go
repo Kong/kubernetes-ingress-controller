@@ -17,6 +17,11 @@ const (
 	// gatewayFeature is the name of the feature-gate for enabling/disabling Gateway APIs
 	gatewayFeature = "Gateway"
 
+	// combinedRoutesFeature is the name of the feature-gate for the newer object
+	// translation logic that will combine routes for kong services when translating
+	// objects like Ingress instead of creating a route per path.
+	combinedRoutesFeature = "CombinedRoutes"
+
 	// featureGatesDocsURL provides a link to the documentation for feature gates in the KIC repository
 	featureGatesDocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -46,7 +51,8 @@ func setupFeatureGates(setupLog logr.Logger, c *Config) (map[string]bool, error)
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func getFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
-		knativeFeature: false,
-		gatewayFeature: false,
+		knativeFeature:        false,
+		gatewayFeature:        false,
+		combinedRoutesFeature: false,
 	}
 }

@@ -689,7 +689,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 	t.Logf("testing incorrect name does not match")
 	blueguyName := gatewayv1alpha2.ObjectName("blueguy")
 	policy.Spec.To[1].Name = &blueguyName
-	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	_, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

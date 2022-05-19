@@ -104,6 +104,14 @@ var (
 	clusterVersion semver.Version
 )
 
+const (
+	// defaultFeatureGates is the default feature gates setting that should be
+	// provided if none are provided by the user. This generally includes features
+	// that are innocuous, or otherwise don't actually get triggered unless the
+	// user takes further action.
+	defaultFeatureGates = "Gateway=true"
+)
+
 // -----------------------------------------------------------------------------
 // Testing Variables - Environment Overrides
 // -----------------------------------------------------------------------------
@@ -126,6 +134,10 @@ var (
 
 	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true"
 	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
+
+	// controllerFeatureGates contains the feature gates that should be enabled
+	// for test runs.
+	controllerFeatureGates = os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
 )
 
 // -----------------------------------------------------------------------------

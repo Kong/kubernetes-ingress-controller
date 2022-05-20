@@ -67,6 +67,18 @@ func (e ErrNotFound) Error() string {
 	return e.message
 }
 
+// ErrNotSupported error is returned when a object type fails to support the resource.
+type ErrNotSupported struct {
+	message string
+}
+
+func (e ErrNotSupported) Error() string {
+	if e.message == "" {
+		return "not supported"
+	}
+	return e.message
+}
+
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
@@ -148,27 +160,28 @@ type CacheStores struct {
 }
 
 // NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores
-func NewCacheStores() (c CacheStores) {
-	c.ClusterPlugin = cache.NewStore(clusterResourceKeyFunc)
-	c.Consumer = cache.NewStore(keyFunc)
-	c.Endpoint = cache.NewStore(keyFunc)
-	c.IngressV1 = cache.NewStore(keyFunc)
-	c.IngressClassV1 = cache.NewStore(clusterResourceKeyFunc)
-	c.IngressV1beta1 = cache.NewStore(keyFunc)
-	c.HTTPRoute = cache.NewStore(keyFunc)
-	c.UDPRoute = cache.NewStore(keyFunc)
-	c.TCPRoute = cache.NewStore(keyFunc)
-	c.TLSRoute = cache.NewStore(keyFunc)
-	c.ReferencePolicy = cache.NewStore(keyFunc)
-	c.KnativeIngress = cache.NewStore(keyFunc)
-	c.Plugin = cache.NewStore(keyFunc)
-	c.Secret = cache.NewStore(keyFunc)
-	c.Service = cache.NewStore(keyFunc)
-	c.TCPIngress = cache.NewStore(keyFunc)
-	c.UDPIngress = cache.NewStore(keyFunc)
-	c.KongIngress = cache.NewStore(keyFunc)
-	c.l = &sync.RWMutex{}
-	return
+func NewCacheStores() CacheStores {
+	return CacheStores{
+		IngressV1beta1:  cache.NewStore(keyFunc),
+		IngressV1:       cache.NewStore(keyFunc),
+		IngressClassV1:  cache.NewStore(clusterResourceKeyFunc),
+		Service:         cache.NewStore(keyFunc),
+		Secret:          cache.NewStore(keyFunc),
+		Endpoint:        cache.NewStore(keyFunc),
+		HTTPRoute:       cache.NewStore(keyFunc),
+		UDPRoute:        cache.NewStore(keyFunc),
+		TCPRoute:        cache.NewStore(keyFunc),
+		TLSRoute:        cache.NewStore(keyFunc),
+		ReferencePolicy: cache.NewStore(keyFunc),
+		Plugin:          cache.NewStore(keyFunc),
+		ClusterPlugin:   cache.NewStore(clusterResourceKeyFunc),
+		Consumer:        cache.NewStore(keyFunc),
+		KongIngress:     cache.NewStore(keyFunc),
+		TCPIngress:      cache.NewStore(keyFunc),
+		UDPIngress:      cache.NewStore(keyFunc),
+		KnativeIngress:  cache.NewStore(keyFunc),
+		l:               &sync.RWMutex{},
+	}
 }
 
 // NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
@@ -270,7 +283,7 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	case *knative.Ingress:
 		return c.KnativeIngress.Get(obj)
 	}
-	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
+	return nil, false, ErrNotSupported{fmt.Sprintf("%T is not a supported cache object type", obj)}
 }
 
 // Add stores a provided runtime.Object into the CacheStore if it's of a supported type.
@@ -331,7 +344,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	case *knative.Ingress:
 		return c.KnativeIngress.Add(obj)
 	default:
-		return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
+		return ErrNotSupported{fmt.Sprintf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())}
 	}
 }
 
@@ -393,7 +406,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	case *knative.Ingress:
 		return c.KnativeIngress.Delete(obj)
 	default:
-		return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
+		return ErrNotSupported{fmt.Sprintf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())}
 	}
 }
 
@@ -892,11 +905,11 @@ func (s Store) getIngressClassHandling() annotations.ClassMatching {
 func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*networkingv1beta1.Ingress, error) {
 	js, err := json.Marshal(obj)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize object of type %v: %w", reflect.TypeOf(obj), err)
+		return nil, ErrNotSupported{fmt.Sprintf("failed to serialize object of type %v: %v", reflect.TypeOf(obj), err)}
 	}
 	var out networkingv1beta1.Ingress
 	if err := json.Unmarshal(js, &out); err != nil {
-		return nil, fmt.Errorf("failed to deserialize json: %w", err)
+		return nil, ErrNotSupported{fmt.Sprintf("failed to deserialize json: %v", err)}
 	}
 	out.APIVersion = networkingv1beta1.SchemeGroupVersion.String()
 	return &out, nil
@@ -914,7 +927,7 @@ func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*networkingv1beta1.Ing
 func convUnstructuredObj(from, to runtime.Object) error {
 	b, err := yaml.Marshal(from)
 	if err != nil {
-		return fmt.Errorf("failed to convert object %s to yaml: %w", from.GetObjectKind().GroupVersionKind(), err)
+		return ErrNotSupported{fmt.Sprintf("failed to convert object %s to yaml: %v", from.GetObjectKind().GroupVersionKind(), err)}
 	}
 	return yaml.Unmarshal(b, to)
 }
@@ -963,6 +976,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	case knative.SchemeGroupVersion.WithKind("Ingress"):
 		return &knative.Ingress{}, nil
 	default:
-		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
+		return nil, ErrNotSupported{fmt.Sprintf("%s is not a supported runtime.Object", gvk)}
 	}
 }

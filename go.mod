@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.12.1
 	github.com/kong/go-kong v0.29.0
-	github.com/kong/kubernetes-testing-framework v0.13.3
+	github.com/kong/kubernetes-testing-framework v0.14.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.49
 	github.com/mitchellh/mapstructure v1.5.0
@@ -31,7 +31,7 @@ require (
 	google.golang.org/api v0.80.0
 	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3
 	k8s.io/api v0.24.0
-	k8s.io/apiextensions-apiserver v0.23.5
+	k8s.io/apiextensions-apiserver v0.24.0
 	k8s.io/apimachinery v0.24.0
 	k8s.io/client-go v0.24.0
 	k8s.io/component-base v0.24.0
@@ -54,10 +54,9 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/containerd/containerd v1.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.0+incompatible // indirect
-	github.com/docker/docker v20.10.14+incompatible // indirect
+	github.com/docker/docker v20.10.16+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect

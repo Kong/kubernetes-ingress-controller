@@ -94,17 +94,17 @@ func (r *Reporter) send(signal string, uptime int) {
 	conn, err := tls.DialWithDialer(&dialer, "tcp", net.JoinHostPort(reportsHost,
 		strconv.FormatUint(uint64(reportsPort), 10)), &tlsConf)
 	if err != nil {
-		r.Logger.Errorf("failed to connect to reporting server: %s", err)
+		r.Logger.Debugf("failed to connect to reporting server: %s", err)
 		return
 	}
 	err = conn.SetDeadline(time.Now().Add(time.Minute))
 	if err != nil {
-		r.Logger.Errorf("failed to set report connection deadline: %s", err)
+		r.Logger.Debugf("failed to set report connection deadline: %s", err)
 		return
 	}
 	defer conn.Close()
 	_, err = conn.Write([]byte(message))
 	if err != nil {
-		r.Logger.Errorf("failed to send report: %s", err)
+		r.Logger.Debugf("failed to send report: %s", err)
 	}
 }

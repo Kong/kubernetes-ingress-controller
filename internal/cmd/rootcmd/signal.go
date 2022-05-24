@@ -48,11 +48,12 @@ func SetupSignalHandler(cfg *manager.Config) (context.Context, error) {
 		case <-time.After(cfg.TermDelay):
 			cancel()
 		case <-c:
-			logger.Info("Second signal received, exiting immediately")
+			logger.Info("Signal received during termination delay, exiting immediately")
 			os.Exit(1) // second signal. Exit directly.
 		}
 
-		logger.Info("Second signal received, exiting immediately")
+		<-c
+		logger.Info("Signal received during graceful shutdown, exiting immediately")
 		os.Exit(1) // second signal. Exit directly.
 	}()
 

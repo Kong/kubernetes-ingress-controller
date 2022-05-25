@@ -106,6 +106,8 @@
   stagger and stabilize the shutdown procedure when the load-balancer is
   draining or otherwise needs to remove the Gateway from it's rotation.
   [#2494](https://github.com/Kong/kubernetes-ingress-controller/pull/2494)
+- Added `kong-ingress-controller` category to CRDs
+  [#2517](https://github.com/Kong/kubernetes-ingress-controller/pull/2517)
 
 #### Fixed
 

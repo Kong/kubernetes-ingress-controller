@@ -10,6 +10,8 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: UDPIngress
     listKind: UDPIngressList
     plural: udpingresses

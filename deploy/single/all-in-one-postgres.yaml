@@ -13,6 +13,8 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: KongClusterPlugin
     listKind: KongClusterPluginList
     plural: kongclusterplugins
@@ -139,6 +141,8 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: KongConsumer
     listKind: KongConsumerList
     plural: kongconsumers
@@ -208,6 +212,8 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: KongIngress
     listKind: KongIngressList
     plural: kongingresses
@@ -522,6 +528,8 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: KongPlugin
     listKind: KongPluginList
     plural: kongplugins
@@ -644,6 +652,8 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: TCPIngress
     listKind: TCPIngressList
     plural: tcpingresses
@@ -830,6 +840,8 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: UDPIngress
     listKind: UDPIngressList
     plural: udpingresses

@@ -148,27 +148,28 @@ type CacheStores struct {
 }
 
 // NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores
-func NewCacheStores() (c CacheStores) {
-	c.ClusterPlugin = cache.NewStore(clusterResourceKeyFunc)
-	c.Consumer = cache.NewStore(keyFunc)
-	c.Endpoint = cache.NewStore(keyFunc)
-	c.IngressV1 = cache.NewStore(keyFunc)
-	c.IngressClassV1 = cache.NewStore(clusterResourceKeyFunc)
-	c.IngressV1beta1 = cache.NewStore(keyFunc)
-	c.HTTPRoute = cache.NewStore(keyFunc)
-	c.UDPRoute = cache.NewStore(keyFunc)
-	c.TCPRoute = cache.NewStore(keyFunc)
-	c.TLSRoute = cache.NewStore(keyFunc)
-	c.ReferencePolicy = cache.NewStore(keyFunc)
-	c.KnativeIngress = cache.NewStore(keyFunc)
-	c.Plugin = cache.NewStore(keyFunc)
-	c.Secret = cache.NewStore(keyFunc)
-	c.Service = cache.NewStore(keyFunc)
-	c.TCPIngress = cache.NewStore(keyFunc)
-	c.UDPIngress = cache.NewStore(keyFunc)
-	c.KongIngress = cache.NewStore(keyFunc)
-	c.l = &sync.RWMutex{}
-	return
+func NewCacheStores() CacheStores {
+	return CacheStores{
+		IngressV1beta1:  cache.NewStore(keyFunc),
+		IngressV1:       cache.NewStore(keyFunc),
+		IngressClassV1:  cache.NewStore(clusterResourceKeyFunc),
+		Service:         cache.NewStore(keyFunc),
+		Secret:          cache.NewStore(keyFunc),
+		Endpoint:        cache.NewStore(keyFunc),
+		HTTPRoute:       cache.NewStore(keyFunc),
+		UDPRoute:        cache.NewStore(keyFunc),
+		TCPRoute:        cache.NewStore(keyFunc),
+		TLSRoute:        cache.NewStore(keyFunc),
+		ReferencePolicy: cache.NewStore(keyFunc),
+		Plugin:          cache.NewStore(keyFunc),
+		ClusterPlugin:   cache.NewStore(clusterResourceKeyFunc),
+		Consumer:        cache.NewStore(keyFunc),
+		KongIngress:     cache.NewStore(keyFunc),
+		TCPIngress:      cache.NewStore(keyFunc),
+		UDPIngress:      cache.NewStore(keyFunc),
+		KnativeIngress:  cache.NewStore(keyFunc),
+		l:               &sync.RWMutex{},
+	}
 }
 
 // NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing

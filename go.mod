@@ -30,10 +30,10 @@ require (
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
 	google.golang.org/api v0.81.0
 	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd
-	k8s.io/api v0.24.0
+	k8s.io/api v0.24.1
 	k8s.io/apiextensions-apiserver v0.24.0
 	k8s.io/apimachinery v0.24.1
-	k8s.io/client-go v0.24.0
+	k8s.io/client-go v0.24.1
 	k8s.io/component-base v0.24.0
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77

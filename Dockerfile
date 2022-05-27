@@ -2,6 +2,16 @@
 # Build the manager binary
 FROM golang:1.18 as builder
 
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
+    && printf ", TARGETARCH=${TARGETARCH}" \
+    && printf ", TARGETOS=${TARGETOS}" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf "With 'uname -s': $(uname -s) and 'uname -m': $(uname -m)"
+
 WORKDIR /workspace
 
 COPY go.mod go.mod
@@ -17,7 +27,6 @@ COPY internal/ internal/
 ARG TAG
 ARG COMMIT
 ARG REPO_INFO
-ARG TARGETARCH="amd64"
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
 
@@ -27,6 +36,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -
 # https://github.com/golang/go/tree/dev.boringcrypto/misc/boring#building-from-docker
 FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.2b7 as builder-fips
 
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
+    && printf ", TARGETARCH=${TARGETARCH}" \
+    && printf ", TARGETOS=${TARGETOS}" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf "With 'uname -s': $(uname -s) and 'uname -m': $(uname -m)"
+
 WORKDIR /workspace
 
 COPY go.mod go.mod
@@ -42,14 +61,15 @@ COPY internal/ internal/
 ARG TAG
 ARG COMMIT
 ARG REPO_INFO
-ARG TARGETARCH="amd64"
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/fips/main.go
 
 # Build a manager binary with debug symbols and download Delve
 FROM builder as builder-delve
 
-ARG TARGETARCH="amd64"
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager-debug -gcflags=all="-N -l" -ldflags "-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
 
@@ -69,6 +89,10 @@ CMD ["exec", "--continue", "--accept-multiclient",  "--headless", "--api-version
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot AS distroless
 ARG TAG
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
 LABEL name="Kong Ingress Controller" \
       vendor="Kong" \
       version="$TAG" \
@@ -81,14 +105,15 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
 
-ARG TARGETARCH="amd64"
-
 ENTRYPOINT ["/manager"]
 
 ### RHEL
 # Build UBI image
 FROM registry.access.redhat.com/ubi8/ubi AS redhat
 ARG TAG
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
 
 LABEL name="Kong Ingress Controller" \
       vendor="Kong" \

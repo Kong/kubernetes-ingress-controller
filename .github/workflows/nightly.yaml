@@ -13,14 +13,14 @@ jobs:
       - name: Add standard tags
         run: |
           echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=schedule,pattern=nightly' >> $GITHUB_ENV
-          echo "type=schedule,pattern={{date 'YYYY-MM-DD'}}" >> $GITHUB_ENV
+          echo 'type=raw,value=nightly' >> $GITHUB_ENV
+          echo "type=raw,value={{date 'YYYY-MM-DD'}}" >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Add Red Hat standard tags
         run: |
           echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=schedule,pattern=nightly,suffix=-redhat' >> $GITHUB_ENV
-          echo "type=schedule,pattern={{date 'YYYY-MM-DD'}},suffix=-redhat" >> $GITHUB_ENV
+          echo 'type=raw,value=nightly,suffix=-redhat' >> $GITHUB_ENV
+          echo "type=raw,value={{date 'YYYY-MM-DD'}},suffix=-redhat" >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

@@ -9,19 +9,19 @@
 
 Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][kong-hub], health checking,
-load balancing and more in Kong
+load balancing, and more in Kong
 for Kubernetes Services, all using
-Custom Resource Definitions(CRDs) and Kubernetes-native tooling.
+Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
 
 ## Features
 
 - **Ingress routing**
-  Use [Ingress][ingress] resources to configure Kong
+  Use [Ingress][ingress] resources to configure Kong.
 - **Enhanced API management using plugins**
   Use a wide-array of [plugins][kong-hub]
-  to monitor, transform, protect your traffic.
+  to monitor, transform, and protect your traffic.
 - **Native gRPC support**
   Proxy gRPC traffic and gain visibility into it using
   Kong's plugin.
@@ -62,7 +62,7 @@ $ helm install kong/kong --generate-name --set ingressController.installCRDs=fal
 Once installed, please follow the [Getting Started guide][getting-started-guide]
 to start using Ingress in your Kubernetes cluster.
 
-> Note: Kong Enterprise users, please follow along our
+> Note: Kong Enterprise users, please follow along with our
 [enterprise guide][k4k8s-enterprise-setup] to setup the enterprise version.
 
 ## Contributing
@@ -98,9 +98,9 @@ or the [Kong Nation Forums](https://discuss.konghq.com/c/kubernetes)
 as it's likely that another user has run into the same problem.
 If you don't find an answer, please feel free to post a question.
 
-If you've found a bug please [open an issue](https://github.com/kong/kubernetes-ingress-controller/issues).
+If you've found a bug, please [open an issue](https://github.com/kong/kubernetes-ingress-controller/issues).
 
-For a feature request please open an issue using the feature request template.
+For a feature request, please open an issue using the feature request template.
 
 You can also talk to the developers behind Kong in the
 [#kong](https://kubernetes.slack.com/messages/kong) channel on the
@@ -122,7 +122,7 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 
 ### Community meetings
 
-You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback or just to listen and hang out.
+You can join monthly meetups hosted by [Kong](https://konghq.com) to ask questions, provide feedback, or just to listen and hang out.
 See the [Online Meetups Page](https://konghq.com/online-meetups/) to sign up and receive meeting invites and [Zoom](https://zoom.us) links.
 
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/

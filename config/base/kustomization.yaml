@@ -3,6 +3,8 @@ resources:
 - namespace.yaml
 - ../crd
 - ../rbac
+- ../rbac/gateway
+- ../rbac/knative
 - ingressclass.yaml
 - secret-sa-token.yaml
 - service.yaml

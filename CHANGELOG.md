@@ -59,6 +59,10 @@
 
 - Added support for plugin ordering (requires Kong Enterprise 3.0 or higher).
   [#2657](https://github.com/Kong/kubernetes-ingress-controller/pull/2657)
+- The all-in-one manifests now use a separate ClusterRole for Gateway API
+  resources, allowing non-admin users to apply these manifests (minus the
+  Gateway API role) on clusters without Gateway API CRDs installed.
+  [#2529](https://github.com/Kong/kubernetes-ingress-controller/issues/2529)
 
 #### Fixed
 

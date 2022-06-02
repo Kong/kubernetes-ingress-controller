@@ -20,7 +20,6 @@ package configuration
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -405,7 +404,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
@@ -634,7 +633,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
@@ -791,7 +790,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
@@ -1332,7 +1331,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
@@ -1489,7 +1488,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
@@ -1646,7 +1645,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured in the data-plane"), "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 

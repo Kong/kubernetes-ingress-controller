@@ -1097,6 +1097,14 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - IngressClassParameters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - kongclusterplugins
   verbs:
   - get

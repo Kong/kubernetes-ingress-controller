@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.12.1
 	github.com/kong/go-kong v0.29.0
-	github.com/kong/kubernetes-testing-framework v0.14.1
+	github.com/kong/kubernetes-testing-framework v0.14.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.49
 	github.com/mitchellh/mapstructure v1.5.0
@@ -63,7 +63,7 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect

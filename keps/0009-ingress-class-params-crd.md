@@ -48,9 +48,11 @@ which would allow said customizations.
 
 ### Graduation Criteria
 
-- [ ] `IngressClassParameters` object available for deployment for end users
+- [ ] introduce `IngressClassParameters` object available for deployment for end users
+- [ ] introduce a [feature gate][feature-gates] for the functionality described in this KEP
 - [ ] `ServiceUpstream` field implemented in `IngressClassParameters` object to allow
-  control of behavior of all services handled by an `IngressClass`
+  control of behavior of all services handled by an `Ingress` configured with an
+  `IngressClass` that references said parameters object
 
 ## Implementation History
 
@@ -65,3 +67,4 @@ which would allow said customizations.
 [1131]: https://github.com/Kong/kubernetes-ingress-controller/pull/1131
 [1586]: https://github.com/Kong/kubernetes-ingress-controller/pull/1586
 [2535]: https://github.com/Kong/kubernetes-ingress-controller/pull/2535
+[feature-gates]: ../FEATURE_GATES.md

@@ -1392,6 +1392,15 @@ subjects:
   namespace: kong
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    kubernetes.io/service-account.name: kong-serviceaccount
+  name: kong-serviceaccount-token
+  namespace: kong
+type: kubernetes.io/service-account-token
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: kong-admin
@@ -1493,6 +1502,7 @@ spec:
       labels:
         app: ingress-kong
     spec:
+      automountServiceAccountToken: false
       containers:
       - env:
         - name: KONG_LICENSE_DATA
@@ -1629,6 +1639,10 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kong-serviceaccount-token
+          readOnly: true
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
       initContainers:
@@ -1650,6 +1664,15 @@ spec:
         image: kong/kong-gateway:2.8
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
+      volumes:
+      - name: kong-serviceaccount-token
+        secret:
+          items:
+          - key: token
+            path: token
+          - key: ca.crt
+            path: ca.crt
+          secretName: kong-serviceaccount-token
 ---
 apiVersion: apps/v1
 kind: StatefulSet

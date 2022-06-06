@@ -23,7 +23,7 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
   Use a wide array of [plugins][docs-konghq-hub] to monitor, transform
   and protect your traffic.
 - **Native gRPC support**
-  Proxy gRPC traffic and gain visibility into it using Kong's plugin.
+  Proxy gRPC traffic and gain visibility into it using Kong's plugins.
 - **Health checking and Load-balancing**
   Load balance requests across your pods and supports active & passive health-checks.
 - **Request/response transformations**

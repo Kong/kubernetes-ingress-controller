@@ -52,6 +52,9 @@ type GatewayReconciler struct { //nolint:revive
 	WatchNamespaces []string
 
 	publishServiceRef types.NamespacedName
+
+	// lastSuccessful maps a Gateway name to a copy of the previous successfully reconciled Gateway with that name
+	lastSuccessful map[string]gatewayv1alpha2.Gateway
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -111,6 +114,9 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Log:    r.Log.WithName("V1Alpha2GatewayClass"),
 		Scheme: r.Scheme,
 	}
+
+	r.lastSuccessful = map[string]gatewayv1alpha2.Gateway{}
+
 	return gwcCTRL.SetupWithManager(mgr)
 }
 
@@ -241,7 +247,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// reconciliation assumes unmanaged mode, in the future we may have a slot here for
 	// other gateway management modes.
-	return r.reconcileUnmanagedGateway(ctx, log, gateway)
+	result, err := r.reconcileUnmanagedGateway(ctx, log, gateway)
+	if err == nil {
+		r.lastSuccessful[gateway.Name] = *gateway
+	}
+	return result, err
 }
 
 // reconcileUnmanagedGateway reconciles a Gateway that is configured for unmanaged mode,
@@ -292,10 +302,6 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 
-	if !areAllowedRoutesConsistentByProtocol(gateway.Spec.Listeners) {
-		return ctrl.Result{}, fmt.Errorf("all listeners for a protocol must use the same AllowedRoutes")
-	}
-
 	// When deployed on Kubernetes Kong can not be relied on for the address data needed for Gateway because
 	// it's commonly deployed in a way agnostic to the container network (e.g. it's simply configured with
 	// 0.0.0.0 as the address for its listeners internally). In order to get addresses we have to derive them
@@ -303,37 +309,44 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
 	// the data-plane's // metadata.
 	debug(log, gateway, "determining listener configurations from publish service")
-	gatewayAddresses, gatewayListeners, err := r.determineL4ListenersFromService(log, svc)
+	kongAddresses, kongListeners, err := r.determineL4ListenersFromService(log, svc)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	debug(log, gateway, "determining listener configurations from Kong data-plane")
-	gatewayListeners, err = r.determineListenersFromDataPlane(ctx, svc, gatewayListeners)
+	kongListeners, err = r.determineListenersFromDataPlane(ctx, svc, kongListeners)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	gatewayListeners = mergeAllowedRoutes(gateway.Spec.Listeners, gatewayListeners)
-
-	debug(log, gateway, "updating the gateway if any changes to listeners occurred")
-	isChanged, err := r.updateAddressesAndListenersSpec(ctx, gateway, gatewayAddresses, gatewayListeners)
-	if err != nil {
-		if errors.IsConflict(err) {
-			// if there's a conflict that's normal just requeue to retry, no need to make noise.
-			return ctrl.Result{Requeue: true}, nil
+	if !reflect.DeepEqual(gateway.Spec.Addresses, kongAddresses) {
+		debug(log, gateway, "updating addresses to match Kong proxy Service")
+		gateway.Spec.Addresses = kongAddresses
+		if err := r.Update(ctx, gateway); err != nil {
+			if errors.IsConflict(err) {
+				// if there's a conflict that's normal just requeue to retry, no need to make noise.
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, err
-	}
-	if isChanged {
-		debug(log, gateway, "gateways listeners and/or addresses were updated in the spec to match the proxy service")
 		return ctrl.Result{}, nil // dont requeue here because spec update will trigger new reconciliation
 	}
+
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2559 check cross-Gateway compatibility
+	// When all Listeners on all Gateways were derived from Kong's configuration, they were guaranteed to be compatible
+	// because they were all identical, though there may have been some ambiguity re de facto merged Gateways that
+	// used different allowedRoutes. We only merged allowedRoutes within a single Gateway, but merged all Gateways into
+	// a single set of shared listens. We lack knowledge of whether this is compatible with user intent, and it may
+	// be incompatible with the spec, so we should consider evaluating cross-Gateway compatibility and raising error
+	// conditions in the event of a problem
+	last := r.lastSuccessful[gateway.Name]
+	listenerStatuses := getListenerStatus(gateway, &last, kongListeners)
 
 	// once specification matches the reference Service, all that's left to do is ensure that the
 	// Gateway status reflects the spec. As the status is simply a mirror of the Service, this is
 	// a given and we can simply update spec to status.
 	debug(log, gateway, "updating the gateway status if necessary")
-	isChanged, err = r.updateAddressesAndListenersStatus(ctx, gateway)
+	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses)
 	if err != nil {
 		if errors.IsConflict(err) {
 			// if there's a conflict that's normal just requeue to retry, no need to make noise.
@@ -342,7 +355,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, err
 	}
 	if isChanged {
-		debug(log, gateway, "gateways listeners and/or addresses were updated in the status to match the proxy service")
+		debug(log, gateway, "gateways status updated")
 		return ctrl.Result{}, nil
 	}
 
@@ -537,30 +550,15 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 // Gateway Controller - Private Object Update Methods
 // -----------------------------------------------------------------------------
 
-// updateAddressesAndListenersSpec updates a unmanaged gateway's spec with new addresses and listeners.
-// If the addresses and listeners provided are the same as what exists, the update is skipped.
-func (r *GatewayReconciler) updateAddressesAndListenersSpec(ctx context.Context, gateway *gatewayv1alpha2.Gateway, addresses []gatewayv1alpha2.GatewayAddress, listeners []gatewayv1alpha2.Listener) (bool, error) {
-	// if the existing object is already configured with the addresses and listeners that were
-	// identified for it, then no change needs to be made.
-	if areAddressesEqual(gateway.Spec.Addresses, addresses) && areListenersEqual(gateway.Spec.Listeners, listeners) {
-		return false, nil
-	}
-
-	// override any existing addresses and listeners with the new ones provided and
-	// update the status of the object in the API.
-	gateway.Spec.Listeners = listeners
-	gateway.Spec.Addresses = addresses
-	return true, r.Update(ctx, gateway)
-}
-
 // updateAddressesAndListenersStatus updates a unmanaged gateway's status with new addresses and listeners.
 // If the addresses and listeners provided are the same as what exists, it is assumed that reconciliation is complete and a Ready condition is posted.
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
 	gateway *gatewayv1alpha2.Gateway,
+	listenerStatuses []gatewayv1alpha2.ListenerStatus,
 ) (bool, error) {
 	if !isGatewayReady(gateway) {
-		gateway.Status.Listeners = convertListenersToListenerStatuses(gateway)
+		gateway.Status.Listeners = listenerStatuses
 		gateway.Status.Addresses = gateway.Spec.Addresses
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
 			Type:               string(gatewayv1alpha2.GatewayConditionReady),
@@ -573,28 +571,6 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 	return false, nil
-}
-
-// mergeAllowedRoutes takes two sets of listeners, scans the source for AllowedRoutes filters, and copies those into
-// listeners in the target set that share the same protocol as the source listener. As implemented, it makes no attempt
-// to account for same-protocol listeners in the source set having different AllowedRoutes: it assumes
-// areAllowedRoutesConsistentByProtocol has been run first because Kong would not support multiple listeners with
-// different protocols anyway
-func mergeAllowedRoutes(source, target []gatewayv1alpha2.Listener) (merged []gatewayv1alpha2.Listener) {
-	mappings := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.RouteNamespaces, len(target))
-	for _, listener := range source {
-		mappings[listener.Protocol] = *listener.AllowedRoutes.Namespaces
-	}
-	for _, listener := range target {
-		if namespaces, exists := mappings[listener.Protocol]; exists {
-			if listener.AllowedRoutes == nil {
-				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{}
-			}
-			listener.AllowedRoutes.Namespaces = &namespaces
-		}
-		merged = append(merged, listener)
-	}
-	return merged
 }
 
 // areAllowedRoutesConsistentByProtocol returns an error if a set of listeners includes multiple listeners for the same

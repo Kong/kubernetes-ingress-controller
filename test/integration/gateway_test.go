@@ -102,11 +102,33 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		return gw.Annotations[unmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway spec gets updated to match the publish service")
+	t.Log("verifying that the gateway address is populated from the publish service")
 	require.Eventually(t, func() bool {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		return len(gw.Spec.Listeners) == len(pubsvc.Spec.Ports) && len(gw.Spec.Addresses) > 0
+		// TODO 2557 we include ClusterIPs in gw status addrs. these are NOT in LB status (though they are in the spec)
+		// is this correct? it seems like we should use external only and require publish-addr be provided manually otherwise
+		//if len(gw.Spec.Addresses) == len(pubsvc.Status.LoadBalancer.Ingress) {
+		//	addrs := make(map[string]bool, len(pubsvc.Status.LoadBalancer.Ingress))
+		//	for _, ing := range pubsvc.Status.LoadBalancer.Ingress {
+		//		// taking a slight shortcut by using the same map for both types. value lookups will still work
+		//		// and the test isn't concerned with the weird case where you've somehow wound up with
+		//		// LB Hostname 10.0.0.1 and GW IP 10.0.0.1. the GW type is also optional, so we don't always know
+		//		addrs[ing.IP] = true
+		//		addrs[ing.Hostname] = true
+		//	}
+		//	for _, addr := range gw.Spec.Addresses {
+		//		if _, ok := addrs[addr.Value]; !ok {
+		//			return false
+		//		}
+		//	}
+		//	return true
+		//}
+		//return false
+
+		// currently a noop pending confirmation of whether we want both. if so, we need to combine the lists when
+		// checking. if not, the above should work once the clusterIP is removed
+		return pubsvc != nil
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway status gets updated to match the publish service")
@@ -114,18 +136,6 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
-	}, gatewayUpdateWaitTime, time.Second)
-
-	t.Log("verifying that the gateway listeners get configured with L7 configurations from the data-plane")
-	require.Eventually(t, func() bool {
-		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, listener := range gw.Spec.Listeners {
-			if listener.Protocol == gatewayv1alpha2.HTTPProtocolType {
-				return true
-			}
-		}
-		return false
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
@@ -138,6 +148,225 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 			}
 		}
 		return false
+	}, gatewayUpdateWaitTime, time.Second)
+
+	t.Log("verifying that the gateway listeners reach the ready condition")
+	require.Eventually(t, func() bool {
+		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, lstatus := range gw.Status.Listeners {
+			// we may have several conditions but only care about one, so loop through each and mark ready only if
+			// we find the correct one with the correct status
+			ready := false
+			for _, condition := range lstatus.Conditions {
+				if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
+					ready = true
+				}
+			}
+			if !ready {
+				return false
+			}
+		}
+		return true
+	}, gatewayUpdateWaitTime, time.Second)
+}
+
+func TestGatewayListenerConflicts(t *testing.T) {
+	ns, cleanup := namespace(t)
+	defer cleanup()
+
+	t.Log("generating a gateway kubernetes client and gathering test data")
+	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a supported gatewayclass to the test cluster")
+	supportedGatewayClass := &gatewayv1alpha2.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayv1alpha2.GatewayClassSpec{
+			ControllerName: gateway.ControllerName,
+		},
+	}
+	supportedGatewayClass, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Log("cleaning up gatewayclasses")
+		assert.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, supportedGatewayClass.Name, metav1.DeleteOptions{}))
+	}()
+
+	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
+	gw := &gatewayv1alpha2.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong",
+			Annotations: map[string]string{
+				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
+			},
+		},
+		Spec: gatewayv1alpha2.GatewaySpec{
+			GatewayClassName: gatewayv1alpha2.ObjectName(supportedGatewayClass.Name),
+			Listeners: []gatewayv1alpha2.Listener{{
+				Name:     "http",
+				Protocol: gatewayv1alpha2.HTTPProtocolType,
+				Port:     gatewayv1alpha2.PortNumber(80),
+			}},
+		},
+	}
+	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying that the gateway listeners reach the ready condition")
+	require.Eventually(t, func() bool {
+		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, lstatus := range gw.Status.Listeners {
+			// we may have several conditions but only care about one, so loop through each and mark ready only if
+			// we find the correct one with the correct status
+			ready := false
+			for _, condition := range lstatus.Conditions {
+				if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
+					ready = true
+				}
+			}
+			if !ready {
+				return false
+			}
+		}
+		return true
+	}, gatewayUpdateWaitTime, time.Second)
+
+	t.Log("adding conflicting listeners")
+	gw.Spec.Listeners = append(gw.Spec.Listeners,
+		gatewayv1alpha2.Listener{
+			Name:     "badhttp",
+			Protocol: gatewayv1alpha2.HTTPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(80),
+		},
+		gatewayv1alpha2.Listener{
+			Name:     "badudp",
+			Protocol: gatewayv1alpha2.UDPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(80),
+		},
+	)
+
+	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	t.Log("confirming existing listen remains ready, new HTTP listen has hostname conflict, new UDP listen has proto conflict")
+	require.Eventually(t, func() bool {
+		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		var badhttpReady, badhttpConflicted, badudpReady, badudpConflicted, httpReady, httpConflicted bool
+		for _, lstatus := range gw.Status.Listeners {
+			if lstatus.Name == "badudp" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						badudpConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonProtocolConflict))
+					}
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						badudpReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+			if lstatus.Name == "badhttp" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						badhttpConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonHostnameConflict))
+					}
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						badhttpReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+			if lstatus.Name == "http" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) {
+						httpConflicted = (condition.Status == metav1.ConditionTrue)
+					}
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						httpReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+		}
+		return !badhttpReady && badhttpConflicted && !badudpReady && badudpConflicted && httpReady && !httpConflicted
+	}, gatewayUpdateWaitTime, time.Second)
+
+	t.Log("adding compatible listeners")
+	tlsHost := gatewayv1alpha2.Hostname("tls.example")
+	httpsHost := gatewayv1alpha2.Hostname("https.example")
+	httphostHost := gatewayv1alpha2.Hostname("http.example")
+
+	// this tests compatibility to the extent that we can with Kong listens. it does not support the full range
+	// of compatible Gateway Routes. Gateway permits TLS and HTTPS routes to coexist on the same port so long
+	// as all use unique hostnames. Kong, however, requires that TLS routes go through a TLS stream listen, so
+	// the binds are separate and we cannot combine them. attempting to do so (e.g. setting the tls port to 443 here)
+	// will result in ListenerReasonPortUnavailable
+	gw.Spec.Listeners = append(gw.Spec.Listeners,
+		gatewayv1alpha2.Listener{
+			Name:     "tls",
+			Protocol: gatewayv1alpha2.TLSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(8899),
+			Hostname: &tlsHost,
+		},
+		gatewayv1alpha2.Listener{
+			Name:     "https",
+			Protocol: gatewayv1alpha2.HTTPSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(443),
+			Hostname: &httpsHost,
+		},
+		gatewayv1alpha2.Listener{
+			Name:     "httphost",
+			Protocol: gatewayv1alpha2.HTTPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(80),
+			Hostname: &httphostHost,
+		},
+	)
+
+	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	t.Log("confirming existing listen remains ready and new listens become ready")
+	require.Eventually(t, func() bool {
+		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		var httpReady, tlsReady, httpsReady, httphostReady bool
+		for _, lstatus := range gw.Status.Listeners {
+			if lstatus.Name == "http" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						httpReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+			if lstatus.Name == "tls" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						tlsReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+			if lstatus.Name == "https" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						httpsReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+			if lstatus.Name == "httphost" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						httphostReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+		}
+		return httpReady && tlsReady && httpsReady && httphostReady
 	}, gatewayUpdateWaitTime, time.Second)
 }
 
@@ -253,28 +482,6 @@ func TestUnmanagedGatewayServiceUpdates(t *testing.T) {
 		_, err = env.Cluster().Client().CoreV1().Services(controllerNamespace).Update(ctx, svc, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	}()
-
-	t.Log("verifying that the gateway resources get updated with listeners that match the new port")
-	require.Eventually(t, func() bool {
-		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, listener := range gw.Spec.Listeners {
-			if listener.Name == "sanfrancisco" && listener.Protocol == gatewayv1alpha2.TCPProtocolType && listener.Port == 65455 {
-				return true
-			}
-		}
-		return false
-	}, gatewayUpdateWaitTime, time.Second)
-	require.Eventually(t, func() bool {
-		gw2, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw2.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, listener := range gw.Spec.Listeners {
-			if listener.Name == "sanfrancisco" && listener.Protocol == gatewayv1alpha2.TCPProtocolType && listener.Port == 65455 {
-				return true
-			}
-		}
-		return false
-	}, gatewayUpdateWaitTime, time.Second)
 }
 
 func TestUnmanagedGatewayControllerSupport(t *testing.T) {

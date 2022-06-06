@@ -21,6 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -333,6 +335,62 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	verifyGateway(ctx, t, env, gw)
 	deployHTTPRoute(ctx, t, env, gw)
 	verifyHTTPRoute(ctx, t, env)
+
+	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	originalListeners := gw.Spec.Listeners
+	gw.Spec.Listeners = append(gw.Spec.Listeners,
+		gatewayv1alpha2.Listener{
+			Name:     "badhttp",
+			Protocol: gatewayv1alpha2.HTTPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(9999),
+		},
+		gatewayv1alpha2.Listener{
+			Name:     "badudp",
+			Protocol: gatewayv1alpha2.UDPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(80),
+		},
+	)
+
+	t.Log("verifying that unsupported listeners indicate correct status")
+	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Update(ctx, gw, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+		var http, udp bool
+		for _, lstatus := range gw.Status.Listeners {
+			if lstatus.Name == "badhttp" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionDetached) {
+						if condition.Reason == string(gatewayv1alpha2.ListenerReasonPortUnavailable) {
+							http = true
+						}
+					}
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionDetached) {
+						if condition.Reason == string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol) {
+							return false
+						}
+					}
+				}
+			}
+			if lstatus.Name == "badudp" {
+				for _, condition := range lstatus.Conditions {
+					// no check against the other reason here: this gets both the port and protocol condition
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionDetached) {
+						if condition.Reason == string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol) {
+							udp = true
+						}
+					}
+				}
+			}
+		}
+		return http == udp == true
+	}, time.Minute*2, time.Second*5)
+
+	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	require.NoError(t, err)
 }
 
 // Unsatisfied LoadBalancers have special handling, see

@@ -35,8 +35,8 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 
 ## Get started
 
-You can use [Minikube, Kind][k8s-io-tools] on your local machine or use
-a hosted k8s service like [GKE](https://cloud.google.com/kubernetes-engine/).
+You can use [Minikube or Kind][k8s-io-tools] on your local machine or use
+a hosted Kubernetes service like [GKE](https://cloud.google.com/kubernetes-engine/).
 
 Setting up Kong for Kubernetes is as simple as:
 

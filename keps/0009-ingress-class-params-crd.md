@@ -1,9 +1,9 @@
 ---
-title: Introduce IngressClassParams CRD to control IngressClass behavior
+title: Introduce IngressClassParameters CRD to control IngressClass behavior
 status: provisional
 ---
 
-# Introduce IngressClassParams CRD to control IngressClass behavior
+# Introduce IngressClassParameters CRD to control IngressClass behavior
 
 <!-- toc -->
 - [Summary](#summary)
@@ -25,7 +25,7 @@ the `service-upstream` behavior to be the default for all new `Ingress` resource
 the need to annotate each and every resource to do so is cumbersome.
 
 Controlling `IngressClass` parameters in one place would be much more desirable in
-such situations hence the proposal to introduce a new object - `IngressClassParams` -
+such situations hence the proposal to introduce a new object - `IngressClassParameters` -
 which would allow said customizations.
 
 [service-upstream-annotation]: https://docs.konghq.com/kubernetes-ingress-controller/2.3.x/references/annotations/#ingresskubernetesioservice-upstream
@@ -38,18 +38,18 @@ which would allow said customizations.
 
 ### Goals
 
-- provide a definition of new object - `IngressClassParams`
+- provide a definition of new object - `IngressClassParameters`
 - provide an _ability to configure_ `IngressClass` in one place via aforementioned
-  `IngressClassParams` object
-- provide `ServiceUpstream` field in `IngressClassParams` object, as means to control
+  `IngressClassParameters` object
+- provide `ServiceUpstream` field in `IngressClassParameters` object, as means to control
   the behavior already provided by `ingress.kubernetes.io/service-upstream` annotation
 
 ## Proposal
 
 ### Graduation Criteria
 
-- [ ] `IngressClassParams` object available for deployment for end users
-- [ ] `ServiceUpstream` field implemented in `IngressClassParams` object to allow
+- [ ] `IngressClassParameters` object available for deployment for end users
+- [ ] `ServiceUpstream` field implemented in `IngressClassParameters` object to allow
   control of behavior of all services handled by an `IngressClass`
 
 ## Implementation History

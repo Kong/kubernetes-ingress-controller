@@ -42,10 +42,6 @@ which would allow said customizations.
 - provide `ServiceUpstream` field in `IngressClassParams` object, as means to control
   the behavior already provided by `ingress.kubernetes.io/service-upstream` annotation
 
-### Non-Goals
-
-N/A
-
 ## Proposal
 
 ### Graduation Criteria

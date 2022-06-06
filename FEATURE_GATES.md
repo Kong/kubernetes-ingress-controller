@@ -14,10 +14,10 @@ See below for current features and their statuses, and follow the links to the r
 
 Below you will find the overviews of features at various maturity levels:
 
-- [Feature gates for graduated or deprecated features](/#feature-gates-for-graduated-or-deprecated-features)
-- [Feature gates for Alpha or Beta features](/#feature-gates-for-alpha-or-beta-features)
+- [Feature gates for graduated or deprecated features](#feature-gates-for-graduated-or-deprecated-features)
+- [Feature gates for Alpha or Beta features](#feature-gates-for-alpha-or-beta-features)
 
-Please read the [Important Notes](/#important-notes) section before using any `Alpha` or `Beta` features.
+Please read the [Important Notes](#important-notes) section before using any `Alpha` or `Beta` features.
 
 ### Important notes
 

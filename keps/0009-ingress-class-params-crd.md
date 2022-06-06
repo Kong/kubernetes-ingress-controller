@@ -19,8 +19,9 @@ status: provisional
 
 As of now users can control the behavior of an `IngressClass` via e.g.
 [`ingress.kubernetes.io/service-upstream` annotation][service-upstream-annotation].
-This is handy in general but gets cumbersome when one needs to change this for
-multiple services.
+In some environments with large numbers of `Ingress` resources who want
+the `service-upstream` behavior to be the default for all new `Ingress` resources
+the need to annotate each and every resource to do so is cumbersome.
 
 Controlling `IngressClass` parameters in one place would be much more desirable in
 such situations hence the proposal to introduce a new object - `IngressClassParams` -

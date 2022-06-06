@@ -7,7 +7,7 @@
 
 # Kong Ingress Controller for Kubernetes (KIC)
 
-Use [Kong][kong-ce] for Kubernetes [Ingress][ingress].
+Use [Kong][kong] for Kubernetes [Ingress][ingress].
 Configure [plugins][docs-konghq-hub], health checking,
 load balancing, and more in Kong
 for Kubernetes Services, all using
@@ -20,8 +20,8 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 - **Ingress routing**
   Use [Ingress][ingress] resources to configure Kong.
 - **Enhanced API management using plugins**
-  Use a wide array of [plugins][docs-konghq-hub]
-  to monitor, transform, and protect your traffic.
+  Use a wide array of [plugins][docs-konghq-hub] to monitor, transform
+  and protect your traffic.
 - **Native gRPC support**
   Proxy gRPC traffic and gain visibility into it using Kong's plugin.
 - **Health checking and Load-balancing**
@@ -63,11 +63,7 @@ to start using Ingress in your Kubernetes cluster.
 ### Release images
 
 Release builds of Kong Ingress Controller can be found on Docker Hub in
-[kong/kubernetes-ingress-controller repository][dockerhub-kic]:
-
-```
-docker pull kong/kubernetes-ingress-controller:latest
-```
+[kong/kubernetes-ingress-controller repository][dockerhub-kic].
 
 ### `main` branch builds
 
@@ -130,7 +126,7 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 [fgates]:/FEATURE_GATES.md
 [fpreview]:/FEATURE_PREVIEW_DOCUMENTATION.md
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
-[kong-ce]: https://konghq.com/kong-community-edition/
+[kong]: https://konghq.com/kong-community-edition/
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k8s-io-tools]: https://kubernetes.io/docs/tasks/tools/

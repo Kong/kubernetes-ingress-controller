@@ -1,6 +1,6 @@
 name:  Release
-description: Release/Pre-release of a version.
-title: "Release Version(e.g: 2.4.0)"
+description: Release checklist
+title: "Replace with your release version (e.g: 2.4.0)"
 labels: [release]
 body:
 - type: dropdown
@@ -12,13 +12,6 @@ body:
     - major release
     - minor release
     - patch release
-  validations:
-    required: true
-- type: input
-  id: release_version
-  attributes:
-    label: Relase Version
-    placeholder: "e.g: 2.4.0"
   validations:
     required: true
 - type: checkboxes
@@ -34,7 +27,7 @@ body:
   attributes:
     label: "**For all releases** Create Release Branch"
     options: 
-      - label: "ensure that you have up to date copy of `main`: git fetch --all"
+      - label: "ensure that you have up to date copy of `main`: git checkout main; git pull"
       - label: "create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`"
       - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
       - label: retrieve the latest license report from FOSSA and save it to LICENSES

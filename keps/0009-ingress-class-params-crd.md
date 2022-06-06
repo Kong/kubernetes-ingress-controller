@@ -30,7 +30,7 @@ which would allow said customizations.
 
 ## Motivation
 
-- we want allow `IngressClass` behavior customizations in one place
+- we want to allow `IngressClass` behavior customizations in one place
 - we want to make configuration management related to `IngressClass` to not be
   a burden for the user even when IngressClass is assigned to many services
 

@@ -20,6 +20,16 @@ spec:
         app: ingress-kong
     spec:
       serviceAccountName: kong-serviceaccount
+      automountServiceAccountToken: false
+      volumes:
+      - name: kong-serviceaccount-token
+        secret:
+          secretName: kong-serviceaccount-token
+          items:
+          - key: token
+            path: token
+          - key: ca.crt
+            path: ca.crt
       containers:
       - name: proxy
         image: kong-placeholder:placeholder # This is replaced by the config/image.yaml component
@@ -131,3 +141,8 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           failureThreshold: 3
+        volumeMounts:
+        - name: kong-serviceaccount-token
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+

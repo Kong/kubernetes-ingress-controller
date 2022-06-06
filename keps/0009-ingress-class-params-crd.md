@@ -52,9 +52,14 @@ which would allow said customizations.
 
 ## Implementation History
 
-- An initial proposal has been made in [#1586][1586] but the work did not conclude
-  and eventually the PR didn't get merged
+- First issue proposing to enable `service-upstream` for an entire ingress class
+  in [#774][774]
+- [#1131][1131] was raised to discuss `IngressClass` parameters more generically
+- An initial proposal has been made in [#1586][1586] (trying to address [#1131][1131])
+  but the work did not conclude and eventually the PR didn't get merged
 - Another proposal has been made in [#2535][2535] basing its work on [#1586][1586]
 
+[774]: https://github.com/Kong/kubernetes-ingress-controller/pull/774
+[1131]: https://github.com/Kong/kubernetes-ingress-controller/pull/1131
 [1586]: https://github.com/Kong/kubernetes-ingress-controller/pull/1586
 [2535]: https://github.com/Kong/kubernetes-ingress-controller/pull/2535

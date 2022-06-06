@@ -126,7 +126,7 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 [fgates]:/FEATURE_GATES.md
 [fpreview]:/FEATURE_PREVIEW_DOCUMENTATION.md
 [ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
-[kong]: https://konghq.com/kong-community-edition/
+[kong]: https://konghq.com/kong
 [kong-url]: https://konghq.com/
 [kong-logo]: https://konghq.com/wp-content/uploads/2018/05/kong-logo-github-readme.png
 [k8s-io-tools]: https://kubernetes.io/docs/tasks/tools/

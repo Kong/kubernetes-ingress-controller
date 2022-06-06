@@ -20,7 +20,7 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 - **Ingress routing**
   Use [Ingress][ingress] resources to configure Kong.
 - **Enhanced API management using plugins**
-  Use a wide-array of [plugins][docs-konghq-hub]
+  Use a wide array of [plugins][docs-konghq-hub]
   to monitor, transform, and protect your traffic.
 - **Native gRPC support**
   Proxy gRPC traffic and gain visibility into it using Kong's plugin.

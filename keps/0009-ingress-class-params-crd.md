@@ -17,7 +17,8 @@ status: provisional
 
 ## Summary
 
-As of now users can control the behavior of an `IngressClass` via e.g.
+Currently users can control how traffic is load-balanced for an `Ingress`
+resource using the [`ingress.kubernetes.io/service-upstream` annotation][service-upstream-annotation].
 [`ingress.kubernetes.io/service-upstream` annotation][service-upstream-annotation].
 In some environments with large numbers of `Ingress` resources who want
 the `service-upstream` behavior to be the default for all new `Ingress` resources

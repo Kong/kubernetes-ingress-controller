@@ -51,7 +51,7 @@ const (
 	// parent Service to fully resolve into ready state.
 	gatewayUpdateWaitTime = time.Minute * 3
 
-	gatewayCRDsURL = "github.com/kubernetes-sigs/gateway-api/config/crd"
+	gatewayCRDsURL = "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.2"
 )
 
 var (

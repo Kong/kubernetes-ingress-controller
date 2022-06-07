@@ -17,7 +17,7 @@ import (
 
 const (
 	kongCRDsKustomize    = "../../config/crd/"
-	gatewayCRDsKustomize = "https://github.com/kubernetes-sigs/gateway-api/config/crd"
+	gatewayCRDsKustomize = "https://github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.2"
 )
 
 func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {

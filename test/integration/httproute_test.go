@@ -297,10 +297,39 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		return true
 	}, ingressWait, waitTick)
 
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2452 need to verify weight distribution
-	t.Log("verifying that both backends receive requests")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>Welcome to nginx!</title>", emptyHeaderSet)
+	t.Log("verifying that both backends are ready to receive traffic")
+	httpbinRespContent := "<title>httpbin.org</title>"
+	nginxRespContent := "<title>Welcome to nginx!</title>"
+	eventuallyGETPath(t, "httpbin", http.StatusOK, httpbinRespContent, emptyHeaderSet)
+	eventuallyGETPath(t, "httpbin", http.StatusOK, nginxRespContent, emptyHeaderSet)
+
+	t.Log("verifying that both backends receive requests according to weighted distribution")
+	httpbinRespName := "httpbin-resp"
+	nginxRespName := "nginx-resp"
+	toleranceDelta := 0.2
+	expectedRespRatio := map[string]int{
+		httpbinRespName: int(httpbinWeight),
+		nginxRespName:   int(nginxWeight),
+	}
+	weightedLoadBalancingTestConfig := countHTTPResponsesConfig{
+		Method:      http.MethodGet,
+		Path:        "httpbin",
+		Headers:     emptyHeaderSet,
+		Duration:    5 * time.Second,
+		RequestTick: 50 * time.Millisecond,
+	}
+	respCounter := countHTTPGetResponses(t, weightedLoadBalancingTestConfig,
+		matchRespByStatusAndContent(httpbinRespName, http.StatusOK, httpbinRespContent),
+		matchRespByStatusAndContent(nginxRespName, http.StatusOK, nginxRespContent),
+	)
+	assert.InDeltaMapValues(t,
+		distributionOfMapValues(respCounter),
+		distributionOfMapValues(expectedRespRatio),
+		toleranceDelta,
+		"Response distribution does not match expected distribution within %f%% delta,"+
+			" request-count=%v, expected-ratio=%v",
+		toleranceDelta*100, respCounter, expectedRespRatio,
+	)
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httproute.Spec.ParentRefs

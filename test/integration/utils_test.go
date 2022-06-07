@@ -302,11 +302,8 @@ func identifyTestCasesForFile(filePath string) ([]string, error) {
 // for the desired conditions so if this request doesn't eventually succeed the
 // calling test will fail and stop.
 func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents string, headers map[string]string) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, path), nil)
-	require.NoError(t, err)
-	for header, value := range headers {
-		req.Header.Set(header, value)
-	}
+	req := newRequest(t, http.MethodGet, path, headers)
+
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Do(req)
 		if err != nil {
@@ -326,6 +323,100 @@ func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents s
 		}
 		return false
 	}, ingressWait, waitTick)
+}
+
+// responseMatcher is a function that returns match-name and whether the response
+// matches the provided criteria.
+type responseMatcher func(resp *http.Response, respBody string) (key string, ok bool)
+
+// matchRespByStatusAndContent returns a responseMatcher that matches the given status code
+// and body contents.
+func matchRespByStatusAndContent(
+	responseName string,
+	expectedStatusCode int,
+	expectedBodyContents string,
+) responseMatcher {
+	return func(resp *http.Response, respBody string) (string, bool) {
+		if resp.StatusCode != expectedStatusCode {
+			return responseName, false
+		}
+		ok := strings.Contains(respBody, expectedBodyContents)
+		return responseName, ok
+	}
+}
+
+type countHTTPResponsesConfig struct {
+	Method      string
+	Path        string
+	Headers     map[string]string
+	Duration    time.Duration
+	RequestTick time.Duration
+}
+
+func countHTTPGetResponses(t *testing.T,
+	cfg countHTTPResponsesConfig,
+	matchers ...responseMatcher,
+) (matchedResponseCounter map[string]int) {
+	req := newRequest(t, cfg.Method, cfg.Path, cfg.Headers)
+	finished := time.After(cfg.Duration)
+	matchedResponseCounter = make(map[string]int)
+
+	for {
+		select {
+		case <-time.Tick(cfg.RequestTick):
+			countHTTPGetResponse(t, req, matchedResponseCounter, matchers...)
+		case <-finished:
+			return matchedResponseCounter
+		}
+	}
+}
+
+func countHTTPGetResponse(t *testing.T, req *http.Request, matchCounter map[string]int, matchers ...responseMatcher) {
+	resp, err := httpc.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	bytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Logf("failed to read response body: %v", err)
+	}
+
+	body := string(bytes)
+
+	for _, matcher := range matchers {
+		if key, ok := matcher(resp, body); ok {
+			matchCounter[key]++
+			t.Logf("response %s matched", key)
+			return
+		}
+	}
+}
+
+// distributionOfMapValues returns a map of the values in the given counter map
+// and the relative frequency of each value.
+func distributionOfMapValues(counter map[string]int) map[string]float64 {
+	total := 0
+	normalized := make(map[string]float64)
+
+	for _, count := range counter {
+		total += count
+	}
+	for key, count := range counter {
+		normalized[key] = float64(count) / float64(total)
+	}
+
+	return normalized
+}
+
+func newRequest(t *testing.T, method, path string, headers map[string]string) *http.Request {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, path), nil)
+	require.NoError(t, err)
+	for header, value := range headers {
+		req.Header.Set(header, value)
+	}
+	return req
 }
 
 // expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.

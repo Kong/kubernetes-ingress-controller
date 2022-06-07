@@ -1,0 +1,71 @@
+name:  Release
+description: Release checklist
+title: "Replace with your release version (e.g: 2.4.0)"
+labels: [release]
+body:
+- type: dropdown
+  id: release_type
+  attributes:
+    label: Release Type
+    description: which type of release is this release?
+    options:
+    - major release
+    - minor release
+    - patch release
+  validations:
+    required: true
+- type: checkboxes
+  id: release_tests
+  attributes:
+    label: "**For all releases** Github Workflow Test Matrix Checkup"
+    options:
+      - label: check the testing workflow ([.github/workflows/test.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/test.yaml)) and ensure that all matrix versions ([.github/workflows/e2e.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/e2e.yaml) and [.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
+      - label: Kubernetes
+      - label: Istio
+- type: checkboxes
+  id: release_branch
+  attributes:
+    label: "**For all releases** Create Release Branch"
+    options: 
+      - label: "ensure that you have up to date copy of `main`: git checkout main; git pull"
+      - label: "create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`"
+      - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
+      - label: retrieve the latest license report from FOSSA and save it to LICENSES
+      - label: "ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`"
+      - label: "push the branch up to the remote: `git push --set-upstream origin release/x.y.z`"
+- type: checkboxes
+  id: release_pr
+  attributes:
+    label: "**For all releases** Create a Release Pull Request"
+    options:
+      - label: Check the [latest nightly job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/nightly.yaml) to confirm that E2E is succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml).
+      - label: Open a PR from your branch to `main`.
+      - label: Once the PR is merged, [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml). Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
+      - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.
+- type: checkboxes
+  id: release_documents
+  attributes:
+    label: "**For major/minor releases only** Update Release documents"
+    options: 
+      - label: Create a new branch in the [documentation site repo](https://github.com/Kong/docs.konghq.com).
+      - label: Copy `app/kubernetes-ingress-controller/OLD_VERSION` to `app/kubernetes-ingress-controller/NEW_VERSION`.
+      - label: Update articles in the new version as needed.
+      - label: Update `references/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)
+      - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml`. Add entries for any new articles.
+      - label: Add a section to `app/_data/kong_versions.yml` for your version.
+      - label: Open a PR from your branch.
+- type: textarea
+  id: release_trouble_shooting
+  attributes:
+    label: Release Troubleshooting
+    value:  If the "Build and push development images" Github action is not appropriate for your release, or is not operating properly, you can build and push Docker images manually
+- type: checkboxes
+  id: release_manual_docker_build
+  attributes:
+    label: Manual Docker image build
+    options:
+      - label: Check out your release tag.
+      - label: Run `make container`. Note that you can set the `TAG` environment variable if you need to override the current tag in Makefile.
+      - label: Add additional tags for your container (e.g. `docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2.0; docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2`)
+      - label: Create a temporary token for the `kongbot` user (see 1Password) and log in using it.
+      - label: Push each of your tags (e.g. `docker push kong/kubernetes-ingress-controller:1.2.0-alpine`)

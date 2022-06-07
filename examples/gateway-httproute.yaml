@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: httpbin
-        image: kennethreitz/httpbin
+        image: arnaudlacour/httpbin
         ports:
         - containerPort: 80
 ---

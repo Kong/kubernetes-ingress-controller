@@ -60,7 +60,7 @@ var (
 	// httpBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
 	// See: https://github.com/postmanlabs/httpbin
-	httpBinImage = "kennethreitz/httpbin"
+	httpBinImage = "arnaudlacour/httpbin"
 
 	// tcpEchoImage echoes TCP text sent to it after printing out basic information about its environment, e.g.
 	// Welcome, you are connected to node kind-control-plane.

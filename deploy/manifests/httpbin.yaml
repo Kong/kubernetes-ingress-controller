@@ -28,7 +28,7 @@ spec:
         app: httpbin
     spec:
       containers:
-      - image: docker.io/kennethreitz/httpbin
+      - image: docker.io/arnaudlacour/httpbin
         name: httpbin
         ports:
         - containerPort: 80

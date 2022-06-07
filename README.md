@@ -70,11 +70,6 @@ At the moment we're providing images for:
 - Linux `amd64`
 - Linux `arm64`*
 
-<sub>
-* <code>arm64</code> images will be available starting with next release but
-nightly builds are already available
-</sub>
-
 ### `main` branch builds
 
 Nightly pre-release builds of the `main` branch are available from the

@@ -68,7 +68,7 @@ Release builds of Kong Ingress Controller can be found on Docker Hub in
 At the moment we're providing images for:
 
 - Linux `amd64`
-- Linux `arm64`*
+- Linux `arm64`
 
 ### `main` branch builds
 

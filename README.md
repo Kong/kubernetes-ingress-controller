@@ -65,6 +65,11 @@ to start using Ingress in your Kubernetes cluster.
 Release builds of Kong Ingress Controller can be found on Docker Hub in
 [kong/kubernetes-ingress-controller repository][dockerhub-kic].
 
+At the moment we're providing images for:
+
+- Linux `amd64`
+- Linux `arm64`
+
 ### `main` branch builds
 
 Nightly pre-release builds of the `main` branch are available from the

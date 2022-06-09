@@ -80,7 +80,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		retry.Delay(c.KongAdminInitializationRetryDelay),
 		retry.DelayType(retry.FixedDelay),
 		retry.OnRetry(func(n uint, err error) {
-			setupLog.Info("Retrying kong admin api client call #%d/%d after error: %w", n, c.KongAdminInitializationRetries, err)
+			setupLog.Info("Retrying kong admin api client call after error",
+				"#", fmt.Sprintf("%d/%d", n, c.KongAdminInitializationRetries),
+				"error", fmt.Sprintf("%v", err),
+			)
 		}),
 	)
 

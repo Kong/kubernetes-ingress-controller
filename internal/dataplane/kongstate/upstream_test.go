@@ -1,10 +1,14 @@
 package kongstate
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -16,7 +20,7 @@ func TestOverrideUpstream(t *testing.T) {
 		inUpstream     Upstream
 		inKongIngresss *configurationv1.KongIngress
 		outUpstream    Upstream
-		annotations    map[string]string
+		svc            *corev1.Service
 	}{
 		{
 			inUpstream: Upstream{
@@ -61,19 +65,29 @@ func TestOverrideUpstream(t *testing.T) {
 					Slots:              kong.Int(42),
 				},
 			},
-			annotations: map[string]string{
-				"konghq.com/host-header": "foo.com",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"konghq.com/host-header": "foo.com",
+					},
+				},
 			},
 		},
 	}
 
 	for _, testcase := range testTable {
-		testcase.inUpstream.override(testcase.inKongIngresss, testcase.annotations)
+		log := logrus.New()
+		log.SetOutput(ioutil.Discard)
+
+		testcase.inUpstream.override(log, testcase.inKongIngresss, testcase.svc)
 		assert.Equal(testcase.inUpstream, testcase.outUpstream)
 	}
 
 	assert.NotPanics(func() {
+		log := logrus.New()
+		log.SetOutput(ioutil.Discard)
+
 		var nilUpstream *Upstream
-		nilUpstream.override(nil, make(map[string]string))
+		nilUpstream.override(log, nil, nil)
 	})
 }

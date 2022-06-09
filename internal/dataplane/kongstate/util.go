@@ -48,23 +48,30 @@ func getKongIngressForServices(
 	return nil, nil
 }
 
-func getKongIngressFromObjectMeta(s store.Storer, obj *util.K8sObjectInfo) (
-	*configurationv1.KongIngress, error) {
-	return getKongIngressFromIngressAnnotations(s, obj.Namespace, obj.Name, obj.Annotations)
+func getKongIngressFromObjectMeta(
+	s store.Storer,
+	obj util.K8sObjectInfo,
+) (
+	*configurationv1.KongIngress, error,
+) {
+	return getKongIngressFromObjAnnotations(s, obj)
 }
 
-func getKongIngressFromIngressAnnotations(s store.Storer, namespace, name string,
-	anns map[string]string) (
-	*configurationv1.KongIngress, error) {
-	confName := annotations.ExtractConfigurationName(anns)
+func getKongIngressFromObjAnnotations(
+	s store.Storer,
+	obj util.K8sObjectInfo,
+) (
+	*configurationv1.KongIngress, error,
+) {
+	confName := annotations.ExtractConfigurationName(obj.Annotations)
 	if confName != "" {
-		ki, err := s.GetKongIngress(namespace, confName)
+		ki, err := s.GetKongIngress(obj.Namespace, confName)
 		if err == nil {
 			return ki, nil
 		}
 	}
 
-	ki, err := s.GetKongIngress(namespace, name)
+	ki, err := s.GetKongIngress(obj.Namespace, obj.Name)
 	if err == nil {
 		return ki, nil
 	}

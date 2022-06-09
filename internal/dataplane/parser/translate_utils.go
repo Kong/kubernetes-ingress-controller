@@ -177,6 +177,7 @@ func (p *Parser) generateKongServiceFromBackendRef(
 			},
 			Namespace: route.GetNamespace(),
 			Backends:  backends,
+			Parent:    route,
 		}
 	}
 

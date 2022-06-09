@@ -136,6 +136,11 @@
   `networking.knative.dev/ingress-class` and the deprecated `networking.knative.dev/ingress.class` one
   to adapt to [what has already been done in knative](https://github.com/knative/networking/pull/522).
   [#2485](https://github.com/Kong/kubernetes-ingress-controller/issues/2485)
+- Remove KongIngress support for Gateway API Route objects and Services referenced
+  by those Routes. This disables an undocumented ability of customizing Gateway API
+  `*Route` objects and `Service`s that are set as backendRefs for those `*Route`s
+  via `konghq.com/override` annotations.
+  [#2554](https://github.com/Kong/kubernetes-ingress-controller/issues/2554)
 
 ## [2.3.1]
 

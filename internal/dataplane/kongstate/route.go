@@ -7,6 +7,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -117,7 +118,6 @@ func (r *Route) overrideProtocols(anns map[string]string) {
 }
 
 func (r *Route) overrideHTTPSRedirectCode(anns map[string]string) {
-
 	if annotations.HasForceSSLRedirectAnnotation(anns) {
 		r.HTTPSRedirectStatusCode = kong.Int(302)
 		r.useSSLProtocol()
@@ -235,6 +235,21 @@ func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.Ko
 	if r == nil {
 		return
 	}
+
+	// Check if we're trying to get KongIngress configuration based on an annotation
+	// on Gateway API object (this would most likely happen for *Route objects but
+	// log a warning for all other Gateway API objects as well since that also should
+	// not happen) and if that's the case then skip it since those should not be
+	// affected by said annotation.
+	if gvk := r.Ingress.GroupVersionKind; gvk.Group == gatewayv1alpha2.GroupName && kongIngress != nil {
+		log.WithFields(logrus.Fields{
+			"resource_name":      r.Ingress.Name,
+			"resource_namespace": r.Ingress.Namespace,
+			"resource_kind":      gvk.Kind,
+		}).Warn("KongIngress annotation is not allowed on Gateway API objects.")
+		return
+	}
+
 	r.overrideByKongIngress(log, kongIngress)
 	r.overrideByAnnotation(log)
 	r.normalizeProtocols()

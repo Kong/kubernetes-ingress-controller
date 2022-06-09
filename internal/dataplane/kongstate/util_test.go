@@ -10,9 +10,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -440,6 +443,134 @@ func Test_getKongIngressForServices(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError.Error())
+			}
+		})
+	}
+}
+
+func TestGetKongIngressFromObjectMeta(t *testing.T) {
+	for _, tt := range []struct {
+		name                string
+		route               client.Object
+		kongIngresses       []*configurationv1.KongIngress
+		expectedKongIngress *configurationv1.KongIngress
+		expectedError       error
+	}{
+		{
+			name: "konghq.com/override annotation does not affect Gateway API's TCPRoute",
+			route: &gatewayv1alpha2.TCPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TCPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "muntaxabi-jugrofiyai-umumiy",
+					Namespace: "behbudiy",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress1",
+					},
+				},
+			},
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expectedKongIngress: nil,
+		},
+		{
+			name: "konghq.com/override annotation does not affect Gateway API's UDPRoute",
+			route: &gatewayv1alpha2.UDPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "UDPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "muntaxabi-jugrofiyai-umumiy",
+					Namespace: "behbudiy",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress1",
+					},
+				},
+			},
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expectedKongIngress: nil,
+		},
+		{
+			name: "konghq.com/override annotation does not affect Gateway API's HTTPRoute",
+			route: &gatewayv1alpha2.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "HTTPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "muntaxabi-jugrofiyai-umumiy",
+					Namespace: "behbudiy",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress1",
+					},
+				},
+			},
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expectedKongIngress: nil,
+		},
+		{
+			name: "konghq.com/override annotation does not affect Gateway API's TLSRoute",
+			route: &gatewayv1alpha2.TLSRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TLSRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "muntaxabi-jugrofiyai-umumiy",
+					Namespace: "behbudiy",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ConfigurationKey: "test-kongingress1",
+					},
+				},
+			},
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
+				},
+			},
+			expectedKongIngress: nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			storer, err := store.NewFakeStore(store.FakeObjects{
+				KongIngresses: tt.kongIngresses,
+			})
+			require.NoError(t, err)
+
+			obj := util.FromK8sObject(tt.route)
+			kongIngress, err := getKongIngressFromObjectMeta(storer, obj)
+
+			if tt.expectedError == nil {
+				require.NoError(t, err)
+				require.EqualValues(t, tt.expectedKongIngress, kongIngress)
+			} else {
+				require.Error(t, err)
 			}
 		})
 	}

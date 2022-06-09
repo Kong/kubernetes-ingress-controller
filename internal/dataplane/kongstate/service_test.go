@@ -1,10 +1,12 @@
 package kongstate
 
 import (
+	"io/ioutil"
 	"reflect"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -361,13 +363,22 @@ func TestOverrideService(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
-		testcase.inService.override(&testcase.inKongIngresss, testcase.inAnnotation)
-		assert.Equal(testcase.inService, testcase.outService)
+		log := logrus.New()
+		log.SetOutput(ioutil.Discard)
+
+		k8sServices := testcase.inService.K8sServices
+		for _, svc := range k8sServices {
+			testcase.inService.override(log, &testcase.inKongIngresss, svc)
+			assert.Equal(testcase.inService, testcase.outService)
+		}
 	}
 
 	assert.NotPanics(func() {
+		log := logrus.New()
+		log.SetOutput(ioutil.Discard)
+
 		var nilService *Service
-		nilService.override(nil, nil)
+		nilService.override(log, nil, nil)
 	})
 }
 

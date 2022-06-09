@@ -137,17 +137,20 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 		// Services
 		kongIngress, err := getKongIngressForServices(s, ks.Services[i].K8sServices)
 		if err != nil {
-			log.WithError(err).Errorf("failed to fetch KongIngress resource for Services %s", PrettyPrintServiceList(ks.Services[i].K8sServices))
+			log.WithError(err).
+				Errorf("failed to fetch KongIngress resource for Services %s",
+					PrettyPrintServiceList(ks.Services[i].K8sServices),
+				)
 			continue
 		}
 
 		for _, svc := range ks.Services[i].K8sServices {
-			ks.Services[i].override(kongIngress, svc.Annotations)
+			ks.Services[i].override(log, kongIngress, svc)
 		}
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
-			kongIngress, err := getKongIngressFromObjectMeta(s, &ks.Services[i].Routes[j].Ingress)
+			kongIngress, err := getKongIngressFromObjectMeta(s, ks.Services[i].Routes[j].Ingress)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"resource_name":      ks.Services[i].Routes[j].Ingress.Name,
@@ -163,12 +166,15 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 	for i := 0; i < len(ks.Upstreams); i++ {
 		kongIngress, err := getKongIngressForServices(s, ks.Upstreams[i].Service.K8sServices)
 		if err != nil {
-			log.WithError(err).Errorf("failed to fetch KongIngress resource for Services %s", PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices))
+			log.WithError(err).
+				Errorf("failed to fetch KongIngress resource for Services %s",
+					PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices),
+				)
 			continue
 		}
 
 		for _, svc := range ks.Upstreams[i].Service.K8sServices {
-			ks.Upstreams[i].override(kongIngress, svc.Annotations)
+			ks.Upstreams[i].override(log, kongIngress, svc)
 		}
 	}
 }

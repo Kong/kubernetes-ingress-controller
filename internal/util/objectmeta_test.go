@@ -6,12 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestFromK8sObject(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		in   metav1.Object
+		in   client.Object
 		want K8sObjectInfo
 	}{
 		{
@@ -46,7 +47,7 @@ func TestFromK8sObject(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := FromK8sObject(tt.in)
-			assert.Equal(t, tt.want, got)
+			assert.EqualValues(t, tt.want, got)
 		})
 	}
 }

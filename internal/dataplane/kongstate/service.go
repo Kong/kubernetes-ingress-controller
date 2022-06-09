@@ -4,7 +4,10 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -48,6 +51,7 @@ type Service struct {
 
 	Backends    []ServiceBackend
 	K8sServices map[string]*corev1.Service
+	Parent      client.Object
 }
 
 // overrideByKongIngress sets Service fields by KongIngress
@@ -112,15 +116,48 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 	s.overridePath(anns)
 }
 
-// override sets Service fields by KongIngress first, then by annotation
-func (s *Service) override(kongIngress *configurationv1.KongIngress,
-	anns map[string]string) {
+// override sets Service fields by KongIngress first, then by k8s Service's annotations
+func (s *Service) override(
+	log logrus.FieldLogger,
+	kongIngress *configurationv1.KongIngress,
+	svc *corev1.Service,
+) {
 	if s == nil {
 		return
 	}
 
+	if s.Parent != nil && kongIngress != nil {
+		kongIngressFromSvcAnnotation := annotations.ExtractConfigurationName(svc.Annotations)
+		if kongIngressFromSvcAnnotation != "" {
+			// If the parent object behind Kong Service is a Gateway API object
+			// (probably *Route but log a warning for all other objects as well)
+			// then check if we're trying to override said Service configuration with
+			// a KongIngress object and if that's the case then skip it since those
+			// should not be affected.
+			gvk := s.Parent.GetObjectKind().GroupVersionKind()
+			if gvk.Group == gatewayv1alpha2.GroupName {
+				obj := s.Parent
+				fields := logrus.Fields{
+					"resource_name":      obj.GetName(),
+					"resource_namespace": obj.GetNamespace(),
+					"resource_kind":      gvk.Kind,
+				}
+				if svc != nil {
+					fields["service_name"] = svc.Name
+					fields["service_namespace"] = svc.Namespace
+				}
+				log.WithFields(fields).
+					Warn("KongIngress annotation is not allowed on Services " +
+						"referenced by Gateway API *Route objects.")
+				return
+			}
+		}
+	}
+
 	s.overrideByKongIngress(kongIngress)
-	s.overrideByAnnotation(anns)
+	if svc != nil {
+		s.overrideByAnnotation(svc.Annotations)
+	}
 
 	if *s.Protocol == "grpc" || *s.Protocol == "grpcs" {
 		// grpc(s) doesn't accept a path

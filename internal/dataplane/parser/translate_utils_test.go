@@ -579,6 +579,16 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 						},
 					},
 				},
+				Parent: &gatewayv1alpha2.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tong-sirlari",
+						Namespace: "cholpon",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "HTTPRoute",
+						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					},
+				},
 			},
 			wantErr: false,
 		},
@@ -639,6 +649,16 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 							Mode:   kongstate.PortModeByNumber,
 							Number: int32(port),
 						},
+					},
+				},
+				Parent: &gatewayv1alpha2.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "padarkush",
+						Namespace: "behbudiy",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "UDPRoute",
+						APIVersion: "gateway.networking.k8s.io/v1alpha2",
 					},
 				},
 			},
@@ -719,6 +739,16 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 							Mode:   kongstate.PortModeByNumber,
 							Number: int32(port),
 						},
+					},
+				},
+				Parent: &gatewayv1alpha2.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "muntaxabi-jugrofiyai-umumiy",
+						Namespace: "behbudiy",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TCPRoute",
+						APIVersion: "gateway.networking.k8s.io/v1alpha2",
 					},
 				},
 			},

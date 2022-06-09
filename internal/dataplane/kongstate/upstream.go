@@ -2,6 +2,9 @@ package kongstate
 
 import (
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -79,12 +82,44 @@ func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngres
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
 }
 
-// override sets Upstream fields by KongIngress first, then by annotation
-func (u *Upstream) override(kongIngress *configurationv1.KongIngress, anns map[string]string) {
+// override sets Upstream fields by KongIngress first, then by k8s Service's annotations
+func (u *Upstream) override(
+	log logrus.FieldLogger,
+	kongIngress *configurationv1.KongIngress,
+	svc *corev1.Service,
+) {
 	if u == nil {
 		return
 	}
 
+	if u.Service.Parent != nil && kongIngress != nil {
+		// If the parent object behind Kong Upstream's is a Gateway API object
+		// (probably *Route but log a warning for all other objects as well)
+		// then check if we're trying to override said Service configuration with
+		// a KongIngress object and if that's the case then skip it since those
+		// should not be affected.
+		gvk := u.Service.Parent.GetObjectKind().GroupVersionKind()
+		if gvk.Group == gatewayv1alpha2.GroupName {
+			obj := u.Service.Parent
+			fields := logrus.Fields{
+				"resource_name":      obj.GetName(),
+				"resource_namespace": obj.GetNamespace(),
+				"resource_kind":      gvk.Kind,
+			}
+			if svc != nil {
+				fields["service_name"] = svc.Name
+				fields["service_namespace"] = svc.Namespace
+			}
+			// No log needed here as there will be one issued already from Kong's
+			// Service override. The reason for this is that there is no other
+			// object in Kubernetes that creates a Kong's Upstream and Kubernetes
+			// Service will already trigger Kong's Service creation and log issuance.
+			return
+		}
+	}
+
 	u.overrideByKongIngress(kongIngress)
-	u.overrideByAnnotation(anns)
+	if svc != nil {
+		u.overrideByAnnotation(svc.Annotations)
+	}
 }

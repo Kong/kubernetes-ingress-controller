@@ -116,8 +116,50 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Name:        "basic-httproute",
 								Namespace:   corev1.NamespaceDefault,
 								Annotations: make(map[string]string),
+								GroupVersionKind: schema.GroupVersionKind{
+									Group:   "gateway.networking.k8s.io",
+									Version: "v1alpha2",
+									Kind:    "HTTPRoute",
+								},
 							},
 						}},
+						Parent: &gatewayv1alpha2.HTTPRoute{
+							Spec: gatewayv1alpha2.HTTPRouteSpec{
+								CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+									ParentRefs: []gatewayv1alpha2.ParentReference{
+										{
+											Name: gatewayv1alpha2.ObjectName("fake-gateway"),
+										},
+									},
+								},
+								Hostnames: []gatewayv1alpha2.Hostname{
+									gatewayv1alpha2.Hostname("konghq.com"),
+									gatewayv1alpha2.Hostname("www.konghq.com"),
+								},
+								Rules: []gatewayv1alpha2.HTTPRouteRule{
+									{
+										BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
+											{
+												BackendRef: gatewayv1alpha2.BackendRef{
+													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+														Name: gatewayv1alpha2.ObjectName("fake-service"),
+														Port: &httpPort,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "basic-httproute",
+								Namespace: "default",
+							},
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "HTTPRoute",
+								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+							},
+						},
 					},
 				},
 			},
@@ -225,8 +267,54 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Name:        "basic-httproute",
 								Namespace:   corev1.NamespaceDefault,
 								Annotations: make(map[string]string),
+								GroupVersionKind: schema.GroupVersionKind{
+									Group:   "gateway.networking.k8s.io",
+									Version: "v1alpha2",
+									Kind:    "HTTPRoute",
+								},
 							},
 						}},
+						Parent: &gatewayv1alpha2.HTTPRoute{
+							Spec: gatewayv1alpha2.HTTPRouteSpec{
+								CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+									ParentRefs: []gatewayv1alpha2.ParentReference{
+										{
+											Name: gatewayv1alpha2.ObjectName("fake-gateway"),
+										},
+									},
+								},
+								Rules: []gatewayv1alpha2.HTTPRouteRule{
+									{
+										Matches: []gatewayv1alpha2.HTTPRouteMatch{
+											{
+												Path: &gatewayv1alpha2.HTTPPathMatch{
+													Type:  &pathMatchPrefix,
+													Value: kong.String("/httpbin"),
+												},
+											},
+										},
+										BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
+											{
+												BackendRef: gatewayv1alpha2.BackendRef{
+													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+														Name: gatewayv1alpha2.ObjectName("fake-service"),
+														Port: &httpPort,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "basic-httproute",
+								Namespace: "default",
+							},
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "HTTPRoute",
+								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+							},
+						},
 					},
 				},
 			},
@@ -362,8 +450,54 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Name:        "basic-httproute",
 								Namespace:   corev1.NamespaceDefault,
 								Annotations: make(map[string]string),
+								GroupVersionKind: schema.GroupVersionKind{
+									Group:   "gateway.networking.k8s.io",
+									Version: "v1alpha2",
+									Kind:    "HTTPRoute",
+								},
 							},
 						}},
+						Parent: &gatewayv1alpha2.HTTPRoute{
+							Spec: gatewayv1alpha2.HTTPRouteSpec{
+								CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+									ParentRefs: []gatewayv1alpha2.ParentReference{
+										{
+											Name: gatewayv1alpha2.ObjectName("fake-gateway"),
+										},
+									},
+								},
+								Rules: []gatewayv1alpha2.HTTPRouteRule{
+									{
+										Matches: []gatewayv1alpha2.HTTPRouteMatch{
+											{
+												Path: &gatewayv1alpha2.HTTPPathMatch{
+													Type:  &pathMatchRegex,
+													Value: kong.String("/httpbin$"),
+												},
+											},
+										},
+										BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
+											{
+												BackendRef: gatewayv1alpha2.BackendRef{
+													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+														Name: gatewayv1alpha2.ObjectName("fake-service"),
+														Port: &httpPort,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "basic-httproute",
+								Namespace: "default",
+							},
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "HTTPRoute",
+								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+							},
+						},
 					},
 				},
 			},
@@ -436,8 +570,54 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Name:        "basic-httproute",
 								Namespace:   corev1.NamespaceDefault,
 								Annotations: make(map[string]string),
+								GroupVersionKind: schema.GroupVersionKind{
+									Group:   "gateway.networking.k8s.io",
+									Version: "v1alpha2",
+									Kind:    "HTTPRoute",
+								},
 							},
 						}},
+						Parent: &gatewayv1alpha2.HTTPRoute{
+							Spec: gatewayv1alpha2.HTTPRouteSpec{
+								CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+									ParentRefs: []gatewayv1alpha2.ParentReference{
+										{
+											Name: gatewayv1alpha2.ObjectName("fake-gateway"),
+										},
+									},
+								},
+								Rules: []gatewayv1alpha2.HTTPRouteRule{
+									{
+										Matches: []gatewayv1alpha2.HTTPRouteMatch{
+											{
+												Path: &gatewayv1alpha2.HTTPPathMatch{
+													Type:  &pathMatchExact,
+													Value: kong.String("/httpbin"),
+												},
+											},
+										},
+										BackendRefs: []gatewayv1alpha2.HTTPBackendRef{
+											{
+												BackendRef: gatewayv1alpha2.BackendRef{
+													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+														Name: gatewayv1alpha2.ObjectName("fake-service"),
+														Port: &httpPort,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "basic-httproute",
+								Namespace: "default",
+							},
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "HTTPRoute",
+								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+							},
+						},
 					},
 				},
 			},

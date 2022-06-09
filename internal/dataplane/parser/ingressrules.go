@@ -55,10 +55,9 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer)
 		// if the Kubernetes services have been deemed invalid, no need to continue
 		// they will all be dropped until the problem has been rectified.
 		if !servicesAllUseTheSameKongAnnotations(log, k8sServices, seenAnnotations) {
-			return fmt.Errorf("the following Kubernetes services were all configured together as the backends "+
-				"for a Kong Service named %s: %+v. These services had disparate KongIngress overrides which is not allowed: "+
-				" when configuring multiple Kubernetes Services as backends (e.g. backendRefs in HTTPRoutes) it is required "+
-				" that all of them have matching KongIngress override annotations", *service.Name, k8sServices)
+			return fmt.Errorf("the Kubernetes Services %v cannot have different sets of konghq.com annotations. "+
+				"These Services are used in the same Gateway Route BackendRef together to create the Kong Service %s"+
+				"and must use the same Kong annotations", k8sServices, *service.Name)
 		}
 
 		for _, k8sService := range k8sServices {

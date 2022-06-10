@@ -101,6 +101,7 @@ func setupControllers(
 				IngressClassName:       c.IngressClassName,
 				StatusQueue:            kubernetesStatusQueue,
 				DataplaneAddressFinder: dataplaneAddressFinder,
+				IngressClassType:       c.GetIngressClassObject(),
 			},
 		},
 		{
@@ -114,6 +115,7 @@ func setupControllers(
 				IngressClassName:       c.IngressClassName,
 				StatusQueue:            kubernetesStatusQueue,
 				DataplaneAddressFinder: dataplaneAddressFinder,
+				IngressClassType:       c.GetIngressClassObject(),
 			},
 		},
 		{
@@ -127,6 +129,7 @@ func setupControllers(
 				IngressClassName:       c.IngressClassName,
 				StatusQueue:            kubernetesStatusQueue,
 				DataplaneAddressFinder: dataplaneAddressFinder,
+				IngressClassType:       c.GetIngressClassObject(),
 			},
 		},
 		{
@@ -169,6 +172,7 @@ func setupControllers(
 				IngressClassName:       c.IngressClassName,
 				StatusQueue:            kubernetesStatusQueue,
 				DataplaneAddressFinder: dataplaneAddressFinder,
+				IngressClassType:       c.GetIngressClassObject(),
 			},
 		},
 		{
@@ -209,6 +213,7 @@ func setupControllers(
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
+				IngressClassType: c.GetIngressClassObject(),
 			},
 		},
 		{
@@ -224,6 +229,7 @@ func setupControllers(
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				IngressClassName: c.IngressClassName,
+				IngressClassType: c.GetIngressClassObject(),
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -247,6 +253,7 @@ func setupControllers(
 				IngressClassName:       c.IngressClassName,
 				StatusQueue:            kubernetesStatusQueue,
 				DataplaneAddressFinder: dataplaneAddressFinder,
+				IngressClassType:       c.GetIngressClassObject(),
 			},
 		},
 		// ---------------------------------------------------------------------------

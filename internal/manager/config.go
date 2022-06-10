@@ -7,6 +7,8 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -81,6 +83,7 @@ type Config struct {
 	KongPluginEnabled        bool
 	KongConsumerEnabled      bool
 	ServiceEnabled           bool
+	UseBeta1IngressClass     bool
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -185,6 +188,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.KongPluginEnabled, "enable-controller-kongplugin", true, "Enable the KongPlugin controller.")
 	flagSet.BoolVar(&c.KongConsumerEnabled, "enable-controller-kongconsumer", true, "Enable the KongConsumer controller. ")
 	flagSet.BoolVar(&c.ServiceEnabled, "enable-controller-service", true, "Enable the Service controller.")
+	flagSet.BoolVar(&c.UseBeta1IngressClass, "use-v1beta1-ingress-class", false, "Use older networking.k8s.io/v1beta1 IngressClass")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
@@ -253,4 +257,11 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 		return nil, err
 	}
 	return client.New(conf, client.Options{})
+}
+
+func (c *Config) GetIngressClassObject() client.Object {
+	if c.UseBeta1IngressClass {
+		return &netv1beta1.IngressClass{}
+	}
+	return &netv1.IngressClass{}
 }

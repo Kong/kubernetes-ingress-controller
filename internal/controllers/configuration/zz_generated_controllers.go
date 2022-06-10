@@ -285,6 +285,7 @@ type NetV1IngressReconciler struct {
 	StatusQueue            *status.Queue
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -312,7 +313,7 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -326,6 +327,7 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *NetV1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &netv1.IngressList{}
@@ -514,6 +516,7 @@ type NetV1Beta1IngressReconciler struct {
 	StatusQueue            *status.Queue
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -541,7 +544,7 @@ func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -555,6 +558,7 @@ func (r *NetV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *NetV1Beta1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &netv1beta1.IngressList{}
@@ -671,6 +675,7 @@ type ExtV1Beta1IngressReconciler struct {
 	StatusQueue            *status.Queue
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -698,7 +703,7 @@ func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -712,6 +717,7 @@ func (r *ExtV1Beta1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *ExtV1Beta1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &extv1beta1.IngressList{}
@@ -971,6 +977,7 @@ type KongV1KongClusterPluginReconciler struct {
 	DataplaneClient *dataplane.KongClient
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -985,7 +992,7 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 		return err
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -999,6 +1006,7 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *KongV1KongClusterPluginReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongClusterPluginList{}
@@ -1090,6 +1098,7 @@ type KongV1KongConsumerReconciler struct {
 	DataplaneClient *dataplane.KongClient
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1104,7 +1113,7 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		return err
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -1118,6 +1127,7 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *KongV1KongConsumerReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongConsumerList{}
@@ -1212,6 +1222,7 @@ type KongV1Beta1TCPIngressReconciler struct {
 	StatusQueue            *status.Queue
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1239,7 +1250,7 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		}
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -1253,6 +1264,7 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *KongV1Beta1TCPIngressReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.TCPIngressList{}
@@ -1369,6 +1381,7 @@ type KongV1Beta1UDPIngressReconciler struct {
 	StatusQueue            *status.Queue
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1396,7 +1409,7 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		}
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -1410,6 +1423,7 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *KongV1Beta1UDPIngressReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.UDPIngressList{}
@@ -1526,6 +1540,7 @@ type Knativev1alpha1IngressReconciler struct {
 	StatusQueue            *status.Queue
 
 	IngressClassName string
+	IngressClassType client.Object
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1553,7 +1568,7 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 		}
 	}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)
@@ -1567,6 +1582,7 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 		preds,
 	)
 }
+
 // listClassless finds and reconciles all objects without ingress class information
 func (r *Knativev1alpha1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &knativev1alpha1.IngressList{}

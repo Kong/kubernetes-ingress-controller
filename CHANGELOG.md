@@ -108,6 +108,7 @@
   [#2494](https://github.com/Kong/kubernetes-ingress-controller/pull/2494)
 - Added `kong-ingress-controller` category to CRDs
   [#2517](https://github.com/Kong/kubernetes-ingress-controller/pull/2517)
+- Added new command line flag `--use-v1beta1-ingress-class` for using `IngressClass` resources from `networking.k8s.io/v1beta1` namespace instead of `networking.k8s.io/v1`. [#2563](https://github.com/Kong/kubernetes-ingress-controller/issues/2563)
 
 #### Fixed
 

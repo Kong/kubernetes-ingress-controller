@@ -450,6 +450,7 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 {{- if or .AcceptsIngressClassNameSpec .AcceptsIngressClassNameAnnotation}}
 
 	IngressClassName string
+	IngressClassType client.Object
 {{- end}}
 }
 
@@ -482,7 +483,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 {{- end}}
 {{- if .AcceptsIngressClassNameAnnotation}}
 	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		&source.Kind{Type: r.IngressClassType},
 		handler.EnqueueRequestsFromMapFunc(r.listClassless),
 		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 	)

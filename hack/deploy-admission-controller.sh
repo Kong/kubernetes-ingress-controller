@@ -30,7 +30,7 @@ webhooks:
       operator: NotIn
       values:
       - helm
-  failurePolicy: Fail
+  failurePolicy: Ignore
   sideEffects: None
   admissionReviewVersions: [\"v1\", \"v1beta1\"]
   rules:

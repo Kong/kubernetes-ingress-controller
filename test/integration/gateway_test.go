@@ -255,7 +255,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
-	t.Log("confirming existing listen remains ready, new HTTP listen has hostname conflict, new UDP listen has proto conflict")
+	t.Log("confirming existing listen becomes unready and conflicted, new HTTP listen has hostname conflict, new UDP listen has proto conflict")
 	require.Eventually(t, func() bool {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -274,7 +274,10 @@ func TestGatewayListenerConflicts(t *testing.T) {
 			if lstatus.Name == "badhttp" {
 				for _, condition := range lstatus.Conditions {
 					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						badhttpConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonHostnameConflict))
+						// this is a PROTOCOL conflict: although this only conflicts with the existing HTTP listen by
+						// hostname, it also conflicts with the new UDP listener by protocol, and the latter takes
+						// precedence
+						badhttpConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonProtocolConflict))
 					}
 					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
 						badhttpReady = (condition.Status == metav1.ConditionTrue)
@@ -292,10 +295,57 @@ func TestGatewayListenerConflicts(t *testing.T) {
 				}
 			}
 		}
-		return !badhttpReady && badhttpConflicted && !badudpReady && badudpConflicted && httpReady && !httpConflicted
+		return !badhttpReady && badhttpConflicted && !badudpReady && badudpConflicted && !httpReady && httpConflicted
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("adding compatible listeners")
+	t.Log("changing listeners to a set with conflicting hostnames")
+	// these both use the empty hostname
+	gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+		gatewayv1alpha2.Listener{
+			Name:     "httpsalpha",
+			Protocol: gatewayv1alpha2.HTTPSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(443),
+		},
+		gatewayv1alpha2.Listener{
+			Name:     "httpsbravo",
+			Protocol: gatewayv1alpha2.HTTPSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(443),
+		},
+	}
+
+	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("confirming listeners with conflicted hostnames receive appropriate conditions")
+	require.Eventually(t, func() bool {
+		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		var httpAlphaReady, httpAlphaConflicted, httpBravoReady, httpBravoConflicted bool
+		for _, lstatus := range gw.Status.Listeners {
+			if lstatus.Name == "httpsalpha" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						httpAlphaConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonHostnameConflict))
+					}
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						httpAlphaReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+			if lstatus.Name == "httpsbravo" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						httpBravoConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonHostnameConflict))
+					}
+					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						httpBravoReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
+		}
+		return !httpAlphaReady && httpAlphaConflicted && !httpBravoReady && httpBravoConflicted
+	}, gatewayUpdateWaitTime, time.Second)
+	t.Log("swapping out existing listeners with multiple compatible listeners")
 	tlsHost := gatewayv1alpha2.Hostname("tls.example")
 	httpsHost := gatewayv1alpha2.Hostname("https.example")
 	httphostHost := gatewayv1alpha2.Hostname("http.example")
@@ -305,26 +355,31 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	// as all use unique hostnames. Kong, however, requires that TLS routes go through a TLS stream listen, so
 	// the binds are separate and we cannot combine them. attempting to do so (e.g. setting the tls port to 443 here)
 	// will result in ListenerReasonPortUnavailable
-	gw.Spec.Listeners = append(gw.Spec.Listeners,
-		gatewayv1alpha2.Listener{
+	gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+		{
+			Name:     "http",
+			Protocol: gatewayv1alpha2.HTTPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(80),
+		},
+		{
 			Name:     "tls",
 			Protocol: gatewayv1alpha2.TLSProtocolType,
 			Port:     gatewayv1alpha2.PortNumber(8899),
 			Hostname: &tlsHost,
 		},
-		gatewayv1alpha2.Listener{
+		{
 			Name:     "https",
 			Protocol: gatewayv1alpha2.HTTPSProtocolType,
 			Port:     gatewayv1alpha2.PortNumber(443),
 			Hostname: &httpsHost,
 		},
-		gatewayv1alpha2.Listener{
+		{
 			Name:     "httphost",
 			Protocol: gatewayv1alpha2.HTTPProtocolType,
 			Port:     gatewayv1alpha2.PortNumber(80),
 			Hostname: &httphostHost,
 		},
-	)
+	}
 
 	_, err = c.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)

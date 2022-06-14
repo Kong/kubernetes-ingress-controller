@@ -340,7 +340,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, err)
 	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	originalListeners := gw.Spec.Listeners
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
 		gatewayv1alpha2.Listener{
 			Name:     "badhttp",

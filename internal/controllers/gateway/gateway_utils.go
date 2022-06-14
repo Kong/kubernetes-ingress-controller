@@ -127,7 +127,7 @@ func NewListenerTracker() ListenerTracker {
 
 type protocolPortMap map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool
 type portProtocolMap map[gatewayv1alpha2.PortNumber]gatewayv1alpha2.ProtocolType
-type portHostnameMap map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]gatewayv1alpha2.SectionName
+type portHostnameMap map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]bool
 type listenerAttachedMap map[gatewayv1alpha2.SectionName]int32
 
 func buildKongPortMap(listens []gatewayv1alpha2.Listener) protocolPortMap {
@@ -142,17 +142,16 @@ func buildKongPortMap(listens []gatewayv1alpha2.Listener) protocolPortMap {
 	return p
 }
 
-// initializeListenerMaps takes a Gateway and its previous iteration and builds indices from ports to
-// protocols, ports to hostnames, and listener name to attached route count. the protocol and port protocol maps only
-// include listeners with a false ListenerConditionConflicted that have not changed since the previous Gateway
-// iteration
+// initializeListenerMaps takes a Gateway and builds indices used in status updates and conflict detection. It returns
+// empty maps from port to protocol to listener name and from port to hostnames, and a populated map from listener name
+// to attached route count from their status
 func initializeListenerMaps(gateway *gatewayv1alpha2.Gateway) (
 	portProtocolMap,
 	portHostnameMap,
 	listenerAttachedMap,
 ) {
-	portsToProtocol := make(portProtocolMap, len(gateway.Status.Listeners))
-	portsToHostnames := make(portHostnameMap, len(gateway.Status.Listeners))
+	portToProtocol := make(portProtocolMap, len(gateway.Status.Listeners))
+	portToHostname := make(portHostnameMap, len(gateway.Status.Listeners))
 	listenerToAttached := make(listenerAttachedMap, len(gateway.Status.Listeners))
 
 	existingStatuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus,
@@ -162,34 +161,14 @@ func initializeListenerMaps(gateway *gatewayv1alpha2.Gateway) (
 	}
 
 	for _, listener := range gateway.Spec.Listeners {
-		portsToHostnames[listener.Port] = make(map[gatewayv1alpha2.Hostname]gatewayv1alpha2.SectionName)
+		portToHostname[listener.Port] = make(map[gatewayv1alpha2.Hostname]bool)
 		if existingStatus, ok := existingStatuses[listener.Name]; ok {
-			listenerToAttached[listener.Name] = existingStatuses[listener.Name].AttachedRoutes
-			for _, condition := range existingStatus.Conditions {
-				// conflicted statuses do not matter for precedence. these listeners are not live. in the event that
-				// we delete a listener that e.g. was holding a port and then there are two previously-conflicted
-				// listeners vying for it, we have no precedence rules to determine the winner
-				if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) &&
-					condition.Status == metav1.ConditionFalse {
-					if _, ok := portsToProtocol[listener.Port]; !ok {
-						portsToProtocol[listener.Port] = listener.Protocol
-					}
-					if listener.Protocol == gatewayv1alpha2.HTTPProtocolType ||
-						listener.Protocol == gatewayv1alpha2.HTTPSProtocolType ||
-						listener.Protocol == gatewayv1alpha2.TLSProtocolType {
-						var hostname gatewayv1alpha2.Hostname
-						if listener.Hostname == nil {
-							hostname = gatewayv1alpha2.Hostname("")
-						} else {
-							hostname = *listener.Hostname
-						}
-						portsToHostnames[listener.Port][hostname] = listener.Name
-					}
-				}
-			}
+			listenerToAttached[listener.Name] = existingStatus.AttachedRoutes
+		} else {
+			listenerToAttached[listener.Name] = 0
 		}
 	}
-	return portsToProtocol, portsToHostnames, listenerToAttached
+	return portToProtocol, portToHostname, listenerToAttached
 }
 
 func canSharePort(requested gatewayv1alpha2.ProtocolType, existing gatewayv1alpha2.ProtocolType) bool {
@@ -198,6 +177,8 @@ func canSharePort(requested gatewayv1alpha2.ProtocolType, existing gatewayv1alph
 	case gatewayv1alpha2.TCPProtocolType, gatewayv1alpha2.UDPProtocolType:
 		return false
 	// HTTPS and TLS Listeners can share ports with others of their type or the other TLS type
+	// note that this is not actually possible in Kong: TLS is a stream listen and HTTPS is an http listen
+	// however, this section implements the spec ignoring Kong's reality
 	case gatewayv1alpha2.HTTPSProtocolType:
 		if existing == gatewayv1alpha2.HTTPSProtocolType || existing == gatewayv1alpha2.TLSProtocolType {
 			return true
@@ -223,37 +204,35 @@ func getListenerStatus(
 	gateway *gatewayv1alpha2.Gateway,
 	kongListens []gatewayv1alpha2.Listener,
 ) []gatewayv1alpha2.ListenerStatus {
-	statuses := []gatewayv1alpha2.ListenerStatus{}
-	// we need to run through listeners with existing no conflict statuses first they take precedence in the event of a
-	// conflict later.
-	portsToProtocol, portsToHostnames, listenerToAttached := initializeListenerMaps(gateway)
-
+	statuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus, len(gateway.Spec.Listeners))
+	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
 	kongProtocolsToPort := buildKongPortMap(kongListens)
+	conflictedPorts := make(map[gatewayv1alpha2.PortNumber]bool, len(gateway.Spec.Listeners))
+	conflictedHostnames := make(map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]bool, len(gateway.Spec.Listeners))
 
 	// TODO we should check transition time rather than always nowing, which we do throughout the below
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2556
 	for _, listener := range gateway.Spec.Listeners {
-		var attachedRoutes int32
-		if attached, ok := listenerToAttached[listener.Name]; ok {
-			attachedRoutes = attached
+		var hostname gatewayv1alpha2.Hostname
+		if listener.Hostname != nil {
+			hostname = *listener.Hostname
 		}
 		status := gatewayv1alpha2.ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
 			SupportedKinds: supportedRouteGroupKinds,
-			AttachedRoutes: attachedRoutes,
-		}
-		if _, ok := portsToHostnames[listener.Port]; !ok {
-			portsToHostnames[listener.Port] = make(map[gatewayv1alpha2.Hostname]gatewayv1alpha2.SectionName)
+			// this has been populated by initializeListenerMaps()
+			AttachedRoutes: listenerToAttached[listener.Name],
 		}
 		// TODO this only handles some Listener conditions and reasons as needed to check cross-listener compatibility
 		// and unattachability due to missing Kong configuration. There are others available and it may be appropriate
 		// for us to add them https://github.com/Kong/kubernetes-ingress-controller/issues/2558
-		if _, ok := portsToProtocol[listener.Port]; !ok {
+		if _, ok := portToProtocol[listener.Port]; !ok {
 			// unoccupied ports are free game
-			portsToProtocol[listener.Port] = listener.Protocol
+			portToProtocol[listener.Port] = listener.Protocol
+			portToHostname[listener.Port][hostname] = true
 		} else {
-			if !canSharePort(listener.Protocol, portsToProtocol[listener.Port]) {
+			if !canSharePort(listener.Protocol, portToProtocol[listener.Port]) {
 				status.Conditions = append(status.Conditions, metav1.Condition{
 					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
 					Status:             metav1.ConditionTrue,
@@ -261,34 +240,32 @@ func getListenerStatus(
 					LastTransitionTime: metav1.Now(),
 					Reason:             string(gatewayv1alpha2.ListenerReasonProtocolConflict),
 				})
+				conflictedPorts[listener.Port] = true
 			} else {
 				// shareable ports determine conflicts by hostname
 				// Each Listener within the group specifies a Hostname that is unique within the group.
 				// As a special case, one Listener within a group may omit Hostname, in which case this Listener
 				// matches when no other Listener matches.
-				var hostname gatewayv1alpha2.Hostname
-				if listener.Hostname == nil {
-					hostname = gatewayv1alpha2.Hostname("")
-				} else {
-					hostname = *listener.Hostname
+				if conflictedHostnames[listener.Port] == nil {
+					conflictedHostnames[listener.Port] = map[gatewayv1alpha2.Hostname]bool{}
 				}
-				if _, exists := portsToHostnames[listener.Port][hostname]; !exists {
-					portsToHostnames[listener.Port][hostname] = listener.Name
+				if _, exists := portToHostname[listener.Port][hostname]; !exists {
+					portToHostname[listener.Port][hostname] = true
 				} else {
-					// ignore if we already added ourselves when handling existing
-					if !(portsToHostnames[listener.Port][hostname] == listener.Name) {
-						status.Conditions = append(status.Conditions, metav1.Condition{
-							Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: gateway.Generation,
-							LastTransitionTime: metav1.Now(),
-							Reason:             string(gatewayv1alpha2.ListenerReasonHostnameConflict),
-						})
-					}
+					status.Conditions = append(status.Conditions, metav1.Condition{
+						Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: gateway.Generation,
+						LastTransitionTime: metav1.Now(),
+						Reason:             string(gatewayv1alpha2.ListenerReasonHostnameConflict),
+					})
+					conflictedHostnames[listener.Port][hostname] = true
 				}
 			}
 		}
 
+		// independent of conflict detection. for example, two TCP Listeners both requesting the same port that Kong
+		// does not provide should be both Conflicted and Detached
 		if len(kongProtocolsToPort[listener.Protocol]) == 0 {
 			status.Conditions = append(status.Conditions, metav1.Condition{
 				Type:               string(gatewayv1alpha2.ListenerConditionDetached),
@@ -309,8 +286,14 @@ func getListenerStatus(
 				Message:            "no Kong listen with the requested protocol is configured for the requested port",
 			})
 		}
-		// if we've gotten this far with no conditions, the listener is good to go
+
+		// finalize adding any general conditions
+		// TODO these (and really the others too) do not account for the conditions maybe having already been present
+		// we simply generate them from scratch each time and mark the current generation the observed generation,
+		// whereas we should preserve the original observed generation
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/2556
 		if len(status.Conditions) == 0 {
+			// if we've gotten this far with no conditions, the listener is good to go
 			status.Conditions = append(status.Conditions,
 				metav1.Condition{
 					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
@@ -329,6 +312,7 @@ func getListenerStatus(
 				},
 			)
 		} else {
+			// any conditions we added above will prevent the Listener from becoming ready
 			// unsure if we want to add the ready=false condition on a per-failure basis or use this else to just mark
 			// it generic unready if we hit anything bad. do any failure conditions block readiness? do we care about
 			// having distinct ready false messages, assuming we have more descriptive messages in the other conditions?
@@ -341,9 +325,67 @@ func getListenerStatus(
 				Message:            "the listener is not ready and cannot route requests",
 			})
 		}
-		statuses = append(statuses, status)
+
+		statuses[listener.Name] = status
 	}
-	return statuses
+
+	// any conflict applies to all listeners sharing the conflicted resource (see
+	// https://github.com/Kong/kubernetes-ingress-controller/pull/2555#issuecomment-1154579046 for discussion)
+	// if we encountered conflicts, we must strip the ready status we originally set
+	for _, listener := range gateway.Spec.Listeners {
+		var reason string
+
+		var hostname gatewayv1alpha2.Hostname
+		if listener.Hostname != nil {
+			hostname = *listener.Hostname
+		}
+		// there's no filter for protocols that don't use Hostname, but this won't be populated from earlier for those
+		if _, ok := conflictedHostnames[listener.Port][hostname]; ok {
+			reason = string(gatewayv1alpha2.ListenerReasonHostnameConflict)
+		}
+
+		if _, ok := conflictedPorts[listener.Port]; ok {
+			reason = string(gatewayv1alpha2.ListenerReasonProtocolConflict)
+		}
+
+		if len(reason) > 0 {
+			newConditions := []metav1.Condition{}
+			for _, cond := range statuses[listener.Name].Conditions {
+				switch gatewayv1alpha2.ListenerConditionType(cond.Type) {
+				case gatewayv1alpha2.ListenerConditionReady, gatewayv1alpha2.ListenerConditionConflicted:
+					continue
+				default:
+					newConditions = append(newConditions, cond)
+				}
+			}
+			newConditions = append(newConditions,
+				metav1.Condition{
+					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             reason,
+				},
+				metav1.Condition{
+					Type:               string(gatewayv1alpha2.ListenerConditionReady),
+					Status:             metav1.ConditionFalse,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1alpha2.ListenerReasonReady),
+					Message:            "the listener is not ready and cannot route requests",
+				},
+			)
+			status := statuses[listener.Name]
+			status.Conditions = newConditions
+			statuses[listener.Name] = status
+		}
+	}
+	statusArray := []gatewayv1alpha2.ListenerStatus{}
+	for _, status := range statuses {
+		statusArray = append(statusArray, status)
+	}
+
+	return statusArray
 }
 
 // -----------------------------------------------------------------------------

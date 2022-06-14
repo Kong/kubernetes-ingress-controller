@@ -146,7 +146,7 @@ func buildKongPortMap(listens []gatewayv1alpha2.Listener) protocolPortMap {
 // protocols, ports to hostnames, and listener name to attached route count. the protocol and port protocol maps only
 // include listeners with a false ListenerConditionConflicted that have not changed since the previous Gateway
 // iteration
-func initializeListenerMaps(gateway, previous *gatewayv1alpha2.Gateway) (
+func initializeListenerMaps(gateway *gatewayv1alpha2.Gateway) (
 	portProtocolMap,
 	portHostnameMap,
 	listenerAttachedMap,
@@ -155,11 +155,6 @@ func initializeListenerMaps(gateway, previous *gatewayv1alpha2.Gateway) (
 	portsToHostnames := make(portHostnameMap, len(gateway.Status.Listeners))
 	listenerToAttached := make(listenerAttachedMap, len(gateway.Status.Listeners))
 
-	previousListeners := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.Listener,
-		len(gateway.Status.Listeners))
-	for _, listener := range gateway.Spec.Listeners {
-		previousListeners[listener.Name] = listener
-	}
 	existingStatuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus,
 		len(gateway.Status.Listeners))
 	for _, listenerStatus := range gateway.Status.Listeners {
@@ -168,24 +163,6 @@ func initializeListenerMaps(gateway, previous *gatewayv1alpha2.Gateway) (
 
 	for _, listener := range gateway.Spec.Listeners {
 		portsToHostnames[listener.Port] = make(map[gatewayv1alpha2.Hostname]gatewayv1alpha2.SectionName)
-		if previous, ok := previousListeners[listener.Name]; ok {
-			// if critical parts of the Listener (parts that can conflict), we treat it as effectively new
-			if !reflect.DeepEqual(
-				gatewayv1alpha2.Listener{
-					Hostname: previous.Hostname,
-					Protocol: previous.Protocol,
-					Port:     previous.Port,
-				},
-				gatewayv1alpha2.Listener{
-					Hostname: listener.Hostname,
-					Protocol: listener.Protocol,
-					Port:     listener.Port,
-				},
-			) {
-				delete(existingStatuses, listener.Name)
-			}
-
-		}
 		if existingStatus, ok := existingStatuses[listener.Name]; ok {
 			listenerToAttached[listener.Name] = existingStatuses[listener.Name].AttachedRoutes
 			for _, condition := range existingStatus.Conditions {
@@ -244,13 +221,12 @@ func canSharePort(requested gatewayv1alpha2.ProtocolType, existing gatewayv1alph
 
 func getListenerStatus(
 	gateway *gatewayv1alpha2.Gateway,
-	previous *gatewayv1alpha2.Gateway,
 	kongListens []gatewayv1alpha2.Listener,
 ) []gatewayv1alpha2.ListenerStatus {
 	statuses := []gatewayv1alpha2.ListenerStatus{}
 	// we need to run through listeners with existing no conflict statuses first they take precedence in the event of a
 	// conflict later.
-	portsToProtocol, portsToHostnames, listenerToAttached := initializeListenerMaps(gateway, previous)
+	portsToProtocol, portsToHostnames, listenerToAttached := initializeListenerMaps(gateway)
 
 	kongProtocolsToPort := buildKongPortMap(kongListens)
 

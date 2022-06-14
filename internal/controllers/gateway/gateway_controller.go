@@ -52,9 +52,6 @@ type GatewayReconciler struct { //nolint:revive
 	WatchNamespaces []string
 
 	publishServiceRef types.NamespacedName
-
-	// lastSuccessful maps a Gateway name to a copy of the previous successfully reconciled Gateway with that name
-	lastSuccessful map[string]gatewayv1alpha2.Gateway
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -114,8 +111,6 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Log:    r.Log.WithName("V1Alpha2GatewayClass"),
 		Scheme: r.Scheme,
 	}
-
-	r.lastSuccessful = map[string]gatewayv1alpha2.Gateway{}
 
 	return gwcCTRL.SetupWithManager(mgr)
 }
@@ -248,9 +243,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// reconciliation assumes unmanaged mode, in the future we may have a slot here for
 	// other gateway management modes.
 	result, err := r.reconcileUnmanagedGateway(ctx, log, gateway)
-	if err == nil {
-		r.lastSuccessful[gateway.Name] = *gateway
-	}
 	return result, err
 }
 
@@ -339,8 +331,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// a single set of shared listens. We lack knowledge of whether this is compatible with user intent, and it may
 	// be incompatible with the spec, so we should consider evaluating cross-Gateway compatibility and raising error
 	// conditions in the event of a problem
-	last := r.lastSuccessful[gateway.Name]
-	listenerStatuses := getListenerStatus(gateway, &last, kongListeners)
+	listenerStatuses := getListenerStatus(gateway, kongListeners)
 
 	// once specification matches the reference Service, all that's left to do is ensure that the
 	// Gateway status reflects the spec. As the status is simply a mirror of the Service, this is

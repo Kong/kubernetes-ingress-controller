@@ -421,24 +421,18 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		corev1.ProtocolTCP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TCPRoute")},
 		corev1.ProtocolUDP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("UDPRoute")},
 	}
-	for _, clusterIP := range svc.Spec.ClusterIPs {
-		addresses = append(addresses, gatewayv1alpha2.GatewayAddress{
-			Type:  &gatewayIPAddrType,
-			Value: clusterIP,
-		})
 
-		for _, port := range svc.Spec.Ports {
-			listeners = append(listeners, gatewayv1alpha2.Listener{
-				Name:     gatewayv1alpha2.SectionName(port.Name),
-				Protocol: gatewayv1alpha2.ProtocolType(port.Protocol),
-				Port:     gatewayv1alpha2.PortNumber(port.Port),
-				AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-					Kinds: []gatewayv1alpha2.RouteGroupKind{
-						protocolToRouteGroupKind[port.Protocol],
-					},
+	for _, port := range svc.Spec.Ports {
+		listeners = append(listeners, gatewayv1alpha2.Listener{
+			Name:     gatewayv1alpha2.SectionName(port.Name),
+			Protocol: gatewayv1alpha2.ProtocolType(port.Protocol),
+			Port:     gatewayv1alpha2.PortNumber(port.Port),
+			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+				Kinds: []gatewayv1alpha2.RouteGroupKind{
+					protocolToRouteGroupKind[port.Protocol],
 				},
-			})
-		}
+			},
+		})
 	}
 
 	// for LoadBalancer service types we'll also capture the LB IP or Host

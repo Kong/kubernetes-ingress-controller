@@ -106,29 +106,23 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		// TODO 2557 we include ClusterIPs in gw status addrs. these are NOT in LB status (though they are in the spec)
-		// is this correct? it seems like we should use external only and require publish-addr be provided manually otherwise
-		//if len(gw.Spec.Addresses) == len(pubsvc.Status.LoadBalancer.Ingress) {
-		//	addrs := make(map[string]bool, len(pubsvc.Status.LoadBalancer.Ingress))
-		//	for _, ing := range pubsvc.Status.LoadBalancer.Ingress {
-		//		// taking a slight shortcut by using the same map for both types. value lookups will still work
-		//		// and the test isn't concerned with the weird case where you've somehow wound up with
-		//		// LB Hostname 10.0.0.1 and GW IP 10.0.0.1. the GW type is also optional, so we don't always know
-		//		addrs[ing.IP] = true
-		//		addrs[ing.Hostname] = true
-		//	}
-		//	for _, addr := range gw.Spec.Addresses {
-		//		if _, ok := addrs[addr.Value]; !ok {
-		//			return false
-		//		}
-		//	}
-		//	return true
-		//}
-		//return false
-
-		// currently a noop pending confirmation of whether we want both. if so, we need to combine the lists when
-		// checking. if not, the above should work once the clusterIP is removed
-		return pubsvc != nil
+		if len(gw.Spec.Addresses) == len(pubsvc.Status.LoadBalancer.Ingress) {
+			addrs := make(map[string]bool, len(pubsvc.Status.LoadBalancer.Ingress))
+			for _, ing := range pubsvc.Status.LoadBalancer.Ingress {
+				// taking a slight shortcut by using the same map for both types. value lookups will still work
+				// and the test isn't concerned with the weird case where you've somehow wound up with
+				// LB Hostname 10.0.0.1 and GW IP 10.0.0.1. the GW type is also optional, so we don't always know
+				addrs[ing.IP] = true
+				addrs[ing.Hostname] = true
+			}
+			for _, addr := range gw.Spec.Addresses {
+				if _, ok := addrs[addr.Value]; !ok {
+					return false
+				}
+			}
+			return true
+		}
+		return false
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway status gets updated to match the publish service")

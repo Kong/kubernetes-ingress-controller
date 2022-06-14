@@ -351,7 +351,8 @@ func getListenerStatus(
 		if len(reason) > 0 {
 			newConditions := []metav1.Condition{}
 			for _, cond := range statuses[listener.Name].Conditions {
-				switch gatewayv1alpha2.ListenerConditionType(cond.Type) {
+				// shut up linter, there's a default
+				switch gatewayv1alpha2.ListenerConditionType(cond.Type) { //nolint:exhaustive
 				case gatewayv1alpha2.ListenerConditionReady, gatewayv1alpha2.ListenerConditionConflicted:
 					continue
 				default:

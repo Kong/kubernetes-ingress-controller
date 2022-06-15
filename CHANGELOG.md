@@ -49,7 +49,7 @@
 
 ## [2.4.0]
 
-> Release date: TBD
+> Release date: 2022-06-14
 
 #### Added
 
@@ -141,6 +141,9 @@
   `*Route` objects and `Service`s that are set as backendRefs for those `*Route`s
   via `konghq.com/override` annotations.
   [#2554](https://github.com/Kong/kubernetes-ingress-controller/issues/2554)
+- Fixed a vulnerability that permission could be escalated by running custom lua
+  scripts.
+  [#2572](https://github.com/Kong/kubernetes-ingress-controller/pull/2572)
 
 ## [2.3.1]
 

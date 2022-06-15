@@ -450,6 +450,7 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 {{- if or .AcceptsIngressClassNameSpec .AcceptsIngressClassNameAnnotation}}
 
 	IngressClassName string
+	DisableIngressClassLookups bool
 {{- end}}
 }
 
@@ -481,13 +482,15 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 	}
 {{- end}}
 {{- if .AcceptsIngressClassNameAnnotation}}
-	err = c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
-		handler.EnqueueRequestsFromMapFunc(r.listClassless),
-		predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
-	)
-	if err != nil {
-		return err
+	if !r.DisableIngressClassLookups {
+		err = c.Watch(
+			&source.Kind{Type: &netv1.IngressClass{}},
+			handler.EnqueueRequestsFromMapFunc(r.listClassless),
+			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+		)
+		if err != nil {
+			return err
+		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 {{- end}}

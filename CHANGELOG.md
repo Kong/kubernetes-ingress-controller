@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.5.0](#250)
  - [2.4.0](#240)
  - [2.3.1](#231)
  - [2.3.0](#230)
@@ -46,6 +47,17 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.5.0]
+
+> Release date: TBD
+
+#### Fixed
+
+- Disabling the IngressClass controller now disables IngressClass watches in
+  other controllers. This fixes a crash on Kubernetes versions that do not
+  offer an IngressClass version that KIC can read.
+  [#2577](https://github.com/Kong/kubernetes-ingress-controller/issues/2577)
 
 ## [2.4.0]
 
@@ -1757,6 +1769,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.2.1...v2.3.0

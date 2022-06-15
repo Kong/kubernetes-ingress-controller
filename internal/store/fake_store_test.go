@@ -839,3 +839,28 @@ func TestFakeStoreReferencePolicy(t *testing.T) {
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two ReferencePolicies")
 }
+
+func TestFakeStoreGateway(t *testing.T) {
+	assert := assert.New(t)
+
+	policies := []*gatewayv1alpha2.Gateway{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: gatewayv1alpha2.GatewaySpec{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+			Spec: gatewayv1alpha2.GatewaySpec{},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{Gateways: policies})
+	assert.Nil(err)
+	assert.NotNil(store)
+	routes, err := store.ListGateways()
+	assert.Nil(err)
+	assert.Len(routes, 2, "expect two Gateways")
+}

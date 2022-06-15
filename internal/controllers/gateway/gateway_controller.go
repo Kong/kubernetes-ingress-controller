@@ -212,7 +212,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "reconciliation triggered but gateway does not exist, ignoring")
 			return ctrl.Result{Requeue: false}, nil
 		}
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{Requeue: true}, r.DataplaneClient.DeleteObject(gateway)
 	}
 	debug(log, gateway, "processing gateway")
 
@@ -224,11 +224,21 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	gwc := &gatewayv1alpha2.GatewayClass{}
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
 		debug(log, gateway, "could not retrieve gatewayclass for gateway", "gatewayclass", string(gateway.Spec.GatewayClassName))
-		return ctrl.Result{}, err
+		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
+			debug(log, gateway, "failed to delete object from data-plane, requeuing")
+			return ctrl.Result{}, err
+		}
+		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
 	}
 	if gwc.Spec.ControllerName != ControllerName {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
-		return ctrl.Result{}, nil
+		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
+			debug(log, gateway, "failed to delete object from data-plane, requeuing")
+			return ctrl.Result{}, err
+		}
+		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
 	}
 
 	// if there's any deletion timestamp on the object, we can simply ignore it. At this point
@@ -243,6 +253,14 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// reconciliation assumes unmanaged mode, in the future we may have a slot here for
 	// other gateway management modes.
 	result, err := r.reconcileUnmanagedGateway(ctx, log, gateway)
+	// reconcileUnmanagedGateway has side effects and modifies the referenced gateway object. dataplane updates must
+	// happen afterwards
+	if err == nil {
+		if err := r.DataplaneClient.UpdateObject(gateway); err != nil {
+			debug(log, gateway, "failed to update object in data-plane, requeueing")
+			return result, err
+		}
+	}
 	return result, err
 }
 

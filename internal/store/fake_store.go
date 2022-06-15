@@ -38,6 +38,7 @@ type FakeObjects struct {
 	TCPRoutes          []*gatewayv1alpha2.TCPRoute
 	TLSRoutes          []*gatewayv1alpha2.TLSRoute
 	ReferencePolicies  []*gatewayv1alpha2.ReferencePolicy
+	Gateways           []*gatewayv1alpha2.Gateway
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*configurationv1beta1.UDPIngress
 	Services           []*apiv1.Service
@@ -105,6 +106,12 @@ func NewFakeStore(
 	referencepolicyStore := cache.NewStore(keyFunc)
 	for _, referencepolicy := range objects.ReferencePolicies {
 		if err := referencepolicyStore.Add(referencepolicy); err != nil {
+			return nil, err
+		}
+	}
+	gatewayStore := cache.NewStore(keyFunc)
+	for _, gw := range objects.Gateways {
+		if err := gatewayStore.Add(gw); err != nil {
 			return nil, err
 		}
 	}
@@ -188,6 +195,7 @@ func NewFakeStore(
 			TCPRoute:        tcprouteStore,
 			TLSRoute:        tlsrouteStore,
 			ReferencePolicy: referencepolicyStore,
+			Gateway:         gatewayStore,
 			TCPIngress:      tcpIngressStore,
 			UDPIngress:      udpIngressStore,
 			Service:         serviceStore,

@@ -54,16 +54,21 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 // isRefAllowedByPolicy checks if backendRef is permitted by the provided namespace-indexed ReferencePolicyTo set,
 // allowed. allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
 // getPermittedForReferencePolicyFrom
-func isRefAllowedByPolicy(backendRef gatewayv1alpha2.BackendRef,
-	allowed map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo) bool {
-	if backendRef.Namespace == nil {
+func isRefAllowedByPolicy(
+	namespace *gatewayv1alpha2.Namespace,
+	name gatewayv1alpha2.ObjectName,
+	group *gatewayv1alpha2.Group,
+	kind *gatewayv1alpha2.Kind,
+	allowed map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo,
+) bool {
+	if namespace == nil {
 		// local references are always fine
 		return true
 	}
-	for _, to := range allowed[*backendRef.Namespace] {
-		if to.Group == *backendRef.Group && to.Kind == *backendRef.Kind {
+	for _, to := range allowed[*namespace] {
+		if to.Group == *group && to.Kind == *kind {
 			if to.Name != nil {
-				if *to.Name == backendRef.Name {
+				if *to.Name == name {
 					return true
 				}
 			} else {
@@ -125,7 +130,7 @@ func (p *Parser) generateKongServiceFromBackendRef(
 	}, policies)
 
 	for _, backendRef := range backendRefs {
-		if isRefAllowedByPolicy(backendRef, allowed) {
+		if isRefAllowedByPolicy(backendRef.Namespace, backendRef.Name, backendRef.Group, backendRef.Kind, allowed) {
 			backend := kongstate.ServiceBackend{
 				Name: string(backendRef.Name),
 				PortDef: kongstate.PortDef{

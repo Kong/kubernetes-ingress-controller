@@ -87,6 +87,7 @@ type Storer interface {
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
 	ListReferencePolicies() ([]*gatewayv1alpha2.ReferencePolicy, error)
+	ListGateways() ([]*gatewayv1alpha2.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
@@ -132,6 +133,7 @@ type CacheStores struct {
 	TCPRoute        cache.Store
 	TLSRoute        cache.Store
 	ReferencePolicy cache.Store
+	Gateway         cache.Store
 
 	// Kong Stores
 	Plugin        cache.Store
@@ -161,6 +163,7 @@ func NewCacheStores() CacheStores {
 		TCPRoute:        cache.NewStore(keyFunc),
 		TLSRoute:        cache.NewStore(keyFunc),
 		ReferencePolicy: cache.NewStore(keyFunc),
+		Gateway:         cache.NewStore(keyFunc),
 		Plugin:          cache.NewStore(keyFunc),
 		ClusterPlugin:   cache.NewStore(clusterResourceKeyFunc),
 		Consumer:        cache.NewStore(keyFunc),
@@ -250,6 +253,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.TLSRoute.Get(obj)
 	case *gatewayv1alpha2.ReferencePolicy:
 		return c.ReferencePolicy.Get(obj)
+	case *gatewayv1alpha2.Gateway:
+		return c.Gateway.Get(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -311,6 +316,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.TLSRoute.Add(obj)
 	case *gatewayv1alpha2.ReferencePolicy:
 		return c.ReferencePolicy.Add(obj)
+	case *gatewayv1alpha2.Gateway:
+		return c.Gateway.Add(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -373,6 +380,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.TLSRoute.Delete(obj)
 	case *gatewayv1alpha2.ReferencePolicy:
 		return c.ReferencePolicy.Delete(obj)
+	case *gatewayv1alpha2.Gateway:
+		return c.Gateway.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
 	// ----------------------------------------------------------------------------
@@ -615,6 +624,22 @@ func (s Store) ListReferencePolicies() ([]*gatewayv1alpha2.ReferencePolicy, erro
 		return nil, err
 	}
 	return policies, nil
+}
+
+// ListGateways returns the list of Gateways in the Gateway cache store.
+func (s Store) ListGateways() ([]*gatewayv1alpha2.Gateway, error) {
+	var gateways []*gatewayv1alpha2.Gateway
+	if err := cache.ListAll(s.stores.Gateway, labels.NewSelector(),
+		func(ob interface{}) {
+			gw, ok := ob.(*gatewayv1alpha2.Gateway)
+			if ok {
+				gateways = append(gateways, gw)
+			}
+		},
+	); err != nil {
+		return nil, err
+	}
+	return gateways, nil
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from

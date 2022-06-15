@@ -232,6 +232,10 @@ func getListenerStatus(
 			portToProtocol[listener.Port] = listener.Protocol
 			portToHostname[listener.Port][hostname] = true
 		} else {
+			// TODO at the moment, this is a bit of a lie. because Kong serves all HTTP routes on all HTTP ports, we
+			// would need to check compatibility across _all_ ports with an HTTP listen. limiting HTTP routes to their
+			// Listener's port only aligns this with the spec
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/2606
 			if !canSharePort(listener.Protocol, portToProtocol[listener.Port]) {
 				status.Conditions = append(status.Conditions, metav1.Condition{
 					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),

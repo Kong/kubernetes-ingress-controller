@@ -39,7 +39,7 @@ var knativeMinKubernetesVersion = semver.MustParse("1.22.0")
 
 func TestKnativeIngress(t *testing.T) {
 	if clusterVersion.LT(knativeMinKubernetesVersion) {
-		t.Skip("knative tests can't be run on cluster versions prior to 1.22")
+		t.Skip("knative tests can't be run on cluster versions prior to", knativeMinKubernetesVersion)
 	}
 
 	t.Parallel()

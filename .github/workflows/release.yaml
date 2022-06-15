@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'The version to release'
+        description: 'The version to release (e.g. v1.2.3)'
         required: true
       latest:
         description: 'Whether to tag this release latest'

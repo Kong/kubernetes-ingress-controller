@@ -14,7 +14,7 @@ const (
 	//
 	// NOTE: the current default is based on observed latency in a CI environment using
 	// the GKE cloud provider with the Kong Admin API.
-	DefaultTimeoutSeconds float32 = 10.0
+	DefaultTimeoutSeconds float32 = 30.0
 )
 
 // -----------------------------------------------------------------------------

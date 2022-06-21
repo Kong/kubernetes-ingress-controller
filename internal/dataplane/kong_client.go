@@ -358,6 +358,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.prometheusMetrics,
 	)
 	if err != nil {
+		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
+			c.logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
+		}
 		// ship diagnostics if enabled
 		if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
 			select {

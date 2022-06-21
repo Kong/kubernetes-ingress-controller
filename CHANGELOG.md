@@ -52,6 +52,12 @@
 
 > Release date: TBD
 
+#### Added
+
+- Increased the default Kong admin API timeout from 10s to 30s and added a
+  log mentioning the flag to increase it further.
+  [#2594](https://github.com/Kong/kubernetes-ingress-controller/issues/2594)
+
 #### Fixed
 
 - Disabling the IngressClass controller now disables IngressClass watches in

@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	httpBinImage     = "kennethreitz/httpbin"
+	httpBinImage     = "kong/httpbin:0.1.0"
 	ingressClass     = "kong"
 	namespace        = "kong"
 	adminServiceName = "kong-admin"

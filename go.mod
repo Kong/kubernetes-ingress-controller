@@ -25,15 +25,15 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.4
 	github.com/tidwall/gjson v1.14.1
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d
 	google.golang.org/api v0.84.0
 	google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac
-	k8s.io/api v0.24.1
+	k8s.io/api v0.24.2
 	k8s.io/apiextensions-apiserver v0.24.1
-	k8s.io/apimachinery v0.24.1
-	k8s.io/client-go v0.24.1
+	k8s.io/apimachinery v0.24.2
+	k8s.io/client-go v0.24.2
 	k8s.io/component-base v0.24.1
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77

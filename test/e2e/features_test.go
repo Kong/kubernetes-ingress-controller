@@ -22,6 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -62,12 +64,11 @@ nodes:
 	admissionScriptPath   = "../../hack/deploy-admission-controller.sh"
 )
 
-var (
-	// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
-	// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
-	tlsPairs = []TLSPair{
-		{
-			Cert: `-----BEGIN CERTIFICATE-----
+// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
+// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
+var tlsPairs = []TLSPair{
+	{
+		Cert: `-----BEGIN CERTIFICATE-----
 MIICTDCCAdKgAwIBAgIUOe9HN8v1eedsZXur5uXAwJkOSG4wCgYIKoZIzj0EAwIw
 XTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
 dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEWMBQGA1UEAwwNZmlyc3QuZXhhbXBsZTAe
@@ -82,15 +83,15 @@ SM49BAMCA2gAMGUCMQC7rKXFcTAfoTSw5m2/ALseXru/xZC5t3Y7yQ+zSaneFMvQ
 KvXcO0/RGYeqLmS58C4CMGoJva3Ad5LaZ7qgMkahhLdopePb0U/GAQqIsWhHfjOT
 Il2dwxMvntBECtd0uXeKHQ==
 -----END CERTIFICATE-----`,
-			Key: `-----BEGIN PRIVATE KEY-----
+		Key: `-----BEGIN PRIVATE KEY-----
 MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAA9OHUgH4O/xF0/qyQ
 t3ZSX0/6IDilnyM1ayoUSUOfNcELUd2UZVAuZgP10f6cMUWhZANiAAR2pbLcSQhX
 4gD6IyPJiRN7lxZ8aPbi6qyPyjvoTJc6DPjMuJuJgkdSC8wye1XFsI295WGl5gbq
 JsXQyJOqU6pHg6mjTEeyRxN9HbfEpH+Zp7GZ2KuTTGzi3wnhCPqzic4=
 -----END PRIVATE KEY-----`,
-		},
-		{
-			Cert: `-----BEGIN CERTIFICATE-----
+	},
+	{
+		Cert: `-----BEGIN CERTIFICATE-----
 MIICTzCCAdSgAwIBAgIUOOTCdVckt76c9OSeGHyf+OrLU+YwCgYIKoZIzj0EAwIw
 XjELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
 dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEXMBUGA1UEAwwOc2Vjb25kLmV4YW1wbGUw
@@ -105,15 +106,14 @@ KoZIzj0EAwIDaQAwZgIxAPRJkWfSdIQMr2R77RgCicR+adD/mMxZra2SoL7qSMyq
 3iXLIXauNP9ar3tt1uZE8wIxAM4C6G4uoQ0dydhcgQVhlgB6GaqO18AEDYPzQjir
 dV2Bs8EBkYBx87PmZ+e/S7g9Ug==
 -----END CERTIFICATE-----`,
-			Key: `-----BEGIN PRIVATE KEY-----
+		Key: `-----BEGIN PRIVATE KEY-----
 MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDBVtvjDBFke/k2Skezl
 h63g1q5IHCQM7wr1T43m5ACKZQt0ZDE1jfm1BYKk1omNpeChZANiAARwk2G6qdz9
 r+Wg7oZDvta1TQInW9FHJwnbcqGcdPjqs9+QLqvxjWi72UWLMlukh1RmkVoT4d40
 PMxZ3NvEwhsJgDJ82D7OUR2G7wZtgUj/WFj14XOofpZJmhzTQrtbbuc=
 -----END PRIVATE KEY-----`,
-		},
-	}
-)
+	},
+}
 
 // TestWebhookUpdate checks that the webhook updates the certificate indicated by --admission-webhook-cert-file when
 // the mounted Secret updates. This requires E2E because we can't mount Secrets with the locally-run integration
@@ -218,7 +218,8 @@ func TestWebhookUpdate(t *testing.T) {
 					Name: "admission-cert",
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
-							SecretName: "admission-cert"},
+							SecretName: "admission-cert",
+						},
 					},
 				})
 
@@ -285,8 +286,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
 
-	t.Logf("deploying Gateway APIs CRDs from %s", gatewayCRDsURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), gatewayCRDsURL))
+	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)

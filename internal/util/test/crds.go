@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -16,8 +18,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	kongCRDsKustomize    = "../../config/crd/"
-	gatewayCRDsKustomize = "https://github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.2"
+	kongCRDsKustomize = "../../config/crd/"
 )
 
 func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
@@ -38,14 +39,16 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to deploy kong CRDs STDOUT=(%s) STDERR=(%s): %w", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
 	}
+	fmt.Printf("INFO: running kubectl kustomize for Kong CRDs (args: %v)\n", args)
 	kongCRDYAML := stdout.String()
 
 	// gather the YAML to deploy Gateway CRDs
 	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	args = []string{"--kubeconfig", kubeconfig.Name(), "kustomize", gatewayCRDsKustomize}
+	args = []string{"--kubeconfig", kubeconfig.Name(), "kustomize", consts.GatewayCRDsKustomizeURL}
 	cmd = exec.CommandContext(ctx, "kubectl", args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
+	fmt.Printf("INFO: running kubectl kustomize for Gateway CRDs (args: %v)\n", args)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to deploy gateway CRDs STDOUT=(%s) STDERR=(%s): %w", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
 	}

@@ -20,8 +20,8 @@ body:
     label: "**For all releases** Github Workflow Test Matrix Checkup"
     options:
       - label: check the testing workflow ([.github/workflows/test.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/test.yaml)) and ensure that all matrix versions ([.github/workflows/e2e.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/e2e.yaml) and [.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
-      - label: Kubernetes
-      - label: Istio
+      - label: Kubernetes (via [KIND](https://hub.docker.com/r/kindest/node/tags) and the latest image available when creating a new rapid channel cluster from the GKE new cluster wizard)
+      - label: Istio (via [Istio's releases page](https://github.com/istio/istio/releases))
 - type: checkboxes
   id: release_branch
   attributes:

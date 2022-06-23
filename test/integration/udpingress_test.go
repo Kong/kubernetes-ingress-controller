@@ -108,14 +108,14 @@ func TestUDPIngressEssentials(t *testing.T) {
 			},
 		}},
 	}
-	c, err := clientset.NewForConfig(env.Cluster().Config())
+	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
-	udp, err = c.ConfigurationV1beta1().UDPIngresses(ns.Name).Create(ctx, udp, metav1.CreateOptions{})
+	udp, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("ensuring UDPIngress %s is cleaned up", udp.Name)
-		if err := c.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
+		if err := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -134,7 +134,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	}
 
 	t.Logf("checking udpingress %s status readiness.", udp.Name)
-	ingCli := c.ConfigurationV1beta1().UDPIngresses(ns.Name)
+	ingCli := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name)
 	assert.Eventually(t, func() bool {
 		curIng, err := ingCli.Get(ctx, udp.Name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
@@ -157,7 +157,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
-	assert.NoError(t, c.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
+	assert.NoError(t, gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		if err != nil {
@@ -246,14 +246,14 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			},
 		}},
 	}
-	c, err := clientset.NewForConfig(env.Cluster().Config())
+	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
-	udp, err = c.ConfigurationV1beta1().UDPIngresses(ns.Name).Create(ctx, udp, metav1.CreateOptions{})
+	udp, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("ensuring UDPIngress %s is cleaned up", udp.Name)
-		if err := c.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
+		if err := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -269,7 +269,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	dnsTCPClient := dns.Client{Net: "tcp"}
 
 	t.Logf("checking udpingress %s status readiness.", udp.Name)
-	ingCli := c.ConfigurationV1beta1().UDPIngresses(ns.Name)
+	ingCli := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name)
 	assert.Eventually(t, func() bool {
 		curIng, err := ingCli.Get(ctx, udp.Name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
@@ -311,12 +311,12 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		}},
 	}
 	assert.NoError(t, err)
-	tcp, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
+	tcp, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	defer func() {
 		t.Logf("ensuring TCPIngress %s is cleaned up", tcp.Name)
-		if err := c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
+		if err := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
@@ -324,7 +324,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	}()
 
 	t.Logf("checking tcpingress %s status readiness.", tcp.Name)
-	tcpIngCli := c.ConfigurationV1beta1().TCPIngresses(ns.Name)
+	tcpIngCli := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name)
 	assert.Eventually(t, func() bool {
 		curIng, err := tcpIngCli.Get(ctx, tcp.Name, metav1.GetOptions{})
 		if err != nil || curIng == nil {
@@ -354,7 +354,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 
 	// Cleanup
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
-	assert.NoError(t, c.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
+	assert.NoError(t, gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
 		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
 		if err != nil {
@@ -366,7 +366,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("tearing down TCPIngress %s and ensuring backends are torn down", tcp.Name)
-	assert.NoError(t, c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
+	assert.NoError(t, gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
 		_, _, err := dnsTCPClient.Exchange(query, fmt.Sprintf("%s:8888", proxyURL.Hostname()))
 		if err != nil {

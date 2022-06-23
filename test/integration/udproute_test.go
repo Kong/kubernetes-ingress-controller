@@ -21,15 +21,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 )
 
 const testdomain = "konghq.com"
 
 func TestUDPRouteEssentials(t *testing.T) {
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns, cleaner := setup(t)
+	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+
 	t.Log("locking UDP port")
 	udpMutex.Lock()
 	defer func() {
@@ -38,59 +37,28 @@ func TestUDPRouteEssentials(t *testing.T) {
 		udpMutex.Unlock()
 	}()
 
-	// TODO consolidate into suite and use for all GW tests?
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 	t.Log("deploying a supported gatewayclass to the test cluster")
-	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-	gwc := &gatewayv1alpha2.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
-		},
-	}
-	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	defer func() {
-		t.Log("cleaning up gatewayclasses")
-		if err := c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
-
-	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
-	gw := &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong",
-			Annotations: map[string]string{
-				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
-			},
-		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "udp",
-				Protocol: gatewayv1alpha2.UDPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort),
-			}},
-		},
-	}
-	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+	t.Log("deploying a supported gatewayclass to the test cluster")
+	gatewayClassName := uuid.NewString()
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
+	cleaner.Add(gwc)
 
-	defer func() {
-		t.Log("cleaning up gateways")
-		if err := c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode and port 9999")
+	gatewayName := uuid.NewString()
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+		gw.Name = gatewayName
+		gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
+			Name:     "udp",
+			Protocol: gatewayv1alpha2.UDPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort),
+		}}
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
 
 	t.Log("configuring coredns corefile")
 	cfgmap1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
@@ -172,7 +140,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 	t.Logf("creating a udproute to access deployment %s via kong", deployment1.Name)
 	udpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort)
-	udproute := &gatewayv1alpha2.UDPRoute{
+	udpRoute := &gatewayv1alpha2.UDPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
@@ -180,7 +148,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 		Spec: gatewayv1alpha2.UDPRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
 				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name: gatewayv1alpha2.ObjectName(gw.Name),
+					Name: gatewayv1alpha2.ObjectName(gatewayName),
 				}},
 			},
 			Rules: []gatewayv1alpha2.UDPRouteRule{{
@@ -205,12 +173,12 @@ func TestUDPRouteEssentials(t *testing.T) {
 		},
 	}
 
-	udproute, err = c.GatewayV1alpha2().UDPRoutes(ns.Name).Create(ctx, udproute, metav1.CreateOptions{})
+	udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Create(ctx, udpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("cleaning up the udproute %s", udproute.Name)
-		if err := c.GatewayV1alpha2().UDPRoutes(ns.Name).Delete(ctx, udproute.Name, metav1.DeleteOptions{}); err != nil {
+		t.Logf("cleaning up the udproute %s", udpRoute.Name)
+		if err := gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Delete(ctx, udpRoute.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
@@ -218,26 +186,28 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}()
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	udpeventuallyGatewayIsLinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
-	t.Logf("checking DNS to resolve via UDPIngress %s", udproute.Name)
+	t.Logf("checking DNS to resolve via UDPIngress %s", udpRoute.Name)
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Log("removing the parentrefs from the UDPRoute")
-	oldParentRefs := udproute.Spec.ParentRefs
+	oldParentRefs := udpRoute.Spec.ParentRefs
 	require.Eventually(t, func() bool {
-		udproute, err = c.GatewayV1alpha2().UDPRoutes(ns.Name).Get(ctx, udproute.Name, metav1.GetOptions{})
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		udproute.Spec.ParentRefs = nil
-		udproute, err = c.GatewayV1alpha2().UDPRoutes(ns.Name).Update(ctx, udproute, metav1.UpdateOptions{})
+		udpRoute.Spec.ParentRefs = nil
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Update(ctx, udpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	udpeventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the parentRefs now removed")
 	// negative checks for these tests check that DNS queries eventually start to fail, presumably because they time
@@ -250,29 +220,30 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
-		udproute, err = c.GatewayV1alpha2().UDPRoutes(ns.Name).Get(ctx, udproute.Name, metav1.GetOptions{})
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		udproute.Spec.ParentRefs = oldParentRefs
-		udproute, err = c.GatewayV1alpha2().UDPRoutes(ns.Name).Update(ctx, udproute, metav1.UpdateOptions{})
+		udpRoute.Spec.ParentRefs = oldParentRefs
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Update(ctx, udpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	udpeventuallyGatewayIsLinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-	t.Logf("checking DNS to resolve via UDPIngress %s", udproute.Name)
+	t.Logf("checking DNS to resolve via UDPIngress %s", udpRoute.Name)
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
-	oldGWCName := gwc.Name
-	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	udpeventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
@@ -281,33 +252,26 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
-	gwc = &gatewayv1alpha2.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: oldGWCName,
-		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
-		},
-	}
-	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	udpeventuallyGatewayIsLinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of UDPRoutes and the route becomes available again")
-	t.Logf("checking DNS to resolve via UDPIngress %s", udproute.Name)
+	t.Logf("checking DNS to resolve via UDPIngress %s", udpRoute.Name)
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
-	oldGWName := gw.Name
-	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	udpeventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
@@ -316,27 +280,19 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gw = &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: oldGWName,
-			Annotations: map[string]string{
-				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
-			},
-		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "udp",
-				Protocol: gatewayv1alpha2.UDPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort),
-			}},
-		},
-	}
-	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+		gw.Name = gatewayName
+		gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
+			Name:     "udp",
+			Protocol: gatewayv1alpha2.UDPProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort),
+		}}
+	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	udpeventuallyGatewayIsLinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of UDPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
@@ -346,10 +302,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 	t.Log("adding another backendRef to load-balance the DNS between multiple CoreDNS pods")
 	require.Eventually(t, func() bool {
-		udproute, err = c.GatewayV1alpha2().UDPRoutes(ns.Name).Get(ctx, udproute.Name, metav1.GetOptions{})
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		udproute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{
+		udpRoute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{
 			{
 				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 					Name: gatewayv1alpha2.ObjectName(service.Name),
@@ -364,7 +320,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			},
 		}
 
-		udproute, err = c.GatewayV1alpha2().UDPRoutes(ns.Name).Update(ctx, udproute, metav1.UpdateOptions{})
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Update(ctx, udpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
 
@@ -375,57 +331,17 @@ func TestUDPRouteEssentials(t *testing.T) {
 	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
-	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
-	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	udpeventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, udproute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err != nil
-	}, ingressWait, waitTick)
-}
-
-// TODO consolidate shared util gateway linked funcs
-// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
-func udpeventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
-	require.Eventually(t, func() bool {
-		// gather a fresh copy of the UDPRoute
-		udproute, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		require.NoError(t, err)
-
-		// determine if there is a link to a supported Gateway
-		for _, parentStatus := range udproute.Status.Parents {
-			if parentStatus.ControllerName == gateway.ControllerName {
-				// supported Gateway link was found
-				return true
-			}
-		}
-
-		// if no link was found yet retry
-		return false
-	}, ingressWait, waitTick)
-}
-
-// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
-func udpeventuallyGatewayIsUnlinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
-	require.Eventually(t, func() bool {
-		// gather a fresh copy of the UDPRoute
-		udproute, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		require.NoError(t, err)
-
-		// determine if there is a link to a supported Gateway
-		for _, parentStatus := range udproute.Status.Parents {
-			if parentStatus.ControllerName == gateway.ControllerName {
-				// a supported Gateway link was found retry
-				return false
-			}
-		}
-
-		// linked gateway is not present, all set
-		return true
 	}, ingressWait, waitTick)
 }
 

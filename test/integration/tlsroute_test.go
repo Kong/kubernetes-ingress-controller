@@ -25,13 +25,13 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 const (
 	tlsRouteHostname      = "tlsroute.kong.example"
 	tlsRouteExtraHostname = "extratlsroute.kong.example"
+	tlsSecretName         = "secret-test"
 )
 
 var (
@@ -104,29 +104,17 @@ func TestTLSRouteEssentials(t *testing.T) {
 
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
-	// TODO consolidate into suite and use for all GW tests?
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
-	t.Log("deploying a supported gatewayclass to the test cluster")
-	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
+
+	t.Log("getting gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	gwc := &gatewayv1alpha2.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
-		},
-	}
-	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(gwc)
 
 	t.Log("configuring secrets")
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
-				Name:      "secret1",
+				Name:      tlsSecretName,
 				Namespace: ns.Name,
 			},
 			Data: map[string][]byte{
@@ -141,35 +129,33 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(secret1)
 
-	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
+	t.Log("deploying a supported gatewayclass to the test cluster")
+	gatewayClassName := uuid.NewString()
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode and port 8899")
+	gatewayName := uuid.NewString()
 	hostname := gatewayv1alpha2.Hostname(tlsRouteHostname)
-	gw := &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong",
-			Annotations: map[string]string{
-				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
-			},
-		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "tls",
-				Protocol: gatewayv1alpha2.TLSProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
-				Hostname: &hostname,
-				TLS: &gatewayv1alpha2.GatewayTLSConfig{
-					CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
-						{
-							Name: gatewayv1alpha2.ObjectName("secret1"),
-						},
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+		gw.Name = gatewayName
+		gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
+			Name:     "tls",
+			Protocol: gatewayv1alpha2.TLSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
+			Hostname: &hostname,
+			TLS: &gatewayv1alpha2.GatewayTLSConfig{
+				CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+					{
+						Name: gatewayv1alpha2.ObjectName(tlsSecretName),
 					},
 				},
-			}},
-		},
-	}
-	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+			},
+		}}
+	})
 	require.NoError(t, err)
-	cleaner.Add(gw)
+	cleaner.Add(gateway)
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
 
@@ -215,7 +201,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	cleaner.Add(service2)
 
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
-	tlsroute := &gatewayv1alpha2.TLSRoute{
+	tlsRoute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
@@ -223,7 +209,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 		Spec: gatewayv1alpha2.TLSRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
 				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name: gatewayv1alpha2.ObjectName(gw.Name),
+					Name: gatewayv1alpha2.ObjectName(gatewayName),
 				}},
 			},
 			Hostnames: []gatewayv1alpha2.Hostname{tlsRouteHostname},
@@ -237,12 +223,13 @@ func TestTLSRouteEssentials(t *testing.T) {
 			}},
 		},
 	}
-	tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsroute, metav1.CreateOptions{})
+	tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(tlsroute)
+	cleaner.Add(tlsRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	tlseventuallyGatewayIsLinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.Eventually(t, func() bool {
@@ -252,17 +239,18 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("removing the parentrefs from the TLSRoute")
-	oldParentRefs := tlsroute.Spec.ParentRefs
+	oldParentRefs := tlsRoute.Spec.ParentRefs
 	require.Eventually(t, func() bool {
-		tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsroute.Name, metav1.GetOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		tlsroute.Spec.ParentRefs = nil
-		tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsroute, metav1.UpdateOptions{})
+		tlsRoute.Spec.ParentRefs = nil
+		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	tlseventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
 	require.Eventually(t, func() bool {
@@ -273,15 +261,16 @@ func TestTLSRouteEssentials(t *testing.T) {
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
-		tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsroute.Name, metav1.GetOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		tlsroute.Spec.ParentRefs = oldParentRefs
-		tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsroute, metav1.UpdateOptions{})
+		tlsRoute.Spec.ParentRefs = oldParentRefs
+		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	tlseventuallyGatewayIsLinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
 	require.Eventually(t, func() bool {
@@ -291,11 +280,11 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
-	oldGWCName := gwc.Name
-	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	tlseventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
@@ -305,19 +294,12 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
-	gwc = &gatewayv1alpha2.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: oldGWCName,
-		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
-		},
-	}
-	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	tlseventuallyGatewayIsLinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TLSRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
@@ -327,11 +309,11 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
-	oldGWName := gw.Name
-	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	tlseventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
@@ -341,35 +323,27 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gw = &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: oldGWName,
-			Annotations: map[string]string{
-				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
-			},
-		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "tls",
-				Protocol: gatewayv1alpha2.TLSProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
-				Hostname: &hostname,
-				TLS: &gatewayv1alpha2.GatewayTLSConfig{
-					CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
-						{
-							Name: gatewayv1alpha2.ObjectName("secret1"),
-						},
+	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+		gw.Name = gatewayName
+		gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
+			Name:     "tls",
+			Protocol: gatewayv1alpha2.TLSProtocolType,
+			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
+			Hostname: &hostname,
+			TLS: &gatewayv1alpha2.GatewayTLSConfig{
+				CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+					{
+						Name: gatewayv1alpha2.ObjectName(tlsSecretName),
 					},
 				},
-			}},
-		},
-	}
-	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+			},
+		}}
+	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	tlseventuallyGatewayIsLinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TLSRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
@@ -380,10 +354,10 @@ func TestTLSRouteEssentials(t *testing.T) {
 
 	t.Log("adding an additional backendRef to the TLSRoute")
 	require.Eventually(t, func() bool {
-		tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsroute.Name, metav1.GetOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		tlsroute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{
+		tlsRoute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{
 			{
 				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 					Name: gatewayv1alpha2.ObjectName(service.Name),
@@ -398,7 +372,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 			},
 		}
 
-		tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsroute, metav1.UpdateOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
 
@@ -415,11 +389,12 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
-	require.NoError(t, c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
-	require.NoError(t, c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	tlseventuallyGatewayIsUnlinkedInStatus(t, c, ns.Name, tlsroute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.TLSProtocolType, ns.Name, tlsRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
@@ -439,6 +414,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
 	}()
+
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
@@ -446,29 +422,16 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.AddNamespace(otherNs)
 
-	// TODO consolidate into suite and use for all GW tests?
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
-	t.Log("deploying a supported gatewayclass to the test cluster")
-	c, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	t.Log("getting the gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	gwc := &gatewayv1alpha2.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
-		},
-	}
-	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(gwc)
 
 	t.Log("configuring secrets")
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
-				Name:      "secret1",
+				Name:      tlsSecretName,
 				Namespace: ns.Name,
 			},
 			Data: map[string][]byte{
@@ -497,52 +460,43 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	cleaner.Add(secret2)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
-	hostname := gatewayv1alpha2.Hostname(tlsRouteHostname)
-	otherHostname := gatewayv1alpha2.Hostname(tlsRouteExtraHostname)
-	otherNamespace := gatewayv1alpha2.Namespace(otherNs.Name)
-	gw := &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong",
-			Annotations: map[string]string{
-				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
-			},
-		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gwc.Name),
-			Listeners: []gatewayv1alpha2.Listener{
-				{
-					Name:     "tls",
-					Protocol: gatewayv1alpha2.TLSProtocolType,
-					Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
-					Hostname: &hostname,
-					TLS: &gatewayv1alpha2.GatewayTLSConfig{
-						CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
-							{
-								Name: gatewayv1alpha2.ObjectName(secrets[0].Name),
-							},
-						},
-					},
-				},
-				{
-					Name:     "tlsother",
-					Protocol: gatewayv1alpha2.TLSProtocolType,
-					Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
-					Hostname: &otherHostname,
-					TLS: &gatewayv1alpha2.GatewayTLSConfig{
-						CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
-							{
-								Name:      gatewayv1alpha2.ObjectName(secrets[1].Name),
-								Namespace: &otherNamespace,
-							},
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+		hostname := gatewayv1alpha2.Hostname(tlsRouteHostname)
+		otherHostname := gatewayv1alpha2.Hostname(tlsRouteExtraHostname)
+		otherNamespace := gatewayv1alpha2.Namespace(otherNs.Name)
+		gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+			{
+				Name:     "tls",
+				Protocol: gatewayv1alpha2.TLSProtocolType,
+				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
+				Hostname: &hostname,
+				TLS: &gatewayv1alpha2.GatewayTLSConfig{
+					CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+						{
+							Name: gatewayv1alpha2.ObjectName(secrets[0].Name),
 						},
 					},
 				},
 			},
-		},
-	}
-	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
+			{
+				Name:     "tlsother",
+				Protocol: gatewayv1alpha2.TLSProtocolType,
+				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
+				Hostname: &otherHostname,
+				TLS: &gatewayv1alpha2.GatewayTLSConfig{
+					CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+						{
+							Name:      gatewayv1alpha2.ObjectName(secrets[1].Name),
+							Namespace: &otherNamespace,
+						},
+					},
+				},
+			},
+		}
+	})
+
 	require.NoError(t, err)
-	cleaner.Add(gw)
+	cleaner.Add(gateway)
 
 	secret2Name := gatewayv1alpha2.ObjectName(secrets[1].Name)
 	t.Logf("creating a reference policy that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
@@ -556,7 +510,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 				{
 					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 					Kind:      gatewayv1alpha2.Kind("Gateway"),
-					Namespace: gatewayv1alpha2.Namespace(gw.Namespace),
+					Namespace: gatewayv1alpha2.Namespace(gateway.Namespace),
 				},
 			},
 			To: []gatewayv1alpha2.ReferencePolicyTo{
@@ -569,7 +523,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 		},
 	}
 
-	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Create(ctx, policy, metav1.CreateOptions{})
+	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Create(ctx, policy, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(policy)
 
@@ -603,7 +557,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 		Spec: gatewayv1alpha2.TLSRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
 				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name: gatewayv1alpha2.ObjectName(gw.Name),
+					Name: gatewayv1alpha2.ObjectName(gateway.Name),
 				}},
 			},
 			Hostnames: []gatewayv1alpha2.Hostname{tlsRouteHostname, tlsRouteExtraHostname},
@@ -617,7 +571,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 			}},
 		},
 	}
-	tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsroute, metav1.CreateOptions{})
+	tlsroute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsroute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(tlsroute)
 
@@ -638,7 +592,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	t.Log("verifying that using the wrong name in the ReferencePolicy removes the related certificate")
 	badName := gatewayv1alpha2.ObjectName("garbage")
 	policy.Spec.To[0].Name = &badName
-	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -649,54 +603,13 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 
 	t.Log("verifying the certificate returns when using a ReferencePolicy with no name restrictions")
 	policy.Spec.To[0].Name = nil
-	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
 		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
 			testUUID, tlsRouteExtraHostname, tlsRouteExtraHostname)
 		return err == nil && responded == true
-	}, ingressWait, waitTick)
-}
-
-// TODO consolidate shared util gateway linked funcs
-// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
-func tlseventuallyGatewayIsLinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
-	require.Eventually(t, func() bool {
-		// gather a fresh copy of the TLSRoute
-		tlsroute, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		require.NoError(t, err)
-
-		// determine if there is a link to a supported Gateway
-		for _, parentStatus := range tlsroute.Status.Parents {
-			if parentStatus.ControllerName == gateway.ControllerName {
-				// supported Gateway link was found
-				return true
-			}
-		}
-
-		// if no link was found yet retry
-		return false
-	}, ingressWait, waitTick)
-}
-
-// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2461
-func tlseventuallyGatewayIsUnlinkedInStatus(t *testing.T, c *gatewayclient.Clientset, namespace, name string) {
-	require.Eventually(t, func() bool {
-		// gather a fresh copy of the TLSRoute
-		tlsroute, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		require.NoError(t, err)
-
-		// determine if there is a link to a supported Gateway
-		for _, parentStatus := range tlsroute.Status.Parents {
-			if parentStatus.ControllerName == gateway.ControllerName {
-				// a supported Gateway link was found retry
-				return false
-			}
-		}
-
-		// linked gateway is not present, all set
-		return true
 	}, ingressWait, waitTick)
 }
 

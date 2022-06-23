@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
@@ -102,6 +103,9 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	k8sClient = env.Cluster().Client()
 
+	cleaner := clusters.NewCleaner(env.Cluster())
+	defer cleaner.Cleanup(ctx)
+
 	fmt.Printf("INFO: reconfiguring the kong admin service as LoadBalancer type\n")
 	svc, err := env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Get(ctx, kong.DefaultAdminServiceName, metav1.GetOptions{})
 	exitOnErr(err)
@@ -170,6 +174,14 @@ func TestMain(m *testing.M) {
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
 		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))
 	}
+
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	exitOnErr(err)
+
+	fmt.Println("INFO: Deploying the default GatewayClass")
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, managedGatewayClassName)
+	exitOnErr(err)
+	cleaner.Add(gwc)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()

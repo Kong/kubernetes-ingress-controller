@@ -232,10 +232,6 @@ func getListenerStatus(
 			portToProtocol[listener.Port] = listener.Protocol
 			portToHostname[listener.Port][hostname] = true
 		} else {
-			// TODO at the moment, this is a bit of a lie. because Kong serves all HTTP routes on all HTTP ports, we
-			// would need to check compatibility across _all_ ports with an HTTP listen. limiting HTTP routes to their
-			// Listener's port only aligns this with the spec
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/2606
 			if !canSharePort(listener.Protocol, portToProtocol[listener.Port]) {
 				status.Conditions = append(status.Conditions, metav1.Condition{
 					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
@@ -250,6 +246,13 @@ func getListenerStatus(
 				// Each Listener within the group specifies a Hostname that is unique within the group.
 				// As a special case, one Listener within a group may omit Hostname, in which case this Listener
 				// matches when no other Listener matches.
+
+				// TODO this only checks if a hostname is already used on a specific port, which is what the Gateway
+				// spec requires. However, Kong does not actually implement HTTP route separation by port: Kong serves
+				// all HTTP routes on all HTTP ports. Effectively, if you add an HTTP(S) Listener with hostname
+				// example.com on port 8000, and your Kong instance has a proxy_listen with both port 8000 and 8200,
+				// you have also added a phantom Listener for hostname example.com and port 8200, because Kong will
+				// serve the route on both. See https://github.com/Kong/kubernetes-ingress-controller/issues/2606
 				if conflictedHostnames[listener.Port] == nil {
 					conflictedHostnames[listener.Port] = map[gatewayv1alpha2.Hostname]bool{}
 				}

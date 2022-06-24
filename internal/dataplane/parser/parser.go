@@ -515,8 +515,6 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 }
 
 func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][]string) []certWrapper {
-	// map of cert public key + private key to certificate
-	//certs := make(map[string]certWrapper)
 	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs {

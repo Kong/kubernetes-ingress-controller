@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -92,6 +93,7 @@ func TestFakeStoreEmpty(t *testing.T) {
 
 func TestFakeStoreIngressV1beta1(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	ingresses := []*networkingv1beta1.Ingress{
 		{
@@ -154,14 +156,15 @@ func TestFakeStoreIngressV1beta1(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{IngressesV1beta1: ingresses})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	assert.Len(store.ListIngressesV1beta1(), 1)
 	assert.Len(store.ListIngressesV1(), 0)
 }
 
 func TestFakeStoreIngressV1(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	defaultClass := annotations.DefaultIngressClass
 	ingresses := []*networkingv1.Ingress{
@@ -258,14 +261,15 @@ func TestFakeStoreIngressV1(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{IngressesV1: ingresses})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	assert.Len(store.ListIngressesV1(), 2)
 	assert.Len(store.ListIngressesV1beta1(), 0)
 }
 
 func TestFakeStoreIngressClassV1(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	classes := []*networkingv1.IngressClass{
 		{
@@ -294,13 +298,14 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{IngressClassesV1: classes})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	assert.Len(store.ListIngressClassesV1(), 2)
 }
 
 func TestFakeStoreListTCPIngress(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	ingresses := []*configurationv1beta1.TCPIngress{
 		{
@@ -363,8 +368,8 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TCPIngresses: ingresses})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	ings, err := store.ListTCPIngresses()
 	assert.Nil(err)
 	assert.Len(ings, 1)
@@ -372,6 +377,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 
 func TestFakeStoreListKnativeIngress(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	ingresses := []*knative.Ingress{
 		{
@@ -435,8 +441,8 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{KnativeIngresses: ingresses})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	ings, err := store.ListKnativeIngresses()
 	assert.Len(ings, 1)
 	assert.Nil(err)
@@ -444,6 +450,7 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 
 func TestFakeStoreService(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	services := []*apiv1.Service{
 		{
@@ -454,8 +461,8 @@ func TestFakeStoreService(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Services: services})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	service, err := store.GetService("default", "foo")
 	assert.NotNil(service)
 	assert.Nil(err)
@@ -468,6 +475,7 @@ func TestFakeStoreService(t *testing.T) {
 
 func TestFakeStoreEndpiont(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	endpoints := []*apiv1.Endpoints{
 		{
@@ -478,8 +486,8 @@ func TestFakeStoreEndpiont(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Endpoints: endpoints})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	c, err := store.GetEndpointsForService("default", "foo")
 	assert.Nil(err)
 	assert.NotNil(c)
@@ -492,6 +500,7 @@ func TestFakeStoreEndpiont(t *testing.T) {
 
 func TestFakeStoreConsumer(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	consumers := []*configurationv1.KongConsumer{
 		{
@@ -505,8 +514,8 @@ func TestFakeStoreConsumer(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{KongConsumers: consumers})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	assert.Len(store.ListKongConsumers(), 1)
 	c, err := store.GetKongConsumer("default", "foo")
 	assert.Nil(err)
@@ -520,6 +529,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 
 func TestFakeStorePlugins(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	plugins := []*configurationv1.KongPlugin{
 		{
@@ -542,8 +552,8 @@ func TestFakeStorePlugins(t *testing.T) {
 		},
 	}
 	store, err = NewFakeStore(FakeObjects{KongPlugins: plugins})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	plugins, err = store.ListGlobalKongPlugins()
 	assert.NoError(err)
 	assert.Len(plugins, 0)
@@ -556,6 +566,7 @@ func TestFakeStorePlugins(t *testing.T) {
 
 func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	plugins := []*configurationv1.KongClusterPlugin{
 		{
@@ -565,8 +576,8 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	plugins, err = store.ListGlobalKongClusterPlugins()
 	assert.NoError(err)
 	assert.Len(plugins, 0)
@@ -599,8 +610,8 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 		},
 	}
 	store, err = NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	plugins, err = store.ListGlobalKongClusterPlugins()
 	assert.NoError(err)
 	assert.Len(plugins, 1)
@@ -617,6 +628,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 
 func TestFakeStoreSecret(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	secrets := []*apiv1.Secret{
 		{
@@ -627,8 +639,8 @@ func TestFakeStoreSecret(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	secret, err := store.GetSecret("default", "foo")
 	assert.Nil(err)
 	assert.NotNil(secret)
@@ -641,6 +653,7 @@ func TestFakeStoreSecret(t *testing.T) {
 
 func TestFakeKongIngress(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	kongIngresses := []*configurationv1.KongIngress{
 		{
@@ -651,8 +664,8 @@ func TestFakeKongIngress(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{KongIngresses: kongIngresses})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	kingress, err := store.GetKongIngress("default", "foo")
 	assert.Nil(err)
 	assert.NotNil(kingress)
@@ -665,6 +678,7 @@ func TestFakeKongIngress(t *testing.T) {
 
 func TestFakeStore_ListCACerts(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	secrets := []*apiv1.Secret{
 		{
@@ -675,8 +689,8 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	certs, err := store.ListCACerts()
 	assert.Nil(err)
 	assert.Len(certs, 0)
@@ -708,8 +722,8 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 		},
 	}
 	store, err = NewFakeStore(FakeObjects{Secrets: secrets})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	certs, err = store.ListCACerts()
 	assert.Nil(err)
 	assert.Len(certs, 2, "expect two secrets as CA certificates")
@@ -717,6 +731,7 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 
 func TestFakeStoreHTTPRoute(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	classes := []*gatewayv1alpha2.HTTPRoute{
 		{
@@ -733,8 +748,8 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	routes, err := store.ListHTTPRoutes()
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two HTTPRoutes")
@@ -742,6 +757,7 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 
 func TestFakeStoreUDPRoute(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	classes := []*gatewayv1alpha2.UDPRoute{
 		{
@@ -758,8 +774,8 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	routes, err := store.ListUDPRoutes()
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two UDPRoutes")
@@ -767,6 +783,7 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 
 func TestFakeStoreTCPRoute(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	classes := []*gatewayv1alpha2.TCPRoute{
 		{
@@ -783,8 +800,8 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TCPRoutes: classes})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	routes, err := store.ListTCPRoutes()
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two TCPRoutes")
@@ -792,6 +809,7 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 
 func TestFakeStoreTLSRoute(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	classes := []*gatewayv1alpha2.TLSRoute{
 		{
@@ -808,8 +826,8 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TLSRoutes: classes})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	routes, err := store.ListTLSRoutes()
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two TLSRoutes")
@@ -817,6 +835,7 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 
 func TestFakeStoreReferencePolicy(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	policies := []*gatewayv1alpha2.ReferencePolicy{
 		{
@@ -833,8 +852,8 @@ func TestFakeStoreReferencePolicy(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{ReferencePolicies: policies})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	routes, err := store.ListReferencePolicies()
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two ReferencePolicies")
@@ -842,6 +861,7 @@ func TestFakeStoreReferencePolicy(t *testing.T) {
 
 func TestFakeStoreGateway(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	policies := []*gatewayv1alpha2.Gateway{
 		{
@@ -858,8 +878,8 @@ func TestFakeStoreGateway(t *testing.T) {
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Gateways: policies})
-	assert.Nil(err)
-	assert.NotNil(store)
+	require.Nil(err)
+	require.NotNil(store)
 	routes, err := store.ListGateways()
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two Gateways")

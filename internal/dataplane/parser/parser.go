@@ -429,84 +429,95 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 					}
 				}
 			}
-			if ready {
-				if listener.TLS != nil {
-					if len(listener.TLS.CertificateRefs) > 0 {
-						if len(listener.TLS.CertificateRefs) > 1 {
-							// TODO support cert_alt and key_alt if there are 2 SecretObjectReferences
-							// https://github.com/Kong/kubernetes-ingress-controller/issues/2604
+			if !ready {
+				continue
+			}
+			if listener.TLS != nil {
+				if len(listener.TLS.CertificateRefs) > 0 {
+					if len(listener.TLS.CertificateRefs) > 1 {
+						// TODO support cert_alt and key_alt if there are 2 SecretObjectReferences
+						// https://github.com/Kong/kubernetes-ingress-controller/issues/2604
+						log.WithFields(logrus.Fields{
+							"gateway":  gateway.Name,
+							"listener": listener.Name,
+						}).Error("Gateway Listeners with more than one certificateRef are not supported")
+						continue
+					}
+
+					ref := listener.TLS.CertificateRefs[0]
+
+					// SecretObjectReference is a misnomer; it can reference any Group+Kind, but defaults to Secret
+					if ref.Kind != nil {
+						if string(*ref.Kind) != "Secret" {
 							log.WithFields(logrus.Fields{
 								"gateway":  gateway.Name,
 								"listener": listener.Name,
-							}).Error("Gateway Listeners with more than one certificateRef are not supported")
-							continue
+							}).Error("CertificateRefs to kinds other than Secret are not supported")
 						}
-						namespace := gateway.Namespace
-						ref := listener.TLS.CertificateRefs[0]
-						// SecretObjectReference is a misnomer; it can reference any Group+Kind, but defaults to Secret
-						if ref.Kind != nil {
-							if string(*ref.Kind) != "Secret" {
-								log.WithFields(logrus.Fields{
-									"gateway":  gateway.Name,
-									"listener": listener.Name,
-								}).Error("CertificateRefs to kinds other than Secret are not supported")
-							}
-						}
-						if ref.Namespace != nil {
-							namespace = string(*ref.Namespace)
-						}
-						if namespace != gateway.Namespace {
-							allowed := getPermittedForReferencePolicyFrom(gatewayv1alpha2.ReferencePolicyFrom{
-								Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
-								Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
-								Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
-							}, policies)
-							if !isRefAllowedByPolicy(ref.Namespace, ref.Name, ref.Group, ref.Kind, allowed) {
-								log.WithFields(logrus.Fields{
-									"gateway":           gateway.Name,
-									"gateway_namespace": gateway.Namespace,
-									"listener":          listener.Name,
-									"secret_name":       string(ref.Name),
-									"secret_namespace":  namespace,
-								}).WithError(err).Error("secret reference not allowed by ReferencePolicy")
-								continue
-							}
-						}
-						secret, err := s.GetSecret(namespace, string(ref.Name))
-						if err != nil {
-							log.WithFields(logrus.Fields{
-								"gateway":          gateway.Name,
-								"listener":         listener.Name,
-								"secret_name":      string(ref.Name),
-								"secret_namespace": namespace,
-							}).WithError(err).Error("failed to fetch secret")
-							continue
-						}
-						cert, key, err := getCertFromSecret(secret)
-						if err != nil {
-							log.WithFields(logrus.Fields{
-								"gateway":          gateway.Name,
-								"listener":         listener.Name,
-								"secret_name":      string(ref.Name),
-								"secret_namespace": namespace,
-							}).WithError(err).Error("failed to construct certificate from secret")
-							continue
-						}
-						hostname := "*"
-						if listener.Hostname != nil {
-							hostname = string(*listener.Hostname)
-						}
-						certs = append(certs, certWrapper{
-							identifier: cert + key,
-							cert: kong.Certificate{
-								ID:   kong.String(string(secret.UID)),
-								Cert: kong.String(cert),
-								Key:  kong.String(key),
-							},
-							CreationTimestamp: secret.CreationTimestamp,
-							snis:              []string{hostname},
-						})
 					}
+
+					// determine the Secret Namespace and validate against ReferencePolicy if needed
+					namespace := gateway.Namespace
+					if ref.Namespace != nil {
+						namespace = string(*ref.Namespace)
+					}
+					if namespace != gateway.Namespace {
+						allowed := getPermittedForReferencePolicyFrom(gatewayv1alpha2.ReferencePolicyFrom{
+							Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
+							Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
+							Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
+						}, policies)
+						if !isRefAllowedByPolicy(ref.Namespace, ref.Name, ref.Group, ref.Kind, allowed) {
+							log.WithFields(logrus.Fields{
+								"gateway":           gateway.Name,
+								"gateway_namespace": gateway.Namespace,
+								"listener":          listener.Name,
+								"secret_name":       string(ref.Name),
+								"secret_namespace":  namespace,
+							}).WithError(err).Error("secret reference not allowed by ReferencePolicy")
+							continue
+						}
+					}
+
+					// retrieve the Secret and extract the PEM strings
+					secret, err := s.GetSecret(namespace, string(ref.Name))
+					if err != nil {
+						log.WithFields(logrus.Fields{
+							"gateway":          gateway.Name,
+							"listener":         listener.Name,
+							"secret_name":      string(ref.Name),
+							"secret_namespace": namespace,
+						}).WithError(err).Error("failed to fetch secret")
+						continue
+					}
+					cert, key, err := getCertFromSecret(secret)
+					if err != nil {
+						log.WithFields(logrus.Fields{
+							"gateway":          gateway.Name,
+							"listener":         listener.Name,
+							"secret_name":      string(ref.Name),
+							"secret_namespace": namespace,
+						}).WithError(err).Error("failed to construct certificate from secret")
+						continue
+					}
+
+					// determine the SNI
+					hostname := "*"
+					if listener.Hostname != nil {
+						hostname = string(*listener.Hostname)
+					}
+
+					// create a Kong certificate, wrap it in metadata, and add it to the certs slice
+					certs = append(certs, certWrapper{
+						identifier: cert + key,
+						cert: kong.Certificate{
+							ID:   kong.String(string(secret.UID)),
+							Cert: kong.String(cert),
+							Key:  kong.String(key),
+						},
+						CreationTimestamp: secret.CreationTimestamp,
+						snis:              []string{hostname},
+					})
 				}
 			}
 		}

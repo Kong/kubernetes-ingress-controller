@@ -472,7 +472,6 @@ func exitOnErr(err error) {
 // testing.
 func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
 	t.Log("performing test setup")
-	t.Parallel()
 	cleaner := clusters.NewCleaner(env.Cluster())
 
 	t.Log("creating a testing namespace")

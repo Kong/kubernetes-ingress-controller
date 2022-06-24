@@ -164,7 +164,10 @@ var tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesD
 func TestTLSRouteExample(t *testing.T) {
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer tlsMutex.Unlock()
+	defer func() {
+		t.Log("unlocking TLS port")
+		tlsMutex.Unlock()
+	}()
 
 	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
 	b, err := os.ReadFile(tlsrouteExampleManifests)

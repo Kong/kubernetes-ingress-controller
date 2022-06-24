@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 type TLSPair struct {
@@ -140,7 +141,7 @@ func TestHTTPSRedirect(t *testing.T) {
 	defer cleanup()
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
-	container := generators.NewContainer("alsohttpbin", httpBinImage, 80)
+	container := generators.NewContainer("alsohttpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	opts := metav1.CreateOptions{}
 	_, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, opts)
@@ -223,7 +224,7 @@ func TestHTTPSIngress(t *testing.T) {
 	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)

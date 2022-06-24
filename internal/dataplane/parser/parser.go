@@ -409,17 +409,17 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 		log.WithError(err).Error("failed to list ReferencePolicies")
 		return certs
 	}
-	for _, g := range gateways {
-		statuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus, len(g.Status.Listeners))
-		for _, status := range g.Status.Listeners {
+	for _, gateway := range gateways {
+		statuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus, len(gateway.Status.Listeners))
+		for _, status := range gateway.Status.Listeners {
 			statuses[status.Name] = status
 		}
-		for _, l := range g.Spec.Listeners {
+		for _, listener := range gateway.Spec.Listeners {
 			ready := false
-			if status, ok := statuses[l.Name]; ok {
+			if status, ok := statuses[listener.Name]; ok {
 				log.WithFields(logrus.Fields{
-					"gateway":  g.Name,
-					"listener": l.Name,
+					"gateway":  gateway.Name,
+					"listener": listener.Name,
 				}).Debug("listener missing status information")
 				for _, c := range status.Conditions {
 					if c.Type == string(gatewayv1alpha2.ListenerConditionReady) {
@@ -430,42 +430,42 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 				}
 			}
 			if ready {
-				if l.TLS != nil {
-					if len(l.TLS.CertificateRefs) > 0 {
-						if len(l.TLS.CertificateRefs) > 1 {
+				if listener.TLS != nil {
+					if len(listener.TLS.CertificateRefs) > 0 {
+						if len(listener.TLS.CertificateRefs) > 1 {
 							// TODO support cert_alt and key_alt if there are 2 SecretObjectReferences
 							// https://github.com/Kong/kubernetes-ingress-controller/issues/2604
 							log.WithFields(logrus.Fields{
-								"gateway":  g.Name,
-								"listener": l.Name,
+								"gateway":  gateway.Name,
+								"listener": listener.Name,
 							}).Error("Gateway Listeners with more than one certificateRef are not supported")
 							continue
 						}
-						namespace := g.Namespace
-						ref := l.TLS.CertificateRefs[0]
+						namespace := gateway.Namespace
+						ref := listener.TLS.CertificateRefs[0]
 						// SecretObjectReference is a misnomer; it can reference any Group+Kind, but defaults to Secret
 						if ref.Kind != nil {
 							if string(*ref.Kind) != "Secret" {
 								log.WithFields(logrus.Fields{
-									"gateway":  g.Name,
-									"listener": l.Name,
+									"gateway":  gateway.Name,
+									"listener": listener.Name,
 								}).Error("CertificateRefs to kinds other than Secret are not supported")
 							}
 						}
 						if ref.Namespace != nil {
 							namespace = string(*ref.Namespace)
 						}
-						if namespace != g.Namespace {
+						if namespace != gateway.Namespace {
 							allowed := getPermittedForReferencePolicyFrom(gatewayv1alpha2.ReferencePolicyFrom{
-								Group:     gatewayv1alpha2.Group(g.GetObjectKind().GroupVersionKind().Group),
-								Kind:      gatewayv1alpha2.Kind(g.GetObjectKind().GroupVersionKind().Kind),
-								Namespace: gatewayv1alpha2.Namespace(g.GetNamespace()),
+								Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
+								Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
+								Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
 							}, policies)
 							if !isRefAllowedByPolicy(ref.Namespace, ref.Name, ref.Group, ref.Kind, allowed) {
 								log.WithFields(logrus.Fields{
-									"gateway":           g.Name,
-									"gateway_namespace": g.Namespace,
-									"listener":          l.Name,
+									"gateway":           gateway.Name,
+									"gateway_namespace": gateway.Namespace,
+									"listener":          listener.Name,
 									"secret_name":       string(ref.Name),
 									"secret_namespace":  namespace,
 								}).WithError(err).Error("secret reference not allowed by ReferencePolicy")
@@ -475,8 +475,8 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 						secret, err := s.GetSecret(namespace, string(ref.Name))
 						if err != nil {
 							log.WithFields(logrus.Fields{
-								"gateway":          g.Name,
-								"listener":         l.Name,
+								"gateway":          gateway.Name,
+								"listener":         listener.Name,
 								"secret_name":      string(ref.Name),
 								"secret_namespace": namespace,
 							}).WithError(err).Error("failed to fetch secret")
@@ -485,16 +485,16 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 						cert, key, err := getCertFromSecret(secret)
 						if err != nil {
 							log.WithFields(logrus.Fields{
-								"gateway":          g.Name,
-								"listener":         l.Name,
+								"gateway":          gateway.Name,
+								"listener":         listener.Name,
 								"secret_name":      string(ref.Name),
 								"secret_namespace": namespace,
 							}).WithError(err).Error("failed to construct certificate from secret")
 							continue
 						}
 						hostname := "*"
-						if l.Hostname != nil {
-							hostname = string(*l.Hostname)
+						if listener.Hostname != nil {
+							hostname = string(*listener.Hostname)
 						}
 						certs = append(certs, certWrapper{
 							identifier: cert + key,

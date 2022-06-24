@@ -31,6 +31,7 @@ import (
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 var (
@@ -128,7 +129,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("creating a mesh enabled http deployment")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

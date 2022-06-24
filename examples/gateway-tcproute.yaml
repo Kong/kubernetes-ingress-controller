@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: tcpecho
-        image: cjimti/go-echo
+        image: kong/go-echo:0.1.0
         ports:
         - containerPort: 1025
         env:

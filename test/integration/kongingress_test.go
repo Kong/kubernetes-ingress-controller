@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 func TestKongIngressEssentials(t *testing.T) {
@@ -30,7 +31,7 @@ func TestKongIngressEssentials(t *testing.T) {
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	testName := "minking"
-	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, httpBinImage, 80))
+	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, 80))
 	_, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 

@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 var emptyHeaderSet = make(map[string]string)
@@ -89,7 +90,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container1 := generators.NewContainer("httpbin", httpBinImage, 80)
+	container1 := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment1 := generators.NewDeploymentForContainer(container1)
 	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
 	require.NoError(t, err)

@@ -25,6 +25,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 const (
@@ -97,7 +98,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}()
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
-	container1 := generators.NewContainer("tcpecho-1", tcpEchoImage, tcpEchoPort)
+	container1 := generators.NewContainer("tcpecho-1", test.TCPEchoImage, tcpEchoPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID1 := uuid.NewString()
 	container1.Env = []corev1.EnvVar{
@@ -111,7 +112,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("creating an additional tcpecho pod to test TLSRoute multiple backendRef loadbalancing")
-	container2 := generators.NewContainer("tcpecho-2", tcpEchoImage, tcpEchoPort)
+	container2 := generators.NewContainer("tcpecho-2", test.TCPEchoImage, tcpEchoPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID2 := uuid.NewString()
 	container2.Env = []corev1.EnvVar{

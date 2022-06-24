@@ -19,7 +19,7 @@ status: provisional
 Currently users can control how traffic is load-balanced for an `Ingress`
 resource using the [`ingress.kubernetes.io/service-upstream` annotation][service-upstream-annotation].
 This can quickly get cumbersome, specifically for environments with large number
-if `Ingress` resources.
+of `Ingress` resources.
 
 Controlling `IngressClass` parameters in one place would be much more desirable in
 such situations, hence the proposal to introduce a new object - `IngressClassParameters` -

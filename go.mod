@@ -25,7 +25,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.7.4
+	github.com/stretchr/testify v1.7.5
 	github.com/tidwall/gjson v1.14.1
 	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9
 	google.golang.org/api v0.85.0

@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -101,9 +100,9 @@ func TestTLSRouteEssentials(t *testing.T) {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
 	}()
-	ns, cleanup := namespace(t)
-	defer cleanup()
 
+	ns, cleaner := setup(t)
+	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 	// TODO consolidate into suite and use for all GW tests?
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
 	t.Log("deploying a supported gatewayclass to the test cluster")
@@ -119,15 +118,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}
 	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up gatewayclasses")
-		if err := c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(gwc)
 
 	t.Log("configuring secrets")
 	secrets := []*corev1.Secret{
@@ -146,16 +137,8 @@ func TestTLSRouteEssentials(t *testing.T) {
 
 	t.Log("deploying secrets")
 	secret1, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[0], metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("ensuring that Secret %s is cleaned up", secret1.Name)
-		if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, secret1.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	require.NoError(t, err)
+	cleaner.Add(secret1)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	hostname := gatewayv1alpha2.Hostname(tlsRouteHostname)
@@ -185,15 +168,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}
 	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up gateways")
-		if err := c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(gw)
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
 	container := generators.NewContainer("tcpecho-1", tcpEchoImage, tcpEchoPort)
@@ -208,6 +183,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(deployment)
 
 	t.Log("creating an additional tcpecho pod to test TLSRoute multiple backendRef loadbalancing")
 	container2 := generators.NewContainer("tcpecho-2", tcpEchoImage, tcpEchoPort)
@@ -222,28 +198,19 @@ func TestTLSRouteEssentials(t *testing.T) {
 	deployment2 := generators.NewDeploymentForContainer(container2)
 	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployments %s/%s and %s/%s", deployment.Namespace, deployment.Name, deployment2.Namespace, deployment2.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment2)
 
 	t.Logf("exposing deployment %s/%s via service", deployment.Namespace, deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	cleaner.Add(service)
 
 	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
 	service2, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}))
-	}()
+	require.NoError(t, err)
+	cleaner.Add(service2)
 
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayv1alpha2.TLSRoute{
@@ -270,15 +237,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}
 	tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsroute, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the tlsroute %s", tlsroute.Name)
-		if err := c.GatewayV1alpha2().TLSRoutes(ns.Name).Delete(ctx, tlsroute.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tlsroute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	tlseventuallyGatewayIsLinkedInStatus(t, c, ns.Name, tlsroute.Name)
@@ -478,11 +437,12 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
 	}()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns, cleaner := setup(t)
+	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
+	cleaner.AddNamespace(otherNs)
 
 	// TODO consolidate into suite and use for all GW tests?
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2461
@@ -499,15 +459,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	}
 	gwc, err = c.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up gatewayclasses")
-		if err := c.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(gwc)
 
 	t.Log("configuring secrets")
 	secrets := []*corev1.Secret{
@@ -536,24 +488,11 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 
 	t.Log("deploying secrets")
 	secret1, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[0], metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	cleaner.Add(secret1)
 	secret2, err := env.Cluster().Client().CoreV1().Secrets(otherNs.Name).Create(ctx, secrets[1], metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("ensuring that Secret %s is cleaned up", secret1.Name)
-		if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, secret1.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-		t.Logf("ensuring that Secret %s is cleaned up", secret2.Name)
-		if err := env.Cluster().Client().CoreV1().Secrets(otherNs.Name).Delete(ctx, secret2.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	require.NoError(t, err)
+	cleaner.Add(secret2)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	hostname := gatewayv1alpha2.Hostname(tlsRouteHostname)
@@ -601,15 +540,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	}
 	gw, err = c.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, gw, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up gateways")
-		if err := c.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gw.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(gw)
 
 	secret2Name := gatewayv1alpha2.ObjectName(secrets[1].Name)
 	t.Logf("creating a reference policy that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
@@ -638,15 +569,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 
 	policy, err = c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Create(ctx, policy, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up referencepolicies")
-		if err := c.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Delete(ctx, policy.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(policy)
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
 	container := generators.NewContainer("tcpecho", tcpEchoImage, tcpEchoPort)
@@ -661,21 +584,13 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployment %s/%s", deployment.Namespace, deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s/%s via service", deployment.Namespace, deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	require.NoError(t, err)
+	cleaner.Add(service)
 
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayv1alpha2.TLSRoute{
@@ -702,15 +617,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	}
 	tlsroute, err = c.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsroute, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the tlsroute %s", tlsroute.Name)
-		if err := c.GatewayV1alpha2().TLSRoutes(ns.Name).Delete(ctx, tlsroute.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tlsroute)
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.Eventually(t, func() bool {

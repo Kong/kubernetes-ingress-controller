@@ -19,9 +19,8 @@ status: provisional
 
 Currently users can control how traffic is load-balanced for an `Ingress`
 resource using the [`ingress.kubernetes.io/service-upstream` annotation][service-upstream-annotation].
-In some environments with large numbers of `Ingress` resources who want
-the `service-upstream` behavior to be the default for all new `Ingress` resources
-the need to annotate each and every resource to do so is cumbersome.
+This can quickly get cumbersome, specifically for environments with large number
+if `Ingress` resources.
 
 Controlling `IngressClass` parameters in one place would be much more desirable in
 such situations, hence the proposal to introduce a new object - `IngressClassParameters` -

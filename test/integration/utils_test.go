@@ -59,18 +59,6 @@ var (
 	// cancel is the cancel function for the above global test context
 	cancel context.CancelFunc
 
-	// httpBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.
-	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
-	// See: https://github.com/postmanlabs/httpbin
-	httpBinImage = "kennethreitz/httpbin"
-
-	// tcpEchoImage echoes TCP text sent to it after printing out basic information about its environment, e.g.
-	// Welcome, you are connected to node kind-control-plane.
-	// Running on Pod tcp-echo-58ccd6b78d-hn9t8.
-	// In namespace foo.
-	// With IP address 10.244.0.13.
-	tcpEchoImage = "cjimti/go-echo"
-
 	// redisImage is Redis
 	redisImage = "bitnami/redis"
 

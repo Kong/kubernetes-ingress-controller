@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 var tcpMutex sync.Mutex
@@ -50,7 +51,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, httpBinImage, 80))
+	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, 80))
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -174,7 +175,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	for _, i := range testServiceSuffixes {
 		localTestName := fmt.Sprintf(testName, i)
 		t.Log("deploying a minimal TCP container deployment to test Ingress routes")
-		container := generators.NewContainer(localTestName, tcpEchoImage, tcpEchoPort)
+		container := generators.NewContainer(localTestName, test.TCPEchoImage, tcpEchoPort)
 		// go-echo sends a "Running on Pod POD_NAME." immediately on connecting
 		container.Env = []corev1.EnvVar{
 			{

@@ -34,10 +34,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 const (
-	httpBinImage     = "kong/httpbin:0.1.0"
 	ingressClass     = "kong"
 	namespace        = "kong"
 	adminServiceName = "kong-admin"
@@ -98,7 +98,7 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -230,7 +230,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

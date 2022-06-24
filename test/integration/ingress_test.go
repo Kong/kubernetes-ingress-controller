@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 // extraIngressNamespace is the name of an alternative namespace used for ingress tests
@@ -40,7 +41,7 @@ func TestIngressEssentials(t *testing.T) {
 	defer cleanup()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -259,7 +260,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -410,7 +411,7 @@ func TestIngressNamespaces(t *testing.T) {
 	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	elsewhereDeployment, err := env.Cluster().Client().AppsV1().Deployments(extraIngressNamespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -479,7 +480,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -600,7 +601,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	defer cleanup()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

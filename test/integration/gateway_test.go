@@ -22,6 +22,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 const (
@@ -490,7 +491,7 @@ func TestGatewayFilters(t *testing.T) {
 	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", httpBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deploymentTemplate := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deploymentTemplate, metav1.CreateOptions{})
 	require.NoError(t, err)

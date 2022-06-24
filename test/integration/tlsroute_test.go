@@ -574,7 +574,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	cleaner.Add(policy)
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
-	container := generators.NewContainer("tcpecho", tcpEchoImage, tcpEchoPort)
+	container := generators.NewContainer("tcpecho", test.TCPEchoImage, tcpEchoPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID := uuid.NewString()
 	container.Env = []corev1.EnvVar{

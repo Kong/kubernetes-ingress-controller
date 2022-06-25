@@ -31,8 +31,8 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: _download_tool
 _download_tool:
-	(cd tools && go mod tidy ) && \
-		GOBIN=$(PROJECT_DIR)/bin go install -modfile tools/go.mod $(TOOL)
+	(cd third_party && go mod tidy ) && \
+		GOBIN=$(PROJECT_DIR)/bin go install -modfile third_party/go.mod $(TOOL)
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

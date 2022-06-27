@@ -38,7 +38,7 @@ body:
   attributes:
     label: "**For all releases** Create a Release Pull Request"
     options:
-      - label: Check the [latest nightly job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/nightly.yaml) to confirm that E2E is succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml).
+      - label: Check the [latest test run](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e.yaml) to confirm that E2E tests are succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml).
       - label: Open a PR from your branch to `main`.
       - label: Once the PR is merged, [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml). Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
       - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.

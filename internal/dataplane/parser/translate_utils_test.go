@@ -275,7 +275,7 @@ func Test_isRefAllowedByPolicy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := isRefAllowedByPolicy(tt.ref, fakeMap)
+			result := isRefAllowedByPolicy(tt.ref.Namespace, tt.ref.Name, tt.ref.Group, tt.ref.Kind, fakeMap)
 			assert.Equal(t, tt.result, result)
 		})
 	}

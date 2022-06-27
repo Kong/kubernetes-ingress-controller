@@ -246,6 +246,13 @@ func getListenerStatus(
 				// Each Listener within the group specifies a Hostname that is unique within the group.
 				// As a special case, one Listener within a group may omit Hostname, in which case this Listener
 				// matches when no other Listener matches.
+
+				// TODO this only checks if a hostname is already used on a specific port, which is what the Gateway
+				// spec requires. However, Kong does not actually implement HTTP route separation by port: Kong serves
+				// all HTTP routes on all HTTP ports. Effectively, if you add an HTTP(S) Listener with hostname
+				// example.com on port 8000, and your Kong instance has a proxy_listen with both port 8000 and 8200,
+				// you have also added a phantom Listener for hostname example.com and port 8200, because Kong will
+				// serve the route on both. See https://github.com/Kong/kubernetes-ingress-controller/issues/2606
 				if conflictedHostnames[listener.Port] == nil {
 					conflictedHostnames[listener.Port] = map[gatewayv1alpha2.Hostname]bool{}
 				}

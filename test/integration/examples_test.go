@@ -164,7 +164,10 @@ var tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesD
 func TestTLSRouteExample(t *testing.T) {
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer tlsMutex.Unlock()
+	defer func() {
+		t.Log("unlocking TLS port")
+		tlsMutex.Unlock()
+	}()
 
 	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
 	b, err := os.ReadFile(tlsrouteExampleManifests)
@@ -179,7 +182,7 @@ func TestTLSRouteExample(t *testing.T) {
 	t.Log("verifying that TLSRoute becomes routable")
 	require.Eventually(t, func() bool {
 		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
-			"tlsroute-example-manifest", "tlsecho.kong.example")
+			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example")
 		return err == nil && responded
 	}, ingressWait, waitTick)
 }

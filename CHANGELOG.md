@@ -53,7 +53,26 @@
 
 > Release date: TBD
 
+#### Breaking changes
+
+- The controller no longer overrides Gateway Listeners with a list of Listeners
+  derived from Kong configuration. User-provided Listener lists are preserved
+  as-is. Listener status information indicates if a requested Listener is not
+  ready because of missing Kong listen configuration. This is necessary to
+  properly support allowed routes and TLS configuration in Listeners, which
+  would otherwise be wiped out by automatic updates. This has no immediate
+  impact on existing Gateway resources used with previous versions: their
+  automatically-set Listeners are now treated as user-defined Listeners and
+  will not be modified by upgrading. This only affects new Gateway resources:
+  you will need to populate the Listeners you want, and they will need to match
+  Kong's listen configuration to become ready.
+  [#2555](https://github.com/Kong/kubernetes-ingress-controller/pull/2555)
+
 #### Added
+
+- Added support for Gateway Listener TLS configuration, to enable full use of
+  TLSRoute and HTTPS HTTPRoutes.
+  [#2580](https://github.com/Kong/kubernetes-ingress-controller/pull/2580)
 
 #### Fixed
 

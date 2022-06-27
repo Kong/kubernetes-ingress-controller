@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -99,7 +100,10 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 	result.FillPlugins(p.logger, p.storer)
 
 	// generate Certificates and SNIs
-	result.Certificates = getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)
+	ingressCerts := getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)
+	gatewayCerts := getGatewayCerts(p.logger, p.storer)
+	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
+	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
 	var err error
@@ -386,14 +390,143 @@ func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
 	return cert, key, nil
 }
 
-func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][]string) []kongstate.Certificate {
-	snisAdded := make(map[string]bool)
-	// map of cert public key + private key to certificate
-	type certWrapper struct {
-		cert              kong.Certificate
-		CreationTimestamp metav1.Time
+type certWrapper struct {
+	identifier        string
+	cert              kong.Certificate
+	snis              []string
+	CreationTimestamp metav1.Time
+}
+
+func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
+	certs := []certWrapper{}
+	gateways, err := s.ListGateways()
+	if err != nil {
+		log.WithError(err).Error("failed to list Gateways")
+		return certs
 	}
-	certs := make(map[string]certWrapper)
+	policies, err := s.ListReferencePolicies()
+	if err != nil {
+		log.WithError(err).Error("failed to list ReferencePolicies")
+		return certs
+	}
+	for _, gateway := range gateways {
+		statuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus, len(gateway.Status.Listeners))
+		for _, status := range gateway.Status.Listeners {
+			statuses[status.Name] = status
+		}
+		for _, listener := range gateway.Spec.Listeners {
+			ready := false
+			if status, ok := statuses[listener.Name]; ok {
+				log.WithFields(logrus.Fields{
+					"gateway":  gateway.Name,
+					"listener": listener.Name,
+				}).Debug("listener missing status information")
+				for _, c := range status.Conditions {
+					if c.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+						if c.Status == metav1.ConditionTrue {
+							ready = true
+						}
+					}
+				}
+			}
+			if !ready {
+				continue
+			}
+			if listener.TLS != nil {
+				if len(listener.TLS.CertificateRefs) > 0 {
+					if len(listener.TLS.CertificateRefs) > 1 {
+						// TODO support cert_alt and key_alt if there are 2 SecretObjectReferences
+						// https://github.com/Kong/kubernetes-ingress-controller/issues/2604
+						log.WithFields(logrus.Fields{
+							"gateway":  gateway.Name,
+							"listener": listener.Name,
+						}).Error("Gateway Listeners with more than one certificateRef are not supported")
+						continue
+					}
+
+					ref := listener.TLS.CertificateRefs[0]
+
+					// SecretObjectReference is a misnomer; it can reference any Group+Kind, but defaults to Secret
+					if ref.Kind != nil {
+						if string(*ref.Kind) != "Secret" {
+							log.WithFields(logrus.Fields{
+								"gateway":  gateway.Name,
+								"listener": listener.Name,
+							}).Error("CertificateRefs to kinds other than Secret are not supported")
+						}
+					}
+
+					// determine the Secret Namespace and validate against ReferencePolicy if needed
+					namespace := gateway.Namespace
+					if ref.Namespace != nil {
+						namespace = string(*ref.Namespace)
+					}
+					if namespace != gateway.Namespace {
+						allowed := getPermittedForReferencePolicyFrom(gatewayv1alpha2.ReferencePolicyFrom{
+							Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
+							Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
+							Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
+						}, policies)
+						if !isRefAllowedByPolicy(ref.Namespace, ref.Name, ref.Group, ref.Kind, allowed) {
+							log.WithFields(logrus.Fields{
+								"gateway":           gateway.Name,
+								"gateway_namespace": gateway.Namespace,
+								"listener":          listener.Name,
+								"secret_name":       string(ref.Name),
+								"secret_namespace":  namespace,
+							}).WithError(err).Error("secret reference not allowed by ReferencePolicy")
+							continue
+						}
+					}
+
+					// retrieve the Secret and extract the PEM strings
+					secret, err := s.GetSecret(namespace, string(ref.Name))
+					if err != nil {
+						log.WithFields(logrus.Fields{
+							"gateway":          gateway.Name,
+							"listener":         listener.Name,
+							"secret_name":      string(ref.Name),
+							"secret_namespace": namespace,
+						}).WithError(err).Error("failed to fetch secret")
+						continue
+					}
+					cert, key, err := getCertFromSecret(secret)
+					if err != nil {
+						log.WithFields(logrus.Fields{
+							"gateway":          gateway.Name,
+							"listener":         listener.Name,
+							"secret_name":      string(ref.Name),
+							"secret_namespace": namespace,
+						}).WithError(err).Error("failed to construct certificate from secret")
+						continue
+					}
+
+					// determine the SNI
+					hostname := "*"
+					if listener.Hostname != nil {
+						hostname = string(*listener.Hostname)
+					}
+
+					// create a Kong certificate, wrap it in metadata, and add it to the certs slice
+					certs = append(certs, certWrapper{
+						identifier: cert + key,
+						cert: kong.Certificate{
+							ID:   kong.String(string(secret.UID)),
+							Cert: kong.String(cert),
+							Key:  kong.String(key),
+						},
+						CreationTimestamp: secret.CreationTimestamp,
+						snis:              []string{hostname},
+					})
+				}
+			}
+		}
+	}
+	return certs
+}
+
+func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][]string) []certWrapper {
+	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
@@ -413,41 +546,72 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 			}).WithError(err).Error("failed to construct certificate from secret")
 			continue
 		}
-		kongCert, ok := certs[cert+key]
-		if !ok {
-			kongCert = certWrapper{
-				cert: kong.Certificate{
-					ID:   kong.String(string(secret.UID)),
-					Cert: kong.String(cert),
-					Key:  kong.String(key),
-				},
-				CreationTimestamp: secret.CreationTimestamp,
-			}
-		} else {
-			secretID := string(secret.UID)
-			if kongCert.CreationTimestamp.After(secret.CreationTimestamp.Time) {
-				kongCert.cert.ID = kong.String(secretID)
-				kongCert.CreationTimestamp = secret.CreationTimestamp
-			} else if kongCert.CreationTimestamp.Time.Equal(secret.CreationTimestamp.Time) && (kongCert.cert.ID == nil || *kongCert.cert.ID > secretID) {
-				kongCert.cert.ID = kong.String(secretID)
-				kongCert.CreationTimestamp = secret.CreationTimestamp
-			}
-		}
+		certs = append(certs, certWrapper{
+			identifier: cert + key,
+			cert: kong.Certificate{
+				ID:   kong.String(string(secret.UID)),
+				Cert: kong.String(cert),
+				Key:  kong.String(key),
+			},
+			CreationTimestamp: secret.CreationTimestamp,
+			snis:              SNIs,
+		})
+	}
 
-		for _, sni := range SNIs {
-			if !snisAdded[sni] {
-				snisAdded[sni] = true
-				kongCert.cert.SNIs = append(kongCert.cert.SNIs, kong.String(sni))
+	return certs
+}
+
+func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.Certificate {
+	snisSeen := make(map[string]string)
+	certsSeen := make(map[string]certWrapper)
+	for _, cl := range certLists {
+		for _, cw := range cl {
+			current, ok := certsSeen[cw.identifier]
+			if !ok {
+				current = cw
+			} else {
+				// multiple Secrets that contain identical certificates are collapsed, because we only create one
+				// Kong resource for a given cert+key pair. however, because we reuse the Secret ID and creation time
+				// for the Kong resource equivalents, the selection of those needs to be deterministic to avoid
+				// pointless configuration updates
+				if current.CreationTimestamp.After(cw.CreationTimestamp.Time) {
+					current.cert.ID = cw.cert.ID
+					current.CreationTimestamp = cw.CreationTimestamp
+				} else if current.CreationTimestamp.Time.Equal(cw.CreationTimestamp.Time) && (current.cert.ID == nil || *current.cert.ID > *cw.cert.ID) {
+					current.cert.ID = cw.cert.ID
+					current.CreationTimestamp = cw.CreationTimestamp
+				}
+				current.snis = append(current.snis, cw.snis...)
 			}
+
+			// although we use current in the end, we only warn/exclude on new ones here. SNIs already in the slice
+			// have already been vetted by some previous iteration and /are/ in the seen list, but they're in the seen
+			// list because the current we retrieved from certsSeen added them
+			for _, sni := range cw.snis {
+				if seen, ok := snisSeen[sni]; !ok {
+					snisSeen[sni] = *current.cert.ID
+					current.cert.SNIs = append(current.cert.SNIs, kong.String(sni))
+				} else {
+					// TODO this should really log information about the requesting Listener or Ingress-like, which is
+					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
+					// what cert will be served. however, the secretToSNIs input to getCerts does not provide this info
+					// https://github.com/Kong/kubernetes-ingress-controller/issues/2605
+					log.WithFields(logrus.Fields{
+						"served_secret_cert":    seen,
+						"requested_secret_cert": *current.cert.ID,
+						"sni":                   sni,
+					}).Error("same SNI requested for multiple certs, can only serve one cert")
+				}
+			}
+			certsSeen[current.identifier] = current
 		}
-		certs[cert+key] = kongCert
 	}
 	var res []kongstate.Certificate
-	for _, cert := range certs {
-		sort.SliceStable(cert.cert.SNIs, func(i, j int) bool {
-			return strings.Compare(*cert.cert.SNIs[i], *cert.cert.SNIs[j]) < 0
+	for _, cw := range certsSeen {
+		sort.SliceStable(cw.cert.SNIs, func(i, j int) bool {
+			return strings.Compare(*cw.cert.SNIs[i], *cw.cert.SNIs[j]) < 0
 		})
-		res = append(res, kongstate.Certificate{Certificate: cert.cert})
+		res = append(res, kongstate.Certificate{Certificate: cw.cert})
 	}
 	return res
 }

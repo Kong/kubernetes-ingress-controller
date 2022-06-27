@@ -30,6 +30,12 @@ spec:
             path: token
           - key: ca.crt
             path: ca.crt
+      - name: podinfo
+        downwardAPI:
+          items:
+          - path: "namespace"
+            fieldRef:
+              fieldPath: metadata.namespace
       containers:
       - name: proxy
         image: kong-placeholder:placeholder # This is replaced by the config/image.yaml component
@@ -143,6 +149,15 @@ spec:
           failureThreshold: 3
         volumeMounts:
         - name: kong-serviceaccount-token
-          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount/token
+          subPath: token
+          readOnly: true
+        - name: kong-serviceaccount-token
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          subPath: ca.crt
+          readOnly: true
+        - name: podinfo
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount/namespace
+          subPath: namespace
           readOnly: true
 

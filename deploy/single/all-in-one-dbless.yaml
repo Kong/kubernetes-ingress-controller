@@ -1566,9 +1566,18 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         volumeMounts:
-        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount/token
           name: kong-serviceaccount-token
           readOnly: true
+          subPath: token
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          name: kong-serviceaccount-token
+          readOnly: true
+          subPath: ca.crt
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount/namespace
+          name: podinfo
+          readOnly: true
+          subPath: namespace
       serviceAccountName: kong-serviceaccount
       volumes:
       - name: kong-serviceaccount-token
@@ -1579,6 +1588,12 @@ spec:
           - key: ca.crt
             path: ca.crt
           secretName: kong-serviceaccount-token
+      - downwardAPI:
+          items:
+          - fieldRef:
+              fieldPath: metadata.namespace
+            path: namespace
+        name: podinfo
 ---
 apiVersion: networking.k8s.io/v1
 kind: IngressClass

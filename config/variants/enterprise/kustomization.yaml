@@ -5,4 +5,4 @@ patchesStrategicMerge:
 images:
 - name: kong
   newName: kong/kong-gateway
-  newTag: '2.7'
+  newTag: '2.8'

@@ -352,8 +352,15 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
+
 		// if we are not the leader, we run no config pushes, and this metric string will not appear
-		return strings.Contains(string(body), metrics.MetricNameConfigPushCount)
+		if !strings.Contains(string(body), metrics.MetricNameConfigPushCount) {
+			t.Logf("response from /metrics endpoint: %q, should contain %q",
+				string(body), metrics.MetricNameConfigPushCount,
+			)
+			return false
+		}
+		return true
 	}, time.Minute, time.Second*10)
 
 	t.Log("deleting the original replica and current leader")
@@ -369,7 +376,14 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
-		return strings.Contains(string(body), metrics.MetricNameConfigPushCount)
+
+		if !strings.Contains(string(body), metrics.MetricNameConfigPushCount) {
+			t.Logf("response from /metrics endpoint: %q, should contain %q",
+				string(body), metrics.MetricNameConfigPushCount,
+			)
+			return false
+		}
+		return true
 	}, time.Minute, time.Second)
 }
 

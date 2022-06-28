@@ -348,7 +348,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		}
 		return adminOutput.Version != ""
 	}, adminAPIWait, time.Second)
-	require.True(t, strings.Contains(adminOutput.Version, "enterprise-edition"))
+	require.Contains(t, adminOutput.Version, "enterprise-edition")
 }
 
 func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {

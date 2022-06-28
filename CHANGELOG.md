@@ -175,8 +175,8 @@
   [#2494](https://github.com/Kong/kubernetes-ingress-controller/pull/2494)
 - Added `kong-ingress-controller` category to CRDs
   [#2517](https://github.com/Kong/kubernetes-ingress-controller/pull/2517)
-- Added `IngressClassParameters` CRD and its first field `ServiceUpstream` to control
-  the behavior of routing traffic via an upstream service for all services managed
+- Added `v1alpha1.IngressClassParameters` CRD and its first field `ServiceUpstream`
+  to control the behavior of routing traffic via an upstream service for all services managed
   by an ingress class without the need of adding an annotation to every single one
   [#2535](https://github.com/Kong/kubernetes-ingress-controller/pull/2535)
 

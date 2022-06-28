@@ -1640,18 +1640,9 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         volumeMounts:
-        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount/token
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           name: kong-serviceaccount-token
           readOnly: true
-          subPath: token
-        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          name: kong-serviceaccount-token
-          readOnly: true
-          subPath: ca.crt
-        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount/namespace
-          name: podinfo
-          readOnly: true
-          subPath: namespace
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
       initContainers:
@@ -1681,13 +1672,9 @@ spec:
             path: token
           - key: ca.crt
             path: ca.crt
-          secretName: kong-serviceaccount-token
-      - downwardAPI:
-          items:
-          - fieldRef:
-              fieldPath: metadata.namespace
+          - key: namespace
             path: namespace
-        name: podinfo
+          secretName: kong-serviceaccount-token
 ---
 apiVersion: apps/v1
 kind: StatefulSet

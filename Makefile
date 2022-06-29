@@ -27,35 +27,28 @@ endif
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
 
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
-
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
-
-CLIENT_GEN = $(shell pwd)/bin/client-gen
-client-gen: ## Download client-gen locally if necessary.
-	$(call go-get-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen@v0.21.3)
-
-GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
-golangci-lint: ## Download golangci-lint locally if necessary.
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2)
-
-# go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
+
+.PHONY: _download_tool
+_download_tool:
+	(cd third_party && go mod tidy ) && \
+		GOBIN=$(PROJECT_DIR)/bin go install -modfile third_party/go.mod $(TOOL)
+
+CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
+controller-gen: ## Download controller-gen locally if necessary.
+	$(MAKE) _download_tool TOOL=sigs.k8s.io/controller-tools/cmd/controller-gen
+
+KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
+kustomize: ## Download kustomize locally if necessary.
+	$(MAKE) _download_tool TOOL=sigs.k8s.io/kustomize/kustomize/v4
+
+CLIENT_GEN = $(PROJECT_DIR)/bin/client-gen
+client-gen: ## Download client-gen locally if necessary.
+	$(MAKE) _download_tool TOOL=k8s.io/code-generator/cmd/client-gen
+
+GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(MAKE) _download_tool TOOL=github.com/golangci/golangci-lint/cmd/golangci-lint
 
 # ------------------------------------------------------------------------------
 # Build
@@ -115,6 +108,7 @@ verify.generators: verify.repo generate verify.diff
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
+CRD_GEN_PATHS ?= ./...
 CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 
 .PHONY: manifests
@@ -122,7 +116,7 @@ manifests: manifests.crds manifests.single
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_GEN_PATHS)" output:crd:artifacts:config=config/crd/bases
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
@@ -137,7 +131,7 @@ generate: generate.controllers generate.clientsets generate.gateway-api-crds-url
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="$(CRD_GEN_PATHS)"
 	go generate ./...
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.

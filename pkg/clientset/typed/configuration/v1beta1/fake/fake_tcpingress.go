@@ -117,7 +117,7 @@ func (c *FakeTCPIngresses) UpdateStatus(ctx context.Context, tCPIngress *v1beta1
 // Delete takes name of the tCPIngress and deletes it. Returns an error if one occurs.
 func (c *FakeTCPIngresses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(tcpingressesResource, c.ns, name), &v1beta1.TCPIngress{})
+		Invokes(testing.NewDeleteActionWithOptions(tcpingressesResource, c.ns, name, opts), &v1beta1.TCPIngress{})
 
 	return err
 }

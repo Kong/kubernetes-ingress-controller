@@ -105,7 +105,7 @@ func (c *FakeKongConsumers) Update(ctx context.Context, kongConsumer *configurat
 // Delete takes name of the kongConsumer and deletes it. Returns an error if one occurs.
 func (c *FakeKongConsumers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(kongconsumersResource, c.ns, name), &configurationv1.KongConsumer{})
+		Invokes(testing.NewDeleteActionWithOptions(kongconsumersResource, c.ns, name, opts), &configurationv1.KongConsumer{})
 
 	return err
 }

@@ -105,7 +105,7 @@ func (c *FakeKongIngresses) Update(ctx context.Context, kongIngress *configurati
 // Delete takes name of the kongIngress and deletes it. Returns an error if one occurs.
 func (c *FakeKongIngresses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(kongingressesResource, c.ns, name), &configurationv1.KongIngress{})
+		Invokes(testing.NewDeleteActionWithOptions(kongingressesResource, c.ns, name, opts), &configurationv1.KongIngress{})
 
 	return err
 }

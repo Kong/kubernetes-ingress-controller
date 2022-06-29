@@ -105,7 +105,7 @@ func (c *FakeKongPlugins) Update(ctx context.Context, kongPlugin *configurationv
 // Delete takes name of the kongPlugin and deletes it. Returns an error if one occurs.
 func (c *FakeKongPlugins) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(kongpluginsResource, c.ns, name), &configurationv1.KongPlugin{})
+		Invokes(testing.NewDeleteActionWithOptions(kongpluginsResource, c.ns, name, opts), &configurationv1.KongPlugin{})
 
 	return err
 }

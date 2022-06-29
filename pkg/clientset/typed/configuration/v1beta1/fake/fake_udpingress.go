@@ -117,7 +117,7 @@ func (c *FakeUDPIngresses) UpdateStatus(ctx context.Context, uDPIngress *v1beta1
 // Delete takes name of the uDPIngress and deletes it. Returns an error if one occurs.
 func (c *FakeUDPIngresses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(udpingressesResource, c.ns, name), &v1beta1.UDPIngress{})
+		Invokes(testing.NewDeleteActionWithOptions(udpingressesResource, c.ns, name, opts), &v1beta1.UDPIngress{})
 
 	return err
 }

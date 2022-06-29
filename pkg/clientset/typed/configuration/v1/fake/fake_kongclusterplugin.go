@@ -99,7 +99,7 @@ func (c *FakeKongClusterPlugins) Update(ctx context.Context, kongClusterPlugin *
 // Delete takes name of the kongClusterPlugin and deletes it. Returns an error if one occurs.
 func (c *FakeKongClusterPlugins) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(kongclusterpluginsResource, name), &configurationv1.KongClusterPlugin{})
+		Invokes(testing.NewRootDeleteActionWithOptions(kongclusterpluginsResource, name, opts), &configurationv1.KongClusterPlugin{})
 	return err
 }
 

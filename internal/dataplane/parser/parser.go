@@ -635,10 +635,10 @@ func getServiceEndpoints(
 	protocols := listProtocols(svc)
 
 	// Check if the service is an upstream service either by annotation or controller configuration.
-	var isSvcUpstream *bool
-	IngressClassParameters, err := getIngressClassParametersOrDefault(s)
+	var isSvcUpstream bool
+	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err == nil {
-		isSvcUpstream = &IngressClassParameters.ServiceUpstream
+		isSvcUpstream = ingressClassParameters.ServiceUpstream
 	}
 
 	// check all protocols for associated endpoints
@@ -659,13 +659,13 @@ func getServiceEndpoints(
 // getIngressClassParametersOrDefault returns the parameters for the current ingress class.
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
-func getIngressClassParametersOrDefault(s store.Storer) (*configurationv1alpha1.IngressClassParametersSpec, error) {
+func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
 	params, err := s.GetIngressClassParametersV1Alpha1()
 	if err != nil {
-		return &configurationv1alpha1.IngressClassParametersSpec{}, err
+		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
 
-	return &params.Spec, nil
+	return params.Spec, nil
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
@@ -677,7 +677,7 @@ func getEndpoints(
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
-	isSvcUpstream *bool,
+	isSvcUpstream bool,
 ) []util.Endpoint {
 	upsServers := []util.Endpoint{}
 
@@ -686,8 +686,7 @@ func getEndpoints(
 	}
 
 	// If service is an upstream service...
-	if (isSvcUpstream != nil && *isSvcUpstream) ||
-		annotations.HasServiceUpstreamAnnotation(s.Annotations) {
+	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(s.Annotations) {
 		// ... return its address as the only endpoint.
 		return append(upsServers, util.Endpoint{
 			Address: s.Name + "." + s.Namespace + ".svc",

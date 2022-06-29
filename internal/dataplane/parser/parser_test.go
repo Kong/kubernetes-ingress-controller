@@ -3806,8 +3806,6 @@ func TestPluginAnnotations(t *testing.T) {
 }
 
 func TestGetEndpoints(t *testing.T) {
-	boolPtr := func(b bool) *bool { return &b }
-
 	tests := []struct {
 		name              string
 		svc               *corev1.Service
@@ -3815,7 +3813,7 @@ func TestGetEndpoints(t *testing.T) {
 		proto             corev1.Protocol
 		fn                func(string, string) (*corev1.Endpoints, error)
 		result            []util.Endpoint
-		isServiceUpstream *bool
+		isServiceUpstream bool
 	}{
 		{
 			name:   "no service should return 0 endpoints",
@@ -3950,7 +3948,7 @@ func TestGetEndpoints(t *testing.T) {
 					Port:    "2080",
 				},
 			},
-			isServiceUpstream: boolPtr(true),
+			isServiceUpstream: true,
 		},
 		{
 			name: "should return no endpoints when there is an error searching for endpoints",

@@ -16,6 +16,7 @@ spec:
       annotations:
         traffic.sidecar.istio.io/includeInboundPorts: ""
         kuma.io/gateway: enabled
+        kuma.io/service-account-token-volume: kong-serviceaccount-token
       labels:
         app: ingress-kong
     spec:

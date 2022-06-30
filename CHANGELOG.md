@@ -1,6 +1,7 @@
 # Table of Contents
 
  - [2.5.0](#250)
+ - [2.4.2](#242)
  - [2.4.1](#241)
  - [2.4.0](#240)
  - [2.3.1](#231)
@@ -56,6 +57,16 @@
 #### Added
 
 #### Fixed
+
+## [2.4.2]
+
+> Release date: 2022-06-30
+
+#### Fixed
+
+- Fix an issue with ServiceAccount token mount.
+  [#2620](https://github.com/Kong/kubernetes-ingress-controller/issues/2620)
+  [#2626](https://github.com/Kong/kubernetes-ingress-controller/issues/2626)
 
 ## [2.4.1]
 
@@ -1784,7 +1795,8 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.5.0
+[2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0
+[2.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.3.0...v2.3.1

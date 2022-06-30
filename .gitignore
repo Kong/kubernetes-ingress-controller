@@ -77,3 +77,6 @@ build/*
 
 # ignore personal TODO lists
 TODO
+
+# ignore .vscode user configuration directory
+.vscode/

@@ -247,6 +247,43 @@ jobs:
         name: coverage
         path: coverage.featuregates.out
 
+  test-previous-kubernetes:
+    environment: gcloud
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        minor:
+          - '20'
+          - '21'
+          - '22'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
+        run: ./hack/e2e/run-tests.sh
+        env:
+          KUBERNETES_MAJOR_VERSION: 1
+          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
   conformance-tests:
     runs-on: ubuntu-latest
     steps:

@@ -4,11 +4,23 @@ updates:
   directory: /
   schedule:
     interval: daily
+  labels:
+  - dependencies
+- package-ecosystem: gomod
+  directory: /third_party/
+  schedule:
+    interval: daily
+  labels:
+  - dependencies
 - package-ecosystem: github-actions
   directory: /
   schedule:
     interval: daily
+  labels:
+  - github_actions
 - package-ecosystem: docker
   directory: /
   schedule:
     interval: daily
+  labels:
+  - docker

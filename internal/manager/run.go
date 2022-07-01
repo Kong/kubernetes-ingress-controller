@@ -192,7 +192,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 
 	if c.AnonymousReports {
 		setupLog.Info("Starting anonymous reports")
-		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, metadata.Release, featureGates); err != nil {
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, c.PublishService, metadata.Release, featureGates); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}
 	} else {

@@ -73,6 +73,8 @@
 - Added support for Gateway Listener TLS configuration, to enable full use of
   TLSRoute and HTTPS HTTPRoutes.
   [#2580](https://github.com/Kong/kubernetes-ingress-controller/pull/2580)
+- Added information about service mesh deployment and distribution in telemetry data reported to Kong.
+  [#2642](https://github.com/Kong/kubernetes-ingress-controller/pull/2642)
 
 #### Fixed
 

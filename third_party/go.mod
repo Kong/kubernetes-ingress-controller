@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/golangci/golangci-lint v1.46.2
 	k8s.io/code-generator v0.24.2
-	sigs.k8s.io/controller-tools v0.7.0
+	sigs.k8s.io/controller-tools v0.8.0
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.5
 )
 

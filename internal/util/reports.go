@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/meshdetect"
 )
@@ -44,7 +44,7 @@ type Reporter struct {
 
 	serializedInfo string
 
-	Logger logrus.FieldLogger
+	Logger logr.Logger
 
 	MeshDetectionEnabled bool
 	MeshDetector         *meshdetect.Detector
@@ -103,7 +103,7 @@ func (r *Reporter) send(signal string, uptime int) {
 		if err != nil {
 			// log the error if mesh detection fails,
 			// but still send the messages without mesh detection results.
-			r.Logger.Debugf("failed to run mesh detection: %w", err)
+			r.Logger.V(DebugLevel).Info("failed to run mesh detection", "error", err)
 
 		} else {
 			// append results from mesh detection to reported message if returned any.
@@ -119,18 +119,18 @@ func (r *Reporter) send(signal string, uptime int) {
 	conn, err := tls.DialWithDialer(&dialer, "tcp", net.JoinHostPort(reportsHost,
 		strconv.FormatUint(uint64(reportsPort), 10)), &tlsConf)
 	if err != nil {
-		r.Logger.Debugf("failed to connect to reporting server: %s", err)
+		r.Logger.V(DebugLevel).Info("failed to connect to reporting server", "error", err)
 		return
 	}
 	err = conn.SetDeadline(time.Now().Add(time.Minute))
 	if err != nil {
-		r.Logger.Debugf("failed to set report connection deadline: %s", err)
+		r.Logger.V(DebugLevel).Info("failed to set report connection deadline", "error", err)
 		return
 	}
 	defer conn.Close()
 	_, err = conn.Write([]byte(message))
 	if err != nil {
-		r.Logger.Debugf("failed to send report: %s", err)
+		r.Logger.V(DebugLevel).Info("failed to send report", "error", err)
 	}
 }
 

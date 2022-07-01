@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bombsimon/logrusr/v2"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/meshdetect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // RunReport runs the anonymous data report and reports any errors that have occurred.
-func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kong, kicVersion string, featureGates map[string]bool) error {
+func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kong, publishServiceName string, kicVersion string, featureGates map[string]bool) error {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
 	// This data helps inform us what versions, features, e.t.c. end-users are actively using which helps to inform
@@ -39,6 +41,11 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 	k8sVersion, err := kc.Discovery().ServerVersion()
 	if err != nil {
 		return fmt.Errorf("failed to fetch k8s api-server version: %w", err)
+	}
+
+	podInfo, err := util.GetPodDetails(ctx, kc)
+	if err != nil {
+		return fmt.Errorf("failed to get pod details: %w", err)
 	}
 
 	// gather versioning information from the kong client
@@ -75,6 +82,16 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 		Info:   info,
 		Logger: logrus.New(),
 	}
+
+	// add mesh detector to reporter
+	detector, err := meshdetect.NewDetectorByConfig(kubeCfg, podInfo.Namespace, podInfo.Name, publishServiceName,
+		logrusr.New(reporter.Logger),
+	)
+	if err == nil {
+		reporter.MeshDetectionEnabled = true
+		reporter.MeshDetector = detector
+	}
+
 	go reporter.Run(ctx.Done())
 
 	return nil

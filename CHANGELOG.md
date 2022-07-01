@@ -78,6 +78,8 @@
   [#2642](https://github.com/Kong/kubernetes-ingress-controller/pull/2642)
 
 #### Fixed
+- Fixed the problem that logs from reporter does not appear in the pod log.
+  [#2645](https://github.com/Kong/kubernetes-ingress-controller/pull/2645)
 
 ## [2.4.2]
 

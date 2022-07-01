@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bombsimon/logrusr/v2"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/meshdetect"
@@ -80,12 +79,13 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 	// run the reporter in the background
 	reporter := util.Reporter{
 		Info:   info,
-		Logger: logrus.New(),
+		Logger: ctrl.Log.WithName("reporter"),
 	}
 
 	// add mesh detector to reporter
 	detector, err := meshdetect.NewDetectorByConfig(kubeCfg, podInfo.Namespace, podInfo.Name, publishServiceName,
-		logrusr.New(reporter.Logger),
+		// logger=reporter.mesh
+		reporter.Logger.WithName("mesh"),
 	)
 	if err == nil {
 		reporter.MeshDetectionEnabled = true

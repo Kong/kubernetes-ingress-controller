@@ -50,6 +50,20 @@ func TestMain(m *testing.M) {
 			WithProxyAdminServiceTypeLoadBalancer()
 	}
 
+	if kongImage != "" {
+		if kongTag == "" {
+			exitOnErrWithCode(fmt.Errorf("TEST_KONG_IMAGE requires TEST_KONG_TAG"), ExitCodeEnvSetupFailed)
+		}
+		kongbuilder = kongbuilder.WithProxyImage(kongImage, kongTag)
+	}
+
+	if kongPullUsername != "" {
+		if kongPullPassword == "" {
+			exitOnErrWithCode(fmt.Errorf("TEST_KONG_PULL_USERNAME requires TEST_KONG_PULL_PASSWORD"), ExitCodeEnvSetupFailed)
+		}
+		kongbuilder = kongbuilder.WithProxyImagePullSecret("", kongPullUsername, kongPullPassword, "")
+	}
+
 	if dbmode == "postgres" {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}

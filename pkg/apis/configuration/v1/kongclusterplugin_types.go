@@ -64,6 +64,9 @@ type KongClusterPlugin struct {
 	// Protocols configures plugin to run on requests received on specific
 	// protocols.
 	Protocols []KongProtocol `json:"protocols,omitempty"`
+
+	// Ordering overrides the normal plugin execution order
+	Ordering *KongPluginOrdering `json:"ordering,omitempty"`
 }
 
 //+kubebuilder:object:root=true

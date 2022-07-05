@@ -76,6 +76,8 @@
   [#2580](https://github.com/Kong/kubernetes-ingress-controller/pull/2580)
 - Added information about service mesh deployment and distribution in telemetry data reported to Kong.
   [#2642](https://github.com/Kong/kubernetes-ingress-controller/pull/2642)
+- Added support for plugin ordering (requires Kong Enterprise 3.0 or higher).
+  [#2657](https://github.com/Kong/kubernetes-ingress-controller/pull/2657)
 
 #### Fixed
 - Fixed the problem that logs from reporter does not appear in the pod log.

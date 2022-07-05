@@ -91,6 +91,26 @@ spec:
             type: string
           metadata:
             type: object
+          ordering:
+            description: Ordering overrides the normal plugin execution order
+            properties:
+              after:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: KongPluginOrderingPhase indicates which plugins in a
+                  phase should affect the target plugin's order
+                type: object
+              before:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: KongPluginOrderingPhase indicates which plugins in a
+                  phase should affect the target plugin's order
+                type: object
+            type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the
               config
@@ -601,6 +621,26 @@ spec:
               submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
+            type: object
+          ordering:
+            description: Ordering overrides the normal plugin execution order
+            properties:
+              after:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: KongPluginOrderingPhase indicates which plugins in a
+                  phase should affect the target plugin's order
+                type: object
+              before:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: KongPluginOrderingPhase indicates which plugins in a
+                  phase should affect the target plugin's order
+                type: object
             type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the

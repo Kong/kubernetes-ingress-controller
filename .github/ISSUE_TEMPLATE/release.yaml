@@ -55,7 +55,7 @@ body:
       - label: Add a section to `app/_data/kong_versions.yml` for your version.
       - label: Open a PR from your branch.
 - type: textarea
-  id: release_trouble_shooting
+  id: release_trouble_shooting_link
   attributes:
     label: Release Troubleshooting
     value: The [Release Troubleshooting guide](https://github.com/Kong/kubernetes-ingress-controller/blob/main/RELEASE.md#release-troubleshooting) covers strategies for dealing with a release that has failed.

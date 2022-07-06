@@ -145,6 +145,10 @@ jobs:
       run: make test.integration.enterprise.postgres
       env:
         KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
+        TEST_KONG_IMAGE: "kong/kong-gateway-internal"
+        TEST_KONG_TAG: "master-nightly-alpine"
+        TEST_KONG_PULL_USERNAME: ${{ secrets.TMP_DOCKER_USERNAME }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.TMP_DOCKER_PASSWORD }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3

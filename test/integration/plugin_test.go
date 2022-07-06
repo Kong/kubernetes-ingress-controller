@@ -395,7 +395,7 @@ func TestPluginOrdering(t *testing.T) {
 	termplugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Get(ctx, termplugin.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	termplugin.Ordering = &kong.PluginOrdering{
-		Before: kong.KongPluginOrderingPhase{
+		Before: kong.PluginOrderingPhase{
 			"access": []string{"key-auth"},
 		},
 	}

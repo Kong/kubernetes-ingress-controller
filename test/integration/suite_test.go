@@ -48,8 +48,22 @@ func TestMain(m *testing.M) {
 		extraControllerArgs = append(extraControllerArgs, "--kong-workspace=notdefault")
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
 			WithProxyEnterpriseSuperAdminPassword(kongTestPassword).
-			WithProxyAdminServiceTypeLoadBalancer().
-			WithProxyImage("kong/kong-gateway-internal", "master-nightly-alpine")
+			WithProxyAdminServiceTypeLoadBalancer()
+	}
+
+	if kongImage != "" {
+		if kongTag == "" {
+			exitOnErrWithCode(fmt.Errorf("TEST_KONG_IMAGE requires TEST_KONG_TAG"), ExitCodeEnvSetupFailed)
+		}
+		kongbuilder = kongbuilder.WithProxyImage(kongImage, kongTag)
+	}
+
+	if kongPullUsername != "" {
+		if kongPullPassword == "" {
+			exitOnErrWithCode(fmt.Errorf("TEST_KONG_PULL_USERNAME requires TEST_KONG_PULL_PASSWORD"), ExitCodeEnvSetupFailed)
+		}
+		// eh, who needs a repo URL or email
+		kongbuilder = kongbuilder.WithProxyImagePullSecret("", kongPullUsername, kongPullPassword, "")
 	}
 
 	if dbmode == "postgres" {

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -218,7 +219,7 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginOrdering(t *testing.T) {
-	if util.GetKongVersion().LTE(semver.MustParse("2.8.1")) {
+	if util.GetKongVersion().GTE(semver.MustParse("3.0.0")) {
 		t.Skip("Kong version does not support plugin ordering")
 	}
 	t.Parallel()
@@ -387,14 +388,14 @@ func TestPluginOrdering(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusForbidden
+		return resp.StatusCode == http.StatusUnauthorized
 	}, ingressWait, waitTick)
 
 	t.Logf("updating plugin %s order to run before key-auth in access", termplugin.Name)
 	termplugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Get(ctx, termplugin.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	termplugin.Ordering = &kongv1.KongPluginOrdering{
-		Before: kongv1.KongPluginOrderingPhase{
+	termplugin.Ordering = &kong.PluginOrdering{
+		Before: kong.KongPluginOrderingPhase{
 			"access": []string{"key-auth"},
 		},
 	}

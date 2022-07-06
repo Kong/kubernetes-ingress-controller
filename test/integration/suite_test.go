@@ -48,7 +48,8 @@ func TestMain(m *testing.M) {
 		extraControllerArgs = append(extraControllerArgs, "--kong-workspace=notdefault")
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
 			WithProxyEnterpriseSuperAdminPassword(kongTestPassword).
-			WithProxyAdminServiceTypeLoadBalancer()
+			WithProxyAdminServiceTypeLoadBalancer().
+			WithProxyImage("kong/kong-gateway-internal", "master-nightly-alpine")
 	}
 
 	if dbmode == "postgres" {

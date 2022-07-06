@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/kong/go-kong/kong"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -66,7 +67,7 @@ type KongClusterPlugin struct {
 	Protocols []KongProtocol `json:"protocols,omitempty"`
 
 	// Ordering overrides the normal plugin execution order
-	Ordering *KongPluginOrdering `json:"ordering,omitempty"`
+	Ordering *kong.PluginOrdering `json:"ordering,omitempty"`
 }
 
 //+kubebuilder:object:root=true

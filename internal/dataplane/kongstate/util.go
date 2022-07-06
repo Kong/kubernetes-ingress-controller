@@ -141,6 +141,7 @@ func kongPluginFromK8SClusterPlugin(
 		Config: config,
 
 		RunOn:     k8sPlugin.RunOn,
+		Ordering:  k8sPlugin.Ordering,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: protocolsToStrings(k8sPlugin.Protocols),
 	}.toKongPlugin()
@@ -191,6 +192,7 @@ func kongPluginFromK8SPlugin(
 		Config: config,
 
 		RunOn:     k8sPlugin.RunOn,
+		Ordering:  k8sPlugin.Ordering,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: protocolsToStrings(k8sPlugin.Protocols),
 	}.toKongPlugin()
@@ -274,6 +276,7 @@ type plugin struct {
 	Config kong.Configuration
 
 	RunOn     string
+	Ordering  *kong.PluginOrdering
 	Disabled  bool
 	Protocols []string
 }
@@ -289,6 +292,7 @@ func (p plugin) toKongPlugin() kong.Plugin {
 	if p.Disabled {
 		result.Enabled = kong.Bool(false)
 	}
+	result.Ordering = p.Ordering
 	if len(p.Protocols) > 0 {
 		result.Protocols = kong.StringSlice(p.Protocols...)
 	}

@@ -60,7 +60,7 @@ func (in *KongClusterPlugin) DeepCopyInto(out *KongClusterPlugin) {
 	}
 	if in.Ordering != nil {
 		in, out := &in.Ordering, &out.Ordering
-		*out = new(KongPluginOrdering)
+		*out = new(kong.PluginOrdering)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -475,7 +475,7 @@ func (in *KongPlugin) DeepCopyInto(out *KongPlugin) {
 	}
 	if in.Ordering != nil {
 		in, out := &in.Ordering, &out.Ordering
-		*out = new(KongPluginOrdering)
+		*out = new(kong.PluginOrdering)
 		(*in).DeepCopyInto(*out)
 	}
 }

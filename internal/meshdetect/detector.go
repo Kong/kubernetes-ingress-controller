@@ -34,6 +34,12 @@ type Detector struct {
 	Logger logr.Logger
 }
 
+const (
+	// defaultPageSize is the default limit of each single call of
+	// listing all resources(services,endpoints,pods) in pages.
+	defaultPageSize = 1000
+)
+
 // NewDetectorByConfig creates a new Detector provided a Kubernetes
 // config for the relevant cluster and the name of the Kubernetes service
 // for ingress traffic to the Kong Gateway.
@@ -57,6 +63,7 @@ func NewDetectorByConfig(kubeCfg *rest.Config,
 
 // DetectMeshDeployment detects which kinds of mesh networks are deployed.
 func (d *Detector) DetectMeshDeployment(ctx context.Context) map[MeshKind]*DeploymentResults {
+
 	deploymentResults := map[MeshKind]*DeploymentResults{}
 
 	for _, meshKind := range MeshesToDetect {
@@ -97,6 +104,7 @@ func (d *Detector) detectMeshDeploymentByService(ctx context.Context, meshKind M
 // for example, if the pod is injected with istio sidecar container and init container,
 // we report that the detector is running under istio mesh.
 func (d *Detector) DetectRunUnder(ctx context.Context) map[MeshKind]*RunUnderResults {
+
 	runUnderResults := map[MeshKind]*RunUnderResults{}
 	// get the pod itself.
 	pod := &corev1.Pod{}
@@ -211,27 +219,139 @@ func isPodInitContainerInjected(meshKind MeshKind, pod *corev1.Pod) bool {
 	return false
 }
 
-// DetectServiceDistribution detects how many services are running under each mesh.
-func (d *Detector) DetectServiceDistribution(ctx context.Context) (*ServiceDistributionResults, error) {
-	ret := &ServiceDistributionResults{
-		MeshDistribution: map[MeshKind]int{},
+//  listAllSevices lists all services in all namespaces.
+//  returns slice if all services.
+func (d *Detector) listAllSevices(ctx context.Context, pageSize int) ([]*corev1.Service, error) {
+	serviceList := []*corev1.Service{}
+	continueToken := ""
+	for {
+		partialServiceList := &corev1.ServiceList{}
+		err := d.Client.List(ctx, partialServiceList, client.Limit(pageSize), client.Continue(continueToken))
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range partialServiceList.Items {
+			serviceList = append(serviceList, &partialServiceList.Items[i])
+		}
+
+		continueToken = partialServiceList.GetContinue()
+
+		if partialServiceList.RemainingItemCount == nil || *partialServiceList.RemainingItemCount == 0 {
+			break
+		}
 	}
 
-	// list all services
-	serviceList := &corev1.ServiceList{}
-	err := d.Client.List(ctx, serviceList)
+	return serviceList, nil
+}
+
+// listAllEndpoints lists all endpoints in all namespaces.
+// returns map: namespaced name of endpoints -> endpoints resource
+// example: client.ObjectKey{Namespace: "default", Name: "service1"} ->
+// &corev1.Endpoints{
+//		ObjectMeta: metav1.ObjectMeta {
+//			Namespace: "default",
+//			Name: "service1", ...
+// 		},
+//		Subsets: ...,
+//		...
+// }
+func (d *Detector) listAllEndpoints(ctx context.Context, pageSize int) (
+	map[client.ObjectKey]*corev1.Endpoints, error) {
+	endpointsMap := map[client.ObjectKey]*corev1.Endpoints{}
+	continueToken := ""
+	for {
+		partialEndpointsList := &corev1.EndpointsList{}
+		err := d.Client.List(ctx, partialEndpointsList, client.Limit(pageSize), client.Continue(continueToken))
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range partialEndpointsList.Items {
+			ep := &partialEndpointsList.Items[i]
+			key := client.ObjectKey{Namespace: ep.Namespace, Name: ep.Name}
+			endpointsMap[key] = ep
+		}
+
+		continueToken = partialEndpointsList.GetContinue()
+
+		if partialEndpointsList.RemainingItemCount == nil || *partialEndpointsList.RemainingItemCount == 0 {
+			break
+		}
+	}
+	return endpointsMap, nil
+}
+
+// listAllPods lists all pods in all namespaces.
+// returns map: namespaced name of pod -> pod resource
+// example: client.ObjectKey{Namespace: "default", Name: "pod1"} ->
+// &corev1.Pod{
+//		ObjectMeta: metav1.ObjectMeta {
+//			Namespace: "default",
+//			Name: "service1", ...
+// 		},
+//		Spec: ...,
+//		...
+// }
+func (d *Detector) listAllPods(ctx context.Context, pageSize int) (
+	map[client.ObjectKey]*corev1.Pod, error) {
+	podMap := map[client.ObjectKey]*corev1.Pod{}
+	continueToken := ""
+	for {
+		partialPodList := &corev1.PodList{}
+		err := d.Client.List(ctx, partialPodList, client.Limit(pageSize), client.Continue(continueToken))
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range partialPodList.Items {
+			pod := &partialPodList.Items[i]
+			key := client.ObjectKey{Namespace: pod.Namespace, Name: pod.Name}
+			podMap[key] = pod
+		}
+
+		continueToken = partialPodList.GetContinue()
+		if partialPodList.RemainingItemCount == nil || *partialPodList.RemainingItemCount == 0 {
+			break
+		}
+	}
+	return podMap, nil
+}
+
+// DetectServiceDistribution detects how many services are running under each mesh.
+func (d *Detector) DetectServiceDistribution(ctx context.Context) (*ServiceDistributionResults, error) {
+
+	// list all services, endpoints and pods to check whether
+	// pods behind each service is injected by each service mesh.
+
+	serviceList, err := d.listAllSevices(ctx, defaultPageSize)
 	if err != nil {
-		d.Logger.Error(err, "failed to list all services in cluster")
+		d.Logger.Error(err, "failed to list services in cluster")
 		return nil, err
 	}
 
-	ret.TotalServices = len(serviceList.Items)
+	endpoints, err := d.listAllEndpoints(ctx, defaultPageSize)
+	if err != nil {
+		d.Logger.Error(err, "failed to list endpoints in cluster")
+		return nil, err
+	}
 
-	for i := range serviceList.Items {
-		svc := &serviceList.Items[i]
-		endpoints := &corev1.Endpoints{}
-		err := d.Client.Get(ctx, client.ObjectKey{Namespace: svc.Namespace, Name: svc.Name}, endpoints)
-		if err != nil {
+	pods, err := d.listAllPods(ctx, defaultPageSize)
+	if err != nil {
+		d.Logger.Error(err, "failed to list pods in cluster")
+		return nil, err
+	}
+
+	ret := &ServiceDistributionResults{
+		MeshDistribution: map[MeshKind]int{},
+		TotalServices:    len(serviceList),
+	}
+
+	for _, svc := range serviceList {
+
+		key := client.ObjectKeyFromObject(svc)
+		endpointsResource := endpoints[key]
+		if endpointsResource == nil {
 			continue
 		}
 
@@ -240,12 +360,11 @@ func (d *Detector) DetectServiceDistribution(ctx context.Context) (*ServiceDistr
 
 		// detect if service has annotations to indicate that the service is injected
 		// (only for traefik)
-
 		for meshKind := range meshServiceAnnotations {
 			injected[meshKind] = isServiceInjected(meshKind, svc)
 		}
 
-		for _, subset := range endpoints.Subsets {
+		for _, subset := range endpointsResource.Subsets {
 			for _, address := range subset.Addresses {
 				// skip if the target endpoint address is not a pod.
 				if address.TargetRef == nil {
@@ -256,11 +375,12 @@ func (d *Detector) DetectServiceDistribution(ctx context.Context) (*ServiceDistr
 				}
 
 				// if one of the pod is injected, we consider this service as running under the mesh.
-				pod := &corev1.Pod{}
-				err := d.Client.Get(ctx,
-					client.ObjectKey{Namespace: address.TargetRef.Namespace, Name: address.TargetRef.Name},
-					pod)
-				if err != nil {
+				podKey := client.ObjectKey{
+					Namespace: address.TargetRef.Namespace,
+					Name:      address.TargetRef.Name,
+				}
+				pod := pods[podKey]
+				if pod == nil {
 					continue
 				}
 

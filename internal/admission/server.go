@@ -90,7 +90,8 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 }
 
 func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handler,
-	log logrus.FieldLogger) (*http.Server, error) {
+	log logrus.FieldLogger,
+) (*http.Server, error) {
 	tlsConfig, err := config.toTLSConfig(ctx, log)
 	if err != nil {
 		return nil, err
@@ -188,7 +189,8 @@ var (
 )
 
 func (a RequestHandler) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
-	*admission.AdmissionResponse, error) {
+	*admission.AdmissionResponse, error,
+) {
 	var response admission.AdmissionResponse
 
 	var ok bool

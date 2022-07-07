@@ -39,7 +39,8 @@ type Detector struct {
 // for ingress traffic to the Kong Gateway.
 func NewDetectorByConfig(kubeCfg *rest.Config,
 	podNamespace, podName, publishServiceName string,
-	logger logr.Logger) (*Detector, error) {
+	logger logr.Logger,
+) (*Detector, error) {
 	c, err := client.New(kubeCfg, client.Options{})
 	if err != nil {
 		return nil, err
@@ -177,7 +178,6 @@ func isPodSidecarInjected(meshKind MeshKind, pod *corev1.Pod) bool {
 	}
 	for _, container := range pod.Spec.Containers {
 		if container.Name == sidecarName {
-
 			switch meshKind { // nolint:exhaustive
 			case MeshKindAWSAppMesh:
 				// special judgement for AWS appmesh here:

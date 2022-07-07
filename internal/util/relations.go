@@ -9,7 +9,6 @@ type Rel struct {
 }
 
 func (relations *ForeignRelations) GetCombinations() []Rel {
-
 	var cartesianProduct []Rel
 
 	if len(relations.Consumer) > 0 {

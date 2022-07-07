@@ -104,7 +104,6 @@ func (r *Reporter) send(signal string, uptime int) {
 			// log the error if mesh detection fails,
 			// but still send the messages without mesh detection results.
 			r.Logger.V(DebugLevel).Info("failed to run mesh detection", "error", err)
-
 		} else {
 			// append results from mesh detection to reported message if returned any.
 			if meshMessage != "" {

@@ -45,7 +45,15 @@ func TestTranslateIngress(t *testing.T) {
 											Port: networkingv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
-											}}}}}}}}}}},
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -108,7 +116,15 @@ func TestTranslateIngress(t *testing.T) {
 											Port: networkingv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
-											}}}}}}}}}}},
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -171,7 +187,15 @@ func TestTranslateIngress(t *testing.T) {
 											Port: networkingv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
-											}}}}}}}}}}},
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -233,7 +257,15 @@ func TestTranslateIngress(t *testing.T) {
 											Port: networkingv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
-											}}}}}}}}}}},
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -295,7 +327,15 @@ func TestTranslateIngress(t *testing.T) {
 											Port: networkingv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
-											}}}}}}}}}}},
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -358,7 +398,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path: "/v2/api",
@@ -368,7 +410,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path: "/v3/api",
@@ -378,7 +422,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path:     "/other/path/1",
@@ -389,7 +435,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path:     "/other/path/2",
@@ -400,7 +448,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path:     "",
@@ -411,9 +461,16 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
-								}}}}}}},
+								},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -482,7 +539,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path: "/v2/api",
@@ -492,7 +551,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path: "/v3/api",
@@ -502,7 +563,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path:     "/other/path/1",
@@ -513,7 +576,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path:     "/other/path/2",
@@ -524,7 +589,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path:     "",
@@ -535,9 +602,16 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
-								}}}}}}},
+								},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -606,7 +680,9 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
 									{
 										Path: "/v2/api",
@@ -616,9 +692,16 @@ func TestTranslateIngress(t *testing.T) {
 												Port: networkingv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
-												}}},
+												},
+											},
+										},
 									},
-								}}}}}}},
+								},
+							},
+						},
+					}},
+				},
+			},
 			expected: []*kongstate.Service{
 				{
 					Namespace: corev1.NamespaceDefault,

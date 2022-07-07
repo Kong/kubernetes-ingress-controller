@@ -85,7 +85,8 @@ func isRefAllowedByPolicy(
 // from a namespace to a slice of ReferencePolicy Tos. When a To is included in the slice, the key namespace has a
 // ReferencePolicy with those Tos and the input From.
 func getPermittedForReferencePolicyFrom(from gatewayv1alpha2.ReferencePolicyFrom,
-	policies []*gatewayv1alpha2.ReferencePolicy) map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo {
+	policies []*gatewayv1alpha2.ReferencePolicy,
+) map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo {
 	allowed := make(map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo)
 	// loop over all From values in all policies. if we find a match, add all Tos to the list of Tos allowed for the
 	// policy namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes

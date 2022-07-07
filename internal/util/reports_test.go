@@ -20,9 +20,8 @@ type TLSPair struct {
 	Key, Cert string
 }
 
-var (
-	reportTestTLSCert = TLSPair{
-		Cert: `-----BEGIN CERTIFICATE-----
+var reportTestTLSCert = TLSPair{
+	Cert: `-----BEGIN CERTIFICATE-----
 MIIC2DCCAcACCQC32eFOsWpKojANBgkqhkiG9w0BAQsFADAuMRcwFQYDVQQDDA5z
 ZWN1cmUtZm9vLWJhcjETMBEGA1UECgwKa29uZ2hxLm9yZzAeFw0xODEyMTgyMTI4
 MDBaFw0xOTEyMTgyMTI4MDBaMC4xFzAVBgNVBAMMDnNlY3VyZS1mb28tYmFyMRMw
@@ -40,7 +39,7 @@ QSnWu1nQLyohnrB9qLZhe2+jOQZnkKuCcWJQ5njvU6SxT3SOKE5XaOZCezEQ6IVL
 U47YCCXsq+7wKWXBhKl4H2Ztk6x3HOC56l0noXWezsMfrou/kjwGuuViGnrjqelS
 WQ7uVeNCUBY+l+qY
 -----END CERTIFICATE-----`,
-		Key: `-----BEGIN PRIVATE KEY-----
+	Key: `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCqGX8dLBXo9sy/
 5wwVT1f4e4ztBs00+Hf0YprimTHMWCICe64niPD1X9vOwTJL5kjKPOj5AoHUvOaB
 1xfi+R0jbYGPFR30c8d1nG2/deKVs2ZKT1Q6XYeHV85EmhLtgf5Vu9XCLPmWjuop
@@ -68,8 +67,7 @@ hncXsgyzK6QUzak6HmFji/CMZ6EU9q6A67JkiEWrYoKqIAKZ2Og8+Eucr/rDdGWc
 kqlmLPBJAJeUsP/9KidBjTE5mIbn/2n089VPMBvnlt2xIcuB6+zrf2NjvlcZEyKS
 Gn+T2uCyOP4a1DTUoPyoNJXo
 -----END PRIVATE KEY-----`,
-	}
-)
+}
 
 func TestMain(m *testing.M) {
 	reportsHost = "localhost"

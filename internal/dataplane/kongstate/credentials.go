@@ -222,10 +222,12 @@ func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
 }
 
 func decodeCredential(credConfig interface{},
-	credStructPointer interface{}) error {
+	credStructPointer interface{},
+) error {
 	decoder, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{TagName: "json",
-			Result: credStructPointer,
+		&mapstructure.DecoderConfig{
+			TagName: "json",
+			Result:  credStructPointer,
 		})
 	if err != nil {
 		return fmt.Errorf("failed to create a decoder: %w", err)

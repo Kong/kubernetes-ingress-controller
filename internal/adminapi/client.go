@@ -146,7 +146,8 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 // GetKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
 // If the workspace does not already exist, GetKongClientForWorkspace will create it.
 func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
-	httpclient *http.Client) (*kong.Client, error) {
+	httpclient *http.Client,
+) (*kong.Client, error) {
 	// create the base client, and if no workspace was provided then return that.
 	client, err := kong.NewClient(kong.String(adminURL), httpclient)
 	if err != nil {

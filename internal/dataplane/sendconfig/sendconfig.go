@@ -40,7 +40,8 @@ func PerformUpdate(ctx context.Context,
 	selectorTags []string,
 	customEntities []byte,
 	oldSHA []byte,
-	promMetrics *metrics.CtrlFuncMetrics) ([]byte, error) {
+	promMetrics *metrics.CtrlFuncMetrics,
+) ([]byte, error) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
 		return oldSHA, err
@@ -111,8 +112,8 @@ func PerformUpdate(ctx context.Context,
 // -----------------------------------------------------------------------------
 
 func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
-	customEntitiesJSONBytes []byte) ([]byte, error) {
-
+	customEntitiesJSONBytes []byte,
+) ([]byte, error) {
 	var kongCoreConfig []byte
 	var err error
 

@@ -51,7 +51,6 @@ func Test_keyFunc(t *testing.T) {
 			args: args{
 				obj: B{
 					F: F{
-
 						Name:      "Fu",
 						Namespace: "Bar",
 					},

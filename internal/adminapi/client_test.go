@@ -24,7 +24,6 @@ import (
 )
 
 func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
-
 	var caPEM *bytes.Buffer
 	var certPEM *bytes.Buffer
 	var certPrivateKeyPEM *bytes.Buffer
@@ -35,7 +34,7 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 		t.Errorf("Fail to build TLS certificates - %s", err.Error())
 	}
 
-	var opts = HTTPClientOpts{
+	opts := HTTPClientOpts{
 		TLSSkipVerify:     true,
 		TLSServerName:     "",
 		CACertPath:        "",
@@ -54,11 +53,9 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 
 	err = validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM)
 	require.NoError(t, err)
-
 }
 
 func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
-
 	var caPEM *bytes.Buffer
 	var certPEM *bytes.Buffer
 	var certPrivateKeyPEM *bytes.Buffer
@@ -112,7 +109,6 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 }
 
 func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPrivateKeyPEM *bytes.Buffer, err error) {
-
 	var ca *x509.Certificate
 	var caPrivateKeyPEM *bytes.Buffer
 
@@ -223,8 +219,8 @@ func validate(t *testing.T,
 	httpclient *http.Client,
 	caPEM *bytes.Buffer,
 	certPEM *bytes.Buffer,
-	certPrivateKeyPEM *bytes.Buffer) (err error) {
-
+	certPrivateKeyPEM *bytes.Buffer,
+) (err error) {
 	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivateKeyPEM.Bytes())
 	if err != nil {
 		t.Errorf("Fail to load server certificates %s", err.Error())

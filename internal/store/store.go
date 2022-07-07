@@ -409,7 +409,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 
 // New creates a new object store to be used in the ingress controller
 func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
-	processClasslessKongConsumer bool, logger logrus.FieldLogger) Storer {
+	processClasslessKongConsumer bool, logger logrus.FieldLogger,
+) Storer {
 	var ingressV1Beta1ClassMatching annotations.ClassMatching
 	var ingressV1ClassMatching annotations.ClassMatching
 	var kongConsumerClassMatching annotations.ClassMatching
@@ -814,7 +815,6 @@ func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
 // Support for these global namespaced KongPlugins was removed in 0.10.0
 // This function remains only to provide warnings to users with old configuration
 func (s Store) ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error) {
-
 	var plugins []*kongv1.KongPlugin
 	// var globalPlugins []*configurationv1.KongPlugin
 	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})

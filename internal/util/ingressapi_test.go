@@ -98,7 +98,6 @@ func TestServerHasGVK(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestNegotiateResourceAPI(t *testing.T) {

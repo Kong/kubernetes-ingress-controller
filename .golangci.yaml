@@ -17,6 +17,7 @@ linters:
   - exportloopref
   - gci
   - gofmt
+  - gofumpt
   - goimports
   - gosec
   - gosimple

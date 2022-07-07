@@ -18,7 +18,6 @@ func TestSerializeMeshDeploymentResults(t *testing.T) {
 			caseName: "deployment:kong-mesh",
 			results: map[meshdetect.MeshKind]*meshdetect.DeploymentResults{
 				meshdetect.MeshKindKongMesh: {
-
 					ServiceExists: true,
 				},
 			},
@@ -102,7 +101,6 @@ func TestSerializeMeshRunUnderResult(t *testing.T) {
 			caseName: "run_under:traefik,aws-app-mesh",
 			results: map[meshdetect.MeshKind]*meshdetect.RunUnderResults{
 				meshdetect.MeshKindTraefik: {
-
 					PodOrServiceAnnotation: true,
 				},
 				meshdetect.MeshKindAWSAppMesh: {

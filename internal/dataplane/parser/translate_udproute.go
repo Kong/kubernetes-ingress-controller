@@ -95,7 +95,8 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 // generateKongRoutesFromUDPRouteRule converts an UDPRoute rule to one or more
 // Kong Route objects to route traffic to services.
 func generateKongRoutesFromUDPRouteRule(udproute *gatewayv1alpha2.UDPRoute, ruleNumber int,
-	rule gatewayv1alpha2.UDPRouteRule) ([]kongstate.Route, error) {
+	rule gatewayv1alpha2.UDPRouteRule,
+) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the udproute
 	objectInfo := util.FromK8sObject(udproute)
 

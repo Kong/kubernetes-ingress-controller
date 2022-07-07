@@ -125,10 +125,12 @@ func NewListenerTracker() ListenerTracker {
 	}
 }
 
-type protocolPortMap map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool
-type portProtocolMap map[gatewayv1alpha2.PortNumber]gatewayv1alpha2.ProtocolType
-type portHostnameMap map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]bool
-type listenerAttachedMap map[gatewayv1alpha2.SectionName]int32
+type (
+	protocolPortMap     map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool
+	portProtocolMap     map[gatewayv1alpha2.PortNumber]gatewayv1alpha2.ProtocolType
+	portHostnameMap     map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]bool
+	listenerAttachedMap map[gatewayv1alpha2.SectionName]int32
+)
 
 func buildKongPortMap(listens []gatewayv1alpha2.Listener) protocolPortMap {
 	p := make(map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool, len(listens))

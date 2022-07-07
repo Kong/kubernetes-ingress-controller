@@ -271,7 +271,8 @@ func setupControllers(
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "gateways",
-				}}.CRDExists,
+				},
+			}.CRDExists,
 			Controller: &gateway.GatewayReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName(gatewayFeature),
@@ -288,7 +289,8 @@ func setupControllers(
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "referencepolicies",
-				}}.CRDExists,
+				},
+			}.CRDExists,
 			Controller: &gateway.ReferencePolicyReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("ReferencePolicy"),
@@ -303,7 +305,8 @@ func setupControllers(
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "httproutes",
-				}}.CRDExists,
+				},
+			}.CRDExists,
 			Controller: &gateway.HTTPRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
@@ -318,7 +321,8 @@ func setupControllers(
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "udproutes",
-				}}.CRDExists,
+				},
+			}.CRDExists,
 			Controller: &gateway.UDPRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("UDPRoute"),
@@ -333,7 +337,8 @@ func setupControllers(
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "tcproutes",
-				}}.CRDExists,
+				},
+			}.CRDExists,
 			Controller: &gateway.TCPRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("TCPRoute"),
@@ -348,7 +353,8 @@ func setupControllers(
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "tlsroutes",
-				}}.CRDExists,
+				},
+			}.CRDExists,
 			Controller: &gateway.TLSRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("TLSRoute"),

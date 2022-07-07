@@ -53,7 +53,8 @@ func setupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
 }
 
 func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme,
-	dbmode string) (ctrl.Options, error) {
+	dbmode string,
+) (ctrl.Options, error) {
 	// some controllers may require additional namespaces to be cached and this
 	// is currently done using the global manager client cache.
 	//

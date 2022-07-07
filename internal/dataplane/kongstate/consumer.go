@@ -10,9 +10,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
-var (
-	minMTLSCredentialVersion = semver.MustParse("2.3.2")
-)
+var minMTLSCredentialVersion = semver.MustParse("2.3.2")
 
 // Consumer holds a Kong consumer and its plugins and credentials.
 type Consumer struct {

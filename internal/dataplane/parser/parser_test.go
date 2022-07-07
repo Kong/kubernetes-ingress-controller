@@ -354,7 +354,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	t.Run("plugins with secret configuration are processed correctly",
 		func(t *testing.T) {
 			objects := stock
@@ -4683,7 +4684,7 @@ func TestCertificate(t *testing.T) {
 		assert.Nil(err)
 		assert.NotNil(state)
 		assert.Equal(3, len(state.Certificates))
-		//foo.com with cert should be fixed
+		// foo.com with cert should be fixed
 		assert.Contains(state.Certificates, fooCertificate)
 	})
 	t.Run("SNIs slice with same certificate should be ordered by asc", func(t *testing.T) {

@@ -14,8 +14,8 @@ import (
 // GenerateSHA generates a SHA256 checksum of the (targetContent, customEntities) tuple, with the purpose of change
 // detection.
 func GenerateSHA(targetContent *file.Content,
-	customEntities []byte) ([]byte, error) {
-
+	customEntities []byte,
+) ([]byte, error) {
 	var buffer bytes.Buffer
 
 	jsonConfig, err := json.Marshal(targetContent)
@@ -120,7 +120,8 @@ func PluginString(plugin file.FPlugin) string {
 
 // FillPluginConfig returns a copy of `config` that has default values filled in from `schema`.
 func FillPluginConfig(schema map[string]interface{},
-	config kong.Configuration) (kong.Configuration, error) {
+	config kong.Configuration,
+) (kong.Configuration, error) {
 	jsonb, err := json.Marshal(&schema)
 	if err != nil {
 		return nil, err

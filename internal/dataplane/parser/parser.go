@@ -622,7 +622,6 @@ func getServiceEndpoints(
 	svc *corev1.Service,
 	servicePort *corev1.ServicePort,
 ) []kongstate.Target {
-
 	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
 		"service_namespace": svc.Namespace,
@@ -657,7 +656,6 @@ func getEndpoints(
 	proto corev1.Protocol,
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
 ) []util.Endpoint {
-
 	upsServers := []util.Endpoint{}
 
 	if s == nil || port == nil {
@@ -697,7 +695,6 @@ func getEndpoints(
 			Address: s.Name + "." + s.Namespace + ".svc",
 			Port:    fmt.Sprintf("%v", port.Port),
 		})
-
 	}
 
 	log.Debugf("fetching endpoints")

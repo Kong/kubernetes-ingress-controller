@@ -19,7 +19,8 @@ var meshKindShortNames = map[meshdetect.MeshKind]string{
 }
 
 func serializeMeshDeploymentResults(
-	results map[meshdetect.MeshKind]*meshdetect.DeploymentResults) string {
+	results map[meshdetect.MeshKind]*meshdetect.DeploymentResults,
+) string {
 	if results == nil {
 		return ""
 	}
@@ -47,7 +48,8 @@ func serializeMeshDeploymentResults(
 }
 
 func serializeMeshRunUnderResults(
-	results map[meshdetect.MeshKind]*meshdetect.RunUnderResults) string {
+	results map[meshdetect.MeshKind]*meshdetect.RunUnderResults,
+) string {
 	if results == nil {
 		return ""
 	}
@@ -82,7 +84,8 @@ func serializeMeshRunUnderResults(
 }
 
 func serializeMeshServiceDistribution(
-	result *meshdetect.ServiceDistributionResults) string {
+	result *meshdetect.ServiceDistributionResults,
+) string {
 	if result == nil {
 		return ""
 	}

@@ -29,17 +29,20 @@ type KongFakeValidator struct {
 }
 
 func (v KongFakeValidator) ValidateConsumer(_ context.Context,
-	consumer configuration.KongConsumer) (bool, string, error) {
+	consumer configuration.KongConsumer,
+) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidatePlugin(_ context.Context,
-	k8sPlugin configuration.KongPlugin) (bool, string, error) {
+	k8sPlugin configuration.KongPlugin,
+) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidateClusterPlugin(_ context.Context,
-	k8sPlugin configuration.KongClusterPlugin) (bool, string, error) {
+	k8sPlugin configuration.KongClusterPlugin,
+) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

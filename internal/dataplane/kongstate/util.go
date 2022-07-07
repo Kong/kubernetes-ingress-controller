@@ -113,7 +113,8 @@ func getPlugin(s store.Storer, namespace, name string) (kong.Plugin, error) {
 
 func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
-	k8sPlugin configurationv1.KongClusterPlugin) (kong.Plugin, error) {
+	k8sPlugin configurationv1.KongClusterPlugin,
+) (kong.Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
@@ -163,7 +164,8 @@ func protocolsToStrings(protocols []configurationv1.KongProtocol) (res []string)
 
 func kongPluginFromK8SPlugin(
 	s store.Storer,
-	k8sPlugin configurationv1.KongPlugin) (kong.Plugin, error) {
+	k8sPlugin configurationv1.KongPlugin,
+) (kong.Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
@@ -212,10 +214,12 @@ func RawConfigToConfiguration(config apiextensionsv1.JSON) (kong.Configuration, 
 func namespacedSecretToConfiguration(
 	s store.Storer,
 	reference configurationv1.NamespacedSecretValueFromSource) (
-	kong.Configuration, error) {
+	kong.Configuration, error,
+) {
 	bareReference := configurationv1.SecretValueFromSource{
 		Secret: reference.Secret,
-		Key:    reference.Key}
+		Key:    reference.Key,
+	}
 	return SecretToConfiguration(s, bareReference, reference.Namespace)
 }
 
@@ -226,7 +230,8 @@ type SecretGetter interface {
 func SecretToConfiguration(
 	s SecretGetter,
 	reference configurationv1.SecretValueFromSource, namespace string) (
-	kong.Configuration, error) {
+	kong.Configuration, error,
+) {
 	secret, err := s.GetSecret(namespace, reference.Secret)
 	if err != nil {
 		return kong.Configuration{}, fmt.Errorf(

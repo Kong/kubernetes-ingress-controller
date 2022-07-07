@@ -325,7 +325,7 @@ func (needed necessary) generate() error {
 		}
 	}
 
-	return os.WriteFile(outputFile, contents.Bytes(), 0600)
+	return os.WriteFile(outputFile, contents.Bytes(), 0o600)
 }
 
 type typeNeeded struct {

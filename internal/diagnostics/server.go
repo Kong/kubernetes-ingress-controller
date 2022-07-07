@@ -23,12 +23,13 @@ type Server struct {
 	ConfigLock       *sync.RWMutex
 }
 
-var successfulConfigDump file.Content
-var failedConfigDump file.Content
+var (
+	successfulConfigDump file.Content
+	failedConfigDump     file.Content
+)
 
 // Listen starts up the HTTP server and blocks until ctx expires.
 func (s *Server) Listen(ctx context.Context, port int) error {
-
 	mux := http.NewServeMux()
 	if s.ConfigDumps != (util.ConfigDumpDiagnostic{}) {
 		s.installDumpHandlers(mux)

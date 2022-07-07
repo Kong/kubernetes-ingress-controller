@@ -31,17 +31,15 @@ const (
 	WarnLevel = int(logrus.WarnLevel) - logrusrDiff
 )
 
-var (
-	logrusLevels = map[string]logrus.Level{
-		"panic": logrus.PanicLevel,
-		"fatal": logrus.FatalLevel,
-		"error": logrus.ErrorLevel,
-		"warn":  logrus.WarnLevel,
-		"info":  logrus.InfoLevel,
-		"debug": logrus.DebugLevel,
-		"trace": logrus.TraceLevel,
-	}
-)
+var logrusLevels = map[string]logrus.Level{
+	"panic": logrus.PanicLevel,
+	"fatal": logrus.FatalLevel,
+	"error": logrus.ErrorLevel,
+	"warn":  logrus.WarnLevel,
+	"info":  logrus.InfoLevel,
+	"debug": logrus.DebugLevel,
+	"trace": logrus.TraceLevel,
+}
 
 func MakeLogger(level string, formatter string) (logrus.FieldLogger, error) {
 	log := logrus.New()

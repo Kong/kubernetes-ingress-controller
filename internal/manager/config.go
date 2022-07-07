@@ -106,7 +106,6 @@ type Config struct {
 
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
-
 	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
 
 	// Logging configurations

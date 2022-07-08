@@ -63,7 +63,6 @@ func NewDetectorByConfig(kubeCfg *rest.Config,
 
 // DetectMeshDeployment detects which kinds of mesh networks are deployed.
 func (d *Detector) DetectMeshDeployment(ctx context.Context) map[MeshKind]*DeploymentResults {
-
 	deploymentResults := map[MeshKind]*DeploymentResults{}
 
 	for _, meshKind := range MeshesToDetect {
@@ -104,7 +103,6 @@ func (d *Detector) detectMeshDeploymentByService(ctx context.Context, meshKind M
 // for example, if the pod is injected with istio sidecar container and init container,
 // we report that the detector is running under istio mesh.
 func (d *Detector) DetectRunUnder(ctx context.Context) map[MeshKind]*RunUnderResults {
-
 	runUnderResults := map[MeshKind]*RunUnderResults{}
 	// get the pod itself.
 	pod := &corev1.Pod{}
@@ -257,7 +255,8 @@ func (d *Detector) listAllSevices(ctx context.Context, pageSize int) ([]*corev1.
 //		...
 // }
 func (d *Detector) listAllEndpoints(ctx context.Context, pageSize int) (
-	map[client.ObjectKey]*corev1.Endpoints, error) {
+	map[client.ObjectKey]*corev1.Endpoints, error,
+) {
 	endpointsMap := map[client.ObjectKey]*corev1.Endpoints{}
 	continueToken := ""
 	for {
@@ -294,7 +293,8 @@ func (d *Detector) listAllEndpoints(ctx context.Context, pageSize int) (
 //		...
 // }
 func (d *Detector) listAllPods(ctx context.Context, pageSize int) (
-	map[client.ObjectKey]*corev1.Pod, error) {
+	map[client.ObjectKey]*corev1.Pod, error,
+) {
 	podMap := map[client.ObjectKey]*corev1.Pod{}
 	continueToken := ""
 	for {
@@ -320,7 +320,6 @@ func (d *Detector) listAllPods(ctx context.Context, pageSize int) (
 
 // DetectServiceDistribution detects how many services are running under each mesh.
 func (d *Detector) DetectServiceDistribution(ctx context.Context) (*ServiceDistributionResults, error) {
-
 	// list all services, endpoints and pods to check whether
 	// pods behind each service is injected by each service mesh.
 

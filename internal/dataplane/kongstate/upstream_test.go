@@ -1,7 +1,7 @@
 package kongstate
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -77,7 +77,7 @@ func TestOverrideUpstream(t *testing.T) {
 
 	for _, testcase := range testTable {
 		log := logrus.New()
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 
 		testcase.inUpstream.override(log, testcase.inKongIngresss, testcase.svc)
 		assert.Equal(testcase.inUpstream, testcase.outUpstream)
@@ -85,7 +85,7 @@ func TestOverrideUpstream(t *testing.T) {
 
 	assert.NotPanics(func() {
 		log := logrus.New()
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 
 		var nilUpstream *Upstream
 		nilUpstream.override(log, nil, nil)

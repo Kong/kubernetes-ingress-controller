@@ -9,7 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -254,7 +254,7 @@ func validate(t *testing.T,
 	defer response.Body.Close()
 
 	// verify the response
-	data, err := ioutil.ReadAll(response.Body)
+	data, err := io.ReadAll(response.Body)
 	if err != nil {
 		t.Errorf("HTTP client failed to process a GET request %s", err.Error())
 		return err

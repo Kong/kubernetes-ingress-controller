@@ -1,7 +1,7 @@
 package kongstate
 
 import (
-	"io/ioutil"
+	"io"
 	"reflect"
 	"testing"
 
@@ -364,7 +364,7 @@ func TestOverrideService(t *testing.T) {
 
 	for _, testcase := range testTable {
 		log := logrus.New()
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 
 		k8sServices := testcase.inService.K8sServices
 		for _, svc := range k8sServices {
@@ -375,7 +375,7 @@ func TestOverrideService(t *testing.T) {
 
 	assert.NotPanics(func() {
 		log := logrus.New()
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 
 		var nilService *Service
 		nilService.override(log, nil, nil)

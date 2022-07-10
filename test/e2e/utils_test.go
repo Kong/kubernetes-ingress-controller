@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -161,16 +160,16 @@ func patchControllerImage(baseManifestPath string, image string, tag string) (io
 		return nil, err
 	}
 	defer os.RemoveAll(workDir)
-	orig, err := ioutil.ReadFile(baseManifestPath)
+	orig, err := os.ReadFile(baseManifestPath)
 	if err != nil {
 		return nil, err
 	}
-	err = ioutil.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0600)
+	err = os.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0o600)
 	if err != nil {
 		return nil, err
 	}
 	kustomization := []byte(fmt.Sprintf(imageKustomizationContents, image, tag))
-	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0600)
+	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0o600)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +273,8 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 // startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
 // ends
 func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, localPort,
-	targetPort string) {
+	targetPort string,
+) {
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
 	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "portforward-tests-kubeconfig-")

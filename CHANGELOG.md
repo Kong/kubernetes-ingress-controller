@@ -54,7 +54,7 @@
 
 > Release date: 2022-07-11
 
-#### Breaking changes
+#### Breaking changes in Gateway API technical preview:
 
 - The controller no longer overrides Gateway Listeners with a list of Listeners
   derived from Kong configuration. User-provided Listener lists are preserved

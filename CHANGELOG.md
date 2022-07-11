@@ -52,7 +52,7 @@
 
 ## [2.5.0]
 
-> Release date: TBD
+> Release date: 2022-07-11
 
 #### Breaking changes
 

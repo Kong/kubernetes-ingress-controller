@@ -1,7 +1,7 @@
 package kongstate
 
 import (
-	"io/ioutil"
+	"io"
 	"reflect"
 	"testing"
 
@@ -359,7 +359,7 @@ func TestNormalizeProtocols(t *testing.T) {
 
 	assert.NotPanics(func() {
 		log := logrus.New()
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 
 		var nilUpstream *Upstream
 		nilUpstream.override(log, nil, nil)

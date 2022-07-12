@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.12.4
-	github.com/kong/go-kong v0.29.0
+	github.com/kong/go-kong v0.30.0
 	github.com/kong/kubernetes-testing-framework v0.15.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.50

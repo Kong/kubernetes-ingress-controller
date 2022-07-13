@@ -48,10 +48,9 @@ body:
     label: "**For major/minor releases only** Update Release documents"
     options:
       - label: Create a new branch in the [documentation site repo](https://github.com/Kong/docs.konghq.com).
-      - label: Copy `app/kubernetes-ingress-controller/OLD_VERSION` to `app/kubernetes-ingress-controller/NEW_VERSION`.
       - label: Update articles in the new version as needed.
       - label: Update `references/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)
-      - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml`. Add entries for any new articles.
+      - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml` and update the `release` field to `NEWVERSION`. Add entries for any new articles.
       - label: Add a section to `app/_data/kong_versions.yml` for your version.
       - label: Open a PR from your branch.
 - type: textarea

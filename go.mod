@@ -5,7 +5,7 @@ go 1.18
 replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
 
 require (
-	cloud.google.com/go/container v1.2.0
+	cloud.google.com/go/container v1.3.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/avast/retry-go/v4 v4.1.0
 	github.com/blang/semver/v4 v4.0.0
@@ -29,7 +29,7 @@ require (
 	github.com/tidwall/gjson v1.14.1
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e
 	google.golang.org/api v0.86.0
-	google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f
+	google.golang.org/genproto v0.0.0-20220706132729-d86698d07c53
 	k8s.io/api v0.24.2
 	k8s.io/apiextensions-apiserver v0.24.2
 	k8s.io/apimachinery v0.24.2

@@ -27,7 +27,7 @@ import (
 // TCPRoute Controller - TCPRouteReconciler
 // -----------------------------------------------------------------------------
 
-// TCPRouteReconciler reconciles an TCPRoute object
+// TCPRouteReconciler reconciles an TCPRoute object.
 type TCPRouteReconciler struct {
 	client.Client
 

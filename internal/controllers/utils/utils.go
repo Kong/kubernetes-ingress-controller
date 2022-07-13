@@ -13,7 +13,7 @@ import (
 
 const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"
 
-// IsDefaultIngressClass returns whether an IngressClass is the default IngressClass
+// IsDefaultIngressClass returns whether an IngressClass is the default IngressClass.
 func IsDefaultIngressClass(obj client.Object) bool {
 	if ingressClass, ok := obj.(*netv1.IngressClass); ok {
 		return ingressClass.ObjectMeta.Annotations[defaultIngressClassAnnotation] == "true"
@@ -21,7 +21,7 @@ func IsDefaultIngressClass(obj client.Object) bool {
 	return false
 }
 
-// MatchesIngressClass indicates whether or not an object belongs to a given ingress class
+// MatchesIngressClass indicates whether or not an object belongs to a given ingress class.
 func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDefault bool) bool {
 	objectIngressClass := obj.GetAnnotations()[annotations.IngressClassKey]
 	objectKnativeClass := obj.GetAnnotations()[annotations.KnativeIngressClassKey]
@@ -48,7 +48,7 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 }
 
 // GeneratePredicateFuncsForIngressClassFilter builds a controller-runtime reconciliation predicate function which filters out objects
-// which have their ingress class set to the a value other than the controller class
+// which have their ingress class set to the a value other than the controller class.
 func GeneratePredicateFuncsForIngressClassFilter(name string) predicate.Funcs {
 	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		// we assume true for isDefault here because the predicates have no client and cannot check if the class is
@@ -61,7 +61,7 @@ func GeneratePredicateFuncsForIngressClassFilter(name string) predicate.Funcs {
 	return preds
 }
 
-// IsIngressClassEmpty returns true if an object has no ingress class information or false otherwise
+// IsIngressClassEmpty returns true if an object has no ingress class information or false otherwise.
 func IsIngressClassEmpty(obj client.Object) bool {
 	switch obj := obj.(type) {
 	case *netv1.Ingress:
@@ -86,7 +86,7 @@ func IsIngressClassEmpty(obj client.Object) bool {
 	}
 }
 
-// CRDExists returns false if CRD does not exist
+// CRDExists returns false if CRD does not exist.
 func CRDExists(client client.Client, gvr schema.GroupVersionResource) bool {
 	_, err := client.RESTMapper().KindFor(gvr)
 	return !meta.IsNoMatchError(err)

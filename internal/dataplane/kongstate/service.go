@@ -54,7 +54,7 @@ type Service struct {
 	Parent      client.Object
 }
 
-// overrideByKongIngress sets Service fields by KongIngress
+// overrideByKongIngress sets Service fields by KongIngress.
 func (s *Service) overrideByKongIngress(kongIngress *configurationv1.KongIngress) {
 	if kongIngress == nil || kongIngress.Proxy == nil {
 		return
@@ -116,7 +116,7 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 	s.overridePath(anns)
 }
 
-// override sets Service fields by KongIngress first, then by k8s Service's annotations
+// override sets Service fields by KongIngress first, then by k8s Service's annotations.
 func (s *Service) override(
 	log logrus.FieldLogger,
 	kongIngress *configurationv1.KongIngress,

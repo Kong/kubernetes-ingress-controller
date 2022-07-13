@@ -33,8 +33,8 @@ const (
 // GatewayClass Controller - Reconciler
 // -----------------------------------------------------------------------------
 
-// GatewayClassReconciler reconciles a GatewayClass object
-type GatewayClassReconciler struct { //nolint:revive
+// GatewayClassReconciler reconciles a GatewayClass object.
+type GatewayClassReconciler struct { //nolint:revive,golint
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme

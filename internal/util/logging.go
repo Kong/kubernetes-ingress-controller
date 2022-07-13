@@ -27,7 +27,7 @@ const (
 	// debug level logging.
 	DebugLevel = int(logrus.DebugLevel) - logrusrDiff
 
-	// WarnLevel is the converted logrus level to go-logr for warnings
+	// WarnLevel is the converted logrus level to go-logr for warnings.
 	WarnLevel = int(logrus.WarnLevel) - logrusrDiff
 )
 

@@ -51,7 +51,7 @@ type Synchronizer struct {
 
 // NewSynchronizer will provide a new Synchronizer object. Note that this
 // starts some background goroutines and the caller is resonsible for marking
-// the provided context.Context as "Done()" to shut down the background routines
+// the provided context.Context as "Done()" to shut down the background routines.
 func NewSynchronizer(logger logrus.FieldLogger, dataplaneClient Client) (*Synchronizer, error) {
 	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
 	if err != nil {
@@ -63,7 +63,7 @@ func NewSynchronizer(logger logrus.FieldLogger, dataplaneClient Client) (*Synchr
 // NewSynchronizer will provide a new Synchronizer object with a specified
 // stagger time for data-plane updates to occur. Note that this starts some
 // background goroutines and the caller is resonsible for marking the provided
-// context.Context as "Done()" to shut down the background routines
+// context.Context as "Done()" to shut down the background routines.
 func NewSynchronizerWithStagger(logger logrus.FieldLogger, dataplaneClient Client, stagger time.Duration) (*Synchronizer, error) {
 	synchronizer := &Synchronizer{
 		logger:          logrusr.New(logger),
@@ -172,7 +172,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 // Synchronizer - Private Methods - Helper
 // -----------------------------------------------------------------------------
 
-// markConfigApplied marks that config has been applied
+// markConfigApplied marks that config has been applied.
 func (p *Synchronizer) markConfigApplied() {
 	p.lock.Lock()
 	defer p.lock.Unlock()

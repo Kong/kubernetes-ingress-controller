@@ -11,7 +11,7 @@ import (
 // Sendconfig - Public Types
 // -----------------------------------------------------------------------------
 
-// Kong Represents a Kong client and connection information
+// Kong Represents a Kong client and connection information.
 type Kong struct {
 	URL        string
 	FilterTags []string

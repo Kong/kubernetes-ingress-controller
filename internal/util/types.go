@@ -28,7 +28,7 @@ type Endpoint struct {
 	Port string `json:"port"`
 }
 
-// RawSSLCert represnts TLS cert and key in bytes
+// RawSSLCert represnts TLS cert and key in bytes.
 type RawSSLCert struct {
 	Cert []byte
 	Key  []byte

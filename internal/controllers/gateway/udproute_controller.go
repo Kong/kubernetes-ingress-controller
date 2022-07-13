@@ -27,7 +27,7 @@ import (
 // UDPRoute Controller - UDPRouteReconciler
 // -----------------------------------------------------------------------------
 
-// UDPRouteReconciler reconciles an UDPRoute object
+// UDPRouteReconciler reconciles an UDPRoute object.
 type UDPRouteReconciler struct {
 	client.Client
 

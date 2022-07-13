@@ -253,7 +253,7 @@ func (d *Detector) listAllSevices(ctx context.Context, pageSize int) ([]*corev1.
 // 		},
 //		Subsets: ...,
 //		...
-// }
+// }.
 func (d *Detector) listAllEndpoints(ctx context.Context, pageSize int) (
 	map[client.ObjectKey]*corev1.Endpoints, error,
 ) {
@@ -291,7 +291,7 @@ func (d *Detector) listAllEndpoints(ctx context.Context, pageSize int) (
 // 		},
 //		Spec: ...,
 //		...
-// }
+// }.
 func (d *Detector) listAllPods(ctx context.Context, pageSize int) (
 	map[client.ObjectKey]*corev1.Pod, error,
 ) {

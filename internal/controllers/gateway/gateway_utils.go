@@ -95,7 +95,7 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []gate
 }
 
 // ListenerTracker holds Gateway Listeners and their statuses, and provides methods to update statuses upon
-// reconciliation
+// reconciliation.
 type ListenerTracker struct {
 	// actual listeners
 	Listeners map[gatewayv1alpha2.SectionName]gatewayv1alpha2.Listener
@@ -114,7 +114,7 @@ type ListenerTracker struct {
 // we just keep the existing maps around
 // need to detect changes, will still receive the full set
 
-// NewListenerTracker returns a ListenerTracker with empty maps
+// NewListenerTracker returns a ListenerTracker with empty maps.
 func NewListenerTracker() ListenerTracker {
 	return ListenerTracker{
 		Statuses:         map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus{},
@@ -146,7 +146,7 @@ func buildKongPortMap(listens []gatewayv1alpha2.Listener) protocolPortMap {
 
 // initializeListenerMaps takes a Gateway and builds indices used in status updates and conflict detection. It returns
 // empty maps from port to protocol to listener name and from port to hostnames, and a populated map from listener name
-// to attached route count from their status
+// to attached route count from their status.
 func initializeListenerMaps(gateway *gatewayv1alpha2.Gateway) (
 	portProtocolMap,
 	portHostnameMap,

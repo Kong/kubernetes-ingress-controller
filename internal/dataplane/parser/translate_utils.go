@@ -14,10 +14,10 @@ import (
 )
 
 // kongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
-// as a regex
+// as a regex.
 const kongHeaderRegexPrefix = "~*"
 
-// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches
+// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches.
 var MinRegexHeaderKongVersion = semver.MustParse("2.8.0")
 
 // -----------------------------------------------------------------------------
@@ -53,7 +53,7 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 
 // isRefAllowedByPolicy checks if backendRef is permitted by the provided namespace-indexed ReferencePolicyTo set,
 // allowed. allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
-// getPermittedForReferencePolicyFrom
+// getPermittedForReferencePolicyFrom.
 func isRefAllowedByPolicy(
 	namespace *gatewayv1alpha2.Namespace,
 	name gatewayv1alpha2.ObjectName,
@@ -104,7 +104,7 @@ func getPermittedForReferencePolicyFrom(from gatewayv1alpha2.ReferencePolicyFrom
 }
 
 // generateKongServiceFromBackendRef translates backendRefs for rule ruleNumber into a Kong service for use with the
-// rules generated from a Gateway APIs route
+// rules generated from a Gateway APIs route.
 func (p *Parser) generateKongServiceFromBackendRef(
 	rules *ingressRules,
 	route client.Object,

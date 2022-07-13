@@ -60,7 +60,7 @@ var meshPodAnnotations = map[MeshKind]*labels.Requirement{
 }
 
 // meshServiceAnnotations is the annotation of service indicating that
-// the service in managed by the service mesh. (currently only for traefik)
+// the service in managed by the service mesh. (currently only for traefik).
 var meshServiceAnnotations = map[MeshKind]*labels.Requirement{
 	MeshKindTraefik: mustMakeRequirement("mesh.traefik.io/traffic-type", selection.In, []string{"HTTP", "TCP"}),
 }

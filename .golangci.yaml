@@ -16,9 +16,11 @@ linters:
   - exhaustive
   - exportloopref
   - gci
+  - godot
   - gofmt
   - gofumpt
   - goimports
+  - golint
   - gosec
   - gosimple
   - govet

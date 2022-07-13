@@ -188,6 +188,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
 KONG_CONTROLLER_FEATURE_GATES ?= Gateway=true
+GOTESTFMT_CMD ?= gotestfmt -hide successful-downloads,empty-packages -showteststatus
 
 .PHONY: test
 test: test.unit
@@ -210,53 +211,84 @@ test.integration: test.integration.dbless test.integration.postgres
 .PHONY: test.integration.enterprise
 test.integration.enterprise: test.integration.enterprise.postgres
 
-.PHONY: test.unit
-test.unit:
-	@go test -v -race \
+.PHONY: _test.unit
+_test.unit:
+	go test -v -race $(GOTESTFLAGS) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.unit.out \
 		./internal/... \
 		./pkg/...
 
-.PHONY: test.integration.dbless
-test.integration.dbless:
+.PHONY: test.unit
+test.unit:
+	@$(MAKE) _test.unit GOTESTFLAGS="$(GOTESTFLAGS)"
+
+.PHONY: test.unit.pretty
+test.unit.pretty:
+	@$(MAKE) _test.unit GOTESTFLAGS="-json" 2>/dev/null | $(GOTESTFMT_CMD)
+
+.PHONY: _check.container.environment
+_check.container.environment:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
-		go test -v -race \
+
+.PHONY: _test.integration
+_test.integration: _check.container.environment
+	TEST_DATABASE_MODE="$(DBMODE)" \
+		GOFLAGS="-tags=integration_tests" \
+		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
+		go test -v $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
-		-coverprofile=coverage.dbless.out \
+		-coverprofile=$(COVERAGE_OUT) \
 		./test/integration
+
+.PHONY: test.integration.dbless
+test.integration.dbless:
+	@$(MAKE) _test.integration \
+		DBMODE=off \
+		COVERAGE_OUT=coverage.dbless.out
+
+.PHONY: test.integration.dbless.pretty
+test.integration.dbless.pretty:
+	@$(MAKE) _test.integration \
+		DBMODE=off \
+		GOTESTFLAGS="-json" \
+		COVERAGE_OUT=coverage.dbless.out 2>/dev/null | \
+		$(GOTESTFMT_CMD)
 
 .PHONY: test.integration.postgres
 test.integration.postgres:
-	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" GOFLAGS="-tags=integration_tests" KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
-		go test -v \
-		-timeout $(INTEGRATION_TEST_TIMEOUT) \
-		-parallel $(NCPU) \
-		-race \
-		-covermode=atomic \
-		-coverpkg=$(PKG_LIST) \
-		-coverprofile=coverage.postgres.out \
-		./test/integration
+	@$(MAKE) _test.integration \
+		DBMODE=postgres \
+		COVERAGE_OUT=coverage.postgres.out
+
+.PHONY: test.integration.postgres.pretty
+test.integration.postgres.pretty:
+	@$(MAKE) _test.integration \
+		DBMODE=postgres \
+		GOTESTFLAGS="-json" \
+		COVERAGE_OUT=coverage.postgres.out 2>/dev/null | \
+		$(GOTESTFMT_CMD)
 
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
-	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="postgres" TEST_KONG_ENTERPRISE="true" GOFLAGS="-tags=integration_tests" KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
-		go test -v \
-		-timeout $(INTEGRATION_TEST_TIMEOUT) \
-		-parallel $(NCPU) \
-		-race \
-		-covermode=atomic \
-		-coverpkg=$(PKG_LIST) \
-		-coverprofile=coverage.enterprisepostgres.out \
-		./test/integration
+	@TEST_KONG_ENTERPRISE="true" \
+		$(MAKE) _test.integration \
+		DBMODE=postgres \
+		COVERAGE_OUT=coverage.enterprisepostgres.out
+
+.PHONY: test.integration.enterprise.postgres.pretty
+test.integration.enterprise.postgres.pretty:
+	@TEST_KONG_ENTERPRISE="true" \
+		$(MAKE) _test.integration \
+		DBMODE=postgres \
+		GOTESTFLAGS="-json" \
+		COVERAGE_OUT=coverage.enterprisepostgres.out 2>/dev/null | \
+		$(GOTESTFMT_CMD)
 
 .PHONY: test.e2e
 test.e2e:

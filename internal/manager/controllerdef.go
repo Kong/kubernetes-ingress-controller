@@ -44,7 +44,7 @@ func (c *ControllerDef) Name() string {
 }
 
 // MaybeSetupWithManager runs SetupWithManager on the controller if it is enabled
-// and its AutoHandler (if any) indicates that it can load
+// and its AutoHandler (if any) indicates that it can load.
 func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 	if !c.Enabled {
 		return nil

@@ -27,7 +27,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 )
 
-// ParseNameNS parses a string searching a namespace and name
+// ParseNameNS parses a string searching a namespace and name.
 func ParseNameNS(input string) (string, string, error) {
 	nsName := strings.Split(input, "/")
 	if len(nsName) != 2 {
@@ -37,7 +37,7 @@ func ParseNameNS(input string) (string, string, error) {
 	return nsName[0], nsName[1], nil
 }
 
-// GetNodeIPOrName returns the IP address or the name of a node in the cluster
+// GetNodeIPOrName returns the IP address or the name of a node in the cluster.
 func GetNodeIPOrName(ctx context.Context, kubeClient clientset.Interface, name string) string {
 	node, err := kubeClient.CoreV1().Nodes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -72,7 +72,7 @@ func GetNodeIPOrName(ctx context.Context, kubeClient clientset.Interface, name s
 	return ip
 }
 
-// PodInfo contains runtime information about the pod running the Ingres controller
+// PodInfo contains runtime information about the pod running the Ingres controller.
 type PodInfo struct {
 	Name      string
 	Namespace string
@@ -83,7 +83,7 @@ type PodInfo struct {
 }
 
 // GetPodDetails returns runtime information about the pod:
-// name, namespace and IP of the node where it is running
+// name, namespace and IP of the node where it is running.
 func GetPodDetails(ctx context.Context, kubeClient clientset.Interface) (*PodInfo, error) {
 	podName := os.Getenv("POD_NAME")
 	podNs := os.Getenv("POD_NAMESPACE")

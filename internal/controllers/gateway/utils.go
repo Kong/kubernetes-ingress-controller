@@ -11,7 +11,7 @@ import (
 // Logging Utilities
 // -----------------------------------------------------------------------------
 
-// debug is an alias for the longer log.V(util.DebugLevel).Info for convenience
+// debug is an alias for the longer log.V(util.DebugLevel).Info for convenience.
 func debug(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) {
 	keysAndValues = append([]interface{}{
 		"namespace", obj.GetNamespace(),
@@ -20,7 +20,7 @@ func debug(log logr.Logger, obj client.Object, msg string, keysAndValues ...inte
 	log.V(util.DebugLevel).Info(msg, keysAndValues...)
 }
 
-// info is an alias for the longer log.V(util.InfoLevel).Info for convenience
+// info is an alias for the longer log.V(util.InfoLevel).Info for convenience.
 func info(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) {
 	keysAndValues = append([]interface{}{
 		"namespace", obj.GetNamespace(),

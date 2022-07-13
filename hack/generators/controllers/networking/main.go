@@ -297,7 +297,7 @@ type typesNeeded []typeNeeded
 
 // rbacsNeeded is a list of Kubernetes API objects which the Kong
 // Kubernetes Ingress Controller interacts with, but does not need a
-// controller for, only permissions
+// controller for, only permissions.
 type rbacsNeeded []rbacNeeded
 
 type necessary struct {
@@ -365,7 +365,7 @@ func (t *typeNeeded) generate(contents *bytes.Buffer) error {
 	return tmpl.Execute(contents, t)
 }
 
-// rbacNeeded represents a resource that we only require RBAC permissions for
+// rbacNeeded represents a resource that we only require RBAC permissions for.
 type rbacNeeded struct {
 	Group     string
 	Plural    string

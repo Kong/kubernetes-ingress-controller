@@ -66,7 +66,7 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 	}
 }
 
-// receiveConfig watches the config update channel
+// receiveConfig watches the config update channel.
 func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {

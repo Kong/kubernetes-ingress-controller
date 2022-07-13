@@ -27,7 +27,7 @@ import (
 // TLSRoute Controller - TLSRouteReconciler
 // -----------------------------------------------------------------------------
 
-// TLSRouteReconciler reconciles an TLSRoute object
+// TLSRouteReconciler reconciles an TLSRoute object.
 type TLSRouteReconciler struct {
 	client.Client
 

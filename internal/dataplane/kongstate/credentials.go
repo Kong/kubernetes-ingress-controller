@@ -40,7 +40,7 @@ type Oauth2Credential struct {
 	kong.Oauth2Credential
 }
 
-// MTLSAuth represents an MTLS auth credential
+// MTLSAuth represents an MTLS auth credential.
 type MTLSAuth struct {
 	kong.MTLSAuth
 }

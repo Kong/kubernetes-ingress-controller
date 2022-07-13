@@ -33,7 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
-// ReferencePolicyReconciler reconciles a ReferencePolicy object
+// ReferencePolicyReconciler reconciles a ReferencePolicy object.
 type ReferencePolicyReconciler struct {
 	client.Client
 	Log             logr.Logger

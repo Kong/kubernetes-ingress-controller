@@ -276,7 +276,7 @@ func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
 
-// DBMode indicates which database the Kong Gateway is using
+// DBMode indicates which database the Kong Gateway is using.
 func (c *KongClient) DBMode() string {
 	c.lock.RLock()
 	defer c.lock.RUnlock()

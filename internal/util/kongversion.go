@@ -12,14 +12,14 @@ var (
 )
 
 // SetKongVersion sets the Kong version. It can only be used once. Repeated calls will not update the Kong
-// version
+// version.
 func SetKongVersion(version semver.Version) {
 	kongVersionOnce.Do(func() {
 		kongVersion = version
 	})
 }
 
-// GetKongVersion retrieves the Kong version. If the version is not set, it returns the lowest possible version
+// GetKongVersion retrieves the Kong version. If the version is not set, it returns the lowest possible version.
 func GetKongVersion() semver.Version {
 	return kongVersion
 }

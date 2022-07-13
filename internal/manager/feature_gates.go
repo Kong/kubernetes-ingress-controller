@@ -11,10 +11,10 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// knativeFeature is the name of the feature-gate for enabling/disabling Knative
+	// knativeFeature is the name of the feature-gate for enabling/disabling Knative.
 	knativeFeature = "Knative"
 
-	// gatewayFeature is the name of the feature-gate for enabling/disabling Gateway APIs
+	// gatewayFeature is the name of the feature-gate for enabling/disabling Gateway APIs.
 	gatewayFeature = "Gateway"
 
 	// combinedRoutesFeature is the name of the feature-gate for the newer object
@@ -22,11 +22,11 @@ const (
 	// objects like Ingress instead of creating a route per path.
 	combinedRoutesFeature = "CombinedRoutes"
 
-	// featureGatesDocsURL provides a link to the documentation for feature gates in the KIC repository
+	// featureGatesDocsURL provides a link to the documentation for feature gates in the KIC repository.
 	featureGatesDocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
 
-// setupFeatureGates converts feature gates to controller enablement
+// setupFeatureGates converts feature gates to controller enablement.
 func setupFeatureGates(setupLog logr.Logger, c *Config) (map[string]bool, error) {
 	// generate a map of feature gates by string names to their controller enablement
 	ctrlMap := getFeatureGatesDefaults()

@@ -30,18 +30,18 @@ import (
 // -----------------------------------------------------------------------------
 
 var (
-	// ManagedGatewaysUnsupported is an error used whenever a failure occurs
+	// ErrManagedGatewaysUnsupported is an error used whenever a failure occurs
 	// due to a Gateway that is not properly configured for unmanaged mode.
-	ManagedGatewaysUnsupported = fmt.Errorf("invalid gateway spec: managed gateways are not currently supported") //nolint:revive
-	gatewayV1alpha2Group       = gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
+	ErrManagedGatewaysUnsupported = fmt.Errorf("invalid gateway spec: managed gateways are not currently supported")
+	gatewayV1alpha2Group          = gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
 )
 
 // -----------------------------------------------------------------------------
 // Gateway Controller - GatewayReconciler
 // -----------------------------------------------------------------------------
 
-// GatewayReconciler reconciles a Gateway object
-type GatewayReconciler struct { //nolint:revive
+// GatewayReconciler reconciles a Gateway object.
+type GatewayReconciler struct { //nolint:revive,golint
 	client.Client
 
 	Log             logr.Logger
@@ -377,12 +377,12 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 // -----------------------------------------------------------------------------
 
 var (
-	// supportedKinds indicates which gateway kinds are supported by this implementation
+	// supportedKinds indicates which gateway kinds are supported by this implementation.
 	supportedKinds = []gatewayv1alpha2.Kind{
 		gatewayv1alpha2.Kind("HTTPRoute"),
 	}
 
-	// supportedRouteGroupKinds indicates the full kinds with GVK that are supported by this implementation
+	// supportedRouteGroupKinds indicates the full kinds with GVK that are supported by this implementation.
 	supportedRouteGroupKinds []gatewayv1alpha2.RouteGroupKind
 )
 

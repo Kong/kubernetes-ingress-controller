@@ -10,7 +10,7 @@ import "k8s.io/apimachinery/pkg/util/sets"
 // of credential that is being provided for the consumer.
 const TypeKey = "kongCredType"
 
-// SupportedCreds indicates all the "kongCredType"s which are supported for KongConsumer credentials.
+// SupportedTypes indicates all the "kongCredType"s which are supported for KongConsumer credentials.
 var SupportedTypes = sets.NewString(
 	"basic-auth",
 	"hmac-auth",

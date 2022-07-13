@@ -260,7 +260,7 @@ func TestReporterRun(t *testing.T) {
 	wg.Wait()
 }
 
-// getTLSListener builds a TLS listener using the test certificates
+// getTLSListener builds a TLS listener using the test certificates.
 func getTLSListener() (net.Listener, error) {
 	testCertificate, err := tls.X509KeyPair([]byte(reportTestTLSCert.Cert), []byte(reportTestTLSCert.Key))
 	if err != nil {
@@ -285,7 +285,7 @@ func getTLSListener() (net.Listener, error) {
 }
 
 // runTLSServer creates a new test TLS server for the reporting system. It accepts connections using the provided
-// listener and sends all requests it receives over the reqs channel
+// listener and sends all requests it receives over the reqs channel.
 func runTestTLSServer(ctx context.Context, t *testing.T, listen net.Listener, reqs chan []byte) {
 	defer close(reqs)
 	for {

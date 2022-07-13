@@ -50,7 +50,7 @@ import (
 
 const (
 	caCertKey = "konghq.com/ca-cert"
-	// IngressClassKongController is the string used for the Controller field of a recognized IngressClass
+	// IngressClassKongController is the string used for the Controller field of a recognized IngressClass.
 	IngressClassKongController = "ingress-controllers.konghq.com/kong"
 )
 
@@ -149,7 +149,7 @@ type CacheStores struct {
 	l *sync.RWMutex
 }
 
-// NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores
+// NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores.
 func NewCacheStores() CacheStores {
 	return CacheStores{
 		IngressV1beta1:  cache.NewStore(keyFunc),
@@ -407,7 +407,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	}
 }
 
-// New creates a new object store to be used in the ingress controller
+// New creates a new object store to be used in the ingress controller.
 func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
 	processClasslessKongConsumer bool, logger logrus.FieldLogger,
 ) Storer {
@@ -441,7 +441,7 @@ func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 boo
 	}
 }
 
-// GetSecret returns a Secret using the namespace and name as key
+// GetSecret returns a Secret using the namespace and name as key.
 func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	secret, exists, err := s.stores.Secret.GetByKey(key)
@@ -454,7 +454,7 @@ func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	return secret.(*corev1.Secret), nil
 }
 
-// GetService returns a Service using the namespace and name as key
+// GetService returns a Service using the namespace and name as key.
 func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	service, exists, err := s.stores.Service.GetByKey(key)
@@ -664,7 +664,7 @@ func (s Store) ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error) {
 	return ingresses, nil
 }
 
-// ListUDPIngresses returns the list of UDP Ingresses
+// ListUDPIngresses returns the list of UDP Ingresses.
 func (s Store) ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error) {
 	ingresses := []*kongv1beta1.UDPIngress{}
 	if s.stores.UDPIngress == nil {
@@ -783,7 +783,7 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 	return p.(*kongv1.KongConsumer), nil
 }
 
-// GetIngressClassV1 returns the 'name' IngressClass resource
+// GetIngressClassV1 returns the 'name' IngressClass resource.
 func (s Store) GetIngressClassV1(name string) (*networkingv1.IngressClass, error) {
 	p, exists, err := s.stores.IngressClassV1.GetByKey(name)
 	if err != nil {
@@ -813,7 +813,7 @@ func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
 // filtered by the ingress.class annotation and with the
 // label global:"true".
 // Support for these global namespaced KongPlugins was removed in 0.10.0
-// This function remains only to provide warnings to users with old configuration
+// This function remains only to provide warnings to users with old configuration.
 func (s Store) ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error) {
 	var plugins []*kongv1.KongPlugin
 	// var globalPlugins []*configurationv1.KongPlugin
@@ -902,7 +902,7 @@ func (s Store) networkingIngressV1Beta1(obj interface{}) *networkingv1beta1.Ingr
 }
 
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or
-// annotations.ExactClassMatch if the IngressClass is not default or does not exist
+// annotations.ExactClassMatch if the IngressClass is not default or does not exist.
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
 	class, err := s.GetIngressClassV1(s.ingressClass)
 	if err != nil {

@@ -263,7 +263,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 }
 
 // ValidateClusterPlugin transfers relevant fields from a KongClusterPlugin into a KongPlugin and then returns
-// the result of ValidatePlugin for the derived KongPlugin
+// the result of ValidatePlugin for the derived KongPlugin.
 func (validator KongHTTPValidator) ValidateClusterPlugin(
 	ctx context.Context,
 	k8sPlugin kongv1.KongClusterPlugin,

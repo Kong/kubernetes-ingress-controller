@@ -27,12 +27,12 @@ var (
 	validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
 	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
-	// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change
+	// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change.
 	validSNIs  = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
 	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 )
 
-// normalizeProtocols prevents users from mismatching grpc/http
+// normalizeProtocols prevents users from mismatching grpc/http.
 func (r *Route) normalizeProtocols() {
 	protocols := r.Protocols
 	var http, grpc bool
@@ -54,7 +54,7 @@ func (r *Route) normalizeProtocols() {
 	}
 }
 
-// useSSLProtocol updates the protocol of the route to either https or grpcs, or https and grpcs
+// useSSLProtocol updates the protocol of the route to either https or grpcs, or https and grpcs.
 func (r *Route) useSSLProtocol() {
 	var http, grpc bool
 	var prots []*string
@@ -216,7 +216,7 @@ func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
 	r.SNIs = snis
 }
 
-// overrideByAnnotation sets Route protocols via annotation
+// overrideByAnnotation sets Route protocols via annotation.
 func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideProtocols(r.Ingress.Annotations)
 	r.overrideStripPath(r.Ingress.Annotations)
@@ -230,7 +230,7 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideHosts(log, r.Ingress.Annotations)
 }
 
-// override sets Route fields by KongIngress first, then by annotation
+// override sets Route fields by KongIngress first, then by annotation.
 func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.KongIngress) {
 	if r == nil {
 		return
@@ -262,7 +262,7 @@ func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.Ko
 	}
 }
 
-// overrideByKongIngress sets Route fields by KongIngress
+// overrideByKongIngress sets Route fields by KongIngress.
 func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *configurationv1.KongIngress) {
 	if kongIngress == nil || kongIngress.Route == nil {
 		return
@@ -333,7 +333,7 @@ func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *confi
 	}
 }
 
-// overrideRequestBuffering ensures defaults for the request_buffering option
+// overrideRequestBuffering ensures defaults for the request_buffering option.
 func (r *Route) overrideRequestBuffering(log logrus.FieldLogger, anns map[string]string) {
 	annotationValue, ok := annotations.ExtractRequestBuffering(anns)
 	if !ok {
@@ -351,7 +351,7 @@ func (r *Route) overrideRequestBuffering(log logrus.FieldLogger, anns map[string
 	r.RequestBuffering = kong.Bool(isEnabled)
 }
 
-// overrideResponseBuffering ensures defaults for the response_buffering option
+// overrideResponseBuffering ensures defaults for the response_buffering option.
 func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[string]string) {
 	annotationValue, ok := annotations.ExtractResponseBuffering(anns)
 	if !ok {
@@ -369,7 +369,7 @@ func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[strin
 	r.ResponseBuffering = kong.Bool(isEnabled)
 }
 
-// overrideHosts appends Host-Aliases to Hosts
+// overrideHosts appends Host-Aliases to Hosts.
 func (r *Route) overrideHosts(log logrus.FieldLogger, anns map[string]string) {
 	var hosts []*string
 	var annHostAliases []string

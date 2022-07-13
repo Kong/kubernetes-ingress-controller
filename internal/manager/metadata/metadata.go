@@ -12,9 +12,9 @@ var (
 	// Release returns the release version, generally a semver like v2.0.0.
 	Release = "NOT_SET"
 
-	// Repo returns the git repository URL
+	// Repo returns the git repository URL.
 	Repo = "NOT_SET"
 
-	// Commit returns the SHA from the current branch HEAD
+	// Commit returns the SHA from the current branch HEAD.
 	Commit = "NOT_SET"
 )

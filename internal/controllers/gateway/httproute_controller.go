@@ -27,7 +27,7 @@ import (
 // HTTPRoute Controller - HTTPRouteReconciler
 // -----------------------------------------------------------------------------
 
-// HTTPRouteReconciler reconciles an HTTPRoute object
+// HTTPRouteReconciler reconciles an HTTPRoute object.
 type HTTPRouteReconciler struct {
 	client.Client
 

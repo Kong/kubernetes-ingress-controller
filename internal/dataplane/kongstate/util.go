@@ -273,7 +273,7 @@ func PrettyPrintServiceList(services map[string]*corev1.Service) string {
 	return serviceList
 }
 
-// plugin is a intermediate type to hold plugin related configuration
+// plugin is a intermediate type to hold plugin related configuration.
 type plugin struct {
 	Name   string
 	Config kong.Configuration

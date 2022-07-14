@@ -5,6 +5,7 @@ package integration
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -114,11 +115,30 @@ func TestKongIngressEssentials(t *testing.T) {
 
 	t.Logf("ensuring that Service %s overrides are eventually removed", service.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin/delay/5", proxyURL))
+		url := fmt.Sprintf("%s/httpbin/delay/5", proxyURL)
+		resp, err := httpc.Get(url)
 		if err != nil {
+			t.Logf("failed issuing http GET for %q: %v", url, err)
 			return false
 		}
 		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusOK
+
+		switch resp.StatusCode {
+		case http.StatusOK:
+			return true
+		default:
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Logf("failed reading response body (url: %q, status code: %d): %v",
+					url, resp.StatusCode, err,
+				)
+				return false
+			}
+
+			t.Logf("response from %q: status code: %d; body: %s",
+				url, resp.StatusCode, string(b),
+			)
+			return false
+		}
 	}, ingressWait, waitTick)
 }

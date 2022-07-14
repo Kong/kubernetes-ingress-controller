@@ -89,7 +89,9 @@ func TestUDPRouteEssentials(t *testing.T) {
 		Name: "config-volume",
 		VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: cfgmap1.Name},
-			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}}}}}
+			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}},
+		}},
+	}
 	deployment1.Spec.Template.Spec.Volumes = append(deployment1.Spec.Template.Spec.Volumes, configVolume1)
 
 	t.Log("deploying coredns")
@@ -109,7 +111,9 @@ func TestUDPRouteEssentials(t *testing.T) {
 		Name: "config-volume",
 		VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: cfgmap2.Name},
-			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}}}}}
+			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}},
+		}},
+	}
 	deployment2.Spec.Template.Spec.Volumes = append(deployment2.Spec.Template.Spec.Volumes, configVolume2)
 
 	t.Log("deploying alternative coredns")
@@ -345,7 +349,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool { //nolint:unparam
+func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool {
 	addrs, err := resolver.LookupHost(ctx, host)
 	if err != nil {
 		return false

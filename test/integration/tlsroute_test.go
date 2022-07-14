@@ -34,10 +34,9 @@ const (
 	tlsSecretName         = "secret-test"
 )
 
-var (
-	tlsRouteTLSPairs = []TLSPair{
-		{
-			Cert: `-----BEGIN CERTIFICATE-----
+var tlsRouteTLSPairs = []TLSPair{
+	{
+		Cert: `-----BEGIN CERTIFICATE-----
 MIIC/jCCAoSgAwIBAgIUVL6UYVDdH6peVNSOnOkCuYyhmrswCgYIKoZIzj0EAwIw
 gbQxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1T
 YW4gRnJhbmNpc2NvMRMwEQYDVQQKDApLb25nLCBJbmMuMRgwFgYDVQQLDA9UZWFt
@@ -56,15 +55,15 @@ PMq+T+iTJ0yNvldYpB3BfdIhrv0EJQ9ALbB16nJwF91YV6YE7mdNP5rNVnoZ0nAC
 MQDmnIpipMawjJWpfSPSZS1/iArz8YuBroWrGFXP62lwhCUp8RZweNnrLmmb/Aek
 y3o=
 -----END CERTIFICATE-----`,
-			Key: `-----BEGIN PRIVATE KEY-----
+		Key: `-----BEGIN PRIVATE KEY-----
 MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDDDRndgPYZaonVuqHiu
 5uuYWI+A16BYLoUBnY0/9BL9U0s47G7LC/b05wE/7UPJEBKhZANiAARB5x/OzGY/
 ALTq42zeTKIsNvpuueAzhm0ZeDBwYPf3dxtiZq6d8E9G3GqHvpEp1L3DOrir6gHx
 0+xAqAE2GUlOv6IUf0OLtsFkVxirH5Kc1RdnR0M0Ftbis9VMkdC92ic=
 -----END PRIVATE KEY-----`,
-		},
-		{
-			Cert: `-----BEGIN CERTIFICATE-----
+	},
+	{
+		Cert: `-----BEGIN CERTIFICATE-----
 MIIDCDCCAo6gAwIBAgIUJB+Fq4hrxgiwhWLtqeAKp+NXigwwCgYIKoZIzj0EAwIw
 gbkxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1T
 YW4gRnJhbmNpc2NvMRMwEQYDVQQKDApLb25nLCBJbmMuMRgwFgYDVQQLDA9UZWFt
@@ -83,15 +82,14 @@ AwIDaAAwZQIwGYtGE0xOKdiObmVUIxlc5Iif9cVwzfvaMF0wiuuth9Hxd3n40XPv
 aof6F4WdQihFAjEA/heIDoQActLLXrhFvxS6JP/XPT3C086lK1mq3inRGIvYX/1r
 /gHROKq7BRLjo6FS
 -----END CERTIFICATE-----`,
-			Key: `-----BEGIN PRIVATE KEY-----
+		Key: `-----BEGIN PRIVATE KEY-----
 MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDBHOv6UxSf7MbyPOllv
 0Sb/hnXf+UfTblLA8TeoKa4Hr9RjoB0QYLFHLDFPMg5eplGhZANiAAQAoKbSEyjK
 MQc+uxU8YvXj9AnJyGm1LuAJZD+yDkpIKa87DxlH4J+rEr/PCMR259KkiMTItTo6
 CvptdmuXmsmGJ69ZIsvUL5tIwrmwg6INN+d+K6zKoyhU4pjEpP+FOAM=
 -----END PRIVATE KEY-----`,
-		},
-	}
-)
+	},
+}
 
 func TestTLSRouteEssentials(t *testing.T) {
 	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
@@ -405,7 +403,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 }
 
 // TestTLSRouteReferencePolicy tests cross-namespace certificate references. These are technically implemented within
-// Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy
+// Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
 func TestTLSRouteReferencePolicy(t *testing.T) {
 	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Log("locking TLS port")
@@ -616,7 +614,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 // tlsEchoResponds takes a TLS address URL and a Pod name and checks if a
 // go-echo instance is running on that Pod at that address using hostname for SNI.
 // It compares an expected message and its length against an expected message, returning true
-// if it is and false and an error explanation if it is not
+// if it is and false and an error explanation if it is not.
 func tlsEchoResponds(url string, podName string, hostname, certHostname string) (bool, error) {
 	dialer := net.Dialer{Timeout: time.Second * 10}
 	conn, err := tls.DialWithDialer(&dialer,

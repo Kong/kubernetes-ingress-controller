@@ -278,7 +278,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 
 // verifyHTTPRoute verifies an HTTPRoute exposes a route at /httpbin
 // TODO this is not actually specific to HTTPRoutes. It is verifyIngress with the KongIngress removed
-// Once we support HTTPMethod HTTPRouteMatch handling, we can combine the two into a single generic function
+// Once we support HTTPMethod HTTPRouteMatch handling, we can combine the two into a single generic function.
 func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
 	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
@@ -387,7 +387,7 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 	require.GreaterOrEqual(t, migrationJob.Status.Succeeded, int32(1))
 }
 
-// killKong kills the Kong container in a given Pod and returns when it has restarted
+// killKong kills the Kong container in a given Pod and returns when it has restarted.
 func killKong(ctx context.Context, t *testing.T, env environments.Environment, pod *corev1.Pod) {
 	var orig, after int32
 	for _, status := range pod.Status.ContainerStatuses {

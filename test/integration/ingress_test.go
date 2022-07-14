@@ -30,7 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
-// extraIngressNamespace is the name of an alternative namespace used for ingress tests
+// extraIngressNamespace is the name of an alternative namespace used for ingress tests.
 const extraIngressNamespace = "elsewhere"
 
 var statusWait = time.Minute * 3
@@ -395,7 +395,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 		defer resp.Body.Close()
 		return expect404WithNoRoute(t, proxyURL.String(), resp)
 	}, ingressWait, waitTick)
-
 }
 
 func TestIngressNamespaces(t *testing.T) {
@@ -527,7 +526,16 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 												Name: service.Name,
 												Port: netv1.ServiceBackendPort{
 													Number: service.Spec.Ports[0].Port,
-												}}}}}}}}}},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -551,7 +559,16 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 												Name: service.Name,
 												Port: netv1.ServiceBackendPort{
 													Number: service.Spec.Ports[0].Port,
-												}}}}}}}}}},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Logf("creating ingress %s and verifying status updates", ing.Name)

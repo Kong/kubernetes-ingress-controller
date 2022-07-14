@@ -611,13 +611,12 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
 		return err != nil && responded == false
 	}, ingressWait, waitTick)
-
 }
 
 // tcpEchoResponds takes a TCP address URL and a Pod name and checks if a
 // go-echo instance is running on that Pod at that address. It compares an
 // expected message and its length against an expected message, returning true
-// if it is and false and an error explanation if it is not
+// if it is and false and an error explanation if it is not.
 func tcpEchoResponds(url string, podName string) (bool, error) {
 	dialer := net.Dialer{Timeout: time.Second * 10}
 	conn, err := dialer.Dial("tcp", url)

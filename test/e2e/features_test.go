@@ -24,11 +24,10 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -39,7 +38,7 @@ import (
 // conflicts with the integration configuration.
 // -----------------------------------------------------------------------------
 
-// TLSPair is a PEM certificate+key pair
+// TLSPair is a PEM certificate+key pair.
 type TLSPair struct {
 	Key, Cert string
 }
@@ -67,7 +66,7 @@ nodes:
 )
 
 // openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
-// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
+// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'.
 var tlsPairs = []TLSPair{
 	{
 		Cert: `-----BEGIN CERTIFICATE-----
@@ -261,7 +260,7 @@ func TestWebhookUpdate(t *testing.T) {
 }
 
 // TestDeployAllInOneDBLESSGateway tests the Gateway feature flag and the admission controller with no user-provided
-// certificate (all other tests with the controller provide certificates, so that behavior isn't tested otherwise)
+// certificate (all other tests with the controller provide certificates, so that behavior isn't tested otherwise).
 func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
 	t.Parallel()

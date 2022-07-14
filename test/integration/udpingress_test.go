@@ -68,7 +68,9 @@ func TestUDPIngressEssentials(t *testing.T) {
 		Name: "config-volume",
 		VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: cfgmap.Name},
-			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}}}}}
+			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}},
+		}},
+	}
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolume)
 
 	t.Log("deploying coredns")
@@ -205,7 +207,9 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		Name: "config-volume",
 		VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: cfgmap.Name},
-			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}}}}}
+			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}},
+		}},
+	}
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolume)
 
 	t.Log("deploying coredns")

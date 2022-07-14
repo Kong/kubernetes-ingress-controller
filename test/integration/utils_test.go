@@ -53,22 +53,22 @@ const (
 
 var (
 	// ctx the topical context of the test suite, can be used by test cases if they don't need
-	// any special context as a function of the test
+	// any special context as a function of the test.
 	ctx context.Context
 
-	// cancel is the cancel function for the above global test context
+	// cancel is the cancel function for the above global test context.
 	cancel context.CancelFunc
 
-	// redisImage is Redis
+	// redisImage is Redis.
 	redisImage = "bitnami/redis"
 
-	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
+	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
 	ingressClass = "kongtests"
 
-	// controllerNamespace is the Kubernetes namespace where the controller is deployed
+	// controllerNamespace is the Kubernetes namespace where the controller is deployed.
 	controllerNamespace = "kong-system"
 
-	// httpc is the default HTTP client to use for tests
+	// httpc is the default HTTP client to use for tests.
 	httpc = http.Client{Timeout: httpcTimeout}
 
 	// watchNamespaces is a list of namespaces the controller watches
@@ -107,10 +107,10 @@ const (
 // -----------------------------------------------------------------------------
 
 var (
-	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported)
+	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported).
 	dbmode = os.Getenv("TEST_DATABASE_MODE")
 
-	// clusterVersion indicates the version of Kubernetes to use for the tests (if the cluster was not provided by the caller)
+	// clusterVersion indicates the version of Kubernetes to use for the tests (if the cluster was not provided by the caller).
 	clusterVersionStr = os.Getenv("KONG_CLUSTER_VERSION")
 
 	// existingCluster indicates whether or not the caller is providing their own cluster for running the tests.
@@ -122,7 +122,7 @@ var (
 	// is provided, as cleanup is not performed for existing clusters.
 	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
 
-	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true"
+	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
 	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
 
 	// controllerFeatureGates contains the feature gates that should be enabled
@@ -199,11 +199,9 @@ func getKongVersion() (semver.Version, error) {
 // Testing Utility Functions - Namespaces
 // -----------------------------------------------------------------------------
 
-var (
-	// namespaces is a map of test case names to a namespace that was generated specifically for them to use.
-	// each test case in the test run gets its own unique namespace.
-	namespaces = make(map[string]*corev1.Namespace)
-)
+// namespaces is a map of test case names to a namespace that was generated specifically for them to use.
+// each test case in the test run gets its own unique namespace.
+var namespaces = make(map[string]*corev1.Namespace)
 
 // namespace provides the namespace provisioned for each test case given their t.Name as the "testCase".
 func namespace(t *testing.T) (*corev1.Namespace, func()) {
@@ -224,7 +222,7 @@ func namespace(t *testing.T) (*corev1.Namespace, func()) {
 // Testing Utility Functions - Identifying Test Cases
 // -----------------------------------------------------------------------------
 
-// identifyTestCasesForDir finds the Go function names for any Go test files in the given directory
+// identifyTestCasesForDir finds the Go function names for any Go test files in the given directory.
 func identifyTestCasesForDir(dir string) ([]string, error) {
 	files, err := os.ReadDir(dir)
 	if err != nil {
@@ -248,10 +246,10 @@ func identifyTestCasesForDir(dir string) ([]string, error) {
 	return testCasesForDir, nil
 }
 
-// testCaseRegexp is a regex to identify Go test cases in test files
+// testCaseRegexp is a regex to identify Go test cases in test files.
 var testCaseRegexp = regexp.MustCompile(`func (Test.*)\(`)
 
-// identifyTestCasesForFile searches the given file for any Golang test cases
+// identifyTestCasesForFile searches the given file for any Golang test cases.
 func identifyTestCasesForFile(filePath string) ([]string, error) {
 	if !strings.HasSuffix(filePath, "test.go") {
 		return nil, fmt.Errorf("%s does not look like a Golang test file", filePath)

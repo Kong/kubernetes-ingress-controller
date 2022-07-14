@@ -118,7 +118,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 // getTestManifest checks if a controller image override is set. If not, it returns the original provided path.
 // If an override is set, it runs a kustomize patch that replaces the controller image with the override image and
 // returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
-// the original provided path
+// the original provided path.
 func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 	var imagetag string
 	if imageLoad != "" {
@@ -153,7 +153,7 @@ images:
 `
 
 // patchControllerImage takes a manifest, image, and tag and runs kustomize to replace the
-// kong/kubernetes-ingress-controller image with the provided image. It returns the location of kustomize's output
+// kong/kubernetes-ingress-controller image with the provided image. It returns the location of kustomize's output.
 func patchControllerImage(baseManifestPath string, image string, tag string) (io.Reader, error) {
 	workDir, err := os.MkdirTemp("", "kictest.")
 	if err != nil {
@@ -180,7 +180,7 @@ func patchControllerImage(baseManifestPath string, image string, tag string) (io
 	return bytes.NewReader(kustomized), nil
 }
 
-// kustomizeManifest runs kustomize on a path and returns the YAML output
+// kustomizeManifest runs kustomize on a path and returns the YAML output.
 func kustomizeManifest(path string) ([]byte, error) {
 	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
 	m, err := k.Run(filesys.MakeFsOnDisk(), path)
@@ -224,7 +224,7 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 	return tags[curIndex-1], nil
 }
 
-// getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot
+// getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
 func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
 	proxyIP := ""
 	require.NotEqual(t, svc.Spec.Type, svc.Spec.ClusterIP)
@@ -271,7 +271,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 }
 
 // startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
-// ends
+// ends.
 func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, localPort,
 	targetPort string,
 ) {

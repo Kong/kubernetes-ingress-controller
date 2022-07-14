@@ -28,8 +28,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
-var tcpMutex sync.Mutex
-var tlsMutex sync.Mutex
+var (
+	tcpMutex sync.Mutex
+	tlsMutex sync.Mutex
+)
 
 func TestTCPIngressEssentials(t *testing.T) {
 	t.Parallel()

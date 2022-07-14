@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	// defaultGatewayName is the default name for the Gateways created during tests
+	// defaultGatewayName is the default name for the Gateways created during tests.
 	defaultGatewayName = "kong"
-	// managedGatewayClassName is the name of the default GatewayClass created during the test environment setup
+	// managedGatewayClassName is the name of the default GatewayClass created during the test environment setup.
 	managedGatewayClassName = "kong-managed"
 	// unmanagedControllerName is the name of the controller used for those gateways that are not supported
-	// by an actual controller (i.e., they won't be scheduled)
+	// by an actual controller (i.e., they won't be scheduled).
 	unmanagedControllerName gatewayv1alpha2.GatewayController = "example.com/unmanaged-gateway-controller"
 )
 
@@ -114,7 +114,7 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 }
 
 // GetGatewayIsLinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)
-// is correctly linked to a supported gateway
+// is correctly linked to a supported gateway.
 func GetGatewayIsLinkedCallback(t *testing.T, c *gatewayclient.Clientset, protocolType gatewayv1alpha2.ProtocolType, namespace, name string) func() bool {
 	return func() bool {
 		return gatewayLinkStatusMatches(t, c, true, protocolType, namespace, name)
@@ -122,7 +122,7 @@ func GetGatewayIsLinkedCallback(t *testing.T, c *gatewayclient.Clientset, protoc
 }
 
 // GetGatewayIsUnlinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)
-// is correctly unlinked from a supported gateway
+// is correctly unlinked from a supported gateway.
 func GetGatewayIsUnlinkedCallback(t *testing.T, c *gatewayclient.Clientset, protocolType gatewayv1alpha2.ProtocolType, namespace, name string) func() bool {
 	return func() bool {
 		return gatewayLinkStatusMatches(t, c, false, protocolType, namespace, name)
@@ -137,7 +137,7 @@ func gatewayLinkStatusMatches(t *testing.T, c *gatewayclient.Clientset, verifyLi
 	var routeParents []gatewayv1alpha2.RouteParentStatus
 
 	// gather a fresh copy of the route, given the specific protocol type
-	switch protocolType {
+	switch protocolType { //nolint:exhaustive
 	case gatewayv1alpha2.HTTPProtocolType:
 		route, err := c.GatewayV1alpha2().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		t.Logf("error getting http route: %v", err)

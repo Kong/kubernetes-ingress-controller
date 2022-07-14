@@ -27,9 +27,7 @@ import (
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
 
-var (
-	k8sClient *kubernetes.Clientset
-)
+var k8sClient *kubernetes.Clientset
 
 // -----------------------------------------------------------------------------
 // Testing Main
@@ -104,7 +102,7 @@ func TestMain(m *testing.M) {
 	k8sClient = env.Cluster().Client()
 
 	cleaner := clusters.NewCleaner(env.Cluster())
-	defer cleaner.Cleanup(ctx)
+	defer cleaner.Cleanup(ctx) //nolint:errcheck
 
 	fmt.Printf("INFO: reconfiguring the kong admin service as LoadBalancer type\n")
 	svc, err := env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Get(ctx, kong.DefaultAdminServiceName, metav1.GetOptions{})

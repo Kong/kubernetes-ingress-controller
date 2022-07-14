@@ -364,7 +364,7 @@ GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
 #       $(shell go list -m -f "{{.Version}}" $(GATEWAY_API_PACKAGE))
 #
 #       Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/2595
-GATEWAY_API_VERSION ?= 71fee1c2808fa19a5f19d952d155fc072cf9324c
+GATEWAY_API_VERSION ?= v0.5.0
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_REPO ?= github.com/kubernetes-sigs/gateway-api
 GATEWAY_API_CRDS_URL = $(GATEWAY_API_REPO)/config/crd?ref=$(GATEWAY_API_VERSION)

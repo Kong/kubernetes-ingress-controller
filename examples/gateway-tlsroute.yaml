@@ -51,15 +51,15 @@ data:
   tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JRzJBZ0VBTUJBR0J5cUdTTTQ5QWdFR0JTdUJCQUFpQklHZU1JR2JBZ0VCQkRERFJuZGdQWVphb25WdXFIaXUKNXV1WVdJK0ExNkJZTG9VQm5ZMC85Qkw5VTBzNDdHN0xDL2IwNXdFLzdVUEpFQktoWkFOaUFBUkI1eC9PekdZLwpBTFRxNDJ6ZVRLSXNOdnB1dWVBemhtMFplREJ3WVBmM2R4dGlacTZkOEU5RzNHcUh2cEVwMUwzRE9yaXI2Z0h4CjAreEFxQUUyR1VsT3Y2SVVmME9MdHNGa1Z4aXJINUtjMVJkblIwTTBGdGJpczlWTWtkQzkyaWM9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
 type: kubernetes.io/tls
 ---
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
-apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
   name: kong
 spec:
   controllerName: konghq.com/kic-gateway-controller
 ---
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
-apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
   name: kong
 spec:

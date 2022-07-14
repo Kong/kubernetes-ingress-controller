@@ -462,7 +462,7 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 						namespace = string(*ref.Namespace)
 					}
 					if namespace != gateway.Namespace {
-						allowed := getPermittedForReferencePolicyFrom(gatewayv1alpha2.ReferencePolicyFrom{
+						allowed := getPermittedForReferenceGrantFrom(gatewayv1alpha2.ReferenceGrantFrom{
 							Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
 							Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
 							Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),

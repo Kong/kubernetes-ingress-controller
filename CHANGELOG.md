@@ -71,13 +71,19 @@
 
 #### Added
 
+- Updated Gateway API dependencies to [v0.5.0][gw-v0.5.0] and updated `examples`
+  directory to use use `v1beta1` versions of APIs where applicable.
+  [#2691](https://github.com/Kong/kubernetes-ingress-controller/pull/2691)
 - Added support for Gateway Listener TLS configuration, to enable full use of
   TLSRoute and HTTPS HTTPRoutes.
   [#2580](https://github.com/Kong/kubernetes-ingress-controller/pull/2580)
 - Added information about service mesh deployment and distribution in telemetry data reported to Kong.
   [#2642](https://github.com/Kong/kubernetes-ingress-controller/pull/2642)
 
+[gw-v0.5.0]:https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.5.0
+
 #### Fixed
+
 - Fixed the problem that logs from reporter does not appear in the pod log.
   [#2645](https://github.com/Kong/kubernetes-ingress-controller/pull/2645)
 

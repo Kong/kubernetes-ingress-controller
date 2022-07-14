@@ -188,7 +188,7 @@ func Test_isRefAllowedByPolicy(t *testing.T) {
 	badKind := gatewayv1alpha2.Kind("badFakeKind")
 	cholponName := gatewayv1alpha2.ObjectName("cholpon")
 
-	fakeMap := map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo{
+	fakeMap := map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
 		fitrat:   {{Group: group, Kind: kind}, {Group: gatewayv1alpha2.Group("extra.example"), Kind: badKind}},
 		cholpon:  {{Group: group, Kind: kind, Name: &cholponName}},
 		behbudiy: {},
@@ -281,7 +281,7 @@ func Test_isRefAllowedByPolicy(t *testing.T) {
 	}
 }
 
-func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
+func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 	policies := []*gatewayv1alpha2.ReferencePolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -289,8 +289,8 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 				Annotations: map[string]string{},
 				Namespace:   "fitrat",
 			},
-			Spec: gatewayv1alpha2.ReferencePolicySpec{
-				From: []gatewayv1alpha2.ReferencePolicyFrom{
+			Spec: gatewayv1alpha2.ReferenceGrantSpec{
+				From: []gatewayv1alpha2.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
@@ -307,7 +307,7 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferencePolicyTo{
+				To: []gatewayv1alpha2.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("PolicyOne"),
@@ -321,8 +321,8 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 				Annotations: map[string]string{},
 				Namespace:   "cholpon",
 			},
-			Spec: gatewayv1alpha2.ReferencePolicySpec{
-				From: []gatewayv1alpha2.ReferencePolicyFrom{
+			Spec: gatewayv1alpha2.ReferenceGrantSpec{
+				From: []gatewayv1alpha2.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("UDPRoute"),
@@ -334,7 +334,7 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferencePolicyTo{
+				To: []gatewayv1alpha2.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("PolicyTwo"),
@@ -345,53 +345,53 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 	}
 	tests := []struct {
 		msg    string
-		from   gatewayv1alpha2.ReferencePolicyFrom
-		result map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo
+		from   gatewayv1alpha2.ReferenceGrantFrom
+		result map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo
 	}{
 		{
 			msg: "no matches whatsoever",
-			from: gatewayv1alpha2.ReferencePolicyFrom{
+			from: gatewayv1alpha2.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("invalid.example"),
 				Kind:      gatewayv1alpha2.Kind("invalid"),
 				Namespace: gatewayv1alpha2.Namespace("invalid"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo{},
+			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching namespace",
-			from: gatewayv1alpha2.ReferencePolicyFrom{
+			from: gatewayv1alpha2.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("niyazi"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo{},
+			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching kind",
-			from: gatewayv1alpha2.ReferencePolicyFrom{
+			from: gatewayv1alpha2.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("TLSRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo{},
+			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching group",
-			from: gatewayv1alpha2.ReferencePolicyFrom{
+			from: gatewayv1alpha2.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("invalid.example"),
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo{},
+			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "single match",
-			from: gatewayv1alpha2.ReferencePolicyFrom{
+			from: gatewayv1alpha2.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo{
+			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
@@ -402,12 +402,12 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 		},
 		{
 			msg: "multiple matches",
-			from: gatewayv1alpha2.ReferencePolicyFrom{
+			from: gatewayv1alpha2.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("TCPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo{
+			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
@@ -425,7 +425,7 @@ func Test_getPermittedForReferencePolicyFrom(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := getPermittedForReferencePolicyFrom(tt.from, policies)
+			result := getPermittedForReferenceGrantFrom(tt.from, policies)
 			assert.Equal(t, tt.result, result)
 		})
 	}
@@ -439,8 +439,8 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 				Annotations: map[string]string{},
 				Namespace:   "fitrat",
 			},
-			Spec: gatewayv1alpha2.ReferencePolicySpec{
-				From: []gatewayv1alpha2.ReferencePolicyFrom{
+			Spec: gatewayv1alpha2.ReferenceGrantSpec{
+				From: []gatewayv1alpha2.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
@@ -457,7 +457,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferencePolicyTo{
+				To: []gatewayv1alpha2.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("Service"),
@@ -471,8 +471,8 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 				Annotations: map[string]string{},
 				Namespace:   "cholpon",
 			},
-			Spec: gatewayv1alpha2.ReferencePolicySpec{
-				From: []gatewayv1alpha2.ReferencePolicyFrom{
+			Spec: gatewayv1alpha2.ReferenceGrantSpec{
+				From: []gatewayv1alpha2.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("UDPRoute"),
@@ -484,7 +484,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferencePolicyTo{
+				To: []gatewayv1alpha2.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("Service"),

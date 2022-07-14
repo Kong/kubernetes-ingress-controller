@@ -841,13 +841,13 @@ func TestFakeStoreReferencePolicy(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.ReferencePolicySpec{},
+			Spec: gatewayv1alpha2.ReferenceGrantSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.ReferencePolicySpec{},
+			Spec: gatewayv1alpha2.ReferenceGrantSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{ReferencePolicies: policies})

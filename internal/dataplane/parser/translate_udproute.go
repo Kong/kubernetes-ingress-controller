@@ -101,12 +101,6 @@ func generateKongRoutesFromUDPRouteRule(udproute *gatewayv1alpha2.UDPRoute, rule
 	objectInfo := util.FromK8sObject(udproute)
 
 	var routes []kongstate.Route
-	if len(rule.Matches) > 0 {
-		// As of 2022-03-04, matches are supported only in experimental CRDs. if you apply a UDPRoute with matches against
-		// the stable CRDs, the matches disappear into the ether (only if doing it via client-go, kubectl rejects them)
-		// We do not intend to implement these until they are stable per https://github.com/Kong/kubernetes-ingress-controller/issues/2087#issuecomment-1079053290
-		return routes, fmt.Errorf("UDPRoute Matches are not yet supported")
-	}
 
 	if len(rule.BackendRefs) == 0 {
 		return routes, fmt.Errorf("UDPRoute rules must include at least one backendRef")

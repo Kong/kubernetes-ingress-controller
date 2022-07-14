@@ -339,35 +339,19 @@ run: install
 # Gateway API
 # ------------------------------------------------------------------------------
 
-GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
-# TODO: Below hardcoded ref is a workaround for the fact that we're using an untagged version
-#       of sigs.k8s.io/gateway-api in go.mod - that occurred after v0.4.0 (which was tagged on master)
-#       but which contains a breaking change w.r.t to the file structure in said repo - and the
-#       fact that kustomize accepts only branch names, tags, or full commit hashes, i.e. short
-#       hashes or go pseudo versions are not supported [1].
-#       Please also note that kustomize fails silently when provided with an unsupported ref
-#       and downloads the manifests from the main branch.
+# GATEWAY_API_VERSION will be processed by kustomize and therefore accepts
+# only branch names, tags, or full commit hashes, i.e. short hashes or go
+# pseudo versions are not supported [1].
+# Please also note that kustomize fails silently when provided with an
+# unsupported ref and downloads the manifests from the main branch.
 #
-#       [1]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md#remote-directories
-#
-#       This causes a problem where we cannot use go pseudo version from go.mod i.e.
-#       v0.4.1-0.20220306235253-71fee1c2808f and where we cannot update to a newer version
-#       sigs.k8s.io/gateway-api because v0.5.0 hasn't been released yet and v0.4.x versions
-#       do not contain the change in file structure that some of the code in this repo already
-#       relies on.
-#
-#       In order to avoid unnecessary work we're just hardcoding the full SHA that
-#       corresponds to what's in go.mod - v0.4.1-0.20220306235253-71fee1c2808f - until
-#       v0.5.0 is released which we can then use in go.mod and scrape via go list ...
-# 
-#       Whenever the above happens the hardcoded SHA can be replaced with:
-#       $(shell go list -m -f "{{.Version}}" $(GATEWAY_API_PACKAGE))
-#
-#       Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/2595
+# [1]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md#remote-directories
 GATEWAY_API_VERSION ?= v0.5.0
+GATEWAY_API_RELEASE_CHANNEL ?= experimental
+GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_REPO ?= github.com/kubernetes-sigs/gateway-api
-GATEWAY_API_CRDS_URL = $(GATEWAY_API_REPO)/config/crd?ref=$(GATEWAY_API_VERSION)
+GATEWAY_API_CRDS_URL = $(GATEWAY_API_REPO)/config/crd/$(GATEWAY_API_RELEASE_CHANNEL)?ref=$(GATEWAY_API_VERSION)
 
 .PHONY: print-gateway-api-crds-url
 print-gateway-api-crds-url:

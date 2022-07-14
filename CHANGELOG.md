@@ -72,7 +72,7 @@
 #### Added
 
 - Updated Gateway API dependencies to [v0.5.0][gw-v0.5.0] and updated `examples`
-  directory to use use `v1beta1` versions of APIs where applicable.
+  directory to use `v1beta1` versions of APIs where applicable.
   [#2691](https://github.com/Kong/kubernetes-ingress-controller/pull/2691)
 - Added support for Gateway Listener TLS configuration, to enable full use of
   TLSRoute and HTTPS HTTPRoutes.

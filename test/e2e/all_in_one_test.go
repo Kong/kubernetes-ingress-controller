@@ -81,7 +81,9 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+	if imageLoad != "" {
+		b, err := loadimage.NewBuilder().WithImage(imageLoad)
+		require.NoError(t, err)
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -140,7 +142,9 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+	if imageLoad != "" {
+		b, err := loadimage.NewBuilder().WithImage(imageLoad)
+		require.NoError(t, err)
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -184,7 +188,9 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+	if imageLoad != "" {
+		b, err := loadimage.NewBuilder().WithImage(imageLoad)
+		require.NoError(t, err)
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -234,7 +240,9 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+	if imageLoad != "" {
+		b, err := loadimage.NewBuilder().WithImage(imageLoad)
+		require.NoError(t, err)
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -271,7 +279,9 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+	if imageLoad != "" {
+		b, err := loadimage.NewBuilder().WithImage(imageLoad)
+		require.NoError(t, err)
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -387,7 +397,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	t.Log("building test cluster and environment")
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+	if imageLoad != "" {
+		b, err := loadimage.NewBuilder().WithImage(imageLoad)
+		require.NoError(t, err)
 		addons = append(addons, b.Build())
 	}
 	builder := environments.NewBuilder().WithAddons(addons...)

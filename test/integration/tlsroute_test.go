@@ -144,7 +144,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
 			Hostname: &hostname,
 			TLS: &gatewayv1alpha2.GatewayTLSConfig{
-				CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+				CertificateRefs: []gatewayv1alpha2.SecretObjectReference{
 					{
 						Name: gatewayv1alpha2.ObjectName(tlsSecretName),
 					},
@@ -329,7 +329,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
 			Hostname: &hostname,
 			TLS: &gatewayv1alpha2.GatewayTLSConfig{
-				CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+				CertificateRefs: []gatewayv1alpha2.SecretObjectReference{
 					{
 						Name: gatewayv1alpha2.ObjectName(tlsSecretName),
 					},
@@ -469,7 +469,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
 				Hostname: &hostname,
 				TLS: &gatewayv1alpha2.GatewayTLSConfig{
-					CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+					CertificateRefs: []gatewayv1alpha2.SecretObjectReference{
 						{
 							Name: gatewayv1alpha2.ObjectName(secrets[0].Name),
 						},
@@ -482,7 +482,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 				Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultTLSServicePort),
 				Hostname: &otherHostname,
 				TLS: &gatewayv1alpha2.GatewayTLSConfig{
-					CertificateRefs: []*gatewayv1alpha2.SecretObjectReference{
+					CertificateRefs: []gatewayv1alpha2.SecretObjectReference{
 						{
 							Name:      gatewayv1alpha2.ObjectName(secrets[1].Name),
 							Namespace: &otherNamespace,
@@ -503,15 +503,15 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
 		},
-		Spec: gatewayv1alpha2.ReferencePolicySpec{
-			From: []gatewayv1alpha2.ReferencePolicyFrom{
+		Spec: gatewayv1alpha2.ReferenceGrantSpec{
+			From: []gatewayv1alpha2.ReferenceGrantFrom{
 				{
 					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 					Kind:      gatewayv1alpha2.Kind("Gateway"),
 					Namespace: gatewayv1alpha2.Namespace(gateway.Namespace),
 				},
 			},
-			To: []gatewayv1alpha2.ReferencePolicyTo{
+			To: []gatewayv1alpha2.ReferenceGrantTo{
 				{
 					Group: gatewayv1alpha2.Group(""),
 					Kind:  gatewayv1alpha2.Kind("Secret"),

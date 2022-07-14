@@ -544,8 +544,8 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
 		},
-		Spec: gatewayv1alpha2.ReferencePolicySpec{
-			From: []gatewayv1alpha2.ReferencePolicyFrom{
+		Spec: gatewayv1alpha2.ReferenceGrantSpec{
+			From: []gatewayv1alpha2.ReferenceGrantFrom{
 				{
 					// this isn't actually used, it's just a dummy extra from to confirm we handle multiple fine
 					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
@@ -558,7 +558,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 					Namespace: gatewayv1alpha2.Namespace(tcproute.Namespace),
 				},
 			},
-			To: []gatewayv1alpha2.ReferencePolicyTo{
+			To: []gatewayv1alpha2.ReferenceGrantTo{
 				// also a dummy
 				{
 					Group: gatewayv1alpha2.Group(""),
@@ -587,7 +587,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 
 	t.Logf("testing specific name references")
 	serviceName := gatewayv1alpha2.ObjectName(service2.ObjectMeta.Name)
-	policy.Spec.To[1] = gatewayv1alpha2.ReferencePolicyTo{
+	policy.Spec.To[1] = gatewayv1alpha2.ReferenceGrantTo{
 		Kind:  gatewayv1alpha2.Kind("Service"),
 		Group: gatewayv1alpha2.Group(""),
 		Name:  &serviceName,

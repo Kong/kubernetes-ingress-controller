@@ -52,8 +52,8 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	deployment := deployKong(ctx, t, env, manifest)
 
 	t.Log("adding Kuma mesh")
-	kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong")
-	kuma.EnableMeshForNamespace(ctx, env.Cluster(), "default")
+	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))
+	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "default"))
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
@@ -118,8 +118,8 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	verifyPostgres(ctx, t, env)
 
 	t.Log("adding Kuma mesh")
-	kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong")
-	kuma.EnableMeshForNamespace(ctx, env.Cluster(), "default")
+	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))
+	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "default"))
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!

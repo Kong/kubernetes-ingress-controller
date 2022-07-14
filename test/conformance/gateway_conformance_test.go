@@ -5,6 +5,7 @@ package conformance
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -28,6 +29,9 @@ var (
 )
 
 func TestGatewayConformance(t *testing.T) {
+	if v := os.Getenv("KONG_TEST_GATEWAY_CONFORMANCE_ENABLED"); v != "true" {
+		t.Skip() // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2692
+	}
 	t.Parallel()
 
 	t.Log("configuring environment for gateway conformance tests")
@@ -48,11 +52,11 @@ func TestGatewayConformance(t *testing.T) {
 
 	t.Log("starting the gateway conformance test suite")
 	cSuite := suite.New(suite.Options{
-		Client:           client,
-		GatewayClassName: gwc.Name,
-		Debug:            showDebug,
-		Cleanup:          shouldCleanup,
-		BaseManifests:    conformanceTestsBaseManifests,
+		Client:               client,
+		GatewayClassName:     gwc.Name,
+		Debug:                showDebug,
+		CleanupBaseResources: shouldCleanup,
+		BaseManifests:        conformanceTestsBaseManifests,
 	})
 	cSuite.Setup(t)
 

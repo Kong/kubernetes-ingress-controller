@@ -51,15 +51,15 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 	return convertedHeaders, nil
 }
 
-// isRefAllowedByPolicy checks if backendRef is permitted by the provided namespace-indexed ReferencePolicyTo set,
+// isRefAllowedByPolicy checks if backendRef is permitted by the provided namespace-indexed ReferenceGrantTo set,
 // allowed. allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
-// getPermittedForReferencePolicyFrom.
+// getPermittedForReferenceGrantFrom.
 func isRefAllowedByPolicy(
 	namespace *gatewayv1alpha2.Namespace,
 	name gatewayv1alpha2.ObjectName,
 	group *gatewayv1alpha2.Group,
 	kind *gatewayv1alpha2.Kind,
-	allowed map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo,
+	allowed map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo,
 ) bool {
 	if namespace == nil {
 		// local references are always fine
@@ -81,13 +81,13 @@ func isRefAllowedByPolicy(
 	return false
 }
 
-// getPermittedForReferencePolicyFrom takes a ReferencePolicy From (a namespace, group, and kind) and returns a map
-// from a namespace to a slice of ReferencePolicy Tos. When a To is included in the slice, the key namespace has a
+// getPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
+// from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
 // ReferencePolicy with those Tos and the input From.
-func getPermittedForReferencePolicyFrom(from gatewayv1alpha2.ReferencePolicyFrom,
+func getPermittedForReferenceGrantFrom(from gatewayv1alpha2.ReferenceGrantFrom,
 	policies []*gatewayv1alpha2.ReferencePolicy,
-) map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo {
-	allowed := make(map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferencePolicyTo)
+) map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo {
+	allowed := make(map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo)
 	// loop over all From values in all policies. if we find a match, add all Tos to the list of Tos allowed for the
 	// policy namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
 	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
@@ -124,7 +124,7 @@ func (p *Parser) generateKongServiceFromBackendRef(
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferencePolicies for %s: %w", objName, err)
 	}
-	allowed := getPermittedForReferencePolicyFrom(gatewayv1alpha2.ReferencePolicyFrom{
+	allowed := getPermittedForReferenceGrantFrom(gatewayv1alpha2.ReferenceGrantFrom{
 		Group:     gatewayv1alpha2.Group(route.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayv1alpha2.Kind(route.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayv1alpha2.Namespace(route.GetNamespace()),

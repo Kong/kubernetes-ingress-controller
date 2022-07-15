@@ -57,8 +57,8 @@ func TestMain(m *testing.M) {
 		kongbuilder = kongbuilder.WithProxyImage(kongImage, kongTag)
 	}
 
-	if kongPullUsername != "" {
-		if kongPullPassword == "" {
+	if kongPullUsername != "" || kongPullPassword != "" {
+		if kongPullPassword == "" || kongPullUsername == "" {
 			exitOnErrWithCode(fmt.Errorf("TEST_KONG_PULL_USERNAME requires TEST_KONG_PULL_PASSWORD"), ExitCodeEnvSetupFailed)
 		}
 		kongbuilder = kongbuilder.WithProxyImagePullSecret("", kongPullUsername, kongPullPassword, "")

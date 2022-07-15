@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -14,35 +14,35 @@ import (
 )
 
 var (
-	pathTypeExact                  = networkingv1.PathTypeExact
-	pathTypeImplementationSpecific = networkingv1.PathTypeImplementationSpecific
-	pathTypePrefix                 = networkingv1.PathTypePrefix
+	pathTypeExact                  = netv1.PathTypeExact
+	pathTypeImplementationSpecific = netv1.PathTypeImplementationSpecific
+	pathTypePrefix                 = netv1.PathTypePrefix
 )
 
 func TestTranslateIngress(t *testing.T) {
 	tts := []struct {
 		name     string
-		ingress  *networkingv1.Ingress
+		ingress  *netv1.Ingress
 		expected []*kongstate.Service
 	}{
 		{
 			name: "a basic ingress resource with a single rule, and only one path results in a single kong service and route",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
 									Path: "/api",
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
 											Name: "test-service",
-											Port: networkingv1.ServiceBackendPort{
+											Port: netv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
 											},
@@ -97,23 +97,23 @@ func TestTranslateIngress(t *testing.T) {
 
 		{
 			name: "an ingress with path type exact gets a kong route with an exact path match",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
 									Path:     "/api",
 									PathType: &pathTypeExact,
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
 											Name: "test-service",
-											Port: networkingv1.ServiceBackendPort{
+											Port: netv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
 											},
@@ -168,23 +168,23 @@ func TestTranslateIngress(t *testing.T) {
 
 		{
 			name: "an Ingress resource with implementation specific path type doesn't modify the path",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
 									Path:     "/api",
 									PathType: &pathTypeImplementationSpecific,
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
 											Name: "test-service",
-											Port: networkingv1.ServiceBackendPort{
+											Port: netv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
 											},
@@ -239,22 +239,22 @@ func TestTranslateIngress(t *testing.T) {
 
 		{
 			name: "an Ingress resource with paths with double /'s gets flattened",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
 									Path: "/v1//api///",
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
 											Name: "test-service",
-											Port: networkingv1.ServiceBackendPort{
+											Port: netv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
 											},
@@ -309,22 +309,22 @@ func TestTranslateIngress(t *testing.T) {
 
 		{
 			name: "empty paths get treated as '/'",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
 									Path: "",
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
 											Name: "test-service",
-											Port: networkingv1.ServiceBackendPort{
+											Port: netv1.ServiceBackendPort{
 												Name:   "http",
 												Number: 80,
 											},
@@ -379,23 +379,23 @@ func TestTranslateIngress(t *testing.T) {
 
 		{
 			name: "multiple and various paths get compiled together properly",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
 									{
 										Path: "/v1/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -404,10 +404,10 @@ func TestTranslateIngress(t *testing.T) {
 									},
 									{
 										Path: "/v2/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -416,10 +416,10 @@ func TestTranslateIngress(t *testing.T) {
 									},
 									{
 										Path: "/v3/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -429,10 +429,10 @@ func TestTranslateIngress(t *testing.T) {
 									{
 										Path:     "/other/path/1",
 										PathType: &pathTypeExact,
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -442,10 +442,10 @@ func TestTranslateIngress(t *testing.T) {
 									{
 										Path:     "/other/path/2",
 										PathType: &pathTypeImplementationSpecific,
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -455,10 +455,10 @@ func TestTranslateIngress(t *testing.T) {
 									{
 										Path:     "",
 										PathType: &pathTypeImplementationSpecific,
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -521,22 +521,22 @@ func TestTranslateIngress(t *testing.T) {
 
 		{
 			name: "when no host is provided, all hosts are matched",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
 									{
 										Path: "/v1/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -545,10 +545,10 @@ func TestTranslateIngress(t *testing.T) {
 									},
 									{
 										Path: "/v2/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -557,10 +557,10 @@ func TestTranslateIngress(t *testing.T) {
 									},
 									{
 										Path: "/v3/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -570,10 +570,10 @@ func TestTranslateIngress(t *testing.T) {
 									{
 										Path:     "/other/path/1",
 										PathType: &pathTypeExact,
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -583,10 +583,10 @@ func TestTranslateIngress(t *testing.T) {
 									{
 										Path:     "/other/path/2",
 										PathType: &pathTypeImplementationSpecific,
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -596,10 +596,10 @@ func TestTranslateIngress(t *testing.T) {
 									{
 										Path:     "",
 										PathType: &pathTypeImplementationSpecific,
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -661,23 +661,23 @@ func TestTranslateIngress(t *testing.T) {
 
 		{
 			name: "when there are multiple backends services, paths wont be combined and separate kong services will be provided",
-			ingress: &networkingv1.Ingress{
+			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{{
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
 									{
 										Path: "/v1/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service1",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -686,10 +686,10 @@ func TestTranslateIngress(t *testing.T) {
 									},
 									{
 										Path: "/v2/api",
-										Backend: networkingv1.IngressBackend{
-											Service: &networkingv1.IngressServiceBackend{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
 												Name: "test-service2",
-												Port: networkingv1.ServiceBackendPort{
+												Port: netv1.ServiceBackendPort{
 													Name:   "http",
 													Number: 80,
 												},
@@ -800,12 +800,12 @@ func TestTranslateIngress(t *testing.T) {
 func Test_pathsFromIngressPaths(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		in   networkingv1.HTTPIngressPath
+		in   netv1.HTTPIngressPath
 		out  []*string
 	}{
 		{
 			name: "path type prefix will expand the match to a trailing slash if not provided",
-			in: networkingv1.HTTPIngressPath{
+			in: netv1.HTTPIngressPath{
 				Path:     "/v1/api/packages",
 				PathType: &pathTypePrefix,
 			},
@@ -816,7 +816,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 		},
 		{
 			name: "path type prefix will expand the match with a literal match if a slash is provided",
-			in: networkingv1.HTTPIngressPath{
+			in: netv1.HTTPIngressPath{
 				Path:     "/v1/api/packages/",
 				PathType: &pathTypePrefix,
 			},
@@ -827,7 +827,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 		},
 		{
 			name: "path type prefix will provide a default when no path is provided",
-			in: networkingv1.HTTPIngressPath{
+			in: netv1.HTTPIngressPath{
 				Path:     "",
 				PathType: &pathTypePrefix,
 			},
@@ -835,7 +835,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 		},
 		{
 			name: "path type exact will cause an exact matching path on a regular path",
-			in: networkingv1.HTTPIngressPath{
+			in: netv1.HTTPIngressPath{
 				Path:     "/v1/api/packages",
 				PathType: &pathTypeExact,
 			},
@@ -843,7 +843,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 		},
 		{
 			name: "path type exact will cause an exact matching path on a regular path with a / suffix",
-			in: networkingv1.HTTPIngressPath{
+			in: netv1.HTTPIngressPath{
 				Path:     "/v1/api/packages/",
 				PathType: &pathTypeExact,
 			},
@@ -851,7 +851,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 		},
 		{
 			name: "path type exact will supply a default if no path is provided",
-			in: networkingv1.HTTPIngressPath{
+			in: netv1.HTTPIngressPath{
 				Path:     "",
 				PathType: &pathTypeExact,
 			},
@@ -859,7 +859,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 		},
 		{
 			name: "path type implementation-specific will leave the path alone",
-			in: networkingv1.HTTPIngressPath{
+			in: netv1.HTTPIngressPath{
 				Path:     "/asdfasd9jhf09432$",
 				PathType: &pathTypeImplementationSpecific,
 			},

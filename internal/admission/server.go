@@ -9,9 +9,9 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
-	admission "k8s.io/api/admission/v1"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
@@ -128,7 +128,7 @@ func (a RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	review := admission.AdmissionReview{}
+	review := admissionv1.AdmissionReview{}
 	if err := json.Unmarshal(data, &review); err != nil {
 		a.Logger.WithError(err).Error("failed to parse AdmissionReview object")
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -156,42 +156,42 @@ func (a RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 var (
-	consumerGVResource = meta.GroupVersionResource{
+	consumerGVResource = metav1.GroupVersionResource{
 		Group:    configuration.SchemeGroupVersion.Group,
 		Version:  configuration.SchemeGroupVersion.Version,
 		Resource: "kongconsumers",
 	}
-	pluginGVResource = meta.GroupVersionResource{
+	pluginGVResource = metav1.GroupVersionResource{
 		Group:    configuration.SchemeGroupVersion.Group,
 		Version:  configuration.SchemeGroupVersion.Version,
 		Resource: "kongplugins",
 	}
-	clusterPluginGVResource = meta.GroupVersionResource{
+	clusterPluginGVResource = metav1.GroupVersionResource{
 		Group:    configuration.SchemeGroupVersion.Group,
 		Version:  configuration.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
-	secretGVResource = meta.GroupVersionResource{
+	secretGVResource = metav1.GroupVersionResource{
 		Group:    corev1.SchemeGroupVersion.Group,
 		Version:  corev1.SchemeGroupVersion.Version,
 		Resource: "secrets",
 	}
-	gatewayGVResource = meta.GroupVersionResource{
+	gatewayGVResource = metav1.GroupVersionResource{
 		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 		Resource: "gateways",
 	}
-	httprouteGVResource = meta.GroupVersionResource{
+	httprouteGVResource = metav1.GroupVersionResource{
 		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 		Resource: "httproutes",
 	}
 )
 
-func (a RequestHandler) handleValidation(ctx context.Context, request admission.AdmissionRequest) (
-	*admission.AdmissionResponse, error,
+func (a RequestHandler) handleValidation(ctx context.Context, request admissionv1.AdmissionRequest) (
+	*admissionv1.AdmissionResponse, error,
 ) {
-	var response admission.AdmissionResponse
+	var response admissionv1.AdmissionResponse
 
 	var ok bool
 	var message string
@@ -208,12 +208,12 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 			return nil, err
 		}
 		switch request.Operation {
-		case admission.Create:
+		case admissionv1.Create:
 			ok, message, err = a.Validator.ValidateConsumer(ctx, consumer)
 			if err != nil {
 				return nil, err
 			}
-		case admission.Update:
+		case admissionv1.Update:
 			var oldConsumer configuration.KongConsumer
 			_, _, err = deserializer.Decode(request.OldObject.Raw,
 				nil, &oldConsumer)
@@ -278,7 +278,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 		// validation also happens at the consumer side of the reference so a
 		// credentials secret can not be referenced without being validated.
 		switch request.Operation {
-		case admission.Update:
+		case admissionv1.Update:
 			ok, message, err = a.Validator.ValidateCredential(ctx, secret)
 			if err != nil {
 				return nil, err
@@ -318,7 +318,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admission.
 	}
 	response.UID = request.UID
 	response.Allowed = ok
-	response.Result = &meta.Status{
+	response.Result = &metav1.Status{
 		Message: message,
 	}
 	if !ok {

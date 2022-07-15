@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/discovery"
 )
 
@@ -21,9 +21,9 @@ const (
 func (ia IngressAPI) String() string {
 	switch ia {
 	case NetworkingV1:
-		return networkingv1.SchemeGroupVersion.String()
+		return netv1.SchemeGroupVersion.String()
 	case NetworkingV1beta1:
-		return networkingv1beta1.SchemeGroupVersion.String()
+		return netv1beta1.SchemeGroupVersion.String()
 	case ExtensionsV1beta1:
 		return extensionsv1beta1.SchemeGroupVersion.String()
 	case OtherAPI:

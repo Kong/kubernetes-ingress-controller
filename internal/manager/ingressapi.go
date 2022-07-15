@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,13 +25,13 @@ func negotiateIngressAPI(config *Config, client client.Client) (IngressAPI, erro
 	var allowedAPIs []IngressAPI
 	candidateAPIs := map[IngressAPI]schema.GroupVersionResource{
 		NetworkingV1: {
-			Group:    networkingv1.SchemeGroupVersion.Group,
-			Version:  networkingv1.SchemeGroupVersion.Version,
+			Group:    netv1.SchemeGroupVersion.Group,
+			Version:  netv1.SchemeGroupVersion.Version,
 			Resource: "ingresses",
 		},
 		NetworkingV1beta1: {
-			Group:    networkingv1beta1.SchemeGroupVersion.Group,
-			Version:  networkingv1beta1.SchemeGroupVersion.Version,
+			Group:    netv1beta1.SchemeGroupVersion.Group,
+			Version:  netv1beta1.SchemeGroupVersion.Version,
 			Resource: "ingresses",
 		},
 		ExtensionsV1beta1: {

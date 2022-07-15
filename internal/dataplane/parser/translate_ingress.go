@@ -7,8 +7,8 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
@@ -20,7 +20,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 
 	ingressList := p.storer.ListIngressesV1beta1()
 
-	var allDefaultBackends []networkingv1beta1.Ingress
+	var allDefaultBackends []netv1beta1.Ingress
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
@@ -168,7 +168,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 	ingressList := p.storer.ListIngressesV1()
 
-	var allDefaultBackends []networkingv1.Ingress
+	var allDefaultBackends []netv1.Ingress
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
@@ -205,7 +205,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 						continue
 					}
 
-					pathType := networkingv1.PathTypeImplementationSpecific
+					pathType := netv1.PathTypeImplementationSpecific
 					if rulePath.PathType != nil {
 						pathType = *rulePath.PathType
 					}

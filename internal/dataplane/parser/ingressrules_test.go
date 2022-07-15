@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -110,7 +110,7 @@ func TestMergeIngressRules(t *testing.T) {
 
 func Test_addFromIngressV1beta1TLS(t *testing.T) {
 	type args struct {
-		tlsSections []networking.IngressTLS
+		tlsSections []netv1beta1.IngressTLS
 		namespace   string
 	}
 	tests := []struct {
@@ -120,7 +120,7 @@ func Test_addFromIngressV1beta1TLS(t *testing.T) {
 	}{
 		{
 			args: args{
-				tlsSections: []networking.IngressTLS{
+				tlsSections: []netv1beta1.IngressTLS{
 					{
 						Hosts: []string{
 							"1.example.com",
@@ -145,7 +145,7 @@ func Test_addFromIngressV1beta1TLS(t *testing.T) {
 		},
 		{
 			args: args{
-				tlsSections: []networking.IngressTLS{
+				tlsSections: []netv1beta1.IngressTLS{
 					{
 						Hosts: []string{
 							"1.example.com",

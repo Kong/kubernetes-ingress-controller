@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -26,14 +26,14 @@ func Test_networkingIngressV1Beta1(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *networking.Ingress
+		want *netv1beta1.Ingress
 	}{
 		{
 			name: "networking.Ingress is returned as is",
 			args: args{
-				obj: &networking.Ingress{},
+				obj: &netv1beta1.Ingress{},
 			},
-			want: &networking.Ingress{},
+			want: &netv1beta1.Ingress{},
 		},
 		{
 			name: "returns nil if a non-ingress object is passed in",
@@ -88,21 +88,21 @@ func Test_networkingIngressV1Beta1(t *testing.T) {
 					},
 				},
 			},
-			want: &networking.Ingress{
+			want: &netv1beta1.Ingress{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "networking.k8s.io/v1beta1",
 					Kind:       "Ingress",
 				},
-				Spec: networking.IngressSpec{
-					Rules: []networking.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networking.IngressRuleValue{
-								HTTP: &networking.HTTPIngressRuleValue{
-									Paths: []networking.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networking.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -113,7 +113,7 @@ func Test_networkingIngressV1Beta1(t *testing.T) {
 						},
 					},
 				},
-				Status: networking.IngressStatus{
+				Status: netv1beta1.IngressStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{{IP: "1.2.3.4"}},
 					},

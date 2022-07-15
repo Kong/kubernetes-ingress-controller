@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
-	networkingv1 "k8s.io/api/networking/v1"
+	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -20,7 +20,7 @@ import (
 // TranslateIngress receives a Kubernetes ingress object and from it will
 // produce a translated set of kong.Services and kong.Routes which will come
 // wrapped in a kongstate.Service object.
-func TranslateIngress(ingress *networkingv1.Ingress) []*kongstate.Service {
+func TranslateIngress(ingress *netv1.Ingress) []*kongstate.Service {
 	index := &ingressTranslationIndex{cache: make(map[string]*ingressTranslationMeta)}
 	index.add(ingress)
 	kongStateServices := kongstate.Services(index.translate())
@@ -32,7 +32,7 @@ func TranslateIngress(ingress *networkingv1.Ingress) []*kongstate.Service {
 // Ingress Translation - Private Consts & Vars
 // -----------------------------------------------------------------------------
 
-var defaultHTTPIngressPathType = networkingv1.PathTypePrefix
+var defaultHTTPIngressPathType = netv1.PathTypePrefix
 
 const (
 	defaultHTTPPort = 80
@@ -71,7 +71,7 @@ type ingressTranslationIndex struct {
 	cache map[string]*ingressTranslationMeta
 }
 
-func (i *ingressTranslationIndex) add(ingress *networkingv1.Ingress) {
+func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 	for _, ingressRule := range ingress.Spec.Rules {
 		if ingressRule.HTTP == nil || len(ingressRule.HTTP.Paths) < 1 {
 			continue
@@ -149,7 +149,7 @@ type ingressTranslationMeta struct {
 	ingressHost        string
 	serviceName        string
 	servicePort        int32
-	paths              []networkingv1.HTTPIngressPath
+	paths              []netv1.HTTPIngressPath
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) *kongstate.Service {
@@ -209,15 +209,15 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 // Ingress Translation - Private - Helper Functions
 // -----------------------------------------------------------------------------
 
-func pathsFromIngressPaths(httpIngressPath networkingv1.HTTPIngressPath) []*string {
+func pathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath) []*string {
 	switch *httpIngressPath.PathType { //nolint:exhaustive
-	case networkingv1.PathTypeExact:
+	case netv1.PathTypeExact:
 		relative := strings.TrimLeft(httpIngressPath.Path, "/")
 		if httpIngressPath.Path == "" {
 			return kong.StringSlice("/")
 		}
 		return kong.StringSlice("/" + relative + "$")
-	case networkingv1.PathTypeImplementationSpecific:
+	case netv1.PathTypeImplementationSpecific:
 		return kong.StringSlice(httpIngressPath.Path)
 	default:
 		// path type is prefix

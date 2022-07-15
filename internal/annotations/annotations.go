@@ -19,7 +19,7 @@ package annotations
 import (
 	"strings"
 
-	networkingv1 "k8s.io/api/networking/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -98,8 +98,8 @@ func IngressClassValidatorFuncFromObjectMeta(
 
 func IngressClassValidatorFuncFromV1Ingress(
 	ingressClass string,
-) func(ingress *networkingv1.Ingress, handling ClassMatching) bool {
-	return func(ingress *networkingv1.Ingress, handling ClassMatching) bool {
+) func(ingress *netv1.Ingress, handling ClassMatching) bool {
+	return func(ingress *netv1.Ingress, handling ClassMatching) bool {
 		class := ingress.Spec.IngressClassName
 		className := ""
 		if class != nil {

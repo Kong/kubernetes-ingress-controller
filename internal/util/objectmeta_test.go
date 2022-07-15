@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,7 +17,7 @@ func TestFromK8sObject(t *testing.T) {
 	}{
 		{
 			name: "empty annotations",
-			in: &networkingv1beta1.Ingress{
+			in: &netv1beta1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "name",
 					Namespace: "namespace",
@@ -31,7 +31,7 @@ func TestFromK8sObject(t *testing.T) {
 		},
 		{
 			name: "has annotations",
-			in: &networkingv1beta1.Ingress{
+			in: &netv1beta1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "name",
 					Namespace:   "namespace",

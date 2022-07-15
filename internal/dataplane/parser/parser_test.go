@@ -12,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -293,7 +293,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 			},
 		},
-		IngressesV1beta1: []*networkingv1beta1.Ingress{
+		IngressesV1beta1: []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -303,16 +303,16 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -333,16 +333,16 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.net",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -968,7 +968,7 @@ func TestCACertificate(t *testing.T) {
 func TestServiceClientCertificate(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("valid client-cert annotation", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -977,16 +977,16 @@ func TestServiceClientCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -996,7 +996,7 @@ func TestServiceClientCertificate(t *testing.T) {
 							},
 						},
 					},
-					TLS: []networkingv1beta1.IngressTLS{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -1050,7 +1050,7 @@ func TestServiceClientCertificate(t *testing.T) {
 			*state.Services[0].ClientCertificate.ID)
 	})
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -1059,16 +1059,16 @@ func TestServiceClientCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -1078,7 +1078,7 @@ func TestServiceClientCertificate(t *testing.T) {
 							},
 						},
 					},
-					TLS: []networkingv1beta1.IngressTLS{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -1119,7 +1119,7 @@ func TestServiceClientCertificate(t *testing.T) {
 func TestKongRouteAnnotations(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("strip-path annotation is correctly processed (true)", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
@@ -1129,16 +1129,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 						annotations.IngressClassKey: "kong",
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -1199,7 +1199,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("strip-path annotation is correctly processed (false)", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
@@ -1209,16 +1209,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 						"konghq.com/strip-path":     "false",
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -1280,7 +1280,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 	})
 	t.Run("https-redirect-status-code annotation is correctly processed",
 		func(t *testing.T) {
-			ingresses := []*networkingv1beta1.Ingress{
+			ingresses := []*netv1beta1.Ingress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
@@ -1290,16 +1290,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 							"konghq.com/https-redirect-status-code": "301",
 						},
 					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
+					Spec: netv1beta1.IngressSpec{
+						Rules: []netv1beta1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
+								IngressRuleValue: netv1beta1.IngressRuleValue{
+									HTTP: &netv1beta1.HTTPIngressRuleValue{
+										Paths: []netv1beta1.HTTPIngressPath{
 											{
 												Path: "/",
-												Backend: networkingv1beta1.IngressBackend{
+												Backend: netv1beta1.IngressBackend{
 													ServiceName: "foo-svc",
 													ServicePort: intstr.FromInt(80),
 												},
@@ -1362,7 +1362,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 	t.Run("bad https-redirect-status-code annotation is ignored",
 		func(t *testing.T) {
-			ingresses := []*networkingv1beta1.Ingress{
+			ingresses := []*netv1beta1.Ingress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
@@ -1372,16 +1372,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 							"konghq.com/https-redirect-status-code": "whoops",
 						},
 					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
+					Spec: netv1beta1.IngressSpec{
+						Rules: []netv1beta1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
+								IngressRuleValue: netv1beta1.IngressRuleValue{
+									HTTP: &netv1beta1.HTTPIngressRuleValue{
+										Paths: []netv1beta1.HTTPIngressPath{
 											{
 												Path: "/",
-												Backend: networkingv1beta1.IngressBackend{
+												Backend: netv1beta1.IngressBackend{
 													ServiceName: "foo-svc",
 													ServicePort: intstr.FromInt(80),
 												},
@@ -1443,7 +1443,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 	t.Run("preserve-host annotation is correctly processed",
 		func(t *testing.T) {
-			ingresses := []*networkingv1beta1.Ingress{
+			ingresses := []*netv1beta1.Ingress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
@@ -1453,16 +1453,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
+					Spec: netv1beta1.IngressSpec{
+						Rules: []netv1beta1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
+								IngressRuleValue: netv1beta1.IngressRuleValue{
+									HTTP: &netv1beta1.HTTPIngressRuleValue{
+										Paths: []netv1beta1.HTTPIngressPath{
 											{
 												Path: "/",
-												Backend: networkingv1beta1.IngressBackend{
+												Backend: netv1beta1.IngressBackend{
 													ServiceName: "foo-svc",
 													ServicePort: intstr.FromInt(80),
 												},
@@ -1524,7 +1524,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 	t.Run("preserve-host annotation with random string is correctly processed",
 		func(t *testing.T) {
-			ingresses := []*networkingv1beta1.Ingress{
+			ingresses := []*netv1beta1.Ingress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
@@ -1534,16 +1534,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 							"konghq.com/preserve-host":  "wiggle wiggle wiggle",
 						},
 					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
+					Spec: netv1beta1.IngressSpec{
+						Rules: []netv1beta1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
+								IngressRuleValue: netv1beta1.IngressRuleValue{
+									HTTP: &netv1beta1.HTTPIngressRuleValue{
+										Paths: []netv1beta1.HTTPIngressPath{
 											{
 												Path: "/",
-												Backend: networkingv1beta1.IngressBackend{
+												Backend: netv1beta1.IngressBackend{
 													ServiceName: "foo-svc",
 													ServicePort: intstr.FromInt(80),
 												},
@@ -1605,7 +1605,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 	t.Run("regex-priority annotation is correctly processed",
 		func(t *testing.T) {
-			ingresses := []*networkingv1beta1.Ingress{
+			ingresses := []*netv1beta1.Ingress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
@@ -1615,16 +1615,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
+					Spec: netv1beta1.IngressSpec{
+						Rules: []netv1beta1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
+								IngressRuleValue: netv1beta1.IngressRuleValue{
+									HTTP: &netv1beta1.HTTPIngressRuleValue{
+										Paths: []netv1beta1.HTTPIngressPath{
 											{
 												Path: "/",
-												Backend: networkingv1beta1.IngressBackend{
+												Backend: netv1beta1.IngressBackend{
 													ServiceName: "foo-svc",
 													ServicePort: intstr.FromInt(80),
 												},
@@ -1686,7 +1686,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 	t.Run("non-integer regex-priority annotation is ignored",
 		func(t *testing.T) {
-			ingresses := []*networkingv1beta1.Ingress{
+			ingresses := []*netv1beta1.Ingress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
@@ -1696,16 +1696,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
+					Spec: netv1beta1.IngressSpec{
+						Rules: []netv1beta1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
+								IngressRuleValue: netv1beta1.IngressRuleValue{
+									HTTP: &netv1beta1.HTTPIngressRuleValue{
+										Paths: []netv1beta1.HTTPIngressPath{
 											{
 												Path: "/",
-												Backend: networkingv1beta1.IngressBackend{
+												Backend: netv1beta1.IngressBackend{
 													ServiceName: "foo-svc",
 													ServicePort: intstr.FromInt(80),
 												},
@@ -1766,7 +1766,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			}, state.Services[0].Routes[0].Route)
 		})
 	t.Run("route buffering options are processed (true)", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route-buffering-test",
@@ -1777,16 +1777,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 						"konghq.com/response-buffering": "True",
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -1845,7 +1845,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route buffering options are processed (false)", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route-buffering-test",
@@ -1856,16 +1856,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 						"konghq.com/response-buffering": "False",
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -1924,7 +1924,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route buffering options are not processed with bad annotation values", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route-buffering-test",
@@ -1935,16 +1935,16 @@ func TestKongRouteAnnotations(t *testing.T) {
 						"konghq.com/response-buffering": "invalid-value",
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -1987,7 +1987,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 func TestKongProcessClasslessIngress(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("Kong classless ingress evaluated (true)", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
@@ -1996,16 +1996,16 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -2041,22 +2041,22 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 			"expected one service to be rendered")
 	})
 	t.Run("Kong classless ingress evaluated (false)", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: "default",
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -2459,7 +2459,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 func TestKongServiceAnnotations(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("path annotation is correctly processed", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
@@ -2468,16 +2468,16 @@ func TestKongServiceAnnotations(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -2542,7 +2542,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 	})
 
 	t.Run("host-header annotation is correctly processed", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
@@ -2551,16 +2551,16 @@ func TestKongServiceAnnotations(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -2633,7 +2633,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 	t.Run("methods annotation is correctly processed",
 		func(t *testing.T) {
-			ingresses := []*networkingv1beta1.Ingress{
+			ingresses := []*netv1beta1.Ingress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
@@ -2643,16 +2643,16 @@ func TestKongServiceAnnotations(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
+					Spec: netv1beta1.IngressSpec{
+						Rules: []netv1beta1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
+								IngressRuleValue: netv1beta1.IngressRuleValue{
+									HTTP: &netv1beta1.HTTPIngressRuleValue{
+										Paths: []netv1beta1.HTTPIngressPath{
 											{
 												Path: "/",
-												Backend: networkingv1beta1.IngressBackend{
+												Backend: netv1beta1.IngressBackend{
 													ServiceName: "foo-svc",
 													ServicePort: intstr.FromInt(80),
 												},
@@ -2718,7 +2718,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 func TestDefaultBackend(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("default backend is processed correctly", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ing-with-default-backend",
@@ -2727,8 +2727,8 @@ func TestDefaultBackend(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Backend: &networkingv1beta1.IngressBackend{
+				Spec: netv1beta1.IngressSpec{
+					Backend: &netv1beta1.IngressBackend{
 						ServiceName: "default-svc",
 						ServicePort: intstr.FromInt(80),
 					},
@@ -2764,7 +2764,7 @@ func TestDefaultBackend(t *testing.T) {
 	})
 
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -2773,16 +2773,16 @@ func TestDefaultBackend(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -2792,7 +2792,7 @@ func TestDefaultBackend(t *testing.T) {
 							},
 						},
 					},
-					TLS: []networkingv1beta1.IngressTLS{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -2833,7 +2833,7 @@ func TestDefaultBackend(t *testing.T) {
 func TestParserSecret(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("invalid TLS secret", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -2842,8 +2842,8 @@ func TestParserSecret(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -2856,8 +2856,8 @@ func TestParserSecret(t *testing.T) {
 					Name:      "bar",
 					Namespace: "default",
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"bar.com"},
@@ -2892,7 +2892,7 @@ func TestParserSecret(t *testing.T) {
 			"expected no certificates to be rendered with empty secret")
 	})
 	t.Run("duplicate certificates order by time", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -2901,8 +2901,8 @@ func TestParserSecret(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -2918,8 +2918,8 @@ func TestParserSecret(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret2",
 							Hosts:      []string{"bar.com"},
@@ -2987,7 +2987,7 @@ func TestParserSecret(t *testing.T) {
 		}, state.Certificates[0])
 	})
 	t.Run("duplicate certificates order by uid", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -2996,8 +2996,8 @@ func TestParserSecret(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -3013,8 +3013,8 @@ func TestParserSecret(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret2",
 							Hosts:      []string{"bar.com"},
@@ -3030,8 +3030,8 @@ func TestParserSecret(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret3",
 							Hosts:      []string{"baz.com"},
@@ -3114,7 +3114,7 @@ func TestParserSecret(t *testing.T) {
 		}, state.Certificates[0])
 	})
 	t.Run("duplicate SNIs", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3123,8 +3123,8 @@ func TestParserSecret(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -3137,8 +3137,8 @@ func TestParserSecret(t *testing.T) {
 					Name:      "bar",
 					Namespace: "ns1",
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret2",
 							Hosts:      []string{"foo.com"},
@@ -3187,7 +3187,7 @@ func TestParserSecret(t *testing.T) {
 func TestParserSNI(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("route includes SNI when TLS info present, but not for wildcard hostnames", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3196,22 +3196,22 @@ func TestParserSNI(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"example.com", "*.example.com"},
 						},
 					},
-					Rules: []networkingv1beta1.IngressRule{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3222,12 +3222,12 @@ func TestParserSNI(t *testing.T) {
 						},
 						{
 							Host: "*.example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3287,7 +3287,7 @@ func TestParserSNI(t *testing.T) {
 		}, state.Services[0].Routes[1].Route)
 	})
 	t.Run("route does not include SNI when TLS info absent", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3296,16 +3296,16 @@ func TestParserSNI(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3346,7 +3346,7 @@ func TestParserHostAliases(t *testing.T) {
 	assert := assert.New(t)
 	annHostAliasesKey := annotations.AnnotationPrefix + annotations.HostAliasesKey
 	t.Run("route Hosts includes Host-Aliases when Host-Aliases are present", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3356,16 +3356,16 @@ func TestParserHostAliases(t *testing.T) {
 						annHostAliasesKey:           "*.example.com,*.sample.com,*.illustration.com",
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3400,7 +3400,7 @@ func TestParserHostAliases(t *testing.T) {
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route Hosts remain unmodified when Host-Aliases are not present", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3409,16 +3409,16 @@ func TestParserHostAliases(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3453,7 +3453,7 @@ func TestParserHostAliases(t *testing.T) {
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route Hosts will not contain duplicates when Host-Aliases duplicates the host", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3463,16 +3463,16 @@ func TestParserHostAliases(t *testing.T) {
 						annHostAliasesKey:           "example.com,*.example.com",
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3520,7 +3520,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3530,16 +3530,16 @@ func TestPluginAnnotations(t *testing.T) {
 						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3612,7 +3612,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3622,16 +3622,16 @@ func TestPluginAnnotations(t *testing.T) {
 						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3697,7 +3697,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3707,16 +3707,16 @@ func TestPluginAnnotations(t *testing.T) {
 						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -3759,7 +3759,7 @@ func TestPluginAnnotations(t *testing.T) {
 		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
 	})
 	t.Run("missing plugin", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -3769,16 +3769,16 @@ func TestPluginAnnotations(t *testing.T) {
 						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					Rules: []networkingv1beta1.IngressRule{
+				Spec: netv1beta1.IngressSpec{
+					Rules: []netv1beta1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: networkingv1beta1.IngressRuleValue{
-								HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-									Paths: []networkingv1beta1.HTTPIngressPath{
+							IngressRuleValue: netv1beta1.IngressRuleValue{
+								HTTP: &netv1beta1.HTTPIngressRuleValue{
+									Paths: []netv1beta1.HTTPIngressPath{
 										{
 											Path: "/",
-											Backend: networkingv1beta1.IngressBackend{
+											Backend: netv1beta1.IngressBackend{
 												ServiceName: "foo-svc",
 												ServicePort: intstr.FromInt(80),
 											},
@@ -4397,7 +4397,7 @@ func TestPickPort(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		objs store.FakeObjects
-		port networkingv1.ServiceBackendPort
+		port netv1.ServiceBackendPort
 
 		wantTarget string
 	}{
@@ -4407,26 +4407,26 @@ func TestPickPort(t *testing.T) {
 				Services:  []*corev1.Service{&svc0},
 				Endpoints: endpointList,
 
-				IngressesV1: []*networkingv1.Ingress{
+				IngressesV1: []*netv1.Ingress{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "foo",
 							Namespace:   "foo-namespace",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
-						Spec: networkingv1.IngressSpec{
-							Rules: []networkingv1.IngressRule{
+						Spec: netv1.IngressSpec{
+							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: networkingv1.IngressRuleValue{
-										HTTP: &networkingv1.HTTPIngressRuleValue{
-											Paths: []networkingv1.HTTPIngressPath{
+									IngressRuleValue: netv1.IngressRuleValue{
+										HTTP: &netv1.HTTPIngressRuleValue{
+											Paths: []netv1.HTTPIngressPath{
 												{
 													Path: "/",
-													Backend: networkingv1.IngressBackend{
-														Service: &networkingv1.IngressServiceBackend{
+													Backend: netv1.IngressBackend{
+														Service: &netv1.IngressServiceBackend{
 															Name: "service-0",
-															Port: networkingv1.ServiceBackendPort{Number: 111},
+															Port: netv1.ServiceBackendPort{Number: 111},
 														},
 													},
 												},
@@ -4447,26 +4447,26 @@ func TestPickPort(t *testing.T) {
 				Services:  []*corev1.Service{&svc2},
 				Endpoints: endpointList,
 
-				IngressesV1: []*networkingv1.Ingress{
+				IngressesV1: []*netv1.Ingress{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "foo",
 							Namespace:   "foo-namespace",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
-						Spec: networkingv1.IngressSpec{
-							Rules: []networkingv1.IngressRule{
+						Spec: netv1.IngressSpec{
+							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: networkingv1.IngressRuleValue{
-										HTTP: &networkingv1.HTTPIngressRuleValue{
-											Paths: []networkingv1.HTTPIngressPath{
+									IngressRuleValue: netv1.IngressRuleValue{
+										HTTP: &netv1.HTTPIngressRuleValue{
+											Paths: []netv1.HTTPIngressPath{
 												{
 													Path: "/externalname",
-													Backend: networkingv1.IngressBackend{
-														Service: &networkingv1.IngressServiceBackend{
+													Backend: netv1.IngressBackend{
+														Service: &netv1.IngressServiceBackend{
 															Name: "service-2",
-															Port: networkingv1.ServiceBackendPort{Number: 222},
+															Port: netv1.ServiceBackendPort{Number: 222},
 														},
 													},
 												},
@@ -4487,26 +4487,26 @@ func TestPickPort(t *testing.T) {
 				Services:  []*corev1.Service{&svc0},
 				Endpoints: endpointList,
 
-				IngressesV1: []*networkingv1.Ingress{
+				IngressesV1: []*netv1.Ingress{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "foo",
 							Namespace:   "foo-namespace",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
-						Spec: networkingv1.IngressSpec{
-							Rules: []networkingv1.IngressRule{
+						Spec: netv1.IngressSpec{
+							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: networkingv1.IngressRuleValue{
-										HTTP: &networkingv1.HTTPIngressRuleValue{
-											Paths: []networkingv1.HTTPIngressPath{
+									IngressRuleValue: netv1.IngressRuleValue{
+										HTTP: &netv1.HTTPIngressRuleValue{
+											Paths: []netv1.HTTPIngressPath{
 												{
 													Path: "/",
-													Backend: networkingv1.IngressBackend{
-														Service: &networkingv1.IngressServiceBackend{
+													Backend: netv1.IngressBackend{
+														Service: &netv1.IngressServiceBackend{
 															Name: "service-0",
-															Port: networkingv1.ServiceBackendPort{Name: "port3"},
+															Port: netv1.ServiceBackendPort{Name: "port3"},
 														},
 													},
 												},
@@ -4527,24 +4527,24 @@ func TestPickPort(t *testing.T) {
 				Services:  []*corev1.Service{&svc1},
 				Endpoints: endpointList,
 
-				IngressesV1: []*networkingv1.Ingress{
+				IngressesV1: []*netv1.Ingress{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "foo",
 							Namespace:   "foo-namespace",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
-						Spec: networkingv1.IngressSpec{
-							Rules: []networkingv1.IngressRule{
+						Spec: netv1.IngressSpec{
+							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: networkingv1.IngressRuleValue{
-										HTTP: &networkingv1.HTTPIngressRuleValue{
-											Paths: []networkingv1.HTTPIngressPath{
+									IngressRuleValue: netv1.IngressRuleValue{
+										HTTP: &netv1.HTTPIngressRuleValue{
+											Paths: []netv1.HTTPIngressPath{
 												{
 													Path: "/",
-													Backend: networkingv1.IngressBackend{
-														Service: &networkingv1.IngressServiceBackend{
+													Backend: netv1.IngressBackend{
+														Service: &netv1.IngressServiceBackend{
 															Name: "service-1",
 														},
 													},
@@ -4577,7 +4577,7 @@ func TestPickPort(t *testing.T) {
 func TestCertificate(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("same host with multiple namespace return the first namespace/secret by asc ", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -4586,8 +4586,8 @@ func TestCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -4603,8 +4603,8 @@ func TestCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -4620,8 +4620,8 @@ func TestCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret1",
 							Hosts:      []string{"foo.com"},
@@ -4688,7 +4688,7 @@ func TestCertificate(t *testing.T) {
 		assert.Contains(state.Certificates, fooCertificate)
 	})
 	t.Run("SNIs slice with same certificate should be ordered by asc", func(t *testing.T) {
-		ingresses := []*networkingv1beta1.Ingress{
+		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo3",
@@ -4697,8 +4697,8 @@ func TestCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret",
 							Hosts:      []string{"foo3.xxx.com"},
@@ -4714,8 +4714,8 @@ func TestCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret",
 							Hosts:      []string{"foo2.xxx.com"},
@@ -4731,8 +4731,8 @@ func TestCertificate(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: networkingv1beta1.IngressSpec{
-					TLS: []networkingv1beta1.IngressTLS{
+				Spec: netv1beta1.IngressSpec{
+					TLS: []netv1beta1.IngressTLS{
 						{
 							SecretName: "secret",
 							Hosts:      []string{"foo1.xxx.com"},

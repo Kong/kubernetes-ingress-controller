@@ -12,7 +12,7 @@ import (
 	"github.com/lithammer/dedent"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	admission "k8s.io/api/admission/v1"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -86,7 +86,7 @@ func TestValidationWebhook(t *testing.T) {
 			validator KongValidator
 
 			wantRespCode        int
-			wantSuccessResponse admission.AdmissionResponse
+			wantSuccessResponse admissionv1.AdmissionResponse
 			wantFailureMessage  string
 		}{
 			{
@@ -116,7 +116,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`),
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
-				wantSuccessResponse: admission.AdmissionResponse{
+				wantSuccessResponse: admissionv1.AdmissionResponse{
 					UID:     "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 					Allowed: true,
 					Result:  &metav1.Status{},
@@ -151,7 +151,7 @@ func TestValidationWebhook(t *testing.T) {
 				`),
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
-				wantSuccessResponse: admission.AdmissionResponse{
+				wantSuccessResponse: admissionv1.AdmissionResponse{
 					UID:     "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 					Allowed: true,
 					Result:  &metav1.Status{},
@@ -185,7 +185,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`),
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
-				wantSuccessResponse: admission.AdmissionResponse{
+				wantSuccessResponse: admissionv1.AdmissionResponse{
 					UID:     "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 					Allowed: true,
 					Result:  &metav1.Status{},
@@ -213,7 +213,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`),
 				validator:    KongFakeValidator{Result: false, Message: "consumer is not valid"},
 				wantRespCode: http.StatusOK,
-				wantSuccessResponse: admission.AdmissionResponse{
+				wantSuccessResponse: admissionv1.AdmissionResponse{
 					UID:     "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 					Allowed: false,
 					Result: &metav1.Status{
@@ -321,7 +321,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`),
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
-				wantSuccessResponse: admission.AdmissionResponse{
+				wantSuccessResponse: admissionv1.AdmissionResponse{
 					UID:     "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 					Allowed: true,
 					Result:  &metav1.Status{},
@@ -346,7 +346,7 @@ func TestValidationWebhook(t *testing.T) {
 				// assert
 				assert.Equal(tt.wantRespCode, res.Code)
 				if tt.wantRespCode == http.StatusOK {
-					var review admission.AdmissionReview
+					var review admissionv1.AdmissionReview
 					_, _, err = decoder.Decode(res.Body.Bytes(), nil, &review)
 					assert.Nil(err)
 					assert.EqualValues(&tt.wantSuccessResponse, review.Response)

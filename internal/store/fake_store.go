@@ -4,9 +4,9 @@ import (
 	"reflect"
 
 	"github.com/sirupsen/logrus"
-	apiv1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,9 +30,9 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	IngressesV1beta1   []*networkingv1beta1.Ingress
-	IngressesV1        []*networkingv1.Ingress
-	IngressClassesV1   []*networkingv1.IngressClass
+	IngressesV1beta1   []*netv1beta1.Ingress
+	IngressesV1        []*netv1.Ingress
+	IngressClassesV1   []*netv1.IngressClass
 	HTTPRoutes         []*gatewayv1alpha2.HTTPRoute
 	UDPRoutes          []*gatewayv1alpha2.UDPRoute
 	TCPRoutes          []*gatewayv1alpha2.TCPRoute
@@ -41,9 +41,9 @@ type FakeObjects struct {
 	Gateways           []*gatewayv1alpha2.Gateway
 	TCPIngresses       []*configurationv1beta1.TCPIngress
 	UDPIngresses       []*configurationv1beta1.UDPIngress
-	Services           []*apiv1.Service
-	Endpoints          []*apiv1.Endpoints
-	Secrets            []*apiv1.Secret
+	Services           []*corev1.Service
+	Endpoints          []*corev1.Endpoints
+	Secrets            []*corev1.Secret
 	KongPlugins        []*configurationv1.KongPlugin
 	KongClusterPlugins []*configurationv1.KongClusterPlugin
 	KongIngresses      []*configurationv1.KongIngress

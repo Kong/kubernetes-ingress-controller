@@ -5,7 +5,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
-	networkingv1 "k8s.io/api/networking/v1"
+	netv1 "k8s.io/api/networking/v1"
 )
 
 func TestPathsFromK8s(t *testing.T) {
@@ -60,17 +60,17 @@ func TestPathsFromK8s(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			{
-				gotPrefix, gotErr := pathsFromK8s(tt.path, networkingv1.PathTypePrefix)
+				gotPrefix, gotErr := pathsFromK8s(tt.path, netv1.PathTypePrefix)
 				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantPrefix, gotPrefix, "prefix match")
 			}
 			{
-				gotExact, gotErr := pathsFromK8s(tt.path, networkingv1.PathTypeExact)
+				gotExact, gotErr := pathsFromK8s(tt.path, netv1.PathTypeExact)
 				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantExact, gotExact, "exact match")
 			}
 			{
-				gotImplSpec, gotErr := pathsFromK8s(tt.path, networkingv1.PathTypeImplementationSpecific)
+				gotImplSpec, gotErr := pathsFromK8s(tt.path, netv1.PathTypeImplementationSpecific)
 				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantImplSpec, gotImplSpec, "implementation specific match")
 			}

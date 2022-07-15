@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 )
@@ -47,7 +47,7 @@ func GetNodeIPOrName(ctx context.Context, kubeClient clientset.Interface, name s
 	ip := ""
 
 	for _, address := range node.Status.Addresses {
-		if address.Type == apiv1.NodeExternalIP {
+		if address.Type == corev1.NodeExternalIP {
 			if address.Address != "" {
 				ip = address.Address
 				break
@@ -61,7 +61,7 @@ func GetNodeIPOrName(ctx context.Context, kubeClient clientset.Interface, name s
 	}
 
 	for _, address := range node.Status.Addresses {
-		if address.Type == apiv1.NodeInternalIP {
+		if address.Type == corev1.NodeInternalIP {
 			if address.Address != "" {
 				ip = address.Address
 				break

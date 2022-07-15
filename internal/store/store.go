@@ -27,8 +27,8 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
@@ -77,11 +77,11 @@ type Storer interface {
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
-	GetIngressClassV1(name string) (*networkingv1.IngressClass, error)
+	GetIngressClassV1(name string) (*netv1.IngressClass, error)
 
-	ListIngressesV1beta1() []*networkingv1beta1.Ingress
-	ListIngressesV1() []*networkingv1.Ingress
-	ListIngressClassesV1() []*networkingv1.IngressClass
+	ListIngressesV1beta1() []*netv1beta1.Ingress
+	ListIngressesV1() []*netv1.Ingress
+	ListIngressClassesV1() []*netv1.IngressClass
 	ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error)
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
@@ -111,7 +111,7 @@ type Store struct {
 	kongConsumerClassMatching   annotations.ClassMatching
 
 	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, annotation string, handling annotations.ClassMatching) bool
-	isValidIngressV1Class func(ingress *networkingv1.Ingress, handling annotations.ClassMatching) bool
+	isValidIngressV1Class func(ingress *netv1.Ingress, handling annotations.ClassMatching) bool
 
 	logger logrus.FieldLogger
 }
@@ -228,11 +228,11 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
 		return c.IngressV1beta1.Get(obj)
-	case *networkingv1beta1.Ingress:
+	case *netv1beta1.Ingress:
 		return c.IngressV1beta1.Get(obj)
-	case *networkingv1.Ingress:
+	case *netv1.Ingress:
 		return c.IngressV1.Get(obj)
-	case *networkingv1.IngressClass:
+	case *netv1.IngressClass:
 		return c.IngressClassV1.Get(obj)
 	case *corev1.Service:
 		return c.Service.Get(obj)
@@ -291,11 +291,11 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
 		return c.IngressV1beta1.Add(obj)
-	case *networkingv1beta1.Ingress:
+	case *netv1beta1.Ingress:
 		return c.IngressV1beta1.Add(obj)
-	case *networkingv1.Ingress:
+	case *netv1.Ingress:
 		return c.IngressV1.Add(obj)
-	case *networkingv1.IngressClass:
+	case *netv1.IngressClass:
 		return c.IngressClassV1.Add(obj)
 	case *corev1.Service:
 		return c.Service.Add(obj)
@@ -355,11 +355,11 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	case *extensions.Ingress:
 		return c.IngressV1beta1.Delete(obj)
-	case *networkingv1beta1.Ingress:
+	case *netv1beta1.Ingress:
 		return c.IngressV1beta1.Delete(obj)
-	case *networkingv1.Ingress:
+	case *netv1.Ingress:
 		return c.IngressV1.Delete(obj)
-	case *networkingv1.IngressClass:
+	case *netv1.IngressClass:
 		return c.IngressClassV1.Delete(obj)
 	case *corev1.Service:
 		return c.Service.Delete(obj)
@@ -468,11 +468,11 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 }
 
 // ListIngressesV1 returns the list of Ingresses in the Ingress v1 store.
-func (s Store) ListIngressesV1() []*networkingv1.Ingress {
+func (s Store) ListIngressesV1() []*netv1.Ingress {
 	// filter ingress rules
-	var ingresses []*networkingv1.Ingress
+	var ingresses []*netv1.Ingress
 	for _, item := range s.stores.IngressV1.List() {
-		ing, ok := item.(*networkingv1.Ingress)
+		ing, ok := item.(*netv1.Ingress)
 		if !ok {
 			s.logger.Warnf("listIngressesV1: dropping object of unexpected type: %#v", item)
 			continue
@@ -507,11 +507,11 @@ func (s Store) ListIngressesV1() []*networkingv1.Ingress {
 }
 
 // ListIngressClassesV1 returns the list of Ingresses in the Ingress v1 store.
-func (s Store) ListIngressClassesV1() []*networkingv1.IngressClass {
+func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 	// filter ingress rules
-	var classes []*networkingv1.IngressClass
+	var classes []*netv1.IngressClass
 	for _, item := range s.stores.IngressClassV1.List() {
-		class, ok := item.(*networkingv1.IngressClass)
+		class, ok := item.(*netv1.IngressClass)
 		if !ok {
 			s.logger.Warnf("listIngressClassesV1: dropping object of unexpected type: %#v", item)
 			continue
@@ -530,9 +530,9 @@ func (s Store) ListIngressClassesV1() []*networkingv1.IngressClass {
 }
 
 // ListIngressesV1beta1 returns the list of Ingresses in the Ingress v1beta1 store.
-func (s Store) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
+func (s Store) ListIngressesV1beta1() []*netv1beta1.Ingress {
 	// filter ingress rules
-	var ingresses []*networkingv1beta1.Ingress
+	var ingresses []*netv1beta1.Ingress
 	for _, item := range s.stores.IngressV1beta1.List() {
 		ing := s.networkingIngressV1Beta1(item)
 		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressV1Beta1ClassMatching) {
@@ -784,7 +784,7 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 }
 
 // GetIngressClassV1 returns the 'name' IngressClass resource.
-func (s Store) GetIngressClassV1(name string) (*networkingv1.IngressClass, error) {
+func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 	p, exists, err := s.stores.IngressClassV1.GetByKey(name)
 	if err != nil {
 		return nil, err
@@ -792,7 +792,7 @@ func (s Store) GetIngressClassV1(name string) (*networkingv1.IngressClass, error
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
 	}
-	return p.(*networkingv1.IngressClass), nil
+	return p.(*netv1.IngressClass), nil
 }
 
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
@@ -882,9 +882,9 @@ func (s Store) ListCACerts() ([]*corev1.Secret, error) {
 	return secrets, nil
 }
 
-func (s Store) networkingIngressV1Beta1(obj interface{}) *networkingv1beta1.Ingress {
+func (s Store) networkingIngressV1Beta1(obj interface{}) *netv1beta1.Ingress {
 	switch obj := obj.(type) {
-	case *networkingv1beta1.Ingress:
+	case *netv1beta1.Ingress:
 		return obj
 
 	case *extensions.Ingress:
@@ -915,16 +915,16 @@ func (s Store) getIngressClassHandling() annotations.ClassMatching {
 	return annotations.ExactClassMatch
 }
 
-func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*networkingv1beta1.Ingress, error) {
+func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*netv1beta1.Ingress, error) {
 	js, err := json.Marshal(obj)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize object of type %v: %w", reflect.TypeOf(obj), err)
 	}
-	var out networkingv1beta1.Ingress
+	var out netv1beta1.Ingress
 	if err := json.Unmarshal(js, &out); err != nil {
 		return nil, fmt.Errorf("failed to deserialize json: %w", err)
 	}
-	out.APIVersion = networkingv1beta1.SchemeGroupVersion.String()
+	out.APIVersion = netv1beta1.SchemeGroupVersion.String()
 	return &out, nil
 }
 
@@ -955,8 +955,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	case extensions.SchemeGroupVersion.WithKind("Ingress"):
 		return &extensions.Ingress{}, nil
-	case networkingv1.SchemeGroupVersion.WithKind("Ingress"):
-		return &networkingv1.Ingress{}, nil
+	case netv1.SchemeGroupVersion.WithKind("Ingress"):
+		return &netv1.Ingress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
 		return &kongv1beta1.TCPIngress{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):

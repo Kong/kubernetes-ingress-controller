@@ -320,3 +320,27 @@ func getKubernetesLogs(t *testing.T, env environments.Environment, namespace, na
 	}
 	return string(out), nil
 }
+
+// httpGetResponseContains returns true if the response body of GETting the URL contains specified substring.
+func httpGetResponseContains(t *testing.T, url string, client *http.Client, substring string) bool {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Logf("failed to create request: %v", err)
+		return false
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("failed to get response: %v", err)
+		return false
+	}
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Logf("failed to read response body: %v", err)
+		return false
+	}
+
+	return strings.Contains(string(body), substring)
+}

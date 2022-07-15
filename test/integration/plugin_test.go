@@ -260,8 +260,9 @@ func TestPluginOrdering(t *testing.T) {
 			// Expected: "<title>httpbin.org</title>"
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
+			if err != nil || n == 0 {
+				return false
+			}
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false

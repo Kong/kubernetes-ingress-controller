@@ -69,19 +69,18 @@ type Config struct {
 	UpdateStatus         bool
 
 	// Kubernetes API toggling
-	IngressExtV1beta1Enabled      bool
-	IngressNetV1beta1Enabled      bool
-	IngressNetV1Enabled           bool
-	IngressClassNetV1Enabled      bool
-	UDPIngressEnabled             bool
-	TCPIngressEnabled             bool
-	KongIngressEnabled            bool
-	KnativeIngressEnabled         bool
-	KongClusterPluginEnabled      bool
-	KongPluginEnabled             bool
-	KongConsumerEnabled           bool
-	IngressClassParametersEnabled bool
-	ServiceEnabled                bool
+	IngressExtV1beta1Enabled bool
+	IngressNetV1beta1Enabled bool
+	IngressNetV1Enabled      bool
+	IngressClassNetV1Enabled bool
+	UDPIngressEnabled        bool
+	TCPIngressEnabled        bool
+	KongIngressEnabled       bool
+	KnativeIngressEnabled    bool
+	KongClusterPluginEnabled bool
+	KongPluginEnabled        bool
+	KongConsumerEnabled      bool
+	ServiceEnabled           bool
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -184,7 +183,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.KongClusterPluginEnabled, "enable-controller-kongclusterplugin", true, "Enable the KongClusterPlugin controller.")
 	flagSet.BoolVar(&c.KongPluginEnabled, "enable-controller-kongplugin", true, "Enable the KongPlugin controller.")
 	flagSet.BoolVar(&c.KongConsumerEnabled, "enable-controller-kongconsumer", true, "Enable the KongConsumer controller. ")
-	flagSet.BoolVar(&c.IngressClassParametersEnabled, "enable-controller-ingress-class-params", false, "Enable or disable the IngressClassParameters controller.")
 	flagSet.BoolVar(&c.ServiceEnabled, "enable-controller-service", true, "Enable the Service controller.")
 
 	// Admission Webhook server config

@@ -833,7 +833,7 @@ func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 	return p.(*netv1.IngressClass), nil
 }
 
-// GetIngressClassV1 returns the 'name' IngressClass resource
+// GetIngressClassV1 returns the 'name' IngressClass resource.
 func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassParameters, error) {
 	class, exists, err := s.stores.IngressClassV1.GetByKey(s.ingressClass)
 	if err != nil {
@@ -843,7 +843,7 @@ func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassPa
 		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s not found", s.ingressClass)}
 	}
 
-	ingressClass := class.(*networkingv1.IngressClass)
+	ingressClass := class.(*netv1.IngressClass)
 	if ingressClass.Spec.Parameters == nil {
 		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s doesn't reference any parameters", s.ingressClass)}
 	}

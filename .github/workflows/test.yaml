@@ -217,41 +217,6 @@ jobs:
         name: coverage
         path: coverage.dbless.out
 
-  # disabled pending changes to the kong/kong repo
-  #integration-tests-dbless-nightly:
-  #  runs-on: ubuntu-latest
-  #  steps:
-
-  #  - name: setup golang
-  #    uses: actions/setup-go@v3
-  #    with:
-  #      go-version: '^1.18'
-
-  #  - name: cache go modules
-  #    uses: actions/cache@v3
-  #    with:
-  #      path: ~/go/pkg/mod
-  #      key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-  #      restore-keys: |
-  #        ${{ runner.os }}-build-codegen-
-
-  #  - name: checkout repository
-  #    uses: actions/checkout@v3
-  #    with:
-  #      fetch-depth: 0
-
-  #  - name: run integration tests
-  #    run: make test.integration.dbless
-  #    env:
-  #      TEST_KONG_IMAGE: "kong/kong"
-  #      TEST_KONG_TAG: "latest"
-
-  #  - name: collect test coverage
-  #    uses: actions/upload-artifact@v3
-  #    with:
-  #      name: coverage
-  #      path: coverage.dbless.out
-
   integration-tests-postgres:
     runs-on: ubuntu-latest
     steps:
@@ -283,40 +248,6 @@ jobs:
         name: coverage
         path: coverage.postgres.out
 
-  # disabled pending changes to the kong/kong repo
-  #integration-tests-postgres-nightly:
-  #  runs-on: ubuntu-latest
-  #  steps:
-
-  #  - name: setup golang
-  #    uses: actions/setup-go@v3
-  #    with:
-  #      go-version: '^1.18'
-
-  #  - name: cache go modules
-  #    uses: actions/cache@v3
-  #    with:
-  #      path: ~/go/pkg/mod
-  #      key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-  #      restore-keys: |
-  #        ${{ runner.os }}-build-codegen-
-
-  #  - name: checkout repository
-  #    uses: actions/checkout@v3
-  #    with:
-  #      fetch-depth: 0
-
-  #  - name: run integration tests
-  #    run: make test.integration.postgres
-  #    env:
-  #      TEST_KONG_IMAGE: "kong/kong"
-  #      TEST_KONG_TAG: "latest"
-
-  #  - name: collect test coverage
-  #    uses: actions/upload-artifact@v3
-  #    with:
-  #      name: coverage
-  #      path: coverage.postgres.out
 
   integration-tests-feature-gates:
     runs-on: ubuntu-latest

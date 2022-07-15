@@ -144,6 +144,10 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	deployIngress(ctx, t, env)
 	service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
 	require.NoError(t, err)
+
+	if service.ObjectMeta.Annotations == nil {
+		service.ObjectMeta.Annotations = map[string]string{}
+	}
 	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
 	service, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
 	require.NoError(t, err)

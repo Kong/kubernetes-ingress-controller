@@ -153,6 +153,12 @@ jobs:
     if: "needs.runnable.outputs.runnable == 'true'"
     steps:
 
+    - uses: Kong/kong-license@master
+      id: license
+      with:
+        # PULP_PASSWORD secret is set in "Configure ci" environment
+        password: ${{ secrets.PULP_PASSWORD }}
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -174,7 +180,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.enterprise.postgres
       env:
-        KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         TEST_KONG_IMAGE: "kong/kong-gateway-internal"
         TEST_KONG_TAG: "master-nightly-alpine"
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}

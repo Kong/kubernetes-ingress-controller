@@ -149,8 +149,6 @@ jobs:
   integration-tests-enterprise-postgres-nightly:
     environment: "Configure ci"
     runs-on: ubuntu-latest
-    needs: runnable
-    if: "needs.runnable.outputs.runnable == 'true'"
     steps:
 
     - uses: Kong/kong-license@master

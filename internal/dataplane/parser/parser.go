@@ -637,7 +637,9 @@ func getServiceEndpoints(
 	// Check if the service is an upstream service either by annotation or controller configuration.
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
-	if err == nil {
+	if err != nil {
+		log.Debugf("error getting an IngressClassParameters: %v", err)
+	} else {
 		isSvcUpstream = ingressClassParameters.ServiceUpstream
 	}
 

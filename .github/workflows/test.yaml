@@ -252,7 +252,6 @@ jobs:
         name: coverage
         path: coverage.postgres.out
 
-
   integration-tests-feature-gates:
     runs-on: ubuntu-latest
     steps:

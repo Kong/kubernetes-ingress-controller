@@ -220,7 +220,7 @@ func TestPluginEssentials(t *testing.T) {
 
 func TestPluginOrdering(t *testing.T) {
 	if !util.GetKongVersion().GTE(semver.MustParse("3.0.0")) || kongEnterpriseEnabled == "" {
-		t.Skip("Kong version does not support plugin ordering")
+		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
 	t.Parallel()
 	ns, cleaner := setup(t)

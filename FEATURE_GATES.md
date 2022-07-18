@@ -44,12 +44,8 @@ Once a feature graduates from `Alpha` to `Beta` maturity these preview docs will
 
 ### Feature gates for graduated or deprecated features
 
-{{< table caption="Feature Gates for Graduated or Deprecated Features" >}}
-
 | Feature                    | Default | Stage      | Since | Until |
 |----------------------------|---------|------------|-------|-------|
-
-{{< /table >}}
 
 Features that reach GA and over time become stable will be removed from this table, they can be found in the main [KIC CRD Documentation][specs] and [Guides][guides].
 
@@ -58,12 +54,9 @@ Features that reach GA and over time become stable will be removed from this tab
 
 ### Feature gates for Alpha or Beta features
 
-{{< table caption="Feature gates for features in Alpha or Beta states" >}}
-
-| Feature        | Default | Stage | Since | Until |
-|---------       |---------|-------|-------|-------|
-| Knative        | `true`  | Alpha | 0.8.0 | TBD   |
-| Gateway        | `false` | Alpha | 2.2.0 | TBD   |
-| CombinedRoutes | `false` | Alpha | 2.4.0 | TBD   |
-
-{{< /table > }}
+| Feature                | Default | Stage | Since | Until |
+|------------------------|---------|-------|-------|-------|
+| Knative                | `true`  | Alpha | 0.8.0 | TBD   |
+| Gateway                | `false` | Alpha | 2.2.0 | TBD   |
+| CombinedRoutes         | `false` | Alpha | 2.4.0 | TBD   |
+| IngressClassParameters | `false` | Alpha | 2.6.0 | TBD   |

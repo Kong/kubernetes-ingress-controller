@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Kong, Inc.
+Copyright 2022 Kong, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1 contains API Schema definitions for the konghq.com v1 API group
-package v1
+// Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group
+package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,7 +27,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "configuration.konghq.com", Version: "v1"}
+	GroupVersion = schema.GroupVersion{Group: "configuration.konghq.com", Version: "v1alpha1"}
 
 	// SchemeGroupVersion is a convenience var for generated clientsets
 	SchemeGroupVersion = GroupVersion

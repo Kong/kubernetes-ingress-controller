@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
@@ -633,10 +634,19 @@ func getServiceEndpoints(
 	// for TCP as this is the default protocol for service ports.
 	protocols := listProtocols(svc)
 
+	// Check if the service is an upstream service either by annotation or controller configuration.
+	var isSvcUpstream bool
+	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
+	if err != nil {
+		log.Debugf("error getting an IngressClassParameters: %v", err)
+	} else {
+		isSvcUpstream = ingressClassParameters.ServiceUpstream
+	}
+
 	// check all protocols for associated endpoints
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, svc, servicePort, protocol, s.GetEndpointsForService)
+		newEndpoints := getEndpoints(log, svc, servicePort, protocol, s.GetEndpointsForService, isSvcUpstream)
 		if len(newEndpoints) > 0 {
 			endpoints = append(endpoints, newEndpoints...)
 		}
@@ -648,18 +658,42 @@ func getServiceEndpoints(
 	return targetsForEndpoints(endpoints)
 }
 
+// getIngressClassParametersOrDefault returns the parameters for the current ingress class.
+// If the cluster operators have specified a set of parameters explicitly, it returns those.
+// Otherwise, it returns a default set of parameters.
+func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
+	params, err := s.GetIngressClassParametersV1Alpha1()
+	if err != nil {
+		return configurationv1alpha1.IngressClassParametersSpec{}, err
+	}
+
+	return params.Spec, nil
+}
+
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
+// It also checks if the service is an upstream service either by its annotations
+// of by IngressClassParameters configuration provided as a flag.
 func getEndpoints(
 	log logrus.FieldLogger,
 	s *corev1.Service,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
+	isSvcUpstream bool,
 ) []util.Endpoint {
 	upsServers := []util.Endpoint{}
 
 	if s == nil || port == nil {
 		return upsServers
+	}
+
+	// If service is an upstream service...
+	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(s.Annotations) {
+		// ... return its address as the only endpoint.
+		return append(upsServers, util.Endpoint{
+			Address: s.Name + "." + s.Namespace + ".svc",
+			Port:    fmt.Sprintf("%v", port.Port),
+		})
 	}
 
 	log = log.WithFields(logrus.Fields{

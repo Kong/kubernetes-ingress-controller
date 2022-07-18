@@ -3807,60 +3807,55 @@ func TestPluginAnnotations(t *testing.T) {
 
 func TestGetEndpoints(t *testing.T) {
 	tests := []struct {
-		name   string
-		svc    *corev1.Service
-		port   *corev1.ServicePort
-		proto  corev1.Protocol
-		fn     func(string, string) (*corev1.Endpoints, error)
-		result []util.Endpoint
+		name              string
+		svc               *corev1.Service
+		port              *corev1.ServicePort
+		proto             corev1.Protocol
+		fn                func(string, string) (*corev1.Endpoints, error)
+		result            []util.Endpoint
+		isServiceUpstream bool
 	}{
 		{
-			"no service should return 0 endpoints",
-			nil,
-			nil,
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
-				return nil, nil
-			},
-			[]util.Endpoint{},
+			name:   "no service should return 0 endpoints",
+			svc:    nil,
+			port:   nil,
+			proto:  corev1.ProtocolTCP,
+			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			result: []util.Endpoint{},
 		},
 		{
-			"no service port should return 0 endpoints",
-			&corev1.Service{},
-			nil,
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
-				return nil, nil
-			},
-			[]util.Endpoint{},
+			name:   "no service port should return 0 endpoints",
+			svc:    &corev1.Service{},
+			port:   nil,
+			proto:  corev1.ProtocolTCP,
+			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			result: []util.Endpoint{},
 		},
 		{
-			"a service without endpoints should return 0 endpoints",
-			&corev1.Service{},
-			&corev1.ServicePort{Name: "default"},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
-				return &corev1.Endpoints{}, nil
-			},
-			[]util.Endpoint{},
+			name:   "a service without endpoints should return 0 endpoints",
+			svc:    &corev1.Service{},
+			port:   &corev1.ServicePort{Name: "default"},
+			proto:  corev1.ProtocolTCP,
+			fn:     func(string, string) (*corev1.Endpoints, error) { return &corev1.Endpoints{}, nil },
+			result: []util.Endpoint{},
 		},
 		{
-			"a service type ServiceTypeExternalName service with an invalid port should return 0 endpoints",
-			&corev1.Service{
+			name: "a service type ServiceTypeExternalName service with an invalid port should return 0 endpoints",
+			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeExternalName,
 				},
 			},
-			&corev1.ServicePort{Name: "default"},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			port:  &corev1.ServicePort{Name: "default"},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]util.Endpoint{},
+			result: []util.Endpoint{},
 		},
 		{
-			"a service type ServiceTypeExternalName with a valid port should return one endpoint",
-			&corev1.Service{
+			name: "a service type ServiceTypeExternalName with a valid port should return one endpoint",
+			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:         corev1.ServiceTypeExternalName,
 					ExternalName: "10.0.0.1.xip.io",
@@ -3872,15 +3867,15 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "default",
 				TargetPort: intstr.FromInt(80),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]util.Endpoint{
+			result: []util.Endpoint{
 				{
 					Address: "10.0.0.1.xip.io",
 					Port:    "80",
@@ -3888,8 +3883,8 @@ func TestGetEndpoints(t *testing.T) {
 			},
 		},
 		{
-			"a service with ingress.kubernetes.io/service-upstream annotation should return one endpoint",
-			&corev1.Service{
+			name: "a service with ingress.kubernetes.io/service-upstream annotation should return one endpoint",
+			svc: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "bar",
@@ -3907,15 +3902,15 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "default",
 				TargetPort: intstr.FromInt(2080),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
-			[]util.Endpoint{
+			result: []util.Endpoint{
 				{
 					Address: "foo.bar.svc",
 					Port:    "2080",
@@ -3923,11 +3918,14 @@ func TestGetEndpoints(t *testing.T) {
 			},
 		},
 		{
-			"should return no endpoints when there is an error searching for endpoints",
-			&corev1.Service{
+			name: "a service with configured IngressClassParameters as ServiceUpstream should return one endpoint",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+				},
 				Spec: corev1.ServiceSpec{
-					Type:      corev1.ServiceTypeClusterIP,
-					ClusterIP: "1.1.1.1",
+					Type: corev1.ServiceTypeClusterIP,
 					Ports: []corev1.ServicePort{
 						{
 							Name:       "default",
@@ -3936,19 +3934,25 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "default",
-				TargetPort: intstr.FromInt(80),
+				TargetPort: intstr.FromInt(2080),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
-				return nil, fmt.Errorf("unexpected error")
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
+				return &corev1.Endpoints{}, nil
 			},
-			[]util.Endpoint{},
+			result: []util.Endpoint{
+				{
+					Address: "foo.bar.svc",
+					Port:    "2080",
+				},
+			},
+			isServiceUpstream: true,
 		},
 		{
-			"should return no endpoints when the protocol does not match",
-			&corev1.Service{
+			name: "should return no endpoints when there is an error searching for endpoints",
+			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
 					ClusterIP: "1.1.1.1",
@@ -3960,12 +3964,36 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "default",
 				TargetPort: intstr.FromInt(80),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
+				return nil, fmt.Errorf("unexpected error")
+			},
+			result: []util.Endpoint{},
+		},
+		{
+			name: "should return no endpoints when the protocol does not match",
+			svc: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -3985,11 +4013,11 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]util.Endpoint{},
+			result: []util.Endpoint{},
 		},
 		{
-			"should return no endpoints when there is no ready Addresses",
-			&corev1.Service{
+			name: "should return no endpoints when there is no ready Addresses",
+			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
 					ClusterIP: "1.1.1.1",
@@ -4001,12 +4029,12 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "default",
 				TargetPort: intstr.FromInt(80),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4026,11 +4054,11 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]util.Endpoint{},
+			result: []util.Endpoint{},
 		},
 		{
-			"should return no endpoints when the name of the port name do not match any port in the endpoint Subsets",
-			&corev1.Service{
+			name: "should return no endpoints when the name of the port name do not match any port in the endpoint Subsets",
+			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
 					ClusterIP: "1.1.1.1",
@@ -4042,12 +4070,12 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "default",
 				TargetPort: intstr.FromInt(80),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4069,11 +4097,11 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]util.Endpoint{},
+			result: []util.Endpoint{},
 		},
 		{
-			"should return one endpoint when the name of the port name match a port in the endpoint Subsets",
-			&corev1.Service{
+			name: "should return one endpoint when the name of the port name match a port in the endpoint Subsets",
+			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
 					ClusterIP: "1.1.1.1",
@@ -4085,12 +4113,12 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "default",
 				TargetPort: intstr.FromInt(80),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4112,7 +4140,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]util.Endpoint{
+			result: []util.Endpoint{
 				{
 					Address: "1.1.1.1",
 					Port:    "80",
@@ -4120,8 +4148,8 @@ func TestGetEndpoints(t *testing.T) {
 			},
 		},
 		{
-			"should return one endpoint when the name of the port name match more than one port in the endpoint Subsets",
-			&corev1.Service{
+			name: "should return one endpoint when the name of the port name match more than one port in the endpoint Subsets",
+			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
 					ClusterIP: "1.1.1.1",
@@ -4133,12 +4161,12 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				},
 			},
-			&corev1.ServicePort{
+			port: &corev1.ServicePort{
 				Name:       "port-1",
 				TargetPort: intstr.FromString("port-1"),
 			},
-			corev1.ProtocolTCP,
-			func(string, string) (*corev1.Endpoints, error) {
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4165,7 +4193,7 @@ func TestGetEndpoints(t *testing.T) {
 					},
 				}, nil
 			},
-			[]util.Endpoint{
+			result: []util.Endpoint{
 				{
 					Address: "1.1.1.1",
 					Port:    "80",
@@ -4176,7 +4204,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn)
+			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
 			}

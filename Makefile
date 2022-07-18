@@ -142,8 +142,8 @@ generate.clientsets: client-gen
 	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/  \
-		--input configuration/v1,configuration/v1beta1 \
-		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
+		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1 \
+		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1alpha1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
 		--output-package github.com/kong/kubernetes-ingress-controller/v2/pkg/
 	@rm -rf pkg/clientset/

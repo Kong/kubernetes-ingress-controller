@@ -33,11 +33,7 @@ var k8sClient *kubernetes.Clientset
 // Testing Main
 // -----------------------------------------------------------------------------
 
-func TestMain(m *testing.M) {
-	ctx, cancel = context.WithCancel(context.Background())
-	defer cancel()
-
-	fmt.Println("INFO: setting up test environment")
+func generateKongBuilder() (*kong.Builder, []string) {
 	kongbuilder := kong.NewBuilder()
 	extraControllerArgs := []string{}
 	if kongEnterpriseEnabled == "true" {
@@ -69,6 +65,16 @@ func TestMain(m *testing.M) {
 	}
 
 	kongbuilder.WithControllerDisabled()
+
+	return kongbuilder, extraControllerArgs
+}
+
+func TestMain(m *testing.M) {
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+
+	fmt.Println("INFO: setting up test environment")
+	kongbuilder, extraControllerArgs := generateKongBuilder()
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
 

@@ -137,23 +137,35 @@ func gatewayLinkStatusMatches(t *testing.T, c *gatewayclient.Clientset, verifyLi
 	var routeParents []gatewayv1alpha2.RouteParentStatus
 
 	// gather a fresh copy of the route, given the specific protocol type
-	switch protocolType { //nolint:exhaustive
+	switch protocolType {
 	case gatewayv1alpha2.HTTPProtocolType:
 		route, err := c.GatewayV1alpha2().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		t.Logf("error getting http route: %v", err)
-		routeParents = route.Status.Parents
+		if err != nil {
+			t.Logf("error getting http route: %v", err)
+		} else {
+			routeParents = route.Status.Parents
+		}
 	case gatewayv1alpha2.TCPProtocolType:
 		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		t.Logf("error getting tcp route: %v", err)
-		routeParents = route.Status.Parents
+		if err != nil {
+			t.Logf("error getting tcp route: %v", err)
+		} else {
+			routeParents = route.Status.Parents
+		}
 	case gatewayv1alpha2.UDPProtocolType:
 		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		t.Logf("error getting udp route: %v", err)
-		routeParents = route.Status.Parents
+		if err != nil {
+			t.Logf("error getting udp route: %v", err)
+		} else {
+			routeParents = route.Status.Parents
+		}
 	case gatewayv1alpha2.TLSProtocolType:
 		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		t.Logf("error getting tls route: %v", err)
-		routeParents = route.Status.Parents
+		if err != nil {
+			t.Logf("error getting tls route: %v", err)
+		} else {
+			routeParents = route.Status.Parents
+		}
 	default:
 		t.Fatalf("protocol %s not supported", string(protocolType))
 	}

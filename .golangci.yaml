@@ -1,8 +1,13 @@
 run:
   timeout: 5m
   skip-dirs:
-  - pkg/client
+  - pkg/clientset
   - pkg/apis
+  - config
+  build-tags:
+  - integration_tests
+  - e2e_tests
+  - conformance_tests
 linters:
   enable:
   - asciicheck

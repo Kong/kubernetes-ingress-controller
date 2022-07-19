@@ -137,7 +137,7 @@ func gatewayLinkStatusMatches(t *testing.T, c *gatewayclient.Clientset, verifyLi
 	var routeParents []gatewayv1alpha2.RouteParentStatus
 
 	// gather a fresh copy of the route, given the specific protocol type
-	switch protocolType {
+	switch protocolType { //nolint:exhaustive
 	case gatewayv1alpha2.HTTPProtocolType:
 		route, err := c.GatewayV1alpha2().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {

@@ -581,12 +581,14 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{if .AcceptsIngressClassNameAnnotation}}
 	class := new(netv1.IngressClass)
-	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
-		// we log this without taking action to support legacy configurations that only set ingressClassName or
-		// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
-		// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
-		// if none exists.
-		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+	if !r.DisableIngressClassLookups {
+		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+			// we log this without taking action to support legacy configurations that only set ingressClassName or
+			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+			// if none exists.
+			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {

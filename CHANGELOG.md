@@ -64,6 +64,9 @@
 
 - Added `mtls-auth` to the admission webhook supported credential types list.
   [#2739](https://github.com/Kong/kubernetes-ingress-controller/pull/2739)
+- Disabled additional IngressClass lookups in other reconcilers when the
+  IngressClass reconciler is disabled.
+  [#2724](https://github.com/Kong/kubernetes-ingress-controller/pull/2724)
 
 ## [2.5.0]
 

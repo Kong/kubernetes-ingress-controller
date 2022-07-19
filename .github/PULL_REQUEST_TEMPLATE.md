@@ -6,15 +6,9 @@
 
 **What this PR does / why we need it**:
 
-<!-- Please describe why this particular PR is necessary or why do you see it as a nice addition -->
+<!-- Please describe why this particular PR is necessary or why you see it as a nice addition -->
 
 **Which issue this PR fixes**:
-
-<!--
-Here you can add any links to issues that this PR is relevant for.
-You can use Github keywords (like: closes, fixes or resolves) to auto-resolve
-the linked issue(s) when this PR gets merged.
--->
 
 <!--
 Here you can add any links to issues that this PR is relevant for.

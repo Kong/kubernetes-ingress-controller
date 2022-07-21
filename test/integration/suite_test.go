@@ -34,7 +34,7 @@ var k8sClient *kubernetes.Clientset
 // -----------------------------------------------------------------------------
 
 // generateKongBuilder returns a Kong KTF addon builder and a string slice of controller arguments needed to interact
-// with the addon
+// with the addon.
 func generateKongBuilder() (*kong.Builder, []string) {
 	kongbuilder := kong.NewBuilder()
 	extraControllerArgs := []string{}

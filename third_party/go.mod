@@ -3,7 +3,7 @@ module github.com/kong/kubernetes-ingress-controller/tools
 go 1.18
 
 require (
-	github.com/golangci/golangci-lint v1.47.1
+	github.com/golangci/golangci-lint v1.47.2
 	github.com/haveyoudebuggedit/gotestfmt/v2 v2.3.2
 	k8s.io/code-generator v0.24.3
 	sigs.k8s.io/controller-tools v0.8.0

@@ -1,11 +1,9 @@
 package kongstate
 
 import (
-	"io"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,18 +74,12 @@ func TestOverrideUpstream(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
-		log := logrus.New()
-		log.SetOutput(io.Discard)
-
-		testcase.inUpstream.override(log, testcase.inKongIngresss, testcase.svc)
+		testcase.inUpstream.override(testcase.inKongIngresss, testcase.svc)
 		assert.Equal(testcase.inUpstream, testcase.outUpstream)
 	}
 
 	assert.NotPanics(func() {
-		log := logrus.New()
-		log.SetOutput(io.Discard)
-
 		var nilUpstream *Upstream
-		nilUpstream.override(log, nil, nil)
+		nilUpstream.override(nil, nil)
 	})
 }

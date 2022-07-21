@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
@@ -28,6 +29,10 @@ var (
 	failedConfigDump     file.Content
 )
 
+const (
+	defaultHTTPReadHeaderTimeout = 10 * time.Second
+)
+
 // Listen starts up the HTTP server and blocks until ctx expires.
 func (s *Server) Listen(ctx context.Context, port int) error {
 	mux := http.NewServeMux()
@@ -38,7 +43,11 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 		installProfilingHandlers(mux)
 	}
 
-	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
+	httpServer := &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           mux,
+		ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
+	}
 	errChan := make(chan error)
 
 	go s.receiveConfig(ctx)

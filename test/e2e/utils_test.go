@@ -301,7 +301,7 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 	}, kongComponentWait, time.Second)
 }
 
-func getKubernetesLogs(t *testing.T, env environments.Environment, namespace, name string) (string, error) { //nolint:deadcode,unused
+func getKubernetesLogs(t *testing.T, env environments.Environment, namespace, name string) (string, error) {
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
 	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "deploy-logs-tests-kubeconfig-")

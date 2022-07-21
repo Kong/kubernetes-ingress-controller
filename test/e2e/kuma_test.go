@@ -78,13 +78,15 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
+	require.NoError(t, err)
 
 	t.Logf("service %#v", service)
 	if service.ObjectMeta.Annotations == nil {
 		service.ObjectMeta.Annotations = map[string]string{}
 	}
 	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
-	service, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
+	require.NoError(t, err)
 	verifyIngress(ctx, t, env)
 }
 
@@ -156,7 +158,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 		service.ObjectMeta.Annotations = map[string]string{}
 	}
 	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
-	service, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
 	require.NoError(t, err,
 		func() string {
 			service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})

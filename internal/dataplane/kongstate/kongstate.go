@@ -174,7 +174,7 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 		}
 
 		for _, svc := range ks.Upstreams[i].Service.K8sServices {
-			ks.Upstreams[i].override(log, kongIngress, svc)
+			ks.Upstreams[i].override(kongIngress, svc)
 		}
 	}
 }

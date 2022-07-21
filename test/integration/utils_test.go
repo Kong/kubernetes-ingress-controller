@@ -399,7 +399,7 @@ func distributionOfMapValues(counter map[string]int) map[string]float64 {
 }
 
 func newRequest(t *testing.T, method, path string, headers map[string]string) *http.Request {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, path), nil)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", proxyURL, path), nil)
 	require.NoError(t, err)
 	for header, value := range headers {
 		req.Header.Set(header, value)

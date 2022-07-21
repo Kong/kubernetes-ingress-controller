@@ -125,6 +125,18 @@ var (
 	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
 	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
 
+	// kongImage is the Kong image to use in lieu of the default.
+	kongImage = os.Getenv("TEST_KONG_IMAGE")
+
+	// kongImage is the Kong image to use in lieu of the default.
+	kongTag = os.Getenv("TEST_KONG_TAG")
+
+	// kongPullUsername is the Docker username to use for the Kong image pull secret.
+	kongPullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
+
+	// kongPullPassword is the Docker password to use for the Kong image pull secret.
+	kongPullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
+
 	// controllerFeatureGates contains the feature gates that should be enabled
 	// for test runs.
 	controllerFeatureGates = os.Getenv("KONG_CONTROLLER_FEATURE_GATES")

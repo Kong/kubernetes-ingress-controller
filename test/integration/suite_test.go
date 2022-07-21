@@ -33,11 +33,9 @@ var k8sClient *kubernetes.Clientset
 // Testing Main
 // -----------------------------------------------------------------------------
 
-func TestMain(m *testing.M) {
-	ctx, cancel = context.WithCancel(context.Background())
-	defer cancel()
-
-	fmt.Println("INFO: setting up test environment")
+// generateKongBuilder returns a Kong KTF addon builder and a string slice of controller arguments needed to interact
+// with the addon.
+func generateKongBuilder() (*kong.Builder, []string) {
 	kongbuilder := kong.NewBuilder()
 	extraControllerArgs := []string{}
 	if kongEnterpriseEnabled == "true" {
@@ -50,11 +48,35 @@ func TestMain(m *testing.M) {
 			WithProxyAdminServiceTypeLoadBalancer()
 	}
 
+	if kongImage != "" {
+		if kongTag == "" {
+			exitOnErrWithCode(fmt.Errorf("TEST_KONG_IMAGE requires TEST_KONG_TAG"), ExitCodeEnvSetupFailed)
+		}
+		kongbuilder = kongbuilder.WithProxyImage(kongImage, kongTag)
+	}
+
+	if kongPullUsername != "" || kongPullPassword != "" {
+		if kongPullPassword == "" || kongPullUsername == "" {
+			exitOnErrWithCode(fmt.Errorf("TEST_KONG_PULL_USERNAME requires TEST_KONG_PULL_PASSWORD"), ExitCodeEnvSetupFailed)
+		}
+		kongbuilder = kongbuilder.WithProxyImagePullSecret("", kongPullUsername, kongPullPassword, "")
+	}
+
 	if dbmode == "postgres" {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 
 	kongbuilder.WithControllerDisabled()
+
+	return kongbuilder, extraControllerArgs
+}
+
+func TestMain(m *testing.M) {
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+
+	fmt.Println("INFO: setting up test environment")
+	kongbuilder, extraControllerArgs := generateKongBuilder()
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
 

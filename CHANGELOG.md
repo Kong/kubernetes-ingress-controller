@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.6.0](#260)
  - [2.5.0](#250)
  - [2.4.2](#242)
  - [2.4.1](#241)
@@ -49,6 +50,15 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.6.0]
+
+> Release date: TBD
+
+#### Added
+
+- Added support for plugin ordering (requires Kong Enterprise 3.0 or higher).
+  [#2657](https://github.com/Kong/kubernetes-ingress-controller/pull/2657)
 
 ## [2.5.0]
 
@@ -1828,6 +1838,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.0...v2.4.1

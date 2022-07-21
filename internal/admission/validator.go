@@ -249,6 +249,9 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if k8sPlugin.RunOn != "" {
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)
 	}
+	if k8sPlugin.Ordering != nil {
+		plugin.Ordering = k8sPlugin.Ordering
+	}
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
 	}

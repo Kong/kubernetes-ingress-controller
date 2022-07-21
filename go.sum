@@ -509,6 +509,10 @@ github.com/kong/deck v1.13.0 h1:E5gDlp/h6oAli06KIDW18r7LNW8+7K3Xq6fpX0ZkuiY=
 github.com/kong/deck v1.13.0/go.mod h1:ubDAtqxijv3bWK2RpqopAyqazURrjtFkBWjfoPVhrmo=
 github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
 github.com/kong/go-kong v0.30.0/go.mod h1:DREJ1lzBSOV8d7VHhMweTCkZrv4eyx3YgbXQcdOxBvk=
+github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
+github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
+github.com/kong/go-kong v0.30.0/go.mod h1:DREJ1lzBSOV8d7VHhMweTCkZrv4eyx3YgbXQcdOxBvk=
+github.com/kong/go-kong v0.30.0/go.mod h1:DREJ1lzBSOV8d7VHhMweTCkZrv4eyx3YgbXQcdOxBvk=
 github.com/kong/kubernetes-testing-framework v0.16.0 h1:/3O76+r2egL+7qrZD1BVkRtjmNzLVolCyUgaJCjejG4=
 github.com/kong/kubernetes-testing-framework v0.16.0/go.mod h1:vdWfF9qabMnpJhrJB1rejG6VQS9/7ZjQmxCCCUWGaEE=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
@@ -1340,6 +1344,7 @@ google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac/go.mod h1:KEWEmljW
 google.golang.org/genproto v0.0.0-20220616135557-88e70c0c3a90/go.mod h1:KEWEmljWE5zPzLBa/oHl6DaEt9LmfH6WtH1OHIvleBA=
 google.golang.org/genproto v0.0.0-20220617124728-180714bec0ad/go.mod h1:KEWEmljWE5zPzLBa/oHl6DaEt9LmfH6WtH1OHIvleBA=
 google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f/go.mod h1:KEWEmljWE5zPzLBa/oHl6DaEt9LmfH6WtH1OHIvleBA=
+google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f/go.mod h1:KEWEmljWE5zPzLBa/oHl6DaEt9LmfH6WtH1OHIvleBA=
 google.golang.org/genproto v0.0.0-20220706132729-d86698d07c53 h1:liFd7OL799HvMNYG5xozhUoWDj944y+zXPDOhu4PyaM=
 google.golang.org/genproto v0.0.0-20220706132729-d86698d07c53/go.mod h1:KEWEmljWE5zPzLBa/oHl6DaEt9LmfH6WtH1OHIvleBA=
 google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
@@ -1463,6 +1468,8 @@ k8s.io/code-generator v0.22.5/go.mod h1:sbdWCOVob+KaQ5O7xs8PNNaCTpbWVqNgA6EPwLOm
 k8s.io/code-generator v0.22.5/go.mod h1:sbdWCOVob+KaQ5O7xs8PNNaCTpbWVqNgA6EPwLOmRNk=
 k8s.io/code-generator v0.24.2/go.mod h1:dpVhs00hTuTdTY6jvVxvTFCk6gSMrtfRydbhZwHI15w=
 k8s.io/code-generator v0.24.3/go.mod h1:dpVhs00hTuTdTY6jvVxvTFCk6gSMrtfRydbhZwHI15w=
+k8s.io/component-base v0.22.5/go.mod h1:VK3I+TjuF9eaa+Ln67dKxhGar5ynVbwnGrUiNF4MqCI=
+k8s.io/component-base v0.22.5/go.mod h1:VK3I+TjuF9eaa+Ln67dKxhGar5ynVbwnGrUiNF4MqCI=
 k8s.io/component-base v0.22.5/go.mod h1:VK3I+TjuF9eaa+Ln67dKxhGar5ynVbwnGrUiNF4MqCI=
 k8s.io/component-base v0.22.5/go.mod h1:VK3I+TjuF9eaa+Ln67dKxhGar5ynVbwnGrUiNF4MqCI=
 k8s.io/component-base v0.24.2/go.mod h1:ucHwW76dajvQ9B7+zecZAP3BVqvrHoOxm8olHEg0nmM=

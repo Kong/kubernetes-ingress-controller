@@ -601,7 +601,7 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 
 	t.Log("verifying the certificate returns when using a ReferencePolicy with no name restrictions")
 	policy.Spec.To[0].Name = nil
-	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

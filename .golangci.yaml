@@ -73,10 +73,6 @@ issues:
   fix: true
   exclude-rules:
   - linters:
-    - staticcheck
-    text:  "SA4006" # ignore err not checked in test files
-    path: _test\.go
-  - linters:
     - ineffassign
     text:  "ineffectual assignment" # ignore err not checked in test files
     path: _test\.go

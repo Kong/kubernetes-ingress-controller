@@ -18,7 +18,7 @@ var SupportedTypes = sets.NewString(
 	"key-auth",
 	"oauth2",
 	"acl",
-	"mtls-auth"
+	"mtls-auth",
 )
 
 var (

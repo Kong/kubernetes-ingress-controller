@@ -334,6 +334,100 @@ func TestTCPIngressTLS(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
+// once upon a time, our upstream Redis image vendor decided to add a passphrase setting that didn't check if it wasn't
+// set and should therefore not be required, so now this test gets a special cert.
+var (
+	passphrasePair = TLSPair{
+		Cert: `-----BEGIN CERTIFICATE-----
+MIIFbTCCA1WgAwIBAgIUYbB5HeN2T1yaXlc/JtBRAcC9IuswDQYJKoZIhvcNAQEL
+BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAgFw0yMjA3MjUxNzQxMzhaGA8yMTIy
+MDcwMTE3NDEzOFowRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
+ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDCCAiIwDQYJKoZIhvcN
+AQEBBQADggIPADCCAgoCggIBAK6Ka7/QCxbYWql+bQRSARWYcmy/0sZYzwhVdU+2
+MMtHIgzeBwc3hAexPzhckskFz+Tmvue2pSNeIK14tYjp9SS6PjZxMP9/aZFS3wtY
+3nd79VtuxDdA+jvjWeIAKqQIiYJtLW/UCByUc8b3dhyyE4X2/67tVOsxM9OCaBgn
+XnyFRHSFR54ca/26iN3LB0fOtXDP+lxNnjs7A5v0Uuh2DvZ04hE+bjc5XRuB4TQj
+Ii/3OU+ca3RsjZ9YRKc1DaokUiMpkL/ODYMwxgSmhcmEV8QnzbNQZKLPcABtVJw5
+S4crjCXh0EXRtP6Di84xhbNQf/24djFjIZN0jCmH50isJc9SFVdOsjNZixb6MOhy
+FF+57N9LYNNuShhUhC1f/OKpBg63mlGYFfE5qfLN6pVCgnOUgNmc01RGfw8/xbTe
+BFZp8OA9PObY+HXxsMOBXDzJ0bea/IC8JmxkcOPZ3fqveBo7aTb2HVGts6THwhUI
+d/Csl5q0+VgCfIsu2i5Mqjv/6mYL1FehfAsL5whPlICEaLgnVOPu2x4QS0dHn7dE
+6BxeIhlq1CvZNFw0ONJayoqGfk0b3igc0PfmLXj9TFx0I5hn8F0/KQl0x3Al+gib
+2ugH49efPJXL+IULwGySNB0CikrqQMIaqyf9rDkpW/L23XMEZ6nXE9asezK3N3Co
+5FTnAgMBAAGjUzBRMB0GA1UdDgQWBBQQ8Kql9b8QuZVu/AoNEwXBScnCNTAfBgNV
+HSMEGDAWgBQQ8Kql9b8QuZVu/AoNEwXBScnCNTAPBgNVHRMBAf8EBTADAQH/MA0G
+CSqGSIb3DQEBCwUAA4ICAQAtxkL9ld5cqD3g/YJOE7g6s1lja6YDqR9nAxNurL5r
+IaxIkLfXa6hx5MEOJ5qsBefpQiY1rhoXYawQ25HHSjPLqGecWDvTdZUFny9JPgs+
+Q72Iphcclk10eOmeY5f33yY8/QEwl5P7BbICKIcp6EHk4yBbv1fCWPAeT40heqkY
+A69gXlWmZIW61q1dR23ul07nv0uPcJEvN37WM0gjOPYez3bfMzV/jvldYqXcv0zb
+GFuVvlaWJwWmn7FScCCq4J73F5bklx7fZJuknfmGegwgaYxtroe3JkaxfTnspomA
+kcasWMaGzNtEO4ylB8JMoUUIXIZ53GXtjJDSA+AjiDduAxe9zvJsw2JE8bbyiSC0
+ira9BKAn8MG4awwrDLVYj/oVdpZqwQlXOQ/8T72SLpNfgUCTQ24E/Hdw/Il7yC+h
+2koyipD0Mkn7y46g6c/qcVjBqPTtpcep7iYmOohXhaADsdhPn7FNO1/CRabkLfGY
+0FN9AWSMKRBpSWEXW1wAy8wrh8stA59zGoGEB7JuX6UrwZfZKGQdUH/ATA2G6TVZ
+YLp4cgCwkL+OvWojOz1Mq9j0E8IYOaFQ2RIAgu/8BqbR2UVAY6nWqfg8eOIcY+OE
+WMfexPAZa49uF0E7BA0h1jxzALtmz96CoKy+KI1EsF23ZUW67M8lq/rGYMlcBIiF
+Tg==
+-----END CERTIFICATE-----`,
+		Key: `-----BEGIN ENCRYPTED PRIVATE KEY-----
+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
+8kBvpExREohI9skT5YquWQu3ClOPpcly
+-----END ENCRYPTED PRIVATE KEY-----`,
+	}
+	passphrasePairPassphrase = "passphrase"
+)
+
 func TestTCPIngressTLSPassthrough(t *testing.T) {
 	version, err := getKongVersion()
 	if err != nil {
@@ -365,8 +459,9 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Data: map[string][]byte{
-			"tls.crt": []byte(tlsPairs[0].Cert),
-			"tls.key": []byte(tlsPairs[0].Key),
+			"tls.crt":        []byte(passphrasePair.Cert),
+			"tls.key":        []byte(passphrasePair.Key),
+			"tls.passphrase": []byte(passphrasePairPassphrase),
 		},
 	}
 
@@ -402,6 +497,10 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 		{
 			Name:  "REDIS_TLS_KEY_FILE",
 			Value: "/opt/certs/tls.key",
+		},
+		{
+			Name:  "REDIS_TLS_KEY_FILE_PASS",
+			Value: "/opt/certs/tls.passphrase",
 		},
 		{
 			Name:  "REDIS_PASSWORD",

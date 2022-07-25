@@ -341,6 +341,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	} else if version.LT(semver.MustParse("2.7.0")) {
 		t.Skipf("kong version %s below minimum TLS passthrough version", version)
 	}
+
 	t.Parallel()
 	t.Log("locking TLS port")
 	tlsMutex.Lock()
@@ -436,6 +437,36 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
 	}()
 
+	t.Log("waiting for deployment to be ready")
+	deploymentName := deployment.Name
+	require.Eventually(t, func() bool {
+		deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Get(ctx, deploymentName, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("failed to get deployment %s/%s , error %v", ns.Name, deploymentName, err)
+			return false
+		}
+		if deployment.Status.Replicas == deployment.Status.AvailableReplicas {
+			return true
+		}
+		t.Logf("deployment not ready: %d/%d pods available", deployment.Status.AvailableReplicas, deployment.Status.Replicas)
+		return false
+	}, ingressWait, waitTick, func() string {
+		// dump status of all pods.
+		podList, err := env.Cluster().Client().CoreV1().Pods(ns.Name).List(
+			ctx, metav1.ListOptions{
+				LabelSelector: "app=" + testName,
+			})
+		if err != nil {
+			return err.Error()
+		}
+		podStatusString := []string{}
+		for _, pod := range podList.Items {
+			podStatusString = append(podStatusString, fmt.Sprintf("pod %s/%s: phase %s",
+				pod.Namespace, pod.Name, pod.Status.Phase))
+		}
+		return strings.Join(podStatusString, "\n")
+	}())
+
 	t.Log("adding TCPIngress")
 	tcp := &kongv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -477,11 +508,13 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 			ServerName:         "redis.example",
 		})
 		if err != nil {
+			t.Logf("failed to connect to %s:8899, error %v, retrying...", proxyURL.Hostname(), err)
 			return false
 		}
 		defer conn.Close()
 		err = conn.Handshake()
 		if err != nil {
+			t.Logf("failed to do tls handshake to %s:8899, error %v, retrying...", proxyURL.Hostname(), err)
 			return false
 		}
 		cert := conn.ConnectionState().PeerCertificates[0]

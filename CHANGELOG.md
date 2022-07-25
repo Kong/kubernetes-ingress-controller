@@ -60,6 +60,11 @@
 - Added support for plugin ordering (requires Kong Enterprise 3.0 or higher).
   [#2657](https://github.com/Kong/kubernetes-ingress-controller/pull/2657)
 
+#### Fixed
+
+- Added `mtls-auth` to the admission webhook supported credential types list.
+  [#2739](https://github.com/Kong/kubernetes-ingress-controller/pull/2739)
+
 ## [2.5.0]
 
 > Release date: 2022-07-11

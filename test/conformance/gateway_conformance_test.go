@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/tests"
@@ -58,6 +57,8 @@ func TestGatewayConformance(t *testing.T) {
 		BaseManifests:        conformanceTestsBaseManifests,
 		SupportedFeatures: []suite.SupportedFeature{
 			suite.SupportReferenceGrant,
+			// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2778
+			// suite.SupportHTTPRouteQueryParamMatching,
 		},
 	})
 	cSuite.Setup(t)
@@ -71,15 +72,6 @@ func TestGatewayConformance(t *testing.T) {
 
 	t.Log("running gateway conformance tests")
 	for _, tt := range tests.ConformanceTests {
-		if enabledGatewayConformanceTests.Has(tt.ShortName) {
-			t.Run(tt.Description, func(t *testing.T) { tt.Run(t, cSuite) })
-		}
+		t.Run(tt.Description, func(t *testing.T) { tt.Run(t, cSuite) })
 	}
 }
-
-var enabledGatewayConformanceTests = sets.NewString(
-	"GatewaySecretInvalidReferenceGrant",
-	"GatewaySecretMissingReferenceGrant",
-	"GatewaySecretReferenceGrantAllInNamespace",
-	"GatewaySecretReferenceGrantSpecific",
-)

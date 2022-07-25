@@ -299,7 +299,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// requeue the object and wait until all supported gateways are ready.
 	debug(log, udproute, "checking if the udproute's gateways are ready")
 	for _, gateway := range gateways {
-		if !isGatewayReady(gateway) {
+		if !isGatewayReady(gateway.gateway) {
 			debug(log, udproute, "gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -352,7 +352,7 @@ var udprouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given UDPRoute and ensures that the status
 // for the UDPRoute is updated appropriately.
-func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, udproute *gatewayv1alpha2.UDPRoute, gateways ...*gatewayv1alpha2.Gateway) (bool, error) {
+func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, udproute *gatewayv1alpha2.UDPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
 	for _, existingParent := range udproute.Status.Parents {
@@ -372,8 +372,8 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
 				Kind:      (*gatewayv1alpha2.Kind)(&udprouteParentKind),
-				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
-				Name:      gatewayv1alpha2.ObjectName(gateway.Name),
+				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
+				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},
 			ControllerName: ControllerName,
 			Conditions: []metav1.Condition{{
@@ -381,13 +381,13 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: udproute.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+				Reason:             string(gatewayv1alpha2.RouteReasonAccepted),
 			}},
 		}
 
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
-		if existingGatewayParentStatus, exists := parentStatuses[gateway.Namespace+gateway.Name]; exists {
+		if existingGatewayParentStatus, exists := parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name]; exists {
 			// fake the time of the existing status as this wont be equal
 			for i := range existingGatewayParentStatus.Conditions {
 				existingGatewayParentStatus.Conditions[i].LastTransitionTime = gatewayParentStatus.Conditions[0].LastTransitionTime
@@ -400,7 +400,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		}
 
 		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[gateway.Namespace+gateway.Name] = gatewayParentStatus
+		parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name] = gatewayParentStatus
 		statusChangesWereMade = true
 	}
 

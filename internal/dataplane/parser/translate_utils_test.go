@@ -687,8 +687,39 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 			},
-			result:  kongstate.Service{},
-			wantErr: true,
+			result: kongstate.Service{
+				Service: kong.Service{
+					Name:           kong.String("tcproute.behbudiy.kitab-ul-atfol.999"),
+					Host:           kong.String("tcproute.behbudiy.kitab-ul-atfol.999"),
+					Protocol:       kong.String(protocol),
+					ConnectTimeout: kong.Int(DefaultServiceTimeout),
+					ReadTimeout:    kong.Int(DefaultServiceTimeout),
+					WriteTimeout:   kong.Int(DefaultServiceTimeout),
+					Retries:        kong.Int(DefaultRetries),
+				},
+				Namespace: "behbudiy",
+				Backends:  []kongstate.ServiceBackend{},
+				Plugins: []kong.Plugin{
+					{
+						Name: kong.String("request-termination"),
+						Config: kong.Configuration{
+							"status_code": 500,
+							"message":     "no existing backendRef provided",
+						},
+					},
+				},
+				Parent: &gatewayv1alpha2.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kitab-ul-atfol",
+						Namespace: "behbudiy",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TCPRoute",
+						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					},
+				},
+			},
+			wantErr: false,
 		},
 		{
 			msg: "same and different ns backend",

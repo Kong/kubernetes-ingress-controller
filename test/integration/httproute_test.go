@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -145,6 +146,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 							Name: gatewayv1alpha2.ObjectName(service1.Name),
 							Port: &httpPort,
+							Kind: (*gatewayv1alpha2.Kind)(pointer.StringPtr("Service")),
 						},
 					},
 				}},
@@ -213,6 +215,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 						Name: gatewayv1alpha2.ObjectName(service1.Name),
 						Port: &httpPort,
+						Kind: (*gatewayv1alpha2.Kind)(pointer.StringPtr("Service")),
 					},
 					Weight: &httpbinWeight,
 				},
@@ -222,6 +225,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 						Name: gatewayv1alpha2.ObjectName(service2.Name),
 						Port: &httpPort,
+						Kind: (*gatewayv1alpha2.Kind)(pointer.StringPtr("Service")),
 					},
 					Weight: &nginxWeight,
 				},

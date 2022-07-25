@@ -131,7 +131,8 @@ func (p *Parser) generateKongServiceFromBackendRef(
 	}, grants)
 
 	for _, backendRef := range backendRefs {
-		if isRefAllowedByGrant(backendRef.Namespace, backendRef.Name, backendRef.Group, backendRef.Kind, allowed) {
+		if util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) &&
+			isRefAllowedByGrant(backendRef.Namespace, backendRef.Name, backendRef.Group, backendRef.Kind, allowed) {
 			backend := kongstate.ServiceBackend{
 				Name: string(backendRef.Name),
 				PortDef: kongstate.PortDef{
@@ -149,15 +150,16 @@ func (p *Parser) generateKongServiceFromBackendRef(
 			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
 			// failing the entire rule could potentially delete routes that were previously online and in use, and
 			// that remain viable (because they still have some permissible backendRefs)
-			p.logger.Errorf("%s requested backendRef to %s %s/%s, but no ReferenceGrant permits it, skipping...",
-				objName, *backendRef.Kind, *backendRef.Namespace, backendRef.Name)
+			var namespace, kind string = route.GetNamespace(), ""
+			if backendRef.Namespace != nil {
+				namespace = string(*backendRef.Namespace)
+			}
+			if backendRef.Kind != nil {
+				kind = string(*backendRef.Kind)
+			}
+			p.logger.Errorf("%s requested backendRef to %s %s/%s, but no ReferencePolicy permits it, skipping...",
+				objName, kind, namespace, backendRef.Name)
 		}
-	}
-
-	// however, if there are _no_ permissible backendRefs, the route will not be able to forward any traffic and we
-	// should reject it
-	if len(backends) == 0 {
-		return kongstate.Service{}, fmt.Errorf("%s has no permissible backendRefs, cannot create a Kong service for it", objName)
 	}
 
 	// the service name needs to uniquely identify this service given it's list of
@@ -185,6 +187,23 @@ func (p *Parser) generateKongServiceFromBackendRef(
 			Backends:  backends,
 			Parent:    route,
 		}
+	}
+
+	// In the context of the gateway API conformance tests, if there is no service for the backend,
+	// the response must have a status code of 500. Since The default behavior of Kong is returning 503
+	// if there is no backend for a service, we inject a plugin that terminates all requests with 500
+	// as status code
+	if len(service.Backends) == 0 {
+		if service.Plugins == nil {
+			service.Plugins = make([]kong.Plugin, 0)
+		}
+		service.Plugins = append(service.Plugins, kong.Plugin{
+			Name: kong.String("request-termination"),
+			Config: kong.Configuration{
+				"status_code": 500,
+				"message":     "no existing backendRef provided",
+			},
+		})
 	}
 
 	return service, nil

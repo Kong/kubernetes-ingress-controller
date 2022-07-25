@@ -59,8 +59,9 @@ var (
 	// cancel is the cancel function for the above global test context.
 	cancel context.CancelFunc
 
-	// redisImage is Redis.
-	redisImage = "bitnami/redis"
+	// redisImage is Redis. Pinned because of
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2735#issuecomment-1194376496 breakage.
+	redisImage = "bitnami/redis:7.0.4-debian-11-r3"
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
 	ingressClass = "kongtests"

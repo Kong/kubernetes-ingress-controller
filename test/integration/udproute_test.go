@@ -349,7 +349,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool {
+func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool { //nolint:unparam
 	addrs, err := resolver.LookupHost(ctx, host)
 	if err != nil {
 		return false

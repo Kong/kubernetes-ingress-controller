@@ -23,6 +23,7 @@ const (
 
 	kongv1          = "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1     = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1beta1"
+	kongv1alpha1    = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1alpha1"
 	knativev1alpha1 = "knative.dev/networking/pkg/apis/networking/v1alpha1"
 )
 
@@ -214,6 +215,21 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "UDPIngress",
 		NeedsStatusPermissions:            true,
 		CapableOfStatusUpdates:            true,
+		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
+		Group:                             "configuration.konghq.com",
+		Version:                           "v1alpha1",
+		Kind:                              "IngressClassParameters",
+		PackageImportAlias:                "kongv1alpha1",
+		PackageAlias:                      "KongV1Alpha1",
+		Package:                           kongv1alpha1,
+		Plural:                            "IngressClassParameters",
+		CacheType:                         "IngressClassParameters",
+		NeedsStatusPermissions:            false,
+		CapableOfStatusUpdates:            false,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -419,6 +435,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 `
 

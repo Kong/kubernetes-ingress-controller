@@ -104,7 +104,7 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 

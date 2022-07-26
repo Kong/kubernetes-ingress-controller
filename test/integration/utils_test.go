@@ -59,8 +59,9 @@ var (
 	// cancel is the cancel function for the above global test context.
 	cancel context.CancelFunc
 
-	// redisImage is Redis.
-	redisImage = "bitnami/redis"
+	// redisImage is Redis. Pinned because of
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2735#issuecomment-1194376496 breakage.
+	redisImage = "bitnami/redis:7.0.4-debian-11-r3"
 
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
 	ingressClass = "kongtests"
@@ -124,6 +125,18 @@ var (
 
 	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
 	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
+
+	// kongImage is the Kong image to use in lieu of the default.
+	kongImage = os.Getenv("TEST_KONG_IMAGE")
+
+	// kongImage is the Kong image to use in lieu of the default.
+	kongTag = os.Getenv("TEST_KONG_TAG")
+
+	// kongPullUsername is the Docker username to use for the Kong image pull secret.
+	kongPullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
+
+	// kongPullPassword is the Docker password to use for the Kong image pull secret.
+	kongPullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
 
 	// controllerFeatureGates contains the feature gates that should be enabled
 	// for test runs.
@@ -399,7 +412,7 @@ func distributionOfMapValues(counter map[string]int) map[string]float64 {
 }
 
 func newRequest(t *testing.T, method, path string, headers map[string]string) *http.Request {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, path), nil)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", proxyURL, path), nil)
 	require.NoError(t, err)
 	for header, value := range headers {
 		req.Header.Set(header, value)

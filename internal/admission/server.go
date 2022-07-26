@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -89,6 +90,10 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 	}, nil
 }
 
+const (
+	defaultHTTPReadHeaderTimeout = 10 * time.Second
+)
+
 func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handler,
 	log logrus.FieldLogger,
 ) (*http.Server, error) {
@@ -97,9 +102,10 @@ func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handl
 		return nil, err
 	}
 	return &http.Server{
-		Addr:      config.ListenAddr,
-		TLSConfig: tlsConfig,
-		Handler:   handler,
+		Addr:              config.ListenAddr,
+		TLSConfig:         tlsConfig,
+		Handler:           handler,
+		ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
 	}, nil
 }
 

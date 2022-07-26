@@ -17,7 +17,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -109,7 +109,7 @@ func TestKnativeIngress(t *testing.T) {
 
 func configKnativeDomain(ctx context.Context, proxy, nsn string, cluster clusters.Cluster) error {
 	// generate the new config-domain configmap
-	configMap := v1.ConfigMap{
+	configMap := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
@@ -154,7 +154,7 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 
 		conds := curIng.Status.Status.GetConditions()
 		for _, cond := range conds {
-			if cond.Type == apis.ConditionReady && cond.Status == v1.ConditionTrue {
+			if cond.Type == apis.ConditionReady && cond.Status == corev1.ConditionTrue {
 				t.Logf("knative ingress %s/%s status is ready.", curIng.Namespace, curIng.Name)
 				return true
 			}

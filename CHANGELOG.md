@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.6.0](#260)
  - [2.5.0](#250)
  - [2.4.2](#242)
  - [2.4.1](#241)
@@ -49,6 +50,20 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.6.0]
+
+> Release date: TBD
+
+#### Added
+
+- Added support for plugin ordering (requires Kong Enterprise 3.0 or higher).
+  [#2657](https://github.com/Kong/kubernetes-ingress-controller/pull/2657)
+
+#### Fixed
+
+- Added `mtls-auth` to the admission webhook supported credential types list.
+  [#2739](https://github.com/Kong/kubernetes-ingress-controller/pull/2739)
 
 ## [2.5.0]
 
@@ -175,6 +190,10 @@
   [#2494](https://github.com/Kong/kubernetes-ingress-controller/pull/2494)
 - Added `kong-ingress-controller` category to CRDs
   [#2517](https://github.com/Kong/kubernetes-ingress-controller/pull/2517)
+- Added `v1alpha1.IngressClassParameters` CRD and its first field `ServiceUpstream`
+  to control the behavior of routing traffic via an upstream service for all services managed
+  by an ingress class without the need of adding an annotation to every single one
+  [#2535](https://github.com/Kong/kubernetes-ingress-controller/pull/2535)
 
 #### Fixed
 
@@ -1824,6 +1843,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.0...v2.4.1

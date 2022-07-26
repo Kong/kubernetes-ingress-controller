@@ -86,7 +86,16 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	}
 	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
 	_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, err,
+		// dump the status of service if the error happens on updating service.
+		func() string {
+			service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
+			if err != nil {
+				return fmt.Sprintf("failed to dump service, error %v", err)
+			}
+			return fmt.Sprintf("current status of service: %#v", service)
+		}(),
+	)
 	verifyIngress(ctx, t, env)
 }
 
@@ -160,6 +169,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
 	_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
 	require.NoError(t, err,
+		// dump the status of service if the error happens on updating service.
 		func() string {
 			service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
 			if err != nil {

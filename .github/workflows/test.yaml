@@ -146,6 +146,14 @@ jobs:
         name: coverage
         path: coverage.enterprisepostgres.out
 
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-enterprise-postgres
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
   integration-tests-enterprise-postgres-nightly:
     environment: "Configure ci"
     runs-on: ubuntu-latest
@@ -190,6 +198,14 @@ jobs:
         name: coverage
         path: coverage.enterprisepostgres.out
 
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-enterprise-postgres-nightly
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
   integration-tests-dbless:
     runs-on: ubuntu-latest
     steps:
@@ -221,6 +237,14 @@ jobs:
         name: coverage
         path: coverage.dbless.out
 
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-dbless
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
   integration-tests-postgres:
     runs-on: ubuntu-latest
     steps:
@@ -251,6 +275,14 @@ jobs:
       with:
         name: coverage
         path: coverage.postgres.out
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-postgres
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
 
   integration-tests-feature-gates:
     runs-on: ubuntu-latest
@@ -284,6 +316,14 @@ jobs:
       with:
         name: coverage
         path: coverage.featuregates.out
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-feature-gates
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
 
   conformance-tests:
     runs-on: ubuntu-latest

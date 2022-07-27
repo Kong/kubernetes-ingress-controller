@@ -508,9 +508,9 @@ github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47e
 github.com/kong/deck v1.13.0 h1:E5gDlp/h6oAli06KIDW18r7LNW8+7K3Xq6fpX0ZkuiY=
 github.com/kong/deck v1.13.0/go.mod h1:ubDAtqxijv3bWK2RpqopAyqazURrjtFkBWjfoPVhrmo=
 github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
+github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
+github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
 github.com/kong/go-kong v0.30.0/go.mod h1:DREJ1lzBSOV8d7VHhMweTCkZrv4eyx3YgbXQcdOxBvk=
-github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
-github.com/kong/go-kong v0.30.0 h1:iD13//BnR5rkhJWsl1bA/X3n2dKDBYjXb14M6CYshcA=
 github.com/kong/go-kong v0.30.0/go.mod h1:DREJ1lzBSOV8d7VHhMweTCkZrv4eyx3YgbXQcdOxBvk=
 github.com/kong/go-kong v0.30.0/go.mod h1:DREJ1lzBSOV8d7VHhMweTCkZrv4eyx3YgbXQcdOxBvk=
 github.com/kong/kubernetes-testing-framework v0.16.0 h1:/3O76+r2egL+7qrZD1BVkRtjmNzLVolCyUgaJCjejG4=
@@ -1245,8 +1245,8 @@ google.golang.org/api v0.78.0/go.mod h1:1Sg78yoMLOhlQTeF+ARBoytAcH1NNyyl390YMy6r
 google.golang.org/api v0.80.0/go.mod h1:xY3nI94gbvBrE0J6NHXhxOmW97HG7Khjkku6AFB3Hyg=
 google.golang.org/api v0.84.0/go.mod h1:NTsGnUFJMYROtiquksZHBWtHfeMC7iYthki7Eq3pa8o=
 google.golang.org/api v0.86.0/go.mod h1:+Sem1dnrKlrXMR/X0bPnMWyluQe4RsNoYfmNLhOIkzw=
-google.golang.org/api v0.88.0 h1:MPwxQRqpyskYhr2iNyfsQ8R06eeyhe7UEuR30p136ZQ=
-google.golang.org/api v0.88.0/go.mod h1:+Sem1dnrKlrXMR/X0bPnMWyluQe4RsNoYfmNLhOIkzw=
+google.golang.org/api v0.89.0 h1:OUywo5UEEZ8H1eMy55mFpkL9Sy59mQ5TzYGWa+td8zo=
+google.golang.org/api v0.89.0/go.mod h1:+Sem1dnrKlrXMR/X0bPnMWyluQe4RsNoYfmNLhOIkzw=
 google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
 google.golang.org/appengine v1.4.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
 google.golang.org/appengine v1.5.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=

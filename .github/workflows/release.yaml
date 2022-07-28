@@ -154,7 +154,7 @@ jobs:
 
   test-current-kubernetes:
     runs-on: ubuntu-latest
-    needs: build-push-images
+    needs: verify-manifest-tag
     strategy:
       matrix:
         kubernetes-version:
@@ -184,7 +184,7 @@ jobs:
   test-previous-kubernetes:
     environment: gcloud
     runs-on: ubuntu-latest
-    needs: build-push-images
+    needs: verify-manifest-tag
     strategy:
       matrix:
         minor:

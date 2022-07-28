@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 func TestDeployAllInOneDBLESSKuma(t *testing.T) {
@@ -77,15 +78,21 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
-	service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
-	require.NoError(t, err)
 
-	t.Logf("service %#v", service)
-	if service.ObjectMeta.Annotations == nil {
-		service.ObjectMeta.Annotations = map[string]string{}
-	}
-	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
-	_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
+	// use retry.RetryOnConflict to update service, to avoid conflicts from different source.
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if service.ObjectMeta.Annotations == nil {
+			service.ObjectMeta.Annotations = map[string]string{}
+		}
+		service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
+		_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
+		return err
+	})
 	require.NoError(t, err,
 		// dump the status of service if the error happens on updating service.
 		func() string {
@@ -159,15 +166,20 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
-	service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
-	require.NoError(t, err)
+	// use retry.RetryOnConflict to update service, to avoid conflicts from different source.
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
 
-	t.Logf("current status of service: %#v", service)
-	if service.ObjectMeta.Annotations == nil {
-		service.ObjectMeta.Annotations = map[string]string{}
-	}
-	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
-	_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
+		if service.ObjectMeta.Annotations == nil {
+			service.ObjectMeta.Annotations = map[string]string{}
+		}
+		service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
+		_, err = env.Cluster().Client().CoreV1().Services("default").Update(ctx, service, metav1.UpdateOptions{})
+		return err
+	})
 	require.NoError(t, err,
 		// dump the status of service if the error happens on updating service.
 		func() string {
@@ -178,5 +190,6 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 			return fmt.Sprintf("current status of service: %#v", service)
 		}(),
 	)
+
 	verifyIngress(ctx, t, env)
 }

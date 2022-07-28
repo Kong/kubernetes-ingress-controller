@@ -1591,8 +1591,8 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) listClassless(obj client.
 		return nil
 	}
 	var recs []reconcile.Request
-	for _, resource := range resourceList.Items {
-		if ctrlutils.IsIngressClassEmpty(&resource) {
+	for i, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: resource.Namespace,

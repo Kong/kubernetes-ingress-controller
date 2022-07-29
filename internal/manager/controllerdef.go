@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/knative"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
@@ -259,7 +260,7 @@ func setupControllers(
 				Version:  knativev1alpha1.SchemeGroupVersion.Version,
 				Resource: "ingresses",
 			}}.CRDExists,
-			Controller: &configuration.Knativev1alpha1IngressReconciler{
+			Controller: &knative.Knativev1alpha1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:                     mgr.GetScheme(),

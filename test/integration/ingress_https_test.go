@@ -185,9 +185,11 @@ func TestHTTPSRedirect(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		resp, err := client.Get(fmt.Sprintf("%s/httpbin", proxyURL))
 		if err != nil {
+			t.Logf("failed to GET %s/httpbin", proxyURL)
 			return false
 		}
 		defer resp.Body.Close()
+		t.Logf("GET %s/httpbin, response code: %d", proxyURL, resp.StatusCode)
 		return resp.StatusCode == http.StatusMovedPermanently
 	}, ingressWait, waitTick)
 }

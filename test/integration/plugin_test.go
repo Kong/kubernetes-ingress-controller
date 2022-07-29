@@ -91,6 +91,7 @@ func TestPluginEssentials(t *testing.T) {
 			require.True(t, n > 0)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
+		t.Logf("GET %s/httpbin, response code %d", proxyURL, resp.StatusCode)
 		return false
 	}, ingressWait, waitTick)
 

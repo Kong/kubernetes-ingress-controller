@@ -40,7 +40,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.12.3
 	sigs.k8s.io/gateway-api v0.5.0
 	sigs.k8s.io/kustomize/api v0.11.5
-	sigs.k8s.io/kustomize/kyaml v0.13.7
+	sigs.k8s.io/kustomize/kyaml v0.13.8
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -141,7 +141,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
-	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
+	github.com/xlab/treeprint v1.1.0 // indirect
 	github.com/yudai/gojsondiff v1.0.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yudai/pp v2.0.1+incompatible // indirect

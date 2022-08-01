@@ -10,7 +10,11 @@ import (
 	"time"
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	netv1 "k8s.io/api/networking/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -182,4 +186,35 @@ func gatewayLinkStatusMatches(t *testing.T, c *gatewayclient.Clientset, verifyLi
 	// supported Gateway link was not found, hence if we want to ensure
 	// the link existence return false
 	return !verifyLinked
+}
+
+// setIngressClassNameWithRetry changes Ingress.Spec.IngressClassName to specified value
+// and retries if update conflict happens.
+func setIngressClassNameWithRetry(ctx context.Context, namespace string, obj runtime.Object, ingressClassName *string) error {
+	switch ingress := obj.(type) {
+	case *netv1.Ingress:
+		ingressClient := env.Cluster().Client().NetworkingV1().Ingresses(namespace)
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			ingress, err := ingressClient.Get(ctx, ingress.ObjectMeta.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			ingress.Spec.IngressClassName = ingressClassName
+			_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
+			return err
+		})
+	case *netv1beta1.Ingress:
+		ingressClient := env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace)
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			ingress, err := ingressClient.Get(ctx, ingress.ObjectMeta.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			ingress.Spec.IngressClassName = ingressClassName
+			_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
+			return err
+		})
+
+	}
+	return fmt.Errorf("unsupported GroupVersionKind %v", obj.GetObjectKind())
 }

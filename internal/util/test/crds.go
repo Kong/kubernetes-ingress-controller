@@ -56,7 +56,7 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 
 	// deploy all CRDs required for testing
 	for _, yaml := range []string{kongCRDYAML, gatewayCRDYAML} {
-		if err := clusters.ApplyYAML(ctx, cluster, yaml); err != nil {
+		if err := clusters.ApplyManifestByYAML(ctx, cluster, yaml); err != nil {
 			return err
 		}
 	}

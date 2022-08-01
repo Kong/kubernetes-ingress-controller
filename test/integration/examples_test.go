@@ -37,10 +37,10 @@ func TestHTTPRouteExample(t *testing.T) {
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(httprouteExampleManifests, examplesDIR))
 	b, err := os.ReadFile(httprouteExampleManifests)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
 
 	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+		require.NoError(t, clusters.DeleteManifestByYAML(ctx, env.Cluster(), string(b)))
 	}()
 
 	t.Logf("verifying that the Gateway receives listen addresses")
@@ -111,10 +111,10 @@ func TestUDPRouteExample(t *testing.T) {
 	s = strings.ReplaceAll(s, "port: 53", "port: 9999")
 	b = []byte(s)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
 
 	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+		require.NoError(t, clusters.DeleteManifestByYAML(ctx, env.Cluster(), string(b)))
 	}()
 
 	t.Logf("configuring test and setting up API clients")
@@ -145,11 +145,11 @@ func TestTCPRouteExample(t *testing.T) {
 	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
 	b, err := os.ReadFile(tcprouteExampleManifests)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
 
 	defer func() {
 		t.Logf("deleting tcproute example")
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+		require.NoError(t, clusters.DeleteManifestByYAML(ctx, env.Cluster(), string(b)))
 	}()
 
 	t.Log("verifying that TCPRoute becomes routable")
@@ -172,11 +172,11 @@ func TestTLSRouteExample(t *testing.T) {
 	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
 	b, err := os.ReadFile(tlsrouteExampleManifests)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
 
 	defer func() {
 		t.Logf("deleting tlsroute example")
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
+		require.NoError(t, clusters.DeleteManifestByYAML(ctx, env.Cluster(), string(b)))
 	}()
 
 	t.Log("verifying that TLSRoute becomes routable")
@@ -194,10 +194,10 @@ func TestIngressExample(t *testing.T) {
 	b, err := os.ReadFile(ingressExampleManifests)
 	require.NoError(t, err)
 	manifests := replaceIngressClassInManifests(string(b))
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), manifests))
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
 
 	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), manifests))
+		require.NoError(t, clusters.DeleteManifestByYAML(ctx, env.Cluster(), manifests))
 	}()
 
 	t.Log("waiting for ingress resource to have an address")
@@ -247,10 +247,10 @@ func TestUDPIngressExample(t *testing.T) {
 	b, err := os.ReadFile(udpingressExampleManifests)
 	require.NoError(t, err)
 	manifests := replaceIngressClassInManifests(string(b))
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), manifests))
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
 
 	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), manifests))
+		require.NoError(t, clusters.DeleteManifestByYAML(ctx, env.Cluster(), manifests))
 	}()
 
 	t.Log("building a DNS query to request of CoreDNS")

@@ -3,11 +3,7 @@ package parser
 import (
 	"fmt"
 
-	"github.com/kong/go-kong/kong"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -61,7 +57,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
 		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromTLSRouteRule(tlsroute, ruleNumber, rule)
+		routes, err := generateKongRoutesFromRouteRule(tlsroute, ruleNumber, rule)
 		if err != nil {
 			return err
 		}
@@ -78,49 +74,4 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 	}
 
 	return nil
-}
-
-// -----------------------------------------------------------------------------
-// Translate TLSRoute - Utils
-// -----------------------------------------------------------------------------
-
-// generateKongRoutesFromTLSRouteRule converts an TLSRoute rule to one or more
-// Kong Route objects to route traffic to services.
-func generateKongRoutesFromTLSRouteRule(
-	tlsroute *gatewayv1alpha2.TLSRoute,
-	ruleNumber int,
-	rule gatewayv1alpha2.TLSRouteRule,
-) ([]kongstate.Route, error) {
-	// gather the k8s object information and hostnames from the tlsroute
-	objectInfo := util.FromK8sObject(tlsroute)
-
-	var routes []kongstate.Route
-
-	if len(rule.BackendRefs) == 0 {
-		return routes, fmt.Errorf("TLSRoute rules must include at least one backendRef")
-	}
-
-	routeName := kong.String(fmt.Sprintf(
-		"tlsroute.%s.%s.%d.%d",
-		tlsroute.Namespace,
-		tlsroute.Name,
-		ruleNumber,
-		0,
-	))
-
-	hostnames := make([]string, len(tlsroute.Spec.Hostnames))
-	for i, hostname := range tlsroute.Spec.Hostnames {
-		hostnames[i] = string(hostname)
-	}
-
-	r := kongstate.Route{
-		Ingress: objectInfo,
-		Route: kong.Route{
-			Name:      routeName,
-			Protocols: kong.StringSlice("tls"),
-			SNIs:      kong.StringSlice(hostnames...),
-		},
-	}
-
-	return append(routes, r), nil
 }

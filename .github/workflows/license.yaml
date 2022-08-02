@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        # we do not want to include test-only dependencies
+        # that will not be compiled into release artifacts
+      - shell: bash
+        run: sudo rm -vrf test
       - uses: fossas/fossa-action@v1
         with:
           api-key: ${{secrets.fossaApiKey}}

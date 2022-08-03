@@ -13,3 +13,4 @@ jobs:
           github-token: '${{ secrets.GITHUB_TOKEN }}'
           invalid-labels: 'do not merge,on-hold'
           pull-request-number: '${{ github.event.pull_request.number }}'
+          disable-reviews: true

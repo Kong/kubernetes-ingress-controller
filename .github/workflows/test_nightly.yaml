@@ -1,0 +1,62 @@
+name: tests-nightly
+
+on:
+  pull_request:
+    types:
+      - labeled
+  workflow_dispatch: {}
+
+jobs:
+  integration-tests-enterprise-postgres-nightly:
+    if: ${{ github.event.label.name == 'ci/run-nightly' }}
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: Kong/kong-license@master
+      id: license
+      with:
+        # PULP_PASSWORD secret is set in "Configure ci" environment
+        password: ${{ secrets.PULP_PASSWORD }}
+
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.18'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: run integration tests
+      run: make test.integration.enterprise.postgres
+      env:
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        TEST_KONG_IMAGE: "kong/kong-gateway-internal"
+        TEST_KONG_TAG: "master-nightly-alpine"
+        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.enterprisepostgres.out
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-enterprise-postgres-nightly
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+

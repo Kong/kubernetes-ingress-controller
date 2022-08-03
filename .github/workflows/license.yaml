@@ -9,11 +9,17 @@ jobs:
     environment: "FOSSA"
     runs-on: ubuntu-latest
     steps:
+      - name: setup golang                     
+        uses: actions/setup-go@v3          
+        with:                                     
+          go-version: '^1.18'    
       - uses: actions/checkout@v3
         # we do not want to include test-only dependencies
         # that will not be compiled into release artifacts
       - shell: bash
         run: sudo rm -vrf test
+      - shell: bash
+        run: go mod tidy
       - uses: fossas/fossa-action@v1
         with:
           api-key: ${{secrets.fossaApiKey}}

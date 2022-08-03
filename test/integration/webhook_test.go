@@ -22,9 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/internal/util"
 )
 
 // extraWebhookNamespace is an additional namespace used by tests when needing

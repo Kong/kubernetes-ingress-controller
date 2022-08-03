@@ -16,7 +16,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/internal/util"
 )
 
 var (

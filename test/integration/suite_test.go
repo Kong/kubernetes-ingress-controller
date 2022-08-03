@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/test/internal/util"
 )
 
 var k8sClient *kubernetes.Clientset

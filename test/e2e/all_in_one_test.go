@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -290,6 +291,9 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	}
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+
+	t.Logf("build a cleaner to dump diagnostics...")
+	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
@@ -298,6 +302,33 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	manifest, err := getTestManifest(t, postgresPath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
+	// dump diagnostics and print out logs of KIC pod, if the test failed.
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			assert.NoError(t, err, "failed to dump diagnostics")
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			// print pod logs of KIC pods to debug when running in CI.
+			podLogDir := output + "/pod_logs"
+			logFiles, err := os.ReadDir(podLogDir)
+			assert.NoError(t, err, "failed to list files in pod log directory")
+			for _, logFile := range logFiles {
+				// print the log file if the pod belongs to KIC deployment
+				// by the pod name and namespace on the filename of log file.
+				if !strings.Contains(logFile.Name(), deployment.Namespace+"_"+deployment.Name) {
+					continue
+				}
+				if logFile.IsDir() {
+					continue
+				}
+
+				podLogContent, err := os.ReadFile(podLogDir + "/" + logFile.Name())
+				assert.NoErrorf(t, err, "failed to read logs in file %s", logFile.Name())
+				// replace the separator in filename `_` to `/`.
+				t.Logf("logs of pod %s:\n%s", strings.Replace(logFile.Name(), "_", "/", 1), string(podLogContent))
+			}
+		}
+	}()
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -357,20 +388,16 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 		return httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount)
 	}, time.Minute, time.Second*10)
 
-	t.Log("deleting the original replica and current leader")
+	// since leader election is time sensitive, we log the time here.
+	t.Logf("deleting the original replica and current leader at %v", time.Now())
 	err = env.Cluster().Client().CoreV1().Pods(initialPod.Namespace).Delete(ctx, initialPod.Name, metav1.DeleteOptions{})
 	require.NoError(t, err)
 
-	t.Log("confirming the second replica becomes the leader and starts pushing configuration")
+	t.Logf("confirming the second replica becomes the leader and starts pushing configuration at %v", time.Now())
 	require.Eventually(t, func() bool {
 		return httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount)
 	}, time.Minute, time.Second,
-		// print logs of secondary pod if the test case fails.
-		func() string {
-			logs, err := getKubernetesLogs(t, env, secondary.Namespace, secondary.Name)
-			require.NoError(t, err)
-			return "logs of secondary pod " + secondary.Name + ":\n" + logs
-		}(),
+		fmt.Sprintf("secondary pod %s did not become the leader. Please check the pod logs to see the details", secondary.Name),
 	)
 }
 

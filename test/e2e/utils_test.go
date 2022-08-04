@@ -301,26 +301,6 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 	}, kongComponentWait, time.Second)
 }
 
-func getKubernetesLogs(t *testing.T, env environments.Environment, namespace, name string) (string, error) {
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "deploy-logs-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	stderr := new(bytes.Buffer)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", "-n", namespace, name, "--all-containers") //nolint:gosec
-	cmd.Stderr = stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("%s", stderr.String())
-	}
-	return string(out), nil
-}
-
 // httpGetResponseContains returns true if the response body of GETting the URL contains specified substring.
 func httpGetResponseContains(t *testing.T, url string, client *http.Client, substring string) bool {
 	req, err := http.NewRequest("GET", url, nil)

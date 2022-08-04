@@ -5,7 +5,6 @@ package conformance
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -29,9 +28,6 @@ var (
 )
 
 func TestGatewayConformance(t *testing.T) {
-	if v := os.Getenv("KONG_TEST_GATEWAY_CONFORMANCE_ENABLED"); v != "true" {
-		t.Skip() // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2692
-	}
 	t.Parallel()
 
 	t.Log("configuring environment for gateway conformance tests")
@@ -49,6 +45,9 @@ func TestGatewayConformance(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, gwc))
+	defer func() {
+		require.NoError(t, client.Delete(ctx, gwc))
+	}()
 
 	t.Log("starting the gateway conformance test suite")
 	cSuite := suite.New(suite.Options{
@@ -57,6 +56,9 @@ func TestGatewayConformance(t *testing.T) {
 		Debug:                showDebug,
 		CleanupBaseResources: shouldCleanup,
 		BaseManifests:        conformanceTestsBaseManifests,
+		SupportedFeatures: []suite.SupportedFeature{
+			suite.SupportReferenceGrant,
+		},
 	})
 	cSuite.Setup(t)
 
@@ -75,15 +77,9 @@ func TestGatewayConformance(t *testing.T) {
 	}
 }
 
-// Today we run only the subset below of all Gateway conformance tests.
-// TODO: ensure that this module runs all Gateway conformance tests
-// https://github.com/Kong/kubernetes-ingress-controller/issues/2210
 var enabledGatewayConformanceTests = sets.NewString(
-	"HTTPRouteCrossNamespace",
-	// "HTTPRouteInvalidCrossNamespace" is the last one we need to get working
-	// before we can delete this set and simply run ALL, but requires:
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/2080
-	"HTTPRouteMatchingAcrossRoutes",
-	"HTTPRouteMatching",
-	"HTTPRouteSimpleSameNamespace",
+	"GatewaySecretInvalidReferenceGrant",
+	"GatewaySecretMissingReferenceGrant",
+	"GatewaySecretReferenceGrantAllInNamespace",
+	"GatewaySecretReferenceGrantSpecific",
 )

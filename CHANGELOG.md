@@ -71,6 +71,8 @@
   upgrading if you're using the alpha APIs, switch your feature gate flags to
   `--feature-gates=GatewayAlpha=true` to keep them enabled.
   [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
+- Added all the Gateway-related conformance tests.
+  [#2777](https://github.com/Kong/kubernetes-ingress-controller/issues/2777)
 
 #### Fixed
 

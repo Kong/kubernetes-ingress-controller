@@ -71,6 +71,8 @@
 - Disabled additional IngressClass lookups in other reconcilers when the
   IngressClass reconciler is disabled.
   [#2724](https://github.com/Kong/kubernetes-ingress-controller/pull/2724)
+- ReferencePolicy support has been dropped in favor of the newer ReferenceGrant API.
+  [#2775](https://github.com/Kong/kubernetes-ingress-controller/pull/2772)
 
 ## [2.5.0]
 

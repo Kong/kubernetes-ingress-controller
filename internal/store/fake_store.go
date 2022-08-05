@@ -38,7 +38,7 @@ type FakeObjects struct {
 	UDPRoutes                      []*gatewayv1alpha2.UDPRoute
 	TCPRoutes                      []*gatewayv1alpha2.TCPRoute
 	TLSRoutes                      []*gatewayv1alpha2.TLSRoute
-	ReferencePolicies              []*gatewayv1alpha2.ReferencePolicy
+	ReferenceGrants                []*gatewayv1alpha2.ReferenceGrant
 	Gateways                       []*gatewayv1alpha2.Gateway
 	TCPIngresses                   []*configurationv1beta1.TCPIngress
 	UDPIngresses                   []*configurationv1beta1.UDPIngress
@@ -112,9 +112,9 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	referencepolicyStore := cache.NewStore(keyFunc)
-	for _, referencepolicy := range objects.ReferencePolicies {
-		if err := referencepolicyStore.Add(referencepolicy); err != nil {
+	referencegrantStore := cache.NewStore(keyFunc)
+	for _, referencegrant := range objects.ReferenceGrants {
+		if err := referencegrantStore.Add(referencegrant); err != nil {
 			return nil, err
 		}
 	}
@@ -196,20 +196,20 @@ func NewFakeStore(
 	}
 	s = Store{
 		stores: CacheStores{
-			IngressV1beta1:  ingressV1beta1Store,
-			IngressV1:       ingressV1Store,
-			IngressClassV1:  ingressClassV1Store,
-			HTTPRoute:       httprouteStore,
-			UDPRoute:        udprouteStore,
-			TCPRoute:        tcprouteStore,
-			TLSRoute:        tlsrouteStore,
-			ReferencePolicy: referencepolicyStore,
-			Gateway:         gatewayStore,
-			TCPIngress:      tcpIngressStore,
-			UDPIngress:      udpIngressStore,
-			Service:         serviceStore,
-			Endpoint:        endpointStore,
-			Secret:          secretsStore,
+			IngressV1beta1: ingressV1beta1Store,
+			IngressV1:      ingressV1Store,
+			IngressClassV1: ingressClassV1Store,
+			HTTPRoute:      httprouteStore,
+			UDPRoute:       udprouteStore,
+			TCPRoute:       tcprouteStore,
+			TLSRoute:       tlsrouteStore,
+			ReferenceGrant: referencegrantStore,
+			Gateway:        gatewayStore,
+			TCPIngress:     tcpIngressStore,
+			UDPIngress:     udpIngressStore,
+			Service:        serviceStore,
+			Endpoint:       endpointStore,
+			Secret:         secretsStore,
 
 			Plugin:                         kongPluginsStore,
 			ClusterPlugin:                  kongClusterPluginsStore,

@@ -402,9 +402,9 @@ func TestTLSRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-// TestTLSRouteReferencePolicy tests cross-namespace certificate references. These are technically implemented within
+// TestTLSRouteReferenceGrant tests cross-namespace certificate references. These are technically implemented within
 // Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
-func TestTLSRouteReferencePolicy(t *testing.T) {
+func TestTLSRouteReferenceGrant(t *testing.T) {
 	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Log("locking TLS port")
 	tlsMutex.Lock()
@@ -497,8 +497,8 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 	cleaner.Add(gateway)
 
 	secret2Name := gatewayv1alpha2.ObjectName(secrets[1].Name)
-	t.Logf("creating a reference policy that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
-	policy := &gatewayv1alpha2.ReferencePolicy{
+	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
+	grant := &gatewayv1alpha2.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
@@ -521,9 +521,9 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 		},
 	}
 
-	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Create(ctx, policy, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(policy)
+	cleaner.Add(grant)
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
 	container := generators.NewContainer("tcpecho", test.TCPEchoImage, tcpEchoPort)
@@ -580,17 +580,17 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
 
-	t.Log("verifying that the tcpecho route can also serve certificates permitted by a ReferencePolicy with a named To")
+	t.Log("verifying that the tcpecho route can also serve certificates permitted by a ReferenceGrant with a named To")
 	require.Eventually(t, func() bool {
 		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
 			testUUID, tlsRouteExtraHostname, tlsRouteExtraHostname)
 		return err == nil && responded == true
 	}, ingressWait, waitTick)
 
-	t.Log("verifying that using the wrong name in the ReferencePolicy removes the related certificate")
+	t.Log("verifying that using the wrong name in the ReferenceGrant removes the related certificate")
 	badName := gatewayv1alpha2.ObjectName("garbage")
-	policy.Spec.To[0].Name = &badName
-	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	grant.Spec.To[0].Name = &badName
+	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -599,9 +599,9 @@ func TestTLSRouteReferencePolicy(t *testing.T) {
 		return err != nil && responded == false
 	}, ingressWait, waitTick)
 
-	t.Log("verifying the certificate returns when using a ReferencePolicy with no name restrictions")
-	policy.Spec.To[0].Name = nil
-	_, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
+	grant.Spec.To[0].Name = nil
+	_, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

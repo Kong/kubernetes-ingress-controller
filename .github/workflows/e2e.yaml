@@ -55,3 +55,11 @@ jobs:
         ISTIO_VERSION: ${{ matrix.istio_version }}
         NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
                 # multiple kind clusters within a single job, so only 1 is allowed at a time.
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-e2e-tests
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore

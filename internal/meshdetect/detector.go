@@ -184,7 +184,7 @@ func isPodSidecarInjected(meshKind MeshKind, pod *corev1.Pod) bool {
 	}
 	for _, container := range pod.Spec.Containers {
 		if container.Name == sidecarName {
-			switch meshKind { // nolint:exhaustive
+			switch meshKind { //nolint:exhaustive
 			case MeshKindAWSAppMesh:
 				// special judgement for AWS appmesh here:
 				// AWS appmesh uses `envoy` as sidecar name, which is a very common name.
@@ -217,8 +217,8 @@ func isPodInitContainerInjected(meshKind MeshKind, pod *corev1.Pod) bool {
 	return false
 }
 
-//  listAllSevices lists all services in all namespaces.
-//  returns slice if all services.
+// listAllSevices lists all services in all namespaces.
+// returns slice if all services.
 func (d *Detector) listAllSevices(ctx context.Context, pageSize int) ([]*corev1.Service, error) {
 	serviceList := []*corev1.Service{}
 	continueToken := ""
@@ -245,15 +245,17 @@ func (d *Detector) listAllSevices(ctx context.Context, pageSize int) ([]*corev1.
 
 // listAllEndpoints lists all endpoints in all namespaces.
 // returns map: namespaced name of endpoints -> endpoints resource
+//
 // example: client.ObjectKey{Namespace: "default", Name: "service1"} ->
-// &corev1.Endpoints{
-//		ObjectMeta: metav1.ObjectMeta {
-//			Namespace: "default",
-//			Name: "service1", ...
-// 		},
-//		Subsets: ...,
-//		...
-// }.
+//
+//	&corev1.Endpoints{
+//	   ObjectMeta: metav1.ObjectMeta {
+//	     Namespace: "default",
+//	     Name: "service1", ...
+//	   },
+//	   Subsets: ...,
+//	   ...
+//	}.
 func (d *Detector) listAllEndpoints(ctx context.Context, pageSize int) (
 	map[client.ObjectKey]*corev1.Endpoints, error,
 ) {
@@ -284,14 +286,15 @@ func (d *Detector) listAllEndpoints(ctx context.Context, pageSize int) (
 // listAllPods lists all pods in all namespaces.
 // returns map: namespaced name of pod -> pod resource
 // example: client.ObjectKey{Namespace: "default", Name: "pod1"} ->
-// &corev1.Pod{
-//		ObjectMeta: metav1.ObjectMeta {
-//			Namespace: "default",
-//			Name: "service1", ...
-// 		},
-//		Spec: ...,
-//		...
-// }.
+//
+//	&corev1.Pod{
+//			ObjectMeta: metav1.ObjectMeta {
+//				Namespace: "default",
+//				Name: "service1", ...
+//			},
+//			Spec: ...,
+//			...
+//	}.
 func (d *Detector) listAllPods(ctx context.Context, pageSize int) (
 	map[client.ObjectKey]*corev1.Pod, error,
 ) {

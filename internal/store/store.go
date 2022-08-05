@@ -1014,8 +1014,8 @@ func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*netv1beta1.Ingress, e
 // for caller convenience when initializing new CacheStores objects.
 //
 // TODO: upon some searching I didn't find an analog to this over in client-go (https://github.com/kubernetes/client-go)
-//       however I could have just missed it. We should switch if we find something better, OR we should contribute
-//       this functionality upstream.
+// however I could have just missed it. We should switch if we find something better, OR we should contribute
+// this functionality upstream.
 func convUnstructuredObj(from, to runtime.Object) error {
 	b, err := yaml.Marshal(from)
 	if err != nil {

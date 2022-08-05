@@ -405,9 +405,9 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 		log.WithError(err).Error("failed to list Gateways")
 		return certs
 	}
-	policies, err := s.ListReferencePolicies()
+	grants, err := s.ListReferenceGrants()
 	if err != nil {
-		log.WithError(err).Error("failed to list ReferencePolicies")
+		log.WithError(err).Error("failed to list ReferenceGrants")
 		return certs
 	}
 	for _, gateway := range gateways {
@@ -457,7 +457,7 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 						}
 					}
 
-					// determine the Secret Namespace and validate against ReferencePolicy if needed
+					// determine the Secret Namespace and validate against ReferenceGrant if needed
 					namespace := gateway.Namespace
 					if ref.Namespace != nil {
 						namespace = string(*ref.Namespace)
@@ -467,15 +467,15 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 							Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
 							Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
 							Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
-						}, policies)
-						if !isRefAllowedByPolicy(ref.Namespace, ref.Name, ref.Group, ref.Kind, allowed) {
+						}, grants)
+						if !isRefAllowedByGrant(ref.Namespace, ref.Name, ref.Group, ref.Kind, allowed) {
 							log.WithFields(logrus.Fields{
 								"gateway":           gateway.Name,
 								"gateway_namespace": gateway.Namespace,
 								"listener":          listener.Name,
 								"secret_name":       string(ref.Name),
 								"secret_namespace":  namespace,
-							}).WithError(err).Error("secret reference not allowed by ReferencePolicy")
+							}).WithError(err).Error("secret reference not allowed by ReferenceGrant")
 							continue
 						}
 					}

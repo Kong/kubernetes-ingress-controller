@@ -298,12 +298,12 @@ func setupControllers(
 				GVR: schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "referencepolicies",
+					Resource: "referencegrants",
 				},
 			}.CRDExists,
-			Controller: &gateway.ReferencePolicyReconciler{
+			Controller: &gateway.ReferenceGrantReconciler{
 				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("ReferencePolicy"),
+				Log:             ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
 				Scheme:          mgr.GetScheme(),
 				DataplaneClient: dataplaneClient,
 			},

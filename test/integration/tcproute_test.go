@@ -371,7 +371,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-func TestTCPRouteReferencePolicy(t *testing.T) {
+func TestTCPRouteReferenceGrant(t *testing.T) {
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	defer func() {
@@ -526,7 +526,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		}
 	}()
 
-	t.Log("verifying that only the local tcpecho is responding without a ReferencePolicy")
+	t.Log("verifying that only the local tcpecho is responding without a ReferenceGrant")
 	require.Eventually(t, func() bool {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return err == nil && responded == true
@@ -536,8 +536,8 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		return err == nil && responded == true
 	}, time.Second*10, time.Second)
 
-	t.Logf("creating a reference policy that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
-	policy := &gatewayv1alpha2.ReferencePolicy{
+	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
+	grant := &gatewayv1alpha2.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
@@ -570,7 +570,7 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 		},
 	}
 
-	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Create(ctx, policy, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying that requests reach both the local and remote namespace echo instances")
@@ -585,13 +585,13 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 
 	t.Logf("testing specific name references")
 	serviceName := gatewayv1alpha2.ObjectName(service2.ObjectMeta.Name)
-	policy.Spec.To[1] = gatewayv1alpha2.ReferenceGrantTo{
+	grant.Spec.To[1] = gatewayv1alpha2.ReferenceGrantTo{
 		Kind:  gatewayv1alpha2.Kind("Service"),
 		Group: gatewayv1alpha2.Group(""),
 		Name:  &serviceName,
 	}
 
-	policy, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -601,8 +601,8 @@ func TestTCPRouteReferencePolicy(t *testing.T) {
 
 	t.Logf("testing incorrect name does not match")
 	blueguyName := gatewayv1alpha2.ObjectName("blueguy")
-	policy.Spec.To[1].Name = &blueguyName
-	_, err = gatewayClient.GatewayV1alpha2().ReferencePolicies(otherNs.Name).Update(ctx, policy, metav1.UpdateOptions{})
+	grant.Spec.To[1].Name = &blueguyName
+	_, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

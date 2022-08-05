@@ -1334,29 +1334,17 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - referencepolicies
+  - referencegrants
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - referencepolicies/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - referencepolicies/status
+  - referencegrants/status
   verbs:
   - get
-  - patch
-  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:

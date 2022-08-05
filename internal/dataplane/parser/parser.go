@@ -782,9 +782,9 @@ func getEndpoints(
 // for a service given a corev1.Service object.
 //
 // TODO: due to historical logic this function defaults to assuming TCP protocol
-//       is valid for the Service and its endpoints, however we need to follow up
-//       on this as this is not technically correct and causes waste.
-//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1429
+// is valid for the Service and its endpoints, however we need to follow up
+// on this as this is not technically correct and causes waste.
+// See: https://github.com/Kong/kubernetes-ingress-controller/issues/1429
 func listProtocols(svc *corev1.Service) map[corev1.Protocol]bool {
 	protocols := map[corev1.Protocol]bool{corev1.ProtocolTCP: true}
 	for _, port := range svc.Spec.Ports {

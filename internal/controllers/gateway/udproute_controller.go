@@ -170,17 +170,18 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(obj client.Object) []r
 // implementation effectively does a map reduce to determine inclusion. This relies heavily
 // on the inherent performance benefits of the cached manager client to avoid API overhead.
 //
-// NOTE: due to a race condition where a Gateway and a GatewayClass may be updated at the
-//       same time and could cause a changed Gateway object to look like it wasn't in-class
-//       while in reality it may still have active data-plane configurations because it was
-//       recently in-class, we can't reliably filter Gateway objects based on class as we
-//       can't verify that didn't change since we received the object. As such the current
-//       implementation enqueues ALL UDPRoute objects for reconciliation every time a Gateway
-//       changes. This is not ideal, but after communicating with other members of the
-//       community this appears to be a standard approach across multiple implementations at
-//       the moment for v1alpha2. As future releases of Gateway come out we'll need to
-//       continue iterating on this and perhaps advocating for upstream changes to help avoid
-//       this kind of problem without having to enqueue extra objects.
+// NOTE:
+// due to a race condition where a Gateway and a GatewayClass may be updated at the
+// same time and could cause a changed Gateway object to look like it wasn't in-class
+// while in reality it may still have active data-plane configurations because it was
+// recently in-class, we can't reliably filter Gateway objects based on class as we
+// can't verify that didn't change since we received the object. As such the current
+// implementation enqueues ALL UDPRoute objects for reconciliation every time a Gateway
+// changes. This is not ideal, but after communicating with other members of the
+// community this appears to be a standard approach across multiple implementations at
+// the moment for v1alpha2. As future releases of Gateway come out we'll need to
+// continue iterating on this and perhaps advocating for upstream changes to help avoid
+// this kind of problem without having to enqueue extra objects.
 func (r *UDPRouteReconciler) listUDPRoutesForGateway(obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayv1alpha2.Gateway)

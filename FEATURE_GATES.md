@@ -57,6 +57,13 @@ Features that reach GA and over time become stable will be removed from this tab
 | Feature                | Default | Stage | Since | Until |
 |------------------------|---------|-------|-------|-------|
 | Knative                | `true`  | Alpha | 0.8.0 | TBD   |
-| Gateway                | `false` | Alpha | 2.2.0 | TBD   |
+| Gateway                | `true`  | Beta  | 2.2.0 | TBD   |
 | CombinedRoutes         | `false` | Alpha | 2.4.0 | TBD   |
 | IngressClassParameters | `false` | Alpha | 2.6.0 | TBD   |
+| GatewayAlpha           | `false` | Alpha | 2.6.0 | TBD   |
+
+**NOTE**: The `Gateway` feature gate refers to [Gateway
+ API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in
+ `v1beta1` or later. `GatewayAlpha` refers to APIs which are still in alpha.
+ These are separated to make a clear distinction in the support stage for these
+ APIs.

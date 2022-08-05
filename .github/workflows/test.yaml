@@ -309,7 +309,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.dbless
       env:
-        KONG_CONTROLLER_FEATURE_GATES: "Gateway=true,CombinedRoutes=true"
+        KONG_CONTROLLER_FEATURE_GATES: "GatewayAlpha=true,CombinedRoutes=true"
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3

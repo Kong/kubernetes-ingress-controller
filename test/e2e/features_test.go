@@ -305,7 +305,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "Gateway=true"})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
 		}
 	}
 

@@ -24,10 +24,10 @@ func TestFeatureGates(t *testing.T) {
 	assert.Len(t, fgs, len(getFeatureGatesDefaults()))
 
 	t.Log("verifying feature gates setup results when valid feature gates options are present")
-	config.FeatureGates = map[string]bool{knativeFeature: true}
+	config.FeatureGates = map[string]bool{gatewayFeature: true}
 	fgs, err = setupFeatureGates(setupLog, config)
 	assert.NoError(t, err)
-	assert.True(t, fgs[knativeFeature])
+	assert.True(t, fgs[gatewayFeature])
 
 	t.Log("configuring several invalid feature gates options")
 	config.FeatureGates = map[string]bool{"invalidGateway": true}

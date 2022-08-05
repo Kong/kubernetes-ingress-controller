@@ -193,7 +193,7 @@ PKG_LIST = ./pkg/...,./internal/...
 KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
-KONG_CONTROLLER_FEATURE_GATES ?= Gateway=true
+KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 GOTESTFMT_CMD ?= gotestfmt -hide successful-downloads,empty-packages -showteststatus
 
 .PHONY: test

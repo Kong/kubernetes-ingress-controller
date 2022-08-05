@@ -66,7 +66,7 @@ func TestMain(m *testing.M) {
 		"--dump-config",
 		"--log-level=trace",
 		"--debug-log-reduce-redundancy",
-		"--feature-gates=Gateway=true",
+		"--feature-gates=GatewayAlpha=true",
 		fmt.Sprintf("--kong-admin-url=%s", admin.String()),
 	}
 	exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), args...))

@@ -17,6 +17,10 @@ const (
 	// gatewayFeature is the name of the feature-gate for enabling/disabling Gateway APIs.
 	gatewayFeature = "Gateway"
 
+	// gatewayAlphaFeature is the name of the feature-gate for enabling or
+	// disabling the Alpha maturity APIs and relevant features for Gateway API.
+	gatewayAlphaFeature = "GatewayAlpha"
+
 	// combinedRoutesFeature is the name of the feature-gate for the newer object
 	// translation logic that will combine routes for kong services when translating
 	// objects like Ingress instead of creating a route per path.
@@ -56,7 +60,8 @@ func setupFeatureGates(setupLog logr.Logger, c *Config) (map[string]bool, error)
 func getFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
 		knativeFeature:                false,
-		gatewayFeature:                false,
+		gatewayFeature:                true,
+		gatewayAlphaFeature:           false,
 		combinedRoutesFeature:         false,
 		ingressClassParametersFeature: false,
 	}

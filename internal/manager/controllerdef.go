@@ -254,7 +254,7 @@ func setupControllers(
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: featureGates[gatewayFeature] || c.KnativeIngressEnabled,
+			Enabled: featureGates[knativeFeature] || c.KnativeIngressEnabled,
 			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
 				Group:    knativev1alpha1.SchemeGroupVersion.Group,
 				Version:  knativev1alpha1.SchemeGroupVersion.Version,
@@ -272,7 +272,7 @@ func setupControllers(
 			},
 		},
 		// ---------------------------------------------------------------------------
-		// GatewayAPI Controllers
+		// Gateway API Controllers - Beta APIs
 		// ---------------------------------------------------------------------------
 		{
 			Enabled: featureGates[gatewayFeature],
@@ -298,6 +298,25 @@ func setupControllers(
 				GVR: schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Resource: "httproutes",
+				},
+			}.CRDExists,
+			Controller: &gateway.HTTPRouteReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
+			},
+		},
+		// ---------------------------------------------------------------------------
+		// Gateway API Controllers - Alpha APIs
+		// ---------------------------------------------------------------------------
+		{
+			Enabled: featureGates[gatewayAlphaFeature],
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 					Resource: "referencegrants",
 				},
 			}.CRDExists,
@@ -309,23 +328,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature],
-			AutoHandler: crdExistsChecker{
-				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "httproutes",
-				},
-			}.CRDExists,
-			Controller: &gateway.HTTPRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
-			},
-		},
-		{
-			Enabled: featureGates[gatewayFeature],
+			Enabled: featureGates[gatewayAlphaFeature],
 			AutoHandler: crdExistsChecker{
 				GVR: schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
@@ -341,7 +344,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature],
+			Enabled: featureGates[gatewayAlphaFeature],
 			AutoHandler: crdExistsChecker{
 				GVR: schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
@@ -357,7 +360,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature],
+			Enabled: featureGates[gatewayAlphaFeature],
 			AutoHandler: crdExistsChecker{
 				GVR: schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,

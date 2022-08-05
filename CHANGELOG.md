@@ -63,6 +63,14 @@
   resources, allowing non-admin users to apply these manifests (minus the
   Gateway API role) on clusters without Gateway API CRDs installed.
   [#2529](https://github.com/Kong/kubernetes-ingress-controller/issues/2529)
+- Gateway API support which had previously been off by default behind a feature
+  gate (`--feature-gates=Gateway=true`) is now **on by default** and covers beta
+  stage APIs (`GatewayClass`, `Gateway`, and `HTTPRoute`). Alpha stage APIs
+  (`TCPRoute`, `UDPRoute`, `TLSRoute`, `ReferenceGrant`) have been moved behind
+  a different feature gate called `GatewayAlpha` and are off by default. When
+  upgrading if you're using the alpha APIs, switch your feature gate flags to
+  `--feature-gates=GatewayAlpha=true` to keep them enabled.
+  [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
 
 #### Fixed
 
@@ -73,6 +81,13 @@
   [#2724](https://github.com/Kong/kubernetes-ingress-controller/pull/2724)
 - ReferencePolicy support has been dropped in favor of the newer ReferenceGrant API.
   [#2775](https://github.com/Kong/kubernetes-ingress-controller/pull/2772)
+  Fixed a bug that cased the `Knative` feature gate to not be checked. Since our
+  knative integration is on by default and because it gets very little usage
+  this likely did not cause any troubles for anyone as all fixing this will do
+  is make it possible to disable the knative controller using the feature gate.
+  (it is also possible to control it via the `--enable-controller-knativeingress`
+  which was working properly).
+  [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
 
 ## [2.5.0]
 

@@ -100,7 +100,7 @@ const (
 	// provided if none are provided by the user. This generally includes features
 	// that are innocuous, or otherwise don't actually get triggered unless the
 	// user takes further action.
-	defaultFeatureGates = "Gateway=true"
+	defaultFeatureGates = "GatewayAlpha=true"
 )
 
 // -----------------------------------------------------------------------------

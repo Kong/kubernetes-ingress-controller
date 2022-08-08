@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -308,25 +307,6 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
 			assert.NoError(t, err, "failed to dump diagnostics")
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			// print pod logs of KIC pods to debug when running in CI.
-			podLogDir := output + "/pod_logs"
-			logFiles, err := os.ReadDir(podLogDir)
-			assert.NoError(t, err, "failed to list files in pod log directory")
-			for _, logFile := range logFiles {
-				// print the log file if the pod belongs to KIC deployment
-				// by the pod name and namespace on the filename of log file.
-				if !strings.Contains(logFile.Name(), deployment.Namespace+"_"+deployment.Name) {
-					continue
-				}
-				if logFile.IsDir() {
-					continue
-				}
-
-				podLogContent, err := os.ReadFile(podLogDir + "/" + logFile.Name())
-				assert.NoErrorf(t, err, "failed to read logs in file %s", logFile.Name())
-				// replace the separator in filename `_` to `/`.
-				t.Logf("logs of pod %s:\n%s", strings.Replace(logFile.Name(), "_", "/", 1), string(podLogContent))
-			}
 		}
 	}()
 
@@ -400,6 +380,11 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 		podList, err = env.Cluster().Client().CoreV1().Pods(initialPod.Namespace).List(ctx, forDeployment)
 		require.NoError(t, err)
 		podNum := 0
+		// we wait for the number of running pod excluding the initial one to be 2
+		// since the replicas is set to 2 in the deployment.
+		// So if there are exactly 2 running pods except the initial pod, we can know
+		// that the new pod is recreated and up after the initial one is deleted,
+		// and the status of deployment runs into a stable state.
 		for _, pod := range podList.Items {
 			if pod.Name != initialPod.Name && pod.Status.Phase == corev1.PodRunning {
 				podNum++
@@ -430,7 +415,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 			t.Logf("rebuilt pod %s is the leader at %v", rebuiltPod.Name, time.Now())
 			leaderCount++
 		}
-		t.Logf("%d/1 leader found", leaderCount)
+		t.Logf("expected exactly one leader, actual %d", leaderCount)
 		return leaderCount == 1
 	}, time.Minute, time.Second)
 }

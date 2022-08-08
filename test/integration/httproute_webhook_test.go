@@ -44,8 +44,6 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 		assert.NoError(t, closer())
 	}()
 
-	waitForWebhookService(t)
-
 	t.Log("creating a gateway client ")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -70,6 +68,10 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 	})
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGateway)
+
+	t.Log("waiting for webhook service to be connective")
+	err = waitForWebhookServiceConnective(ctx, "kong-validations-gateway")
+	require.NoError(t, err)
 
 	for _, tt := range []struct {
 		name                   string

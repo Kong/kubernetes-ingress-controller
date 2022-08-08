@@ -4,8 +4,8 @@
 package integration
 
 import (
+	"context"
 	"fmt"
-	"net"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
@@ -82,7 +83,8 @@ func TestValidationWebhook(t *testing.T) {
 		assert.NoError(t, closer())
 	}()
 
-	waitForWebhookService(t)
+	err = waitForWebhookServiceConnective(ctx, "kong-validations-consumer")
+	require.NoError(t, err)
 
 	t.Log("creating a large number of consumers on the cluster to verify the performance of the cached client during validation")
 	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
@@ -668,11 +670,13 @@ func ensureWebhookService(name string) (func() error, error) {
 	return closer, nil
 }
 
-func waitForWebhookService(t *testing.T) {
-	require.Eventually(t, func() bool {
-		_, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort), 1*time.Second)
-		return err == nil
-	}, ingressWait, waitTick, "waiting for the admission service to be up")
+func waitForWebhookServiceConnective(ctx context.Context, configResourceName string) error {
+	svcName := fmt.Sprintf("webhook-%s", configResourceName)
+	svcPort := 443
+	waitCtx, cancel := context.WithTimeout(ctx, ingressWait)
+	defer cancel()
+
+	return networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), controllerNamespace, svcName, svcPort, 10*time.Second)
 }
 
 func ensureAdmissionRegistration(configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {

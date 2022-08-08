@@ -371,7 +371,7 @@ func getListenerStatus(
 					break
 				}
 				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
-				if certRef.Namespace == nil {
+				if certRef.Namespace == nil || *certRef.Namespace == gatewayv1alpha2.Namespace(gateway.Namespace) {
 					continue
 				}
 				// get the result of the certificate reference. If the returned reason is not successful, the loop
@@ -390,8 +390,10 @@ func getListenerStatus(
 		// the outcome of that reference (that means if the gateway is granted to access that secret)
 		if resolvedRefReason != "" {
 			conditionStatus := metav1.ConditionTrue
+			message := "the listener is ready and available for routing"
 			if resolvedRefReason != string(gatewayv1alpha2.ListenerReasonResolvedRefs) {
 				conditionStatus = metav1.ConditionFalse
+				message = "the listener is not ready and cannot route requests"
 			}
 			newConditions = append(newConditions,
 				metav1.Condition{
@@ -407,7 +409,7 @@ func getListenerStatus(
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
 					Reason:             string(gatewayv1alpha2.ListenerReasonReady),
-					Message:            "the listener is not ready and cannot route requests",
+					Message:            message,
 				},
 			)
 		}

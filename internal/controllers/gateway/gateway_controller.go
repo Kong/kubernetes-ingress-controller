@@ -342,6 +342,13 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, nil // dont requeue here because spec update will trigger new reconciliation
 	}
 
+	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
+	// TLS secrets they are granted for
+	referenceGrantList := &gatewayv1alpha2.ReferenceGrantList{}
+	if err := r.Client.List(ctx, referenceGrantList); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2559 check cross-Gateway compatibility
 	// When all Listeners on all Gateways were derived from Kong's configuration, they were guaranteed to be compatible
 	// because they were all identical, though there may have been some ambiguity re de facto merged Gateways that
@@ -349,7 +356,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// a single set of shared listens. We lack knowledge of whether this is compatible with user intent, and it may
 	// be incompatible with the spec, so we should consider evaluating cross-Gateway compatibility and raising error
 	// conditions in the event of a problem
-	listenerStatuses := getListenerStatus(gateway, kongListeners)
+	listenerStatuses := getListenerStatus(gateway, kongListeners, referenceGrantList.Items)
 
 	// once specification matches the reference Service, all that's left to do is ensure that the
 	// Gateway status reflects the spec. As the status is simply a mirror of the Service, this is

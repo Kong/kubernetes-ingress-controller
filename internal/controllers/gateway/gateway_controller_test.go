@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -403,5 +404,138 @@ func Test_areAllowedRoutesConsistentByProtocol(t *testing.T) {
 	}
 	for _, input := range inputs {
 		assert.Equal(t, input.expected, areAllowedRoutesConsistentByProtocol(input.l), input.message)
+	}
+}
+
+func Test_getReferenceGrantConditionReason(t *testing.T) {
+	testCases := []struct {
+		name             string
+		gatewayNamespace string
+		certRef          gatewayv1alpha2.SecretObjectReference
+		referenceGrants  []gatewayv1alpha2.ReferenceGrant
+		expectedReason   string
+	}{
+		{
+			name:             "no need for reference",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind: (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Name: "testSecret",
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+		},
+		{
+			name:             "reference not granted",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind:      (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Name:      "testSecret",
+				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+			},
+			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "otherNamespace",
+					},
+					Spec: gatewayv1alpha2.ReferenceGrantSpec{
+						From: []gatewayv1alpha2.ReferenceGrantFrom{
+							{
+								Group:     gatewayV1alpha2Group,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []gatewayv1alpha2.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Secret",
+								Name:  (*gatewayv1alpha2.ObjectName)(pointer.StringPtr("anotherSecret")),
+							},
+						},
+					},
+				},
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef),
+		},
+		{
+			name:             "reference granted, secret name not specified",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind:      (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Name:      "testSecret",
+				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+			},
+			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "otherNamespace",
+					},
+					Spec: gatewayv1alpha2.ReferenceGrantSpec{
+						From: []gatewayv1alpha2.ReferenceGrantFrom{
+							// useless entry, just to furtherly test the function
+							{
+								Group:     "otherGroup",
+								Kind:      "otherKind",
+								Namespace: "test",
+							},
+							// good entry
+							{
+								Group:     gatewayV1alpha2Group,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []gatewayv1alpha2.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Secret",
+							},
+						},
+					},
+				},
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+		},
+		{
+			name:             "reference granted, secret name specified",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind:      (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Name:      "testSecret",
+				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+			},
+			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "otherNamespace",
+					},
+					Spec: gatewayv1alpha2.ReferenceGrantSpec{
+						From: []gatewayv1alpha2.ReferenceGrantFrom{
+							{
+								Group:     gatewayV1alpha2Group,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []gatewayv1alpha2.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Secret",
+								Name:  (*gatewayv1alpha2.ObjectName)(pointer.StringPtr("testSecret")),
+							},
+						},
+					},
+				},
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+		},
+	}
+
+	for _, tc := range testCases {
+		assert.Equal(t, tc.expectedReason, getReferenceGrantConditionReason(
+			tc.gatewayNamespace,
+			tc.certRef,
+			tc.referenceGrants,
+		))
 	}
 }

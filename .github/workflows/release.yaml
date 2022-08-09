@@ -193,10 +193,10 @@ jobs:
         uses: ./.github/actions/redhat-opdev-preflight-action
         with:
           image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}:${{ steps.meta_redhat_scan_registry.outputs.version }}
-          username: ${{ secrets.RH_USERNAME }}
-          password: ${{ secrets.RH_TOKEN }}
-          apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
-          projectid: ${{ secrets.RH_PROJECT_ID }}      
+          username: "${{ secrets.RH_USERNAME }}"
+          password: "${{ secrets.RH_TOKEN }}"
+          apitoken: "${{ secrets.RH_PYXIS_TOKEN }}"
+          projectid: "${{ secrets.RH_PROJECT_ID }}"     
 
   test-current-kubernetes:
     runs-on: ubuntu-latest

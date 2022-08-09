@@ -4,4 +4,4 @@ RUN apk add bash
 
 COPY entrypoint.sh /entrypoint.sh
 
-ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "-x", "/entrypoint.sh"]

@@ -301,14 +301,15 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// on the object is ready to begin.
 	info(log, gateway, "marking gateway as scheduled")
 	if !isGatewayScheduled(gateway) {
-		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
+		scheduledCondition := metav1.Condition{
 			Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
 			Reason:             string(gatewayv1alpha2.GatewayReasonScheduled),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
-		})
+		}
+		setGatewayCondition(gateway, scheduledCondition)
 		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 
@@ -570,14 +571,15 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	if !isGatewayReady(gateway) {
 		gateway.Status.Listeners = listenerStatuses
 		gateway.Status.Addresses = gateway.Spec.Addresses
-		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{
+		readyCondition := metav1.Condition{
 			Type:               string(gatewayv1alpha2.GatewayConditionReady),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
 			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
 			Message:            "addresses and listeners for the Gateway resource were successfully updated",
-		})
+		}
+		setGatewayCondition(gateway, readyCondition)
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 	return false, nil

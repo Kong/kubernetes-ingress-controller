@@ -90,14 +90,15 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		if !alreadyAccepted {
-			gwc.Status.Conditions = append(gwc.Status.Conditions, metav1.Condition{
+			acceptedCondtion := metav1.Condition{
 				Type:               string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: gwc.Generation,
 				LastTransitionTime: metav1.Now(),
 				Reason:             string(gatewayv1alpha2.GatewayClassReasonAccepted),
 				Message:            "the gatewayclass has been accepted by the controller",
-			})
+			}
+			setGatewayClassCondition(gwc, acceptedCondtion)
 			return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayClassStatusConds(gwc))
 		}
 	}
@@ -117,4 +118,19 @@ func pruneGatewayClassStatusConds(gwc *gatewayv1alpha2.GatewayClass) *gatewayv1a
 		gwc.Status.Conditions = gwc.Status.Conditions[len(gwc.Status.Conditions)-maxConds:]
 	}
 	return gwc
+}
+
+// setGatewayClassCondition sets the condition with specified type in gatewayclass status
+// to expected condition in newCondition.
+// if the gatewayclass status does not contain a condition with that type, add one more condition.
+// if the gatewayclass status contains condition(s) with the type, then replace with the new condition.
+func setGatewayClassCondition(gwc *gatewayv1alpha2.GatewayClass, newCondition metav1.Condition) {
+	newConditions := []metav1.Condition{}
+	for _, condition := range gwc.Status.Conditions {
+		if condition.Type != newCondition.Type {
+			newConditions = append(newConditions, condition)
+		}
+	}
+	newConditions = append(newConditions, newCondition)
+	gwc.Status.Conditions = newConditions
 }

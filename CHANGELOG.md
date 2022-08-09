@@ -83,7 +83,7 @@
   [#2724](https://github.com/Kong/kubernetes-ingress-controller/pull/2724)
 - ReferencePolicy support has been dropped in favor of the newer ReferenceGrant API.
   [#2775](https://github.com/Kong/kubernetes-ingress-controller/pull/2772)
-  Fixed a bug that cased the `Knative` feature gate to not be checked. Since our
+- Fixed a bug that caused the `Knative` feature gate to not be checked. Since our
   knative integration is on by default and because it gets very little usage
   this likely did not cause any troubles for anyone as all fixing this will do
   is make it possible to disable the knative controller using the feature gate.

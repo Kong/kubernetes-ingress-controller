@@ -13,8 +13,6 @@ jobs:
   build-push-images:
     environment: 'Docker Push'
     runs-on: ubuntu-latest
-    outputs:
-      redhat_scan_tag: ${{ steps.redhat_scan_tag.outputs.tag }}
     steps:
       - name: Add standard tags
         run: |
@@ -58,10 +56,14 @@ jobs:
           flavor: |
             latest=false
           tags: ${{ env.REDHAT_STANDARD }}
-      - name: Set tag for RedHat Scan Registry
-        id: redhat_scan_tag
-        run: |
-          echo "::set-output name=tag::${{ steps.meta_redhat.outputs.tags }}"
+      - name: Docker meta (redhat scan registry)
+        id: meta_redhat_scan_registry
+        uses: docker/metadata-action@v4.0.1
+        with:
+          images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
         id: docker_build_binary
         uses: docker/build-push-action@v3
@@ -90,7 +92,7 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-      - name: Build and push Red Hat
+      - name: Build and push Red Hat image
         id: docker_build_redhat
         env:
           TAG: ${{ steps.meta.outputs.version }}
@@ -106,45 +108,32 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-  rh-scan-registry:
-    runs-on: ubuntu-latest
-    needs: build-push-images
-    steps: 
-      - name: Login to RedHat Scan Registry
-        uses: docker/login-action@v2
+      - name: Build and push Red Hat Scan Registry image
+        id: docker_build_redhat_scan_registry
+        env:
+          TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}
+        uses: docker/build-push-action@v3.1.1
         with:
-          registry: scan.connect.redhat.com
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta_redhat_scan_registry.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: redhat
+          # RedHat scan registry does not support multiarch images
+          platforms: linux/amd64
+          build-args: |
+            TAG=${{ steps.meta_redhat_scan_registry.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Run Red Hat Certification Preflight scan
+        uses: .github/actions/redhat-opdev-preflight-action
+        with:
+          image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}:${{ steps.meta_redhat_scan_registry.outputs.version }}
           username: ${{ secrets.RH_USERNAME }}
           password: ${{ secrets.RH_TOKEN }}
-      - name: Docker meta (redhat scan registry)
-        id: meta_redhat_scan_registry
-        uses: docker/metadata-action@v4.0.1
-        with:
-          images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}
-          flavor: |
-            latest=false
-          tags: ${{ env.REDHAT_STANDARD }}
-      - name: Setup preflight
-        run: |
-          echo "DOCKER_HOME=$HOME/.docker/" >> $GITHUB_ENV
-          echo "SRC_RH_IMAGE_TAG=${{ needs.build-push-images.outputs.redhat_scan_tag }}" >> $GITHUB_ENV
-          echo "DST_RH_IMAGE_TAG=${{ steps.meta_redhat_scan_registry.outputs.redhat_scan_tag }}" >> $GITHUB_ENV
-      - name: Push Image to RedHat Scan Registry
-        uses: akhilerm/tag-push-action@v2.0.0
-        with:
-          src: ${{ env.SRC_RH_IMAGE_TAG }}
-          dst: ${{ env.DST_RH_IMAGE_TAG }}
-      - name: Run preflight
-        uses: addnab/docker-run-action@v3
-        with:
-          image: quay.io/opdev/preflight:stable
-          options: -v ${{ env.DOCKER_HOME }}:/docker
-          run: |
-            /usr/local/bin/preflight check container ${{ env.DST_RH_IMAGE_TAG }} \
-              --docker-config=/docker/config.json \
-              --submit \
-              --pyxis-api-token=${{ secrets.RH_PYXIS_TOKEN }} \
-              --certification-project-id=${{ secrets.RH_PROJECT_ID }}
+          apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
+          projectid: ${{ secrets.RH_PROJECT_ID }}   
+  
   # run integration test in latest version of kubernetes.
   test-current-kubernetes:
     runs-on: ubuntu-latest

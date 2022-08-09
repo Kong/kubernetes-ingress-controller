@@ -7,7 +7,7 @@ on:
 
 env:
   RH_SCAN_REGISTRY: scan.connect.redhat.com
-  RH_SCAN_REGISTRY_IMAGE_NAME: ${{ secret.RH_PROJECT_ID }}/nightly-ingress-controller
+  RH_SCAN_REGISTRY_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/nightly-ingress-controller
 
 jobs:
   build-push-images:

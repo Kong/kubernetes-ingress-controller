@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v2
 
-go 1.18
+go 1.19
 
 replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
 

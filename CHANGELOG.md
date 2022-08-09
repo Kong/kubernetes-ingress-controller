@@ -92,7 +92,9 @@
   [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
 - Treat status conditions in `Gateway` and `GatewayClass` as snapshots, replace
   existing conditions with same type on setting conditions.
-  [#2791](https://github.com/Kong/kubernetes-ingress-controller/pull/2791) 
+  [#2791](https://github.com/Kong/kubernetes-ingress-controller/pull/2791)
+- Update Listener statuses whenever they change, not just on Gateway creation.
+  [#2797](https://github.com/Kong/kubernetes-ingress-controller/pull/2797)
 
 #### Under the hood
 

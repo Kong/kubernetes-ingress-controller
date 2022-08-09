@@ -582,6 +582,10 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 		setGatewayCondition(gateway, readyCondition)
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
+	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {
+		gateway.Status.Listeners = listenerStatuses
+		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+	}
 	return false, nil
 }
 

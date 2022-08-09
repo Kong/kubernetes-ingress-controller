@@ -146,7 +146,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v3
         with:
-          push: true
+          push: false
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -162,7 +162,7 @@ jobs:
           TAG: ${{ steps.meta_redhat.outputs.version }}
         uses: docker/build-push-action@v3
         with:
-          push: true
+          push: false
           file: Dockerfile
           tags: ${{ steps.meta_redhat.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -266,28 +266,28 @@ jobs:
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
-  publish-release:
-    runs-on: ubuntu-latest
-    needs: [build-push-images, test-current-kubernetes, test-previous-kubernetes]
-    steps:
-    - name: Parse semver string
-      id: semver_parser
-      uses: booxmedialtd/ws-action-parse-semver@v1
-      with:
-        input_string: ${{ github.event.inputs.tag }}
-        version_extractor_regex: 'v(.*)$'
-    - uses: ncipollo/release-action@v1
-      with:
-        body: |
-          #### Download Kong Ingress Controller ${{ steps.semver_parser.outputs.fullversion }}:
+  # publish-release:
+  #   runs-on: ubuntu-latest
+  #   needs: [build-push-images, test-current-kubernetes, test-previous-kubernetes]
+  #   steps:
+  #   - name: Parse semver string
+  #     id: semver_parser
+  #     uses: booxmedialtd/ws-action-parse-semver@v1
+  #     with:
+  #       input_string: ${{ github.event.inputs.tag }}
+  #       version_extractor_regex: 'v(.*)$'
+  #   - uses: ncipollo/release-action@v1
+  #     with:
+  #       body: |
+  #         #### Download Kong Ingress Controller ${{ steps.semver_parser.outputs.fullversion }}:
 
-          - [Docker Image](https://hub.docker.com/repository/docker/kong/kubernetes-ingress-controller)
-          - [Get started](https://github.com/Kong/kubernetes-ingress-controller#get-started)
+  #         - [Docker Image](https://hub.docker.com/repository/docker/kong/kubernetes-ingress-controller)
+  #         - [Get started](https://github.com/Kong/kubernetes-ingress-controller#get-started)
           
-          #### Links:
+  #         #### Links:
           
-          - [Changelog](https://github.com/Kong/kubernetes-ingress-controller/blob/main/CHANGELOG.md#${{ steps.semver_parser.outputs.major }}${{ steps.semver_parser.outputs.minor }}${{ steps.semver_parser.outputs.patch }})
+  #         - [Changelog](https://github.com/Kong/kubernetes-ingress-controller/blob/main/CHANGELOG.md#${{ steps.semver_parser.outputs.major }}${{ steps.semver_parser.outputs.minor }}${{ steps.semver_parser.outputs.patch }})
 
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ github.event.inputs.tag }}
-        commit: ${{ github.sha }}
+  #       token: ${{ secrets.GITHUB_TOKEN }}
+  #       tag: ${{ github.event.inputs.tag }}
+  #       commit: ${{ github.sha }}

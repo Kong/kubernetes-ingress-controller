@@ -5,6 +5,7 @@ on:
     - cron: '30 3 * * *'
   workflow_dispatch: {}
 
+
 env:
   RH_SCAN_REGISTRY: scan.connect.redhat.com
   RH_SCAN_REGISTRY_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/nightly-ingress-controller
@@ -82,7 +83,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v3
         with:
-          push: true
+          push: false
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -98,7 +99,7 @@ jobs:
           TAG: ${{ steps.meta.outputs.version }}
         uses: docker/build-push-action@v3
         with:
-          push: true
+          push: false
           file: Dockerfile
           tags: ${{ steps.meta_redhat.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache

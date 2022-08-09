@@ -91,6 +91,11 @@
   which was working properly).
   [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
 
+#### Under the hood
+
+- Updated the compiler to [Go v1.19](https://golang.org/doc/go1.19)
+  [#2794](https://github.com/Kong/kubernetes-ingress-controller/issues/2794)
+
 ## [2.5.0]
 
 > Release date: 2022-07-11

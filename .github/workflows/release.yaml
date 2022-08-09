@@ -190,7 +190,7 @@ jobs:
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Run Red Hat Certification Preflight scan
-        uses: .github/actions/redhat-opdev-preflight-action
+        uses: ./.github/actions/redhat-opdev-preflight-action
         with:
           image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}:${{ steps.meta_redhat_scan_registry.outputs.version }}
           username: ${{ secrets.RH_USERNAME }}

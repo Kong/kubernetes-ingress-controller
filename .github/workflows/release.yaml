@@ -10,6 +10,9 @@ on:
         description: 'Whether to tag this release latest'
         required: true
         default: 'false'
+env:
+  RH_SCAN_REGISTRY: scan.connect.redhat.com
+  RH_SCAN_REGISTRY_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/kong-ingress-controller
 
 jobs:
   verify-manifest-tag:
@@ -45,6 +48,10 @@ jobs:
     needs: verify-manifest-tag
     runs-on: ubuntu-latest
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@v1
@@ -91,6 +98,12 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Login to RH Scan Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.RH_SCAN_REGISTRY }}
+          username: ${{ secrets.RH_USERNAME }}
+          password: ${{ secrets.RH_TOKEN }}
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4.0.1
@@ -104,6 +117,14 @@ jobs:
         uses: docker/metadata-action@v4.0.1
         with:
           images: kong/kubernetes-ingress-controller
+          flavor: |
+            latest=false
+          tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
+      - name: Docker meta (redhat scan registry)
+        id: meta_redhat_scan_registry
+        uses: docker/metadata-action@v4.0.1
+        with:
+          images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}
           flavor: |
             latest=false
           tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
@@ -135,10 +156,10 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-      - name: Build and push Red Hat
+      - name: Build and push Red Hat image
         id: docker_build_redhat
         env:
-          TAG: ${{ steps.meta.outputs.version }}
+          TAG: ${{ steps.meta_redhat.outputs.version }}
         uses: docker/build-push-action@v3
         with:
           push: true
@@ -151,6 +172,31 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Build and push Red Hat Scan Registry image
+        id: docker_build_redhat_scan_registry
+        env:
+          TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}
+        uses: docker/build-push-action@v3.1.1
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta_redhat_scan_registry.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: redhat
+          # RedHat scan registry does not support multiarch images
+          platforms: linux/amd64
+          build-args: |
+            TAG=${{ steps.meta_redhat_scan_registry.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Run Red Hat Certification Preflight scan
+        uses: .github/actions/redhat-opdev-preflight-action
+        with:
+          image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}:${{ steps.meta_redhat_scan_registry.outputs.version }}
+          username: ${{ secrets.RH_USERNAME }}
+          password: ${{ secrets.RH_TOKEN }}
+          apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
+          projectid: ${{ secrets.RH_PROJECT_ID }}      
 
   test-current-kubernetes:
     runs-on: ubuntu-latest

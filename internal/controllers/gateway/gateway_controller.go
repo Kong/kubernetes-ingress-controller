@@ -105,6 +105,13 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	if err := c.Watch(
+		&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
+		handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+	); err != nil {
+		return err
+	}
+
 	// start the required gatewayclass controller as well
 	gwcCTRL := &GatewayClassReconciler{
 		Client: r.Client,
@@ -156,6 +163,36 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 		return nil
 	}
 	return reconcileGatewaysIfClassMatches(gatewayClass, gateways.Items)
+}
+
+// listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
+// ReferenceGrant.
+func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []reconcile.Request {
+	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	if !ok {
+		r.Log.Error(fmt.Errorf("unexpected object type in referencegrant watch predicates"), "expected",
+			"*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj))
+		return nil
+	}
+	gateways := &gatewayv1alpha2.GatewayList{}
+	if err := r.Client.List(context.Background(), gateways); err != nil {
+		r.Log.Error(err, "failed to list gateways in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, gateway := range gateways.Items {
+		for _, from := range grant.Spec.From {
+			if string(from.Namespace) == gateway.Namespace && from.Kind == gatewayv1alpha2.Kind("Gateway") {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gateway.Namespace,
+						Name:      gateway.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
 }
 
 // listGatewaysForService is a watch predicate which finds all the gateway objects which use

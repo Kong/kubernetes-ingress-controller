@@ -48,8 +48,9 @@ type GatewayReconciler struct { //nolint:revive,golint
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService  string
-	WatchNamespaces []string
+	PublishService      string
+	WatchNamespaces     []string
+	WatchReferenceGrant bool
 
 	publishServiceRef types.NamespacedName
 }
@@ -106,12 +107,14 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
-	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
-		handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-		predicate.NewPredicateFuncs(hasGatewayFrom),
-	); err != nil {
-		return err
+	if r.WatchReferenceGrant {
+		if err := c.Watch(
+			&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
+			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+			predicate.NewPredicateFuncs(hasGatewayFrom),
+		); err != nil {
+			return err
+		}
 	}
 
 	// start the required gatewayclass controller as well

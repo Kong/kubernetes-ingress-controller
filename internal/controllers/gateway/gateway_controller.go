@@ -105,9 +105,11 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if err := c.Watch(
 		&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
 		handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+		predicate.NewPredicateFuncs(hasGatewayFrom),
 	); err != nil {
 		return err
 	}
@@ -182,7 +184,9 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 	recs := []reconcile.Request{}
 	for _, gateway := range gateways.Items {
 		for _, from := range grant.Spec.From {
-			if string(from.Namespace) == gateway.Namespace && from.Kind == gatewayv1alpha2.Kind("Gateway") {
+			if string(from.Namespace) == gateway.Namespace &&
+				from.Kind == gatewayv1alpha2.Kind("Gateway") &&
+				from.Group == gatewayv1alpha2.Group("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: gateway.Namespace,
@@ -227,6 +231,19 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 // the gateway service referenced by --publish-service.
 func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 	return fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishService
+}
+
+func hasGatewayFrom(obj client.Object) bool {
+	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	for _, from := range grant.Spec.From {
+		if from.Kind == gatewayv1alpha2.Kind("Gateway") && from.Group == gatewayv1alpha2.Group("gateway.networking.k8s.io") {
+			return true
+		}
+	}
+	return false
 }
 
 // -----------------------------------------------------------------------------

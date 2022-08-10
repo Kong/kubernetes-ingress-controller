@@ -133,7 +133,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-crds-url
+generate: generate.controllers generate.clientsets generate.gateway-api-urls
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
@@ -357,18 +357,25 @@ GATEWAY_API_RELEASE_CHANNEL ?= experimental
 GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_REPO ?= github.com/kubernetes-sigs/gateway-api
+GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/kubernetes-sigs/gateway-api
 GATEWAY_API_CRDS_URL = $(GATEWAY_API_REPO)/config/crd/$(GATEWAY_API_RELEASE_CHANNEL)?ref=$(GATEWAY_API_VERSION)
+GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
 
 .PHONY: print-gateway-api-crds-url
 print-gateway-api-crds-url:
 	@echo $(GATEWAY_API_CRDS_URL)
 
-.PHONY: generate.gateway-api-crds-url
-generate.gateway-api-crds-url:
-	URL=$(shell $(MAKE) print-gateway-api-crds-url) \
-		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-crds-url/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/test/consts/gateway.go \
-		go generate ./test/internal/cmd/generate-gateway-api-crds-url
+.PHONY: print-gateway-api-raw-repo-url
+print-gateway-api-raw-repo-url:
+	@echo $(GATEWAY_API_RAW_REPO_URL)
+
+.PHONY: generate.gateway-api-urls
+generate.gateway-api-urls:
+	CRDS_URL=$(shell $(MAKE) print-gateway-api-crds-url) \
+		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
+		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
+		OUTPUT=$(shell pwd)/test/consts/zz_generated_gateway.go \
+		go generate ./test/internal/cmd/generate-gateway-api-urls
 
 .PHONY: go-mod-download-gateway-api
 go-mod-download-gateway-api:

@@ -352,9 +352,9 @@ run: install
 # unsupported ref and downloads the manifests from the main branch.
 #
 # [1]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md#remote-directories
-GATEWAY_API_VERSION ?= v0.5.0
-GATEWAY_API_RELEASE_CHANNEL ?= experimental
 GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
+GATEWAY_API_RELEASE_CHANNEL ?= experimental
+GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACKAGE))
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_REPO ?= github.com/kubernetes-sigs/gateway-api
 GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/kubernetes-sigs/gateway-api

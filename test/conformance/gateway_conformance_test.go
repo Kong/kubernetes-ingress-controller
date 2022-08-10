@@ -17,14 +17,14 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
 var (
 	showDebug     = true
 	shouldCleanup = true
 
-	manifestRepo                  = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/master/"
-	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", manifestRepo)
+	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
 )
 
 func TestGatewayConformance(t *testing.T) {
@@ -65,7 +65,7 @@ func TestGatewayConformance(t *testing.T) {
 	t.Log("configuring gateway conformance tests")
 	for i := range tests.ConformanceTests {
 		for j, manifest := range tests.ConformanceTests[i].Manifests {
-			tests.ConformanceTests[i].Manifests[j] = fmt.Sprintf("%s/conformance/%s", manifestRepo, manifest)
+			tests.ConformanceTests[i].Manifests[j] = fmt.Sprintf("%s/conformance/%s", consts.GatewayRawRepoURL, manifest)
 		}
 	}
 

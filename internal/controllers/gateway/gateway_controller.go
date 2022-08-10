@@ -638,7 +638,7 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	}
 	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {
 		gateway.Status.Listeners = listenerStatuses
-		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+		return true, r.Status().Update(ctx, gateway)
 	}
 	return false, nil
 }

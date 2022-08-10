@@ -3,6 +3,7 @@ package gateway
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -351,6 +352,13 @@ func getListenerStatus(
 			})
 		}
 
+		// consistent sort statuses to allow equality comparisons
+		sort.Slice(status.Conditions, func(i, j int) bool {
+			a := status.Conditions[i]
+			b := status.Conditions[i]
+			return fmt.Sprintf("%s%s%s%s", a.Type, a.Status, a.Reason, a.Message) <
+				fmt.Sprintf("%s%s%s%s", b.Type, b.Status, b.Reason, b.Message)
+		})
 		statuses[listener.Name] = status
 	}
 
@@ -459,6 +467,13 @@ func getListenerStatus(
 		}
 		if len(newConditions) > 0 {
 			status := statuses[listener.Name]
+			// consistent sort statuses to allow equality comparisons
+			sort.Slice(newConditions, func(i, j int) bool {
+				a := newConditions[i]
+				b := newConditions[i]
+				return fmt.Sprintf("%s%s%s%s", a.Type, a.Status, a.Reason, a.Message) <
+					fmt.Sprintf("%s%s%s%s", b.Type, b.Status, b.Reason, b.Message)
+			})
 			status.Conditions = newConditions
 			statuses[listener.Name] = status
 		}

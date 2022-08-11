@@ -111,7 +111,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		if err := c.Watch(
 			&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			predicate.NewPredicateFuncs(hasGatewayFrom),
+			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
 		); err != nil {
 			return err
 		}
@@ -236,7 +236,7 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 	return fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishService
 }
 
-func hasGatewayFrom(obj client.Object) bool {
+func referenceGrantHasGatewayFrom(obj client.Object) bool {
 	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
 	if !ok {
 		return false

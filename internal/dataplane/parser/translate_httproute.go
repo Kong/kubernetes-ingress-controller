@@ -188,13 +188,13 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				r.Route.Headers = headers
 			}
 
-			// stripPath needs to be enabled by default by the Gateway API conformance tests
+			// stripPath needs to be disabled by default to be conformant with the Gateway API
 			r.StripPath = kong.Bool(false)
 
 			// attach the plugins to be applied to the given route
 			if len(plugins) != 0 {
 				if r.Plugins == nil {
-					r.Plugins = make([]kong.Plugin, 0)
+					r.Plugins = make([]kong.Plugin, 0, len(plugins))
 				}
 				r.Plugins = append(r.Plugins, plugins...)
 			}
@@ -227,7 +227,7 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 		// attach the plugins to be applied to the given route
 		if len(plugins) != 0 {
 			if r.Plugins == nil {
-				r.Plugins = make([]kong.Plugin, 0)
+				r.Plugins = make([]kong.Plugin, 0, len(plugins))
 			}
 			r.Plugins = append(r.Plugins, plugins...)
 		}
@@ -265,7 +265,7 @@ func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1alpha2.HTTPReque
 
 	// modifier.Set is converted to a pair composed of "replace" and "add"
 	if modifier.Set != nil {
-		setModifiers := make([]string, 0)
+		setModifiers := make([]string, 0, len(modifier.Set))
 		for _, s := range modifier.Set {
 			setModifiers = append(setModifiers, kongHeaderFormatter(s))
 		}
@@ -279,7 +279,7 @@ func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1alpha2.HTTPReque
 
 	// modifier.Add is converted to "append"
 	if modifier.Add != nil {
-		appendModifiers := make([]string, 0)
+		appendModifiers := make([]string, 0, len(modifier.Add))
 		for _, a := range modifier.Add {
 			appendModifiers = append(appendModifiers, kongHeaderFormatter(a))
 		}

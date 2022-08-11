@@ -216,6 +216,8 @@ func listenerHostnameIntersectWithRouteHostnames(listener gatewayv1alpha2.Listen
 	return false
 }
 
+// filterHostnames accepts a HTTPRoute and returns a version of the same object with only a subset of the
+// hostnames, the ones matching with the listeners' hostname.
 func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayv1alpha2.HTTPRoute) *gatewayv1alpha2.HTTPRoute {
 	filteredHostnames := make([]gatewayv1alpha2.Hostname, 0)
 
@@ -224,8 +226,7 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 	if len(httpRoute.Spec.Hostnames) == 0 {
 		for _, gateway := range gateways {
 			for _, listener := range gateway.gateway.Spec.Listeners {
-				if gatewayv1alpha2.SectionName(gateway.listenerName) == "" ||
-					gatewayv1alpha2.SectionName(gateway.listenerName) == listener.Name {
+				if listenerName := gatewayv1alpha2.SectionName(gateway.listenerName); listenerName == "" || listenerName == listener.Name {
 					if listener.Hostname != nil {
 						filteredHostnames = append(filteredHostnames, *listener.Hostname)
 					}
@@ -244,12 +245,12 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 	return httpRoute
 }
 
-// getMinimumHostnameIntersection returns the minimum intersecting namespace, in the sense that:
+// getMinimumHostnameIntersection returns the minimum intersecting hostname, in the sense that:
 //
-// - if the listener hostname is empty, returns the httpRoute hostname
+// - if the listener hostname is empty, return the httpRoute hostname
 // - if the listener hostname acts as a wildcard for the httpRoute hostname, return the httpRoute hostname
 // - if the httpRoute hostname acts as a wildcard for the listener hostname, return the listener hostname
-// - if the httpRoute hostname is the same of the listener hostname, returns it
+// - if the httpRoute hostname is the same of the listener hostname, return it
 // - if none of the above is true, return an empty string.
 func getMinimumHostnameIntersection(gateways []supportedGatewayWithCondition, hostname gatewayv1alpha2.Hostname) gatewayv1alpha2.Hostname {
 	for _, gateway := range gateways {
@@ -281,7 +282,7 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 	return false
 }
 
-// isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by the a specific ReferenceGrant.
+// isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.
 func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backendRef gatewayv1alpha2.HTTPBackendRef, fromNamespace string) bool {
 	var backendRefGroup gatewayv1alpha2.Group
 	var backendRefKind gatewayv1alpha2.Kind

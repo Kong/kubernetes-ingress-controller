@@ -111,8 +111,10 @@ spec:
         value: /httproute-testing
     backendRefs:
     - name: httpbin
+      kind: Service
       port: 80
-      kind: Service
+      weight: 75
     - name: nginx
-      port: 8080
       kind: Service
+      port: 8080
+      weight: 25

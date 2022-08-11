@@ -21,6 +21,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -371,7 +372,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(&tcprouteParentKind),
+				Kind:      util.StringToGatewayAPIKindPtr(tcprouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},

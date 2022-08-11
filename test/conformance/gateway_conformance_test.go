@@ -72,6 +72,7 @@ func TestGatewayConformance(t *testing.T) {
 
 	t.Log("running gateway conformance tests")
 	for _, tt := range tests.ConformanceTests {
+		tt := tt
 		t.Run(tt.Description, func(t *testing.T) { tt.Run(t, cSuite) })
 	}
 }

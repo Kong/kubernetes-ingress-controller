@@ -384,7 +384,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(&httprouteParentKind),
+				Kind:      util.StringToGatewayAPIKindPtr(httprouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},
@@ -422,15 +422,14 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		statusChangesWereMade = true
 	}
 
-	/// TODO: move this condition BELOW
-	// if we didn't have to actually make any changes, no status update is needed
-	if !statusChangesWereMade {
-		return false, nil
-	}
-
-	parentStatuses, err := r.setRouteConditionResolvedRefsCondition(ctx, httproute, parentStatuses)
+	parentStatuses, resolvedRefsChanged, err := r.setRouteConditionResolvedRefsCondition(ctx, httproute, parentStatuses)
 	if err != nil {
 		return false, err
+	}
+
+	// if we didn't have to actually make any changes, no status update is needed
+	if !statusChangesWereMade && !resolvedRefsChanged {
+		return false, nil
 	}
 
 	// update the httproute status with the new status references
@@ -477,26 +476,42 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Co
 }
 
 // setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.
-func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(ctx context.Context, httpRoute *gatewayv1alpha2.HTTPRoute, parentStatuses map[string]*gatewayv1alpha2.RouteParentStatus) (map[string]*gatewayv1alpha2.RouteParentStatus, error) {
+func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(ctx context.Context, httpRoute *gatewayv1alpha2.HTTPRoute, parentStatuses map[string]*gatewayv1alpha2.RouteParentStatus) (map[string]*gatewayv1alpha2.RouteParentStatus, bool, error) {
+	var changed bool
+	resolvedRefsStatus := metav1.ConditionFalse
 	reason, err := r.getHTTPRouteRuleReason(ctx, *httpRoute)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	if reason == "" {
-		return parentStatuses, nil
+	if reason == gatewayv1alpha2.RouteReasonResolvedRefs {
+		resolvedRefsStatus = metav1.ConditionTrue
 	}
 
+	// iterate over all the parentStatuses conditions, and if no RouteConditionResolvedRefs is found,
+	// or if the condition is found but has to be changed, update the status and mark it to be updated
 	for _, parentStatus := range parentStatuses {
-		parentStatus.Conditions = append(parentStatus.Conditions, metav1.Condition{
-			Type:               string(gatewayv1alpha2.RouteConditionResolvedRefs),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: httpRoute.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(reason),
-		})
+		var conditionFound bool
+		for _, cond := range parentStatus.Conditions {
+			if cond.Type == string(gatewayv1alpha2.RouteConditionResolvedRefs) &&
+				cond.Status == resolvedRefsStatus &&
+				cond.Reason == string(reason) {
+				conditionFound = true
+				break
+			}
+		}
+		if !conditionFound {
+			parentStatus.Conditions = append(parentStatus.Conditions, metav1.Condition{
+				Type:               string(gatewayv1alpha2.RouteConditionResolvedRefs),
+				Status:             resolvedRefsStatus,
+				ObservedGeneration: httpRoute.Generation,
+				LastTransitionTime: metav1.Now(),
+				Reason:             string(reason),
+			})
+			changed = true
+		}
 	}
 
-	return parentStatuses, nil
+	return parentStatuses, changed, nil
 }
 
 func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRoute gatewayv1alpha2.HTTPRoute) (gatewayv1alpha2.RouteConditionReason, error) {
@@ -533,13 +548,18 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 				if len(referenceGrantList.Items) == 0 {
 					return gatewayv1alpha2.RouteReasonRefNotPermitted, nil
 				}
+				var isGranted bool
 				for _, grant := range referenceGrantList.Items {
-					if !isHTTPReferenceGranted(grant.Spec, backendRef, httpRoute.Namespace) {
-						return gatewayv1alpha2.RouteReasonRefNotPermitted, nil
+					if isHTTPReferenceGranted(grant.Spec, backendRef, httpRoute.Namespace) {
+						isGranted = true
+						break
 					}
+				}
+				if !isGranted {
+					return gatewayv1alpha2.RouteReasonRefNotPermitted, nil
 				}
 			}
 		}
 	}
-	return "", nil
+	return gatewayv1alpha2.RouteReasonResolvedRefs, nil
 }

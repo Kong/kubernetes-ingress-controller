@@ -1,0 +1,22 @@
+name: 'Red Hat Certification Action'
+description: 'Runs Red Hat certification checks for a container image'
+inputs:
+  image:
+    description: 'Image to scan'
+    required: true
+  username:
+    description: 'Docker Username'
+    required: true
+  password:
+    description: 'Docker Password'
+    required: true
+  apitoken:
+    description: 'API token for Pyxis authentication'
+    required: true
+  certificationid:
+    description: 'Certification Project ID from connect.redhat.com/projects/{certification-project-id}/overview'
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'

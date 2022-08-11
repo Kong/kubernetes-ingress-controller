@@ -12,6 +12,7 @@ import (
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -47,7 +48,15 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 		opt(gwc)
 	}
 
-	return client.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	result, err := client.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	if apierrors.IsAlreadyExists(err) {
+		err = client.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return result, err
+		}
+		result, err = client.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	}
+	return result, err
 }
 
 // DeployGateway creates a default gateway, accepts a variadic set of options,
@@ -76,7 +85,15 @@ func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespa
 		opt(gw)
 	}
 
-	return client.GatewayV1alpha2().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+	result, err := client.GatewayV1alpha2().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+	if apierrors.IsAlreadyExists(err) {
+		err = client.GatewayV1alpha2().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return result, err
+		}
+		result, err = client.GatewayV1alpha2().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+	}
+	return result, err
 }
 
 // gatewayHealthCheck checks the gateway has been scheduled by KIC. This function is inspired by

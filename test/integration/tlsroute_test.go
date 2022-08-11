@@ -599,6 +599,21 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 		return err != nil && responded == false
 	}, ingressWait, waitTick)
 
+	t.Log("verifying that a Listener has the invalid ref status condition")
+	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	invalid := false
+	for _, status := range gateway.Status.Listeners {
+		for _, condition := range status.Conditions {
+			if condition.Type == string(gatewayv1alpha2.ListenerConditionResolvedRefs) &&
+				condition.Status == metav1.ConditionFalse &&
+				condition.Reason == string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef) {
+				invalid = true
+			}
+		}
+	}
+	require.True(t, invalid)
+
 	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
 	grant.Spec.To[0].Name = nil
 	_, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})

@@ -48,8 +48,9 @@ type GatewayReconciler struct { //nolint:revive,golint
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService  string
-	WatchNamespaces []string
+	PublishService      string
+	WatchNamespaces     []string
+	WatchReferenceGrant bool
 
 	publishServiceRef types.NamespacedName
 }
@@ -105,6 +106,17 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
+	if r.WatchReferenceGrant {
+		if err := c.Watch(
+			&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
+			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
+		); err != nil {
+			return err
+		}
+	}
+
 	// start the required gatewayclass controller as well
 	gwcCTRL := &GatewayClassReconciler{
 		Client: r.Client,
@@ -158,6 +170,38 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 	return reconcileGatewaysIfClassMatches(gatewayClass, gateways.Items)
 }
 
+// listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
+// ReferenceGrant.
+func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []reconcile.Request {
+	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	if !ok {
+		r.Log.Error(fmt.Errorf("unexpected object type in referencegrant watch predicates"), "expected",
+			"*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj))
+		return nil
+	}
+	gateways := &gatewayv1alpha2.GatewayList{}
+	if err := r.Client.List(context.Background(), gateways); err != nil {
+		r.Log.Error(err, "failed to list gateways in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, gateway := range gateways.Items {
+		for _, from := range grant.Spec.From {
+			if string(from.Namespace) == gateway.Namespace &&
+				from.Kind == gatewayv1alpha2.Kind("Gateway") &&
+				from.Group == gatewayv1alpha2.Group("gateway.networking.k8s.io") {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gateway.Namespace,
+						Name:      gateway.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
 // listGatewaysForService is a watch predicate which finds all the gateway objects which use
 // GatewayClasses supported by this controller and are configured for the same service via
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
@@ -190,6 +234,19 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 // the gateway service referenced by --publish-service.
 func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 	return fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishService
+}
+
+func referenceGrantHasGatewayFrom(obj client.Object) bool {
+	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	for _, from := range grant.Spec.From {
+		if from.Kind == gatewayv1alpha2.Kind("Gateway") && from.Group == gatewayv1alpha2.Group("gateway.networking.k8s.io") {
+			return true
+		}
+	}
+	return false
 }
 
 // -----------------------------------------------------------------------------
@@ -581,6 +638,10 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 		}
 		setGatewayCondition(gateway, readyCondition)
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+	}
+	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {
+		gateway.Status.Listeners = listenerStatuses
+		return true, r.Status().Update(ctx, gateway)
 	}
 	return false, nil
 }

@@ -83,13 +83,21 @@
   [#2724](https://github.com/Kong/kubernetes-ingress-controller/pull/2724)
 - ReferencePolicy support has been dropped in favor of the newer ReferenceGrant API.
   [#2775](https://github.com/Kong/kubernetes-ingress-controller/pull/2772)
-  Fixed a bug that cased the `Knative` feature gate to not be checked. Since our
+- Fixed a bug that caused the `Knative` feature gate to not be checked. Since our
   knative integration is on by default and because it gets very little usage
   this likely did not cause any troubles for anyone as all fixing this will do
   is make it possible to disable the knative controller using the feature gate.
   (it is also possible to control it via the `--enable-controller-knativeingress`
   which was working properly).
   [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
+- Treat status conditions in `Gateway` and `GatewayClass` as snapshots, replace
+  existing conditions with same type on setting conditions.
+  [#2791](https://github.com/Kong/kubernetes-ingress-controller/pull/2791) 
+
+#### Under the hood
+
+- Updated the compiler to [Go v1.19](https://golang.org/doc/go1.19)
+  [#2794](https://github.com/Kong/kubernetes-ingress-controller/issues/2794)
 
 ## [2.5.0]
 

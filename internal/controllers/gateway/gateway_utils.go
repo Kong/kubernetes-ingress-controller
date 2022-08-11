@@ -25,6 +25,21 @@ const (
 	maxConds = 8
 )
 
+// setGatewayCondition sets the condition with specified type in gateway status
+// to expected condition in newCondition.
+// if the gateway status does not contain a condition with that type, add one more condition.
+// if the gateway status contains condition(s) with the type, then replace with the new condition.
+func setGatewayCondition(gateway *gatewayv1alpha2.Gateway, newCondition metav1.Condition) {
+	newConditions := []metav1.Condition{}
+	for _, condition := range gateway.Status.Conditions {
+		if condition.Type != newCondition.Type {
+			newConditions = append(newConditions, condition)
+		}
+	}
+	newConditions = append(newConditions, newCondition)
+	gateway.Status.Conditions = newConditions
+}
+
 // isGatewayScheduled returns boolean whether or not the gateway object was scheduled
 // previously by the gateway controller.
 func isGatewayScheduled(gateway *gatewayv1alpha2.Gateway) bool {

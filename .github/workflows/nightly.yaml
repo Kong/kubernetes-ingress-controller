@@ -7,6 +7,7 @@ on:
 
 env:
   RH_PROJECT_ID: ospid-f8304390-ff4c-4b7f-8c7e-1ed13370b3c2
+  RH_PROJECT_ID_FROM_URL: 5eab1b8ea165648bd1353266
   RH_SCAN_REGISTRY: scan.connect.redhat.com
   RH_SCAN_REGISTRY_IMAGE_NAME: ospid-f8304390-ff4c-4b7f-8c7e-1ed13370b3c2/nightly-ingress-controller
 
@@ -156,7 +157,7 @@ jobs:
           username: "${{ secrets.RH_USERNAME }}"
           password: "${{ secrets.RH_TOKEN }}"
           apitoken: "${{ secrets.RH_PYXIS_TOKEN }}"
-          projectid: "${{ env.RH_PROJECT_ID }}"
+          projectid: "${{ env.RH_PROJECT_ID_FROM_URL }}"
   
   # # run integration test in latest version of kubernetes.
   # test-current-kubernetes:

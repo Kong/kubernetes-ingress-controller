@@ -14,5 +14,5 @@ docker run                                                          \
     check container "${INPUT_IMAGE}"                                \
     --docker-config=/docker/config.json                             \
     --submit                                                        \
-    --certification-project-id="${INPUT_PROJECTID}"                 \
+    --certification-project-id="${INPUT_CERTIFICATIONID}"           \
     --pyxis-api-token="${INPUT_APITOKEN}"

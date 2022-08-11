@@ -142,7 +142,8 @@ jobs:
           username: ${{ secrets.RH_USERNAME }}
           password: ${{ secrets.RH_TOKEN }}
           apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
-          projectid: ${{ secrets.RH_PROJECT_ID }}   
+          certificationid: ${{ secrets.RH_CERTIFICATION_ID }}
+
   
   # run integration test in latest version of kubernetes.
   test-current-kubernetes:

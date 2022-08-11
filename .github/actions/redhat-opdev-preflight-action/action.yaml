@@ -13,7 +13,7 @@ inputs:
   apitoken:
     description: 'API token for Pyxis authentication'
     required: true
-  projectid:
+  certificationid:
     description: 'Certification Project ID from connect.redhat.com/projects/{certification-project-id}/overview'
     required: true
 

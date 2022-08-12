@@ -3,7 +3,8 @@ description: 'Runs Red Hat certification checks for a container image'
 inputs:
   image:
     description: 'Image to scan'
-    required: true
+    required: false
+    default: 'false'
   submit:
     description: 'API token for Pyxis authentication'
     required: true

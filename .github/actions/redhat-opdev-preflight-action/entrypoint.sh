@@ -5,14 +5,10 @@ set -euo pipefail
 
 env
 
-# Login.
-echo "$INPUT_PASSWORD"  | docker login scan.connect.redhat.com -u "${INPUT_USERNAME}" --password-stdin
-
-
-if [[ -z "${INPUT_SUBMIT:-}" ]]; then
+if [[ $INPUT_SUBMIT == "false" ]]; then
   echo "Skipping submission to scan.connect.redhat.com"
 
-  docker run                                                          \
+  docker run                                                        \
     -v "/var/run/docker.sock":"/var/run/docker.sock"                \
     -v "/home/runner/.docker/":"/docker"                            \
     quay.io/opdev/preflight:stable                                  \
@@ -21,6 +17,9 @@ if [[ -z "${INPUT_SUBMIT:-}" ]]; then
 
   exit 0
 fi
+
+# Login.
+echo "$INPUT_PASSWORD"  | docker login scan.connect.redhat.com -u "${INPUT_USERNAME}" --password-stdin
 
 
 # Run checks.

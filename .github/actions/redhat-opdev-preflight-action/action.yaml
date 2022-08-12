@@ -4,6 +4,9 @@ inputs:
   image:
     description: 'Image to scan'
     required: true
+  submit:
+    description: 'API token for Pyxis authentication'
+    required: true
   username:
     description: 'Docker Username'
     required: true
@@ -12,10 +15,10 @@ inputs:
     required: true
   apitoken:
     description: 'API token for Pyxis authentication'
-    required: true
+    required: false
   projectid:
     description: 'Certification Project ID from connect.redhat.com/projects/{certification-project-id}/overview'
-    required: true
+    required: false
 
 runs:
   using: 'docker'

@@ -139,7 +139,7 @@ jobs:
           TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}
         uses: docker/build-push-action@v3.1.1
         with:
-          push: true
+          push: false
           file: Dockerfile
           tags: ${{ steps.meta_redhat_scan_registry.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache

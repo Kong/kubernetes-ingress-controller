@@ -11,6 +11,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
@@ -523,7 +524,7 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 			name:             "no need for reference",
 			gatewayNamespace: "test",
 			certRef: gatewayv1alpha2.SecretObjectReference{
-				Kind: (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Kind: util.StringToGatewayAPIKindPtr("Secret"),
 				Name: "testSecret",
 			},
 			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
@@ -532,7 +533,7 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 			name:             "reference not granted",
 			gatewayNamespace: "test",
 			certRef: gatewayv1alpha2.SecretObjectReference{
-				Kind:      (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
 				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
 			},
@@ -565,7 +566,7 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 			name:             "reference granted, secret name not specified",
 			gatewayNamespace: "test",
 			certRef: gatewayv1alpha2.SecretObjectReference{
-				Kind:      (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
 				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
 			},
@@ -604,7 +605,7 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 			name:             "reference granted, secret name specified",
 			gatewayNamespace: "test",
 			certRef: gatewayv1alpha2.SecretObjectReference{
-				Kind:      (*gatewayv1alpha2.Kind)(pointer.StringPtr("secret")),
+				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
 				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
 			},

@@ -145,6 +145,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 							Name: gatewayv1alpha2.ObjectName(service1.Name),
 							Port: &httpPort,
+							Kind: util.StringToGatewayAPIKindPtr("Service"),
 						},
 					},
 				}},
@@ -213,6 +214,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 						Name: gatewayv1alpha2.ObjectName(service1.Name),
 						Port: &httpPort,
+						Kind: util.StringToGatewayAPIKindPtr("Service"),
 					},
 					Weight: &httpbinWeight,
 				},
@@ -222,6 +224,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 						Name: gatewayv1alpha2.ObjectName(service2.Name),
 						Port: &httpPort,
+						Kind: util.StringToGatewayAPIKindPtr("Service"),
 					},
 					Weight: &nginxWeight,
 				},

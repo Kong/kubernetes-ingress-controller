@@ -21,6 +21,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -299,7 +300,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// requeue the object and wait until all supported gateways are ready.
 	debug(log, tlsroute, "checking if the tlsroute's gateways are ready")
 	for _, gateway := range gateways {
-		if !isGatewayReady(gateway) {
+		if !isGatewayReady(gateway.gateway) {
 			debug(log, tlsroute, "gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -352,7 +353,7 @@ var tlsrouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given TLSRoute and ensures that the status
 // for the TLSRoute is updated appropriately.
-func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, tlsroute *gatewayv1alpha2.TLSRoute, gateways ...*gatewayv1alpha2.Gateway) (bool, error) {
+func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, tlsroute *gatewayv1alpha2.TLSRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
 	for _, existingParent := range tlsroute.Status.Parents {
@@ -371,9 +372,9 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(&tlsrouteParentKind),
-				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.Namespace),
-				Name:      gatewayv1alpha2.ObjectName(gateway.Name),
+				Kind:      util.StringToGatewayAPIKindPtr(tlsrouteParentKind),
+				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
+				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},
 			ControllerName: ControllerName,
 			Conditions: []metav1.Condition{{
@@ -381,13 +382,13 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: tlsroute.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+				Reason:             string(gatewayv1alpha2.RouteReasonAccepted),
 			}},
 		}
 
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
-		if existingGatewayParentStatus, exists := parentStatuses[gateway.Namespace+gateway.Name]; exists {
+		if existingGatewayParentStatus, exists := parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name]; exists {
 			// fake the time of the existing status as this wont be equal
 			for i := range existingGatewayParentStatus.Conditions {
 				existingGatewayParentStatus.Conditions[i].LastTransitionTime = gatewayParentStatus.Conditions[0].LastTransitionTime
@@ -400,7 +401,7 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		}
 
 		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[gateway.Namespace+gateway.Name] = gatewayParentStatus
+		parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name] = gatewayParentStatus
 		statusChangesWereMade = true
 	}
 

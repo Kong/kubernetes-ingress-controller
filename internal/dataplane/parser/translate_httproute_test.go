@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -72,6 +73,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 									Name: gatewayv1alpha2.ObjectName("fake-service"),
 									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -144,6 +146,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 														Name: gatewayv1alpha2.ObjectName("fake-service"),
 														Port: &httpPort,
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},
@@ -224,6 +227,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 									Name: gatewayv1alpha2.ObjectName("fake-service"),
 									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -262,6 +266,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 									kong.String("http"),
 									kong.String("https"),
 								},
+								StripPath: pointer.BoolPtr(false),
 							},
 							Ingress: util.K8sObjectInfo{
 								Name:        "basic-httproute",
@@ -299,6 +304,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 														Name: gatewayv1alpha2.ObjectName("fake-service"),
 														Port: &httpPort,
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},
@@ -368,6 +374,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 									Name: gatewayv1alpha2.ObjectName("fake-service"),
 									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -407,6 +414,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 									Name: gatewayv1alpha2.ObjectName("fake-service"),
 									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -445,6 +453,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 									kong.String("http"),
 									kong.String("https"),
 								},
+								StripPath: pointer.BoolPtr(false),
 							},
 							Ingress: util.K8sObjectInfo{
 								Name:        "basic-httproute",
@@ -482,6 +491,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 														Name: gatewayv1alpha2.ObjectName("fake-service"),
 														Port: &httpPort,
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},
@@ -527,6 +537,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 									Name: gatewayv1alpha2.ObjectName("fake-service"),
 									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -565,6 +576,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 									kong.String("http"),
 									kong.String("https"),
 								},
+								StripPath: pointer.BoolPtr(false),
 							},
 							Ingress: util.K8sObjectInfo{
 								Name:        "basic-httproute",
@@ -602,6 +614,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 														Name: gatewayv1alpha2.ObjectName("fake-service"),
 														Port: &httpPort,
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},

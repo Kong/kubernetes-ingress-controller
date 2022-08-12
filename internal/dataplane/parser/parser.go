@@ -61,7 +61,7 @@ func NewParser(
 // -----------------------------------------------------------------------------
 
 // Build creates a Kong configuration from Ingress and Custom resources
-// defined in Kuberentes.
+// defined in Kubernetes.
 // It throws an error if there is an error returned from client-go.
 func (p *Parser) Build() (*kongstate.KongState, error) {
 	// parse and merge all rules together from all Kubernetes API sources

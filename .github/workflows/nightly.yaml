@@ -118,13 +118,13 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-      - name: Build and push Red Hat Scan Registry image
+      - name: Build image for local Preflight scan
         id: docker_build_redhat_scan_registry
         env:
           TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}
         uses: docker/build-push-action@v3.1.1
         with:
-          push: true
+          push: false
           file: Dockerfile
           tags: ${{ steps.meta_redhat_scan_registry.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -135,14 +135,13 @@ jobs:
             TAG=${{ steps.meta_redhat_scan_registry.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-      - name: Run Red Hat Certification Preflight scan
+      - name: Run local Red Hat Certification Preflight scan
         uses: ./.github/actions/redhat-opdev-preflight-action
         with:
           image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}:${{ steps.meta_redhat_scan_registry.outputs.version }}
           username: ${{ secrets.RH_USERNAME }}
           password: ${{ secrets.RH_TOKEN }}
-          apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
-          certificationid: ${{ secrets.RH_CERTIFICATION_ID }}
+          submit: false
 
   
   # run integration test in latest version of kubernetes.

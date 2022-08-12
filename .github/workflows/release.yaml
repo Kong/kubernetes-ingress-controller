@@ -195,6 +195,7 @@ jobs:
           image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}:${{ steps.meta_redhat_scan_registry.outputs.version }}
           username: ${{ secrets.RH_USERNAME }}
           password: ${{ secrets.RH_TOKEN }}
+          submit: true
           apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
           certificationid: ${{ secrets.RH_CERTIFICATION_ID }}
 

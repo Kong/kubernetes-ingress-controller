@@ -403,8 +403,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
 	referenceGrantList := &gatewayv1alpha2.ReferenceGrantList{}
-	if err := r.Client.List(ctx, referenceGrantList); err != nil {
-		return ctrl.Result{}, err
+	if r.WatchReferenceGrant {
+		if err := r.Client.List(ctx, referenceGrantList); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2559 check cross-Gateway compatibility

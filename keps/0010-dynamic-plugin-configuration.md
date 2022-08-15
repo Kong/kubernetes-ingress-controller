@@ -55,6 +55,10 @@ when using standard kubernetes objects and with out assumed templating systems.
 * Provide ability to read individual configuration values from arbitrary or generic resource types (other custom resource types)
 * KongPlugin controller should react to updates to ConfigMap and Secret objects referenced by managed plugins to re-apply the configuration to all attached KongPlugins
 * Support configuration as an array of objects (`name`, [`value`, `valueFrom`]) similar to pod [envvar core][]
+* Support value interpretation in the cases where literal `value` is used. (see [envvar core][])
+  * References `$(config_name)` are expanded using previously defined configuration values
+  * If a variable cannot be resolved, the input string should be unchanged.
+  * Double `$$` are reduced to a single `$`, which allows for escaping ( `$$(foobar)` -> `$(foobar)`)
 
 ### Non-Goals
 

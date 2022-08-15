@@ -190,6 +190,10 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
+	defer func() {
+		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		t.Logf("no longer responding check state: responded=%v, eof=%v, err=%v", responded, errors.Is(err, io.EOF), err)
+	}()
 	require.Eventually(t, func() bool {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return responded == false && errors.Is(err, io.EOF)

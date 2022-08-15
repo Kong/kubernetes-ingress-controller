@@ -75,6 +75,9 @@
   [#2777](https://github.com/Kong/kubernetes-ingress-controller/issues/2777)
 - Added all the HTTPRoute-related conformance tests.
   [#2776](https://github.com/Kong/kubernetes-ingress-controller/issues/2776)
+- Added support for Kong 3.0 upstream `query_arg` and `uri_capture` hash
+  configuration to KongIngress.
+  [#2822](https://github.com/Kong/kubernetes-ingress-controller/issues/2822)
 
 #### Fixed
 

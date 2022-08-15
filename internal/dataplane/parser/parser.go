@@ -316,7 +316,7 @@ func getUpstreams(
 				newTargets := getServiceEndpoints(log, s, k8sService, port)
 
 				if len(newTargets) == 0 {
-					log.WithField("service_name", *service.Name).Errorf("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
+					log.WithField("service_name", *service.Name).Infof("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
 				}
 
 				// if weights were set for the backend then that weight needs to be

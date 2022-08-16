@@ -79,10 +79,11 @@
 #### Fixed
 
 - When `Endpoints` could not be found for a `Service` to add them as targets of
-  a Kong `Upstream`, this was producing a log message at `error` level which was
-  inaccurate because this condition is often expected when `Pods` are being
-  provisioned. Those log entries now report at `info` level.
+  a Kong `Upstream`, this would produce a log message at `error` and `warning`
+  levels which was inaccurate because this condition is often expected when
+  `Pods` are being provisioned. Those log entries now report at `info` level.
   [#2820](https://github.com/Kong/kubernetes-ingress-controller/issues/2820)
+  [#2825](https://github.com/Kong/kubernetes-ingress-controller/pull/2825)
 - Added `mtls-auth` to the admission webhook supported credential types list.
   [#2739](https://github.com/Kong/kubernetes-ingress-controller/pull/2739)
 - Disabled additional IngressClass lookups in other reconcilers when the

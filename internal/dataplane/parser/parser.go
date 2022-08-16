@@ -351,7 +351,7 @@ func getUpstreams(
 
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
-				log.WithField("service_name", *service.Name).Warnf("no targets found to create upstream")
+				log.WithField("service_name", *service.Name).Infof("no targets found to create upstream")
 			}
 
 			// define the upstream including all the newly populated targets

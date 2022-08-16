@@ -293,14 +293,9 @@ func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
+		// temp: verify the `Server:gunicorn/*` response header from httpbin server.
+		serverHeader := resp.Header.Get("Server")
+		return strings.Contains(serverHeader, "gunicorn/")
 	}, ingressWait, time.Second)
 }
 

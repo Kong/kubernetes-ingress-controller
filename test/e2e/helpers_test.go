@@ -230,7 +230,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin-httproute", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

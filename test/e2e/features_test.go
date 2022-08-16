@@ -420,9 +420,39 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
-	_ = deployKong(ctx, t, env, manifest)
+	deployment := deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
+
+	// ensure that Gateways with no addresses come online and start ingesting routes
+	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
+
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	t.Log("updating kong deployment to enable Gateway feature gate")
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "ingress-controller" {
+			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+		}
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
+		deployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("updating service type to NodePort")
+	svc, err := env.Cluster().Client().CoreV1().Services(deployment.Namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
+	svc.Spec.Type = "NodePort"
+	_, err = env.Cluster().Client().CoreV1().Services(deployment.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying controller updates associated Gateway resoures")
+	gw := deployGateway(ctx, t, env)
+	verifyGateway(ctx, t, env, gw)
+	deployHTTPRoute(ctx, t, env, gw)
+	verifyHTTPRoute(ctx, t, env)
 }

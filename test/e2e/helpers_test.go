@@ -247,6 +247,9 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 	httproute := &gatewayv1alpha2.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true", // trigger the unmanaged gateway mode
+			},
 		},
 		Spec: gatewayv1alpha2.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{

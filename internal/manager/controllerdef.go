@@ -276,7 +276,7 @@ func setupControllers(
 		// ---------------------------------------------------------------------------
 		{
 			Enabled:     featureGates[gatewayFeature],
-			AutoHandler: gatewayCRDExistsCheceker.CRDExists,
+			AutoHandler: gatewayCRDExistsChecker.CRDExists,
 			Controller: &gateway.GatewayReconciler{
 				Client:              mgr.GetClient(),
 				Log:                 ctrl.Log.WithName("controllers").WithName(gatewayFeature),
@@ -357,7 +357,7 @@ func (c crdExistsChecker) CRDExists(r client.Client) bool {
 
 // CRD Exists checker for gateway API resources.
 
-var gatewayCRDExistsCheceker = crdExistsChecker{
+var gatewayCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
 		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
 		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
@@ -411,6 +411,19 @@ var referenceGrantCRDExistsChecker = crdExistsChecker{
 		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
 		Resource: "referencegrants",
 	},
+}
+
+var gatewayBetaCRDsExistsCheckers = []crdExistsChecker{
+	gatewayCRDExistsChecker,
+	gatewayClassCRDExistsChecker,
+	httpRouteCRDExistsChecker,
+}
+
+var gatewayAlphaCRDsExistsCheckers = []crdExistsChecker{
+	tcpRouteCRDExistsChecker,
+	udpRouteCRDExistsChecker,
+	tlsRouteCRDExistsChecker,
+	referenceGrantCRDExistsChecker,
 }
 
 // ingressControllerStrategy picks the best Ingress API supported by k8s apiserver.

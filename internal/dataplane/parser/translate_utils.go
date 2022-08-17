@@ -157,7 +157,7 @@ func (p *Parser) generateKongServiceFromBackendRef(
 			if backendRef.Kind != nil {
 				kind = string(*backendRef.Kind)
 			}
-			p.logger.Errorf("%s requested backendRef to %s %s/%s, but no ReferencePolicy permits it, skipping...",
+			p.logger.Errorf("%s requested backendRef to %s %s/%s, but no ReferenceGrant permits it, skipping...",
 				objName, kind, namespace, backendRef.Name)
 		}
 	}

@@ -278,13 +278,14 @@ func setupControllers(
 			Enabled:     featureGates[gatewayFeature],
 			AutoHandler: gatewayCRDExistsChecker.CRDExists,
 			Controller: &gateway.GatewayReconciler{
-				Client:              mgr.GetClient(),
-				Log:                 ctrl.Log.WithName("controllers").WithName(gatewayFeature),
-				Scheme:              mgr.GetScheme(),
-				DataplaneClient:     dataplaneClient,
-				PublishService:      c.PublishService,
-				WatchNamespaces:     c.WatchNamespaces,
-				WatchReferenceGrant: featureGates[gatewayAlphaFeature],
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName(gatewayFeature),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
+				PublishService:  c.PublishService,
+				WatchNamespaces: c.WatchNamespaces,
+				WatchReferenceGrant: featureGates[gatewayAlphaFeature] &&
+					referenceGrantCRDExistsChecker.CRDExists(mgr.GetClient()),
 			},
 		},
 		{
@@ -295,6 +296,8 @@ func setupControllers(
 				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
 				Scheme:          mgr.GetScheme(),
 				DataplaneClient: dataplaneClient,
+				EnableReferenceGrant: featureGates[gatewayAlphaFeature] &&
+					referenceGrantCRDExistsChecker.CRDExists(mgr.GetClient()),
 			},
 		},
 		// ---------------------------------------------------------------------------

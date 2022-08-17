@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"syscall"
 	"testing"
 	"time"
 
@@ -191,12 +192,15 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is no longer responding")
 	defer func() {
-		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		t.Logf("no longer responding check state: responded=%v, eof=%v, err=%v", responded, errors.Is(err, io.EOF), err)
+		if t.Failed() {
+			responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+			t.Logf("no longer responding check failure state: responded=%v, eof=%v, reset=%v, err=%v", responded,
+				errors.Is(err, io.EOF), errors.Is(err, syscall.ECONNRESET), err)
+		}
 	}()
 	require.Eventually(t, func() bool {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && errors.Is(err, io.EOF)
+		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
 	}, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
@@ -228,7 +232,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && errors.Is(err, io.EOF)
+		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
@@ -255,7 +259,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && errors.Is(err, io.EOF)
+		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
@@ -290,7 +294,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && errors.Is(err, io.EOF)
+		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
@@ -371,7 +375,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
 		responded, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && errors.Is(err, io.EOF)
+		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
 	}, ingressWait, waitTick)
 }
 

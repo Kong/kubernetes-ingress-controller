@@ -549,6 +549,13 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		}
 	}
 
+	// the API server transforms a Gateway with a zero-length address slice into a Gateway with a nil address slice
+	// the value we return here needs to match the transformed Gateway, as otherwise the controller will always see
+	// that the Gateway needs a status update and will never mark it ready
+	if len(addresses) == 0 {
+		addresses = nil
+	}
+
 	return addresses, listeners, nil
 }
 

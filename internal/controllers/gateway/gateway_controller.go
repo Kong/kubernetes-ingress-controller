@@ -48,9 +48,9 @@ type GatewayReconciler struct { //nolint:revive,golint
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService      string
-	WatchNamespaces     []string
-	WatchReferenceGrant bool
+	PublishService       string
+	WatchNamespaces      []string
+	EnableReferenceGrant bool
 
 	publishServiceRef types.NamespacedName
 }
@@ -107,7 +107,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
-	if r.WatchReferenceGrant {
+	if r.EnableReferenceGrant {
 		if err := c.Watch(
 			&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
@@ -403,7 +403,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
 	referenceGrantList := &gatewayv1alpha2.ReferenceGrantList{}
-	if r.WatchReferenceGrant {
+	if r.EnableReferenceGrant {
 		if err := r.Client.List(ctx, referenceGrantList); err != nil {
 			return ctrl.Result{}, err
 		}

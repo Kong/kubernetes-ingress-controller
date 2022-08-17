@@ -284,7 +284,7 @@ func setupControllers(
 				DataplaneClient: dataplaneClient,
 				PublishService:  c.PublishService,
 				WatchNamespaces: c.WatchNamespaces,
-				WatchReferenceGrant: featureGates[gatewayAlphaFeature] &&
+				EnableReferenceGrant: featureGates[gatewayAlphaFeature] &&
 					referenceGrantCRDExistsChecker.CRDExists(mgr.GetClient()),
 			},
 		},

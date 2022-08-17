@@ -15,7 +15,7 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.13.0
-	github.com/kong/go-kong v0.30.0
+	github.com/kong/go-kong v0.31.0
 	github.com/kong/kubernetes-testing-framework v0.19.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.50

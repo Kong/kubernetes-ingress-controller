@@ -12,26 +12,29 @@ import (
 	"text/template"
 )
 
-//go:generate go run . -crds-url $CRDS_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
+//go:generate go run . -standard-crds-url $STANDARD_CRDS_URL -crds-url $CRDS_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
 
 var (
-	crdsURLFlag    = flag.String("crds-url", "", "The URL of Gateway API CRDs to be consumed by kustomize")
-	rawRepoURLFlag = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
-	inFlag         = flag.String("in", "", "Template file path")
-	outFlag        = flag.String("out", "", "Output file path where the generate file will be placed")
+	standardCrdsURLFlag = flag.String("standard-crds-url", "", "The URL of standard Gateway API CRDs to be consumed by kustomize")
+	crdsURLFlag         = flag.String("crds-url", "", "The URL of Gateway API CRDs to be consumed by kustomize")
+	rawRepoURLFlag      = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
+	inFlag              = flag.String("in", "", "Template file path")
+	outFlag             = flag.String("out", "", "Output file path where the generate file will be placed")
 )
 
 type Data struct {
-	CRDsKustomizeURL string
-	RawRepoURL       string
+	StandardCRDsKustomizeURL string
+	CRDsKustomizeURL         string
+	RawRepoURL               string
 }
 
 func main() {
 	flagParse()
 
 	data := Data{
-		CRDsKustomizeURL: *crdsURLFlag,
-		RawRepoURL:       *rawRepoURLFlag,
+		StandardCRDsKustomizeURL: *standardCrdsURLFlag,
+		CRDsKustomizeURL:         *crdsURLFlag,
+		RawRepoURL:               *rawRepoURLFlag,
 	}
 	processTemplate(*inFlag, *outFlag, data)
 }
@@ -44,6 +47,10 @@ func must(err error, errMsg string) {
 
 func flagParse() {
 	flag.Parse()
+	if *standardCrdsURLFlag == "" {
+		log.Print("Please provide the 'standard-crds-url' flag")
+		os.Exit(0)
+	}
 	if *crdsURLFlag == "" {
 		log.Print("Please provide the 'crds-url' flag")
 		os.Exit(0)

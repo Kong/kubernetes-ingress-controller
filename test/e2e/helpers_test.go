@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -41,6 +42,11 @@ const (
 	ingressClass     = "kong"
 	namespace        = "kong"
 	adminServiceName = "kong-admin"
+)
+
+const (
+	tcpEchoPort    = 1025
+	tcpListnerPort = 8888
 )
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
@@ -89,6 +95,7 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	require.Eventually(t, func() bool {
 		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
 		require.NoError(t, err)
+		t.Logf("%d/%d replicas ready", deployment.Status.ReadyReplicas, *deployment.Spec.Replicas)
 		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
 	}, kongComponentWait, time.Second)
 	return deployment
@@ -226,6 +233,58 @@ func verifyGateway(ctx context.Context, t *testing.T, env environments.Environme
 	}, gatewayUpdateWaitTime, time.Second)
 }
 
+func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environments.Environment) *gatewayv1alpha2.Gateway {
+	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a supported gatewayclass to the test cluster")
+	supportedGatewayClass := &gatewayv1alpha2.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayv1alpha2.GatewayClassSpec{
+			ControllerName: gateway.ControllerName,
+		},
+	}
+	supportedGatewayClass, err = gc.GatewayV1alpha2().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
+	gw := &gatewayv1alpha2.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong",
+		},
+		Spec: gatewayv1alpha2.GatewaySpec{
+			GatewayClassName: gatewayv1alpha2.ObjectName(supportedGatewayClass.Name),
+			Listeners: []gatewayv1alpha2.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1alpha2.HTTPProtocolType,
+					Port:     gatewayv1alpha2.PortNumber(80),
+				},
+				{
+					Name:     "tcp",
+					Protocol: gatewayv1alpha2.TCPProtocolType,
+					Port:     gatewayv1alpha2.PortNumber(tcpListnerPort),
+				},
+			},
+		},
+	}
+	_, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	if err == nil {
+		t.Logf("gateway %s exists, delete and re-create it", gw.Name)
+		err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Delete(ctx, gw.Name, metav1.DeleteOptions{})
+		require.NoError(t, err)
+		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
+		require.NoError(t, err)
+	} else {
+		require.True(t, kerrors.IsNotFound(err))
+		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+	return gw
+}
+
 func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
@@ -248,7 +307,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.StripPathKey: "true", // trigger the unmanaged gateway mode
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
 		},
 		Spec: gatewayv1alpha2.HTTPRouteSpec{
@@ -305,6 +364,82 @@ func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 		}
 		return false
 	}, ingressWait, time.Second)
+}
+
+func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
+	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	assert.NoError(t, err)
+	t.Log("deploying a TCP service to test the ingress controller and proxy")
+	container := generators.NewContainer("tcpecho-tcproute", test.TCPEchoImage, tcpEchoPort)
+	container.Env = []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: "tcpecho-tcproute",
+		},
+	}
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.Spec.Ports = []corev1.ServicePort{
+		{
+			Name:       "echo",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       tcpListnerPort,
+			TargetPort: intstr.FromInt(tcpEchoPort),
+		},
+	}
+	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("creating a TCPRoute for service %s with Gateway %s", service.Name, gw.Name)
+	portNumber := gatewayv1alpha2.PortNumber(tcpListnerPort)
+	tcpRoute := &gatewayv1alpha2.TCPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayv1alpha2.TCPRouteSpec{
+			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+				ParentRefs: []gatewayv1alpha2.ParentReference{{
+					Name: gatewayv1alpha2.ObjectName(gw.Name),
+				}},
+			},
+			Rules: []gatewayv1alpha2.TCPRouteRule{
+				{
+					BackendRefs: []gatewayv1alpha2.BackendRef{
+						{
+							BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+								Name: gatewayv1alpha2.ObjectName(service.Name),
+								Port: &portNumber,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err = gc.GatewayV1alpha2().TCPRoutes(corev1.NamespaceDefault).Create(ctx, tcpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func verifyTCPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Log("finding the kong proxy service ip")
+	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
+	proxyIP := getKongProxyIP(ctx, t, env, svc)
+
+	t.Logf("waiting for route from TCPRoute to be operational at %s:%d", proxyIP, tcpListnerPort)
+	require.Eventually(t, func() bool {
+		ok, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyIP, tcpListnerPort), "tcpecho-tcproute")
+		if err != nil {
+			t.Logf("failed to connect to %s:%d, error %v", proxyIP, tcpListnerPort, err)
+			return false
+		}
+		return ok
+	}, ingressWait, 5*time.Second,
+	)
 }
 
 // verifyEnterprise performs some basic tests of the Kong Admin API in the provided

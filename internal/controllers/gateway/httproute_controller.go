@@ -38,8 +38,8 @@ type HTTPRouteReconciler struct {
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
-	// namespace is in backendRefs. If it is false, referecing backend in different namespace
-	// will be directly rejected.
+	// namespace is in backendRefs.
+	// If it is false, referencing backend in different namespace will be rejected.
 	EnableReferenceGrant bool
 }
 

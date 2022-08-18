@@ -48,8 +48,10 @@ type GatewayReconciler struct { //nolint:revive,golint
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService       string
-	WatchNamespaces      []string
+	PublishService  string
+	WatchNamespaces []string
+	// If EnableReferenceGrant is true, controller will watch ReferenceGrants
+	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	EnableReferenceGrant bool
 
 	publishServiceRef types.NamespacedName

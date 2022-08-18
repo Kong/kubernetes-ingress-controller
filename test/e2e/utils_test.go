@@ -324,3 +324,26 @@ func httpGetResponseContains(t *testing.T, url string, client *http.Client, subs
 
 	return strings.Contains(string(body), substring)
 }
+
+// getKubernetesLogs gets logs af ALL containers inside pod.
+func getKubernetesLogs(ctx context.Context, t *testing.T, env environments.Environment, namespace string, name string) (string, error) {
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "podlogs-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer os.Remove(kubeconfigFile.Name())
+	defer kubeconfigFile.Close()
+
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+
+	stderr := new(bytes.Buffer)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", name, "-n", namespace, "--all-containers") //nolint:gosec
+	cmd.Stderr = stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("%s", stderr.String())
+	}
+	return string(out), nil
+}

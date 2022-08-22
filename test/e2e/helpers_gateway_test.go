@@ -17,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
+// deployGateway deploys a gateway with a new created gateway class and a fixed name `kong`.
 func deployGateway(ctx context.Context, t *testing.T, env environments.Environment) *gatewayv1alpha2.Gateway {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -69,6 +69,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 	return gw
 }
 
+// verifyGateway verifies that the gateway `gw` is ready.
 func verifyGateway(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -86,6 +87,7 @@ func verifyGateway(ctx context.Context, t *testing.T, env environments.Environme
 	}, gatewayUpdateWaitTime, time.Second)
 }
 
+// deployGatewayWithTCPListener deploys a gateway `kong` with a tcp listener to test TCPRoute.
 func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environments.Environment) *gatewayv1alpha2.Gateway {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -138,9 +140,11 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 	return gw
 }
 
+// deployHTTPRoute creates an `HTTPRoute` and related backend deployment/service.
+// it matches the specified path `/httpbin` by prefix, so we can access the backend service by `http://$PROXY_IP/httpbin`.
 func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
 	container := generators.NewContainer("httpbin-httproute", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
@@ -219,9 +223,10 @@ func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 	}, ingressWait, time.Second)
 }
 
+// deployTCPRoute creates a `TCPRoute` and related backend deployment/service.
 func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environment, gw *gatewayv1alpha2.Gateway) {
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	t.Log("deploying a TCP service to test the ingress controller and proxy")
 	container := generators.NewContainer("tcpecho-tcproute", test.TCPEchoImage, tcpEchoPort)
 	container.Env = []corev1.EnvVar{
@@ -277,6 +282,8 @@ func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 	require.NoError(t, err)
 }
 
+// verifyTCPRoute checks whether the traffic is routed to the backend tcp-echo service,
+// using eventually testing helper.
 func verifyTCPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
 	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})

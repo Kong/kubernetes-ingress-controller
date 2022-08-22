@@ -325,7 +325,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, deploymentListOptions)
 		require.NoError(t, err)
 		for _, pod := range pods.Items {
-			logs, err := getKubernetesLogs(ctx, t, env, pod.Namespace, pod.Name)
+			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
 			if err != nil {
 				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
 				return false

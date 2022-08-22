@@ -325,8 +325,14 @@ func httpGetResponseContains(t *testing.T, url string, client *http.Client, subs
 	return strings.Contains(string(body), substring)
 }
 
-// getKubernetesLogs gets logs af ALL containers inside pod.
-func getKubernetesLogs(ctx context.Context, t *testing.T, env environments.Environment, namespace string, name string) (string, error) {
+// getPodLogs gets logs af ALL containers inside pod.
+// returns a non-nil error if we failed to get logs of the pod (for example, pod is not started yet)
+// otherwise, it returns the combination of logs of all containers in the pod.
+// if we failed to create a kubeconfig file, fail the test `t` immediately.
+func getPodLogs(
+	ctx context.Context, t *testing.T, env environments.Environment,
+	namespace string, podName string,
+) (string, error) {
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
 	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "podlogs-tests-kubeconfig-")
@@ -339,7 +345,7 @@ func getKubernetesLogs(ctx context.Context, t *testing.T, env environments.Envir
 	require.Equal(t, len(kubeconfig), written)
 
 	stderr := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", name, "-n", namespace, "--all-containers") //nolint:gosec
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", podName, "-n", namespace, "--all-containers") //nolint:gosec
 	cmd.Stderr = stderr
 	out, err := cmd.Output()
 	if err != nil {

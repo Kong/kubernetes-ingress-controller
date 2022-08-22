@@ -155,6 +155,12 @@ func TestWebhookUpdate(t *testing.T) {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
 
+	t.Logf("build a cleaner to dump diagnostics...")
+	cleaner := clusters.NewCleaner(env.Cluster())
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
@@ -181,6 +187,15 @@ func TestWebhookUpdate(t *testing.T) {
 			"tls.key": []byte(tlsPairs[1].Key),
 		},
 	}
+
+	// dump diagnostics and print out logs of KIC pod, if the test failed.
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			assert.NoError(t, err, "failed to dump diagnostics")
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+		}
+	}()
 
 	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Create(ctx, firstCertificate, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -239,9 +254,12 @@ func TestWebhookUpdate(t *testing.T) {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
 			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
 		if err != nil {
+			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false
 		}
-		return conn.ConnectionState().PeerCertificates[0].Subject.CommonName == "first.example"
+		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
+		t.Logf("subject common name of certificate: %s", certCommonName)
+		return certCommonName == "first.example"
 	}, time.Minute*2, time.Second)
 
 	t.Log("changing certificate")
@@ -253,9 +271,12 @@ func TestWebhookUpdate(t *testing.T) {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
 			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
 		if err != nil {
+			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false
 		}
-		return conn.ConnectionState().PeerCertificates[0].Subject.CommonName == "second.example"
+		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
+		t.Logf("subject common name of certificate: %s", certCommonName)
+		return certCommonName == "second.example"
 	}, time.Minute*10, time.Second)
 }
 

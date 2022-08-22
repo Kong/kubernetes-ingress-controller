@@ -188,12 +188,12 @@ func TestWebhookUpdate(t *testing.T) {
 		},
 	}
 
-	// dump diagnostics and print out logs of KIC pod, if the test failed.
+	// dump diagnostics and print out logs of KIC pod to a temporary directory, if the test failed.
 	defer func() {
 		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			outputDir, err := cleaner.DumpDiagnostics(ctx, t.Name())
 			assert.NoError(t, err, "failed to dump diagnostics")
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			t.Logf("%s failed, dumped diagnostics to directory %s", t.Name(), outputDir)
 		}
 	}()
 

@@ -12,29 +12,29 @@ import (
 	"text/template"
 )
 
-//go:generate go run . -standard-crds-url $STANDARD_CRDS_URL -crds-url $CRDS_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
+//go:generate go run . -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
 
 var (
-	standardCrdsURLFlag = flag.String("standard-crds-url", "", "The URL of standard Gateway API CRDs to be consumed by kustomize")
-	crdsURLFlag         = flag.String("crds-url", "", "The URL of Gateway API CRDs to be consumed by kustomize")
-	rawRepoURLFlag      = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
-	inFlag              = flag.String("in", "", "Template file path")
-	outFlag             = flag.String("out", "", "Output file path where the generate file will be placed")
+	crdsStandardURLFlag     = flag.String("crds-standard-url", "", "The URL of standard Gateway API CRDs to be consumed by kustomize")
+	crdsExperimentalURLFlag = flag.String("crds-experimental-url", "", "The URL of experimental Gateway API CRDs to be consumed by kustomize")
+	rawRepoURLFlag          = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
+	inFlag                  = flag.String("in", "", "Template file path")
+	outFlag                 = flag.String("out", "", "Output file path where the generate file will be placed")
 )
 
 type Data struct {
-	StandardCRDsKustomizeURL string
-	CRDsKustomizeURL         string
-	RawRepoURL               string
+	CRDsStandardKustomizeURL     string
+	CRDsExperimentalKustomizeURL string
+	RawRepoURL                   string
 }
 
 func main() {
 	flagParse()
 
 	data := Data{
-		StandardCRDsKustomizeURL: *standardCrdsURLFlag,
-		CRDsKustomizeURL:         *crdsURLFlag,
-		RawRepoURL:               *rawRepoURLFlag,
+		CRDsStandardKustomizeURL:     *crdsStandardURLFlag,
+		CRDsExperimentalKustomizeURL: *crdsExperimentalURLFlag,
+		RawRepoURL:                   *rawRepoURLFlag,
 	}
 	processTemplate(*inFlag, *outFlag, data)
 }
@@ -47,12 +47,12 @@ func must(err error, errMsg string) {
 
 func flagParse() {
 	flag.Parse()
-	if *standardCrdsURLFlag == "" {
-		log.Print("Please provide the 'standard-crds-url' flag")
+	if *crdsStandardURLFlag == "" {
+		log.Print("Please provide the 'crds-standard-url' flag")
 		os.Exit(0)
 	}
-	if *crdsURLFlag == "" {
-		log.Print("Please provide the 'crds-url' flag")
+	if *crdsExperimentalURLFlag == "" {
+		log.Print("Please provide the 'crds-experimental-url' flag")
 		os.Exit(0)
 	}
 	if *rawRepoURLFlag == "" {

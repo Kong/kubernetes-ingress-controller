@@ -409,8 +409,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
-	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
+	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -482,8 +482,8 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	verifyIngress(ctx, t, env)
 
 	// ensure that Gateways with no addresses come online and start ingesting routes
-	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
+	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)

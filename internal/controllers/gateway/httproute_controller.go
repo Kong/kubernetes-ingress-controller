@@ -37,6 +37,10 @@ type HTTPRouteReconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
+	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
+	// namespace is in backendRefs.
+	// If it is false, referencing backend in different namespace will be rejected.
+	EnableReferenceGrant bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -541,6 +545,10 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 			// Check if the object referenced is in another namespace,
 			// and if there is grant for that reference
 			if httpRoute.Namespace != backendNamespace {
+				if !r.EnableReferenceGrant {
+					return gatewayv1alpha2.RouteReasonRefNotPermitted, nil
+				}
+
 				referenceGrantList := &gatewayv1alpha2.ReferenceGrantList{}
 				if err := r.Client.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
 					return "", err

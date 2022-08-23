@@ -23,6 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 const examplesDIR = "../../examples"
@@ -174,7 +176,7 @@ func TestTCPRouteExample(t *testing.T) {
 
 	t.Log("verifying that TCPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		responds, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
+		responds, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
 		return err == nil && responds
 	}, ingressWait, waitTick)
 }

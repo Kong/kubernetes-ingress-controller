@@ -44,7 +44,7 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 
 	// gather the YAML to deploy Gateway CRDs
 	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	args = []string{"--kubeconfig", kubeconfig.Name(), "kustomize", consts.GatewayCRDsKustomizeURL}
+	args = []string{"--kubeconfig", kubeconfig.Name(), "kustomize", consts.GatewayExperimentalCRDsKustomizeURL}
 	cmd = exec.CommandContext(ctx, "kubectl", args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

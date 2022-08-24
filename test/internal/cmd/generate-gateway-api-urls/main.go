@@ -1,3 +1,6 @@
+//go:build generate_gateway_api_urls
+// +build generate_gateway_api_urls
+
 package main
 
 import (
@@ -12,7 +15,7 @@ import (
 	"text/template"
 )
 
-//go:generate go run . -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
+//go:generate go run --tags generate_gateway_api_urls . -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
 
 var (
 	crdsStandardURLFlag     = flag.String("crds-standard-url", "", "The URL of standard Gateway API CRDs to be consumed by kustomize")

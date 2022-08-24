@@ -138,7 +138,14 @@ generate: generate.controllers generate.clientsets generate.gateway-api-urls
 .PHONY: generate.controllers
 generate.controllers: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="$(CRD_GEN_PATHS)"
-	go generate ./...
+	go generate $(PROJECT_DIR)/internal/cmd
+# TODO: Previously this didn't have build tags assigned so technically nothing really
+# happened upon go generate invocation for fips binary.
+# Unfortunately this requires a bit more code to change the generation code since
+# github.com/kong/kubernetes-ingress-controller/v2/hack/generators/controllers/networking
+# relies on a relative path to boilerplate.go.txt which breaks if accessed from internal/cmd/fips.
+# Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/2853
+# go generate --tags fips $(PROJECT_DIR)/internal/cmd/fips
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
@@ -374,7 +381,7 @@ generate.gateway-api-urls:
 		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
 		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
 		OUTPUT=$(shell pwd)/test/consts/zz_generated_gateway.go \
-		go generate ./test/internal/cmd/generate-gateway-api-urls
+		go generate -tags=generate_gateway_api_urls ./test/internal/cmd/generate-gateway-api-urls
 
 .PHONY: go-mod-download-gateway-api
 go-mod-download-gateway-api:

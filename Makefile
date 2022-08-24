@@ -66,9 +66,9 @@ clean:
 .PHONY: build
 build: generate fmt vet lint
 	go build -a -o bin/manager -ldflags "-s -w \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$(TAG) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
+		-X $(REPO_URL)/v2/internal/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/v2/internal/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
 
 .PHONY: fmt
 fmt:
@@ -141,20 +141,18 @@ generate.controllers: controller-gen
 	go generate ./...
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
-# TODO: we're using a tempdir to hack around the client-gen file emitter, we should see if there's a simple fix for this.
-#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2856
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
-	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
+	$(CLIENT_GEN) \
+		--go-header-file ./hack/boilerplate.go.txt \
+		--logtostderr \
 		--clientset-name clientset \
-		--input-base github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/  \
+		--input-base $(REPO_URL)/v2/pkg/apis/  \
 		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1 \
-		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1alpha1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
-		--output-base client-gen-tmp/ \
-		--output-package github.com/kong/kubernetes-ingress-controller/v2/pkg/
-	@rm -rf pkg/clientset/
-	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset pkg/
-	@rm -rf client-gen-tmp/
+		--input-dirs $(REPO_URL)/pkg/apis/configuration/v1alpha1/,$(REPO_URL)/pkg/apis/configuration/v1beta1/,$(REPO_URL)/pkg/apis/configuration/v1/ \
+		--output-base pkg/ \
+		--output-package $(REPO_URL)/v2/pkg/ \
+		--trim-path-prefix pkg/$(REPO_URL)/v2/
 
 # ------------------------------------------------------------------------------
 # Build - Container Images

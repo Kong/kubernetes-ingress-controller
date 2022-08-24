@@ -141,8 +141,8 @@ generate.controllers: controller-gen
 	go generate ./...
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
-# TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
-#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1254
+# TODO: we're using a tempdir to hack around the client-gen file emitter, we should see if there's a simple fix for this.
+#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2856
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
 	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \

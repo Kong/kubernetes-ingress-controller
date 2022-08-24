@@ -16,7 +16,7 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
+        # PULP_PASSWORD secret is set in "Configure ci"  environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: setup golang

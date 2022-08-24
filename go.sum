@@ -515,8 +515,8 @@ github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+o
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/kong/deck v1.14.0 h1:ZqYgDqOr3KXqBTOMakFUf2EIQjjyXVevQrveUNJMneo=
 github.com/kong/deck v1.14.0/go.mod h1:H26s8ZNZhtouUy9drgLjgsGVIXayVtoClRz46TBrap8=
-github.com/kong/go-kong v0.31.0 h1:m+0pMyTbyHPKKIXf7jPz5aqbWvOr9ahsyDtkYh4VGPM=
-github.com/kong/go-kong v0.31.0/go.mod h1:CNUTSvX9mfYVQvb08d+uJfkbjxv7M6RdkLXK8XJ9fL8=
+github.com/kong/go-kong v0.31.1 h1:bO9jRdw35HQKXd3XS5baJhwTAVl8gZjdY51cvglojUU=
+github.com/kong/go-kong v0.31.1/go.mod h1:76auWSrwSmH1de2oBJ2/6zibVS0eW+sJgAsdA94f1jI=
 github.com/kong/kubernetes-testing-framework v0.19.0 h1:RCE1xErJc4vm85ujtOksFgnsRJAaIylUcBODg73pQ84=
 github.com/kong/kubernetes-testing-framework v0.19.0/go.mod h1:0NMLleZP3MLHLqqHMzy0Hkajq2HnWK3neqIvS/Jkf+I=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

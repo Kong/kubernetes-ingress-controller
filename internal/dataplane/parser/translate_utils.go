@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -12,13 +11,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
-
-// kongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
-// as a regex.
-const kongHeaderRegexPrefix = "~*"
-
-// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches.
-var MinRegexHeaderKongVersion = semver.MustParse("2.8.0")
 
 // -----------------------------------------------------------------------------
 // Translate Utilities - Gateway

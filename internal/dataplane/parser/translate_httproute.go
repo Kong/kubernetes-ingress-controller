@@ -167,9 +167,16 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 			if match.Path != nil {
 				if *match.Path.Type == gatewayv1alpha2.PathMatchExact {
 					terminated := *match.Path.Value + "$"
+					if util.GetKongVersion().GTE(MinExplicitPathRegexKongVersion) {
+						terminated = kongPathRegexPrefix + terminated
+					}
 					r.Route.Paths = []*string{&terminated}
 				} else if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix {
-					r.Route.Paths = []*string{match.Path.Value}
+					path := *match.Path.Value
+					if util.GetKongVersion().GTE(MinExplicitPathRegexKongVersion) {
+						path = kongPathRegexPrefix + path
+					}
+					r.Route.Paths = []*string{&path}
 				}
 			}
 

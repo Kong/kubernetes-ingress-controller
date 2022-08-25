@@ -1,5 +1,7 @@
 package parser
 
+import "github.com/blang/semver/v4"
+
 // -----------------------------------------------------------------------------
 // Translation - Vars & Constants
 // -----------------------------------------------------------------------------
@@ -17,4 +19,19 @@ const (
 	// DefaultHTTPPort is the network port that should be assumed by default
 	// for HTTP traffic to services.
 	DefaultHTTPPort = 80
+
+	// kongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
+	// as a regex.
+	kongHeaderRegexPrefix = "~*"
+
+	// kongPathRegexPrefix is the reserved prefix string that instructs Kong 3.0+ to interpret a path as a regex.
+	kongPathRegexPrefix = "~"
+)
+
+var (
+	// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches.
+	MinRegexHeaderKongVersion = semver.MustParse("2.8.0")
+
+	// MinExplicitPathRegexKongVersion is the minimum Kong version that requires explicit indication of regex paths.
+	MinExplicitPathRegexKongVersion = semver.MustParse("3.0.0")
 )

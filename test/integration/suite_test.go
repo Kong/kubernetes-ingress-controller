@@ -133,6 +133,19 @@ func TestMain(m *testing.M) {
 	_, err = env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Update(ctx, svc, metav1.UpdateOptions{})
 	exitOnErr(err)
 
+	fmt.Printf("INFO: set KONG_ROUTER_FLAVOR to traditional\n")
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(kongAddon.Namespace()).Get(ctx, "ingress-controller-kong", metav1.GetOptions{})
+	exitOnErr(err)
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "proxy" {
+			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "KONG_ROUTER_FLAVOR", Value: "traditional"},
+			)
+		}
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(kongAddon.Namespace()).Update(ctx, deployment, metav1.UpdateOptions{})
+	exitOnErr(err)
+
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(err)
 	if clusterVersion.GE(knativeMinKubernetesVersion) {

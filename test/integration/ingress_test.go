@@ -108,6 +108,22 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		return false
 	}, ingressWait, waitTick)
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/regex-999-httpbin", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
 
 	t.Logf("removing the ingress.class annotation %q from ingress", ingressClass)
 	switch obj := ingress.(type) {

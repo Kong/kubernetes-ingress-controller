@@ -1573,6 +1573,8 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
+        - name: KONG_ROUTER_FLAVOR
+          value: traditional
         image: kong:2.8
         lifecycle:
           preStop:

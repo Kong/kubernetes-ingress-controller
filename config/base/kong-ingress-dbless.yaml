@@ -63,6 +63,9 @@ spec:
         # - value: /dev/stdout
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
+        # router mode in 3.0.0. use `traditional` here for full compatibility.
+        - name: KONG_ROUTER_FLAVOR
+          value: traditional
         lifecycle:
           preStop:
             exec:

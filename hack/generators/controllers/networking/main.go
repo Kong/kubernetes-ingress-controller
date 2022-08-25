@@ -21,10 +21,9 @@ const (
 	netv1beta1 = "k8s.io/api/networking/v1beta1"
 	extv1beta1 = "k8s.io/api/extensions/v1beta1"
 
-	kongv1          = "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1beta1     = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1beta1"
-	kongv1alpha1    = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1alpha1"
-	knativev1alpha1 = "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	kongv1       = "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1beta1"
+	kongv1alpha1 = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1alpha1"
 )
 
 // inputControllersNeeded is a list of the supported Types for the
@@ -234,21 +233,6 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
-	typeNeeded{
-		Group:                             "networking.internal.knative.dev",
-		Version:                           "v1alpha1",
-		Kind:                              "Ingress",
-		PackageImportAlias:                "knativev1alpha1",
-		PackageAlias:                      "Knativev1alpha1",
-		Package:                           knativev1alpha1,
-		Plural:                            "ingresses",
-		CacheType:                         "KnativeIngress",
-		NeedsStatusPermissions:            true,
-		CapableOfStatusUpdates:            true,
-		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
-		RBACVerbs:                         []string{"get", "list", "watch"},
-	},
 }
 
 var inputRBACPermissionsNeeded = &rbacsNeeded{
@@ -419,8 +403,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	knativeApis "knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -529,8 +511,8 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(obj client.Object) 
 		return nil
 	}
 	var recs []reconcile.Request
-	for _, resource := range resourceList.Items {
-		if ctrlutils.IsIngressClassEmpty(&resource) {
+	for i, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: resource.Namespace,
@@ -581,12 +563,14 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{if .AcceptsIngressClassNameAnnotation}}
 	class := new(netv1.IngressClass)
-	if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
-		// we log this without taking action to support legacy configurations that only set ingressClassName or
-		// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
-		// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
-		// if none exists.
-		log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+	if !r.DisableIngressClassLookups {
+		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+			// we log this without taking action to support legacy configurations that only set ingressClassName or
+			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+			// if none exists.
+			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
@@ -615,29 +599,11 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		}
 
 		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-{{- if eq .Group "networking.internal.knative.dev"}}
-		var knativeLBIngress []knativev1alpha1.LoadBalancerIngressStatus
-		for _, addr := range addrs {
-			knativeIng := knativev1alpha1.LoadBalancerIngressStatus{
-				IP:     addr.IP,
-				Domain: addr.Hostname,
-			}
-			knativeLBIngress = append(knativeLBIngress, knativeIng)
-		}
-		ingressCondSet := knativeApis.NewLivingConditionSet()
-		if obj.Status.PublicLoadBalancer == nil || len(obj.Status.PublicLoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.PublicLoadBalancer.Ingress, knativeLBIngress) {
-			obj.Status.MarkLoadBalancerReady(knativeLBIngress, knativeLBIngress)
-			ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionReady)
-			ingressCondSet.Manage(&obj.Status).MarkTrue(knativev1alpha1.IngressConditionNetworkConfigured)
-			obj.Status.ObservedGeneration = obj.Generation
-{{- else}}
 		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
 			obj.Status.LoadBalancer.Ingress = addrs
-{{- end}}
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
-		} else {
-			log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
 		}
+		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 {{- end}}
 

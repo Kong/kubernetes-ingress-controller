@@ -162,6 +162,28 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 		return err
 	}
 
+	if featureGates[gatewayFeature] {
+		setupLog.Info("Gateway Feature Enabled, Checking Existence of CRDs")
+		for _, checker := range gatewayBetaCRDsExistsCheckers {
+			if !checker.CRDExists(mgr.GetClient()) {
+				setupLog.Info("CRD does not exist, disable gateway feature", "resource", checker.GVR.Resource)
+				featureGates[gatewayFeature] = false
+				break
+			}
+		}
+	}
+
+	// Check alpha CRDs if GatewayAlpha enabled.
+	if featureGates[gatewayAlphaFeature] {
+		setupLog.Info("GatewayAlpha Feature Enabled, Checking Existence of CRDs")
+		for _, checker := range gatewayAlphaCRDsExistsCheckers {
+			if !checker.CRDExists(mgr.GetClient()) {
+				setupLog.Info("Warning: GatewayAlpha feature enabled but CRD does not exist",
+					"resource", checker.GVR.Resource)
+			}
+		}
+	}
+
 	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(mgr, dataplaneClient, dataplaneAddressFinder, kubernetesStatusQueue, c, featureGates)
 	if err != nil {

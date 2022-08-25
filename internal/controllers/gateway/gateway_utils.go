@@ -3,6 +3,7 @@ package gateway
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -24,6 +25,21 @@ const (
 	// maxConds is the maximum number of status conditions a Gateway can have at one time.
 	maxConds = 8
 )
+
+// setGatewayCondition sets the condition with specified type in gateway status
+// to expected condition in newCondition.
+// if the gateway status does not contain a condition with that type, add one more condition.
+// if the gateway status contains condition(s) with the type, then replace with the new condition.
+func setGatewayCondition(gateway *gatewayv1alpha2.Gateway, newCondition metav1.Condition) {
+	newConditions := []metav1.Condition{}
+	for _, condition := range gateway.Status.Conditions {
+		if condition.Type != newCondition.Type {
+			newConditions = append(newConditions, condition)
+		}
+	}
+	newConditions = append(newConditions, newCondition)
+	gateway.Status.Conditions = newConditions
+}
 
 // isGatewayScheduled returns boolean whether or not the gateway object was scheduled
 // previously by the gateway controller.
@@ -205,6 +221,7 @@ func canSharePort(requested gatewayv1alpha2.ProtocolType, existing gatewayv1alph
 func getListenerStatus(
 	gateway *gatewayv1alpha2.Gateway,
 	kongListens []gatewayv1alpha2.Listener,
+	referenceGrants []gatewayv1alpha2.ReferenceGrant,
 ) []gatewayv1alpha2.ListenerStatus {
 	statuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus, len(gateway.Spec.Listeners))
 	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
@@ -335,6 +352,13 @@ func getListenerStatus(
 			})
 		}
 
+		// consistent sort statuses to allow equality comparisons
+		sort.Slice(status.Conditions, func(i, j int) bool {
+			a := status.Conditions[i]
+			b := status.Conditions[j]
+			return fmt.Sprintf("%s%s%s%s", a.Type, a.Status, a.Reason, a.Message) <
+				fmt.Sprintf("%s%s%s%s", b.Type, b.Status, b.Reason, b.Message)
+		})
 		statuses[listener.Name] = status
 	}
 
@@ -342,7 +366,8 @@ func getListenerStatus(
 	// https://github.com/Kong/kubernetes-ingress-controller/pull/2555#issuecomment-1154579046 for discussion)
 	// if we encountered conflicts, we must strip the ready status we originally set
 	for _, listener := range gateway.Spec.Listeners {
-		var reason string
+		var conflictReason string
+		var resolvedRefReason string
 
 		var hostname gatewayv1alpha2.Hostname
 		if listener.Hostname != nil {
@@ -350,15 +375,69 @@ func getListenerStatus(
 		}
 		// there's no filter for protocols that don't use Hostname, but this won't be populated from earlier for those
 		if _, ok := conflictedHostnames[listener.Port][hostname]; ok {
-			reason = string(gatewayv1alpha2.ListenerReasonHostnameConflict)
+			conflictReason = string(gatewayv1alpha2.ListenerReasonHostnameConflict)
 		}
 
 		if _, ok := conflictedPorts[listener.Port]; ok {
-			reason = string(gatewayv1alpha2.ListenerReasonProtocolConflict)
+			conflictReason = string(gatewayv1alpha2.ListenerReasonProtocolConflict)
 		}
 
-		if len(reason) > 0 {
-			newConditions := []metav1.Condition{}
+		// If the listener uses TLS, we need to ensure that the gateway is granted to reference
+		// all the secrets it references
+		if listener.TLS != nil {
+			resolvedRefReason = string(gatewayv1alpha2.ListenerReasonResolvedRefs)
+			for _, certRef := range listener.TLS.CertificateRefs {
+				// only secrets are supported as certificate references
+				if (certRef.Group != nil && (*certRef.Group != "core" && *certRef.Group != "")) ||
+					(certRef.Kind != nil && *certRef.Kind != "Secret") {
+					resolvedRefReason = string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef)
+					break
+				}
+				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
+				if certRef.Namespace == nil || *certRef.Namespace == gatewayv1alpha2.Namespace(gateway.Namespace) {
+					continue
+				}
+				// get the result of the certificate reference. If the returned reason is not successful, the loop
+				// must be broken because a secret reference isn't granted
+				resolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
+				if resolvedRefReason != string(gatewayv1alpha2.ListenerReasonResolvedRefs) {
+					break
+				}
+			}
+		}
+
+		newConditions := []metav1.Condition{}
+
+		// if resolvedRefReason has any value, it means that the listener references a secret.
+		// A ListenerConditionResolvedRefs condition must be set to reflect in the gateway status
+		// the outcome of that reference (that means if the gateway is granted to access that secret)
+		if resolvedRefReason != "" {
+			conditionStatus := metav1.ConditionTrue
+			message := "the listener is ready and available for routing"
+			if resolvedRefReason != string(gatewayv1alpha2.ListenerReasonResolvedRefs) {
+				conditionStatus = metav1.ConditionFalse
+				message = "the listener is not ready and cannot route requests"
+			}
+			newConditions = append(newConditions,
+				metav1.Condition{
+					Type:               string(gatewayv1alpha2.ListenerConditionResolvedRefs),
+					Status:             conditionStatus,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             resolvedRefReason,
+				},
+				metav1.Condition{
+					Type:               string(gatewayv1alpha2.ListenerConditionReady),
+					Status:             conditionStatus,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1alpha2.ListenerReasonReady),
+					Message:            message,
+				},
+			)
+		}
+
+		if len(conflictReason) > 0 {
 			for _, cond := range statuses[listener.Name].Conditions {
 				// shut up linter, there's a default
 				switch gatewayv1alpha2.ListenerConditionType(cond.Type) { //nolint:exhaustive
@@ -374,7 +453,7 @@ func getListenerStatus(
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             reason,
+					Reason:             conflictReason,
 				},
 				metav1.Condition{
 					Type:               string(gatewayv1alpha2.ListenerConditionReady),
@@ -385,7 +464,16 @@ func getListenerStatus(
 					Message:            "the listener is not ready and cannot route requests",
 				},
 			)
+		}
+		if len(newConditions) > 0 {
 			status := statuses[listener.Name]
+			// consistent sort statuses to allow equality comparisons
+			sort.Slice(newConditions, func(i, j int) bool {
+				a := newConditions[i]
+				b := newConditions[j]
+				return fmt.Sprintf("%s%s%s%s", a.Type, a.Status, a.Reason, a.Message) <
+					fmt.Sprintf("%s%s%s%s", b.Type, b.Status, b.Reason, b.Message)
+			})
 			status.Conditions = newConditions
 			statuses[listener.Name] = status
 		}
@@ -396,6 +484,42 @@ func getListenerStatus(
 	}
 
 	return statusArray
+}
+
+// getReferenceGrantConditionReason gets a certRef belonging to a specific listener and a slice of referenceGrants.
+func getReferenceGrantConditionReason(gatewayNamespace string, certRef gatewayv1alpha2.SecretObjectReference, referenceGrants []gatewayv1alpha2.ReferenceGrant) string {
+	// no need to have this reference granted
+	if certRef.Namespace == nil || *certRef.Namespace == gatewayv1alpha2.Namespace(gatewayNamespace) {
+		return string(gatewayv1alpha2.ListenerReasonResolvedRefs)
+	}
+
+	certRefNamespace := string(*certRef.Namespace)
+	for _, grant := range referenceGrants {
+		// the grant must exist in the same namespace of the referenced resource
+		if grant.Namespace != certRefNamespace {
+			continue
+		}
+		for _, from := range grant.Spec.From {
+			// we are interested only in grants for gateways that want to reference secrets
+			if from.Group != gatewayV1alpha2Group || from.Kind != "Gateway" {
+				continue
+			}
+			if from.Namespace == gatewayv1alpha2.Namespace(gatewayNamespace) {
+				for _, to := range grant.Spec.To {
+					if (to.Group != "" && to.Group != "core") || to.Kind != "Secret" {
+						continue
+					}
+					// if all the above conditions are satisfied, and the name of the referenced secret matches
+					// the granted resource name, then return a reason "ResolvedRefs"
+					if to.Name == nil || string(*to.Name) == string(certRef.Name) {
+						return string(gatewayv1alpha2.ListenerReasonResolvedRefs)
+					}
+				}
+			}
+		}
+	}
+	// if no grants have been found for the reference, return an "InvalidCertificateRef" reason
+	return string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef)
 }
 
 // -----------------------------------------------------------------------------

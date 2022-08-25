@@ -51,10 +51,10 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 	return convertedHeaders, nil
 }
 
-// isRefAllowedByPolicy checks if backendRef is permitted by the provided namespace-indexed ReferenceGrantTo set,
+// isRefAllowedByGrant checks if backendRef is permitted by the provided namespace-indexed ReferenceGrantTo set,
 // allowed. allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
 // getPermittedForReferenceGrantFrom.
-func isRefAllowedByPolicy(
+func isRefAllowedByGrant(
 	namespace *gatewayv1alpha2.Namespace,
 	name gatewayv1alpha2.ObjectName,
 	group *gatewayv1alpha2.Group,
@@ -83,19 +83,19 @@ func isRefAllowedByPolicy(
 
 // getPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
 // from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
-// ReferencePolicy with those Tos and the input From.
+// ReferenceGrant with those Tos and the input From.
 func getPermittedForReferenceGrantFrom(from gatewayv1alpha2.ReferenceGrantFrom,
-	policies []*gatewayv1alpha2.ReferencePolicy,
+	grants []*gatewayv1alpha2.ReferenceGrant,
 ) map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo {
 	allowed := make(map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo)
-	// loop over all From values in all policies. if we find a match, add all Tos to the list of Tos allowed for the
-	// policy namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
+	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
+	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
 	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
-	// matching To when checking if a ReferencePolicy allows a reference)
-	for _, policy := range policies {
-		for _, otherFrom := range policy.Spec.From {
+	// matching To when checking if a ReferenceGrant allows a reference)
+	for _, grant := range grants {
+		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
-				allowed[gatewayv1alpha2.Namespace(policy.ObjectMeta.Namespace)] = append(allowed[gatewayv1alpha2.Namespace(policy.ObjectMeta.Namespace)], policy.Spec.To...)
+				allowed[gatewayv1alpha2.Namespace(grant.ObjectMeta.Namespace)] = append(allowed[gatewayv1alpha2.Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
 			}
 		}
 	}
@@ -120,18 +120,19 @@ func (p *Parser) generateKongServiceFromBackendRef(
 
 	backends := make(kongstate.ServiceBackends, 0, len(backendRefs))
 
-	policies, err := p.storer.ListReferencePolicies()
+	grants, err := p.storer.ListReferenceGrants()
 	if err != nil {
-		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferencePolicies for %s: %w", objName, err)
+		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
 	allowed := getPermittedForReferenceGrantFrom(gatewayv1alpha2.ReferenceGrantFrom{
 		Group:     gatewayv1alpha2.Group(route.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayv1alpha2.Kind(route.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayv1alpha2.Namespace(route.GetNamespace()),
-	}, policies)
+	}, grants)
 
 	for _, backendRef := range backendRefs {
-		if isRefAllowedByPolicy(backendRef.Namespace, backendRef.Name, backendRef.Group, backendRef.Kind, allowed) {
+		if util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) &&
+			isRefAllowedByGrant(backendRef.Namespace, backendRef.Name, backendRef.Group, backendRef.Kind, allowed) {
 			backend := kongstate.ServiceBackend{
 				Name: string(backendRef.Name),
 				PortDef: kongstate.PortDef{
@@ -149,15 +150,16 @@ func (p *Parser) generateKongServiceFromBackendRef(
 			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
 			// failing the entire rule could potentially delete routes that were previously online and in use, and
 			// that remain viable (because they still have some permissible backendRefs)
-			p.logger.Errorf("%s requested backendRef to %s %s/%s, but no ReferencePolicy permits it, skipping...",
-				objName, *backendRef.Kind, *backendRef.Namespace, backendRef.Name)
+			var namespace, kind string = route.GetNamespace(), ""
+			if backendRef.Namespace != nil {
+				namespace = string(*backendRef.Namespace)
+			}
+			if backendRef.Kind != nil {
+				kind = string(*backendRef.Kind)
+			}
+			p.logger.Errorf("%s requested backendRef to %s %s/%s, but no ReferenceGrant permits it, skipping...",
+				objName, kind, namespace, backendRef.Name)
 		}
-	}
-
-	// however, if there are _no_ permissible backendRefs, the route will not be able to forward any traffic and we
-	// should reject it
-	if len(backends) == 0 {
-		return kongstate.Service{}, fmt.Errorf("%s has no permissible backendRefs, cannot create a Kong service for it", objName)
 	}
 
 	// the service name needs to uniquely identify this service given it's list of
@@ -185,6 +187,23 @@ func (p *Parser) generateKongServiceFromBackendRef(
 			Backends:  backends,
 			Parent:    route,
 		}
+	}
+
+	// In the context of the gateway API conformance tests, if there is no service for the backend,
+	// the response must have a status code of 500. Since The default behavior of Kong is returning 503
+	// if there is no backend for a service, we inject a plugin that terminates all requests with 500
+	// as status code
+	if len(service.Backends) == 0 {
+		if service.Plugins == nil {
+			service.Plugins = make([]kong.Plugin, 0)
+		}
+		service.Plugins = append(service.Plugins, kong.Plugin{
+			Name: kong.String("request-termination"),
+			Config: kong.Configuration{
+				"status_code": 500,
+				"message":     "no existing backendRef provided",
+			},
+		})
 	}
 
 	return service, nil

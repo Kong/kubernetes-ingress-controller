@@ -66,9 +66,9 @@ clean:
 .PHONY: build
 build: generate fmt vet lint
 	go build -a -o bin/manager -ldflags "-s -w \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Release=$(TAG) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Commit=$(COMMIT) \
-		-X github.com/kong/kubernetes-ingress-controller/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
+		-X $(REPO_URL)/v2/internal/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/v2/internal/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
 
 .PHONY: fmt
 fmt:
@@ -112,11 +112,17 @@ CRD_GEN_PATHS ?= ./...
 CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 
 .PHONY: manifests
-manifests: manifests.crds manifests.single
+manifests: manifests.crds manifests.rbac manifests.single
 
 .PHONY: manifests.crds
-manifests.crds: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_GEN_PATHS)" output:crd:artifacts:config=config/crd/bases
+
+.PHONY: manifests.rbac ## Generate ClusterRole objects.
+manifests.rbac: controller-gen
+	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/"
+	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-knative paths="./internal/controllers/knative/" output:rbac:artifacts:config=config/rbac/knative
+	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
@@ -127,28 +133,33 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-crds-url
+generate: generate.controllers generate.clientsets generate.gateway-api-urls
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="$(CRD_GEN_PATHS)"
-	go generate ./...
+	go generate $(PROJECT_DIR)/internal/cmd
+# TODO: Previously this didn't have build tags assigned so technically nothing really
+# happened upon go generate invocation for fips binary.
+# Unfortunately this requires a bit more code to change the generation code since
+# github.com/kong/kubernetes-ingress-controller/v2/hack/generators/controllers/networking
+# relies on a relative path to boilerplate.go.txt which breaks if accessed from internal/cmd/fips.
+# Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/2853
+# go generate --tags fips $(PROJECT_DIR)/internal/cmd/fips
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
-# TODO: we're hacking around client-gen for now to enable it for enabled go modules, should probably contribute upstream to improve this.
-#       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1254
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
-	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
+	$(CLIENT_GEN) \
+		--go-header-file ./hack/boilerplate.go.txt \
+		--logtostderr \
 		--clientset-name clientset \
-		--input-base github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/  \
+		--input-base $(REPO_URL)/v2/pkg/apis/  \
 		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1 \
-		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1alpha1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
-		--output-base client-gen-tmp/ \
-		--output-package github.com/kong/kubernetes-ingress-controller/v2/pkg/
-	@rm -rf pkg/clientset/
-	@mv client-gen-tmp/github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset pkg/
-	@rm -rf client-gen-tmp/
+		--input-dirs $(REPO_URL)/pkg/apis/configuration/v1alpha1/,$(REPO_URL)/pkg/apis/configuration/v1beta1/,$(REPO_URL)/pkg/apis/configuration/v1/ \
+		--output-base pkg/ \
+		--output-package $(REPO_URL)/v2/pkg/ \
+		--trim-path-prefix pkg/$(REPO_URL)/v2/
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
@@ -187,7 +198,7 @@ PKG_LIST = ./pkg/...,./internal/...
 KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
-KONG_CONTROLLER_FEATURE_GATES ?= Gateway=true
+KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 GOTESTFMT_CMD ?= gotestfmt -hide successful-downloads,empty-packages -showteststatus
 
 .PHONY: test
@@ -346,23 +357,31 @@ run: install
 # unsupported ref and downloads the manifests from the main branch.
 #
 # [1]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md#remote-directories
-GATEWAY_API_VERSION ?= v0.5.0
-GATEWAY_API_RELEASE_CHANNEL ?= experimental
 GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
+GATEWAY_API_RELEASE_CHANNEL ?= experimental
+GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACKAGE))
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_REPO ?= github.com/kubernetes-sigs/gateway-api
+GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/kubernetes-sigs/gateway-api
 GATEWAY_API_CRDS_URL = $(GATEWAY_API_REPO)/config/crd/$(GATEWAY_API_RELEASE_CHANNEL)?ref=$(GATEWAY_API_VERSION)
+GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
 
 .PHONY: print-gateway-api-crds-url
 print-gateway-api-crds-url:
 	@echo $(GATEWAY_API_CRDS_URL)
 
-.PHONY: generate.gateway-api-crds-url
-generate.gateway-api-crds-url:
-	URL=$(shell $(MAKE) print-gateway-api-crds-url) \
-		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-crds-url/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/test/consts/gateway.go \
-		go generate ./test/internal/cmd/generate-gateway-api-crds-url
+.PHONY: print-gateway-api-raw-repo-url
+print-gateway-api-raw-repo-url:
+	@echo $(GATEWAY_API_RAW_REPO_URL)
+
+.PHONY: generate.gateway-api-urls
+generate.gateway-api-urls:
+	CRDS_STANDARD_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="" $(MAKE) print-gateway-api-crds-url)\
+		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
+		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
+		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
+		OUTPUT=$(shell pwd)/test/consts/zz_generated_gateway.go \
+		go generate -tags=generate_gateway_api_urls ./test/internal/cmd/generate-gateway-api-urls
 
 .PHONY: go-mod-download-gateway-api
 go-mod-download-gateway-api:

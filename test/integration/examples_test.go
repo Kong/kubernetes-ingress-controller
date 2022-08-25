@@ -23,6 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 const examplesDIR = "../../examples"
@@ -30,6 +32,16 @@ const examplesDIR = "../../examples"
 var httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
 
 func TestHTTPRouteExample(t *testing.T) {
+	_, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
 	t.Logf("configuring test and setting up API clients")
 	gwc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -37,11 +49,8 @@ func TestHTTPRouteExample(t *testing.T) {
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(httprouteExampleManifests, examplesDIR))
 	b, err := os.ReadFile(httprouteExampleManifests)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
-
-	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
-	}()
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
+	cleaner.AddManifest(string(b))
 
 	t.Logf("verifying that the Gateway receives listen addresses")
 	var gatewayAddr string
@@ -103,6 +112,16 @@ func TestUDPRouteExample(t *testing.T) {
 	udpMutex.Lock()
 	defer udpMutex.Unlock()
 
+	_, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpRouteExampleManifests, examplesDIR))
 	b, err := os.ReadFile(udpRouteExampleManifests)
 	// TODO as of 2022-04-01, UDPRoute does not support using a different inbound port than the outbound
@@ -111,11 +130,8 @@ func TestUDPRouteExample(t *testing.T) {
 	s = strings.ReplaceAll(s, "port: 53", "port: 9999")
 	b = []byte(s)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
-
-	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
-	}()
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
+	cleaner.AddManifest(string(b))
 
 	t.Logf("configuring test and setting up API clients")
 	resolver := &net.Resolver{
@@ -142,19 +158,25 @@ func TestTCPRouteExample(t *testing.T) {
 	tcpMutex.Lock()
 	defer tcpMutex.Unlock()
 
+	_, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
 	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
 	b, err := os.ReadFile(tcprouteExampleManifests)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
-
-	defer func() {
-		t.Logf("deleting tcproute example")
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
-	}()
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
+	cleaner.AddManifest(string(b))
 
 	t.Log("verifying that TCPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		responds, err := tcpEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
+		responds, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
 		return err == nil && responds
 	}, ingressWait, waitTick)
 }
@@ -169,15 +191,21 @@ func TestTLSRouteExample(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
+	_, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
 	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
 	b, err := os.ReadFile(tlsrouteExampleManifests)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), string(b)))
-
-	defer func() {
-		t.Logf("deleting tlsroute example")
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), string(b)))
-	}()
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
+	cleaner.AddManifest(string(b))
 
 	t.Log("verifying that TLSRoute becomes routable")
 	require.Eventually(t, func() bool {
@@ -190,15 +218,22 @@ func TestTLSRouteExample(t *testing.T) {
 var ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)
 
 func TestIngressExample(t *testing.T) {
+	_, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(ingressExampleManifests, examplesDIR))
 	b, err := os.ReadFile(ingressExampleManifests)
 	require.NoError(t, err)
 	manifests := replaceIngressClassInManifests(string(b))
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), manifests))
-
-	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), manifests))
-	}()
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
+	cleaner.AddManifest(string(b))
 
 	t.Log("waiting for ingress resource to have an address")
 	var ingAddr string
@@ -243,15 +278,22 @@ func TestUDPIngressExample(t *testing.T) {
 	udpMutex.Lock()
 	defer udpMutex.Unlock()
 
+	_, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpingressExampleManifests, examplesDIR))
 	b, err := os.ReadFile(udpingressExampleManifests)
 	require.NoError(t, err)
 	manifests := replaceIngressClassInManifests(string(b))
-	require.NoError(t, clusters.ApplyYAML(ctx, env.Cluster(), manifests))
-
-	defer func() {
-		require.NoError(t, clusters.DeleteYAML(ctx, env.Cluster(), manifests))
-	}()
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
+	cleaner.AddManifest(string(b))
 
 	t.Log("building a DNS query to request of CoreDNS")
 	query := new(dns.Msg)

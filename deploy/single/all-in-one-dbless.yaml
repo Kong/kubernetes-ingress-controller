@@ -395,9 +395,18 @@ spec:
                   from as hash input. Only required when "hash_fallback" is set to
                   "header".
                 type: string
+              hash_fallback_query_arg:
+                description: HashFallbackQueryArg is the "hash_fallback" version of
+                  HashOnQueryArg.
+                type: string
+              hash_fallback_uri_capture:
+                description: HashFallbackURICapture is the "hash_fallback" version
+                  of HashOnURICapture.
+                type: string
               hash_on:
                 description: 'HashOn defines what to use as hashing input. Accepted
-                  values are: "none", "consumer", "ip", "header", "cookie".'
+                  values are: "none", "consumer", "ip", "header", "cookie", "path",
+                  "query_arg", "uri_capture".'
                 type: string
               hash_on_cookie:
                 description: The cookie name to take the value from as hash input.
@@ -410,6 +419,14 @@ spec:
               hash_on_header:
                 description: HashOnHeader defines the header name to take the value
                   from as hash input. Only required when "hash_on" is set to "header".
+                type: string
+              hash_on_query_arg:
+                description: HashOnQueryArg is the query string parameter whose value
+                  is the hash input when "hash_on" is set to "query_arg".
+                type: string
+              hash_on_uri_capture:
+                description: HashOnURICapture is the name of the capture group whose
+                  value is the hash input when "hash_on" is set to "uri_capture".
                 type: string
               healthchecks:
                 description: Healthchecks defines the health check configurations
@@ -1255,6 +1272,37 @@ rules:
   - patch
   - update
 - apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kong-ingress-gateway
+rules:
+- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses
@@ -1303,29 +1351,17 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - referencepolicies
+  - referencegrants
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - referencepolicies/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - referencepolicies/status
+  - referencegrants/status
   verbs:
   - get
-  - patch
-  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
@@ -1371,6 +1407,13 @@ rules:
   verbs:
   - get
   - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kong-ingress-knative
+rules:
 - apiGroups:
   - networking.internal.knative.dev
   resources:
@@ -1381,30 +1424,6 @@ rules:
   - watch
 - apiGroups:
   - networking.internal.knative.dev
-  resources:
-  - ingresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingressclasses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.k8s.io
   resources:
   - ingresses/status
   verbs:
@@ -1434,6 +1453,32 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: kong-ingress
+subjects:
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kong-ingress-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kong-ingress-gateway
+subjects:
+- kind: ServiceAccount
+  name: kong-serviceaccount
+  namespace: kong
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kong-ingress-knative
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kong-ingress-knative
 subjects:
 - kind: ServiceAccount
   name: kong-serviceaccount

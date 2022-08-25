@@ -178,7 +178,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 	}
 }
 
-func Test_isRefAllowedByPolicy(t *testing.T) {
+func Test_isRefAllowedByGrant(t *testing.T) {
 	fitrat := gatewayv1alpha2.Namespace("fitrat")
 	cholpon := gatewayv1alpha2.Namespace("cholpon")
 	behbudiy := gatewayv1alpha2.Namespace("behbudiy")
@@ -261,7 +261,7 @@ func Test_isRefAllowedByPolicy(t *testing.T) {
 			result: false,
 		},
 		{
-			msg: "no policies in target namespace",
+			msg: "no grants in target namespace",
 			ref: gatewayv1alpha2.BackendRef{
 				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 					Name:      gatewayv1alpha2.ObjectName("foo"),
@@ -275,14 +275,14 @@ func Test_isRefAllowedByPolicy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := isRefAllowedByPolicy(tt.ref.Namespace, tt.ref.Name, tt.ref.Group, tt.ref.Kind, fakeMap)
+			result := isRefAllowedByGrant(tt.ref.Namespace, tt.ref.Name, tt.ref.Group, tt.ref.Kind, fakeMap)
 			assert.Equal(t, tt.result, result)
 		})
 	}
 }
 
 func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
-	policies := []*gatewayv1alpha2.ReferencePolicy{
+	grants := []*gatewayv1alpha2.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        uuid.NewString(),
@@ -310,7 +310,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				To: []gatewayv1alpha2.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("PolicyOne"),
+						Kind:  gatewayv1alpha2.Kind("GrantOne"),
 					},
 				},
 			},
@@ -337,7 +337,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				To: []gatewayv1alpha2.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("PolicyTwo"),
+						Kind:  gatewayv1alpha2.Kind("GrantTwo"),
 					},
 				},
 			},
@@ -395,7 +395,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("PolicyTwo"),
+						Kind:  gatewayv1alpha2.Kind("GrantTwo"),
 					},
 				},
 			},
@@ -411,13 +411,13 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("PolicyTwo"),
+						Kind:  gatewayv1alpha2.Kind("GrantTwo"),
 					},
 				},
 				"fitrat": {
 					{
 						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("PolicyOne"),
+						Kind:  gatewayv1alpha2.Kind("GrantOne"),
 					},
 				},
 			},
@@ -425,14 +425,14 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := getPermittedForReferenceGrantFrom(tt.from, policies)
+			result := getPermittedForReferenceGrantFrom(tt.from, grants)
 			assert.Equal(t, tt.result, result)
 		})
 	}
 }
 
 func Test_generateKongServiceFromBackendRef(t *testing.T) {
-	policies := []*gatewayv1alpha2.ReferencePolicy{
+	grants := []*gatewayv1alpha2.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        uuid.NewString(),
@@ -493,7 +493,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 			},
 		},
 	}
-	fakestore, err := store.NewFakeStore(store.FakeObjects{ReferencePolicies: policies})
+	fakestore, err := store.NewFakeStore(store.FakeObjects{ReferenceGrants: grants})
 	assert.Nil(t, err)
 	p := NewParser(logrus.New(), fakestore)
 	// empty since we always want to actually generate a service for tests
@@ -687,8 +687,39 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 			},
-			result:  kongstate.Service{},
-			wantErr: true,
+			result: kongstate.Service{
+				Service: kong.Service{
+					Name:           kong.String("tcproute.behbudiy.kitab-ul-atfol.999"),
+					Host:           kong.String("tcproute.behbudiy.kitab-ul-atfol.999"),
+					Protocol:       kong.String(protocol),
+					ConnectTimeout: kong.Int(DefaultServiceTimeout),
+					ReadTimeout:    kong.Int(DefaultServiceTimeout),
+					WriteTimeout:   kong.Int(DefaultServiceTimeout),
+					Retries:        kong.Int(DefaultRetries),
+				},
+				Namespace: "behbudiy",
+				Backends:  []kongstate.ServiceBackend{},
+				Plugins: []kong.Plugin{
+					{
+						Name: kong.String("request-termination"),
+						Config: kong.Configuration{
+							"status_code": 500,
+							"message":     "no existing backendRef provided",
+						},
+					},
+				},
+				Parent: &gatewayv1alpha2.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kitab-ul-atfol",
+						Namespace: "behbudiy",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TCPRoute",
+						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					},
+				},
+			},
+			wantErr: false,
 		},
 		{
 			msg: "same and different ns backend",

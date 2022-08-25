@@ -90,7 +90,7 @@ resources:
 - controller: true
   domain: networking.k8s.io
   group: gateway
-  kind: ReferencePolicy
+  kind: ReferenceGrant
   version: v1alpha2
 - controller: true
   domain: networking.k8s.io

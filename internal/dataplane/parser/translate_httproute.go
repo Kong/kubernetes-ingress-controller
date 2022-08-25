@@ -47,7 +47,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 }
 
 func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1alpha2.HTTPRoute) error {
-	// first we grab the spec and gather some metdata about the object
+	// first we grab the spec and gather some metadata about the object
 	spec := httproute.Spec
 
 	// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
@@ -125,6 +125,9 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 	// Therefore we treat each match rule as a separate Kong Route, so we iterate through
 	// all matches to determine all the routes that will be needed for the services.
 	var routes []kongstate.Route
+
+	// generate kong plugins from rule.filters
+	plugins := generatePluginsFromHTTPRouteRuleFilters(rule)
 	if len(rule.Matches) > 0 {
 		for matchNumber, match := range rule.Matches {
 			// determine the name of the route, identify it as a route that belongs
@@ -137,7 +140,7 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				matchNumber,
 			))
 
-			// TODO: implement query param matches
+			// TODO: implement query param matches (https://github.com/Kong/kubernetes-ingress-controller/issues/2778)
 			if len(match.QueryParams) > 0 {
 				return nil, fmt.Errorf("query param matches are not yet supported")
 			}
@@ -185,6 +188,17 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 				r.Route.Headers = headers
 			}
 
+			// stripPath needs to be disabled by default to be conformant with the Gateway API
+			r.StripPath = kong.Bool(false)
+
+			// attach the plugins to be applied to the given route
+			if len(plugins) != 0 {
+				if r.Plugins == nil {
+					r.Plugins = make([]kong.Plugin, 0, len(plugins))
+				}
+				r.Plugins = append(r.Plugins, plugins...)
+			}
+
 			// add the route to the list of routes for the service(s)
 			routes = append(routes, r)
 		}
@@ -210,8 +224,79 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 
 		// otherwise apply the hostnames to the route
 		r.Hosts = append(r.Hosts, hostnames...)
+		// attach the plugins to be applied to the given route
+		if len(plugins) != 0 {
+			if r.Plugins == nil {
+				r.Plugins = make([]kong.Plugin, 0, len(plugins))
+			}
+			r.Plugins = append(r.Plugins, plugins...)
+		}
 		routes = append(routes, r)
 	}
 
 	return routes, nil
+}
+
+// generatePluginsFromHTTPRouteRuleFilters accepts a rule as argument and converts
+// HttpRouteRule.Filters into Kong filters.
+func generatePluginsFromHTTPRouteRuleFilters(rule gatewayv1alpha2.HTTPRouteRule) []kong.Plugin {
+	kongPlugins := make([]kong.Plugin, 0)
+	if rule.Filters == nil {
+		return kongPlugins
+	}
+
+	for _, filter := range rule.Filters {
+		if filter.Type == gatewayv1alpha2.HTTPRouteFilterRequestHeaderModifier {
+			kongPlugins = append(kongPlugins, generateRequestHeaderModifierKongPlugin(filter.RequestHeaderModifier))
+		}
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2793
+	}
+
+	return kongPlugins
+}
+
+// generateRequestHeaderModifierKongPlugin converts a gatewayv1alpha2.HTTPRequestHeaderFilter into a
+// kong.Plugin of type request-transformer.
+func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1alpha2.HTTPRequestHeaderFilter) kong.Plugin {
+	plugin := kong.Plugin{
+		Name:   kong.String("request-transformer"),
+		Config: make(kong.Configuration),
+	}
+
+	// modifier.Set is converted to a pair composed of "replace" and "add"
+	if modifier.Set != nil {
+		setModifiers := make([]string, 0, len(modifier.Set))
+		for _, s := range modifier.Set {
+			setModifiers = append(setModifiers, kongHeaderFormatter(s))
+		}
+		plugin.Config["replace"] = map[string][]string{
+			"headers": setModifiers,
+		}
+		plugin.Config["add"] = map[string][]string{
+			"headers": setModifiers,
+		}
+	}
+
+	// modifier.Add is converted to "append"
+	if modifier.Add != nil {
+		appendModifiers := make([]string, 0, len(modifier.Add))
+		for _, a := range modifier.Add {
+			appendModifiers = append(appendModifiers, kongHeaderFormatter(a))
+		}
+		plugin.Config["append"] = map[string][]string{
+			"headers": appendModifiers,
+		}
+	}
+
+	if modifier.Remove != nil {
+		plugin.Config["remove"] = map[string][]string{
+			"headers": modifier.Remove,
+		}
+	}
+
+	return plugin
+}
+
+func kongHeaderFormatter(header gatewayv1alpha2.HTTPHeader) string {
+	return fmt.Sprintf("%s:%s", header.Name, header.Value)
 }

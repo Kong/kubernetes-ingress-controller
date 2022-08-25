@@ -46,7 +46,9 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		assert.NoError(t, closer())
 	}()
 
-	waitForWebhookService(t)
+	t.Log("waiting for webhook service to be connective")
+	err = waitForWebhookServiceConnective(ctx, "kong-validations-gateway")
+	require.NoError(t, err)
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

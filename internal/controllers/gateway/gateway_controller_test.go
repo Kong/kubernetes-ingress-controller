@@ -6,10 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
@@ -55,6 +57,110 @@ func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
 		Status: gatewayv1alpha2.GatewayStatus{},
 	}
 	assert.False(t, isGatewayReady(neverBeenReadyGateway))
+}
+
+func Test_setGatewayCondtion(t *testing.T) {
+	testCases := []struct {
+		name            string
+		gw              *gatewayv1alpha2.Gateway
+		condition       metav1.Condition
+		conditionLength int
+	}{
+		{
+			name: "no_such_condition_should_append_one",
+			gw:   &gatewayv1alpha2.Gateway{},
+			condition: metav1.Condition{
+				Type:               "fake1",
+				Status:             metav1.ConditionTrue,
+				Reason:             "fake1",
+				ObservedGeneration: 1,
+				LastTransitionTime: metav1.Now(),
+			},
+			conditionLength: 1,
+		},
+		{
+			name: "have_condition_with_type_should_replace",
+			gw: &gatewayv1alpha2.Gateway{
+				Status: gatewayv1alpha2.GatewayStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               "fake1",
+							Status:             metav1.ConditionFalse,
+							Reason:             "fake1",
+							ObservedGeneration: 1,
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			},
+			condition: metav1.Condition{
+				Type:               "fake1",
+				Status:             metav1.ConditionTrue,
+				Reason:             "fake1",
+				ObservedGeneration: 2,
+				LastTransitionTime: metav1.Now(),
+			},
+			conditionLength: 1,
+		},
+		{
+			name: "multiple_conditions_with_type_should_preserve_one",
+			gw: &gatewayv1alpha2.Gateway{
+				Status: gatewayv1alpha2.GatewayStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               "fake1",
+							Status:             metav1.ConditionFalse,
+							Reason:             "fake1",
+							ObservedGeneration: 1,
+							LastTransitionTime: metav1.Now(),
+						},
+						{
+							Type:               "fake1",
+							Status:             metav1.ConditionTrue,
+							Reason:             "fake2",
+							ObservedGeneration: 2,
+							LastTransitionTime: metav1.Now(),
+						},
+						{
+							Type:               "fake2",
+							Status:             metav1.ConditionTrue,
+							Reason:             "fake2",
+							ObservedGeneration: 2,
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			},
+			condition: metav1.Condition{
+				Type:               "fake1",
+				Status:             metav1.ConditionTrue,
+				Reason:             "fake1",
+				ObservedGeneration: 3,
+				LastTransitionTime: metav1.Now(),
+			},
+			conditionLength: 2,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			setGatewayCondition(tc.gw, tc.condition)
+			t.Logf("checking conditions of gateway after setting")
+			assert.Len(t, tc.gw.Status.Conditions, tc.conditionLength)
+
+			conditionNum := 0
+			var observedCondition metav1.Condition
+			for _, condition := range tc.gw.Status.Conditions {
+				if condition.Type == tc.condition.Type {
+					conditionNum++
+					observedCondition = condition
+				}
+			}
+			assert.Equal(t, 1, conditionNum)
+			assert.EqualValues(t, tc.condition, observedCondition)
+		})
+	}
 }
 
 func Test_isGatewayMarkedAsScheduled(t *testing.T) {
@@ -403,5 +509,138 @@ func Test_areAllowedRoutesConsistentByProtocol(t *testing.T) {
 	}
 	for _, input := range inputs {
 		assert.Equal(t, input.expected, areAllowedRoutesConsistentByProtocol(input.l), input.message)
+	}
+}
+
+func Test_getReferenceGrantConditionReason(t *testing.T) {
+	testCases := []struct {
+		name             string
+		gatewayNamespace string
+		certRef          gatewayv1alpha2.SecretObjectReference
+		referenceGrants  []gatewayv1alpha2.ReferenceGrant
+		expectedReason   string
+	}{
+		{
+			name:             "no need for reference",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind: util.StringToGatewayAPIKindPtr("Secret"),
+				Name: "testSecret",
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+		},
+		{
+			name:             "reference not granted",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
+				Name:      "testSecret",
+				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+			},
+			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "otherNamespace",
+					},
+					Spec: gatewayv1alpha2.ReferenceGrantSpec{
+						From: []gatewayv1alpha2.ReferenceGrantFrom{
+							{
+								Group:     gatewayV1alpha2Group,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []gatewayv1alpha2.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Secret",
+								Name:  (*gatewayv1alpha2.ObjectName)(pointer.StringPtr("anotherSecret")),
+							},
+						},
+					},
+				},
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef),
+		},
+		{
+			name:             "reference granted, secret name not specified",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
+				Name:      "testSecret",
+				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+			},
+			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "otherNamespace",
+					},
+					Spec: gatewayv1alpha2.ReferenceGrantSpec{
+						From: []gatewayv1alpha2.ReferenceGrantFrom{
+							// useless entry, just to furtherly test the function
+							{
+								Group:     "otherGroup",
+								Kind:      "otherKind",
+								Namespace: "test",
+							},
+							// good entry
+							{
+								Group:     gatewayV1alpha2Group,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []gatewayv1alpha2.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Secret",
+							},
+						},
+					},
+				},
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+		},
+		{
+			name:             "reference granted, secret name specified",
+			gatewayNamespace: "test",
+			certRef: gatewayv1alpha2.SecretObjectReference{
+				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
+				Name:      "testSecret",
+				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+			},
+			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "otherNamespace",
+					},
+					Spec: gatewayv1alpha2.ReferenceGrantSpec{
+						From: []gatewayv1alpha2.ReferenceGrantFrom{
+							{
+								Group:     gatewayV1alpha2Group,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []gatewayv1alpha2.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Secret",
+								Name:  (*gatewayv1alpha2.ObjectName)(pointer.StringPtr("testSecret")),
+							},
+						},
+					},
+				},
+			},
+			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+		},
+	}
+
+	for _, tc := range testCases {
+		assert.Equal(t, tc.expectedReason, getReferenceGrantConditionReason(
+			tc.gatewayNamespace,
+			tc.certRef,
+			tc.referenceGrants,
+		))
 	}
 }

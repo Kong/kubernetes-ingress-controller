@@ -6,8 +6,10 @@ package e2e
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -155,6 +158,12 @@ func TestWebhookUpdate(t *testing.T) {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
 
+	t.Logf("build a cleaner to dump diagnostics...")
+	cleaner := clusters.NewCleaner(env.Cluster())
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
@@ -181,6 +190,15 @@ func TestWebhookUpdate(t *testing.T) {
 			"tls.key": []byte(tlsPairs[1].Key),
 		},
 	}
+
+	// dump diagnostics and print out logs of KIC pod to a temporary directory, if the test failed.
+	defer func() {
+		if t.Failed() {
+			outputDir, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			assert.NoError(t, err, "failed to dump diagnostics")
+			t.Logf("%s failed, dumped diagnostics to directory %s", t.Name(), outputDir)
+		}
+	}()
 
 	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Create(ctx, firstCertificate, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -237,11 +255,14 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking initial certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) // nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
 		if err != nil {
+			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false
 		}
-		return conn.ConnectionState().PeerCertificates[0].Subject.CommonName == "first.example"
+		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
+		t.Logf("subject common name of certificate: %s", certCommonName)
+		return certCommonName == "first.example"
 	}, time.Minute*2, time.Second)
 
 	t.Log("changing certificate")
@@ -251,11 +272,14 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking second certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) // nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
 		if err != nil {
+			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false
 		}
-		return conn.ConnectionState().PeerCertificates[0].Subject.CommonName == "second.example"
+		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
+		t.Logf("subject common name of certificate: %s", certCommonName)
+		return certCommonName == "second.example"
 	}, time.Minute*10, time.Second)
 }
 
@@ -287,30 +311,17 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
 
-	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
-
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
+	deploymentListOptions := metav1.ListOptions{
+		LabelSelector: "app=" + deployment.Name,
+	}
 
 	t.Log("running the admission webhook setup script")
 	cmd := exec.Command("bash", admissionScriptPath)
 	require.NoError(t, cmd.Run())
-
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	t.Log("updating kong deployment to enable Gateway feature gate and admission controller")
-	for i, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name == "ingress-controller" {
-			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "Gateway=true"})
-		}
-	}
-
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
-		deployment, metav1.UpdateOptions{})
 
 	// vov it's easier than tracking the deployment state
 	t.Log("creating a consumer to ensure the admission webhook is online")
@@ -329,6 +340,34 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		_, err = kongClient.ConfigurationV1().KongConsumers(namespace).Create(ctx, consumer, metav1.CreateOptions{})
 		return err == nil
 	}, time.Minute*2, time.Second*1)
+
+	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
+	require.Eventually(t, func() bool {
+		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, deploymentListOptions)
+		require.NoError(t, err)
+		for _, pod := range pods.Items {
+			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
+			if err != nil {
+				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
+				return false
+			}
+			if !strings.Contains(logs, "CRD does not exist, disable gateway feature") {
+				return false
+			}
+		}
+		return true
+	}, time.Minute, 5*time.Second)
+
+	t.Logf("deploying Gateway APIs CRDs in standard channel from %s", consts.GatewayStandardCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayStandardCRDsKustomizeURL))
+
+	t.Logf("deleting KIC pods to restart them after Gateway APIs CRDs installed")
+	pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, deploymentListOptions)
+	require.NoError(t, err)
+	for _, pod := range pods.Items {
+		err = env.Cluster().Client().CoreV1().Pods(deployment.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+		require.NoError(t, err)
+	}
 
 	t.Log("verifying controller updates associated Gateway resoures")
 	gw := deployGateway(ctx, t, env)
@@ -390,6 +429,43 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
+
+	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
+
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	t.Log("updating kong deployment to enable Gateway feature gate and admission controller")
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "ingress-controller" {
+			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+		}
+		if container.Name == "proxy" {
+			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListnerPort)})
+		}
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("updating kong proxy service to enable TCP listener")
+	proxyService, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
+	proxyService.Spec.Ports = append(proxyService.Spec.Ports, corev1.ServicePort{
+		Name:       "stream-tcp",
+		Protocol:   corev1.ProtocolTCP,
+		Port:       tcpListnerPort,
+		TargetPort: intstr.FromInt(tcpListnerPort),
+	})
+	_, err = env.Cluster().Client().CoreV1().Services(namespace).Update(ctx, proxyService, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	gw = deployGatewayWithTCPListener(ctx, t, env)
+	verifyGateway(ctx, t, env, gw)
+
+	deployTCPRoute(ctx, t, env, gw)
+	verifyTCPRoute(ctx, t, env)
 }
 
 // Unsatisfied LoadBalancers have special handling, see
@@ -420,9 +496,39 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
-	_ = deployKong(ctx, t, env, manifest)
+	deployment := deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
+
+	// ensure that Gateways with no addresses come online and start ingesting routes
+	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
+
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	t.Log("updating kong deployment to enable Gateway feature gate")
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "ingress-controller" {
+			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+		}
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
+		deployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("updating service type to NodePort")
+	svc, err := env.Cluster().Client().CoreV1().Services(deployment.Namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
+	svc.Spec.Type = "NodePort"
+	_, err = env.Cluster().Client().CoreV1().Services(deployment.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying controller updates associated Gateway resoures")
+	gw := deployGateway(ctx, t, env)
+	verifyGateway(ctx, t, env, gw)
+	deployHTTPRoute(ctx, t, env, gw)
+	verifyHTTPRoute(ctx, t, env)
 }

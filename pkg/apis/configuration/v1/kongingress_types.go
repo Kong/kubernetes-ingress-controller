@@ -153,7 +153,7 @@ type KongIngressUpstream struct {
 	Healthchecks *kong.Healthcheck `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 
 	// HashOn defines what to use as hashing input.
-	// Accepted values are: "none", "consumer", "ip", "header", "cookie".
+	// Accepted values are: "none", "consumer", "ip", "header", "cookie", "path", "query_arg", "uri_capture".
 	HashOn *string `json:"hash_on,omitempty" yaml:"hash_on,omitempty"`
 
 	// HashFallback defines What to use as hashing input
@@ -176,6 +176,19 @@ type KongIngressUpstream struct {
 	// The cookie path to set in the response headers.
 	// Only required when "hash_on" or "hash_fallback" is set to "cookie".
 	HashOnCookiePath *string `json:"hash_on_cookie_path,omitempty" yaml:"hash_on_cookie_path,omitempty"`
+
+	// HashOnQueryArg is the query string parameter whose value is the hash input when "hash_on" is set to "query_arg".
+	HashOnQueryArg *string `json:"hash_on_query_arg,omitempty" yaml:"hash_on_query_arg,omitempty"`
+
+	// HashFallbackQueryArg is the "hash_fallback" version of HashOnQueryArg.
+	HashFallbackQueryArg *string `json:"hash_fallback_query_arg,omitempty" yaml:"hash_fallback_query_arg,omitempty"`
+
+	// HashOnURICapture is the name of the capture group whose value is the hash input when "hash_on" is set to
+	// "uri_capture".
+	HashOnURICapture *string `json:"hash_on_uri_capture,omitempty" yaml:"hash_on_uri_capture,omitempty"`
+
+	// HashFallbackURICapture is the "hash_fallback" version of HashOnURICapture.
+	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty" yaml:"hash_fallback_uri_capture,omitempty"`
 
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
 	//ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`

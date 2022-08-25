@@ -19,7 +19,7 @@ jobs:
     - name: Setup go
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.18'
+        go-version: '^1.19'
 
     - name: Cache Go modules
       uses: actions/cache@v3
@@ -82,7 +82,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.18'
+        go-version: '^1.19'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -120,7 +120,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.18'
+        go-version: '^1.19'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -146,49 +146,13 @@ jobs:
         name: coverage
         path: coverage.enterprisepostgres.out
 
-  integration-tests-enterprise-postgres-nightly:
-    environment: "Configure ci"
-    runs-on: ubuntu-latest
-    steps:
-
-    - uses: Kong/kong-license@master
-      id: license
-      with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
-        password: ${{ secrets.PULP_PASSWORD }}
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.18'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: run integration tests
-      run: make test.integration.enterprise.postgres
-      env:
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        TEST_KONG_IMAGE: "kong/kong-gateway-internal"
-        TEST_KONG_TAG: "master-nightly-alpine"
-        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
-        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
-
-    - name: collect test coverage
+    - name: upload diagnostics
+      if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
-        name: coverage
-        path: coverage.enterprisepostgres.out
+        name: diagnostics-integration-tests-enterprise-postgres
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
 
   integration-tests-dbless:
     runs-on: ubuntu-latest
@@ -197,7 +161,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.18'
+        go-version: '^1.19'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -221,6 +185,14 @@ jobs:
         name: coverage
         path: coverage.dbless.out
 
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-dbless
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
   integration-tests-postgres:
     runs-on: ubuntu-latest
     steps:
@@ -228,7 +200,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.18'
+        go-version: '^1.19'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -252,6 +224,14 @@ jobs:
         name: coverage
         path: coverage.postgres.out
 
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-postgres
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
   integration-tests-feature-gates:
     runs-on: ubuntu-latest
     steps:
@@ -259,7 +239,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.18'
+        go-version: '^1.19'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -277,13 +257,21 @@ jobs:
     - name: run integration tests
       run: make test.integration.dbless
       env:
-        KONG_CONTROLLER_FEATURE_GATES: "Gateway=true,CombinedRoutes=true"
+        KONG_CONTROLLER_FEATURE_GATES: "GatewayAlpha=true,CombinedRoutes=true"
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage.featuregates.out
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-feature-gates
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
 
   conformance-tests:
     runs-on: ubuntu-latest
@@ -292,7 +280,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.18'
+        go-version: '^1.19'
 
     - name: cache go modules
       uses: actions/cache@v3

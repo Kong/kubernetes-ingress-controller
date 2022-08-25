@@ -89,7 +89,7 @@ type Storer interface {
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
-	ListReferencePolicies() ([]*gatewayv1alpha2.ReferencePolicy, error)
+	ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error)
 	ListGateways() ([]*gatewayv1alpha2.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
@@ -131,12 +131,12 @@ type CacheStores struct {
 	Endpoint       cache.Store
 
 	// Gateway API Stores
-	HTTPRoute       cache.Store
-	UDPRoute        cache.Store
-	TCPRoute        cache.Store
-	TLSRoute        cache.Store
-	ReferencePolicy cache.Store
-	Gateway         cache.Store
+	HTTPRoute      cache.Store
+	UDPRoute       cache.Store
+	TCPRoute       cache.Store
+	TLSRoute       cache.Store
+	ReferenceGrant cache.Store
+	Gateway        cache.Store
 
 	// Kong Stores
 	Plugin                         cache.Store
@@ -164,12 +164,12 @@ func NewCacheStores() CacheStores {
 		Secret:         cache.NewStore(keyFunc),
 		Endpoint:       cache.NewStore(keyFunc),
 		// Gateway API Stores
-		HTTPRoute:       cache.NewStore(keyFunc),
-		UDPRoute:        cache.NewStore(keyFunc),
-		TCPRoute:        cache.NewStore(keyFunc),
-		TLSRoute:        cache.NewStore(keyFunc),
-		ReferencePolicy: cache.NewStore(keyFunc),
-		Gateway:         cache.NewStore(keyFunc),
+		HTTPRoute:      cache.NewStore(keyFunc),
+		UDPRoute:       cache.NewStore(keyFunc),
+		TCPRoute:       cache.NewStore(keyFunc),
+		TLSRoute:       cache.NewStore(keyFunc),
+		ReferenceGrant: cache.NewStore(keyFunc),
+		Gateway:        cache.NewStore(keyFunc),
 		// Kong Stores
 		Plugin:                         cache.NewStore(keyFunc),
 		ClusterPlugin:                  cache.NewStore(clusterResourceKeyFunc),
@@ -261,8 +261,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.TCPRoute.Get(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Get(obj)
-	case *gatewayv1alpha2.ReferencePolicy:
-		return c.ReferencePolicy.Get(obj)
+	case *gatewayv1alpha2.ReferenceGrant:
+		return c.ReferenceGrant.Get(obj)
 	case *gatewayv1alpha2.Gateway:
 		return c.Gateway.Get(obj)
 	// ----------------------------------------------------------------------------
@@ -326,8 +326,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.TCPRoute.Add(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Add(obj)
-	case *gatewayv1alpha2.ReferencePolicy:
-		return c.ReferencePolicy.Add(obj)
+	case *gatewayv1alpha2.ReferenceGrant:
+		return c.ReferenceGrant.Add(obj)
 	case *gatewayv1alpha2.Gateway:
 		return c.Gateway.Add(obj)
 	// ----------------------------------------------------------------------------
@@ -392,8 +392,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.TCPRoute.Delete(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Delete(obj)
-	case *gatewayv1alpha2.ReferencePolicy:
-		return c.ReferencePolicy.Delete(obj)
+	case *gatewayv1alpha2.ReferenceGrant:
+		return c.ReferenceGrant.Delete(obj)
 	case *gatewayv1alpha2.Gateway:
 		return c.Gateway.Delete(obj)
 	// ----------------------------------------------------------------------------
@@ -649,20 +649,20 @@ func (s Store) ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error) {
 	return tlsroutes, nil
 }
 
-// ListReferencePolicies returns the list of ReferencePolicies in the ReferencePolicy cache store.
-func (s Store) ListReferencePolicies() ([]*gatewayv1alpha2.ReferencePolicy, error) {
-	var policies []*gatewayv1alpha2.ReferencePolicy
-	if err := cache.ListAll(s.stores.ReferencePolicy, labels.NewSelector(),
+// ListReferenceGrants returns the list of ReferenceGrants in the ReferenceGrant cache store.
+func (s Store) ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error) {
+	var grants []*gatewayv1alpha2.ReferenceGrant
+	if err := cache.ListAll(s.stores.ReferenceGrant, labels.NewSelector(),
 		func(ob interface{}) {
-			policy, ok := ob.(*gatewayv1alpha2.ReferencePolicy)
+			grant, ok := ob.(*gatewayv1alpha2.ReferenceGrant)
 			if ok {
-				policies = append(policies, policy)
+				grants = append(grants, grant)
 			}
 		},
 	); err != nil {
 		return nil, err
 	}
-	return policies, nil
+	return grants, nil
 }
 
 // ListGateways returns the list of Gateways in the Gateway cache store.
@@ -1014,8 +1014,8 @@ func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*netv1beta1.Ingress, e
 // for caller convenience when initializing new CacheStores objects.
 //
 // TODO: upon some searching I didn't find an analog to this over in client-go (https://github.com/kubernetes/client-go)
-//       however I could have just missed it. We should switch if we find something better, OR we should contribute
-//       this functionality upstream.
+// however I could have just missed it. We should switch if we find something better, OR we should contribute
+// this functionality upstream.
 func convUnstructuredObj(from, to runtime.Object) error {
 	b, err := yaml.Marshal(from)
 	if err != nil {

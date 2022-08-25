@@ -3,11 +3,7 @@ package parser
 import (
 	"fmt"
 
-	"github.com/kong/go-kong/kong"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -69,7 +65,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 		}
 
 		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromUDPRouteRule(udproute, ruleNumber, rule)
+		routes, err := generateKongRoutesFromRouteRule(udproute, ruleNumber, rule)
 		if err != nil {
 			return err
 		}
@@ -86,52 +82,4 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 	}
 
 	return nil
-}
-
-// -----------------------------------------------------------------------------
-// Translate UDPRoute - Utils
-// -----------------------------------------------------------------------------
-
-// generateKongRoutesFromUDPRouteRule converts an UDPRoute rule to one or more
-// Kong Route objects to route traffic to services.
-func generateKongRoutesFromUDPRouteRule(udproute *gatewayv1alpha2.UDPRoute, ruleNumber int,
-	rule gatewayv1alpha2.UDPRouteRule,
-) ([]kongstate.Route, error) {
-	// gather the k8s object information and hostnames from the udproute
-	objectInfo := util.FromK8sObject(udproute)
-
-	var routes []kongstate.Route
-
-	if len(rule.BackendRefs) == 0 {
-		return routes, fmt.Errorf("UDPRoute rules must include at least one backendRef")
-	}
-
-	routeName := kong.String(fmt.Sprintf(
-		"udproute.%s.%s.%d.%d",
-		udproute.Namespace,
-		udproute.Name,
-		ruleNumber,
-		0,
-	))
-
-	// for now, UDPRoutes provide no means of specifying a destination port other than the backend target port
-	// they will once https://gateway-api.sigs.k8s.io/geps/gep-957/ is stable. in the interim, this always uses the
-	// backend target
-	var destinations []*kong.CIDRPort
-	for _, backendRef := range rule.BackendRefs {
-		destinations = append(destinations, &kong.CIDRPort{Port: kong.Int(int(*backendRef.Port))})
-	}
-
-	r := kongstate.Route{
-		Ingress: objectInfo,
-		Route: kong.Route{
-			Name:         routeName,
-			Protocols:    kong.StringSlice("udp"),
-			Destinations: destinations,
-		},
-	}
-
-	routes = append(routes, r)
-
-	return routes, nil
 }

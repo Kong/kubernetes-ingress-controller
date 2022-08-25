@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/knative"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
@@ -253,13 +254,13 @@ func setupControllers(
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: featureGates[gatewayFeature] || c.KnativeIngressEnabled,
+			Enabled: featureGates[knativeFeature] || c.KnativeIngressEnabled,
 			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
 				Group:    knativev1alpha1.SchemeGroupVersion.Group,
 				Version:  knativev1alpha1.SchemeGroupVersion.Version,
 				Resource: "ingresses",
 			}}.CRDExists,
-			Controller: &configuration.Knativev1alpha1IngressReconciler{
+			Controller: &knative.Knativev1alpha1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
 				Scheme:                     mgr.GetScheme(),
@@ -271,17 +272,11 @@ func setupControllers(
 			},
 		},
 		// ---------------------------------------------------------------------------
-		// GatewayAPI Controllers
+		// Gateway API Controllers - Beta APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[gatewayFeature],
-			AutoHandler: crdExistsChecker{
-				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "gateways",
-				},
-			}.CRDExists,
+			Enabled:     featureGates[gatewayFeature],
+			AutoHandler: gatewayCRDExistsChecker.CRDExists,
 			Controller: &gateway.GatewayReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName(gatewayFeature),
@@ -289,49 +284,38 @@ func setupControllers(
 				DataplaneClient: dataplaneClient,
 				PublishService:  c.PublishService,
 				WatchNamespaces: c.WatchNamespaces,
+				EnableReferenceGrant: featureGates[gatewayAlphaFeature] &&
+					referenceGrantCRDExistsChecker.CRDExists(mgr.GetClient()),
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature],
-			AutoHandler: crdExistsChecker{
-				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "referencepolicies",
-				},
-			}.CRDExists,
-			Controller: &gateway.ReferencePolicyReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("ReferencePolicy"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
-			},
-		},
-		{
-			Enabled: featureGates[gatewayFeature],
-			AutoHandler: crdExistsChecker{
-				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "httproutes",
-				},
-			}.CRDExists,
+			Enabled:     featureGates[gatewayFeature],
+			AutoHandler: httpRouteCRDExistsChecker.CRDExists,
 			Controller: &gateway.HTTPRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
 				Scheme:          mgr.GetScheme(),
 				DataplaneClient: dataplaneClient,
+				EnableReferenceGrant: featureGates[gatewayAlphaFeature] &&
+					referenceGrantCRDExistsChecker.CRDExists(mgr.GetClient()),
+			},
+		},
+		// ---------------------------------------------------------------------------
+		// Gateway API Controllers - Alpha APIs
+		// ---------------------------------------------------------------------------
+		{
+			Enabled:     featureGates[gatewayAlphaFeature],
+			AutoHandler: referenceGrantCRDExistsChecker.CRDExists,
+			Controller: &gateway.ReferenceGrantReconciler{
+				Client:          mgr.GetClient(),
+				Log:             ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
+				Scheme:          mgr.GetScheme(),
+				DataplaneClient: dataplaneClient,
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature],
-			AutoHandler: crdExistsChecker{
-				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "udproutes",
-				},
-			}.CRDExists,
+			Enabled:     featureGates[gatewayAlphaFeature],
+			AutoHandler: udpRouteCRDExistsChecker.CRDExists,
 			Controller: &gateway.UDPRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("UDPRoute"),
@@ -340,14 +324,8 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature],
-			AutoHandler: crdExistsChecker{
-				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "tcproutes",
-				},
-			}.CRDExists,
+			Enabled:     featureGates[gatewayAlphaFeature],
+			AutoHandler: tcpRouteCRDExistsChecker.CRDExists,
 			Controller: &gateway.TCPRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("TCPRoute"),
@@ -356,14 +334,8 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature],
-			AutoHandler: crdExistsChecker{
-				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-					Resource: "tlsroutes",
-				},
-			}.CRDExists,
+			Enabled:     featureGates[gatewayAlphaFeature],
+			AutoHandler: tlsRouteCRDExistsChecker.CRDExists,
 			Controller: &gateway.TLSRouteReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("TLSRoute"),
@@ -384,6 +356,77 @@ type crdExistsChecker struct {
 // CRDExists returns true iff the apiserver supports the specified group/version/resource.
 func (c crdExistsChecker) CRDExists(r client.Client) bool {
 	return ctrlutils.CRDExists(r, c.GVR)
+}
+
+// CRD Exists checker for gateway API resources.
+
+var gatewayCRDExistsChecker = crdExistsChecker{
+	GVR: schema.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "gateways",
+	},
+}
+
+var gatewayClassCRDExistsChecker = crdExistsChecker{
+	GVR: schema.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "gatewayclasses",
+	},
+}
+
+var httpRouteCRDExistsChecker = crdExistsChecker{
+	GVR: schema.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "httproutes",
+	},
+}
+
+var tcpRouteCRDExistsChecker = crdExistsChecker{
+	GVR: schema.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "tcproutes",
+	},
+}
+
+var udpRouteCRDExistsChecker = crdExistsChecker{
+	GVR: schema.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "udproutes",
+	},
+}
+
+var tlsRouteCRDExistsChecker = crdExistsChecker{
+	GVR: schema.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "tlsroutes",
+	},
+}
+
+var referenceGrantCRDExistsChecker = crdExistsChecker{
+	GVR: schema.GroupVersionResource{
+		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
+		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Resource: "referencegrants",
+	},
+}
+
+var gatewayBetaCRDsExistsCheckers = []crdExistsChecker{
+	gatewayCRDExistsChecker,
+	gatewayClassCRDExistsChecker,
+	httpRouteCRDExistsChecker,
+}
+
+var gatewayAlphaCRDsExistsCheckers = []crdExistsChecker{
+	tcpRouteCRDExistsChecker,
+	udpRouteCRDExistsChecker,
+	tlsRouteCRDExistsChecker,
+	referenceGrantCRDExistsChecker,
 }
 
 // ingressControllerStrategy picks the best Ingress API supported by k8s apiserver.

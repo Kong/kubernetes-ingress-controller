@@ -59,11 +59,61 @@
 
 - Added support for plugin ordering (requires Kong Enterprise 3.0 or higher).
   [#2657](https://github.com/Kong/kubernetes-ingress-controller/pull/2657)
+- The all-in-one manifests now use a separate ClusterRole for Gateway API
+  resources, allowing non-admin users to apply these manifests (minus the
+  Gateway API role) on clusters without Gateway API CRDs installed.
+  [#2529](https://github.com/Kong/kubernetes-ingress-controller/issues/2529)
+- Gateway API support which had previously been off by default behind a feature
+  gate (`--feature-gates=Gateway=true`) is now **on by default** and covers beta
+  stage APIs (`GatewayClass`, `Gateway`, and `HTTPRoute`). Alpha stage APIs
+  (`TCPRoute`, `UDPRoute`, `TLSRoute`, `ReferenceGrant`) have been moved behind
+  a different feature gate called `GatewayAlpha` and are off by default. When
+  upgrading if you're using the alpha APIs, switch your feature gate flags to
+  `--feature-gates=GatewayAlpha=true` to keep them enabled.
+  [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
+- Added all the Gateway-related conformance tests.
+  [#2777](https://github.com/Kong/kubernetes-ingress-controller/issues/2777)
+- Added all the HTTPRoute-related conformance tests.
+  [#2776](https://github.com/Kong/kubernetes-ingress-controller/issues/2776)
+- Added support for Kong 3.0 upstream `query_arg` and `uri_capture` hash
+  configuration to KongIngress.
+  [#2822](https://github.com/Kong/kubernetes-ingress-controller/issues/2822)
 
 #### Fixed
 
+- When `Endpoints` could not be found for a `Service` to add them as targets of
+  a Kong `Upstream`, this would produce a log message at `error` and `warning`
+  levels which was inaccurate because this condition is often expected when
+  `Pods` are being provisioned. Those log entries now report at `info` level.
+  [#2820](https://github.com/Kong/kubernetes-ingress-controller/issues/2820)
+  [#2825](https://github.com/Kong/kubernetes-ingress-controller/pull/2825)
 - Added `mtls-auth` to the admission webhook supported credential types list.
   [#2739](https://github.com/Kong/kubernetes-ingress-controller/pull/2739)
+- Disabled additional IngressClass lookups in other reconcilers when the
+  IngressClass reconciler is disabled.
+  [#2724](https://github.com/Kong/kubernetes-ingress-controller/pull/2724)
+- ReferencePolicy support has been dropped in favor of the newer ReferenceGrant API.
+  [#2775](https://github.com/Kong/kubernetes-ingress-controller/pull/2772)
+- Fixed a bug that caused the `Knative` feature gate to not be checked. Since our
+  knative integration is on by default and because it gets very little usage
+  this likely did not cause any troubles for anyone as all fixing this will do
+  is make it possible to disable the knative controller using the feature gate.
+  (it is also possible to control it via the `--enable-controller-knativeingress`
+  which was working properly).
+  [#2781](https://github.com/Kong/kubernetes-ingress-controller/pull/2781)
+- Treat status conditions in `Gateway` and `GatewayClass` as snapshots, replace
+  existing conditions with same type on setting conditions.
+  [#2791](https://github.com/Kong/kubernetes-ingress-controller/pull/2791)
+- Update Listener statuses whenever they change, not just on Gateway creation.
+  [#2797](https://github.com/Kong/kubernetes-ingress-controller/pull/2797)
+- StripPath for `HTTPRoute`s is now disabled by default to be conformant with the
+  Gateway API requirements.
+  #[#2737](https://github.com/Kong/kubernetes-ingress-controller/pull/2737)
+
+#### Under the hood
+
+- Updated the compiler to [Go v1.19](https://golang.org/doc/go1.19)
+  [#2794](https://github.com/Kong/kubernetes-ingress-controller/issues/2794)
 
 ## [2.5.0]
 

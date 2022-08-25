@@ -290,6 +290,9 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	}
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+
+	t.Logf("build a cleaner to dump diagnostics...")
+	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
 		assert.NoError(t, env.Cleanup(ctx))
 	}()
@@ -298,6 +301,14 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	manifest, err := getTestManifest(t, postgresPath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
+	// dump diagnostics and print out logs of KIC pod to a temporary directory, if the test failed.
+	defer func() {
+		if t.Failed() {
+			outputDir, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			assert.NoError(t, err, "failed to dump diagnostics")
+			t.Logf("%s failed, dumped diagnostics to directory %s", t.Name(), outputDir)
+		}
+	}()
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -351,27 +362,62 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	t.Log("confirming the second replica is not the leader and is not pushing configuration")
 	forwardCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	startPortForwarder(forwardCtx, t, env, secondary.Namespace, secondary.Name, "9777", "cmetrics")
+
 	require.Never(t, func() bool {
 		// if we are not the leader, we run no config pushes, and this metric string will not appear.
 		return httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount)
 	}, time.Minute, time.Second*10)
 
-	t.Log("deleting the original replica and current leader")
+	// since leader election is time sensitive, we log the time here.
+	t.Logf("deleting the original replica and current leader at %v", time.Now())
 	err = env.Cluster().Client().CoreV1().Pods(initialPod.Namespace).Delete(ctx, initialPod.Name, metav1.DeleteOptions{})
 	require.NoError(t, err)
 
-	t.Log("confirming the second replica becomes the leader and starts pushing configuration")
+	t.Logf("waiting for the initial pod disappear and new pod to be recreated and up")
 	require.Eventually(t, func() bool {
-		return httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount)
-	}, time.Minute, time.Second,
-		// print logs of secondary pod if the test case fails.
-		func() string {
-			logs, err := getKubernetesLogs(t, env, secondary.Namespace, secondary.Name)
-			require.NoError(t, err)
-			return "logs of secondary pod " + secondary.Name + ":\n" + logs
-		}(),
-	)
+		podList, err = env.Cluster().Client().CoreV1().Pods(initialPod.Namespace).List(ctx, forDeployment)
+		require.NoError(t, err)
+		podNum := 0
+		// we wait for the number of running pod excluding the initial one to be 2
+		// since the replicas is set to 2 in the deployment.
+		// So if there are exactly 2 running pods except the initial pod, we can know
+		// that the new pod is recreated and up after the initial one is deleted,
+		// and the status of deployment runs into a stable state.
+		for _, pod := range podList.Items {
+			if pod.Name != initialPod.Name && pod.Status.Phase == corev1.PodRunning {
+				podNum++
+			}
+		}
+		return podNum == 2
+	}, time.Minute, time.Second)
+
+	var rebuiltPod corev1.Pod
+	for _, pod := range podList.Items {
+		if pod.Name != initialPod.Name && pod.Name != secondary.Name {
+			rebuiltPod = pod
+			startPortForwarder(forwardCtx, t, env, rebuiltPod.Namespace, rebuiltPod.Name, "9778", "cmetrics")
+			break
+		}
+	}
+
+	// Pass the test if exactly one of the pod becomes the leader, not limited to the original secondary pod.
+	// Because in several times, the rebuilt pod (new pod created after initial pod deleted) became the leader.
+	t.Logf("confirming there is exactly one pod that becomes leader and starts pushing configuration at %v", time.Now())
+	require.Eventually(t, func() bool {
+		leaderCount := 0
+		if httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount) {
+			t.Logf("secondary pod %s is the leader at %v", secondary.Name, time.Now())
+			leaderCount++
+		}
+		if httpGetResponseContains(t, "http://localhost:9778/metrics", client, metrics.MetricNameConfigPushCount) {
+			t.Logf("rebuilt pod %s is the leader at %v", rebuiltPod.Name, time.Now())
+			leaderCount++
+		}
+		t.Logf("expected exactly one leader, actual %d", leaderCount)
+		return leaderCount == 1
+	}, time.Minute, time.Second)
 }
 
 const entPostgresPath = "../../deploy/single/all-in-one-postgres-enterprise.yaml"

@@ -78,6 +78,18 @@ func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngres
 	if k.HashOnCookiePath != nil {
 		u.HashOnCookiePath = kong.String(*k.HashOnCookiePath)
 	}
+	if k.HashOnQueryArg != nil {
+		u.HashOnQueryArg = kong.String(*k.HashOnQueryArg)
+	}
+	if k.HashFallbackQueryArg != nil {
+		u.HashFallbackQueryArg = kong.String(*k.HashFallbackQueryArg)
+	}
+	if k.HashOnURICapture != nil {
+		u.HashOnURICapture = kong.String(*k.HashOnURICapture)
+	}
+	if k.HashFallbackURICapture != nil {
+		u.HashFallbackURICapture = kong.String(*k.HashFallbackURICapture)
+	}
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
 }
 

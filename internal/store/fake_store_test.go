@@ -832,11 +832,11 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 	assert.Len(routes, 2, "expect two TLSRoutes")
 }
 
-func TestFakeStoreReferencePolicy(t *testing.T) {
+func TestFakeStoreReferenceGrant(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	policies := []*gatewayv1alpha2.ReferencePolicy{
+	grants := []*gatewayv1alpha2.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
@@ -850,19 +850,19 @@ func TestFakeStoreReferencePolicy(t *testing.T) {
 			Spec: gatewayv1alpha2.ReferenceGrantSpec{},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{ReferencePolicies: policies})
+	store, err := NewFakeStore(FakeObjects{ReferenceGrants: grants})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListReferencePolicies()
+	routes, err := store.ListReferenceGrants()
 	assert.Nil(err)
-	assert.Len(routes, 2, "expect two ReferencePolicies")
+	assert.Len(routes, 2, "expect two ReferenceGrants")
 }
 
 func TestFakeStoreGateway(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	policies := []*gatewayv1alpha2.Gateway{
+	grants := []*gatewayv1alpha2.Gateway{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
@@ -876,7 +876,7 @@ func TestFakeStoreGateway(t *testing.T) {
 			Spec: gatewayv1alpha2.GatewaySpec{},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{Gateways: policies})
+	store, err := NewFakeStore(FakeObjects{Gateways: grants})
 	require.Nil(err)
 	require.NotNil(store)
 	routes, err := store.ListGateways()

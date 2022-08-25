@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -44,8 +43,15 @@ func TestTCPIngressEssentials(t *testing.T) {
 		tcpMutex.Unlock()
 	}()
 
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress"
@@ -56,21 +62,13 @@ func TestTCPIngressEssentials(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, 80))
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(service)
 
 	t.Logf("routing to service %s via TCPIngress", service.Name)
 	tcp := &kongv1beta1.TCPIngress{
@@ -95,14 +93,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	}
 	tcp, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer func() {
-		t.Logf("ensuring that TCPIngress %s is cleaned up", tcp.Name)
-		if err := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tcp)
 
 	t.Logf("checking tcpingress %s status readiness.", tcp.Name)
 	ingCli := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name)
@@ -163,8 +154,15 @@ func TestTCPIngressTLS(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress-%s"
@@ -188,22 +186,14 @@ func TestTCPIngressTLS(t *testing.T) {
 		deployment := generators.NewDeploymentForContainer(container)
 		deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 		require.NoError(t, err)
-
-		defer func() {
-			t.Logf("cleaning up the deployment %s", deployment.Name)
-			assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-		}()
+		cleaner.Add(deployment)
 
 		t.Logf("exposing deployment %s via service", deployment.Name)
 		service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 		service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 		require.NoError(t, err)
 		testServices[i] = service
-
-		defer func() {
-			t.Logf("cleaning up the service %s", service.Name)
-			assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-		}()
+		cleaner.Add(service)
 	}
 
 	t.Log("adding TCPIngresses")
@@ -238,14 +228,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	}
 	tcpX, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcpX, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer func() {
-		t.Logf("ensuring that TCPIngress %s is cleaned up", tcpX.Name)
-		if err := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcpX.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tcpX)
 
 	tcpY := &kongv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -270,14 +253,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	}
 	tcpY, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcpY, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer func() {
-		t.Logf("ensuring that TCPIngress %s is cleaned up", tcpY.Name)
-		if err := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcpY.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tcpY)
 
 	for _, i := range testServiceSuffixes {
 		t.Logf("verifying TCP Ingress for %s.example operational", i)
@@ -350,8 +326,15 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("setting up the TCPIngress TLS passthrough tests")
 	testName := "tlspass"
@@ -421,21 +404,13 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	}
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(service)
 
 	t.Log("waiting for deployment to be ready")
 	deploymentName := deployment.Name
@@ -492,14 +467,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	}
 	tcp, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer func() {
-		t.Log("ensuring that TCPIngress is cleaned up", tcp.Name)
-		if err := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tcp)
 
 	t.Log("verifying TCP Ingress for redis.example operational")
 	require.Eventually(t, func() bool {

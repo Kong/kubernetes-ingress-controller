@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -33,7 +32,14 @@ var emptyHeaderSet = make(map[string]string)
 
 func TestHTTPRouteEssentials(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("getting a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -64,20 +70,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	deployment2 := generators.NewDeploymentForContainer(container2)
 	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up the deployments")
-		if err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment1.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-		if err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(deployment1)
+	cleaner.Add(deployment2)
 
 	t.Logf("exposing deployment %s via service", deployment1.Name)
 	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
@@ -88,20 +82,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service1.Name)
-		if err := env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service1.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-		if err := env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(service1)
+	cleaner.Add(service2)
 
 	kongplugin := &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
@@ -163,6 +145,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 							Name: gatewayv1alpha2.ObjectName(service1.Name),
 							Port: &httpPort,
+							Kind: util.StringToGatewayAPIKindPtr("Service"),
 						},
 					},
 				}},
@@ -182,15 +165,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}
 	httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the httproute %s", httpRoute.Name)
-		if err := gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Delete(ctx, httpRoute.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(httpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.HTTPProtocolType, ns.Name, httpRoute.Name)
@@ -239,6 +214,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 						Name: gatewayv1alpha2.ObjectName(service1.Name),
 						Port: &httpPort,
+						Kind: util.StringToGatewayAPIKindPtr("Service"),
 					},
 					Weight: &httpbinWeight,
 				},
@@ -248,6 +224,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
 						Name: gatewayv1alpha2.ObjectName(service2.Name),
 						Port: &httpPort,
+						Kind: util.StringToGatewayAPIKindPtr("Service"),
 					},
 					Weight: &nginxWeight,
 				},

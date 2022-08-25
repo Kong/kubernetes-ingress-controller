@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -19,6 +21,16 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 	result := newIngressRules()
 
 	ingressList := p.storer.ListIngressesV1beta1()
+	icp, err := getIngressClassParametersOrDefault(p.storer)
+	if err != nil {
+		if errors.As(err, &store.ErrNotFound{}) {
+			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
+			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
+		} else {
+			// anything else is unexpected
+			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
+		}
+	}
 
 	var allDefaultBackends []netv1beta1.Ingress
 	sort.SliceStable(ingressList, func(i, j int) bool {
@@ -51,6 +63,9 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				if strings.Contains(path, "//") {
 					log.Errorf("rule skipped: invalid path: '%v'", path)
 					continue
+				}
+				if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+					path = maybePrependRegexPrefix(path)
 				}
 				if path == "" {
 					path = "/"
@@ -167,6 +182,16 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	result := newIngressRules()
 
 	ingressList := p.storer.ListIngressesV1()
+	icp, err := getIngressClassParametersOrDefault(p.storer)
+	if err != nil {
+		if errors.As(err, &store.ErrNotFound{}) {
+			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
+			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
+		} else {
+			// anything else is unexpected
+			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
+		}
+	}
 
 	var allDefaultBackends []netv1.Ingress
 	sort.SliceStable(ingressList, func(i, j int) bool {
@@ -190,7 +215,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		var objectSuccessfullyParsed bool
 
 		if p.featureEnabledCombinedServiceRoutes {
-			for _, kongStateService := range translators.TranslateIngress(ingress) {
+			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
 				result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
 			}
 			objectSuccessfullyParsed = true
@@ -205,15 +230,23 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 						continue
 					}
 
-					pathType := netv1.PathTypeImplementationSpecific
-					if rulePath.PathType != nil {
-						pathType = *rulePath.PathType
+					pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
+					if rulePath.PathType == nil {
+						rulePath.PathType = &pathTypeImplementationSpecific
 					}
 
-					paths, err := pathsFromK8s(rulePath.Path, pathType)
-					if err != nil {
-						log.WithError(err).Error("rule skipped: pathsFromK8s")
+					paths := translators.PathsFromIngressPaths(rulePath, p.flagEnabledRegexPathPrefix)
+					if paths == nil {
+						log.Errorf("could not translate Ingress Path %s to Kong paths", rulePath.Path)
 						continue
+					}
+
+					for i, path := range paths {
+						newPath := *path
+						if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+							newPath = maybePrependRegexPrefix(*path)
+						}
+						paths[i] = &newPath
 					}
 
 					r := kongstate.Route{
@@ -224,7 +257,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 							StripPath:         kong.Bool(false),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
-							RegexPriority:     kong.Int(priorityForPath[pathType]),
+							RegexPriority:     kong.Int(priorityForPath[*rulePath.PathType]),
 							RequestBuffering:  kong.Bool(true),
 							ResponseBuffering: kong.Bool(true),
 						},

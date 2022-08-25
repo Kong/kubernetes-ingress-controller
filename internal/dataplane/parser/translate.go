@@ -2,9 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -16,30 +14,6 @@ func serviceBackendPortToStr(port netv1.ServiceBackendPort) string {
 		return fmt.Sprintf("pname-%s", port.Name)
 	}
 	return fmt.Sprintf("pnum-%d", port.Number)
-}
-
-func pathsFromK8s(path string, pathType netv1.PathType) ([]*string, error) {
-	switch pathType {
-	case netv1.PathTypePrefix:
-		base := strings.Trim(path, "/")
-		if base == "" {
-			return kong.StringSlice("/"), nil
-		}
-		return kong.StringSlice(
-			"/"+base+"$",
-			"/"+base+"/",
-		), nil
-	case netv1.PathTypeExact:
-		relative := strings.TrimLeft(path, "/")
-		return kong.StringSlice("/" + relative + "$"), nil
-	case netv1.PathTypeImplementationSpecific:
-		if path == "" {
-			return kong.StringSlice("/"), nil
-		}
-		return kong.StringSlice(path), nil
-	}
-
-	return nil, fmt.Errorf("unknown pathType %v", pathType)
 }
 
 var priorityForPath = map[netv1.PathType]int{

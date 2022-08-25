@@ -37,6 +37,13 @@ spec:
             type: object
           spec:
             properties:
+              enableLegacyRegexDetection:
+                default: false
+                description: EnableLegacyRegexDetection automatically detects if ImplementationSpecific
+                  Ingress paths are regular expression paths using the legacy 2.x
+                  heuristic. The controller adds the "~" prefix to those paths if
+                  the Kong version is 3.0 or higher.
+                type: boolean
               serviceUpstream:
                 default: false
                 description: Offload load-balancing to kube-proxy or sidecar

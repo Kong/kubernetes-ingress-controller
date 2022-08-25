@@ -7,6 +7,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -69,7 +70,7 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 		}
 
 		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule)
+		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.flagEnabledRegexPathPrefix)
 		if err != nil {
 			return err
 		}
@@ -115,7 +116,12 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayv1alpha2.HTT
 // path prefix routing option for that service in addition to hostname routing.
 // If an HTTPRoute is provided that has matches that include any unsupported matching
 // configurations, this will produce an error and the route is considered invalid.
-func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, ruleNumber int, rule gatewayv1alpha2.HTTPRouteRule) ([]kongstate.Route, error) {
+func generateKongRoutesFromHTTPRouteRule(
+	httproute *gatewayv1alpha2.HTTPRoute,
+	ruleNumber int,
+	rule gatewayv1alpha2.HTTPRouteRule,
+	addRegexPrefix bool,
+) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
 	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
@@ -167,9 +173,16 @@ func generateKongRoutesFromHTTPRouteRule(httproute *gatewayv1alpha2.HTTPRoute, r
 			if match.Path != nil {
 				if *match.Path.Type == gatewayv1alpha2.PathMatchExact {
 					terminated := *match.Path.Value + "$"
+					if addRegexPrefix {
+						terminated = translators.KongPathRegexPrefix + terminated
+					}
 					r.Route.Paths = []*string{&terminated}
 				} else if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix {
-					r.Route.Paths = []*string{match.Path.Value}
+					path := *match.Path.Value
+					if addRegexPrefix {
+						path = translators.KongPathRegexPrefix + path
+					}
+					r.Route.Paths = []*string{&path}
 				}
 			}
 

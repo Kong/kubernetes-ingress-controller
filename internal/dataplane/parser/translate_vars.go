@@ -1,5 +1,9 @@
 package parser
 
+import (
+	"regexp"
+)
+
 // -----------------------------------------------------------------------------
 // Translation - Vars & Constants
 // -----------------------------------------------------------------------------
@@ -17,4 +21,11 @@ const (
 	// DefaultHTTPPort is the network port that should be assumed by default
 	// for HTTP traffic to services.
 	DefaultHTTPPort = 80
+
+	// kongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
+	// as a regex.
+	kongHeaderRegexPrefix = "~*"
 )
+
+// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is a regex.
+var LegacyRegexPathExpression = regexp.MustCompile(`^[a-zA-Z0-9\.\-_~/%]*$`)

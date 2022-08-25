@@ -21,8 +21,8 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -130,7 +130,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					{
 						Path: &gatewayv1alpha2.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
-							Value: kong.String(`/regex-\d{3}-test-http-route-essentials`),
+							Value: kong.String(`/test-http-route-essentials/regex/\d{3}`),
 						},
 					},
 					{
@@ -152,7 +152,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			}},
 		},
 	}
-	if util.GetKongVersion().GTE(parser.MinRegexHeaderKongVersion) {
+	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
 		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayv1alpha2.HTTPRouteMatch{
 			Headers: []gatewayv1alpha2.HTTPHeaderMatch{
 				{
@@ -175,7 +175,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
 		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.", emptyHeaderSet)
-	eventuallyGETPath(t, "regex-123-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "/test-http-route-essentials/regex/999", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 
@@ -197,7 +197,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	if util.GetKongVersion().GTE(parser.MinRegexHeaderKongVersion) {
+	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
 		t.Log("verifying HTTPRoute header match")
 		eventuallyGETPath(t, "", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"})
 	}

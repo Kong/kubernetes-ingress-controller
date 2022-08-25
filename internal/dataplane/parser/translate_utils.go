@@ -3,22 +3,17 @@ package parser
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
-
-// kongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
-// as a regex.
-const kongHeaderRegexPrefix = "~*"
-
-// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches.
-var MinRegexHeaderKongVersion = semver.MustParse("2.8.0")
 
 // -----------------------------------------------------------------------------
 // Translate Utilities - Gateway
@@ -36,9 +31,9 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 				string(header.Name))
 		}
 		if header.Type != nil && *header.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
-			if util.GetKongVersion().LT(MinRegexHeaderKongVersion) {
+			if !versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
 				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression",
-					util.GetKongVersion().String())
+					versions.GetKongVersion().Full().String())
 			}
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1alpha2.HeaderMatchExact {
@@ -207,4 +202,15 @@ func (p *Parser) generateKongServiceFromBackendRef(
 	}
 
 	return service, nil
+}
+
+// maybePrependRegexPrefix takes a path string and returns it withthe regex prefix prepended if the Kong version
+// requires it and it is not already present. If those conditions are not met, it returns the original path string.
+func maybePrependRegexPrefix(path string) string {
+	if LegacyRegexPathExpression.FindString(path) != "" {
+		if !strings.HasPrefix(path, translators.KongPathRegexPrefix) {
+			path = translators.KongPathRegexPrefix + path
+		}
+	}
+	return path
 }

@@ -1,6 +1,10 @@
 package parser
 
-import "github.com/blang/semver/v4"
+import (
+	"regexp"
+
+	"github.com/blang/semver/v4"
+)
 
 // -----------------------------------------------------------------------------
 // Translation - Vars & Constants
@@ -34,4 +38,7 @@ var (
 
 	// MinExplicitPathRegexKongVersion is the minimum Kong version that requires explicit indication of regex paths.
 	MinExplicitPathRegexKongVersion = semver.MustParse("3.0.0")
+
+	// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is a regex
+	LegacyRegexPathExpression = regexp.MustCompile(`^[a-zA-Z0-9\.\-_~/%]*$`)
 )

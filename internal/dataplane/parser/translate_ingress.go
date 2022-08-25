@@ -52,6 +52,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					log.Errorf("rule skipped: invalid path: '%v'", path)
 					continue
 				}
+				path = maybePrependRegexPrefix(path)
 				if path == "" {
 					path = "/"
 				}
@@ -214,6 +215,11 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					if err != nil {
 						log.WithError(err).Error("rule skipped: pathsFromK8s")
 						continue
+					}
+
+					for i, path := range paths {
+						newPath := maybePrependRegexPrefix(*path)
+						paths[i] = &newPath
 					}
 
 					r := kongstate.Route{

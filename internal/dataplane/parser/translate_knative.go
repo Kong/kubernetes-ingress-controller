@@ -45,6 +45,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				if path == "" {
 					path = "/"
 				}
+				path = maybePrependRegexPrefix(path)
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{

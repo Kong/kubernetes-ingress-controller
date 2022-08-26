@@ -163,7 +163,7 @@ func TestHTTPSRedirect(t *testing.T) {
 	t.Logf("exposing Service %s via Ingress", service.Name)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_https_redirect", map[string]string{
 		annotations.IngressClassKey:             ingressClass,
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
@@ -183,7 +183,7 @@ func TestHTTPSRedirect(t *testing.T) {
 		Timeout: time.Second * 3,
 	}
 	assert.Eventually(t, func() bool {
-		resp, err := client.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := client.Get(fmt.Sprintf("%s/test_https_redirect", proxyURL))
 		if err != nil {
 			return false
 		}

@@ -537,7 +537,7 @@ func TestGatewayFilters(t *testing.T) {
 					{
 						Path: &gatewayv1alpha2.HTTPPathMatch{
 							Type:  &pathMatchPrefix,
-							Value: kong.String("/httpbin"),
+							Value: kong.String("/test_gateway_filters"),
 						},
 					},
 				},
@@ -557,7 +557,7 @@ func TestGatewayFilters(t *testing.T) {
 
 	otherRoute, err := gatewayClient.GatewayV1alpha2().HTTPRoutes(other.Name).Create(ctx, httprouteTemplate, metav1.CreateOptions{})
 	require.NoError(t, err)
-	otherRoute.Spec.Rules[0].Matches[0].Path.Value = kong.String("/otherbin")
+	otherRoute.Spec.Rules[0].Matches[0].Path.Value = kong.String("/other_test_gateway_filters")
 	_, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(other.Name).Update(ctx, otherRoute, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
@@ -580,9 +580,9 @@ func TestGatewayFilters(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	t.Log("waiting for routes from HTTPRoute in other namespace to become operational")
-	eventuallyGETPath(t, "otherbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("changing to the same namespace filter")
 	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
@@ -614,9 +614,9 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("confirming other namespace route becomes inaccessible")
-	eventuallyGETPath(t, "otherbin", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 	t.Log("confirming same namespace route still operational")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("changing to a selector filter")
 	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
@@ -659,7 +659,7 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	eventuallyGETPath(t, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 	t.Log("confirming right selector namespace route becomes operational")
-	eventuallyGETPath(t, "otherbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 }

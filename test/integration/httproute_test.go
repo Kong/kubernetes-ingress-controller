@@ -124,19 +124,19 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					{
 						Path: &gatewayv1alpha2.HTTPPathMatch{
 							Type:  &pathMatchPrefix,
-							Value: kong.String("/httpbin"),
+							Value: kong.String("/test-http-route-essentials"),
 						},
 					},
 					{
 						Path: &gatewayv1alpha2.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
-							Value: kong.String(`/regex-\d{3}-httpbin`),
+							Value: kong.String(`/regex-\d{3}-test-http-route-essentials`),
 						},
 					},
 					{
 						Path: &gatewayv1alpha2.HTTPPathMatch{
 							Type:  &pathMatchExact,
-							Value: kong.String(`/exact-httpbin`),
+							Value: kong.String(`/exact-test-http-route-essentials`),
 						},
 					},
 				},
@@ -172,22 +172,22 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
 		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.", emptyHeaderSet)
-	eventuallyGETPath(t, "regex-123-httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "exact-httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "exact-httpbina", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	eventuallyGETPath(t, "regex-123-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 
 	require.Eventually(t, func() bool {
-		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "httpbin"), nil)
+		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "test-http-route-essentials"), nil)
 		if err != nil {
 			t.Logf("WARNING: failed to create HTTP request: %v", err)
 			return false
 		}
 		resp, err := httpc.Do(req)
 		if err != nil {
-			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, "httpbin", err)
+			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, "test-http-route-essentials", err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -243,8 +243,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("verifying that both backends are ready to receive traffic")
 	httpbinRespContent := "<title>httpbin.org</title>"
 	nginxRespContent := "<title>Welcome to nginx!</title>"
-	eventuallyGETPath(t, "httpbin", http.StatusOK, httpbinRespContent, emptyHeaderSet)
-	eventuallyGETPath(t, "httpbin", http.StatusOK, nginxRespContent, emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, httpbinRespContent, emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, nginxRespContent, emptyHeaderSet)
 
 	t.Log("verifying that both backends receive requests according to weighted distribution")
 	httpbinRespName := "httpbin-resp"
@@ -256,7 +256,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}
 	weightedLoadBalancingTestConfig := countHTTPResponsesConfig{
 		Method:      http.MethodGet,
-		Path:        "httpbin",
+		Path:        "test-http-route-essentials",
 		Headers:     emptyHeaderSet,
 		Duration:    5 * time.Second,
 		RequestTick: 50 * time.Millisecond,
@@ -289,7 +289,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet)
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
@@ -305,7 +305,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("deleting the GatewayClass")
 	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
@@ -314,7 +314,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet)
 
 	t.Log("putting the GatewayClass back")
 	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -326,7 +326,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("deleting the Gateway")
 	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
@@ -336,7 +336,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet)
 
 	t.Log("putting the Gateway back")
 	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
@@ -349,7 +349,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	eventuallyGETPath(t, "httpbin", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
@@ -360,5 +360,5 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
-	eventuallyGETPath(t, "httpbin", http.StatusNotFound, "", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet)
 }

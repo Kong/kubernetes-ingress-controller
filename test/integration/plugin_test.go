@@ -219,7 +219,7 @@ func TestPluginOrdering(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
-	ingress := generators.NewIngressForService("/httpbin", map[string]string{
+	ingress := generators.NewIngressForService("/test_plugin_ordering", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
@@ -228,7 +228,7 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/test_plugin_ordering", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -286,7 +286,7 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", termplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/test_plugin_ordering", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -308,7 +308,7 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", authplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/test_plugin_ordering", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -330,7 +330,7 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Logf("validating that plugin %s now takes precedence", termplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/test_plugin_ordering", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -342,7 +342,7 @@ func TestPluginOrdering(t *testing.T) {
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/test_plugin_ordering", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false

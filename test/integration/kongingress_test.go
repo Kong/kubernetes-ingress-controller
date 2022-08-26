@@ -57,7 +57,7 @@ func TestKongIngressEssentials(t *testing.T) {
 	t.Logf("routing to service %s via Ingress", service.Name)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_kongingress_essentials", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
@@ -96,7 +96,7 @@ func TestKongIngressEssentials(t *testing.T) {
 	t.Log("waiting for routes from Ingress to be operational and that overrides are in place")
 	httpc := http.Client{Timeout: time.Second * 10} // this timeout should never be hit, we expect a 504 from the proxy within 1000ms
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/httpbin/delay/5", proxyURL))
+		resp, err := httpc.Get(fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL))
 		if err != nil {
 			return false
 		}
@@ -115,7 +115,7 @@ func TestKongIngressEssentials(t *testing.T) {
 
 	t.Logf("ensuring that Service %s overrides are eventually removed", service.Name)
 	assert.Eventually(t, func() bool {
-		url := fmt.Sprintf("%s/httpbin/delay/5", proxyURL)
+		url := fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL)
 		resp, err := httpc.Get(url)
 		if err != nil {
 			t.Logf("failed issuing http GET for %q: %v", url, err)

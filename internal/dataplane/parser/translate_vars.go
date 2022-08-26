@@ -40,5 +40,5 @@ var (
 	MinExplicitPathRegexKongVersion = semver.MustParse("3.0.0")
 
 	// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is a regex
-	LegacyRegexPathExpression = regexp.MustCompile(`^[a-zA-Z0-9\.\-_~/%]*$`)
+	LegacyRegexPathExpression = regexp.MustCompile(`^\^?[a-zA-Z0-9\.\-_~/%]*\$?$`)
 )

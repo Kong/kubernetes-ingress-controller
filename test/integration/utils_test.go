@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // -----------------------------------------------------------------------------
@@ -495,4 +496,20 @@ func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
 	cleaner.AddNamespace(namespace)
 
 	return namespace, cleaner
+}
+
+// -----------------------------------------------------------------------------
+// Ingress Helpers
+// -----------------------------------------------------------------------------
+
+func cleanIngress(cleaner *clusters.Cleaner, ingress runtime.Object) error {
+	if v1, ok := ingress.(*netv1.Ingress); ok {
+		cleaner.Add(v1)
+		return nil
+	}
+	if v1beta1, ok := ingress.(*netv1beta1.Ingress); ok {
+		cleaner.Add(v1beta1)
+		return nil
+	}
+	return fmt.Errorf("%s is not an Ingress", ingress.GetObjectKind().GroupVersionKind().String())
 }

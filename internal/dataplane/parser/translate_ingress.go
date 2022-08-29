@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -19,6 +21,16 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 	result := newIngressRules()
 
 	ingressList := p.storer.ListIngressesV1beta1()
+	icp, err := getIngressClassParametersOrDefault(p.storer)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound{}) {
+			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
+			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
+		} else {
+			// anything else is unexpected
+			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
+		}
+	}
 
 	var allDefaultBackends []netv1beta1.Ingress
 	sort.SliceStable(ingressList, func(i, j int) bool {
@@ -52,7 +64,9 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					log.Errorf("rule skipped: invalid path: '%v'", path)
 					continue
 				}
-				path = maybePrependRegexPrefix(path)
+				if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+					path = maybePrependRegexPrefix(path)
+				}
 				if path == "" {
 					path = "/"
 				}
@@ -168,6 +182,16 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	result := newIngressRules()
 
 	ingressList := p.storer.ListIngressesV1()
+	icp, err := getIngressClassParametersOrDefault(p.storer)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound{}) {
+			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
+			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
+		} else {
+			// anything else is unexpected
+			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
+		}
+	}
 
 	var allDefaultBackends []netv1.Ingress
 	sort.SliceStable(ingressList, func(i, j int) bool {
@@ -191,7 +215,8 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		var objectSuccessfullyParsed bool
 
 		if p.featureEnabledCombinedServiceRoutes {
-			for _, kongStateService := range translators.TranslateIngress(ingress) {
+			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
+				// TODO ditto path regex
 				result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
 			}
 			objectSuccessfullyParsed = true
@@ -211,14 +236,17 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 						pathType = *rulePath.PathType
 					}
 
-					paths, err := pathsFromK8s(rulePath.Path, pathType)
+					paths, err := PathsFromK8s(rulePath.Path, pathType, p.flagEnabledRegexPathPrefix)
 					if err != nil {
-						log.WithError(err).Error("rule skipped: pathsFromK8s")
+						log.WithError(err).Error("rule skipped: PathsFromK8s")
 						continue
 					}
 
 					for i, path := range paths {
-						newPath := maybePrependRegexPrefix(*path)
+						newPath := *path
+						if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+							newPath = maybePrependRegexPrefix(*path)
+						}
 						paths[i] = &newPath
 					}
 

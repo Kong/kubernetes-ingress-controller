@@ -36,8 +36,9 @@ var (
 	// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches.
 	MinRegexHeaderKongVersion = semver.MustParse("2.8.0")
 
-	// MinExplicitPathRegexKongVersion is the minimum Kong version that requires explicit indication of regex paths.
-	MinExplicitPathRegexKongVersion = semver.MustParse("3.0.0")
+	// MaxHeuristicRegexPathDetectionVersion is the maximum Kong (major) version that detects regular expression paths
+	// automatically using a heuristic.
+	MaxHeuristicRegexPathDetectionVersion = semver.Version{Major: 2}
 
 	// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is a regex
 	LegacyRegexPathExpression = regexp.MustCompile(`^\^?[a-zA-Z0-9\.\-_~/%]*\$?$`)

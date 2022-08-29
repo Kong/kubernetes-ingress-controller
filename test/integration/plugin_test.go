@@ -198,7 +198,7 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginOrdering(t *testing.T) {
-	if !util.GetKongVersion().GTE(semver.MustParse("3.0.0")) || kongEnterpriseEnabled == "" {
+	if !util.GetKongVersion().GT(semver.MustParse("2")) || kongEnterpriseEnabled == "" {
 		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
 	t.Parallel()

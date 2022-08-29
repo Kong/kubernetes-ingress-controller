@@ -302,6 +302,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.AreCombinedServiceRoutesEnabled() {
 		p.EnableCombinedServiceRoutes()
 	}
+	if util.GetKongVersion().GT(parser.MaxHeuristicRegexPathDetectionVersion) {
+		p.EnableRegexPathPrefix()
+	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, err := p.Build()

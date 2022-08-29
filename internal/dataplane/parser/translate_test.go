@@ -32,45 +32,45 @@ func TestPathsFromK8s(t *testing.T) {
 		{
 			name:         "one segment, no trailing slash",
 			path:         "/foo",
-			wantPrefix:   kong.StringSlice("/foo$", "/foo/"),
+			wantPrefix:   kong.StringSlice("/foo/", "/foo$"),
 			wantExact:    kong.StringSlice("/foo$"),
 			wantImplSpec: kong.StringSlice("/foo"),
 		},
 		{
 			name:         "one segment, has trailing slash",
 			path:         "/foo/",
-			wantPrefix:   kong.StringSlice("/foo$", "/foo/"),
+			wantPrefix:   kong.StringSlice("/foo/", "/foo$"),
 			wantExact:    kong.StringSlice("/foo/$"),
 			wantImplSpec: kong.StringSlice("/foo/"),
 		},
 		{
 			name:         "two segments, no trailing slash",
 			path:         "/foo/bar",
-			wantPrefix:   kong.StringSlice("/foo/bar$", "/foo/bar/"),
+			wantPrefix:   kong.StringSlice("/foo/bar/", "/foo/bar$"),
 			wantExact:    kong.StringSlice("/foo/bar$"),
 			wantImplSpec: kong.StringSlice("/foo/bar"),
 		},
 		{
 			name:         "two segments, has trailing slash",
 			path:         "/foo/bar/",
-			wantPrefix:   kong.StringSlice("/foo/bar$", "/foo/bar/"),
+			wantPrefix:   kong.StringSlice("/foo/bar/", "/foo/bar$"),
 			wantExact:    kong.StringSlice("/foo/bar/$"),
 			wantImplSpec: kong.StringSlice("/foo/bar/"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			{
-				gotPrefix, gotErr := pathsFromK8s(tt.path, netv1.PathTypePrefix)
+				gotPrefix, gotErr := PathsFromK8s(tt.path, netv1.PathTypePrefix, false)
 				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantPrefix, gotPrefix, "prefix match")
 			}
 			{
-				gotExact, gotErr := pathsFromK8s(tt.path, netv1.PathTypeExact)
+				gotExact, gotErr := PathsFromK8s(tt.path, netv1.PathTypeExact, false)
 				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantExact, gotExact, "exact match")
 			}
 			{
-				gotImplSpec, gotErr := pathsFromK8s(tt.path, netv1.PathTypeImplementationSpecific)
+				gotImplSpec, gotErr := PathsFromK8s(tt.path, netv1.PathTypeImplementationSpecific, false)
 				require.NoError(t, gotErr)
 				require.Equal(t, tt.wantImplSpec, gotImplSpec, "implementation specific match")
 			}

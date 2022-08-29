@@ -20,8 +20,11 @@ import (
 // TranslateIngress receives a Kubernetes ingress object and from it will
 // produce a translated set of kong.Services and kong.Routes which will come
 // wrapped in a kongstate.Service object.
-func TranslateIngress(ingress *netv1.Ingress) []*kongstate.Service {
-	index := &ingressTranslationIndex{cache: make(map[string]*ingressTranslationMeta)}
+func TranslateIngress(ingress *netv1.Ingress, addRegexPrefix bool) []*kongstate.Service {
+	index := &ingressTranslationIndex{
+		cache:          make(map[string]*ingressTranslationMeta),
+		addRegexPrefix: addRegexPrefix,
+	}
 	index.add(ingress)
 	kongStateServices := kongstate.Services(index.translate())
 	sort.Sort(kongStateServices)
@@ -67,8 +70,12 @@ const (
 // are unique. For ingress spec rules which are not unique along those
 // data-points, a separate kong.Service and separate kong.Routes will be created
 // for each unique combination.
+//
+// The addRegexPrefix flag indicates if generated regex paths for path type handling include the Kong 3.0+ "~" regular
+// expression prefix.
 type ingressTranslationIndex struct {
-	cache map[string]*ingressTranslationMeta
+	cache          map[string]*ingressTranslationMeta
+	addRegexPrefix bool
 }
 
 func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
@@ -100,6 +107,7 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 					ingressHost:      ingressRule.Host,
 					serviceName:      serviceName,
 					servicePort:      servicePort,
+					addRegexPrefix:   i.addRegexPrefix,
 				}
 			}
 
@@ -150,6 +158,7 @@ type ingressTranslationMeta struct {
 	serviceName        string
 	servicePort        int32
 	paths              []netv1.HTTPIngressPath
+	addRegexPrefix     bool
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) *kongstate.Service {
@@ -198,7 +207,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 	}
 
 	for _, httpIngressPath := range m.paths {
-		paths := pathsFromIngressPaths(httpIngressPath)
+		paths := pathsFromIngressPaths(httpIngressPath, m.addRegexPrefix)
 		route.Paths = append(route.Paths, paths...)
 	}
 
@@ -209,27 +218,60 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 // Ingress Translation - Private - Helper Functions
 // -----------------------------------------------------------------------------
 
-func pathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath) []*string {
-	switch *httpIngressPath.PathType { //nolint:exhaustive
-	case netv1.PathTypeExact:
-		relative := strings.TrimLeft(httpIngressPath.Path, "/")
-		if httpIngressPath.Path == "" {
-			return kong.StringSlice("/")
-		}
-		return kong.StringSlice("/" + relative + "$")
-	case netv1.PathTypeImplementationSpecific:
-		return kong.StringSlice(httpIngressPath.Path)
-	default:
-		// path type is prefix
-		base := strings.Trim(httpIngressPath.Path, "/")
+func pathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath, addRegexPrefix bool) []*string {
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/pull/2507 originally added pathsFromIngressPaths,
+	// which was a near-copy of PathsFromK8s (minor differences are that the former took a path object whereas the
+	// latter took its components, and the former has an apparent error where an empty exact path gets "/" _without_
+	// the final "$"). pathsFromIngressPaths had a default case that assumed prefix type if not one of the others,
+	// whereas PathsFromK8s would return an error if the path type was unrecognized. I don't think we can reasonably
+	// default to prefix in that situation; we have no way of knowing intent for an unknown type. if anything,
+	// implementation-specific is probably the most reasonable fallback as it's the "just pass exactly what you have to
+	// Kong" option, but arguably none are valid. however, this function and everything above it neither return errors
+	// to the parser nor have access to its logger, so there's not much we can reasonably do with it (we want to log,
+	// as we want to just skip the bad path rule, not break the entire build) without refactoring. For the current
+	// goal of just handling the 3.x regex prefix and not having two competing implementations of Ingress path type
+	// handling, this just discards the error for now and will return an empty path set if it encounters one.
+	//
+	// In light of the import hell here being more annyoing than expected, the pass-through call:
+	// paths, _ := parser.PathsFromK8s(httpIngressPath.Path, *httpIngressPath.PathType, addRegexPrefix)
+	// is now just that function copied entirely after some setup:
+	pathType := *httpIngressPath.PathType
+	path := httpIngressPath.Path
+	kongPathRegexPrefix := "~"
+	// function continues minus error returns below
+
+	routePaths := []string{}
+	routeRegexPaths := []string{}
+
+	switch pathType {
+	case netv1.PathTypePrefix:
+		base := strings.Trim(path, "/")
 		if base == "" {
-			return kong.StringSlice("/")
+			routePaths = append(routePaths, "/")
+		} else {
+			routePaths = append(routePaths, "/"+base+"/")
+			routeRegexPaths = append(routeRegexPaths, "/"+base+"$")
 		}
-		return kong.StringSlice(
-			"/"+base+"$",
-			"/"+base+"/",
-		)
+	case netv1.PathTypeExact:
+		relative := strings.TrimLeft(path, "/")
+		routeRegexPaths = append(routeRegexPaths, "/"+relative+"$")
+	case netv1.PathTypeImplementationSpecific:
+		if path == "" {
+			routePaths = append(routePaths, "/")
+		} else {
+			routePaths = append(routePaths, path)
+		}
+	default:
+		return nil
 	}
+
+	if addRegexPrefix {
+		for i, orig := range routeRegexPaths {
+			routeRegexPaths[i] = kongPathRegexPrefix + orig
+		}
+	}
+	routePaths = append(routePaths, routeRegexPaths...)
+	return kong.StringSlice(routePaths...)
 }
 
 func flattenMultipleSlashes(path string) string {

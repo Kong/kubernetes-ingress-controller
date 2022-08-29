@@ -75,7 +75,7 @@ func TestTranslateIngress(t *testing.T) {
 					Route: kong.Route{
 						Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 						Hosts:             kong.StringSlice("konghq.com"),
-						Paths:             kong.StringSlice("/api$", "/api/"), // Prefix pathing is the default behavior when no pathtype is defined
+						Paths:             kong.StringSlice("/api/", "/api$"), // Prefix pathing is the default behavior when no pathtype is defined
 						PreserveHost:      kong.Bool(true),
 						Protocols:         kong.StringSlice("http", "https"),
 						RegexPriority:     kong.Int(0),
@@ -287,7 +287,7 @@ func TestTranslateIngress(t *testing.T) {
 					Route: kong.Route{
 						Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 						Hosts:             kong.StringSlice("konghq.com"),
-						Paths:             kong.StringSlice("/v1/api$", "/v1/api/"),
+						Paths:             kong.StringSlice("/v1/api/", "/v1/api$"),
 						PreserveHost:      kong.Bool(true),
 						Protocols:         kong.StringSlice("http", "https"),
 						RegexPriority:     kong.Int(0),
@@ -493,9 +493,9 @@ func TestTranslateIngress(t *testing.T) {
 						Name:  kong.String("default.test-ingress.test-service.konghq.com.80"),
 						Hosts: kong.StringSlice("konghq.com"),
 						Paths: kong.StringSlice(
-							"/v1/api$", "/v1/api/",
-							"/v2/api$", "/v2/api/",
-							"/v3/api$", "/v3/api/",
+							"/v1/api/", "/v1/api$",
+							"/v2/api/", "/v2/api$",
+							"/v3/api/", "/v3/api$",
 							"/other/path/1$",
 							"/other/path/2",
 							"/",
@@ -633,9 +633,9 @@ func TestTranslateIngress(t *testing.T) {
 					Route: kong.Route{
 						Name: kong.String("default.test-ingress.test-service..80"),
 						Paths: kong.StringSlice(
-							"/v1/api$", "/v1/api/",
-							"/v2/api$", "/v2/api/",
-							"/v3/api$", "/v3/api/",
+							"/v1/api/", "/v1/api$",
+							"/v2/api/", "/v2/api$",
+							"/v3/api/", "/v3/api$",
 							"/other/path/1$",
 							"/other/path/2",
 							"/",
@@ -725,7 +725,7 @@ func TestTranslateIngress(t *testing.T) {
 							Route: kong.Route{
 								Name:              kong.String("default.test-ingress.test-service1.konghq.com.80"),
 								Hosts:             kong.StringSlice("konghq.com"),
-								Paths:             kong.StringSlice("/v1/api$", "/v1/api/"),
+								Paths:             kong.StringSlice("/v1/api/", "/v1/api$"),
 								PreserveHost:      kong.Bool(true),
 								Protocols:         kong.StringSlice("http", "https"),
 								RegexPriority:     kong.Int(0),
@@ -767,7 +767,7 @@ func TestTranslateIngress(t *testing.T) {
 							Route: kong.Route{
 								Name:              kong.String("default.test-ingress.test-service2.konghq.com.80"),
 								Hosts:             kong.StringSlice("konghq.com"),
-								Paths:             kong.StringSlice("/v2/api$", "/v2/api/"),
+								Paths:             kong.StringSlice("/v2/api/", "/v2/api$"),
 								PreserveHost:      kong.Bool(true),
 								Protocols:         kong.StringSlice("http", "https"),
 								RegexPriority:     kong.Int(0),
@@ -792,7 +792,8 @@ func TestTranslateIngress(t *testing.T) {
 
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, TranslateIngress(tt.ingress), tt.expected)
+			// TODO split to handle prefixed also
+			assert.Equal(t, TranslateIngress(tt.ingress, false), tt.expected)
 		})
 	}
 }
@@ -810,8 +811,8 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 				PathType: &pathTypePrefix,
 			},
 			out: kong.StringSlice(
-				"/v1/api/packages$",
 				"/v1/api/packages/",
+				"/v1/api/packages$",
 			),
 		},
 		{
@@ -821,8 +822,8 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 				PathType: &pathTypePrefix,
 			},
 			out: kong.StringSlice(
-				"/v1/api/packages$",
 				"/v1/api/packages/",
+				"/v1/api/packages$",
 			),
 		},
 		{
@@ -855,7 +856,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 				Path:     "",
 				PathType: &pathTypeExact,
 			},
-			out: kong.StringSlice("/"),
+			out: kong.StringSlice("/$"),
 		},
 		{
 			name: "path type implementation-specific will leave the path alone",
@@ -867,7 +868,8 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.out, pathsFromIngressPaths(tt.in))
+			// TODO split test cases to handle regex
+			assert.Equal(t, tt.out, pathsFromIngressPaths(tt.in, false))
 		})
 	}
 }

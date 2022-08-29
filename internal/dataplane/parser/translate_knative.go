@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -8,12 +9,27 @@ import (
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	result := newIngressRules()
 
+	// IngressClass is not actually part of the Knative spec, and we are getting networking.k8s.io IngressClasses here,
+	// not a resource specific to Knative. However, the reason we're using it (enabling the 2.x regex heuristic) is
+	// Kong-specific, so in absence of a proper Knative IngressClass to attach our IngressClassParams to, we may as
+	// well use the stock Kubernetes resouce.
+	icp, err := getIngressClassParametersOrDefault(p.storer)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound{}) {
+			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
+			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
+		} else {
+			// anything else is unexpected
+			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
+		}
+	}
 	ingressList, err := p.storer.ListKnativeIngresses()
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list Knative Ingresses")
@@ -45,7 +61,9 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				if path == "" {
 					path = "/"
 				}
-				path = maybePrependRegexPrefix(path)
+				if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+					path = maybePrependRegexPrefix(path)
+				}
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{

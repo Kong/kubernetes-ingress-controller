@@ -205,11 +205,9 @@ func (p *Parser) generateKongServiceFromBackendRef(
 // maybePrependRegexPrefix takes a path string and returns it withthe regex prefix prepended if the Kong version
 // requires it and it is not already present. If those conditions are not met, it returns the original path string.
 func maybePrependRegexPrefix(path string) string {
-	if util.GetKongVersion().GTE(MinExplicitPathRegexKongVersion) {
-		if LegacyRegexPathExpression.FindString(path) != "" {
-			if !strings.HasPrefix(path, kongPathRegexPrefix) {
-				path = kongPathRegexPrefix + path
-			}
+	if LegacyRegexPathExpression.FindString(path) != "" {
+		if !strings.HasPrefix(path, kongPathRegexPrefix) {
+			path = kongPathRegexPrefix + path
 		}
 	}
 	return path

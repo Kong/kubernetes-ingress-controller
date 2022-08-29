@@ -18,28 +18,43 @@ func serviceBackendPortToStr(port netv1.ServiceBackendPort) string {
 	return fmt.Sprintf("pnum-%d", port.Number)
 }
 
-func pathsFromK8s(path string, pathType netv1.PathType) ([]*string, error) {
+// TODO decide where we want this to live. was previously not exported.
+
+// PathsFromK8s takes a path and Ingress path type and returns a set of Kong route paths that satisfy that path type.
+// It optionally adds the Kong 3.x regex path prefix for path types that require a regex path. It rejects unknown path
+// types with an error.
+func PathsFromK8s(path string, pathType netv1.PathType, addRegexPrefix bool) ([]*string, error) {
+	routePaths := []string{}
+	routeRegexPaths := []string{}
 	switch pathType {
 	case netv1.PathTypePrefix:
 		base := strings.Trim(path, "/")
 		if base == "" {
-			return kong.StringSlice("/"), nil
+			routePaths = append(routePaths, "/")
+		} else {
+			routePaths = append(routePaths, "/"+base+"/")
+			routeRegexPaths = append(routeRegexPaths, "/"+base+"$")
 		}
-		return kong.StringSlice(
-			"/"+base+"$",
-			"/"+base+"/",
-		), nil
 	case netv1.PathTypeExact:
 		relative := strings.TrimLeft(path, "/")
-		return kong.StringSlice("/" + relative + "$"), nil
+		routeRegexPaths = append(routeRegexPaths, "/"+relative+"$")
 	case netv1.PathTypeImplementationSpecific:
 		if path == "" {
-			return kong.StringSlice("/"), nil
+			routePaths = append(routePaths, "/")
+		} else {
+			routePaths = append(routePaths, path)
 		}
-		return kong.StringSlice(path), nil
+	default:
+		return nil, fmt.Errorf("unknown pathType %v", pathType)
 	}
 
-	return nil, fmt.Errorf("unknown pathType %v", pathType)
+	if addRegexPrefix {
+		for i, orig := range routeRegexPaths {
+			routeRegexPaths[i] = kongPathRegexPrefix + orig
+		}
+	}
+	routePaths = append(routePaths, routeRegexPaths...)
+	return kong.StringSlice(routePaths...), nil
 }
 
 var priorityForPath = map[netv1.PathType]int{

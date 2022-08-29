@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -26,7 +28,10 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
@@ -34,33 +39,35 @@ import (
 // extraIngressNamespace is the name of an alternative namespace used for ingress tests.
 const extraIngressNamespace = "elsewhere"
 
-var statusWait = time.Minute * 3
+var (
+	statusWait        = time.Minute * 3
+	ingressClassMutex = sync.Mutex{}
+)
 
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	kubernetesVersion, err := env.Cluster().Version()
@@ -70,15 +77,7 @@ func TestIngressEssentials(t *testing.T) {
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-
-	defer func() {
-		t.Log("cleaning up Ingress resource")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	defer cleanIngress(cleaner, ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -100,22 +99,6 @@ func TestIngressEssentials(t *testing.T) {
 		if resp.StatusCode == http.StatusOK {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
-	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/regex-999-httpbin", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
@@ -631,6 +614,12 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 
 func TestDefaultIngressClass(t *testing.T) {
 	t.Parallel()
+	t.Log("locking IngressClass management")
+	ingressClassMutex.Lock()
+	defer func() {
+		t.Log("unlocking IngressClass management")
+		ingressClassMutex.Unlock()
+	}()
 	ns, cleaner := setup(t)
 	defer func() {
 		if t.Failed() {
@@ -646,21 +635,13 @@ func TestDefaultIngressClass(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(service)
 
 	t.Logf("creating a classless ingress for service %s", service.Name)
 	kubernetesVersion, err := env.Cluster().Version()
@@ -669,15 +650,7 @@ func TestDefaultIngressClass(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-
-	defer func() {
-		t.Log("cleaning up Ingress resource")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	defer cleanIngress(cleaner, ingress)
 
 	t.Log("ensuring Ingress does not become live")
 	require.Never(t, func() bool {
@@ -708,16 +681,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	}
 	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, class, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up IngressClass resource")
-		if err := env.Cluster().Client().NetworkingV1().IngressClasses().Delete(ctx, class.Name,
-			metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(class)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -745,16 +709,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	require.NoError(t, err)
 	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Log("cleaning up KongClusterPlugin resource")
-		if err := c.ConfigurationV1().KongClusterPlugins().Delete(ctx, kongclusterplugin.Name,
-			metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(kongclusterplugin)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
@@ -774,6 +729,115 @@ func TestDefaultIngressClass(t *testing.T) {
 			if value, ok := resp.Header["Access-Control-Allow-Origin"]; ok {
 				return strings.Contains(b.String(), "<title>httpbin.org</title>") && value[0] == "example.com"
 			}
+		}
+		return false
+	}, ingressWait, waitTick)
+}
+
+func TestIngressClassRegexToggle(t *testing.T) {
+	t.Parallel()
+	if !util.GetKongVersion().GT(semver.MustParse("2")) {
+		t.Skip("legacy regex detection is only relevant for Kong 3.0+")
+	}
+	t.Log("locking IngressClass management")
+	ingressClassMutex.Lock()
+	defer func() {
+		t.Log("unlocking IngressClass management")
+		ingressClassMutex.Unlock()
+	}()
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an IngressClassParameters with legacy regex detection enabled")
+	params := &kongv1alpha1.IngressClassParameters{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kongtests",
+		},
+		Spec: kongv1alpha1.IngressClassParametersSpec{
+			EnableLegacyRegexDetection: true,
+		},
+	}
+	c, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	params, err = c.ConfigurationV1alpha1().IngressClassParameterses(ns.Name).Create(ctx, params, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(params)
+
+	t.Logf("creating an IngressClass with the legacy regex IngressClassParameters attached")
+	class := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kongtests",
+			Annotations: map[string]string{
+				"ingressclass.kubernetes.io/is-default-class": "true",
+			},
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+			Parameters: &netv1.IngressClassParametersReference{
+				APIGroup:  &v1alpha1.GroupVersion.Group,
+				Kind:      v1alpha1.IngressClassParametersKind,
+				Name:      params.Name,
+				Scope:     kong.String(netv1.IngressClassParametersReferenceScopeNamespace),
+				Namespace: &params.Namespace,
+			},
+		},
+	}
+	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, class, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(class)
+
+	t.Logf("creating an ingress for service %s", service.Name)
+	kubernetesVersion, err := env.Cluster().Version()
+	require.NoError(t, err)
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, `/test_ingress_class_regex_toggle/d{3}`, map[string]string{
+		"konghq.com/strip-path": "true",
+	}, service)
+	switch obj := ingress.(type) {
+	case *netv1.Ingress:
+		obj.Spec.IngressClassName = kong.String(ingressClass)
+	case *netv1beta1.Ingress:
+		obj.Spec.IngressClassName = kong.String(ingressClass)
+	}
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	defer cleanIngress(cleaner, ingress)
+
+	// we only test the positive case here, and assume the negative case (without the toggle, this will not route)
+	// based on prior experience. unfortunately the effect of the negative case is that it breaks router rebuilds
+	// entirely, which would be bad for other tests.
+	t.Log("waiting for ingress path to become available")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/test_ingress_class_regex_toggle/999", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
 	}, ingressWait, waitTick)

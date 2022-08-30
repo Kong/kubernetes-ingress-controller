@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -27,6 +26,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -736,7 +736,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 func TestIngressClassRegexToggle(t *testing.T) {
 	t.Parallel()
-	if !util.GetKongVersion().GT(semver.MustParse("2")) {
+	if !util.GetKongVersion().GT(parser.MaxHeuristicRegexPathDetectionVersion) {
 		t.Skip("legacy regex detection is only relevant for Kong 3.0+")
 	}
 	t.Log("locking IngressClass management")

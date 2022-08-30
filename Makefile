@@ -31,24 +31,36 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: _download_tool
 _download_tool:
-	(cd third_party && go mod tidy ) && \
-		GOBIN=$(PROJECT_DIR)/bin go install -modfile third_party/go.mod $(TOOL)
+	(cd third_party && go mod tidy && \
+		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
+
+.PHONY: tools
+tools: controller-gen kustomize client-gen golangci-lint gotestfmt
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
+.PHONY: controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(MAKE) _download_tool TOOL=sigs.k8s.io/controller-tools/cmd/controller-gen
+	@$(MAKE) _download_tool TOOL=controller-gen
 
 KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
+.PHONY: kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(MAKE) _download_tool TOOL=sigs.k8s.io/kustomize/kustomize/v4
+	@$(MAKE) _download_tool TOOL=kustomize
 
 CLIENT_GEN = $(PROJECT_DIR)/bin/client-gen
+.PHONY: client-gen
 client-gen: ## Download client-gen locally if necessary.
-	$(MAKE) _download_tool TOOL=k8s.io/code-generator/cmd/client-gen
+	@$(MAKE) _download_tool TOOL=client-gen
 
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
+.PHONY: golangci-lint
 golangci-lint: ## Download golangci-lint locally if necessary.
-	$(MAKE) _download_tool TOOL=github.com/golangci/golangci-lint/cmd/golangci-lint
+	@$(MAKE) _download_tool TOOL=golangci-lint
+
+GOTESTFMT = $(PROJECT_DIR)/bin/gotestfmt
+.PHONY: gotestfmt
+gotestfmt: ## Download gotestfmt locally if necessary.
+	@$(MAKE) _download_tool TOOL=gotestfmt
 
 # ------------------------------------------------------------------------------
 # Build
@@ -199,7 +211,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
-GOTESTFMT_CMD ?= gotestfmt -hide successful-downloads,empty-packages -showteststatus
+GOTESTFMT_CMD ?= $(GOTESTFMT) -hide successful-downloads,empty-packages -showteststatus
 
 .PHONY: test
 test: test.unit
@@ -236,7 +248,7 @@ test.unit:
 	@$(MAKE) _test.unit GOTESTFLAGS="$(GOTESTFLAGS)"
 
 .PHONY: test.unit.pretty
-test.unit.pretty:
+test.unit.pretty: gotestfmt
 	@$(MAKE) _test.unit GOTESTFLAGS="-json" 2>/dev/null | $(GOTESTFMT_CMD)
 
 .PHONY: _check.container.environment

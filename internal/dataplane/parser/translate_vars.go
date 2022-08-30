@@ -27,9 +27,6 @@ const (
 	// kongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
 	// as a regex.
 	kongHeaderRegexPrefix = "~*"
-
-	// kongPathRegexPrefix is the reserved prefix string that instructs Kong 3.0+ to interpret a path as a regex.
-	kongPathRegexPrefix = "~"
 )
 
 var (
@@ -39,6 +36,10 @@ var (
 	// MaxHeuristicRegexPathDetectionVersion is the maximum Kong (major) version that detects regular expression paths
 	// automatically using a heuristic.
 	MaxHeuristicRegexPathDetectionVersion = semver.Version{Major: 2}
+
+	// PluginOrderingVersionCutoff is the Kong version prior to the addition of plugin ordering. Any Kong version <=
+	// PluginOrderingVersionCutoff does not support plugin ordering.
+	PluginOrderingVersionCutoff = semver.Version{Major: 2}
 
 	// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is a regex
 	LegacyRegexPathExpression = regexp.MustCompile(`^\^?[a-zA-Z0-9\.\-_~/%]*\$?$`)

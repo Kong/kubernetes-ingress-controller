@@ -798,7 +798,7 @@ func TestTranslateIngress(t *testing.T) {
 	}
 }
 
-func Test_pathsFromIngressPaths(t *testing.T) {
+func Test_PathsFromIngressPaths(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   netv1.HTTPIngressPath
@@ -869,7 +869,7 @@ func Test_pathsFromIngressPaths(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO split test cases to handle regex
-			assert.Equal(t, tt.out, pathsFromIngressPaths(tt.in, false))
+			assert.Equal(t, tt.out, PathsFromIngressPaths(tt.in, false))
 		})
 	}
 }

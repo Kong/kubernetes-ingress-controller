@@ -10,6 +10,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -206,8 +207,8 @@ func (p *Parser) generateKongServiceFromBackendRef(
 // requires it and it is not already present. If those conditions are not met, it returns the original path string.
 func maybePrependRegexPrefix(path string) string {
 	if LegacyRegexPathExpression.FindString(path) != "" {
-		if !strings.HasPrefix(path, kongPathRegexPrefix) {
-			path = kongPathRegexPrefix + path
+		if !strings.HasPrefix(path, translators.KongPathRegexPrefix) {
+			path = translators.KongPathRegexPrefix + path
 		}
 	}
 	return path

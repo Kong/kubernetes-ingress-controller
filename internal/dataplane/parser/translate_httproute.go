@@ -7,6 +7,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -173,13 +174,13 @@ func generateKongRoutesFromHTTPRouteRule(
 				if *match.Path.Type == gatewayv1alpha2.PathMatchExact {
 					terminated := *match.Path.Value + "$"
 					if addRegexPrefix {
-						terminated = kongPathRegexPrefix + terminated
+						terminated = translators.KongPathRegexPrefix + terminated
 					}
 					r.Route.Paths = []*string{&terminated}
 				} else if *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression || *match.Path.Type == gatewayv1alpha2.PathMatchPathPrefix {
 					path := *match.Path.Value
 					if addRegexPrefix {
-						path = kongPathRegexPrefix + path
+						path = translators.KongPathRegexPrefix + path
 					}
 					r.Route.Paths = []*string{&path}
 				}

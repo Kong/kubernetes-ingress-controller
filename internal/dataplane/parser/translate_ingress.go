@@ -236,9 +236,9 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 						pathType = *rulePath.PathType
 					}
 
-					paths, err := PathsFromK8s(rulePath.Path, pathType, p.flagEnabledRegexPathPrefix)
-					if err != nil {
-						log.WithError(err).Error("rule skipped: PathsFromK8s")
+					paths := translators.PathsFromIngressPaths(rulePath, p.flagEnabledRegexPathPrefix)
+					if paths == nil {
+						log.Errorf("could not translate Ingress Path %s to Kong paths", rulePath.Path)
 						continue
 					}
 

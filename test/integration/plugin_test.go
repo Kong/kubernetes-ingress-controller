@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -198,7 +197,7 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginOrdering(t *testing.T) {
-	if !util.GetKongVersion().GT(semver.MustParse("2")) || kongEnterpriseEnabled == "" {
+	if !util.GetKongVersion().GT(parser.PluginOrderingVersionCutoff) || kongEnterpriseEnabled == "" {
 		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
 	t.Parallel()

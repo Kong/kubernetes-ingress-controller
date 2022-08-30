@@ -2,8 +2,6 @@ package parser
 
 import (
 	"regexp"
-
-	"github.com/blang/semver/v4"
 )
 
 // -----------------------------------------------------------------------------
@@ -30,17 +28,6 @@ const (
 )
 
 var (
-	// MinRegexHeaderKongVersion is the minimum Kong version that supports regex header matches.
-	MinRegexHeaderKongVersion = semver.MustParse("2.8.0")
-
-	// MaxHeuristicRegexPathDetectionVersion is the maximum Kong (major) version that detects regular expression paths
-	// automatically using a heuristic.
-	MaxHeuristicRegexPathDetectionVersion = semver.Version{Major: 2}
-
-	// PluginOrderingVersionCutoff is the Kong version prior to the addition of plugin ordering. Any Kong version <=
-	// PluginOrderingVersionCutoff does not support plugin ordering.
-	PluginOrderingVersionCutoff = semver.Version{Major: 2}
-
 	// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is a regex
 	LegacyRegexPathExpression = regexp.MustCompile(`^\^?[a-zA-Z0-9\.\-_~/%]*\$?$`)
 )

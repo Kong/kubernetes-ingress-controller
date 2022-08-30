@@ -26,9 +26,8 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
@@ -275,8 +274,15 @@ func TestGRPCIngressEssentials(t *testing.T) {
 
 func TestIngressClassNameSpec(t *testing.T) {
 	t.Parallel()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	if clusterVersion.Major < uint64(2) && clusterVersion.Minor < uint64(19) {
 		t.Skip("ingress spec tests can not be properly validated against old clusters")
@@ -287,21 +293,13 @@ func TestIngressClassNameSpec(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	kubernetesVersion, err := env.Cluster().Version()
@@ -314,17 +312,23 @@ func TestIngressClassNameSpec(t *testing.T) {
 		obj.Spec.IngressClassName = kong.String(ingressClass)
 	}
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-
 	defer func() {
-		t.Log("ensuring that Ingress is cleaned up")
-		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
+		err := cleanIngress(cleaner, ingress)
+		require.NoError(t, err)
 	}()
 
 	t.Log("waiting for routes from Ingress to be operational")
+	defer func() {
+		if t.Failed() {
+			resp, err := httpc.Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
+			if err != nil {
+				t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			}
+			t.Logf("GET %s/test_ingressclassname_spec: status code %d", proxyURL, resp.StatusCode)
+			resp.Body.Close()
+		}
+	}()
+
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
 		if err != nil {
@@ -742,7 +746,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 func TestIngressClassRegexToggle(t *testing.T) {
 	t.Parallel()
-	if !util.GetKongVersion().GT(parser.MaxHeuristicRegexPathDetectionVersion) {
+	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("legacy regex detection is only relevant for Kong 3.0+")
 	}
 	t.Log("locking IngressClass management")

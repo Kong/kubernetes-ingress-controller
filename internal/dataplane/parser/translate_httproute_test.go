@@ -36,7 +36,7 @@ var (
 
 //// TODO this doesn't really work because the version singleton set will break the other tests
 //func Test_ingressRulesFromHTTPRoutes_kong3(t *testing.T) {
-//	util.SetKongVersion(semver.MustParse("3.0.0"))
+//	versions.SetKongVersion(semver.MustParse("3.0.0"))
 //	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 //	assert.NoError(t, err)
 //	p := NewParser(logrus.New(), fakestore)

@@ -227,6 +227,9 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 func PathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath, addRegexPrefix bool) []*string {
 	routePaths := []string{}
 	routeRegexPaths := []string{}
+	if httpIngressPath.PathType == nil {
+		return nil
+	}
 
 	switch *httpIngressPath.PathType {
 	case netv1.PathTypePrefix:

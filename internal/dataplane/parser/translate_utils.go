@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -30,9 +31,9 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 				string(header.Name))
 		}
 		if header.Type != nil && *header.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
-			if util.GetKongVersion().LT(MinRegexHeaderKongVersion) {
+			if !versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
 				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression",
-					util.GetKongVersion().String())
+					versions.GetKongVersion().Full().String())
 			}
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1alpha2.HeaderMatchExact {

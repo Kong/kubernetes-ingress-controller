@@ -77,7 +77,10 @@ func TestIngressEssentials(t *testing.T) {
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	defer cleanIngress(cleaner, ingress)
+	defer func() {
+		err := cleanIngress(cleaner, ingress)
+		require.NoError(t, err)
+	}()
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -650,7 +653,10 @@ func TestDefaultIngressClass(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	defer cleanIngress(cleaner, ingress)
+	defer func() {
+		err := cleanIngress(cleaner, ingress)
+		require.NoError(t, err)
+	}()
 
 	t.Log("ensuring Ingress does not become live")
 	require.Never(t, func() bool {
@@ -819,7 +825,10 @@ func TestIngressClassRegexToggle(t *testing.T) {
 		obj.Spec.IngressClassName = kong.String(ingressClass)
 	}
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	defer cleanIngress(cleaner, ingress)
+	defer func() {
+		err := cleanIngress(cleaner, ingress)
+		require.NoError(t, err)
+	}()
 
 	// we only test the positive case here, and assume the negative case (without the toggle, this will not route)
 	// based on prior experience. unfortunately the effect of the negative case is that it breaks router rebuilds

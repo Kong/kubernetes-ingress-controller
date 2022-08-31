@@ -324,7 +324,8 @@ func TestIngressClassNameSpec(t *testing.T) {
 			if err != nil {
 				t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			}
-			t.Logf("GET %s/test_ingressclassname_spec: status code %d", proxyURL, resp.StatusCode)
+			t.Logf("TestIngressClassNameSpec failed, current GET %s/test_ingressclassname_spec status code is %d",
+				proxyURL, resp.StatusCode)
 			resp.Body.Close()
 		}
 	}()
@@ -336,7 +337,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		t.Logf("GET %s/test_ingressclassname_spec: status code %d", proxyURL, resp.StatusCode)
 		if resp.StatusCode == http.StatusOK {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"
@@ -361,7 +361,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		t.Logf("GET %s/test_ingressclassname_spec: status code %d", proxyURL, resp.StatusCode)
 		return expect404WithNoRoute(t, proxyURL.String(), resp)
 	}, ingressWait, waitTick)
 
@@ -377,7 +376,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		t.Logf("GET %s/test_ingressclassname_spec: status code %d", proxyURL, resp.StatusCode)
 		if resp.StatusCode == http.StatusOK {
 			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
 			// Expected: "<title>httpbin.org</title>"

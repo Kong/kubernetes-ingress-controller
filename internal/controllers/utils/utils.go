@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"encoding/json"
+	"fmt"
+
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,6 +19,8 @@ const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-cla
 // IsDefaultIngressClass returns whether an IngressClass is the default IngressClass.
 func IsDefaultIngressClass(obj client.Object) bool {
 	if ingressClass, ok := obj.(*netv1.IngressClass); ok {
+		jblob, _ := json.Marshal(ingressClass)
+		fmt.Printf("checking if default class for: %s\n", string(jblob))
 		return ingressClass.ObjectMeta.Annotations[defaultIngressClassAnnotation] == "true"
 	}
 	return false
@@ -26,12 +31,22 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 	objectIngressClass := obj.GetAnnotations()[annotations.IngressClassKey]
 	objectKnativeClass := obj.GetAnnotations()[annotations.KnativeIngressClassKey]
 	objectKnativeClassAlt := obj.GetAnnotations()[annotations.KnativeIngressClassDeprecatedKey]
+	jblob, _ := json.Marshal(obj)
+	fmt.Printf("checking class for: %s\n", string(jblob))
+	fmt.Printf("objectIngressClass: %s, name: %s/%s\n", objectIngressClass, obj.GetNamespace(), obj.GetName())
 	if isDefault && IsIngressClassEmpty(obj) {
+		fmt.Printf("isDefault == true and class is empty, name: %s/%s\n", obj.GetNamespace(), obj.GetName())
 		return true
 	}
 	if ing, isV1Ingress := obj.(*netv1.Ingress); isV1Ingress {
-		if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == controllerIngressClass {
-			return true
+		if ing.Spec.IngressClassName != nil {
+			fmt.Printf("spec.IngressClassName(%s) != nil: %v, name: %s/%s\n",
+				*ing.Spec.IngressClassName, ing.Spec.IngressClassName != nil, obj.GetNamespace(), obj.GetName())
+			fmt.Printf("spec.IngressClassName(%s) == controllerIngressClass(%s): %v, name: %s/%s\n",
+				*ing.Spec.IngressClassName, controllerIngressClass, *ing.Spec.IngressClassName == controllerIngressClass, obj.GetNamespace(), obj.GetName())
+			if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == controllerIngressClass {
+				return true
+			}
 		}
 	}
 

@@ -21,6 +21,8 @@ package configuration
 import (
 	"context"
 	"reflect"
+	"fmt"
+	"encoding/json"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -367,9 +369,13 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	jblob, _ := json.Marshal(obj)
+	fmt.Printf("reconciling: %s\n", string(jblob))
 
 	// clean the object up if it's being deleted
+	fmt.Printf("checking delete for %s/%s\n", req.Namespace, req.Name)
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		fmt.Printf("performing delete for %s/%s\n", req.Namespace, req.Name)
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -386,6 +392,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	class := new(netv1.IngressClass)
 	if !r.DisableIngressClassLookups {
+		fmt.Printf("getting IngressClass for %s/%s\n", req.Namespace, req.Name)
 		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 			// we log this without taking action to support legacy configurations that only set ingressClassName or
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
@@ -394,14 +401,17 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
+	fmt.Printf("checking class for %s/%s\n", req.Namespace, req.Name)
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 		"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
+		fmt.Printf("failed class for %s/%s\n", req.Namespace, req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 		"class", r.IngressClassName)
+		fmt.Printf("succeeded class for %s/%s\n", req.Namespace, req.Name)
 	}
 
 	// update the kong Admin API with the changes

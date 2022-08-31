@@ -861,3 +861,56 @@ func TestFromIngressV1(t *testing.T) {
 		assert.True(ok)
 	})
 }
+
+func TestFromIngressV1_RegexPrefix(t *testing.T) {
+	assert := assert.New(t)
+	pathTypeExact := netv1.PathTypeExact
+	ingressList := []*netv1.Ingress{
+		// 0
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: netv1.IngressSpec{
+				Rules: []netv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     "/whatever",
+										PathType: &pathTypeExact,
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	t.Run("exact rule results in prefixed regex", func(t *testing.T) {
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*netv1.Ingress{
+				ingressList[0],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+		p.EnableRegexPathPrefix()
+
+		parsedInfo := p.ingressRulesFromIngressV1()
+		assert.Equal("~/whatever$", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+	})
+}

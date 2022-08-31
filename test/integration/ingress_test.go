@@ -386,8 +386,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
-	}, ingressWait, waitTick, // TODO: dump status of kong gateway here.
-	)
+	}, ingressWait, waitTick)
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))

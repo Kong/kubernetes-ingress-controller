@@ -80,10 +80,7 @@ func TestIngressEssentials(t *testing.T) {
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	defer func() {
-		err := cleanIngress(cleaner, ingress)
-		require.NoError(t, err)
-	}()
+	addIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -322,10 +319,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 		obj.Spec.IngressClassName = kong.String(ingressClass)
 	}
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	defer func() {
-		err := cleanIngress(cleaner, ingress)
-		require.NoError(t, err)
-	}()
+	addIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	defer func() {
@@ -626,130 +620,6 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 	}, statusWait, waitTick)
 }
 
-//func TestDefaultIngressClass(t *testing.T) {
-//	t.Log("locking IngressClass management")
-//	ingressClassMutex.Lock()
-//	defer func() {
-//		t.Log("unlocking IngressClass management")
-//		ingressClassMutex.Unlock()
-//	}()
-//	ns, cleaner := setup(t)
-//	defer func() {
-//		if t.Failed() {
-//			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-//			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-//			assert.NoError(t, err)
-//		}
-//		assert.NoError(t, cleaner.Cleanup(ctx))
-//	}()
-//
-//	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-//	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
-//	deployment := generators.NewDeploymentForContainer(container)
-//	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
-//	require.NoError(t, err)
-//	cleaner.Add(deployment)
-//
-//	t.Logf("exposing deployment %s via service", deployment.Name)
-//	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-//	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-//	require.NoError(t, err)
-//	cleaner.Add(service)
-//
-//	t.Logf("creating a classless ingress for service %s", service.Name)
-//	kubernetesVersion, err := env.Cluster().Version()
-//	require.NoError(t, err)
-//	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/abbosiysaltanati", map[string]string{
-//		"konghq.com/strip-path": "true",
-//	}, service)
-//	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-//	defer func() {
-//		err := cleanIngress(cleaner, ingress)
-//		require.NoError(t, err)
-//	}()
-//
-//	t.Log("ensuring Ingress does not become live")
-//	require.Never(t, func() bool {
-//		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
-//		if err != nil {
-//			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-//			return false
-//		}
-//		defer resp.Body.Close()
-//		if resp.StatusCode < http.StatusBadRequest {
-//			t.Logf("unexpected status when checking Ingress status: %v", resp.StatusCode)
-//			return true
-//		}
-//		return false
-//	}, time.Minute, waitTick)
-//
-//	t.Logf("creating a default IngressClass for our class")
-//	class := &netv1.IngressClass{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Name: "kongtests",
-//			Annotations: map[string]string{
-//				"ingressclass.kubernetes.io/is-default-class": "true",
-//			},
-//		},
-//		Spec: netv1.IngressClassSpec{
-//			Controller: store.IngressClassKongController,
-//		},
-//	}
-//	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, class, metav1.CreateOptions{})
-//	require.NoError(t, err)
-//	cleaner.Add(class)
-//
-//	t.Log("waiting for updated ingress status to include IP")
-//	require.Eventually(t, func() bool {
-//		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress)
-//		if err != nil {
-//			return false
-//		}
-//		return len(lbstatus.Ingress) > 0
-//	}, statusWait, waitTick)
-//
-//	t.Log("creating classless global KongClusterPlugin")
-//	kongclusterplugin := &kongv1.KongClusterPlugin{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Name: "test",
-//			Labels: map[string]string{
-//				"global": "true",
-//			},
-//		},
-//		PluginName: "cors",
-//		Config: apiextensionsv1.JSON{
-//			Raw: []byte(`{"origins": ["example.com"]}`),
-//		},
-//	}
-//	c, err := clientset.NewForConfig(env.Cluster().Config())
-//	require.NoError(t, err)
-//	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
-//	require.NoError(t, err)
-//	cleaner.Add(kongclusterplugin)
-//
-//	t.Log("waiting for routes from Ingress to be operational")
-//	require.Eventually(t, func() bool {
-//		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
-//		if err != nil {
-//			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-//			return false
-//		}
-//		defer resp.Body.Close()
-//		if resp.StatusCode == http.StatusOK {
-//			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-//			// Expected: "<title>httpbin.org</title>"
-//			b := new(bytes.Buffer)
-//			n, err := b.ReadFrom(resp.Body)
-//			require.NoError(t, err)
-//			require.True(t, n > 0)
-//			if value, ok := resp.Header["Access-Control-Allow-Origin"]; ok {
-//				return strings.Contains(b.String(), "<title>httpbin.org</title>") && value[0] == "example.com"
-//			}
-//		}
-//		return false
-//	}, ingressWait, waitTick)
-//}
-
 func TestIngressClassRegexToggle(t *testing.T) {
 	t.Parallel()
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
@@ -832,10 +702,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 		obj.Spec.IngressClassName = kong.String(ingressClass)
 	}
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	defer func() {
-		err := cleanIngress(cleaner, ingress)
-		require.NoError(t, err)
-	}()
+	addIngressToCleaner(cleaner, ingress)
 
 	// we only test the positive case here, and assume the negative case (without the toggle, this will not route)
 	// based on prior experience. unfortunately the effect of the negative case is that it breaks router rebuilds

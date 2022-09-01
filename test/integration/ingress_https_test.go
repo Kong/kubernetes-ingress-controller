@@ -167,7 +167,7 @@ func TestHTTPSRedirect(t *testing.T) {
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)
 	assert.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	defer cleanIngress(cleaner, ingress)
+	addIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for Ingress to be operational and properly redirect")
 	client := &http.Client{
@@ -302,8 +302,8 @@ func TestHTTPSIngress(t *testing.T) {
 	t.Log("deploying ingress resources")
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress1))
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress2))
-	defer cleanIngress(cleaner, ingress1)
-	defer cleanIngress(cleaner, ingress2)
+	addIngressToCleaner(cleaner, ingress1)
+	addIngressToCleaner(cleaner, ingress2)
 
 	t.Log("checking first ingress status readiness")
 	require.Eventually(t, func() bool {

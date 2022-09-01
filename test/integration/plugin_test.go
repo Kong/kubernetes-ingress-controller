@@ -61,8 +61,7 @@ func TestPluginEssentials(t *testing.T) {
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	err = cleanIngress(cleaner, ingress)
-	require.NoError(t, err)
+	addIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {

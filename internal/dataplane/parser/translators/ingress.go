@@ -254,7 +254,7 @@ func PathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath, addRegexPrefix
 		// PathTypes, and leave it up to the callers if they want to handle empty responses. barring spec changes,
 		// however, this should not be a concern: Kubernetes rejects any Ingress with an unknown PathType already, so
 		// none should ever end up here. prior versions of this function returned an error in this case, but it
-		// should be unecessary in practice and not returning one simplifies the call chain above (this would be the
+		// should be unnecessary in practice and not returning one simplifies the call chain above (this would be the
 		// only part of translation that can error)
 		return nil
 	}

@@ -19,7 +19,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	// IngressClass is not actually part of the Knative spec, and we are getting networking.k8s.io IngressClasses here,
 	// not a resource specific to Knative. However, the reason we're using it (enabling the 2.x regex heuristic) is
 	// Kong-specific, so in absence of a proper Knative IngressClass to attach our IngressClassParams to, we may as
-	// well use the stock Kubernetes resouce.
+	// well use the stock Kubernetes resource.
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound{}) {

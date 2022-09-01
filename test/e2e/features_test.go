@@ -4,9 +4,11 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -19,9 +21,11 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,6 +34,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
@@ -531,4 +536,154 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	verifyGateway(ctx, t, env, gw)
 	deployHTTPRoute(ctx, t, env, gw)
 	verifyHTTPRoute(ctx, t, env)
+}
+
+// TestDefaultIngressClass tests functionality related to the default Ingress class, which loads resources that have
+// no class information. This is in E2E because loading classless resources interferes with integration tests that
+// expect the opposite, as the integration test controller cannot use a different IngressClass than it selected at
+// startup.
+func TestDefaultIngressClass(t *testing.T) {
+	t.Log("configuring all-in-one-dbless.yaml manifest test")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	configFile, err := os.CreateTemp(os.TempDir(), "test-default-ingress-class")
+	require.NoError(t, err)
+	defer os.Remove(configFile.Name())
+	defer configFile.Close()
+	written, err := configFile.Write([]byte(webhookKINDConfig))
+	require.NoError(t, err)
+	require.Equal(t, len(webhookKINDConfig), written)
+
+	clusterBuilder := kind.NewBuilder()
+	clusterBuilder.WithConfig(configFile.Name())
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+		require.NoError(t, err)
+		clusterBuilder.WithClusterVersion(clusterVersion)
+	}
+	cluster, err := clusterBuilder.Build(ctx)
+	require.NoError(t, err)
+	addons := []clusters.Addon{}
+	addons = append(addons, metallb.New())
+	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+		addons = append(addons, b.Build())
+	}
+	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, env.Cleanup(ctx))
+	}()
+
+	t.Logf("build a cleaner to dump diagnostics...")
+	cleaner := clusters.NewCleaner(env.Cluster())
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	t.Log("deploying kong components")
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+	kongDeployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(kongDeployment.Namespace).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("creating a classless ingress for service %s", service.Name)
+	kubernetesVersion, err := env.Cluster().Version()
+	require.NoError(t, err)
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/abbosiysaltanati", map[string]string{
+		"konghq.com/strip-path": "true",
+	}, service)
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
+
+	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
+	proxyURL := "http://" + getKongProxyIP(ctx, t, env, svc)
+	t.Log("ensuring Ingress does not become live")
+	require.Never(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < http.StatusBadRequest {
+			t.Logf("unexpected status when checking Ingress status: %v", resp.StatusCode)
+			return true
+		}
+		return false
+	}, time.Minute, time.Second)
+
+	t.Logf("making our class a default IngressClass")
+	class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, "kong", metav1.GetOptions{})
+	require.NoError(t, err)
+	class.ObjectMeta.Annotations["ingressclass.kubernetes.io/is-default-class"] = "true"
+	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Update(ctx, class, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("waiting for updated ingress status to include IP")
+	require.Eventually(t, func() bool {
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), kongDeployment.Namespace, ingress)
+		if err != nil {
+			return false
+		}
+		return len(lbstatus.Ingress) > 0
+	}, time.Minute, time.Second)
+
+	t.Log("creating classless global KongClusterPlugin")
+	kongclusterplugin := &kongv1.KongClusterPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+			Labels: map[string]string{
+				"global": "true",
+			},
+		},
+		PluginName: "cors",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"origins": ["example.com"]}`),
+		},
+	}
+	c, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("waiting for routes from Ingress to be operational")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
+			// Expected: "<title>httpbin.org</title>"
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			if value, ok := resp.Header["Access-Control-Allow-Origin"]; ok {
+				return strings.Contains(b.String(), "<title>httpbin.org</title>") && value[0] == "example.com"
+			}
+		}
+		return false
+	}, ingressWait, time.Second)
 }

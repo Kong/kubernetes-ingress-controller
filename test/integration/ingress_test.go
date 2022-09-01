@@ -806,9 +806,6 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	class := &netv1.IngressClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kongtests",
-			Annotations: map[string]string{
-				"ingressclass.kubernetes.io/is-default-class": "true",
-			},
 		},
 		Spec: netv1.IngressClassSpec{
 			Controller: store.IngressClassKongController,

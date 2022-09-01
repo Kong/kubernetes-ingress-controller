@@ -45,6 +45,12 @@ var (
 
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
+	t.Log("locking IngressClass management")
+	ingressClassMutex.Lock()
+	defer func() {
+		t.Log("unlocking IngressClass management")
+		ingressClassMutex.Unlock()
+	}()
 	ns, cleaner := setup(t)
 	defer func() {
 		if t.Failed() {
@@ -274,6 +280,12 @@ func TestGRPCIngressEssentials(t *testing.T) {
 
 func TestIngressClassNameSpec(t *testing.T) {
 	t.Parallel()
+	t.Log("locking IngressClass management")
+	ingressClassMutex.Lock()
+	defer func() {
+		t.Log("unlocking IngressClass management")
+		ingressClassMutex.Unlock()
+	}()
 	ns, cleaner := setup(t)
 	defer func() {
 		if t.Failed() {

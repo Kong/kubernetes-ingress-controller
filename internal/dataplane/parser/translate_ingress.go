@@ -23,7 +23,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 	ingressList := p.storer.ListIngressesV1beta1()
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound{}) {
+		if errors.As(err, &store.ErrNotFound{}) {
 			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
 			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
 		} else {
@@ -184,7 +184,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	ingressList := p.storer.ListIngressesV1()
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound{}) {
+		if errors.As(err, &store.ErrNotFound{}) {
 			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
 			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
 		} else {

@@ -61,14 +61,6 @@ type ErrNotFound struct {
 	message string
 }
 
-// Is returns true if an error is an ErrNotFound, regardless of its message.
-func (e *ErrNotFound) Is(target error) bool {
-	if _, ok := target.(ErrNotFound); ok {
-		return true
-	}
-	return false
-}
-
 func (e ErrNotFound) Error() string {
 	if e.message == "" {
 		return "not found"

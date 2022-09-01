@@ -50,7 +50,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.enterprisepostgres.out
+        path: coverage.nightlyenterprisepostgres.out
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -60,3 +60,90 @@ jobs:
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
+  integration-tests-postgres-nightly:
+    if: ${{ github.event.label.name == 'ci/run-nightly' }}
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: run integration tests
+      run: make test.integration.postgres
+      env:
+        TEST_KONG_IMAGE: "kong/kong"
+        TEST_KONG_TAG: "master-nightly-alpine"
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.nightlypostgres.out
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-postgres-nightly
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+  integration-tests-dbless-nightly:
+    if: ${{ github.event.label.name == 'ci/run-nightly' }}
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: run integration tests
+      run: make test.integration.dbless
+      env:
+        TEST_KONG_IMAGE: "kong/kong"
+        TEST_KONG_TAG: "master-nightly-alpine"
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.nightlydbless.out
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-dbless-nightly
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore

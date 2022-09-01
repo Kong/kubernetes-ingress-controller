@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -622,6 +623,13 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 
 func TestIngressClassRegexToggle(t *testing.T) {
 	t.Parallel()
+	// the manager runs in a goroutine and may not have pulled the version before this test starts
+	require.Eventually(t, func() bool {
+		if !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0")) {
+			return true
+		}
+		return false
+	}, time.Minute, time.Second)
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("legacy regex detection is only relevant for Kong 3.0+")
 	}

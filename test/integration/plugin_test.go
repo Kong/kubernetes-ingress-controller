@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -196,10 +198,17 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginOrdering(t *testing.T) {
+	t.Parallel()
+	// the manager runs in a goroutine and may not have pulled the version before this test starts
+	require.Eventually(t, func() bool {
+		if !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0")) {
+			return true
+		}
+		return false
+	}, time.Minute, time.Second)
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || kongEnterpriseEnabled == "" {
 		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
-	t.Parallel()
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 

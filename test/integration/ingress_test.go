@@ -629,7 +629,6 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 }
 
 func TestDefaultIngressClass(t *testing.T) {
-	t.Parallel()
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
 	defer func() {

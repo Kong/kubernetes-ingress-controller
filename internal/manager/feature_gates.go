@@ -63,6 +63,6 @@ func getFeatureGatesDefaults() map[string]bool {
 		gatewayFeature:                true,
 		gatewayAlphaFeature:           false,
 		combinedRoutesFeature:         false,
-		ingressClassParametersFeature: false,
+		ingressClassParametersFeature: true,
 	}
 }

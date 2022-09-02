@@ -175,7 +175,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
 		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.", emptyHeaderSet)
-	eventuallyGETPath(t, "/test-http-route-essentials/regex/999", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-essentials/regex/999", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 

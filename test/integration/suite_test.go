@@ -226,7 +226,7 @@ func TestMain(m *testing.M) {
 	}()
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
-	code = m.Run()
+	code = m.Run() //nolint:staticcheck
 
 	if keepTestCluster == "" && existingCluster == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)

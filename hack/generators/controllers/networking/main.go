@@ -229,7 +229,7 @@ var inputControllersNeeded = &typesNeeded{
 		CacheType:                         "IngressClassParameters",
 		NeedsStatusPermissions:            false,
 		CapableOfStatusUpdates:            false,
-		AcceptsIngressClassNameAnnotation: true, // TODO should this have a class? it's _attached_ to a class
+		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},

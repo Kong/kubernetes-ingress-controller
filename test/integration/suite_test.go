@@ -74,6 +74,9 @@ func generateKongBuilder() (*kong.Builder, []string) {
 }
 
 func TestMain(m *testing.M) {
+	var code int
+	defer os.Exit(code)
+
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
@@ -216,10 +219,14 @@ func TestMain(m *testing.M) {
 	}
 	iclass, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, iclass, metav1.CreateOptions{})
 	exitOnErr(err)
-	cleaner.Add(iclass)
+	defer func() {
+		// deleting this directly instead of adding it to the cleaner because the cleaner always gets a 404 on it for
+		// unknown reasons
+		_ = env.Cluster().Client().NetworkingV1().IngressClasses().Delete(ctx, iclass.Name, metav1.DeleteOptions{})
+	}()
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
-	code := m.Run()
+	code = m.Run()
 
 	if keepTestCluster == "" && existingCluster == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
@@ -227,6 +234,4 @@ func TestMain(m *testing.M) {
 		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
 		exitOnErr(env.Cleanup(ctx))
 	}
-
-	os.Exit(code)
 }

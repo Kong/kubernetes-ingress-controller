@@ -310,7 +310,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_ingressclassname_spec", map[string]string{"konghq.com/strip-path": "true"}, service)
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_ingressclassname_spec/", map[string]string{"konghq.com/strip-path": "true"}, service)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
 		obj.Spec.IngressClassName = kong.String(ingressClass)
@@ -620,8 +620,11 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 	}, statusWait, waitTick)
 }
 
+// TestIngressClassRegexToggle tests if the controller adds the 3.x "~" regular expression path prefix to Ingress
+// paths that match the 2.x heuristic when their IngressClass has the EnableLegacyRegexDetection flag set. It IS NOT
+// parallel: parts of the test may add this route _without_ the prefix, and the 3.x router really hates this and will
+// stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
-	t.Parallel()
 	// the manager runs in a goroutine and may not have pulled the version before this test starts
 	require.Eventually(t, func() bool {
 		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))

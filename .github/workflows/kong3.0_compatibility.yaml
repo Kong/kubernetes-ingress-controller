@@ -16,7 +16,7 @@ jobs:
           - 'postgres'
         kong-edition:
           - 'OSS'
-          - 'enterprise'
+          # - 'enterprise' ## temporarily disable it for issue https://github.com/Kong/kubernetes-ingress-controller/issues/2891 
     steps:
     - name: setup golang
       id: setup_golang
@@ -81,5 +81,13 @@ jobs:
         TEST_DATABASE_MODE: ${{ env.TEST_DATABASE_MODE }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-enterprise-postgres
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
 
   # e2e-tests: ## TODO: blocked by loading kong image in manifests: https://github.com/Kong/kubernetes-ingress-controller/issues/2884

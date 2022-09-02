@@ -9,15 +9,13 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
-  name: ingressclassparameters.configuration.konghq.com
+  name: ingressclassparameterses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
   names:
-    categories:
-    - kong-ingress-controller
     kind: IngressClassParameters
     listKind: IngressClassParametersList
-    plural: ingressclassparameters
+    plural: ingressclassparameterses
     singular: ingressclassparameters
   scope: Namespaced
   versions:
@@ -1214,7 +1212,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - IngressClassParameters
+  - IngressClassParameterses
   verbs:
   - get
   - list

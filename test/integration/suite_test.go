@@ -19,11 +19,13 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
 
@@ -202,6 +204,17 @@ func TestMain(m *testing.M) {
 	gwc, err := DeployGatewayClass(ctx, gatewayClient, managedGatewayClassName)
 	exitOnErr(err)
 	cleaner.Add(gwc)
+
+	fmt.Println("INFO: Deploying the controller's IngressClass")
+	iclass := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ingressClass,
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+		},
+	}
+	_, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, iclass, metav1.CreateOptions{})
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()

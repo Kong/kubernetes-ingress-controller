@@ -1615,7 +1615,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl
 func (r *KongV1Alpha1IngressClassParametersReconciler) listClassless(obj client.Object) []reconcile.Request {
 	resourceList := &kongv1alpha1.IngressClassParametersList{}
 	if err := r.Client.List(context.Background(), resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless IngressClassParameters")
+		r.Log.Error(err, "failed to list classless IngressClassParameterses")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1632,7 +1632,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) listClassless(obj client.
 	return recs
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=IngressClassParameters,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=IngressClassParameterses,verbs=get;list;watch
 
 // Reconcile processes the watched objects
 func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

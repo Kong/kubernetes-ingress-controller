@@ -225,11 +225,11 @@ var inputControllersNeeded = &typesNeeded{
 		PackageImportAlias:                "kongv1alpha1",
 		PackageAlias:                      "KongV1Alpha1",
 		Package:                           kongv1alpha1,
-		Plural:                            "IngressClassParameters",
+		Plural:                            "IngressClassParameterses",
 		CacheType:                         "IngressClassParameters",
 		NeedsStatusPermissions:            false,
 		CapableOfStatusUpdates:            false,
-		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameAnnotation: true, // TODO should this have a class? it's _attached_ to a class
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},

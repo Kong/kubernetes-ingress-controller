@@ -26,7 +26,6 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -665,7 +664,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	t.Logf("creating an IngressClassParameters with legacy regex detection enabled")
 	params := &v1alpha1.IngressClassParameters{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "kongtests",
+			Name: ingressClass,
 		},
 		Spec: v1alpha1.IngressClassParametersSpec{
 			EnableLegacyRegexDetection: true,
@@ -677,25 +676,27 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(params)
 
-	t.Logf("creating an IngressClass with the legacy regex IngressClassParameters attached")
-	class := &netv1.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kongtests",
-		},
-		Spec: netv1.IngressClassSpec{
-			Controller: store.IngressClassKongController,
-			Parameters: &netv1.IngressClassParametersReference{
-				APIGroup:  &v1alpha1.GroupVersion.Group,
-				Kind:      v1alpha1.IngressClassParametersKind,
-				Name:      params.Name,
-				Scope:     kong.String(netv1.IngressClassParametersReferenceScopeNamespace),
-				Namespace: &params.Namespace,
-			},
-		},
-	}
-	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, class, metav1.CreateOptions{})
+	class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, ingressClass, metav1.GetOptions{})
 	require.NoError(t, err)
-	cleaner.Add(class)
+	t.Logf("adding legacy regex IngressClassParameters to the %s IngressClass", class.Name)
+	class.Spec.Parameters = &netv1.IngressClassParametersReference{
+		APIGroup:  &v1alpha1.GroupVersion.Group,
+		Kind:      v1alpha1.IngressClassParametersKind,
+		Name:      params.Name,
+		Scope:     kong.String(netv1.IngressClassParametersReferenceScopeNamespace),
+		Namespace: &params.Namespace,
+	}
+	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Update(ctx, class, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	defer func() {
+		t.Logf("removing parameters from IngressClass %s", class.ObjectMeta.Name)
+		class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, ingressClass, metav1.GetOptions{})
+		require.NoError(t, err)
+		class.Spec.Parameters = nil
+		class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Update(ctx, class, metav1.UpdateOptions{})
+		require.NoError(t, err)
+	}()
 
 	t.Logf("creating an ingress for service %s", service.Name)
 	kubernetesVersion, err := env.Cluster().Version()

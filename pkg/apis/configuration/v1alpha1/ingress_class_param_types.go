@@ -38,6 +38,7 @@ type IngressClassParametersList struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:resource:categories=kong-ingress-controller
+//+kubebuilder:resource:path=ingressclassparameterses
 
 // IngressClassParameters is the Schema for the IngressClassParameters API
 type IngressClassParameters struct {

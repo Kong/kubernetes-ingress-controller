@@ -27,5 +27,5 @@ const (
 	kongHeaderRegexPrefix = "~*"
 )
 
-// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is a regex.
+// LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is not a regex.
 var LegacyRegexPathExpression = regexp.MustCompile(`^[a-zA-Z0-9\.\-_~/%]*$`)

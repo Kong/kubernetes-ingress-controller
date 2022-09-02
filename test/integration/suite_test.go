@@ -214,8 +214,9 @@ func TestMain(m *testing.M) {
 			Controller: store.IngressClassKongController,
 		},
 	}
-	_, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, iclass, metav1.CreateOptions{})
+	iclass, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, iclass, metav1.CreateOptions{})
 	exitOnErr(err)
+	cleaner.Add(iclass)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code := m.Run()

@@ -696,19 +696,43 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	}()
 
 	t.Logf("creating an ingress for service %s", service.Name)
-	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, `/test_ingress_class_regex_toggle/d{3}`, map[string]string{
-		"konghq.com/strip-path": "true",
-	}, service)
-	switch obj := ingress.(type) {
-	case *netv1.Ingress:
-		obj.Spec.IngressClassName = kong.String(ingressClass)
-	case *netv1beta1.Ingress:
-		obj.Spec.IngressClassName = kong.String(ingressClass)
+	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
+	ingress := &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "regex-toggle",
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
+			},
+		},
+		Spec: netv1.IngressSpec{
+			IngressClassName: kong.String(ingressClass),
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     `/test_ingress_class_regex_toggle/\d+`,
+									PathType: &pathTypeImplementationSpecific,
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	cleaner.Add(ingress)
 
 	// we only test the positive case here, and assume the negative case (without the toggle, this will not route)
 	// based on prior experience. unfortunately the effect of the negative case is that it breaks router rebuilds

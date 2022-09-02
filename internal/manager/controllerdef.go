@@ -203,7 +203,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[ingressClassParametersFeature],
+			Enabled: c.IngressClassParametersEnabled,
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("IngressClassParameters"),

@@ -1,0 +1,85 @@
+name: Kong 3.0 compatibility
+
+on:
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  integration-tests:
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database-mode:
+          - 'dbless'
+          - 'postgres'
+        kong-edition:
+          - 'OSS'
+          - 'enterprise'
+    steps:
+    - name: setup golang
+      id: setup_golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      id: go_modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      id: checkout_repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - uses: Kong/kong-license@master
+      id: license
+      with:
+        # PULP_PASSWORD secret is set in "Configure ci" environment
+        password: ${{ secrets.PULP_PASSWORD }}
+
+    - name: setup test kong image for OSS edition
+      id: setup_env_oss
+      if: ${{ matrix.kong-edition }} == 'OSS'
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.0.0-alpha.14-alpine" >> $GITHUB_ENV
+
+    - name: setup test kong image and env for enterprise edition
+      id: setup_env_ee
+      if: ${{ matrix.kong-edition }} == 'enterprise'
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong-gateway-internal" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.0.x.x-alpine" >> $GITHUB_ENV
+        echo "TEST_KONG_ENTERPRISE=true" >> $GITHUB_ENV
+
+    - name: setup database mode for dbless
+      id: setup_env_dbless
+      if: ${{ matrix.database-mode }} == 'dbless' 
+      run: echo "TEST_DATABASE_MODE=off" >> $GITHUB_ENV
+
+    - name: setup database mode for postgres
+      id: setup_env_postgres
+      if: ${{ matrix.database-mode }} == 'postgres'
+      run: echo "TEST_DATABASE_MODE=postgres" >> $GITHUB_ENV
+    
+    - name: run integration tests
+      id: run_integration_tests
+      run: make _test.integration
+      env:
+        TEST_KONG_IMAGE: ${{ env.TEST_KONG_IMAGE }}
+        TEST_KONG_TAG: ${{ env.TEST_KONG_TAG }}
+        TEST_KONG_ENTERPRISE: ${{ env.TEST_KONG_ENTERPRISE }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        TEST_DATABASE_MODE: ${{ env.TEST_DATABASE_MODE }}
+        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+
+  # e2e-tests: ## TODO: blocked by loading kong image in manifests: https://github.com/Kong/kubernetes-ingress-controller/issues/2884

@@ -120,28 +120,58 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 // returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
 // the original provided path.
 func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
+	var manifestsReader io.Reader
+	manifestsReader, err := os.Open(baseManifestPath)
+	if err != nil {
+		return nil, err
+	}
+
 	var imagetag string
 	if imageLoad != "" {
 		imagetag = imageLoad
 	} else {
 		imagetag = imageOverride
 	}
-	if imagetag == "" {
-		return os.Open(baseManifestPath)
+
+	if imagetag != "" {
+		split := strings.Split(imagetag, ":")
+		if len(split) < 2 {
+			t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
+			return manifestsReader, nil
+		}
+		manifestsReader, err = patchControllerImage(manifestsReader, strings.Join(split[0:len(split)-1], ":"),
+			split[len(split)-1])
+		if err != nil {
+			t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
+			return manifestsReader, nil
+		}
 	}
-	split := strings.Split(imagetag, ":")
-	if len(split) < 2 {
-		t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
-		return os.Open(baseManifestPath)
+
+	var kongImageTag string
+	if kongImageLoad != "" {
+		kongImageTag = kongImageLoad
+	} else {
+		kongImageTag = kongImageOverride
 	}
-	modified, err := patchControllerImage(baseManifestPath, strings.Join(split[0:len(split)-1], ":"),
-		split[len(split)-1])
-	if err != nil {
-		t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
-		return os.Open(baseManifestPath)
+	if kongImageTag != "" {
+		t.Logf("replace kong image to %s", kongImageTag)
+		split := strings.Split(kongImageTag, ":")
+		if len(split) < 2 {
+			t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
+			return manifestsReader, nil
+		}
+		manifestsReader, err = patchKongImage(manifestsReader, strings.Join(split[0:len(split)-1], ":"),
+			split[len(split)-1])
+		if err != nil {
+			t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
+			return manifestsReader, nil
+		}
 	}
+
 	t.Logf("using modified %v manifest", baseManifestPath)
-	return modified, nil
+
+	// patch kong image.
+	return manifestsReader, nil
 }
 
 const imageKustomizationContents = `resources:
@@ -154,13 +184,13 @@ images:
 
 // patchControllerImage takes a manifest, image, and tag and runs kustomize to replace the
 // kong/kubernetes-ingress-controller image with the provided image. It returns the location of kustomize's output.
-func patchControllerImage(baseManifestPath string, image string, tag string) (io.Reader, error) {
+func patchControllerImage(baseManifestReader io.Reader, image string, tag string) (io.Reader, error) {
 	workDir, err := os.MkdirTemp("", "kictest.")
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(workDir)
-	orig, err := os.ReadFile(baseManifestPath)
+	orig, err := io.ReadAll(baseManifestReader)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +199,45 @@ func patchControllerImage(baseManifestPath string, image string, tag string) (io
 		return nil, err
 	}
 	kustomization := []byte(fmt.Sprintf(imageKustomizationContents, image, tag))
+	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	kustomized, err := kustomizeManifest(workDir)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(kustomized), nil
+}
+
+const kongImageKustomizationContents = `resources:
+- base.yaml
+images:
+- name: kong
+  newName: %v
+  newTag: '%v'
+- name: kong/kong-gateway
+  newName: %v
+  newTag: '%v'
+`
+
+func patchKongImage(baseManifestsReader io.Reader, image string, tag string) (io.Reader, error) {
+	workDir, err := os.MkdirTemp("", "kictest.")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(workDir)
+	orig, err := io.ReadAll(baseManifestsReader)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0o600)
+	if err != nil {
+		return nil, err
+	}
+
+	kustomization := []byte(fmt.Sprintf(kongImageKustomizationContents, image, tag, image, tag))
 	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0o600)
 	if err != nil {
 		return nil, err

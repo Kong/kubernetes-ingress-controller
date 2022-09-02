@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -36,15 +37,15 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 	require.NoError(t, err)
 
 	t.Log("deploying a supported gatewayclass to the test cluster")
-	supportedGatewayClass := &gatewayv1alpha2.GatewayClass{
+	supportedGatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gatewayv1beta1.GatewayController(gateway.ControllerName),
 		},
 	}
-	supportedGatewayClass, err = gc.GatewayV1alpha2().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
+	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
@@ -93,15 +94,15 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 	require.NoError(t, err)
 
 	t.Log("deploying a supported gatewayclass to the test cluster")
-	supportedGatewayClass := &gatewayv1alpha2.GatewayClass{
+	supportedGatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gatewayv1beta1.GatewayController(gateway.ControllerName),
 		},
 	}
-	supportedGatewayClass, err = gc.GatewayV1alpha2().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
+	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")

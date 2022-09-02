@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -305,7 +306,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 	}
 
 	// validate the gatewayclass reference
-	gwc := gatewayv1alpha2.GatewayClass{}
+	gwc := gatewayv1beta1.GatewayClass{}
 	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return true, "", nil // not managed by this controller
@@ -315,7 +316,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 
 	// validate whether the gatewayclass is a supported class, if not
 	// then this gateway belongs to another controller.
-	if gwc.Spec.ControllerName != gatewaycontroller.ControllerName {
+	if string(gwc.Spec.ControllerName) != string(gatewaycontroller.ControllerName) {
 		return true, "", nil
 	}
 
@@ -347,13 +348,13 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		}
 
 		// pull the referenced GatewayClass object from the Gateway
-		gatewayClass := gatewayv1alpha2.GatewayClass{}
+		gatewayClass := gatewayv1beta1.GatewayClass{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 			return false, fmt.Sprintf("couldn't retrieve referenced gatewayclass %s", gateway.Spec.GatewayClassName), err
 		}
 
 		// determine ultimately whether the Gateway is managed by this controller implementation
-		if gatewayClass.Spec.ControllerName == gatewaycontroller.ControllerName {
+		if string(gatewayClass.Spec.ControllerName) == string(gatewaycontroller.ControllerName) {
 			managedGateways = append(managedGateways, &gateway)
 		}
 	}

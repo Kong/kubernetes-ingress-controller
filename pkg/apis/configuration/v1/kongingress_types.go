@@ -59,7 +59,7 @@ type KongIngressList struct {
 }
 
 // KongIngressService contains KongIngress service configuration.
-//+ It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress
+// + It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress
 type KongIngressService struct {
 	// The protocol used to communicate with the upstream.
 	//+kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
@@ -89,7 +89,7 @@ type KongIngressService struct {
 }
 
 // KongIngressRoute contains KongIngress route configuration
-//+ It contains the subset of go-kong.kong.Route fields supported by kongstate.Route.overrideByKongIngress
+// + It contains the subset of go-kong.kong.Route fields supported by kongstate.Route.overrideByKongIngress
 type KongIngressRoute struct {
 	// Methods is a list of HTTP methods that match this Route.
 	Methods []*string `json:"methods,omitempty" yaml:"methods,omitempty"`
@@ -135,7 +135,7 @@ type KongIngressRoute struct {
 }
 
 // KongIngressUpstream contains KongIngress upstream configuration
-//+ It contains the subset of go-kong.kong.Upstream fields supported by kongstate.Upstream.overrideByKongIngress
+// + It contains the subset of go-kong.kong.Upstream fields supported by kongstate.Upstream.overrideByKongIngress
 type KongIngressUpstream struct {
 	// HostHeader is The hostname to be used as Host header
 	// when proxying requests through Kong.

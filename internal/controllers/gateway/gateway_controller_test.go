@@ -9,6 +9,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -230,12 +231,12 @@ func Test_pruneStatusConditions(t *testing.T) {
 
 func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("generating a gatewayclass to test reconciliation filters")
-	gatewayClass := &gatewayv1alpha2.GatewayClass{
+	gatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "us",
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: ControllerName,
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gatewayv1beta1.GatewayController(ControllerName),
 		},
 	}
 
@@ -325,21 +326,21 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 
 func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 	t.Log("generating a gatewayclass controlled by this controller implementation")
-	controlledGatewayClass := &gatewayv1alpha2.GatewayClass{
+	controlledGatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "us",
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: ControllerName,
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gatewayv1beta1.GatewayController(ControllerName),
 		},
 	}
 
 	t.Log("generating a gatewayclass not controlled by this implementation")
-	uncontrolledGatewayClass := &gatewayv1alpha2.GatewayClass{
+	uncontrolledGatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "eu",
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
+		Spec: gatewayv1beta1.GatewayClassSpec{
 			ControllerName: "acme.io/gateway-controller",
 		},
 	}

@@ -13,6 +13,7 @@ import (
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
 
@@ -56,8 +57,8 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 	cleaner.Add(managedGateway)
 
 	t.Log("creating an unmanaged gatewayclass")
-	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1alpha2.GatewayClass) {
-		gc.Spec.ControllerName = unmanagedControllerName
+	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
+		gc.Spec.ControllerName = gatewayv1beta1.GatewayController(unmanagedControllerName)
 	})
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGatewayClass)

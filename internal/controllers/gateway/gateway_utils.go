@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
@@ -67,9 +68,9 @@ func isGatewayReady(gateway *gatewayv1alpha2.Gateway) bool {
 
 // isGatewayInClassAndUnmanaged returns boolean if the provided combination of gateway and class
 // is controlled by this controller and the gateway is configured for unmanaged mode.
-func isGatewayInClassAndUnmanaged(gatewayClass *gatewayv1alpha2.GatewayClass, gateway gatewayv1alpha2.Gateway) bool {
+func isGatewayInClassAndUnmanaged(gatewayClass *gatewayv1beta1.GatewayClass, gateway gatewayv1alpha2.Gateway) bool {
 	_, ok := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations)
-	return ok && gatewayClass.Spec.ControllerName == ControllerName
+	return ok && gatewayClass.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName)
 }
 
 // getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName
@@ -547,12 +548,12 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 	}
 
 	for _, obj := range objs {
-		gwc, ok := obj.(*gatewayv1alpha2.GatewayClass)
+		gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
 		if !ok {
 			log.Error(fmt.Errorf("invalid type"), "received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 			continue
 		}
-		if gwc.Spec.ControllerName == ControllerName {
+		if gwc.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName) {
 			return true
 		}
 	}

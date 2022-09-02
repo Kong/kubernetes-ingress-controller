@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -361,8 +362,8 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying an unsupported gatewayclass to the test cluster")
-	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1alpha2.GatewayClass) {
-		gc.Spec.ControllerName = unmanagedControllerName
+	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
+		gc.Spec.ControllerName = gatewayv1beta1.GatewayController(unmanagedControllerName)
 	})
 	require.NoError(t, err)
 	cleaner.Add(unsupportedGatewayClass)

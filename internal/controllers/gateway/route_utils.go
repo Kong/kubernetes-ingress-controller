@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -86,7 +87,7 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 		}
 
 		// pull the GatewayClass for the Gateway object from the cached client
-		gatewayClass := gatewayv1alpha2.GatewayClass{}
+		gatewayClass := gatewayv1beta1.GatewayClass{}
 		if err := mgrc.Get(ctx, client.ObjectKey{
 			Name: string(gateway.Spec.GatewayClassName),
 		}, &gatewayClass); err != nil {
@@ -101,7 +102,7 @@ func getSupportedGatewayForRoute(ctx context.Context, mgrc client.Client, obj cl
 
 		// if the GatewayClass matches this controller we're all set and this controller
 		// should reconcile this object.
-		if gatewayClass.Spec.ControllerName == ControllerName {
+		if gatewayClass.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName) {
 			allowedNamespaces := make(map[string]interface{})
 			// set true if we find any AllowedRoutes. there may be none, in which case any namespace is permitted
 			filtered := false

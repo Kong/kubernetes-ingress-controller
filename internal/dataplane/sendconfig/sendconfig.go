@@ -260,9 +260,10 @@ var (
 // decisions (such as staggering or stifling duplicate log lines).
 //
 // TODO: This is a bit of a hack for now to keep backwards compat,
-//       but in the future we might configure rolling this into
-//       some object/interface which has this functionality as an
-//       inherent behavior.
+//
+//	but in the future we might configure rolling this into
+//	some object/interface which has this functionality as an
+//	inherent behavior.
 func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 	shaLock.Lock()
 	defer shaLock.Unlock()

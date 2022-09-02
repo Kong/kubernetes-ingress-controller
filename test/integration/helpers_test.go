@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -34,13 +35,13 @@ const (
 
 // DeployGateway creates a default gatewayClass, accepts a variadic set of options,
 // and finally deploys it on the Kubernetes cluster by means of the gateway client given as arg.
-func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gatewayv1alpha2.GatewayClass)) (*gatewayv1alpha2.GatewayClass, error) {
-	gwc := &gatewayv1alpha2.GatewayClass{
+func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gatewayv1beta1.GatewayClass)) (*gatewayv1beta1.GatewayClass, error) {
+	gwc := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gatewayClassName,
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gatewayv1beta1.GatewayController(gateway.ControllerName),
 		},
 	}
 
@@ -48,13 +49,13 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 		opt(gwc)
 	}
 
-	result, err := client.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	result, err := client.GatewayV1beta1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1alpha2().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
+		err = client.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return result, err
 		}
-		result, err = client.GatewayV1alpha2().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+		result, err = client.GatewayV1beta1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	}
 	return result, err
 }

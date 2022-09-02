@@ -1,9 +1,9 @@
 package v1
 
-//+ KongProtocol is a valid Kong protocol
-//+ This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
-//+kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
-//+kubebuilder:object:generate=true
+// + KongProtocol is a valid Kong protocol
+// + This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
+// +kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
+// +kubebuilder:object:generate=true
 type KongProtocol string
 
 // KongProtocolsToStrings converts a slice of KongProtocol to plain strings

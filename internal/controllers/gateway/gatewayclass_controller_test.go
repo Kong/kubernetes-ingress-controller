@@ -5,19 +5,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func Test_setGatewayClassCondtion(t *testing.T) {
 	testCases := []struct {
 		name            string
-		gwc             *gatewayv1alpha2.GatewayClass
+		gwc             *gatewayv1beta1.GatewayClass
 		condition       metav1.Condition
 		conditionLength int
 	}{
 		{
 			name: "no_such_condition_should_append_one",
-			gwc:  &gatewayv1alpha2.GatewayClass{},
+			gwc:  &gatewayv1beta1.GatewayClass{},
 			condition: metav1.Condition{
 				Type:               "fake1",
 				Status:             metav1.ConditionTrue,
@@ -29,8 +29,8 @@ func Test_setGatewayClassCondtion(t *testing.T) {
 		},
 		{
 			name: "have_condition_with_type_should_replace",
-			gwc: &gatewayv1alpha2.GatewayClass{
-				Status: gatewayv1alpha2.GatewayClassStatus{
+			gwc: &gatewayv1beta1.GatewayClass{
+				Status: gatewayv1beta1.GatewayClassStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",
@@ -53,8 +53,8 @@ func Test_setGatewayClassCondtion(t *testing.T) {
 		},
 		{
 			name: "multiple_conditions_with_type_should_preserve_one",
-			gwc: &gatewayv1alpha2.GatewayClass{
-				Status: gatewayv1alpha2.GatewayClassStatus{
+			gwc: &gatewayv1beta1.GatewayClass{
+				Status: gatewayv1beta1.GatewayClassStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",

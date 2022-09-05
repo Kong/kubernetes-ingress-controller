@@ -126,44 +126,46 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		return nil, err
 	}
 
-	var imagetag string
+	var imageFullname string
 	if imageLoad != "" {
-		imagetag = imageLoad
+		imageFullname = imageLoad
 	} else {
-		imagetag = imageOverride
+		imageFullname = imageOverride
 	}
 
-	if imagetag != "" {
-		split := strings.Split(imagetag, ":")
+	if imageFullname != "" {
+		split := strings.Split(imageFullname, ":")
 		if len(split) < 2 {
-			t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
+			t.Logf("could not parse override image '%v', using default manifest %v", imageFullname, baseManifestPath)
 			return manifestsReader, nil
 		}
-		manifestsReader, err = patchControllerImage(manifestsReader, strings.Join(split[0:len(split)-1], ":"),
-			split[len(split)-1])
+		repo := strings.Join(split[0:len(split)-1], ":")
+		tag := split[len(split)-1]
+		manifestsReader, err = patchControllerImage(manifestsReader, repo, tag)
 		if err != nil {
-			t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
+			t.Logf("failed patching override image '%v' (%v), using default manifest %v", imageFullname, err, baseManifestPath)
 			return manifestsReader, nil
 		}
 	}
 
-	var kongImageTag string
+	var kongImageFullname string
 	if kongImageLoad != "" {
-		kongImageTag = kongImageLoad
+		kongImageFullname = kongImageLoad
 	} else {
-		kongImageTag = kongImageOverride
+		kongImageFullname = kongImageOverride
 	}
-	if kongImageTag != "" {
-		t.Logf("replace kong image to %s", kongImageTag)
-		split := strings.Split(kongImageTag, ":")
+	if kongImageFullname != "" {
+		t.Logf("replace kong image to %s", kongImageFullname)
+		split := strings.Split(kongImageFullname, ":")
 		if len(split) < 2 {
-			t.Logf("could not parse override image '%v', using default manifest %v", imagetag, baseManifestPath)
+			t.Logf("could not parse override image '%v', using default manifest %v", kongImageFullname, baseManifestPath)
 			return manifestsReader, nil
 		}
-		manifestsReader, err = patchKongImage(manifestsReader, strings.Join(split[0:len(split)-1], ":"),
-			split[len(split)-1])
+		repo := strings.Join(split[0:len(split)-1], ":")
+		tag := split[len(split)-1]
+		manifestsReader, err = patchKongImage(manifestsReader, repo, tag)
 		if err != nil {
-			t.Logf("failed patching override image '%v' (%v), using default manifest %v", imagetag, err, baseManifestPath)
+			t.Logf("failed patching override image '%v' (%v), using default manifest %v", kongImageFullname, err, baseManifestPath)
 			return manifestsReader, nil
 		}
 	}
@@ -203,6 +205,7 @@ func patchControllerImage(baseManifestReader io.Reader, image string, tag string
 	if err != nil {
 		return nil, err
 	}
+
 	kustomized, err := kustomizeManifest(workDir)
 	if err != nil {
 		return nil, err

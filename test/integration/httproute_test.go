@@ -18,6 +18,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -100,12 +101,12 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	_, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment1.Name)
-	httpPort := gatewayv1alpha2.PortNumber(80)
-	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
-	pathMatchRegularExpression := gatewayv1alpha2.PathMatchRegularExpression
-	pathMatchExact := gatewayv1alpha2.PathMatchExact
-	headerMatchRegex := gatewayv1alpha2.HeaderMatchRegularExpression
-	httpRoute := &gatewayv1alpha2.HTTPRoute{
+	httpPort := gatewayv1beta1.PortNumber(80)
+	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
+	pathMatchRegularExpression := gatewayv1beta1.PathMatchRegularExpression
+	pathMatchExact := gatewayv1beta1.PathMatchExact
+	headerMatchRegex := gatewayv1beta1.HeaderMatchRegularExpression
+	httpRoute := &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
@@ -113,39 +114,39 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
 			},
 		},
-		Spec: gatewayv1alpha2.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name: gatewayv1alpha2.ObjectName(gateway.Name),
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name: gatewayv1beta1.ObjectName(gateway.Name),
 				}},
 			},
-			Rules: []gatewayv1alpha2.HTTPRouteRule{{
-				Matches: []gatewayv1alpha2.HTTPRouteMatch{
+			Rules: []gatewayv1beta1.HTTPRouteRule{{
+				Matches: []gatewayv1beta1.HTTPRouteMatch{
 					{
-						Path: &gatewayv1alpha2.HTTPPathMatch{
+						Path: &gatewayv1beta1.HTTPPathMatch{
 							Type:  &pathMatchPrefix,
 							Value: kong.String("/test-http-route-essentials"),
 						},
 					},
 					{
-						Path: &gatewayv1alpha2.HTTPPathMatch{
+						Path: &gatewayv1beta1.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
 							Value: kong.String(`/regex-\d{3}-test-http-route-essentials`),
 						},
 					},
 					{
-						Path: &gatewayv1alpha2.HTTPPathMatch{
+						Path: &gatewayv1beta1.HTTPPathMatch{
 							Type:  &pathMatchExact,
 							Value: kong.String(`/exact-test-http-route-essentials`),
 						},
 					},
 				},
-				BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{
-					BackendRef: gatewayv1alpha2.BackendRef{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Name: gatewayv1alpha2.ObjectName(service1.Name),
+				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
+					BackendRef: gatewayv1beta1.BackendRef{
+						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+							Name: gatewayv1beta1.ObjectName(service1.Name),
 							Port: &httpPort,
-							Kind: util.StringToGatewayAPIKindPtr("Service"),
+							Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
 						},
 					},
 				}},
@@ -153,8 +154,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		},
 	}
 	if util.GetKongVersion().GTE(parser.MinRegexHeaderKongVersion) {
-		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayv1alpha2.HTTPRouteMatch{
-			Headers: []gatewayv1alpha2.HTTPHeaderMatch{
+		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayv1beta1.HTTPRouteMatch{
+			Headers: []gatewayv1beta1.HTTPHeaderMatch{
 				{
 					Type:  &headerMatchRegex,
 					Value: "^audio/*",
@@ -163,7 +164,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			},
 		})
 	}
-	httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)
 
@@ -206,32 +207,32 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	var httpbinWeight int32 = 75
 	var nginxWeight int32 = 25
 	require.Eventually(t, func() bool {
-		httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		httpRoute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.HTTPBackendRef{
+		httpRoute.Spec.Rules[0].BackendRefs = []gatewayv1beta1.HTTPBackendRef{
 			{
-				BackendRef: gatewayv1alpha2.BackendRef{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-						Name: gatewayv1alpha2.ObjectName(service1.Name),
+				BackendRef: gatewayv1beta1.BackendRef{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+						Name: gatewayv1beta1.ObjectName(service1.Name),
 						Port: &httpPort,
-						Kind: util.StringToGatewayAPIKindPtr("Service"),
+						Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
 					},
 					Weight: &httpbinWeight,
 				},
 			},
 			{
-				BackendRef: gatewayv1alpha2.BackendRef{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-						Name: gatewayv1alpha2.ObjectName(service2.Name),
+				BackendRef: gatewayv1beta1.BackendRef{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+						Name: gatewayv1beta1.ObjectName(service2.Name),
 						Port: &httpPort,
-						Kind: util.StringToGatewayAPIKindPtr("Service"),
+						Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
 					},
 					Weight: &nginxWeight,
 				},
 			},
 		}
 
-		httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(httpRoute.Namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		if err != nil {
 			t.Logf("WARNING: could not update httproute with an additional backendRef: %s (retrying)", err)
 			return false
@@ -277,10 +278,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httpRoute.Spec.ParentRefs
 	require.Eventually(t, func() bool {
-		httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		httpRoute.Spec.ParentRefs = nil
-		httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
@@ -293,10 +294,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
-		httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		httpRoute.Spec.ParentRefs = oldParentRefs
-		httpRoute, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 

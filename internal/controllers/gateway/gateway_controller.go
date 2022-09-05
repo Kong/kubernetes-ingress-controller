@@ -147,7 +147,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		r.Log.Error(err, "could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
-	return gatewayClass.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName)
+	return gatewayClass.Spec.ControllerName == ControllerName
 }
 
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
@@ -158,7 +158,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 		r.Log.Error(fmt.Errorf("unexpected object type in gatewayclass watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
 		return false
 	}
-	return gatewayClass.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName)
+	return gatewayClass.Spec.ControllerName == ControllerName
 }
 
 // listGatewaysForGatewayClass is a watch predicate which finds all the gateway objects reference
@@ -291,7 +291,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
 	}
-	if gwc.Spec.ControllerName != gatewayv1beta1.GatewayController(ControllerName) {
+	if gwc.Spec.ControllerName != ControllerName {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
 		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")

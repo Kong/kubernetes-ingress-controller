@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -85,7 +86,7 @@ type Storer interface {
 	ListIngressesV1() []*netv1.Ingress
 	ListIngressClassesV1() []*netv1.IngressClass
 	ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters
-	ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error)
+	ListHTTPRoutes() ([]*gatewayv1beta1.HTTPRoute, error)
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
@@ -253,7 +254,7 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
-	case *gatewayv1alpha2.HTTPRoute:
+	case *gatewayv1beta1.HTTPRoute:
 		return c.HTTPRoute.Get(obj)
 	case *gatewayv1alpha2.UDPRoute:
 		return c.UDPRoute.Get(obj)
@@ -318,7 +319,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
-	case *gatewayv1alpha2.HTTPRoute:
+	case *gatewayv1beta1.HTTPRoute:
 		return c.HTTPRoute.Add(obj)
 	case *gatewayv1alpha2.UDPRoute:
 		return c.UDPRoute.Add(obj)
@@ -384,7 +385,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
-	case *gatewayv1alpha2.HTTPRoute:
+	case *gatewayv1beta1.HTTPRoute:
 		return c.HTTPRoute.Delete(obj)
 	case *gatewayv1alpha2.UDPRoute:
 		return c.UDPRoute.Delete(obj)
@@ -586,11 +587,11 @@ func (s Store) ListIngressesV1beta1() []*netv1beta1.Ingress {
 }
 
 // ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
-func (s Store) ListHTTPRoutes() ([]*gatewayv1alpha2.HTTPRoute, error) {
-	var httproutes []*gatewayv1alpha2.HTTPRoute
+func (s Store) ListHTTPRoutes() ([]*gatewayv1beta1.HTTPRoute, error) {
+	var httproutes []*gatewayv1beta1.HTTPRoute
 	if err := cache.ListAll(s.stores.HTTPRoute, labels.NewSelector(),
 		func(ob interface{}) {
-			httproute, ok := ob.(*gatewayv1alpha2.HTTPRoute)
+			httproute, ok := ob.(*gatewayv1beta1.HTTPRoute)
 			if ok {
 				httproutes = append(httproutes, httproute)
 			}
@@ -1048,7 +1049,7 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
 	case gatewayv1alpha2.SchemeGroupVersion.WithKind("HTTPRoutes"):
-		return &gatewayv1alpha2.HTTPRoute{}, nil
+		return &gatewayv1beta1.HTTPRoute{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------

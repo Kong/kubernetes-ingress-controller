@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -34,7 +35,7 @@ type FakeObjects struct {
 	IngressesV1beta1               []*netv1beta1.Ingress
 	IngressesV1                    []*netv1.Ingress
 	IngressClassesV1               []*netv1.IngressClass
-	HTTPRoutes                     []*gatewayv1alpha2.HTTPRoute
+	HTTPRoutes                     []*gatewayv1beta1.HTTPRoute
 	UDPRoutes                      []*gatewayv1alpha2.UDPRoute
 	TCPRoutes                      []*gatewayv1alpha2.TCPRoute
 	TLSRoutes                      []*gatewayv1alpha2.TLSRoute

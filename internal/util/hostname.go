@@ -1,13 +1,21 @@
 package util
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
+)
 
 // HostnamesIntersect checks if the hostnameA and hostnameB have an intersection.
 // To perform this check, the function HostnamesMatch is called twice swapping the
 // parameters and using first hostnameA as a mask, then hostnameB.
 // If there is at least one match, the hostnames intersect.
-func HostnamesIntersect(hostnameA, hostnameB string) bool {
-	return HostnamesMatch(hostnameA, hostnameB) || HostnamesMatch(hostnameB, hostnameA)
+func HostnamesIntersect[H1, H2 types.HostnameT](hostnameA H1, hostnameB H2) bool {
+	var (
+		a = (string)(hostnameA)
+		b = (string)(hostnameB)
+	)
+	return HostnamesMatch(a, b) || HostnamesMatch(b, a)
 }
 
 // HostnamesMatch checks that the hostnameB matches the hostnameA. HostnameA is treated as mask

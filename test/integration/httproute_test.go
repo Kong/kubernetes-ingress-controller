@@ -131,13 +131,13 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					{
 						Path: &gatewayv1beta1.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
-							Value: kong.String(`/test-http-route-essentials/regex/\d{3}`),
+							Value: kong.String(`/2/test-http-route-essentials/regex/\d{3}`),
 						},
 					},
 					{
 						Path: &gatewayv1beta1.HTTPPathMatch{
 							Type:  &pathMatchExact,
-							Value: kong.String(`/exact-test-http-route-essentials`),
+							Value: kong.String(`/3/exact-test-http-route-essentials`),
 						},
 					},
 				},
@@ -176,9 +176,9 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
 		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.", emptyHeaderSet)
-	eventuallyGETPath(t, "test-http-route-essentials/regex/999", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
-	eventuallyGETPath(t, "exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	eventuallyGETPath(t, "2/test-http-route-essentials/regex/999", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "3/exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	eventuallyGETPath(t, "3/exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet)
 
 	require.Eventually(t, func() bool {
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "test-http-route-essentials"), nil)

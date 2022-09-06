@@ -238,11 +238,11 @@ func PathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath, addRegexPrefix
 			routePaths = append(routePaths, "/")
 		} else {
 			routePaths = append(routePaths, "/"+base+"/")
-			routeRegexPaths = append(routeRegexPaths, "/"+base+"$")
+			routeRegexPaths = append(routeRegexPaths, "^/"+base+"$")
 		}
 	case netv1.PathTypeExact:
 		relative := strings.TrimLeft(httpIngressPath.Path, "/")
-		routeRegexPaths = append(routeRegexPaths, "/"+relative+"$")
+		routeRegexPaths = append(routeRegexPaths, "^/"+relative+"$")
 	case netv1.PathTypeImplementationSpecific:
 		if httpIngressPath.Path == "" {
 			routePaths = append(routePaths, "/")

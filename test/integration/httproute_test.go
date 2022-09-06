@@ -4,8 +4,10 @@
 package integration
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,12 +31,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
-var emptyHeaderSet = make(map[string]string)
+var (
+	emptyHeaderSet     = make(map[string]string)
+	kongDebugHeaderSet = map[string]string{"kong-debug": "1"}
+)
 
 func TestHTTPRouteEssentials(t *testing.T) {
 	ns, cleaner := setup(t)
 	defer func() {
-		if t.Failed() {
+		if true {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 			assert.NoError(t, err)
@@ -62,6 +67,12 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container1 := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container1.Env = []corev1.EnvVar{
+		{
+			Name:  "GUNICORN_CMD_ARGS",
+			Value: "--capture-output --error-logfile - --access-logfile - --access-logformat '%(h)s %(t)s %(r)s %(s)s Host: %({Host}i)s}'",
+		},
+	}
 	deployment1 := generators.NewDeploymentForContainer(container1)
 	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -172,6 +183,24 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
+	defer func() {
+		req := newRequest(t, http.MethodGet, "2/test-http-route-essentials/regex/999", kongDebugHeaderSet)
+		resp, err := httpc.Do(req)
+		if err != nil {
+			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, "999", err)
+		}
+		var head string
+		for h, v := range resp.Header {
+			head = fmt.Sprintf("%s\n%s: %s", head, h, strings.Join(v, ","))
+		}
+		defer resp.Body.Close()
+		b := new(bytes.Buffer)
+		_, err = b.ReadFrom(resp.Body)
+		if err != nil {
+			t.Logf("WARNING: http request unreadable for GET %s/%s: %v", proxyURL, "999", err)
+		}
+		t.Logf("TestHTTPRouteEssentials diag: status %v headers===\n%s\nbody===\n%s\n\n", resp.StatusCode, head, b.String())
+	}()
 	t.Log("waiting for routes from HTTPRoute to become operational")
 	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 	eventuallyGETPath(t, "test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",

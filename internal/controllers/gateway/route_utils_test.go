@@ -4,16 +4,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func Test_filterHostnames(t *testing.T) {
-	commonGateway := &gatewayv1alpha2.Gateway{
-		Spec: gatewayv1alpha2.GatewaySpec{
-			Listeners: []gatewayv1alpha2.Listener{
+	commonGateway := &gatewayv1beta1.Gateway{
+		Spec: gatewayv1beta1.GatewaySpec{
+			Listeners: []Listener{
 				{
 					Name:     "listener-1",
 					Hostname: util.StringToGatewayAPIHostnamePtr("very.specific.com"),

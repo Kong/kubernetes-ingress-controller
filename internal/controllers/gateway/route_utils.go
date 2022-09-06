@@ -27,29 +27,29 @@ const (
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
 // such as the condition Status condition Accepted of the gateway and the listenerName.
 type supportedGatewayWithCondition struct {
-	gateway      *gatewayv1alpha2.Gateway
+	gateway      *Gateway
 	condition    metav1.Condition
 	listenerName string
 }
 
 // parentRefsForRoute provides a list of the parentRefs given a Gateway APIs route object
 // (e.g. HTTPRoute, TCPRoute, e.t.c.) which refer to the Gateway resource(s) which manage it.
-func parentRefsForRoute[T types.RouteT](route T) ([]gatewayv1beta1.ParentReference, error) {
+func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 	// Note: Ideally we wouldn't have to do this but it's hard to juggle around types
-	// and support gatewayv1beta1.ParentReference and gatewayv1alpha2.ParentReference
+	// and support ParentReference and gatewayv1alpha2.ParentReference
 	// at the same time so we just copy v1alpha2 refs to a new v1beta1 slice.
 	convertV1Alpha2ToV1Beta1ParentReference := func(
 		refsAlpha []gatewayv1alpha2.ParentReference,
-	) []gatewayv1beta1.ParentReference {
-		ret := make([]gatewayv1beta1.ParentReference, len(refsAlpha))
+	) []ParentReference {
+		ret := make([]ParentReference, len(refsAlpha))
 		for i, v := range refsAlpha {
-			ret[i] = gatewayv1beta1.ParentReference{
+			ret[i] = ParentReference{
 				Group:       (*gatewayv1beta1.Group)(v.Group),
-				Kind:        (*gatewayv1beta1.Kind)(v.Kind),
+				Kind:        (*Kind)(v.Kind),
 				Namespace:   (*gatewayv1beta1.Namespace)(v.Namespace),
 				Name:        (gatewayv1beta1.ObjectName)(v.Name),
-				SectionName: (*gatewayv1beta1.SectionName)(v.SectionName),
-				Port:        (*gatewayv1beta1.PortNumber)(v.Port),
+				SectionName: (*SectionName)(v.SectionName),
+				Port:        (*PortNumber)(v.Port),
 			}
 		}
 		return ret
@@ -94,7 +94,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		name := string(parentRef.Name)
 
 		// pull the Gateway object from the cached client
-		gateway := gatewayv1alpha2.Gateway{}
+		gateway := gatewayv1beta1.Gateway{}
 		if err := mgrc.Get(ctx, client.ObjectKey{
 			Namespace: namespace,
 			Name:      name,
@@ -139,21 +139,21 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				case *gatewayv1beta1.HTTPRoute:
 					hostnames := r.Spec.Hostnames
 					oneHostnameMatch = listenerHostnameIntersectWithRouteHostnames(listener, hostnames)
-					if !(listener.Protocol == gatewayv1alpha2.HTTPProtocolType || listener.Protocol == gatewayv1alpha2.HTTPSProtocolType) {
+					if !(listener.Protocol == HTTPProtocolType || listener.Protocol == HTTPSProtocolType) {
 						continue
 					}
 				case *gatewayv1alpha2.TCPRoute:
-					if listener.Protocol != gatewayv1alpha2.TCPProtocolType {
+					if listener.Protocol != (TCPProtocolType) {
 						continue
 					}
 				case *gatewayv1alpha2.UDPRoute:
-					if listener.Protocol != gatewayv1alpha2.UDPProtocolType {
+					if listener.Protocol != (UDPProtocolType) {
 						continue
 					}
 				case *gatewayv1alpha2.TLSRoute:
 					hostnames := r.Spec.Hostnames
 					oneHostnameMatch = listenerHostnameIntersectWithRouteHostnames(listener, hostnames)
-					if listener.Protocol != gatewayv1alpha2.TLSProtocolType {
+					if listener.Protocol != (TLSProtocolType) {
 						continue
 					}
 				default:
@@ -164,12 +164,12 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				}
 				if listener.AllowedRoutes != nil {
 					filtered = true
-					if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromAll {
+					if *listener.AllowedRoutes.Namespaces.From == gatewayv1beta1.NamespacesFromAll {
 						// we allow "all" by just stuffing the namespace we want to find into the map
 						allowedNamespaces[route.GetNamespace()] = nil
-					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromSame {
+					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1beta1.NamespacesFromSame {
 						allowedNamespaces[gateway.ObjectMeta.Namespace] = nil
-					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1alpha2.NamespacesFromSelector {
+					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1beta1.NamespacesFromSelector {
 						namespaces := &corev1.NamespaceList{}
 						selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
 						if err != nil {
@@ -241,7 +241,7 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.List
 				return true
 			}
 		}
-	case gatewayv1beta1.Listener:
+	case Listener:
 		if l.Hostname == nil || *l.Hostname == "" {
 			return true
 		}
@@ -267,9 +267,9 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 	if len(httpRoute.Spec.Hostnames) == 0 {
 		for _, gateway := range gateways {
 			for _, listener := range gateway.gateway.Spec.Listeners {
-				if listenerName := gatewayv1alpha2.SectionName(gateway.listenerName); listenerName == "" || listenerName == listener.Name {
+				if listenerName := gateway.listenerName; listenerName == "" || listenerName == string(listener.Name) {
 					if listener.Hostname != nil {
-						filteredHostnames = append(filteredHostnames, (gatewayv1beta1.Hostname)(*listener.Hostname))
+						filteredHostnames = append(filteredHostnames, (*listener.Hostname))
 					}
 				}
 			}
@@ -297,8 +297,8 @@ func getMinimumHostnameIntersection(gateways []supportedGatewayWithCondition, ho
 	for _, gateway := range gateways {
 		for _, listener := range gateway.gateway.Spec.Listeners {
 			// if the listenerName is specified and matches the name of the gateway listener proceed
-			if (gatewayv1beta1.SectionName)(gateway.listenerName) == "" ||
-				(gatewayv1beta1.SectionName)(gateway.listenerName) == (gatewayv1beta1.SectionName)(listener.Name) {
+			if (SectionName)(gateway.listenerName) == "" ||
+				(SectionName)(gateway.listenerName) == (listener.Name) {
 				if listener.Hostname == nil || *listener.Hostname == "" {
 					return hostname
 				}
@@ -306,7 +306,7 @@ func getMinimumHostnameIntersection(gateways []supportedGatewayWithCondition, ho
 					return hostname
 				}
 				if util.HostnamesMatch(string(hostname), string(*listener.Hostname)) {
-					return (gatewayv1beta1.Hostname)(*listener.Hostname)
+					return (*listener.Hostname)
 				}
 			}
 		}
@@ -326,7 +326,7 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.
 func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backendRef gatewayv1beta1.HTTPBackendRef, fromNamespace string) bool {
 	var backendRefGroup gatewayv1beta1.Group
-	var backendRefKind gatewayv1beta1.Kind
+	var backendRefKind Kind
 
 	if backendRef.Group != nil {
 		backendRefGroup = *backendRef.Group
@@ -341,7 +341,7 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 
 		for _, to := range grantSpec.To {
 			if backendRefGroup == (gatewayv1beta1.Group)(to.Group) &&
-				backendRefKind == (gatewayv1beta1.Kind)(to.Kind) &&
+				backendRefKind == (Kind)(to.Kind) &&
 				(to.Name == nil || (gatewayv1beta1.ObjectName)(*to.Name) == backendRef.Name) {
 				return true
 			}

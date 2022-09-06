@@ -34,7 +34,7 @@ var (
 	// ErrManagedGatewaysUnsupported is an error used whenever a failure occurs
 	// due to a Gateway that is not properly configured for unmanaged mode.
 	ErrManagedGatewaysUnsupported = fmt.Errorf("invalid gateway spec: managed gateways are not currently supported")
-	gatewayV1alpha2Group          = gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
+	gatewayV1beta1Group           = gatewayv1beta1.Group(gatewayv1beta1.GroupName)
 )
 
 // -----------------------------------------------------------------------------
@@ -81,7 +81,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch Gateway objects, filtering out any Gateways which are not configured with
 	// a supported GatewayClass controller name.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.Gateway{}},
+		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass),
 	); err != nil {
@@ -137,9 +137,9 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // gatewayHasMatchingGatewayClass is a watch predicate which filters out reconciliation events for
 // gateway objects which aren't supported by this controller.
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
-	gateway, ok := obj.(*gatewayv1alpha2.Gateway)
+	gateway, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1alpha2.Gateway", "found", reflect.TypeOf(obj))
+		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1beta1.Gateway", "found", reflect.TypeOf(obj))
 		return false
 	}
 	gatewayClass := &gatewayv1beta1.GatewayClass{}
@@ -165,7 +165,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 // by a gatewayclass to enqueue them for reconciliation. This is generally used when a GatewayClass
 // is updated to ensure that idle gateways are initialized when their gatewayclass becomes available.
 func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Object) []reconcile.Request {
-	gateways := &gatewayv1alpha2.GatewayList{}
+	gateways := &gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), gateways); err != nil {
 		r.Log.Error(err, "failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
 		return nil
@@ -182,7 +182,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 			"*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj))
 		return nil
 	}
-	gateways := &gatewayv1alpha2.GatewayList{}
+	gateways := &gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), gateways); err != nil {
 		r.Log.Error(err, "failed to list gateways in watch", "referencegrant", grant.Name)
 		return nil
@@ -210,7 +210,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
 // all gateways are updated when the service gets updated with new listeners.
 func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []reconcile.Request) {
-	gateways := &gatewayv1alpha2.GatewayList{}
+	gateways := &gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), gateways); err != nil {
 		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service")
 		return
@@ -245,7 +245,7 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 		return false
 	}
 	for _, from := range grant.Spec.From {
-		if from.Kind == gatewayv1alpha2.Kind("Gateway") && from.Group == gatewayv1alpha2.Group("gateway.networking.k8s.io") {
+		if from.Kind == "Gateway" && from.Group == "gateway.networking.k8s.io" {
 			return true
 		}
 	}
@@ -262,11 +262,11 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("V1Alpha2Gateway", req.NamespacedName)
+	log := r.Log.WithValues("V1Beta1Gateway", req.NamespacedName)
 
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.
-	gateway := new(gatewayv1alpha2.Gateway)
+	gateway := new(gatewayv1beta1.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
 		if errors.IsNotFound(err) {
 			debug(log, gateway, "reconciliation triggered but gateway does not exist, ignoring")
@@ -327,7 +327,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 // reconcileUnmanagedGateway reconciles a Gateway that is configured for unmanaged mode,
 // this mode will extract the Addresses and Listeners for the Gateway from the Kubernetes Service
 // used for the Kong Gateway in the pre-existing deployment.
-func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log logr.Logger, gateway *gatewayv1alpha2.Gateway) (ctrl.Result, error) {
+func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log logr.Logger, gateway *gatewayv1beta1.Gateway) (ctrl.Result, error) {
 	// currently this controller supports only unmanaged gateway mode, we need to verify
 	// any Gateway object that comes to us is configured appropriately, and if not reject it
 	// with a clear status condition and message.
@@ -362,11 +362,11 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	info(log, gateway, "marking gateway as scheduled")
 	if !isGatewayScheduled(gateway) {
 		scheduledCondition := metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
+			Type:               string(gatewayv1beta1.GatewayConditionScheduled),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonScheduled),
+			Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
 		}
 		setGatewayCondition(gateway, scheduledCondition)
@@ -448,19 +448,19 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 var (
 	// supportedKinds indicates which gateway kinds are supported by this implementation.
-	supportedKinds = []gatewayv1alpha2.Kind{
-		gatewayv1alpha2.Kind("HTTPRoute"),
+	supportedKinds = []Kind{
+		Kind("HTTPRoute"),
 	}
 
 	// supportedRouteGroupKinds indicates the full kinds with GVK that are supported by this implementation.
-	supportedRouteGroupKinds []gatewayv1alpha2.RouteGroupKind
+	supportedRouteGroupKinds []gatewayv1beta1.RouteGroupKind
 )
 
 func init() {
 	// gather the supported RouteGroupKinds for the Gateway listeners
-	group := gatewayv1alpha2.Group(gatewayv1alpha2.GroupName)
+	group := gatewayv1beta1.Group(gatewayv1beta1.GroupName)
 	for _, supportedKind := range supportedKinds {
-		supportedRouteGroupKinds = append(supportedRouteGroupKinds, gatewayv1alpha2.RouteGroupKind{
+		supportedRouteGroupKinds = append(supportedRouteGroupKinds, gatewayv1beta1.RouteGroupKind{
 			Group: &group,
 			Kind:  supportedKind,
 		})
@@ -488,8 +488,8 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	log logr.Logger,
 	svc *corev1.Service,
 ) (
-	[]gatewayv1alpha2.GatewayAddress,
-	[]gatewayv1alpha2.Listener,
+	[]GatewayAddress,
+	[]Listener,
 	error,
 ) {
 	// if there are no clusterIPs available yet then this service
@@ -499,24 +499,24 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	}
 
 	// take var copies of the address types so we can take pointers to them
-	gatewayIPAddrType := gatewayv1alpha2.IPAddressType
-	gatewayHostAddrType := gatewayv1alpha2.HostnameAddressType
+	gatewayIPAddrType := gatewayv1beta1.IPAddressType
+	gatewayHostAddrType := gatewayv1beta1.HostnameAddressType
 
 	// for all service types we're going to capture the ClusterIP
-	addresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(svc.Spec.ClusterIPs))
-	listeners := make([]gatewayv1alpha2.Listener, 0, len(svc.Spec.Ports))
-	protocolToRouteGroupKind := map[corev1.Protocol]gatewayv1alpha2.RouteGroupKind{
-		corev1.ProtocolTCP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TCPRoute")},
-		corev1.ProtocolUDP: {Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("UDPRoute")},
+	addresses := make([]GatewayAddress, 0, len(svc.Spec.ClusterIPs))
+	listeners := make([]Listener, 0, len(svc.Spec.Ports))
+	protocolToRouteGroupKind := map[corev1.Protocol]gatewayv1beta1.RouteGroupKind{
+		corev1.ProtocolTCP: {Group: &gatewayV1beta1Group, Kind: Kind("TCPRoute")},
+		corev1.ProtocolUDP: {Group: &gatewayV1beta1Group, Kind: Kind("UDPRoute")},
 	}
 
 	for _, port := range svc.Spec.Ports {
-		listeners = append(listeners, gatewayv1alpha2.Listener{
-			Name:     gatewayv1alpha2.SectionName(port.Name),
-			Protocol: gatewayv1alpha2.ProtocolType(port.Protocol),
-			Port:     gatewayv1alpha2.PortNumber(port.Port),
-			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-				Kinds: []gatewayv1alpha2.RouteGroupKind{
+		listeners = append(listeners, Listener{
+			Name:     (SectionName)(port.Name),
+			Protocol: (ProtocolType)(port.Protocol),
+			Port:     (PortNumber)(port.Port),
+			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+				Kinds: []gatewayv1beta1.RouteGroupKind{
 					protocolToRouteGroupKind[port.Protocol],
 				},
 			},
@@ -538,13 +538,13 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		// are often the most common address used for traffic.
 		for _, ingress := range svc.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
-				addresses = append([]gatewayv1alpha2.GatewayAddress{{
+				addresses = append([]GatewayAddress{{
 					Type:  &gatewayIPAddrType,
 					Value: ingress.IP,
 				}}, addresses...)
 			}
 			if ingress.Hostname != "" {
-				addresses = append([]gatewayv1alpha2.GatewayAddress{{
+				addresses = append([]GatewayAddress{{
 					Type:  &gatewayHostAddrType,
 					Value: ingress.Hostname,
 				}}, addresses...)
@@ -565,7 +565,11 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 // determineListenersFromDataPlane takes a list of Gateway listeners and references
 // them against the data-plane to determine any higher level protocol (TLS, HTTP)
 // configured for them.
-func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context, svc *corev1.Service, listeners []gatewayv1alpha2.Listener) ([]gatewayv1alpha2.Listener, error) {
+func (r *GatewayReconciler) determineListenersFromDataPlane(
+	ctx context.Context,
+	svc *corev1.Service,
+	listeners []Listener,
+) ([]Listener, error) {
 	// gather the proxy and stream listeners from the data-plane and map them
 	// to their respective ports (which will be the targetPorts of the proxy
 	// Service in Kubernetes).
@@ -591,31 +595,31 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 
 	// upgrade existing L4 listeners with any higher level protocols that
 	// are configured for them in the data-plane.
-	upgradedListeners := make([]gatewayv1alpha2.Listener, 0, len(listeners))
+	upgradedListeners := make([]Listener, 0, len(listeners))
 	for _, listener := range listeners {
 		if streamListener, ok := streamListenersMap[portMapper[int(listener.Port)]]; ok {
 			if streamListener.SSL {
-				listener.Protocol = gatewayv1alpha2.TLSProtocolType
-				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
-					Kinds: []gatewayv1alpha2.RouteGroupKind{
-						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("TLSRoute")},
+				listener.Protocol = gatewayv1beta1.TLSProtocolType
+				listener.AllowedRoutes = &gatewayv1beta1.AllowedRoutes{
+					Kinds: []gatewayv1beta1.RouteGroupKind{
+						{Group: &gatewayV1beta1Group, Kind: (Kind)("TLSRoute")},
 					},
 				}
 			}
 		}
 		if proxyListener, ok := proxyListenersMap[portMapper[int(listener.Port)]]; ok {
 			if proxyListener.SSL {
-				listener.Protocol = gatewayv1alpha2.HTTPSProtocolType
-				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
-					Kinds: []gatewayv1alpha2.RouteGroupKind{
-						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("HTTPRoute")},
+				listener.Protocol = gatewayv1beta1.HTTPSProtocolType
+				listener.AllowedRoutes = &gatewayv1beta1.AllowedRoutes{
+					Kinds: []gatewayv1beta1.RouteGroupKind{
+						{Group: &gatewayV1beta1Group, Kind: (Kind)("HTTPRoute")},
 					},
 				}
 			} else {
-				listener.Protocol = gatewayv1alpha2.HTTPProtocolType
-				listener.AllowedRoutes = &gatewayv1alpha2.AllowedRoutes{
-					Kinds: []gatewayv1alpha2.RouteGroupKind{
-						{Group: &gatewayV1alpha2Group, Kind: gatewayv1alpha2.Kind("HTTPRoute")},
+				listener.Protocol = gatewayv1beta1.HTTPProtocolType
+				listener.AllowedRoutes = &gatewayv1beta1.AllowedRoutes{
+					Kinds: []gatewayv1beta1.RouteGroupKind{
+						{Group: &gatewayV1beta1Group, Kind: (Kind)("HTTPRoute")},
 					},
 				}
 			}
@@ -634,18 +638,18 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(ctx context.Context,
 // If the addresses and listeners provided are the same as what exists, it is assumed that reconciliation is complete and a Ready condition is posted.
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
-	gateway *gatewayv1alpha2.Gateway,
-	listenerStatuses []gatewayv1alpha2.ListenerStatus,
+	gateway *gatewayv1beta1.Gateway,
+	listenerStatuses []gatewayv1beta1.ListenerStatus,
 ) (bool, error) {
 	if !isGatewayReady(gateway) {
 		gateway.Status.Listeners = listenerStatuses
 		gateway.Status.Addresses = gateway.Spec.Addresses
 		readyCondition := metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionReady),
+			Type:               string(gatewayv1beta1.GatewayConditionReady),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+			Reason:             string(gatewayv1beta1.GatewayReasonReady),
 			Message:            "addresses and listeners for the Gateway resource were successfully updated",
 		}
 		setGatewayCondition(gateway, readyCondition)

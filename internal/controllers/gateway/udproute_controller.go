@@ -72,7 +72,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.Gateway{}},
+		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
 		handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGateway),
 	); err != nil {
 		return err
@@ -108,7 +108,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(obj client.Object) []r
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayv1alpha2.GatewayList{}
+	gatewayList := gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
@@ -186,7 +186,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(obj client.Object) []r
 // this kind of problem without having to enqueue extra objects.
 func (r *UDPRouteReconciler) listUDPRoutesForGateway(obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayv1alpha2.Gateway)
+	gw, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
@@ -373,7 +373,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      util.StringToGatewayAPIKindPtr(udprouteParentKind),
+				Kind:      (*gatewayv1alpha2.Kind)(util.StringToGatewayAPIKindPtr(udprouteParentKind)),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},

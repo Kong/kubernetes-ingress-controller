@@ -40,7 +40,7 @@ type FakeObjects struct {
 	TCPRoutes                      []*gatewayv1alpha2.TCPRoute
 	TLSRoutes                      []*gatewayv1alpha2.TLSRoute
 	ReferenceGrants                []*gatewayv1alpha2.ReferenceGrant
-	Gateways                       []*gatewayv1alpha2.Gateway
+	Gateways                       []*gatewayv1beta1.Gateway
 	TCPIngresses                   []*configurationv1beta1.TCPIngress
 	UDPIngresses                   []*configurationv1beta1.UDPIngress
 	IngressClassParametersV1alpha1 []*configurationv1alpha1.IngressClassParameters

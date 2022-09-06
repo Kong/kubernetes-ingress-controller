@@ -267,7 +267,6 @@ _test.integration: _check.container.environment
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
-		-run TestHTTPRouteEssentials \
 		./test/integration
 
 .PHONY: test.integration.dbless

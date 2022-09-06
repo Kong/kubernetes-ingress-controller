@@ -8,7 +8,7 @@ on:
 
 jobs:
   integration-tests-enterprise-postgres-nightly:
-    if: ${{ github.event.label.name == 'ci/run-nightly' }}
+    if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
     environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
@@ -61,7 +61,7 @@ jobs:
         if-no-files-found: ignore
 
   integration-tests-postgres-nightly:
-    if: ${{ github.event.label.name == 'ci/run-nightly' }}
+    if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
     environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
@@ -105,7 +105,7 @@ jobs:
         if-no-files-found: ignore
 
   integration-tests-dbless-nightly:
-    if: ${{ github.event.label.name == 'ci/run-nightly' }}
+    if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
     environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:

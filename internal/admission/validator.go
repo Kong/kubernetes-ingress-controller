@@ -29,7 +29,7 @@ type KongValidator interface {
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
 	ValidateGateway(ctx context.Context, gateway gatewayv1alpha2.Gateway) (bool, string, error)
-	ValidateHTTPRoute(ctx context.Context, httproute gatewayv1alpha2.HTTPRoute) (bool, string, error)
+	ValidateHTTPRoute(ctx context.Context, httproute gatewayv1beta1.HTTPRoute) (bool, string, error)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -324,7 +324,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 }
 
 func (validator KongHTTPValidator) ValidateHTTPRoute(
-	ctx context.Context, httproute gatewayv1alpha2.HTTPRoute,
+	ctx context.Context, httproute gatewayv1beta1.HTTPRoute,
 ) (bool, string, error) {
 	// in order to be sure whether or not an HTTPRoute resource is managed by this
 	// controller we disallow references to Gateway resources that do not exist.

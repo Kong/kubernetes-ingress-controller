@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -27,7 +26,7 @@ const (
 	// ControllerName is the unique identifier for this controller and is used
 	// within GatewayClass resources to indicate that this controller should
 	// support connected Gateway resources.
-	ControllerName gatewayv1alpha2.GatewayController = "konghq.com/kic-gateway-controller"
+	ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
 )
 
 // -----------------------------------------------------------------------------
@@ -80,7 +79,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	log.V(util.DebugLevel).Info("processing gatewayclass", "name", req.Name)
 
-	if gwc.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName) {
+	if gwc.Spec.ControllerName == ControllerName {
 		alreadyAccepted := false
 		for _, cond := range gwc.Status.Conditions {
 			if cond.Reason == string(gatewayv1beta1.GatewayClassConditionStatusAccepted) {

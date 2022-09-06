@@ -25,7 +25,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
-	pathMatchRegex := gatewayv1alpha2.PathMatchRegularExpression
+	pathMatchRegex := gatewayv1beta1.PathMatchRegularExpression
 
 	closer, err := ensureAdmissionRegistration(
 		"kong-validations-gateway",
@@ -76,21 +76,21 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                   string
-		route                  *gatewayv1alpha2.HTTPRoute
+		route                  *gatewayv1beta1.HTTPRoute
 		wantCreateErr          bool
 		wantCreateErrSubstring string
 	}{
 		{
 			name: "a valid httproute linked to a managed gateway passes validation",
-			route: &gatewayv1alpha2.HTTPRoute{
+			route: &gatewayv1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentReference{{
-							Namespace: (*gatewayv1alpha2.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1alpha2.ObjectName(managedGateway.Name),
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{{
+							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
 						}},
 					},
 				},
@@ -99,15 +99,15 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 		},
 		{
 			name: "an httproute linked to a non-existent gateway fails validation",
-			route: &gatewayv1alpha2.HTTPRoute{
+			route: &gatewayv1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentReference{{
-							Namespace: (*gatewayv1alpha2.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1alpha2.ObjectName("fake-gateway"),
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{{
+							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1beta1.ObjectName("fake-gateway"),
 						}},
 					},
 				},
@@ -117,22 +117,22 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 		},
 		{
 			name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",
-			route: &gatewayv1alpha2.HTTPRoute{
+			route: &gatewayv1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Rules: []gatewayv1alpha2.HTTPRouteRule{{
-						Matches: []gatewayv1alpha2.HTTPRouteMatch{{
-							Path: &gatewayv1alpha2.HTTPPathMatch{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Rules: []gatewayv1beta1.HTTPRouteRule{{
+						Matches: []gatewayv1beta1.HTTPRouteMatch{{
+							Path: &gatewayv1beta1.HTTPPathMatch{
 								Type: &pathMatchRegex, // this route is invalid because we don't support regex path matches (yet)
 							},
 						}},
 					}},
-					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentReference{{
-							Namespace: (*gatewayv1alpha2.Namespace)(&unmanagedGateway.Namespace),
-							Name:      gatewayv1alpha2.ObjectName(unmanagedGateway.Name),
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{{
+							Namespace: (*gatewayv1beta1.Namespace)(&unmanagedGateway.Namespace),
+							Name:      gatewayv1beta1.ObjectName(unmanagedGateway.Name),
 						}},
 					},
 				},
@@ -141,7 +141,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Create(ctx, tt.route, metav1.CreateOptions{})
+			_, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, tt.route, metav1.CreateOptions{})
 			if tt.wantCreateErr {
 				require.Contains(t, err.Error(), tt.wantCreateErrSubstring)
 			} else {

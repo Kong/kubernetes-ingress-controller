@@ -70,7 +70,7 @@ func isGatewayReady(gateway *gatewayv1alpha2.Gateway) bool {
 // is controlled by this controller and the gateway is configured for unmanaged mode.
 func isGatewayInClassAndUnmanaged(gatewayClass *gatewayv1beta1.GatewayClass, gateway gatewayv1alpha2.Gateway) bool {
 	_, ok := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations)
-	return ok && gatewayClass.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName)
+	return ok && gatewayClass.Spec.ControllerName == ControllerName
 }
 
 // getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName
@@ -553,7 +553,7 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 			log.Error(fmt.Errorf("invalid type"), "received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 			continue
 		}
-		if gwc.Spec.ControllerName == gatewayv1beta1.GatewayController(ControllerName) {
+		if gwc.Spec.ControllerName == ControllerName {
 			return true
 		}
 	}

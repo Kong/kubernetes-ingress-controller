@@ -42,7 +42,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(gateway.ControllerName),
+			ControllerName: gateway.ControllerName,
 		},
 	}
 	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
@@ -99,7 +99,7 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(gateway.ControllerName),
+			ControllerName: gateway.ControllerName,
 		},
 	}
 	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
@@ -158,33 +158,33 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 	require.NoError(t, err)
 
 	t.Logf("creating an HTTPRoute for service %s with Gateway %s", service.Name, gw.Name)
-	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
+	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
 	path := "/httpbin"
-	httpPort := gatewayv1alpha2.PortNumber(80)
-	httproute := &gatewayv1alpha2.HTTPRoute{
+	httpPort := gatewayv1beta1.PortNumber(80)
+	httproute := &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
 		},
-		Spec: gatewayv1alpha2.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name: gatewayv1alpha2.ObjectName(gw.Name),
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name: gatewayv1beta1.ObjectName(gw.Name),
 				}},
 			},
-			Rules: []gatewayv1alpha2.HTTPRouteRule{{
-				Matches: []gatewayv1alpha2.HTTPRouteMatch{{
-					Path: &gatewayv1alpha2.HTTPPathMatch{
+			Rules: []gatewayv1beta1.HTTPRouteRule{{
+				Matches: []gatewayv1beta1.HTTPRouteMatch{{
+					Path: &gatewayv1beta1.HTTPPathMatch{
 						Type:  &pathMatchPrefix,
 						Value: &path,
 					},
 				}},
-				BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{
-					BackendRef: gatewayv1alpha2.BackendRef{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Name: gatewayv1alpha2.ObjectName(service.Name),
+				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
+					BackendRef: gatewayv1beta1.BackendRef{
+						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+							Name: gatewayv1beta1.ObjectName(service.Name),
 							Port: &httpPort,
 						},
 					},
@@ -192,7 +192,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 			}},
 		},
 	}
-	_, err = gc.GatewayV1alpha2().HTTPRoutes(corev1.NamespaceDefault).Create(ctx, httproute, metav1.CreateOptions{})
+	_, err = gc.GatewayV1beta1().HTTPRoutes(corev1.NamespaceDefault).Create(ctx, httproute, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 

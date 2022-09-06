@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -32,8 +33,8 @@ func Test_filterHostnames(t *testing.T) {
 	testCases := []struct {
 		name              string
 		gateways          []supportedGatewayWithCondition
-		httpRoute         *gatewayv1alpha2.HTTPRoute
-		expectedHTTPRoute *gatewayv1alpha2.HTTPRoute
+		httpRoute         *gatewayv1beta1.HTTPRoute
+		expectedHTTPRoute *gatewayv1beta1.HTTPRoute
 	}{
 		{
 			name: "listener 1 - specific",
@@ -43,19 +44,19 @@ func Test_filterHostnames(t *testing.T) {
 					listenerName: "listener-1",
 				},
 			},
-			httpRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
-						util.StringToGatewayAPIHostname("*.nonmatchingwildcard.io"),
-						util.StringToGatewayAPIHostname("very.specific.com"),
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("*.anotherwildcard.io"),
+						util.StringToGatewayAPIHostnameV1Beta1("*.nonmatchingwildcard.io"),
+						util.StringToGatewayAPIHostnameV1Beta1("very.specific.com"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("very.specific.com"),
+			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("very.specific.com"),
 					},
 				},
 			},
@@ -68,18 +69,18 @@ func Test_filterHostnames(t *testing.T) {
 					listenerName: "listener-1",
 				},
 			},
-			httpRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("non.matching.com"),
-						util.StringToGatewayAPIHostname("*.specific.com"),
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("non.matching.com"),
+						util.StringToGatewayAPIHostnameV1Beta1("*.specific.com"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("very.specific.com"),
+			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("very.specific.com"),
 					},
 				},
 			},
@@ -92,23 +93,23 @@ func Test_filterHostnames(t *testing.T) {
 					listenerName: "listener-2",
 				},
 			},
-			httpRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("non.matching.com"),
-						util.StringToGatewayAPIHostname("wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.wildcard.io"),
-						util.StringToGatewayAPIHostname("bar.wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("non.matching.com"),
+						util.StringToGatewayAPIHostnameV1Beta1("wildcard.io"),
+						util.StringToGatewayAPIHostnameV1Beta1("foo.wildcard.io"),
+						util.StringToGatewayAPIHostnameV1Beta1("bar.wildcard.io"),
+						util.StringToGatewayAPIHostnameV1Beta1("foo.bar.wildcard.io"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("foo.wildcard.io"),
-						util.StringToGatewayAPIHostname("bar.wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
+			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("foo.wildcard.io"),
+						util.StringToGatewayAPIHostnameV1Beta1("bar.wildcard.io"),
+						util.StringToGatewayAPIHostnameV1Beta1("foo.bar.wildcard.io"),
 					},
 				},
 			},
@@ -121,17 +122,17 @@ func Test_filterHostnames(t *testing.T) {
 					listenerName: "listener-3",
 				},
 			},
-			httpRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("*.anotherwildcard.io"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
+			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("*.anotherwildcard.io"),
 					},
 				},
 			},
@@ -143,17 +144,17 @@ func Test_filterHostnames(t *testing.T) {
 					gateway: commonGateway,
 				},
 			},
-			httpRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						util.StringToGatewayAPIHostname("specific.but.wrong.com"),
-						util.StringToGatewayAPIHostname("wildcard.io"),
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						util.StringToGatewayAPIHostnameV1Beta1("specific.but.wrong.com"),
+						util.StringToGatewayAPIHostnameV1Beta1("wildcard.io"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1alpha2.HTTPRoute{
-				Spec: gatewayv1alpha2.HTTPRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{},
+			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{},
 				},
 			},
 		},

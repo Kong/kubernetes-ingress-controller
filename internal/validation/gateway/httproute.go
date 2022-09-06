@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -13,7 +14,7 @@ import (
 // ValidateHTTPRoute provides a suite of validation for a given HTTPRoute and
 // any number of Gateway resources it's attached to that the caller wants to
 // have it validated against.
-func ValidateHTTPRoute(httproute *gatewayv1alpha2.HTTPRoute, attachedGateways ...*gatewayv1alpha2.Gateway) (bool, string, error) {
+func ValidateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute, attachedGateways ...*gatewayv1alpha2.Gateway) (bool, string, error) {
 	// perform Gateway validations for the HTTPRoute (e.g. listener validation, namespace validation, e.t.c.)
 	for _, gateway := range attachedGateways {
 		// TODO: validate that the namespace is supported by the linked Gateway objects
@@ -77,7 +78,7 @@ func validateHTTPRouteListener(listener *gatewayv1alpha2.Listener) error {
 // validateHTTPRouteFeatures checks for features that are not supported by this
 // HTTPRoute implementation and validates that the provided object is not using
 // any of those unsupported features.
-func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
+func validateHTTPRouteFeatures(httproute *gatewayv1beta1.HTTPRoute) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
 			// we don't support queryparam matching rules
@@ -88,14 +89,14 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 
 			// we don't support regex path matching rules
 			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2153
-			if match.Path != nil && match.Path.Type != nil && *match.Path.Type == gatewayv1alpha2.PathMatchRegularExpression {
+			if match.Path != nil && match.Path.Type != nil && *match.Path.Type == gatewayv1beta1.PathMatchRegularExpression {
 				return fmt.Errorf("regex path matching is not yet supported for httproute")
 			}
 
 			// we don't support regex header matching rules
 			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2154
 			for _, hdr := range match.Headers {
-				if hdr.Type != nil && *hdr.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
+				if hdr.Type != nil && *hdr.Type == gatewayv1beta1.HeaderMatchRegularExpression {
 					return fmt.Errorf("regex header matching is not yet supported for httproute")
 				}
 			}
@@ -122,7 +123,7 @@ func validateHTTPRouteFeatures(httproute *gatewayv1alpha2.HTTPRoute) error {
 // which links to the provided Gateway if available. If the provided Gateway is not
 // actually referenced by parentRef in the provided HTTPRoute this is considered
 // invalid input and will produce an error.
-func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (*gatewayv1alpha2.ParentReference, error) {
+func getParentRefForHTTPRouteGateway(httproute *gatewayv1beta1.HTTPRoute, gateway *gatewayv1alpha2.Gateway) (*gatewayv1beta1.ParentReference, error) {
 	// search all the parentRefs on the HTTPRoute to find one that matches the Gateway
 	for _, ref := range httproute.Spec.ParentRefs {
 		// determine the namespace for the gateway reference
@@ -144,13 +145,13 @@ func getParentRefForHTTPRouteGateway(httproute *gatewayv1alpha2.HTTPRoute, gatew
 
 // getListenersForHTTPRouteValidation determines if ALL http listeners should be used for validation
 // or if only a select listener should be considered.
-func getListenersForHTTPRouteValidation(sectionName *gatewayv1alpha2.SectionName, gateway *gatewayv1alpha2.Gateway) ([]*gatewayv1alpha2.Listener, error) {
+func getListenersForHTTPRouteValidation(sectionName *gatewayv1beta1.SectionName, gateway *gatewayv1alpha2.Gateway) ([]*gatewayv1alpha2.Listener, error) {
 	var listenersForValidation []*gatewayv1alpha2.Listener
 	if sectionName != nil {
 		// only one specified listener is in use, only need to validate the
 		// route against that listener.
 		for _, listener := range gateway.Spec.Listeners {
-			if listener.Name == *sectionName {
+			if string(listener.Name) == string(*sectionName) {
 				listenerCopy := listener
 				listenersForValidation = append(listenersForValidation, &listenerCopy)
 			}
@@ -165,7 +166,8 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayv1alpha2.SectionName
 		// no specific listener was chosen, so we'll simply validate against
 		// all HTTP listeners on the Gateway.
 		for _, listener := range gateway.Spec.Listeners {
-			if listener.Protocol == gatewayv1alpha2.HTTPProtocolType || listener.Protocol == gatewayv1alpha2.HTTPSProtocolType {
+			if (gatewayv1beta1.ProtocolType)(listener.Protocol) == gatewayv1beta1.HTTPProtocolType ||
+				(gatewayv1beta1.ProtocolType)(listener.Protocol) == gatewayv1beta1.HTTPSProtocolType {
 				listenerCopy := listener
 				listenersForValidation = append(listenersForValidation, &listenerCopy)
 			}

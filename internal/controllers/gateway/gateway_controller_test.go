@@ -236,7 +236,7 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 			Name: "us",
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(ControllerName),
+			ControllerName: ControllerName,
 		},
 	}
 
@@ -331,7 +331,7 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 			Name: "us",
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(ControllerName),
+			ControllerName: ControllerName,
 		},
 	}
 

@@ -294,7 +294,7 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 }
 
 // buildImageLoadAddons creates addons to load KIC and kong images.
-func buildImageLoadAddonss(t *testing.T, images ...string) []clusters.Addon {
+func buildImageLoadAddons(t *testing.T, images ...string) []clusters.Addon {
 	addons := []clusters.Addon{}
 	for _, image := range images {
 		if image != "" {

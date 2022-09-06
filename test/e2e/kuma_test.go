@@ -30,7 +30,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	addons = append(addons, kuma.New())
 	builder := environments.NewBuilder().WithAddons(addons...)
@@ -114,7 +114,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	addons = append(addons, metallb.New())
 	addons = append(addons, kuma.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {

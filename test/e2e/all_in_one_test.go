@@ -83,7 +83,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
@@ -142,7 +142,7 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
@@ -186,7 +186,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
@@ -239,7 +239,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
@@ -276,7 +276,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {
@@ -431,7 +431,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
 
-	addons = append(addons, buildImageLoadAddonss(t, imageLoad, kongImageLoad)...)
+	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	builder := environments.NewBuilder().WithAddons(addons...)
 	if clusterVersionStr != "" {

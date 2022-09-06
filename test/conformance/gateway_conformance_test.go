@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
@@ -33,13 +34,14 @@ func TestGatewayConformance(t *testing.T) {
 	client, err := client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
+	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
 
 	t.Log("creating GatewayClass for gateway conformance tests")
-	gwc := &gatewayv1alpha2.GatewayClass{
+	gwc := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
+		Spec: gatewayv1beta1.GatewayClassSpec{
 			ControllerName: gateway.ControllerName,
 		},
 	}

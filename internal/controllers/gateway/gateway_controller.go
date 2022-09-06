@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -90,7 +91,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch for updates to gatewayclasses, if any gateway classes change, enqueue
 	// reconciliation for all supported gateway objects which reference it.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
+		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 		predicate.NewPredicateFuncs(r.gatewayClassMatchesController),
 	); err != nil {
@@ -122,7 +123,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// start the required gatewayclass controller as well
 	gwcCTRL := &GatewayClassReconciler{
 		Client: r.Client,
-		Log:    r.Log.WithName("V1Alpha2GatewayClass"),
+		Log:    r.Log.WithName("V1Beta1GatewayClass"),
 		Scheme: r.Scheme,
 	}
 
@@ -141,7 +142,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1alpha2.Gateway", "found", reflect.TypeOf(obj))
 		return false
 	}
-	gatewayClass := &gatewayv1alpha2.GatewayClass{}
+	gatewayClass := &gatewayv1beta1.GatewayClass{}
 	if err := r.Client.Get(context.Background(), client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 		r.Log.Error(err, "could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
@@ -152,9 +153,9 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
 // aren't configured with the required ControllerName, e.g. they are not supported by this controller.
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayv1alpha2.GatewayClass)
+	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gatewayclass watch predicates"), "expected", "*gatewayv1alpha2.GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(fmt.Errorf("unexpected object type in gatewayclass watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
 		return false
 	}
 	return gatewayClass.Spec.ControllerName == ControllerName
@@ -215,7 +216,7 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 		return
 	}
 	for _, gateway := range gateways.Items {
-		gatewayClass := &gatewayv1alpha2.GatewayClass{}
+		gatewayClass := &gatewayv1beta1.GatewayClass{}
 		if err := r.Client.Get(context.Background(), types.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
@@ -280,7 +281,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// the interim while the object has been queued for reconciliation. This double check
 	// reduces reconciliation operations that would occur on old information.
 	debug(log, gateway, "verifying gatewayclass")
-	gwc := &gatewayv1alpha2.GatewayClass{}
+	gwc := &gatewayv1beta1.GatewayClass{}
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
 		debug(log, gateway, "could not retrieve gatewayclass for gateway", "gatewayclass", string(gateway.Spec.GatewayClassName))
 		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {

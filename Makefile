@@ -400,21 +400,21 @@ go-mod-download-gateway-api:
 	@go mod download $(GATEWAY_API_PACKAGE)
 
 .PHONY: install-gateway-api-crds
-install-gateway-api-crds: go-mod-download-gateway-api
+install-gateway-api-crds: go-mod-download-gateway-api kustomize
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl apply -f -
 
 .PHONY: uninstall-gateway-api-crds
-uninstall-gateway-api-crds: go-mod-download-gateway-api
+uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete -f -
 
 # Install CRDs into the K8s cluster specified in $KUBECONFIG.
 .PHONY: install
-install: manifests kustomize install-gateway-api-crds
+install: manifests install-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 # Uninstall CRDs from the K8s cluster specified in $KUBECONFIG.
 .PHONY: uninstall
-uninstall: manifests kustomize uninstall-gateway-api-crds
+uninstall: manifests uninstall-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in $KUBECONFIG.

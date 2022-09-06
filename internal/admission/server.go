@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -304,7 +305,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admissionv
 			return nil, err
 		}
 	case httprouteGVResource:
-		httproute := gatewayv1alpha2.HTTPRoute{}
+		httproute := gatewayv1beta1.HTTPRoute{}
 		deserializer := codecs.UniversalDeserializer()
 		_, _, err = deserializer.Decode(request.Object.Raw, nil, &httproute)
 		if err != nil {

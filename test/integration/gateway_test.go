@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -361,8 +362,8 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying an unsupported gatewayclass to the test cluster")
-	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1alpha2.GatewayClass) {
-		gc.Spec.ControllerName = unmanagedControllerName
+	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
+		gc.Spec.ControllerName = gatewayv1beta1.GatewayController(unmanagedControllerName)
 	})
 	require.NoError(t, err)
 	cleaner.Add(unsupportedGatewayClass)
@@ -518,57 +519,57 @@ func TestGatewayFilters(t *testing.T) {
 	httpPort := gatewayv1alpha2.PortNumber(80)
 	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
 	refNamespace := gatewayv1alpha2.Namespace(gateway.Namespace)
-	httprouteTemplate := &gatewayv1alpha2.HTTPRoute{
+	httprouteTemplate := &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
 		},
-		Spec: gatewayv1alpha2.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name:      gatewayv1alpha2.ObjectName(gateway.Name),
-					Namespace: &refNamespace,
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name:      gatewayv1beta1.ObjectName(gateway.Name),
+					Namespace: (*gatewayv1beta1.Namespace)(&refNamespace),
 				}},
 			},
-			Rules: []gatewayv1alpha2.HTTPRouteRule{{
-				Matches: []gatewayv1alpha2.HTTPRouteMatch{
+			Rules: []gatewayv1beta1.HTTPRouteRule{{
+				Matches: []gatewayv1beta1.HTTPRouteMatch{
 					{
-						Path: &gatewayv1alpha2.HTTPPathMatch{
-							Type:  &pathMatchPrefix,
+						Path: &gatewayv1beta1.HTTPPathMatch{
+							Type:  (*gatewayv1beta1.PathMatchType)(&pathMatchPrefix),
 							Value: kong.String("/test_gateway_filters"),
 						},
 					},
 				},
-				BackendRefs: []gatewayv1alpha2.HTTPBackendRef{{
-					BackendRef: gatewayv1alpha2.BackendRef{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Name: gatewayv1alpha2.ObjectName(service.Name),
-							Port: &httpPort,
+				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
+					BackendRef: gatewayv1beta1.BackendRef{
+						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+							Name: gatewayv1beta1.ObjectName(service.Name),
+							Port: (*gatewayv1beta1.PortNumber)(&httpPort),
 						},
 					},
 				}},
 			}},
 		},
 	}
-	httpRoute, err := gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Create(ctx, httprouteTemplate, metav1.CreateOptions{})
+	httpRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httprouteTemplate, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	otherRoute, err := gatewayClient.GatewayV1alpha2().HTTPRoutes(other.Name).Create(ctx, httprouteTemplate, metav1.CreateOptions{})
+	otherRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(other.Name).Create(ctx, httprouteTemplate, metav1.CreateOptions{})
 	require.NoError(t, err)
 	otherRoute.Spec.Rules[0].Matches[0].Path.Value = kong.String("/other_test_gateway_filters")
-	_, err = gatewayClient.GatewayV1alpha2().HTTPRoutes(other.Name).Update(ctx, otherRoute, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(other.Name).Update(ctx, otherRoute, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
 		t.Logf("cleaning up the httproute %s", httpRoute.Name)
-		if err := gatewayClient.GatewayV1alpha2().HTTPRoutes(ns.Name).Delete(ctx, httpRoute.Name, metav1.DeleteOptions{}); err != nil {
+		if err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Delete(ctx, httpRoute.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
-		if err := gatewayClient.GatewayV1alpha2().HTTPRoutes(other.Name).Delete(ctx, httpRoute.Name, metav1.DeleteOptions{}); err != nil {
+		if err := gatewayClient.GatewayV1beta1().HTTPRoutes(other.Name).Delete(ctx, httpRoute.Name, metav1.DeleteOptions{}); err != nil {
 			if !errors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}

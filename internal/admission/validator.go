@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -28,7 +29,7 @@ type KongValidator interface {
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
 	ValidateGateway(ctx context.Context, gateway gatewayv1alpha2.Gateway) (bool, string, error)
-	ValidateHTTPRoute(ctx context.Context, httproute gatewayv1alpha2.HTTPRoute) (bool, string, error)
+	ValidateHTTPRoute(ctx context.Context, httproute gatewayv1beta1.HTTPRoute) (bool, string, error)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -305,7 +306,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 	}
 
 	// validate the gatewayclass reference
-	gwc := gatewayv1alpha2.GatewayClass{}
+	gwc := gatewayv1beta1.GatewayClass{}
 	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return true, "", nil // not managed by this controller
@@ -315,7 +316,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 
 	// validate whether the gatewayclass is a supported class, if not
 	// then this gateway belongs to another controller.
-	if gwc.Spec.ControllerName != gatewaycontroller.ControllerName {
+	if string(gwc.Spec.ControllerName) != string(gatewaycontroller.ControllerName) {
 		return true, "", nil
 	}
 
@@ -323,7 +324,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 }
 
 func (validator KongHTTPValidator) ValidateHTTPRoute(
-	ctx context.Context, httproute gatewayv1alpha2.HTTPRoute,
+	ctx context.Context, httproute gatewayv1beta1.HTTPRoute,
 ) (bool, string, error) {
 	// in order to be sure whether or not an HTTPRoute resource is managed by this
 	// controller we disallow references to Gateway resources that do not exist.
@@ -347,13 +348,13 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		}
 
 		// pull the referenced GatewayClass object from the Gateway
-		gatewayClass := gatewayv1alpha2.GatewayClass{}
+		gatewayClass := gatewayv1beta1.GatewayClass{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 			return false, fmt.Sprintf("couldn't retrieve referenced gatewayclass %s", gateway.Spec.GatewayClassName), err
 		}
 
 		// determine ultimately whether the Gateway is managed by this controller implementation
-		if gatewayClass.Spec.ControllerName == gatewaycontroller.ControllerName {
+		if string(gatewayClass.Spec.ControllerName) == string(gatewaycontroller.ControllerName) {
 			managedGateways = append(managedGateways, &gateway)
 		}
 	}

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -289,4 +290,46 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 		return false
 	}, kongComponentWait, time.Second)
 	t.Logf("kong container has %v restart after kill", after)
+}
+
+// buildImageLoadAddons creates addons to load KIC and kong images.
+func buildImageLoadAddons(t *testing.T, images ...string) []clusters.Addon {
+	addons := []clusters.Addon{}
+	for _, image := range images {
+		if image != "" {
+			t.Logf("load image %s", image)
+			b, err := loadimage.NewBuilder().WithImage(image)
+			require.NoError(t, err)
+			addons = append(addons, b.Build())
+		}
+	}
+	return addons
+}
+
+// createKongImagePullSecret creates the image pull secret
+// `kong-enterprise-edition-docker` for kong enterprise image
+// from env TEST_KONG_PULL_USERNAME and TEST_KONG_PULL_PASSWORD.
+func createKongImagePullSecret(ctx context.Context, t *testing.T, env environments.Environment) {
+	if kongImagePullUsername == "" || kongImagePullPassword == "" {
+		return
+	}
+	secretName := "kong-enterprise-edition-docker"
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "create-pull-secret-kubeconfig-")
+	require.NoError(t, err)
+	t.Log("dumping kubeconfig to tempfile")
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Len(t, kubeconfig, written)
+	kubeconfigFilename := kubeconfigFile.Name()
+	cmd := exec.CommandContext(
+		ctx,
+		"kubectl", "--kubeconfig", kubeconfigFilename,
+		"create", "secret", "docker-registry", secretName,
+		"--docker-username="+kongImagePullUsername,
+		"--docker-password="+kongImagePullPassword,
+	)
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "command output: "+string(out))
 }

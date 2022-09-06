@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -54,7 +55,7 @@ func (v KongFakeValidator) ValidateGateway(ctx context.Context, gateway gatewayv
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateHTTPRoute(ctx context.Context, gateway gatewayv1alpha2.HTTPRoute) (bool, string, error) {
+func (v KongFakeValidator) ValidateHTTPRoute(ctx context.Context, gateway gatewayv1beta1.HTTPRoute) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

@@ -6,12 +6,15 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -21,7 +24,7 @@ import (
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch
 // and converts these header matching rules to the format expected by go-kong.
-func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2.HTTPHeaderMatch) (map[string][]string, error) {
+func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.HTTPHeaderMatch) (map[string][]string, error) {
 	// iterate through each provided header match checking for invalid
 	// options and otherwise converting to kong type format.
 	convertedHeaders := make(map[string][]string)
@@ -30,13 +33,13 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 			return nil, fmt.Errorf("multiple header matches for the same header are not allowed: %s",
 				string(header.Name))
 		}
-		if header.Type != nil && *header.Type == gatewayv1alpha2.HeaderMatchRegularExpression {
+		if header.Type != nil && *header.Type == gatewayv1beta1.HeaderMatchRegularExpression {
 			if !versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
 				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression",
 					versions.GetKongVersion().Full().String())
 			}
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
-		} else if header.Type == nil || *header.Type == gatewayv1alpha2.HeaderMatchExact {
+		} else if header.Type == nil || *header.Type == gatewayv1beta1.HeaderMatchExact {
 			convertedHeaders[string(header.Name)] = []string{header.Value}
 		} else {
 			return nil, fmt.Errorf("unknown/unsupported header match type: %s", string(*header.Type))
@@ -46,43 +49,14 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1alpha2
 	return convertedHeaders, nil
 }
 
-// isRefAllowedByGrant checks if backendRef is permitted by the provided namespace-indexed ReferenceGrantTo set,
-// allowed. allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
-// getPermittedForReferenceGrantFrom.
-func isRefAllowedByGrant(
-	namespace *gatewayv1alpha2.Namespace,
-	name gatewayv1alpha2.ObjectName,
-	group *gatewayv1alpha2.Group,
-	kind *gatewayv1alpha2.Kind,
-	allowed map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo,
-) bool {
-	if namespace == nil {
-		// local references are always fine
-		return true
-	}
-	for _, to := range allowed[*namespace] {
-		if to.Group == *group && to.Kind == *kind {
-			if to.Name != nil {
-				if *to.Name == name {
-					return true
-				}
-			} else {
-				// if no referent name specified, matching group/kind is sufficient
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
 // getPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
 // from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
 // ReferenceGrant with those Tos and the input From.
-func getPermittedForReferenceGrantFrom(from gatewayv1alpha2.ReferenceGrantFrom,
+func getPermittedForReferenceGrantFrom(
+	from gatewayv1alpha2.ReferenceGrantFrom,
 	grants []*gatewayv1alpha2.ReferenceGrant,
-) map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo {
-	allowed := make(map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo)
+) map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo {
+	allowed := make(map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo)
 	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
 	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
 	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
@@ -90,7 +64,7 @@ func getPermittedForReferenceGrantFrom(from gatewayv1alpha2.ReferenceGrantFrom,
 	for _, grant := range grants {
 		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
-				allowed[gatewayv1alpha2.Namespace(grant.ObjectMeta.Namespace)] = append(allowed[gatewayv1alpha2.Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
+				allowed[gatewayv1beta1.Namespace(grant.ObjectMeta.Namespace)] = append(allowed[gatewayv1beta1.Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
 			}
 		}
 	}
@@ -100,12 +74,16 @@ func getPermittedForReferenceGrantFrom(from gatewayv1alpha2.ReferenceGrantFrom,
 
 // generateKongServiceFromBackendRef translates backendRefs for rule ruleNumber into a Kong service for use with the
 // rules generated from a Gateway APIs route.
-func (p *Parser) generateKongServiceFromBackendRef(
+func generateKongServiceFromBackendRef[
+	T types.BackendRefT,
+](
+	logger logrus.FieldLogger,
+	storer store.Storer,
 	rules *ingressRules,
 	route client.Object,
 	ruleNumber int,
 	protocol string,
-	backendRefs ...gatewayv1alpha2.BackendRef,
+	backendRefs ...T,
 ) (kongstate.Service, error) {
 	objName := fmt.Sprintf("%s %s/%s",
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
@@ -113,9 +91,7 @@ func (p *Parser) generateKongServiceFromBackendRef(
 		return kongstate.Service{}, fmt.Errorf("no backendRefs present for %s, cannot build Kong service", objName)
 	}
 
-	backends := make(kongstate.ServiceBackends, 0, len(backendRefs))
-
-	grants, err := p.storer.ListReferenceGrants()
+	grants, err := storer.ListReferenceGrants()
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
@@ -125,37 +101,7 @@ func (p *Parser) generateKongServiceFromBackendRef(
 		Namespace: gatewayv1alpha2.Namespace(route.GetNamespace()),
 	}, grants)
 
-	for _, backendRef := range backendRefs {
-		if util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) &&
-			isRefAllowedByGrant(backendRef.Namespace, backendRef.Name, backendRef.Group, backendRef.Kind, allowed) {
-			backend := kongstate.ServiceBackend{
-				Name: string(backendRef.Name),
-				PortDef: kongstate.PortDef{
-					Mode:   kongstate.PortModeByNumber,
-					Number: int32(*backendRef.Port),
-				},
-				Weight: backendRef.Weight,
-			}
-			if backendRef.Namespace != nil {
-				backend.Namespace = string(*backendRef.Namespace)
-			}
-			backends = append(backends, backend)
-		} else {
-			// we log impermissible refs rather than failing the entire rule. while we cannot actually route to
-			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
-			// failing the entire rule could potentially delete routes that were previously online and in use, and
-			// that remain viable (because they still have some permissible backendRefs)
-			var namespace, kind string = route.GetNamespace(), ""
-			if backendRef.Namespace != nil {
-				namespace = string(*backendRef.Namespace)
-			}
-			if backendRef.Kind != nil {
-				kind = string(*backendRef.Kind)
-			}
-			p.logger.Errorf("%s requested backendRef to %s %s/%s, but no ReferenceGrant permits it, skipping...",
-				objName, kind, namespace, backendRef.Name)
-		}
-	}
+	backends := backendRefsToKongStateBackends(logger, route, backendRefs, allowed)
 
 	// the service name needs to uniquely identify this service given it's list of
 	// one or more backends.

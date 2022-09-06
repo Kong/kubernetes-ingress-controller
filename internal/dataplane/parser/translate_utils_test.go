@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -19,11 +20,11 @@ import (
 )
 
 func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *testing.T) {
-	regexType := gatewayv1alpha2.HeaderMatchRegularExpression
+	regexType := gatewayv1beta1.HeaderMatchRegularExpression
 
 	type Case struct {
 		msg    string
-		input  []gatewayv1alpha2.HTTPHeaderMatch
+		input  []gatewayv1beta1.HTTPHeaderMatch
 		output map[string][]string
 		err    error
 	}
@@ -32,7 +33,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *te
 	belowThresholdTests := []Case{
 		{
 			msg: "regex header matches fail on unsupported versions",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{{
+			input: []gatewayv1beta1.HTTPHeaderMatch{{
 				Type:  &regexType,
 				Name:  "Content-Type",
 				Value: "^audio/*",
@@ -42,7 +43,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *te
 		},
 		{
 			msg: "a single exact header match succeeds on any version",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{{
+			input: []gatewayv1beta1.HTTPHeaderMatch{{
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -65,7 +66,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *te
 	aboveThresholdTests := []Case{
 		{
 			msg: "regex header matches succeed on supported versions",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{{
+			input: []gatewayv1beta1.HTTPHeaderMatch{{
 				Type:  &regexType,
 				Name:  "Content-Type",
 				Value: "^audio/*",
@@ -86,20 +87,20 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *te
 }
 
 func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
-	regexType := gatewayv1alpha2.HeaderMatchRegularExpression
-	exactType := gatewayv1alpha2.HeaderMatchExact
+	regexType := gatewayv1beta1.HeaderMatchRegularExpression
+	exactType := gatewayv1beta1.HeaderMatchExact
 	versions.SetKongVersion(semver.MustParse("2.8.0"))
 
 	t.Log("generating several gateway header matches")
 	tests := []struct {
 		msg    string
-		input  []gatewayv1alpha2.HTTPHeaderMatch
+		input  []gatewayv1beta1.HTTPHeaderMatch
 		output map[string][]string
 		err    error
 	}{
 		{
 			msg: "regex header matches convert correctly",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{{
+			input: []gatewayv1beta1.HTTPHeaderMatch{{
 				Type:  &regexType,
 				Name:  "Content-Type",
 				Value: "^audio/*",
@@ -110,7 +111,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "a single exact header match with no type defaults to exact type and converts properly",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{{
+			input: []gatewayv1beta1.HTTPHeaderMatch{{
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -120,7 +121,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "a single exact header match with a single value converts properly",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{{
+			input: []gatewayv1beta1.HTTPHeaderMatch{{
 				Type:  &exactType,
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
@@ -131,7 +132,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "multiple header matches for the same header are rejected",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{
+			input: []gatewayv1beta1.HTTPHeaderMatch{
 				{
 					Name:  "Content-Type",
 					Value: "audio/vorbis",
@@ -146,7 +147,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "multiple header matches convert properly",
-			input: []gatewayv1alpha2.HTTPHeaderMatch{
+			input: []gatewayv1beta1.HTTPHeaderMatch{
 				{
 					Type:  &exactType,
 					Name:  "Content-Type",
@@ -179,44 +180,54 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 }
 
 func Test_isRefAllowedByGrant(t *testing.T) {
-	fitrat := gatewayv1alpha2.Namespace("fitrat")
-	cholpon := gatewayv1alpha2.Namespace("cholpon")
-	behbudiy := gatewayv1alpha2.Namespace("behbudiy")
+	fitrat := gatewayv1beta1.Namespace("fitrat")
+	cholpon := gatewayv1beta1.Namespace("cholpon")
+	behbudiy := gatewayv1beta1.Namespace("behbudiy")
 
-	group := gatewayv1alpha2.Group("fake.example.com")
-	kind := gatewayv1alpha2.Kind("fakeKind")
-	badKind := gatewayv1alpha2.Kind("badFakeKind")
-	cholponName := gatewayv1alpha2.ObjectName("cholpon")
+	group := gatewayv1beta1.Group("fake.example.com")
+	kind := gatewayv1beta1.Kind("fakeKind")
+	badKind := gatewayv1beta1.Kind("badFakeKind")
+	cholponName := gatewayv1beta1.ObjectName("cholpon")
 
-	fakeMap := map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
-		fitrat:   {{Group: group, Kind: kind}, {Group: gatewayv1alpha2.Group("extra.example"), Kind: badKind}},
-		cholpon:  {{Group: group, Kind: kind, Name: &cholponName}},
+	refGrantGroup := gatewayv1alpha2.Group(group)
+	refGrantKind := gatewayv1alpha2.Kind(kind)
+	refGrantBadKind := gatewayv1alpha2.Kind(badKind)
+	refGrantName := gatewayv1alpha2.ObjectName(cholponName)
+
+	fakeMap := map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
+		fitrat: {
+			{Group: refGrantGroup, Kind: refGrantKind},
+			{Group: gatewayv1alpha2.Group("extra.example"), Kind: refGrantBadKind},
+		},
+		cholpon: {
+			{Group: refGrantGroup, Kind: refGrantKind, Name: &refGrantName},
+		},
 		behbudiy: {},
 	}
 	tests := []struct {
 		msg    string
-		ref    gatewayv1alpha2.BackendRef
+		ref    gatewayv1beta1.BackendRef
 		result bool
 	}{
 		{
 			msg:    "empty",
-			ref:    gatewayv1alpha2.BackendRef{},
+			ref:    gatewayv1beta1.BackendRef{},
 			result: true,
 		},
 		{
 			msg: "no namespace",
-			ref: gatewayv1alpha2.BackendRef{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-					Name: gatewayv1alpha2.ObjectName("foo"),
+			ref: gatewayv1beta1.BackendRef{
+				BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					Name: gatewayv1beta1.ObjectName("foo"),
 				},
 			},
 			result: true,
 		},
 		{
 			msg: "valid namespace+group+kind",
-			ref: gatewayv1alpha2.BackendRef{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-					Name:      gatewayv1alpha2.ObjectName("foo"),
+			ref: gatewayv1beta1.BackendRef{
+				BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					Name:      gatewayv1beta1.ObjectName("foo"),
 					Group:     &group,
 					Kind:      &kind,
 					Namespace: &fitrat,
@@ -226,8 +237,8 @@ func Test_isRefAllowedByGrant(t *testing.T) {
 		},
 		{
 			msg: "valid namespace+group+kind+name",
-			ref: gatewayv1alpha2.BackendRef{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+			ref: gatewayv1beta1.BackendRef{
+				BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 					Name:      cholponName,
 					Group:     &group,
 					Kind:      &kind,
@@ -238,9 +249,9 @@ func Test_isRefAllowedByGrant(t *testing.T) {
 		},
 		{
 			msg: "invalid namespace+group+kind",
-			ref: gatewayv1alpha2.BackendRef{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-					Name:      gatewayv1alpha2.ObjectName("foo"),
+			ref: gatewayv1beta1.BackendRef{
+				BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					Name:      gatewayv1beta1.ObjectName("foo"),
 					Group:     &group,
 					Kind:      &badKind,
 					Namespace: &fitrat,
@@ -250,9 +261,9 @@ func Test_isRefAllowedByGrant(t *testing.T) {
 		},
 		{
 			msg: "invalid namespace+group+kind+name",
-			ref: gatewayv1alpha2.BackendRef{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-					Name:      gatewayv1alpha2.ObjectName("sadness"),
+			ref: gatewayv1beta1.BackendRef{
+				BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					Name:      gatewayv1beta1.ObjectName("sadness"),
 					Group:     &group,
 					Kind:      &kind,
 					Namespace: &cholpon,
@@ -262,9 +273,9 @@ func Test_isRefAllowedByGrant(t *testing.T) {
 		},
 		{
 			msg: "no grants in target namespace",
-			ref: gatewayv1alpha2.BackendRef{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-					Name:      gatewayv1alpha2.ObjectName("foo"),
+			ref: gatewayv1beta1.BackendRef{
+				BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					Name:      gatewayv1beta1.ObjectName("foo"),
 					Group:     &group,
 					Kind:      &kind,
 					Namespace: &behbudiy,
@@ -275,7 +286,8 @@ func Test_isRefAllowedByGrant(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := isRefAllowedByGrant(tt.ref.Namespace, tt.ref.Name, tt.ref.Group, tt.ref.Kind, fakeMap)
+			result := newRefChecker(tt.ref).IsRefAllowedByGrant(fakeMap)
+
 			assert.Equal(t, tt.result, result)
 		})
 	}
@@ -346,7 +358,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 	tests := []struct {
 		msg    string
 		from   gatewayv1alpha2.ReferenceGrantFrom
-		result map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo
+		result map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo
 	}{
 		{
 			msg: "no matches whatsoever",
@@ -355,7 +367,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				Kind:      gatewayv1alpha2.Kind("invalid"),
 				Namespace: gatewayv1alpha2.Namespace("invalid"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching namespace",
@@ -364,7 +376,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("niyazi"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching kind",
@@ -373,7 +385,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				Kind:      gatewayv1alpha2.Kind("TLSRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching group",
@@ -382,7 +394,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
 		},
 		{
 			msg: "single match",
@@ -391,7 +403,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
+			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
@@ -407,7 +419,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 				Kind:      gatewayv1alpha2.Kind("TCPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 			},
-			result: map[gatewayv1alpha2.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
+			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
@@ -501,29 +513,29 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 	rules := ingressRules{ServiceNameToServices: map[string]kongstate.Service{}}
 	ruleNumber := 999
 	protocol := "example"
-	port := gatewayv1alpha2.PortNumber(7777)
-	redObjName := gatewayv1alpha2.ObjectName("red-service")
-	blueObjName := gatewayv1alpha2.ObjectName("blue-service")
-	cholponNamespace := gatewayv1alpha2.Namespace("cholpon")
-	serviceKind := gatewayv1alpha2.Kind("Service")
-	serviceGroup := gatewayv1alpha2.Group("")
+	port := gatewayv1beta1.PortNumber(7777)
+	redObjName := gatewayv1beta1.ObjectName("red-service")
+	blueObjName := gatewayv1beta1.ObjectName("blue-service")
+	cholponNamespace := gatewayv1beta1.Namespace("cholpon")
+	serviceKind := gatewayv1beta1.Kind("Service")
+	serviceGroup := gatewayv1beta1.Group("")
 	tests := []struct {
 		msg     string
 		route   client.Object
-		refs    []gatewayv1alpha2.BackendRef
+		refs    []gatewayv1beta1.BackendRef
 		result  kongstate.Service
 		wantErr bool
 	}{
 		{
 			msg:     "empty backend list",
-			route:   &gatewayv1alpha2.HTTPRoute{},
-			refs:    []gatewayv1alpha2.BackendRef{},
+			route:   &gatewayv1beta1.HTTPRoute{},
+			refs:    []gatewayv1beta1.BackendRef{},
 			result:  kongstate.Service{},
 			wantErr: true,
 		},
 		{
 			msg: "all backends in route namespace",
-			route: &gatewayv1alpha2.HTTPRoute{
+			route: &gatewayv1beta1.HTTPRoute{
 				// normally the k8s api call populates TypeMeta properly, but we have no such luxuries here
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "HTTPRoute",
@@ -534,9 +546,9 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "cholpon",
 				},
 			},
-			refs: []gatewayv1alpha2.BackendRef{
+			refs: []gatewayv1beta1.BackendRef{
 				{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 						Name:  blueObjName,
 						Kind:  &serviceKind,
 						Port:  &port,
@@ -544,7 +556,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 				{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 						Name:  redObjName,
 						Kind:  &serviceKind,
 						Port:  &port,
@@ -579,7 +591,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 						},
 					},
 				},
-				Parent: &gatewayv1alpha2.HTTPRoute{
+				Parent: &gatewayv1beta1.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "tong-sirlari",
 						Namespace: "cholpon",
@@ -604,9 +616,9 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "behbudiy",
 				},
 			},
-			refs: []gatewayv1alpha2.BackendRef{
+			refs: []gatewayv1beta1.BackendRef{
 				{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 						Name:      blueObjName,
 						Port:      &port,
 						Kind:      &serviceKind,
@@ -615,7 +627,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 				{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 						Name:  redObjName,
 						Port:  &port,
 						Kind:  &serviceKind,
@@ -676,9 +688,9 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "behbudiy",
 				},
 			},
-			refs: []gatewayv1alpha2.BackendRef{
+			refs: []gatewayv1beta1.BackendRef{
 				{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 						Name:      blueObjName,
 						Port:      &port,
 						Kind:      &serviceKind,
@@ -733,9 +745,9 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "behbudiy",
 				},
 			},
-			refs: []gatewayv1alpha2.BackendRef{
+			refs: []gatewayv1beta1.BackendRef{
 				{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 						Name:      blueObjName,
 						Port:      &port,
 						Kind:      &serviceKind,
@@ -744,7 +756,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 				{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 						Name:  redObjName,
 						Port:  &port,
 						Kind:  &serviceKind,
@@ -788,7 +800,7 @@ func Test_generateKongServiceFromBackendRef(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result, err := p.generateKongServiceFromBackendRef(&rules, tt.route, ruleNumber, protocol, tt.refs...)
+			result, err := generateKongServiceFromBackendRef(p.logger, p.storer, &rules, tt.route, ruleNumber, protocol, tt.refs...)
 			assert.Equal(t, tt.result, result)
 			if tt.wantErr {
 				assert.NotNil(t, err)

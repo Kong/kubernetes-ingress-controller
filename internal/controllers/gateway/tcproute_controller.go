@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -54,7 +55,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
+		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -100,7 +101,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // the cached manager client to avoid API overhead.
 func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
-	gwc, ok := obj.(*gatewayv1alpha2.GatewayClass)
+	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
@@ -376,7 +377,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},
-			ControllerName: ControllerName,
+			ControllerName: (gatewayv1alpha2.GatewayController)(ControllerName),
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1alpha2.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
@@ -432,7 +433,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
 	for _, status := range tcproute.Status.Parents {
-		if status.ControllerName != ControllerName {
+		if status.ControllerName != (gatewayv1alpha2.GatewayController)(ControllerName) {
 			newStatuses = append(newStatuses, status)
 		}
 	}

@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -26,7 +26,7 @@ const (
 	// ControllerName is the unique identifier for this controller and is used
 	// within GatewayClass resources to indicate that this controller should
 	// support connected Gateway resources.
-	ControllerName gatewayv1alpha2.GatewayController = "konghq.com/kic-gateway-controller"
+	ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
 )
 
 // -----------------------------------------------------------------------------
@@ -42,7 +42,7 @@ type GatewayClassReconciler struct { //nolint:revive,golint
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("V1Alpha2GatewayClass", mgr, controller.Options{
+	c, err := controller.New("V1Beta1GatewayClass", mgr, controller.Options{
 		Reconciler: r,
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
@@ -52,7 +52,7 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
+		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -67,9 +67,9 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("V1Alpha2GatewayClass", req.NamespacedName)
+	log := r.Log.WithValues("V1Beta1GatewayClass", req.NamespacedName)
 
-	gwc := new(gatewayv1alpha2.GatewayClass)
+	gwc := new(gatewayv1beta1.GatewayClass)
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(util.DebugLevel).Info("object enqueued no longer exists, skipping", "name", req.Name)
@@ -82,7 +82,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if gwc.Spec.ControllerName == ControllerName {
 		alreadyAccepted := false
 		for _, cond := range gwc.Status.Conditions {
-			if cond.Reason == string(gatewayv1alpha2.GatewayClassConditionStatusAccepted) {
+			if cond.Reason == string(gatewayv1beta1.GatewayClassConditionStatusAccepted) {
 				if cond.ObservedGeneration == gwc.Generation {
 					alreadyAccepted = true
 				}
@@ -91,11 +91,11 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		if !alreadyAccepted {
 			acceptedCondtion := metav1.Condition{
-				Type:               string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+				Type:               string(gatewayv1beta1.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: gwc.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.GatewayClassReasonAccepted),
+				Reason:             string(gatewayv1beta1.GatewayClassReasonAccepted),
 				Message:            "the gatewayclass has been accepted by the controller",
 			}
 			setGatewayClassCondition(gwc, acceptedCondtion)
@@ -113,7 +113,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // pruneGatewayClassStatusConds cleans out old status conditions if the
 // Gatewayclass currently has more status conditions set than the 8 maximum
 // allowed by the Kubernetes API.
-func pruneGatewayClassStatusConds(gwc *gatewayv1alpha2.GatewayClass) *gatewayv1alpha2.GatewayClass {
+func pruneGatewayClassStatusConds(gwc *gatewayv1beta1.GatewayClass) *gatewayv1beta1.GatewayClass {
 	if len(gwc.Status.Conditions) > maxConds {
 		gwc.Status.Conditions = gwc.Status.Conditions[len(gwc.Status.Conditions)-maxConds:]
 	}
@@ -124,7 +124,7 @@ func pruneGatewayClassStatusConds(gwc *gatewayv1alpha2.GatewayClass) *gatewayv1a
 // to expected condition in newCondition.
 // if the gatewayclass status does not contain a condition with that type, add one more condition.
 // if the gatewayclass status contains condition(s) with the type, then replace with the new condition.
-func setGatewayClassCondition(gwc *gatewayv1alpha2.GatewayClass, newCondition metav1.Condition) {
+func setGatewayClassCondition(gwc *gatewayv1beta1.GatewayClass, newCondition metav1.Condition) {
 	newConditions := []metav1.Condition{}
 	for _, condition := range gwc.Status.Conditions {
 		if condition.Type != newCondition.Type {

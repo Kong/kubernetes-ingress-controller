@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -370,8 +371,8 @@ var gatewayCRDExistsChecker = crdExistsChecker{
 
 var gatewayClassCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Group:    gatewayv1beta1.SchemeGroupVersion.Group,
+		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
 		Resource: "gatewayclasses",
 	},
 }

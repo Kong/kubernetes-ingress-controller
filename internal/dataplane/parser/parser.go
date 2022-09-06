@@ -478,7 +478,8 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 							Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
 							Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
 						}, grants)
-						if !isRefAllowedByGrant(ref.Namespace, ref.Name, ref.Group, ref.Kind, allowed) {
+
+						if !newRefChecker(ref).IsRefAllowedByGrant(allowed) {
 							log.WithFields(logrus.Fields{
 								"gateway":           gateway.Name,
 								"gateway_namespace": gateway.Namespace,

@@ -100,6 +100,10 @@
 - Added support for Kong 3.0 upstream `query_arg` and `uri_capture` hash
   configuration to KongIngress.
   [#2822](https://github.com/Kong/kubernetes-ingress-controller/issues/2822)
+- Added support for Gateway API's v1beta1 versions of: GatewayClass, Gateway
+  and HTTPRoute.
+  [#2889](https://github.com/Kong/kubernetes-ingress-controller/issues/2889)
+  [#2894](https://github.com/Kong/kubernetes-ingress-controller/issues/2894)
 
 #### Fixed
 

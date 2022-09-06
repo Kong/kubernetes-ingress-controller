@@ -70,7 +70,7 @@
 #### Added
 
 - IngressClassParameters now supports a `enableLegacyRegexDetection` boolean
-  field.. Kong 3.x+ requires adding a `~` prefix to regular expression paths,
+  field. Kong 3.x+ requires adding a `~` prefix to regular expression paths,
   whereas Kong 2.x and earlier attempted to detect regular expression paths
   using heuristics. By default, if you use regular expression paths and wish to
   migrate to Kong 3.x, you must update all Ingresses to use this prefix.

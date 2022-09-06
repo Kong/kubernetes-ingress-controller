@@ -7,6 +7,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,7 +37,7 @@ var (
 
 func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	p := NewParser(logrus.New(), fakestore)
 	httpPort := gatewayv1beta1.PortNumber(80)
 
@@ -713,7 +714,7 @@ func Test_getHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 
 func Test_ingressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	p := NewParser(logrus.New(), fakestore)
 	p.EnableRegexPathPrefix()
 	httpPort := gatewayv1beta1.PortNumber(80)

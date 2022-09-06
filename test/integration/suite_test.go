@@ -75,8 +75,9 @@ func generateKongBuilder() (*kong.Builder, []string) {
 
 func TestMain(m *testing.M) {
 	var code int
-	defer os.Exit(code)
-
+	defer func() {
+		os.Exit(code)
+	}()
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 

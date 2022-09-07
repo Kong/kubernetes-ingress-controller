@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -55,13 +55,13 @@ func TestHTTPRouteExample(t *testing.T) {
 	t.Logf("verifying that the Gateway receives listen addresses")
 	var gatewayAddr string
 	require.Eventually(t, func() bool {
-		obj, err := gwc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, "kong", metav1.GetOptions{})
+		obj, err := gwc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, "kong", metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 
 		for _, addr := range obj.Status.Addresses {
-			if addr.Type != nil && *addr.Type == gatewayv1alpha2.IPAddressType {
+			if addr.Type != nil && *addr.Type == gatewayv1beta1.IPAddressType {
 				gatewayAddr = addr.Value
 				return true
 			}

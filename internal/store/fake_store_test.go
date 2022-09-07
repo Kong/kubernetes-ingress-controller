@@ -863,18 +863,18 @@ func TestFakeStoreGateway(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayv1alpha2.Gateway{
+	grants := []*gatewayv1beta1.Gateway{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.GatewaySpec{},
+			Spec: gatewayv1beta1.GatewaySpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.GatewaySpec{},
+			Spec: gatewayv1beta1.GatewaySpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Gateways: grants})

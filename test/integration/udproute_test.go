@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
 
@@ -49,12 +50,12 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode and port 9999")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
+		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
 			Name:     "udp",
-			Protocol: gatewayv1alpha2.UDPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort),
+			Protocol: gatewayv1beta1.UDPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultUDPServicePort),
 		}}
 	})
 	require.NoError(t, err)
@@ -190,7 +191,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}()
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udpRoute.Name)
@@ -210,7 +211,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the parentRefs now removed")
@@ -232,7 +233,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -243,10 +244,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
-	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the GatewayClass now removed")
@@ -260,7 +261,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of UDPRoutes and the route becomes available again")
@@ -271,10 +272,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
-	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the Gateway now removed")
@@ -284,18 +285,18 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1alpha2.Listener{{
+		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
 			Name:     "udp",
-			Protocol: gatewayv1alpha2.UDPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort),
+			Protocol: gatewayv1beta1.UDPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultUDPServicePort),
 		}}
 	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of UDPRoutes and the route becomes available again")
@@ -335,11 +336,11 @@ func TestUDPRouteEssentials(t *testing.T) {
 	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
-	require.NoError(t, gatewayClient.GatewayV1alpha2().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
-	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1alpha2.UDPProtocolType, ns.Name, udpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the UDPRoute does not get orphaned with the GatewayClass and Gateway gone")

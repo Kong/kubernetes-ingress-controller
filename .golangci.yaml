@@ -12,7 +12,6 @@ linters:
   enable:
   - asciicheck
   - bodyclose
-  - deadcode
   - depguard
   - dogsled
   - durationcheck
@@ -38,11 +37,10 @@ linters:
   - predeclared
   - revive
   - staticcheck
-  - structcheck
   - typecheck
   - unconvert
   - unparam
-  - varcheck
+  - unused
   - wastedassign
 linters-settings:
   gci:

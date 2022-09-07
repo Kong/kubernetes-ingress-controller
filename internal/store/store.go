@@ -91,7 +91,7 @@ type Storer interface {
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
 	ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error)
-	ListGateways() ([]*gatewayv1alpha2.Gateway, error)
+	ListGateways() ([]*gatewayv1beta1.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
@@ -264,7 +264,7 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.TLSRoute.Get(obj)
 	case *gatewayv1alpha2.ReferenceGrant:
 		return c.ReferenceGrant.Get(obj)
-	case *gatewayv1alpha2.Gateway:
+	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Get(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
@@ -329,7 +329,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.TLSRoute.Add(obj)
 	case *gatewayv1alpha2.ReferenceGrant:
 		return c.ReferenceGrant.Add(obj)
-	case *gatewayv1alpha2.Gateway:
+	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Add(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
@@ -395,7 +395,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.TLSRoute.Delete(obj)
 	case *gatewayv1alpha2.ReferenceGrant:
 		return c.ReferenceGrant.Delete(obj)
-	case *gatewayv1alpha2.Gateway:
+	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
@@ -667,11 +667,11 @@ func (s Store) ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error) 
 }
 
 // ListGateways returns the list of Gateways in the Gateway cache store.
-func (s Store) ListGateways() ([]*gatewayv1alpha2.Gateway, error) {
-	var gateways []*gatewayv1alpha2.Gateway
+func (s Store) ListGateways() ([]*gatewayv1beta1.Gateway, error) {
+	var gateways []*gatewayv1beta1.Gateway
 	if err := cache.ListAll(s.stores.Gateway, labels.NewSelector(),
 		func(ob interface{}) {
-			gw, ok := ob.(*gatewayv1alpha2.Gateway)
+			gw, ok := ob.(*gatewayv1beta1.Gateway)
 			if ok {
 				gateways = append(gateways, gw)
 			}
@@ -1049,7 +1049,7 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
-	case gatewayv1alpha2.SchemeGroupVersion.WithKind("HTTPRoutes"):
+	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoutes"):
 		return &gatewayv1beta1.HTTPRoute{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs

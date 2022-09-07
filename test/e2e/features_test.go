@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -382,26 +383,26 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
-		gatewayv1alpha2.Listener{
+		gatewayv1beta1.Listener{
 			Name:     "badhttp",
-			Protocol: gatewayv1alpha2.HTTPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(9999),
+			Protocol: gatewayv1beta1.HTTPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(9999),
 		},
-		gatewayv1alpha2.Listener{
+		gatewayv1beta1.Listener{
 			Name:     "badudp",
-			Protocol: gatewayv1alpha2.UDPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(80),
+			Protocol: gatewayv1beta1.UDPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
 		},
 	)
 
 	t.Log("verifying that unsupported listeners indicate correct status")
-	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Update(ctx, gw, metav1.UpdateOptions{})
+	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 		var http, udp bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "badhttp" {
@@ -432,7 +433,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		return http == udp == true
 	}, time.Minute*2, time.Second*5)
 
-	gw, err = gc.GatewayV1alpha2().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)

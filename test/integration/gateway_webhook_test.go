@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -34,7 +34,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 			{
 				Rule: admregv1.Rule{
 					APIGroups:   []string{"gateway.networking.k8s.io"},
-					APIVersions: []string{"v1alpha2"},
+					APIVersions: []string{"v1beta1"},
 					Resources:   []string{"gateways"},
 				},
 				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
@@ -55,7 +55,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
-		createdGW gatewayv1alpha2.Gateway
+		createdGW gatewayv1beta1.Gateway
 		patch     []byte // optional
 
 		wantCreateErr          bool
@@ -66,19 +66,19 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	}{
 		{
 			name: "valid gateway",
-			createdGW: gatewayv1alpha2.Gateway{
+			createdGW: gatewayv1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation: "true",
 					},
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					GatewayClassName: gatewayv1alpha2.ObjectName(managedGatewayClassName),
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					GatewayClassName: gatewayv1beta1.ObjectName(managedGatewayClassName),
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
-						Protocol: gatewayv1alpha2.HTTPProtocolType,
-						Port:     gatewayv1alpha2.PortNumber(80),
+						Protocol: gatewayv1beta1.HTTPProtocolType,
+						Port:     gatewayv1beta1.PortNumber(80),
 					}},
 				},
 			},
@@ -86,7 +86,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, gotCreateErr := gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Create(ctx, &tt.createdGW, metav1.CreateOptions{})
+			_, gotCreateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Create(ctx, &tt.createdGW, metav1.CreateOptions{})
 			if tt.wantCreateErr {
 				require.Error(t, gotCreateErr)
 				require.Contains(t, gotCreateErr.Error(), tt.wantCreateErrSubstring)
@@ -95,7 +95,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 			}
 
 			if len(tt.patch) > 0 {
-				_, gotUpdateErr := gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Patch(ctx, tt.createdGW.Name, types.MergePatchType, tt.patch, metav1.PatchOptions{})
+				_, gotUpdateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Patch(ctx, tt.createdGW.Name, types.MergePatchType, tt.patch, metav1.PatchOptions{})
 				if tt.wantPatchErr {
 					require.Error(t, gotUpdateErr)
 					require.Contains(t, gotUpdateErr.Error(), tt.wantPatchErrSubstring)
@@ -104,7 +104,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 				}
 			}
 
-			if err := gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Delete(ctx, tt.createdGW.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			if err := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, tt.createdGW.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		})

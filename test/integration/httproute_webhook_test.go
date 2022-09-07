@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
@@ -33,7 +32,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 			{
 				Rule: admregv1.Rule{
 					APIGroups:   []string{"gateway.networking.k8s.io"},
-					APIVersions: []string{"v1alpha2"},
+					APIVersions: []string{"v1beta1"},
 					Resources:   []string{"httproutes"},
 				},
 				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
@@ -50,7 +49,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("creating a managed gateway")
-	managedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(g *gatewayv1alpha2.Gateway) {
+	managedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)
@@ -58,13 +57,13 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 
 	t.Log("creating an unmanaged gatewayclass")
 	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = gatewayv1beta1.GatewayController(unmanagedControllerName)
+		gc.Spec.ControllerName = unmanagedControllerName
 	})
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGatewayClass)
 
 	t.Log("creating an unmanaged gateway")
-	unmanagedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayv1alpha2.Gateway) {
+	unmanagedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayv1beta1.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)

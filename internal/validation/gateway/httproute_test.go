@@ -8,14 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {
 	var (
 		nonexistentListener = gatewayv1beta1.SectionName("listener-that-doesnt-exist")
-		group               = gatewayv1alpha2.Group("gateway.networking.k8s.io")
+		group               = gatewayv1beta1.Group("gateway.networking.k8s.io")
 		defaultGWNamespace  = gatewayv1beta1.Namespace(corev1.NamespaceDefault)
 		pathMatchRegex      = gatewayv1beta1.PathMatchRegularExpression
 		headerMatchRegex    = gatewayv1beta1.HeaderMatchRegularExpression
@@ -26,7 +25,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 	for _, tt := range []struct {
 		msg           string
 		route         *gatewayv1beta1.HTTPRoute
-		gateways      []*gatewayv1alpha2.Gateway
+		gateways      []*gatewayv1beta1.Gateway
 		valid         bool
 		validationMsg string
 		err           error
@@ -39,18 +38,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					Name:      "testing-httproute",
 				},
 			}, // no parentRefs
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -78,18 +77,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "not-the-right-listener",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -116,13 +115,13 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{},
 				},
 			}},
 			valid:         false,
@@ -144,18 +143,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -180,18 +179,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http-alternate",
 						Port:     8000,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "TCPRoute",
 							}},
@@ -233,18 +232,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -286,18 +285,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -340,18 +339,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -398,18 +397,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -455,18 +454,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1alpha2.Gateway{{
+			gateways: []*gatewayv1beta1.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{{
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1alpha2.ProtocolType)(gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-							Kinds: []gatewayv1alpha2.RouteGroupKind{{
+						Protocol: (gatewayv1beta1.HTTPProtocolType),
+						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Kinds: []gatewayv1beta1.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},

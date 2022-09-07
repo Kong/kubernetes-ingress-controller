@@ -28,5 +28,8 @@ type ParentReferenceT interface {
 }
 
 type BackendRefT interface {
-	gatewayv1beta1.BackendRef | gatewayv1alpha2.BackendRef | gatewayv1alpha2.SecretObjectReference
+	gatewayv1alpha2.BackendRef |
+		gatewayv1beta1.BackendRef |
+		gatewayv1alpha2.SecretObjectReference |
+		gatewayv1beta1.SecretObjectReference
 }

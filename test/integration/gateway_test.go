@@ -17,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -38,7 +37,7 @@ const (
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
-	var gw *gatewayv1alpha2.Gateway
+	var gw *gatewayv1beta1.Gateway
 
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
@@ -58,14 +57,14 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	t.Log("verifying that the gateway service ref gets provisioned when placeholder is used")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
 		return gw.Annotations[unmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway address is populated from the publish service")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if len(gw.Spec.Addresses) == len(pubsvc.Status.LoadBalancer.Ingress) {
 			addrs := make(map[string]bool, len(pubsvc.Status.LoadBalancer.Ingress))
@@ -88,19 +87,19 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	t.Log("verifying that the gateway status gets updated to match the publish service")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		// The conditions should be snapshots, so we judge by the observed status of condition with type Ready.
 		for _, cond := range gw.Status.Conditions {
-			if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) {
-				return cond.Reason == string(gatewayv1alpha2.GatewayReasonReady)
+			if cond.Type == string(gatewayv1beta1.GatewayConditionReady) {
+				return cond.Reason == string(gatewayv1beta1.GatewayReasonReady)
 			}
 		}
 		return false
@@ -108,14 +107,14 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	t.Log("verifying that the gateway listeners reach the ready condition")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
 			// we may have several conditions but only care about one, so loop through each and mark ready only if
 			// we find the correct one with the correct status
 			ready := false
 			for _, condition := range lstatus.Conditions {
-				if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(gatewayv1beta1.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
 					ready = true
 				}
 			}
@@ -128,7 +127,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 }
 
 func TestGatewayListenerConflicts(t *testing.T) {
-	var gw *gatewayv1alpha2.Gateway
+	var gw *gatewayv1beta1.Gateway
 
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
@@ -146,14 +145,14 @@ func TestGatewayListenerConflicts(t *testing.T) {
 
 	t.Log("verifying that the gateway listeners reach the ready condition")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
 			// we may have several conditions but only care about one, so loop through each and mark ready only if
 			// we find the correct one with the correct status
 			ready := false
 			for _, condition := range lstatus.Conditions {
-				if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(gatewayv1beta1.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
 					ready = true
 				}
 			}
@@ -166,58 +165,58 @@ func TestGatewayListenerConflicts(t *testing.T) {
 
 	t.Log("adding conflicting listeners")
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
-		gatewayv1alpha2.Listener{
+		gatewayv1beta1.Listener{
 			Name:     "badhttp",
-			Protocol: gatewayv1alpha2.HTTPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(80),
+			Protocol: gatewayv1beta1.HTTPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
 		},
-		gatewayv1alpha2.Listener{
+		gatewayv1beta1.Listener{
 			Name:     "badudp",
-			Protocol: gatewayv1alpha2.UDPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(80),
+			Protocol: gatewayv1beta1.UDPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
 		},
 	)
 
-	_, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
-	gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming existing listen becomes unready and conflicted, new HTTP listen has hostname conflict, new UDP listen has proto conflict")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		var badhttpReady, badhttpConflicted, badudpReady, badudpConflicted, httpReady, httpConflicted bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "badudp" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						badudpConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonProtocolConflict))
+					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						badudpConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonProtocolConflict))
 					}
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						badudpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "badhttp" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
 						// this is a PROTOCOL conflict: although this only conflicts with the existing HTTP listen by
 						// hostname, it also conflicts with the new UDP listener by protocol, and the latter takes
 						// precedence
-						badhttpConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonProtocolConflict))
+						badhttpConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonProtocolConflict))
 					}
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						badhttpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "http" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) {
 						httpConflicted = (condition.Status == metav1.ConditionTrue)
 					}
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -228,44 +227,44 @@ func TestGatewayListenerConflicts(t *testing.T) {
 
 	t.Log("changing listeners to a set with conflicting hostnames")
 	// these both use the empty hostname
-	gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+	gw.Spec.Listeners = []gatewayv1beta1.Listener{
 		{
 			Name:     "httpsalpha",
-			Protocol: gatewayv1alpha2.HTTPSProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(443),
+			Protocol: gatewayv1beta1.HTTPSProtocolType,
+			Port:     gatewayv1beta1.PortNumber(443),
 		},
 		{
 			Name:     "httpsbravo",
-			Protocol: gatewayv1alpha2.HTTPSProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(443),
+			Protocol: gatewayv1beta1.HTTPSProtocolType,
+			Port:     gatewayv1beta1.PortNumber(443),
 		},
 	}
 
-	_, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming listeners with conflicted hostnames receive appropriate conditions")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		var httpAlphaReady, httpAlphaConflicted, httpBravoReady, httpBravoConflicted bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "httpsalpha" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						httpAlphaConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonHostnameConflict))
+					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						httpAlphaConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
 					}
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						httpAlphaReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "httpsbravo" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						httpBravoConflicted = (condition.Reason == string(gatewayv1alpha2.ListenerReasonHostnameConflict))
+					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						httpBravoConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
 					}
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						httpBravoReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -274,76 +273,76 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		return !httpAlphaReady && httpAlphaConflicted && !httpBravoReady && httpBravoConflicted
 	}, gatewayUpdateWaitTime, time.Second)
 	t.Log("swapping out existing listeners with multiple compatible listeners")
-	tlsHost := gatewayv1alpha2.Hostname("tls.example")
-	httpsHost := gatewayv1alpha2.Hostname("https.example")
-	httphostHost := gatewayv1alpha2.Hostname("http.example")
+	tlsHost := gatewayv1beta1.Hostname("tls.example")
+	httpsHost := gatewayv1beta1.Hostname("https.example")
+	httphostHost := gatewayv1beta1.Hostname("http.example")
 
 	// this tests compatibility to the extent that we can with Kong listens. it does not support the full range
 	// of compatible Gateway Routes. Gateway permits TLS and HTTPS routes to coexist on the same port so long
 	// as all use unique hostnames. Kong, however, requires that TLS routes go through a TLS stream listen, so
 	// the binds are separate and we cannot combine them. attempting to do so (e.g. setting the tls port to 443 here)
 	// will result in ListenerReasonPortUnavailable
-	gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+	gw.Spec.Listeners = []gatewayv1beta1.Listener{
 		{
 			Name:     "http",
-			Protocol: gatewayv1alpha2.HTTPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(80),
+			Protocol: gatewayv1beta1.HTTPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
 		},
 		{
 			Name:     "tls",
-			Protocol: gatewayv1alpha2.TLSProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(8899),
+			Protocol: gatewayv1beta1.TLSProtocolType,
+			Port:     gatewayv1beta1.PortNumber(8899),
 			Hostname: &tlsHost,
 		},
 		{
 			Name:     "https",
-			Protocol: gatewayv1alpha2.HTTPSProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(443),
+			Protocol: gatewayv1beta1.HTTPSProtocolType,
+			Port:     gatewayv1beta1.PortNumber(443),
 			Hostname: &httpsHost,
 		},
 		{
 			Name:     "httphost",
-			Protocol: gatewayv1alpha2.HTTPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(80),
+			Protocol: gatewayv1beta1.HTTPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
 			Hostname: &httphostHost,
 		},
 	}
 
-	_, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
-	gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming existing listen remains ready and new listens become ready")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		var httpReady, tlsReady, httpsReady, httphostReady bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "http" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "tls" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						tlsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "https" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						httpsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "httphost" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
 						httphostReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -363,7 +362,7 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 
 	t.Log("deploying an unsupported gatewayclass to the test cluster")
 	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = gatewayv1beta1.GatewayController(unmanagedControllerName)
+		gc.Spec.ControllerName = unmanagedControllerName
 	})
 	require.NoError(t, err)
 	cleaner.Add(unsupportedGatewayClass)
@@ -376,10 +375,10 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 	t.Log("verifying that the unsupported Gateway object does not get scheduled by the controller")
 	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
 	for timeout.After(time.Now()) {
-		unsupportedGateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
+		unsupportedGateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, unsupportedGateway.Status.Conditions, 1)
-		require.Equal(t, string(gatewayv1alpha2.GatewayReasonNotReconciled), unsupportedGateway.Status.Conditions[0].Reason)
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), unsupportedGateway.Status.Conditions[0].Reason)
 	}
 }
 
@@ -394,7 +393,7 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 	t.Log("deploying a gateway to the test cluster using unmanaged mode, but with no valid gatewayclass yet")
 	gatewayClassName := uuid.NewString()
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
@@ -403,10 +402,10 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 	t.Log("verifying that the Gateway object does not get scheduled by the controller due to missing its GatewayClass")
 	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
 	for timeout.After(time.Now()) {
-		gateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, gateway.Status.Conditions, 1)
-		require.Equal(t, string(gatewayv1alpha2.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
 	}
 
 	t.Log("deploying the missing gatewayclass to the test cluster")
@@ -416,10 +415,10 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 
 	t.Log("now that the gatewayclass exists, verifying that the gateway resource gets resolved")
 	require.Eventually(t, func() bool {
-		gateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, cond := range gateway.Status.Conditions {
-			if cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) {
+			if cond.Reason == string(gatewayv1beta1.GatewayReasonReady) {
 				return true
 			}
 		}
@@ -443,26 +442,26 @@ func TestGatewayFilters(t *testing.T) {
 
 	t.Log("deploying a gateway that allows routes in all namespaces")
 	gatewayName := uuid.NewString()
-	fromAll := gatewayv1alpha2.NamespacesFromAll
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(gw *gatewayv1alpha2.Gateway) {
+	fromAll := gatewayv1beta1.NamespacesFromAll
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1alpha2.Listener{
+		gw.Spec.Listeners = []gatewayv1beta1.Listener{
 			{
 				Name:     "http",
-				Protocol: gatewayv1alpha2.HTTPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(80),
-				AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-					Namespaces: &gatewayv1alpha2.RouteNamespaces{
+				Protocol: gatewayv1beta1.HTTPProtocolType,
+				Port:     gatewayv1beta1.PortNumber(80),
+				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+					Namespaces: &gatewayv1beta1.RouteNamespaces{
 						From: &fromAll,
 					},
 				},
 			},
 			{
 				Name:     "https",
-				Protocol: gatewayv1alpha2.HTTPSProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(443),
-				AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-					Namespaces: &gatewayv1alpha2.RouteNamespaces{
+				Protocol: gatewayv1beta1.HTTPSProtocolType,
+				Port:     gatewayv1beta1.PortNumber(443),
+				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+					Namespaces: &gatewayv1beta1.RouteNamespaces{
 						From: &fromAll,
 					},
 				},
@@ -516,9 +515,9 @@ func TestGatewayFilters(t *testing.T) {
 	}()
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
-	httpPort := gatewayv1alpha2.PortNumber(80)
-	pathMatchPrefix := gatewayv1alpha2.PathMatchPathPrefix
-	refNamespace := gatewayv1alpha2.Namespace(gateway.Namespace)
+	httpPort := gatewayv1beta1.PortNumber(80)
+	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
+	refNamespace := gatewayv1beta1.Namespace(gateway.Namespace)
 	httprouteTemplate := &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -530,14 +529,14 @@ func TestGatewayFilters(t *testing.T) {
 			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
 				ParentRefs: []gatewayv1beta1.ParentReference{{
 					Name:      gatewayv1beta1.ObjectName(gateway.Name),
-					Namespace: (*gatewayv1beta1.Namespace)(&refNamespace),
+					Namespace: &refNamespace,
 				}},
 			},
 			Rules: []gatewayv1beta1.HTTPRouteRule{{
 				Matches: []gatewayv1beta1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1beta1.HTTPPathMatch{
-							Type:  (*gatewayv1beta1.PathMatchType)(&pathMatchPrefix),
+							Type:  &pathMatchPrefix,
 							Value: kong.String("/test_gateway_filters"),
 						},
 					},
@@ -546,7 +545,7 @@ func TestGatewayFilters(t *testing.T) {
 					BackendRef: gatewayv1beta1.BackendRef{
 						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 							Name: gatewayv1beta1.ObjectName(service.Name),
-							Port: (*gatewayv1beta1.PortNumber)(&httpPort),
+							Port: &httpPort,
 						},
 					},
 				}},
@@ -577,7 +576,7 @@ func TestGatewayFilters(t *testing.T) {
 	}()
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1alpha2.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
@@ -586,32 +585,32 @@ func TestGatewayFilters(t *testing.T) {
 	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("changing to the same namespace filter")
-	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+	gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	fromSame := gatewayv1alpha2.NamespacesFromSame
-	gateway.Spec.Listeners = []gatewayv1alpha2.Listener{
+	fromSame := gatewayv1beta1.NamespacesFromSame
+	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
 		{
 			Name:     "http",
-			Protocol: gatewayv1alpha2.HTTPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(80),
-			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+			Protocol: gatewayv1beta1.HTTPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
+			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+				Namespaces: &gatewayv1beta1.RouteNamespaces{
 					From: &fromSame,
 				},
 			},
 		},
 		{
 			Name:     "https",
-			Protocol: gatewayv1alpha2.HTTPSProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(443),
-			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+			Protocol: gatewayv1beta1.HTTPSProtocolType,
+			Port:     gatewayv1beta1.PortNumber(443),
+			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+				Namespaces: &gatewayv1beta1.RouteNamespaces{
 					From: &fromSame,
 				},
 			},
 		},
 	}
-	_, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming other namespace route becomes inaccessible")
@@ -620,16 +619,16 @@ func TestGatewayFilters(t *testing.T) {
 	eventuallyGETPath(t, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
 
 	t.Log("changing to a selector filter")
-	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+	gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	fromSelector := gatewayv1alpha2.NamespacesFromSelector
-	gateway.Spec.Listeners = []gatewayv1alpha2.Listener{
+	fromSelector := gatewayv1beta1.NamespacesFromSelector
+	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
 		{
 			Name:     "http",
-			Protocol: gatewayv1alpha2.HTTPProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(80),
-			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+			Protocol: gatewayv1beta1.HTTPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
+			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+				Namespaces: &gatewayv1beta1.RouteNamespaces{
 					From: &fromSelector,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -641,10 +640,10 @@ func TestGatewayFilters(t *testing.T) {
 		},
 		{
 			Name:     "https",
-			Protocol: gatewayv1alpha2.HTTPSProtocolType,
-			Port:     gatewayv1alpha2.PortNumber(443),
-			AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-				Namespaces: &gatewayv1alpha2.RouteNamespaces{
+			Protocol: gatewayv1beta1.HTTPSProtocolType,
+			Port:     gatewayv1beta1.PortNumber(443),
+			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+				Namespaces: &gatewayv1beta1.RouteNamespaces{
 					From: &fromSelector,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -656,7 +655,7 @@ func TestGatewayFilters(t *testing.T) {
 		},
 	}
 
-	_, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")

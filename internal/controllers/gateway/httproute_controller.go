@@ -78,7 +78,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.Gateway{}},
+		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
 		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway),
 	); err != nil {
 		return err
@@ -114,7 +114,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) [
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayv1alpha2.GatewayList{}
+	gatewayList := gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
@@ -192,7 +192,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) [
 // this kind of problem without having to enqueue extra objects.
 func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayv1alpha2.Gateway)
+	gw, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
@@ -387,9 +387,9 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	for _, gateway := range gateways {
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayv1beta1.RouteParentStatus{
-			ParentRef: gatewayv1beta1.ParentReference{
+			ParentRef: ParentReference{
 				Group:     (*gatewayv1beta1.Group)(&gatewayv1beta1.GroupVersion.Group),
-				Kind:      util.StringToGatewayAPIKindV1Beta1Ptr(httprouteParentKind),
+				Kind:      util.StringToGatewayAPIKindPtr(httprouteParentKind),
 				Namespace: (*gatewayv1beta1.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1beta1.ObjectName(gateway.gateway.Name),
 			},
@@ -403,7 +403,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 			}},
 		}
 		if gateway.listenerName != "" {
-			gatewayParentStatus.ParentRef.SectionName = (*gatewayv1beta1.SectionName)(pointer.StringPtr(gateway.listenerName))
+			gatewayParentStatus.ParentRef.SectionName = (*SectionName)(pointer.StringPtr(gateway.listenerName))
 		}
 
 		key := fmt.Sprintf("%s/%s/%s", gateway.gateway.Namespace, gateway.gateway.Name, gateway.listenerName)

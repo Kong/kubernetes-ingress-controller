@@ -77,7 +77,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 									Name: gatewayv1beta1.ObjectName("fake-service"),
 									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -150,7 +150,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 														Name: gatewayv1beta1.ObjectName("fake-service"),
 														Port: &httpPort,
-														Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},
@@ -231,7 +231,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 									Name: gatewayv1beta1.ObjectName("fake-service"),
 									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -308,7 +308,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 														Name: gatewayv1beta1.ObjectName("fake-service"),
 														Port: &httpPort,
-														Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},
@@ -378,7 +378,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 									Name: gatewayv1beta1.ObjectName("fake-service"),
 									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -418,7 +418,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 									Name: gatewayv1beta1.ObjectName("fake-service"),
 									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -495,7 +495,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 														Name: gatewayv1beta1.ObjectName("fake-service"),
 														Port: &httpPort,
-														Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},
@@ -541,7 +541,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 									Name: gatewayv1beta1.ObjectName("fake-service"),
 									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
 						}},
@@ -618,7 +618,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 													BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 														Name: gatewayv1beta1.ObjectName("fake-service"),
 														Port: &httpPort,
-														Kind: util.StringToGatewayAPIKindV1Beta1Ptr("Service"),
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
 													},
 												},
 											},

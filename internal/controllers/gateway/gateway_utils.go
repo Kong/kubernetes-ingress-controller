@@ -31,7 +31,7 @@ const (
 // to expected condition in newCondition.
 // if the gateway status does not contain a condition with that type, add one more condition.
 // if the gateway status contains condition(s) with the type, then replace with the new condition.
-func setGatewayCondition(gateway *gatewayv1alpha2.Gateway, newCondition metav1.Condition) {
+func setGatewayCondition(gateway *Gateway, newCondition metav1.Condition) {
 	newConditions := []metav1.Condition{}
 	for _, condition := range gateway.Status.Conditions {
 		if condition.Type != newCondition.Type {
@@ -44,10 +44,10 @@ func setGatewayCondition(gateway *gatewayv1alpha2.Gateway, newCondition metav1.C
 
 // isGatewayScheduled returns boolean whether or not the gateway object was scheduled
 // previously by the gateway controller.
-func isGatewayScheduled(gateway *gatewayv1alpha2.Gateway) bool {
+func isGatewayScheduled(gateway *Gateway) bool {
 	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionScheduled) &&
-			cond.Reason == string(gatewayv1alpha2.GatewayReasonScheduled) &&
+		if cond.Type == string(gatewayv1beta1.GatewayConditionScheduled) &&
+			cond.Reason == string(gatewayv1beta1.GatewayReasonScheduled) &&
 			cond.Status == metav1.ConditionTrue {
 			return true
 		}
@@ -57,9 +57,9 @@ func isGatewayScheduled(gateway *gatewayv1alpha2.Gateway) bool {
 
 // isGatewayReady returns boolean whether the ready condition exists
 // for the given gateway object if it matches the currently known generation of that object.
-func isGatewayReady(gateway *gatewayv1alpha2.Gateway) bool {
+func isGatewayReady(gateway *Gateway) bool {
 	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) && cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) && cond.ObservedGeneration == gateway.Generation {
+		if cond.Type == string(gatewayv1beta1.GatewayConditionReady) && cond.Reason == string(gatewayv1beta1.GatewayReasonReady) && cond.ObservedGeneration == gateway.Generation {
 			return true
 		}
 	}
@@ -68,7 +68,7 @@ func isGatewayReady(gateway *gatewayv1alpha2.Gateway) bool {
 
 // isGatewayInClassAndUnmanaged returns boolean if the provided combination of gateway and class
 // is controlled by this controller and the gateway is configured for unmanaged mode.
-func isGatewayInClassAndUnmanaged(gatewayClass *gatewayv1beta1.GatewayClass, gateway gatewayv1alpha2.Gateway) bool {
+func isGatewayInClassAndUnmanaged(gatewayClass *GatewayClass, gateway Gateway) bool {
 	_, ok := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations)
 	return ok && gatewayClass.Spec.ControllerName == ControllerName
 }
@@ -88,7 +88,7 @@ func getRefFromPublishService(publishService string) (types.NamespacedName, erro
 
 // pruneGatewayStatusConds cleans out old status conditions if the Gateway currently has more
 // status conditions set than the 8 maximum allowed by the Kubernetes API.
-func pruneGatewayStatusConds(gateway *gatewayv1alpha2.Gateway) *gatewayv1alpha2.Gateway {
+func pruneGatewayStatusConds(gateway *Gateway) *Gateway {
 	if len(gateway.Status.Conditions) > maxConds {
 		gateway.Status.Conditions = gateway.Status.Conditions[len(gateway.Status.Conditions)-maxConds:]
 	}
@@ -97,7 +97,7 @@ func pruneGatewayStatusConds(gateway *gatewayv1alpha2.Gateway) *gatewayv1alpha2.
 
 // reconcileGatewaysIfClassMatches is a filter function to convert a list of gateways into a list
 // of reconciliation requests for those gateways based on which match the given class.
-func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []gatewayv1alpha2.Gateway) (recs []reconcile.Request) {
+func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []Gateway) (recs []reconcile.Request) {
 	for _, gateway := range gateways {
 		if string(gateway.Spec.GatewayClassName) == gatewayClass.GetName() {
 			recs = append(recs, reconcile.Request{
@@ -115,16 +115,17 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []gate
 // reconciliation.
 type ListenerTracker struct {
 	// actual listeners
-	Listeners map[gatewayv1alpha2.SectionName]gatewayv1alpha2.Listener
+	Listeners map[SectionName]Listener
 
 	// statuses
-	Statuses map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus
+	Statuses map[SectionName]ListenerStatus
+
 	// protocol to port to number map (var protocols)
-	protocolToPort map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool
+	protocolToPort map[ProtocolType]map[PortNumber]bool
 	// port to protocol map (portsToProtocol)
-	portToProtocol map[gatewayv1alpha2.PortNumber]gatewayv1alpha2.ProtocolType
+	portToProtocol map[PortNumber]ProtocolType
 	// port to hostname to listener name map (portsToHostnames)
-	portsToHostnames map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]gatewayv1alpha2.SectionName
+	portsToHostnames map[PortNumber]map[Hostname]SectionName
 }
 
 // update from existing becomes moot if we're stateful, correct?
@@ -134,27 +135,27 @@ type ListenerTracker struct {
 // NewListenerTracker returns a ListenerTracker with empty maps.
 func NewListenerTracker() ListenerTracker {
 	return ListenerTracker{
-		Statuses:         map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus{},
-		Listeners:        map[gatewayv1alpha2.SectionName]gatewayv1alpha2.Listener{},
-		protocolToPort:   map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool{},
-		portToProtocol:   map[gatewayv1alpha2.PortNumber]gatewayv1alpha2.ProtocolType{},
-		portsToHostnames: map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]gatewayv1alpha2.SectionName{},
+		Statuses:         map[SectionName]ListenerStatus{},
+		Listeners:        map[SectionName]Listener{},
+		protocolToPort:   map[ProtocolType]map[PortNumber]bool{},
+		portToProtocol:   map[PortNumber]ProtocolType{},
+		portsToHostnames: map[PortNumber]map[Hostname]SectionName{},
 	}
 }
 
 type (
-	protocolPortMap     map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool
-	portProtocolMap     map[gatewayv1alpha2.PortNumber]gatewayv1alpha2.ProtocolType
-	portHostnameMap     map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]bool
-	listenerAttachedMap map[gatewayv1alpha2.SectionName]int32
+	protocolPortMap     map[ProtocolType]map[PortNumber]bool
+	portProtocolMap     map[PortNumber]ProtocolType
+	portHostnameMap     map[PortNumber]map[Hostname]bool
+	listenerAttachedMap map[SectionName]int32
 )
 
-func buildKongPortMap(listens []gatewayv1alpha2.Listener) protocolPortMap {
-	p := make(map[gatewayv1alpha2.ProtocolType]map[gatewayv1alpha2.PortNumber]bool, len(listens))
+func buildKongPortMap(listens []Listener) protocolPortMap {
+	p := make(map[ProtocolType]map[PortNumber]bool, len(listens))
 	for _, listen := range listens {
 		_, ok := p[listen.Protocol]
 		if !ok {
-			p[listen.Protocol] = map[gatewayv1alpha2.PortNumber]bool{}
+			p[listen.Protocol] = map[PortNumber]bool{}
 		}
 		p[listen.Protocol][listen.Port] = true
 	}
@@ -164,7 +165,7 @@ func buildKongPortMap(listens []gatewayv1alpha2.Listener) protocolPortMap {
 // initializeListenerMaps takes a Gateway and builds indices used in status updates and conflict detection. It returns
 // empty maps from port to protocol to listener name and from port to hostnames, and a populated map from listener name
 // to attached route count from their status.
-func initializeListenerMaps(gateway *gatewayv1alpha2.Gateway) (
+func initializeListenerMaps(gateway *Gateway) (
 	portProtocolMap,
 	portHostnameMap,
 	listenerAttachedMap,
@@ -173,14 +174,14 @@ func initializeListenerMaps(gateway *gatewayv1alpha2.Gateway) (
 	portToHostname := make(portHostnameMap, len(gateway.Status.Listeners))
 	listenerToAttached := make(listenerAttachedMap, len(gateway.Status.Listeners))
 
-	existingStatuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus,
+	existingStatuses := make(map[SectionName]ListenerStatus,
 		len(gateway.Status.Listeners))
 	for _, listenerStatus := range gateway.Status.Listeners {
 		existingStatuses[listenerStatus.Name] = listenerStatus
 	}
 
 	for _, listener := range gateway.Spec.Listeners {
-		portToHostname[listener.Port] = make(map[gatewayv1alpha2.Hostname]bool)
+		portToHostname[listener.Port] = make(map[Hostname]bool)
 		if existingStatus, ok := existingStatuses[listener.Name]; ok {
 			listenerToAttached[listener.Name] = existingStatus.AttachedRoutes
 		} else {
@@ -190,27 +191,29 @@ func initializeListenerMaps(gateway *gatewayv1alpha2.Gateway) (
 	return portToProtocol, portToHostname, listenerToAttached
 }
 
-func canSharePort(requested gatewayv1alpha2.ProtocolType, existing gatewayv1alpha2.ProtocolType) bool {
-	switch requested {
+func canSharePort(requested, existing ProtocolType) bool {
+	switch requested { //nolint:exhaustive
 	// TCP and UDP listeners must always use unique ports
-	case gatewayv1alpha2.TCPProtocolType, gatewayv1alpha2.UDPProtocolType:
+	case (ProtocolType)(gatewayv1alpha2.TCPProtocolType), (ProtocolType)(gatewayv1alpha2.UDPProtocolType):
 		return false
 	// HTTPS and TLS Listeners can share ports with others of their type or the other TLS type
 	// note that this is not actually possible in Kong: TLS is a stream listen and HTTPS is an http listen
 	// however, this section implements the spec ignoring Kong's reality
-	case gatewayv1alpha2.HTTPSProtocolType:
-		if existing == gatewayv1alpha2.HTTPSProtocolType || existing == gatewayv1alpha2.TLSProtocolType {
+	case (ProtocolType)(gatewayv1alpha2.HTTPSProtocolType):
+		if existing == (ProtocolType)(gatewayv1alpha2.HTTPSProtocolType) ||
+			existing == (ProtocolType)(gatewayv1alpha2.TLSProtocolType) {
 			return true
 		}
 		return false
-	case gatewayv1alpha2.TLSProtocolType:
-		if existing == gatewayv1alpha2.HTTPSProtocolType || existing == gatewayv1alpha2.TLSProtocolType {
+	case (ProtocolType)(gatewayv1alpha2.TLSProtocolType):
+		if existing == (ProtocolType)(gatewayv1alpha2.HTTPSProtocolType) ||
+			existing == (ProtocolType)(gatewayv1alpha2.TLSProtocolType) {
 			return true
 		}
 		return false
 	// HTTP Listeners can share ports with others of the same protocol only
-	case gatewayv1alpha2.HTTPProtocolType:
-		if existing == gatewayv1alpha2.HTTPProtocolType {
+	case gatewayv1beta1.HTTPProtocolType:
+		if existing == gatewayv1beta1.HTTPProtocolType {
 			return true
 		}
 		return false
@@ -220,24 +223,24 @@ func canSharePort(requested gatewayv1alpha2.ProtocolType, existing gatewayv1alph
 }
 
 func getListenerStatus(
-	gateway *gatewayv1alpha2.Gateway,
-	kongListens []gatewayv1alpha2.Listener,
+	gateway *Gateway,
+	kongListens []Listener,
 	referenceGrants []gatewayv1alpha2.ReferenceGrant,
-) []gatewayv1alpha2.ListenerStatus {
-	statuses := make(map[gatewayv1alpha2.SectionName]gatewayv1alpha2.ListenerStatus, len(gateway.Spec.Listeners))
+) []ListenerStatus {
+	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
 	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
 	kongProtocolsToPort := buildKongPortMap(kongListens)
-	conflictedPorts := make(map[gatewayv1alpha2.PortNumber]bool, len(gateway.Spec.Listeners))
-	conflictedHostnames := make(map[gatewayv1alpha2.PortNumber]map[gatewayv1alpha2.Hostname]bool, len(gateway.Spec.Listeners))
+	conflictedPorts := make(map[PortNumber]bool, len(gateway.Spec.Listeners))
+	conflictedHostnames := make(map[PortNumber]map[Hostname]bool, len(gateway.Spec.Listeners))
 
 	// TODO we should check transition time rather than always nowing, which we do throughout the below
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2556
 	for _, listener := range gateway.Spec.Listeners {
-		var hostname gatewayv1alpha2.Hostname
+		var hostname Hostname
 		if listener.Hostname != nil {
 			hostname = *listener.Hostname
 		}
-		status := gatewayv1alpha2.ListenerStatus{
+		status := ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
 			SupportedKinds: supportedRouteGroupKinds,
@@ -254,11 +257,11 @@ func getListenerStatus(
 		} else {
 			if !canSharePort(listener.Protocol, portToProtocol[listener.Port]) {
 				status.Conditions = append(status.Conditions, metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
+					Type:               string(gatewayv1beta1.ListenerConditionConflicted),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1alpha2.ListenerReasonProtocolConflict),
+					Reason:             string(gatewayv1beta1.ListenerReasonProtocolConflict),
 				})
 				conflictedPorts[listener.Port] = true
 			} else {
@@ -274,7 +277,7 @@ func getListenerStatus(
 				// you have also added a phantom Listener for hostname example.com and port 8200, because Kong will
 				// serve the route on both. See https://github.com/Kong/kubernetes-ingress-controller/issues/2606
 				if conflictedHostnames[listener.Port] == nil {
-					conflictedHostnames[listener.Port] = map[gatewayv1alpha2.Hostname]bool{}
+					conflictedHostnames[listener.Port] = map[Hostname]bool{}
 				}
 				if _, exists := portToHostname[listener.Port][hostname]; !exists {
 					portToHostname[listener.Port][hostname] = true
@@ -370,7 +373,7 @@ func getListenerStatus(
 		var conflictReason string
 		var resolvedRefReason string
 
-		var hostname gatewayv1alpha2.Hostname
+		var hostname Hostname
 		if listener.Hostname != nil {
 			hostname = *listener.Hostname
 		}
@@ -395,7 +398,7 @@ func getListenerStatus(
 					break
 				}
 				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
-				if certRef.Namespace == nil || *certRef.Namespace == gatewayv1alpha2.Namespace(gateway.Namespace) {
+				if certRef.Namespace == nil || *certRef.Namespace == (Namespace)(gateway.Namespace) {
 					continue
 				}
 				// get the result of the certificate reference. If the returned reason is not successful, the loop
@@ -479,7 +482,7 @@ func getListenerStatus(
 			statuses[listener.Name] = status
 		}
 	}
-	statusArray := []gatewayv1alpha2.ListenerStatus{}
+	statusArray := []ListenerStatus{}
 	for _, status := range statuses {
 		statusArray = append(statusArray, status)
 	}
@@ -488,9 +491,13 @@ func getListenerStatus(
 }
 
 // getReferenceGrantConditionReason gets a certRef belonging to a specific listener and a slice of referenceGrants.
-func getReferenceGrantConditionReason(gatewayNamespace string, certRef gatewayv1alpha2.SecretObjectReference, referenceGrants []gatewayv1alpha2.ReferenceGrant) string {
+func getReferenceGrantConditionReason(
+	gatewayNamespace string,
+	certRef gatewayv1beta1.SecretObjectReference,
+	referenceGrants []gatewayv1alpha2.ReferenceGrant,
+) string {
 	// no need to have this reference granted
-	if certRef.Namespace == nil || *certRef.Namespace == gatewayv1alpha2.Namespace(gatewayNamespace) {
+	if certRef.Namespace == nil || *certRef.Namespace == (Namespace)(gatewayNamespace) {
 		return string(gatewayv1alpha2.ListenerReasonResolvedRefs)
 	}
 
@@ -502,7 +509,7 @@ func getReferenceGrantConditionReason(gatewayNamespace string, certRef gatewayv1
 		}
 		for _, from := range grant.Spec.From {
 			// we are interested only in grants for gateways that want to reference secrets
-			if from.Group != gatewayV1alpha2Group || from.Kind != "Gateway" {
+			if (Group)(from.Group) != gatewayV1beta1Group || from.Kind != "Gateway" {
 				continue
 			}
 			if from.Namespace == gatewayv1alpha2.Namespace(gatewayNamespace) {
@@ -548,7 +555,7 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 	}
 
 	for _, obj := range objs {
-		gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
+		gwc, ok := obj.(*GatewayClass)
 		if !ok {
 			log.Error(fmt.Errorf("invalid type"), "received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 			continue

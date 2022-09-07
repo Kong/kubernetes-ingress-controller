@@ -17,45 +17,45 @@ import (
 
 func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
 	t.Log("checking ready condition for currently ready gateway")
-	currentlyReadyGateway := &gatewayv1alpha2.Gateway{
+	currentlyReadyGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Generation: 1,
 		},
-		Status: gatewayv1alpha2.GatewayStatus{
+		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1alpha2.GatewayConditionReady),
+				Type:               string(gatewayv1beta1.GatewayConditionReady),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+				Reason:             string(gatewayv1beta1.GatewayReasonReady),
 			}},
 		},
 	}
 	assert.True(t, isGatewayReady(currentlyReadyGateway))
 
 	t.Log("checking ready condition for previously ready gateway that has since been updated")
-	previouslyReadyGateway := &gatewayv1alpha2.Gateway{
+	previouslyReadyGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Generation: 2,
 		},
-		Status: gatewayv1alpha2.GatewayStatus{
+		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1alpha2.GatewayConditionReady),
+				Type:               string(gatewayv1beta1.GatewayConditionReady),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+				Reason:             string(gatewayv1beta1.GatewayReasonReady),
 			}},
 		},
 	}
 	assert.False(t, isGatewayReady(previouslyReadyGateway))
 
 	t.Log("checking ready condition for a gateway which has never been ready")
-	neverBeenReadyGateway := &gatewayv1alpha2.Gateway{
+	neverBeenReadyGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Generation: 10,
 		},
-		Status: gatewayv1alpha2.GatewayStatus{},
+		Status: gatewayv1beta1.GatewayStatus{},
 	}
 	assert.False(t, isGatewayReady(neverBeenReadyGateway))
 }
@@ -63,13 +63,13 @@ func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
 func Test_setGatewayCondtion(t *testing.T) {
 	testCases := []struct {
 		name            string
-		gw              *gatewayv1alpha2.Gateway
+		gw              *gatewayv1beta1.Gateway
 		condition       metav1.Condition
 		conditionLength int
 	}{
 		{
 			name: "no_such_condition_should_append_one",
-			gw:   &gatewayv1alpha2.Gateway{},
+			gw:   &gatewayv1beta1.Gateway{},
 			condition: metav1.Condition{
 				Type:               "fake1",
 				Status:             metav1.ConditionTrue,
@@ -81,8 +81,8 @@ func Test_setGatewayCondtion(t *testing.T) {
 		},
 		{
 			name: "have_condition_with_type_should_replace",
-			gw: &gatewayv1alpha2.Gateway{
-				Status: gatewayv1alpha2.GatewayStatus{
+			gw: &gatewayv1beta1.Gateway{
+				Status: gatewayv1beta1.GatewayStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",
@@ -105,8 +105,8 @@ func Test_setGatewayCondtion(t *testing.T) {
 		},
 		{
 			name: "multiple_conditions_with_type_should_preserve_one",
-			gw: &gatewayv1alpha2.Gateway{
-				Status: gatewayv1alpha2.GatewayStatus{
+			gw: &gatewayv1beta1.Gateway{
+				Status: gatewayv1beta1.GatewayStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",
@@ -166,21 +166,21 @@ func Test_setGatewayCondtion(t *testing.T) {
 
 func Test_isGatewayMarkedAsScheduled(t *testing.T) {
 	t.Log("verifying scheduled check for gateway object which has been scheduled")
-	scheduledGateway := &gatewayv1alpha2.Gateway{
-		Status: gatewayv1alpha2.GatewayStatus{
+	scheduledGateway := &gatewayv1beta1.Gateway{
+		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
+				Type:               string(gatewayv1beta1.GatewayConditionScheduled),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.GatewayReasonScheduled),
+				Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
 			}},
 		},
 	}
 	assert.True(t, isGatewayScheduled(scheduledGateway))
 
 	t.Log("verifying scheduled check for gateway object which has not been scheduled")
-	unscheduledGateway := &gatewayv1alpha2.Gateway{}
+	unscheduledGateway := &gatewayv1beta1.Gateway{}
 	assert.False(t, isGatewayScheduled(unscheduledGateway))
 }
 
@@ -203,7 +203,7 @@ func Test_getRefFromPublishService(t *testing.T) {
 
 func Test_pruneStatusConditions(t *testing.T) {
 	t.Log("verifying that a gateway with minimal status conditions is not pruned")
-	gateway := &gatewayv1alpha2.Gateway{}
+	gateway := &gatewayv1beta1.Gateway{}
 	for i := 0; i < 4; i++ {
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{Type: "fake", ObservedGeneration: int64(i)})
 	}
@@ -241,14 +241,14 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 	}
 
 	t.Log("generating a list of matching controllers")
-	matching := []gatewayv1alpha2.Gateway{
+	matching := []gatewayv1beta1.Gateway{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "sanfrancisco",
 				Namespace: "california",
 			},
-			Spec: gatewayv1alpha2.GatewaySpec{
-				GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
+			Spec: gatewayv1beta1.GatewaySpec{
+				GatewayClassName: gatewayv1beta1.ObjectName(gatewayClass.Name),
 			},
 		},
 		{
@@ -256,8 +256,8 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 				Name:      "sandiego",
 				Namespace: "california",
 			},
-			Spec: gatewayv1alpha2.GatewaySpec{
-				GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
+			Spec: gatewayv1beta1.GatewaySpec{
+				GatewayClassName: gatewayv1beta1.ObjectName(gatewayClass.Name),
 			},
 		},
 		{
@@ -265,21 +265,21 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 				Name:      "losangelos",
 				Namespace: "california",
 			},
-			Spec: gatewayv1alpha2.GatewaySpec{
-				GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
+			Spec: gatewayv1beta1.GatewaySpec{
+				GatewayClassName: gatewayv1beta1.ObjectName(gatewayClass.Name),
 			},
 		},
 	}
 
 	t.Log("generating a list of non-matching controllers")
-	nonmatching := []gatewayv1alpha2.Gateway{
+	nonmatching := []gatewayv1beta1.Gateway{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hamburg",
 				Namespace: "germany",
 			},
-			Spec: gatewayv1alpha2.GatewaySpec{
-				GatewayClassName: gatewayv1alpha2.ObjectName("eu"),
+			Spec: gatewayv1beta1.GatewaySpec{
+				GatewayClassName: gatewayv1beta1.ObjectName("eu"),
 			},
 		},
 		{
@@ -287,8 +287,8 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 				Name:      "paris",
 				Namespace: "france",
 			},
-			Spec: gatewayv1alpha2.GatewaySpec{
-				GatewayClassName: gatewayv1alpha2.ObjectName("eu"),
+			Spec: gatewayv1beta1.GatewaySpec{
+				GatewayClassName: gatewayv1beta1.ObjectName("eu"),
 			},
 		},
 	}
@@ -346,7 +346,7 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 	}
 
 	t.Log("creating an unmanaged mode enabled gateway")
-	unmanagedGateway := gatewayv1alpha2.Gateway{
+	unmanagedGateway := gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
@@ -356,8 +356,8 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 	}
 
 	t.Log("verifying the results for several gateways")
-	assert.False(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, gatewayv1alpha2.Gateway{}))
-	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, gatewayv1alpha2.Gateway{}))
+	assert.False(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, gatewayv1beta1.Gateway{}))
+	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, gatewayv1beta1.Gateway{}))
 	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, unmanagedGateway))
 	assert.True(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, unmanagedGateway))
 }
@@ -517,14 +517,14 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 	testCases := []struct {
 		name             string
 		gatewayNamespace string
-		certRef          gatewayv1alpha2.SecretObjectReference
+		certRef          gatewayv1beta1.SecretObjectReference
 		referenceGrants  []gatewayv1alpha2.ReferenceGrant
 		expectedReason   string
 	}{
 		{
 			name:             "no need for reference",
 			gatewayNamespace: "test",
-			certRef: gatewayv1alpha2.SecretObjectReference{
+			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind: util.StringToGatewayAPIKindPtr("Secret"),
 				Name: "testSecret",
 			},
@@ -533,10 +533,10 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 		{
 			name:             "reference not granted",
 			gatewayNamespace: "test",
-			certRef: gatewayv1alpha2.SecretObjectReference{
+			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+				Namespace: (*Namespace)(pointer.StringPtr("otherNamespace")),
 			},
 			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
 				{
@@ -546,7 +546,7 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayv1alpha2.ReferenceGrantSpec{
 						From: []gatewayv1alpha2.ReferenceGrantFrom{
 							{
-								Group:     gatewayV1alpha2Group,
+								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -566,10 +566,10 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 		{
 			name:             "reference granted, secret name not specified",
 			gatewayNamespace: "test",
-			certRef: gatewayv1alpha2.SecretObjectReference{
+			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+				Namespace: (*Namespace)(pointer.StringPtr("otherNamespace")),
 			},
 			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
 				{
@@ -586,7 +586,7 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 							},
 							// good entry
 							{
-								Group:     gatewayV1alpha2Group,
+								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -605,10 +605,10 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 		{
 			name:             "reference granted, secret name specified",
 			gatewayNamespace: "test",
-			certRef: gatewayv1alpha2.SecretObjectReference{
+			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: (*gatewayv1alpha2.Namespace)(pointer.StringPtr("otherNamespace")),
+				Namespace: (*Namespace)(pointer.StringPtr("otherNamespace")),
 			},
 			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
 				{
@@ -618,7 +618,7 @@ func Test_getReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayv1alpha2.ReferenceGrantSpec{
 						From: []gatewayv1alpha2.ReferenceGrantFrom{
 							{
-								Group:     gatewayV1alpha2Group,
+								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
 								Kind:      "Gateway",
 								Namespace: "test",
 							},

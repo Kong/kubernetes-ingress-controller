@@ -72,7 +72,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.Gateway{}},
+		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 	); err != nil {
 		return err
@@ -108,7 +108,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(obj client.Object) []r
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayv1alpha2.GatewayList{}
+	gatewayList := gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
@@ -186,7 +186,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(obj client.Object) []r
 // this kind of problem without having to enqueue extra objects.
 func (r *TCPRouteReconciler) listTCPRoutesForGateway(obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayv1alpha2.Gateway)
+	gw, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
@@ -354,7 +354,11 @@ var tcprouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given TCPRoute and ensures that the status
 // for the TCPRoute is updated appropriately.
-func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, tcproute *gatewayv1alpha2.TCPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
+func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
+	ctx context.Context,
+	tcproute *gatewayv1alpha2.TCPRoute,
+	gateways ...supportedGatewayWithCondition,
+) (bool, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
 	for _, existingParent := range tcproute.Status.Parents {
@@ -372,18 +376,18 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
-				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      util.StringToGatewayAPIKindPtr(tcprouteParentKind),
+				Group:     (*gatewayv1alpha2.Group)(&gatewayv1beta1.GroupVersion.Group),
+				Kind:      (*gatewayv1alpha2.Kind)(util.StringToGatewayAPIKindPtr(tcprouteParentKind)),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
+				Name:      (gatewayv1alpha2.ObjectName)(gateway.gateway.Name),
 			},
 			ControllerName: (gatewayv1alpha2.GatewayController)(ControllerName),
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1alpha2.RouteConditionAccepted),
+				Type:               string(gatewayv1beta1.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: tcproute.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.RouteReasonAccepted),
+				Reason:             string(gatewayv1beta1.RouteReasonAccepted),
 			}},
 		}
 

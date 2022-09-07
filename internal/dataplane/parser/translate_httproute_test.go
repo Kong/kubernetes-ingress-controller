@@ -573,7 +573,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							Route: kong.Route{
 								Name: kong.String("httproute.default.basic-httproute.0.0"),
 								Paths: []*string{
-									kong.String("/httpbin$"),
+									kong.String("^/httpbin$"),
 								},
 								PreserveHost: kong.Bool(true),
 								Protocols: []*string{

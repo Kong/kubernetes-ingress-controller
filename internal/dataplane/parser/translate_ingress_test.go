@@ -912,6 +912,6 @@ func TestFromIngressV1_RegexPrefix(t *testing.T) {
 		p.EnableRegexPathPrefix()
 
 		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal("~/whatever$", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+		assert.Equal("~^/whatever$", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 	})
 }

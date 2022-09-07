@@ -1048,7 +1048,7 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
-	case gatewayv1alpha2.SchemeGroupVersion.WithKind("HTTPRoutes"):
+	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoutes"):
 		return &gatewayv1beta1.HTTPRoute{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs

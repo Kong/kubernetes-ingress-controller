@@ -23,7 +23,7 @@ import (
 // Kubernetes API.
 var httprouteGVK = schema.GroupVersionKind{
 	Group:   "gateway.networking.k8s.io",
-	Version: "v1alpha2",
+	Version: "v1beta1",
 	Kind:    "HTTPRoute",
 }
 
@@ -120,7 +120,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 								GroupVersionKind: schema.GroupVersionKind{
 									Group:   "gateway.networking.k8s.io",
-									Version: "v1alpha2",
+									Version: "v1beta1",
 									Kind:    "HTTPRoute",
 								},
 							},
@@ -160,7 +160,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							TypeMeta: metav1.TypeMeta{
 								Kind:       "HTTPRoute",
-								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+								APIVersion: "gateway.networking.k8s.io/v1beta1",
 							},
 						},
 					},
@@ -274,7 +274,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 								GroupVersionKind: schema.GroupVersionKind{
 									Group:   "gateway.networking.k8s.io",
-									Version: "v1alpha2",
+									Version: "v1beta1",
 									Kind:    "HTTPRoute",
 								},
 							},
@@ -318,7 +318,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							TypeMeta: metav1.TypeMeta{
 								Kind:       "HTTPRoute",
-								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+								APIVersion: "gateway.networking.k8s.io/v1beta1",
 							},
 						},
 					},
@@ -461,7 +461,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 								GroupVersionKind: schema.GroupVersionKind{
 									Group:   "gateway.networking.k8s.io",
-									Version: "v1alpha2",
+									Version: "v1beta1",
 									Kind:    "HTTPRoute",
 								},
 							},
@@ -505,7 +505,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							TypeMeta: metav1.TypeMeta{
 								Kind:       "HTTPRoute",
-								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+								APIVersion: "gateway.networking.k8s.io/v1beta1",
 							},
 						},
 					},
@@ -584,7 +584,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 								Annotations: make(map[string]string),
 								GroupVersionKind: schema.GroupVersionKind{
 									Group:   "gateway.networking.k8s.io",
-									Version: "v1alpha2",
+									Version: "v1beta1",
 									Kind:    "HTTPRoute",
 								},
 							},
@@ -628,7 +628,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							TypeMeta: metav1.TypeMeta{
 								Kind:       "HTTPRoute",
-								APIVersion: "gateway.networking.k8s.io/v1alpha2",
+								APIVersion: "gateway.networking.k8s.io/v1beta1",
 							},
 						},
 					},

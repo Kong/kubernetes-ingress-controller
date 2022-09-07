@@ -68,6 +68,8 @@ func generateKongBuilder() (*kong.Builder, []string) {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 
+	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", "traditional")
+
 	kongbuilder.WithControllerDisabled()
 
 	return kongbuilder, extraControllerArgs

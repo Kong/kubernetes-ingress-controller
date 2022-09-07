@@ -146,7 +146,7 @@ func TestTranslateIngress(t *testing.T) {
 					Route: kong.Route{
 						Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 						Hosts:             kong.StringSlice("konghq.com"),
-						Paths:             kong.StringSlice("/api/", "^/api$"),
+						Paths:             kong.StringSlice("/api/", "/api$"),
 						PreserveHost:      kong.Bool(true),
 						Protocols:         kong.StringSlice("http", "https"),
 						RegexPriority:     kong.Int(0),
@@ -217,7 +217,7 @@ func TestTranslateIngress(t *testing.T) {
 					Route: kong.Route{
 						Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 						Hosts:             kong.StringSlice("konghq.com"),
-						Paths:             kong.StringSlice("^/api$"), // No Prefix Pathing
+						Paths:             kong.StringSlice("/api$"), // No Prefix Pathing
 						PreserveHost:      kong.Bool(true),
 						Protocols:         kong.StringSlice("http", "https"),
 						RegexPriority:     kong.Int(0),
@@ -567,7 +567,7 @@ func TestTranslateIngress(t *testing.T) {
 							"/v1/api",
 							"/v2/api",
 							"/v3/api",
-							"^/other/path/1$",
+							"/other/path/1$",
 							"/other/path/2",
 							"/",
 						),
@@ -707,7 +707,7 @@ func TestTranslateIngress(t *testing.T) {
 							"/v1/api",
 							"/v2/api",
 							"/v3/api",
-							"^/other/path/1$",
+							"/other/path/1$",
 							"/other/path/2",
 							"/",
 						),
@@ -882,7 +882,7 @@ func Test_PathsFromIngressPaths(t *testing.T) {
 			},
 			out: kong.StringSlice(
 				"/v1/api/packages/",
-				"^/v1/api/packages$",
+				"/v1/api/packages$",
 			),
 		},
 		{
@@ -893,7 +893,7 @@ func Test_PathsFromIngressPaths(t *testing.T) {
 			},
 			out: kong.StringSlice(
 				"/v1/api/packages/",
-				"^/v1/api/packages$",
+				"/v1/api/packages$",
 			),
 		},
 		{
@@ -910,7 +910,7 @@ func Test_PathsFromIngressPaths(t *testing.T) {
 				Path:     "/v1/api/packages",
 				PathType: &pathTypeExact,
 			},
-			out: kong.StringSlice("^/v1/api/packages$"),
+			out: kong.StringSlice("/v1/api/packages$"),
 		},
 		{
 			name: "path type exact will cause an exact matching path on a regular path with a / suffix",
@@ -918,7 +918,7 @@ func Test_PathsFromIngressPaths(t *testing.T) {
 				Path:     "/v1/api/packages/",
 				PathType: &pathTypeExact,
 			},
-			out: kong.StringSlice("^/v1/api/packages/$"),
+			out: kong.StringSlice("/v1/api/packages/$"),
 		},
 		{
 			name: "path type exact will supply a default if no path is provided",
@@ -926,7 +926,7 @@ func Test_PathsFromIngressPaths(t *testing.T) {
 				Path:     "",
 				PathType: &pathTypeExact,
 			},
-			out: kong.StringSlice("^/$"),
+			out: kong.StringSlice("/$"),
 		},
 		{
 			name: "path type implementation-specific will leave the path alone",
@@ -1059,7 +1059,7 @@ func TestTranslateIngressRegexPrefix(t *testing.T) {
 					Route: kong.Route{
 						Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 						Hosts:             kong.StringSlice("konghq.com"),
-						Paths:             kong.StringSlice("/api/", "~^/api$"),
+						Paths:             kong.StringSlice("/api/", "~/api$"),
 						PreserveHost:      kong.Bool(true),
 						Protocols:         kong.StringSlice("http", "https"),
 						RegexPriority:     kong.Int(0),
@@ -1101,7 +1101,7 @@ func Test_PathsFromIngressPathsRegexPrefix(t *testing.T) {
 			},
 			out: kong.StringSlice(
 				"/v1/api/packages/",
-				"~^/v1/api/packages$",
+				"~/v1/api/packages$",
 			),
 		},
 		{
@@ -1112,7 +1112,7 @@ func Test_PathsFromIngressPathsRegexPrefix(t *testing.T) {
 			},
 			out: kong.StringSlice(
 				"/v1/api/packages/",
-				"~^/v1/api/packages$",
+				"~/v1/api/packages$",
 			),
 		},
 		{
@@ -1129,7 +1129,7 @@ func Test_PathsFromIngressPathsRegexPrefix(t *testing.T) {
 				Path:     "/v1/api/packages",
 				PathType: &pathTypeExact,
 			},
-			out: kong.StringSlice("~^/v1/api/packages$"),
+			out: kong.StringSlice("~/v1/api/packages$"),
 		},
 		{
 			name: "path type exact will cause an exact matching path on a regular path with a / suffix",
@@ -1137,7 +1137,7 @@ func Test_PathsFromIngressPathsRegexPrefix(t *testing.T) {
 				Path:     "/v1/api/packages/",
 				PathType: &pathTypeExact,
 			},
-			out: kong.StringSlice("~^/v1/api/packages/$"),
+			out: kong.StringSlice("~/v1/api/packages/$"),
 		},
 		{
 			name: "path type exact will supply a default if no path is provided",
@@ -1145,7 +1145,7 @@ func Test_PathsFromIngressPathsRegexPrefix(t *testing.T) {
 				Path:     "",
 				PathType: &pathTypeExact,
 			},
-			out: kong.StringSlice("~^/$"),
+			out: kong.StringSlice("~/$"),
 		},
 		{
 			name: "path type implementation-specific will leave the path alone",

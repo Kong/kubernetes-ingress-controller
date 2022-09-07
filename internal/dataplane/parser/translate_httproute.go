@@ -178,13 +178,8 @@ func generateKongRoutesFromHTTPRouteRule(
 						terminated = translators.KongPathRegexPrefix + terminated
 					}
 					r.Route.Paths = []*string{&terminated}
-				case gatewayv1beta1.PathMatchPathPrefix:
-					path := *match.Path.Value
-					if addRegexPrefix {
-						path = translators.KongPathRegexPrefix + path
-					}
-					r.Route.Paths = []*string{&path}
-				case gatewayv1beta1.PathMatchRegularExpression:
+				case gatewayv1beta1.PathMatchRegularExpression,
+					gatewayv1beta1.PathMatchPathPrefix:
 					path := *match.Path.Value
 					if addRegexPrefix {
 						path = translators.KongPathRegexPrefix + path

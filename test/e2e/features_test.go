@@ -143,6 +143,7 @@ func TestWebhookUpdate(t *testing.T) {
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)
+		t.Logf("k8s cluster version is set to %v", clusterVersion)
 		clusterBuilder.WithClusterVersion(clusterVersion)
 	}
 	cluster, err := clusterBuilder.Build(ctx)
@@ -298,12 +299,9 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
 		addons = append(addons, b.Build())
 	}
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -482,12 +480,9 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
 		addons = append(addons, b.Build())
 	}
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {

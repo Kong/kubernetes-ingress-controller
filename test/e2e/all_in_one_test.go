@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -85,12 +84,8 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
@@ -144,12 +139,9 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
@@ -188,12 +180,8 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -241,12 +229,8 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
@@ -278,12 +262,8 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -413,7 +393,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 		}
 		t.Logf("expected exactly one leader, actual %d", leaderCount)
 		return leaderCount == 1
-	}, time.Minute, time.Second)
+	}, 2*time.Minute, time.Second)
 }
 
 const entPostgresPath = "../../deploy/single/all-in-one-postgres-enterprise.yaml"
@@ -433,12 +413,8 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	createKongImagePullSecret(ctx, t, env)

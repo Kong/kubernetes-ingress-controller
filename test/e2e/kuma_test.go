@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kuma"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -33,12 +32,9 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
 	addons = append(addons, kuma.New())
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
@@ -116,12 +112,8 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 
 	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
 
-	builder := environments.NewBuilder().WithAddons(addons...)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		builder.WithKubernetesVersion(clusterVersion)
-	}
+	builder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {

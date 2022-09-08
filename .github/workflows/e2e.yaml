@@ -51,8 +51,8 @@ jobs:
       env:
         TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes_version }}
-        ISTIO_VERSION: ${{ matrix.istio_version }}
+        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+        ISTIO_VERSION: ${{ matrix.istio-version }}
         NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
                 # multiple kind clusters within a single job, so only 1 is allowed at a time.
 

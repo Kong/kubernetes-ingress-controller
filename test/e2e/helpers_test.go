@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -333,4 +334,16 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 	)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "command output: "+string(out))
+}
+
+// setBuilderKubernetesVersion configures the kubernetes version of test environment builder
+// and returns the updated builder.
+func setBuilderKubernetesVersion(t *testing.T, b *environments.Builder, clusterVersionStr string) *environments.Builder {
+	if clusterVersionStr == "" {
+		return b
+	}
+	clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+	require.NoError(t, err)
+	t.Logf("k8s cluster version is set to %v", clusterVersion)
+	return b.WithKubernetesVersion(clusterVersion)
 }

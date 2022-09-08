@@ -78,12 +78,8 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	istioAddon := istioBuilder.Build()
 
 	t.Log("deploying a testing environment and Kubernetes cluster with Istio enabled")
-	envBuilder := environments.NewBuilder().WithAddons(metallbAddon, kongAddon, istioAddon)
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		envBuilder.WithKubernetesVersion(clusterVersion)
-	}
+	envBuilder := setBuilderKubernetesVersion(t,
+		environments.NewBuilder().WithAddons(metallbAddon, kongAddon, istioAddon), clusterVersionStr)
 	env, err := envBuilder.Build(ctx)
 	require.NoError(t, err)
 

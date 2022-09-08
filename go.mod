@@ -12,7 +12,7 @@ require (
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.3
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.14.0
 	github.com/kong/go-kong v0.31.1

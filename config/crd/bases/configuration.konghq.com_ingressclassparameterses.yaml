@@ -5,15 +5,13 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: ingressclassparameters.configuration.konghq.com
+  name: ingressclassparameterses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
   names:
-    categories:
-    - kong-ingress-controller
     kind: IngressClassParameters
     listKind: IngressClassParametersList
-    plural: ingressclassparameters
+    plural: ingressclassparameterses
     singular: ingressclassparameters
   scope: Namespaced
   versions:
@@ -37,6 +35,13 @@ spec:
             type: object
           spec:
             properties:
+              enableLegacyRegexDetection:
+                default: false
+                description: EnableLegacyRegexDetection automatically detects if ImplementationSpecific
+                  Ingress paths are regular expression paths using the legacy 2.x
+                  heuristic. The controller adds the "~" prefix to those paths if
+                  the Kong version is 3.0 or higher.
+                type: boolean
               serviceUpstream:
                 default: false
                 description: Offload load-balancing to kube-proxy or sidecar

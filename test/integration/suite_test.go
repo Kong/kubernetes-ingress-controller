@@ -19,11 +19,13 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
 
@@ -66,12 +68,18 @@ func generateKongBuilder() (*kong.Builder, []string) {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 
+	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", "traditional")
+
 	kongbuilder.WithControllerDisabled()
 
 	return kongbuilder, extraControllerArgs
 }
 
 func TestMain(m *testing.M) {
+	var code int
+	defer func() {
+		os.Exit(code)
+	}()
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
@@ -220,8 +228,25 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	cleaner.Add(gwc)
 
+	fmt.Println("INFO: Deploying the controller's IngressClass")
+	iclass := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ingressClass,
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+		},
+	}
+	iclass, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, iclass, metav1.CreateOptions{})
+	exitOnErr(err)
+	defer func() {
+		// deleting this directly instead of adding it to the cleaner because the cleaner always gets a 404 on it for
+		// unknown reasons
+		_ = env.Cluster().Client().NetworkingV1().IngressClasses().Delete(ctx, iclass.Name, metav1.DeleteOptions{})
+	}()
+
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
-	code := m.Run()
+	code = m.Run()
 
 	if keepTestCluster == "" && existingCluster == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
@@ -229,6 +254,4 @@ func TestMain(m *testing.M) {
 		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
 		exitOnErr(env.Cleanup(ctx))
 	}
-
-	os.Exit(code)
 }

@@ -76,7 +76,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - IngressClassParameters
+  - IngressClassParameterses
   verbs:
   - get
   - list

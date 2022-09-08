@@ -225,11 +225,11 @@ var inputControllersNeeded = &typesNeeded{
 		PackageImportAlias:                "kongv1alpha1",
 		PackageAlias:                      "KongV1Alpha1",
 		Package:                           kongv1alpha1,
-		Plural:                            "IngressClassParameters",
+		Plural:                            "IngressClassParameterses",
 		CacheType:                         "IngressClassParameters",
 		NeedsStatusPermissions:            false,
 		CapableOfStatusUpdates:            false,
-		AcceptsIngressClassNameAnnotation: true,
+		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
@@ -574,8 +574,12 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+		"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	} else {
+		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		"class", r.IngressClassName)
 	}
 {{end}}
 	// update the kong Admin API with the changes

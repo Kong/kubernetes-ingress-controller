@@ -55,8 +55,30 @@
 
 > Release date: TBD
 
+### Breaking changes
+
+- When using the `CombinedRoutes=true` feature gate, Ingress rules with no
+  PathType now use ImplementationSpecific instead of Prefix. While Kong's
+  ImplementationSpecific handling is similar to Prefix, it does not require
+  that the prefix be a directory: an ImplementationSpecific `/foo` will match
+  `/foo`, `/foo/`, and `/foo/.*`, whereas Prefix will only match the latter
+  two. If you have rules with no PathType, use `CombinedRoutes=true`, and wish
+  to preserve existing behavior, add `PathType=prefix` configuration to those
+  rules.
+  [#2883](https://github.com/Kong/kubernetes-ingress-controller/pull/2883)
+
 #### Added
 
+- IngressClassParameters now supports a `enableLegacyRegexDetection` boolean
+  field. Kong 3.x+ requires adding a `~` prefix to regular expression paths,
+  whereas Kong 2.x and earlier attempted to detect regular expression paths
+  using heuristics. By default, if you use regular expression paths and wish to
+  migrate to Kong 3.x, you must update all Ingresses to use this prefix.
+  Enabling this field will use the 2.x heuristic to detect if an Ingress path
+  is a regular expression and add the prefix for you. You should update your
+  Ingresses to include the new prefix as soon as possible after upgrading to
+  Kong 3.x+, however, as the heuristic has known flaws that will not be fixed.
+  [#2883](https://github.com/Kong/kubernetes-ingress-controller/pull/2883)
 - Added support for plugin ordering (requires Kong Enterprise 3.0 or higher).
   [#2657](https://github.com/Kong/kubernetes-ingress-controller/pull/2657)
 - The all-in-one manifests now use a separate ClusterRole for Gateway API

@@ -38,6 +38,7 @@ type IngressClassParametersList struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:resource:categories=kong-ingress-controller
+//+kubebuilder:resource:path=ingressclassparameterses
 
 // IngressClassParameters is the Schema for the IngressClassParameters API
 type IngressClassParameters struct {
@@ -53,6 +54,12 @@ type IngressClassParametersSpec struct {
 	// Offload load-balancing to kube-proxy or sidecar
 	//+kubebuilder:default:=false
 	ServiceUpstream bool `json:"serviceUpstream,omitempty"`
+
+	// EnableLegacyRegexDetection automatically detects if ImplementationSpecific Ingress paths are regular expression
+	// paths using the legacy 2.x heuristic. The controller adds the "~" prefix to those paths if the Kong version is
+	// 3.0 or higher.
+	//+kubebuilder:default:=false
+	EnableLegacyRegexDetection bool `json:"enableLegacyRegexDetection,omitempty"`
 }
 
 func init() {

@@ -92,7 +92,6 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	require.Eventually(t, func() bool {
 		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
 		require.NoError(t, err)
-		t.Logf("%d/%d replicas ready", deployment.Status.ReadyReplicas, *deployment.Spec.Replicas)
 		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
 	}, kongComponentWait, time.Second)
 	return deployment

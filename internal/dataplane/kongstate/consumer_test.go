@@ -7,7 +7,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -452,7 +452,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 		})
 	}
 
-	util.SetKongVersion(semver.MustParse("2.3.2")) // minimum version for mtls-auths with tags
+	versions.SetKongVersion(semver.MustParse("2.3.2")) // minimum version for mtls-auths with tags
 	mtlsSupportedTests := []Case{
 		{
 			name: "mtls-auth",

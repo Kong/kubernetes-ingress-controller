@@ -16,7 +16,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *testing.T) {
@@ -61,7 +61,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *te
 		})
 	}
 
-	util.SetKongVersion(semver.MustParse("2.8.0"))
+	versions.SetKongVersion(semver.MustParse("2.8.0"))
 
 	aboveThresholdTests := []Case{
 		{
@@ -89,7 +89,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *te
 func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 	regexType := gatewayv1beta1.HeaderMatchRegularExpression
 	exactType := gatewayv1beta1.HeaderMatchExact
-	util.SetKongVersion(semver.MustParse("2.8.0"))
+	versions.SetKongVersion(semver.MustParse("2.8.0"))
 
 	t.Log("generating several gateway header matches")
 	tests := []struct {

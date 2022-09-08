@@ -865,7 +865,8 @@ func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassPa
 		)}
 	}
 
-	params, exists, err := s.stores.IngressClassParametersV1alpha1.GetByKey(ingressClass.Spec.Parameters.Name)
+	key := fmt.Sprintf("%v/%v", *ingressClass.Spec.Parameters.Namespace, ingressClass.Spec.Parameters.Name)
+	params, exists, err := s.stores.IngressClassParametersV1alpha1.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

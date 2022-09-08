@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
@@ -23,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -62,8 +63,7 @@ func TestPluginEssentials(t *testing.T) {
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	err = cleanIngress(cleaner, ingress)
-	require.NoError(t, err)
+	addIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
@@ -198,10 +198,14 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginOrdering(t *testing.T) {
-	if !util.GetKongVersion().GTE(semver.MustParse("3.0.0")) || kongEnterpriseEnabled == "" {
+	t.Parallel()
+	// the manager runs in a goroutine and may not have pulled the version before this test starts
+	require.Eventually(t, func() bool {
+		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
+	}, time.Minute, time.Second)
+	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || kongEnterpriseEnabled == "" {
 		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
-	t.Parallel()
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 

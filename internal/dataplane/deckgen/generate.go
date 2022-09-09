@@ -21,9 +21,10 @@ func ToDeckContent(
 	k8sState *kongstate.KongState,
 	schemas *util.PluginSchemaStore,
 	selectorTags []string,
+	formatVersion string,
 ) *file.Content {
 	var content file.Content
-	content.FormatVersion = "1.1"
+	content.FormatVersion = formatVersion
 	var err error
 
 	for _, s := range k8sState.Services {

@@ -59,7 +59,7 @@ resources:
   group: configuration
   kind: IngressClassParameters
   path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1alpha1
-  plural: IngressClassParameterses
+  plural: ingressclassparameterses
   version: v1alpha1
 - api:
     crdVersion: v1

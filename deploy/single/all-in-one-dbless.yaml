@@ -1170,7 +1170,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - IngressClassParameterses
+  - ingressclassparameterses
   verbs:
   - get
   - list

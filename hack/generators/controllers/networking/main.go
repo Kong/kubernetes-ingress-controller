@@ -225,7 +225,7 @@ var inputControllersNeeded = &typesNeeded{
 		PackageImportAlias:                "kongv1alpha1",
 		PackageAlias:                      "KongV1Alpha1",
 		Package:                           kongv1alpha1,
-		Plural:                            "IngressClassParameterses",
+		Plural:                            "ingressclassparameterses",
 		CacheType:                         "IngressClassParameters",
 		NeedsStatusPermissions:            false,
 		CapableOfStatusUpdates:            false,

@@ -1597,7 +1597,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl
 	)
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=IngressClassParameterses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=ingressclassparameterses,verbs=get;list;watch
 
 // Reconcile processes the watched objects
 func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

@@ -297,6 +297,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
 	p := parser.NewParser(c.logger, storer)
+	formatVersion := "1.1"
 	if c.AreKubernetesObjectReportsEnabled() {
 		p.EnableKubernetesObjectReports()
 	}
@@ -305,6 +306,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		p.EnableRegexPathPrefix()
+		formatVersion = "3.0"
 	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration
@@ -326,6 +328,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger, kongstate,
 		c.kongConfig.PluginSchemaStore,
 		c.kongConfig.FilterTags,
+		formatVersion,
 	)
 
 	// generate diagnostic configuration if enabled
@@ -338,6 +341,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 				kongstate.SanitizedCopy(),
 				c.kongConfig.PluginSchemaStore,
 				c.kongConfig.FilterTags,
+				formatVersion,
 			)
 			diagnosticConfig = redactedConfig
 		} else {

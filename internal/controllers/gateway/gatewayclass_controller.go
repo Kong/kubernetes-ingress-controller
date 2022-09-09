@@ -22,12 +22,10 @@ import (
 // GatewayClass Controller - Vars & Consts
 // -----------------------------------------------------------------------------
 
-const (
-	// ControllerName is the unique identifier for this controller and is used
-	// within GatewayClass resources to indicate that this controller should
-	// support connected Gateway resources.
-	ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
-)
+// ControllerName is the unique identifier for this controller and is used
+// within GatewayClass resources to indicate that this controller should
+// support connected Gateway resources.
+var ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
 
 // -----------------------------------------------------------------------------
 // GatewayClass Controller - Reconciler

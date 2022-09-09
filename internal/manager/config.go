@@ -54,14 +54,15 @@ type Config struct {
 	KongCustomEntitiesSecret string
 
 	// Kubernetes configurations
-	KubeconfigPath          string
-	IngressClassName        string
-	EnableLeaderElection    bool
-	LeaderElectionNamespace string
-	LeaderElectionID        string
-	Concurrency             int
-	FilterTags              []string
-	WatchNamespaces         []string
+	KubeconfigPath           string
+	IngressClassName         string
+	EnableLeaderElection     bool
+	LeaderElectionNamespace  string
+	LeaderElectionID         string
+	Concurrency              int
+	FilterTags               []string
+	WatchNamespaces          []string
+	GatewayAPIControllerName string
 
 	// Ingress status
 	PublishService       string
@@ -152,6 +153,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `A Secret containing custom entities for DB-less mode, in "namespace/name" format`)
 
 	// Kubernetes configurations
+	flagSet.StringVar(&c.GatewayAPIControllerName, "gateway-api-controller-name", "", "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")

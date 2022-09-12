@@ -29,9 +29,9 @@ const (
 	defaultGatewayName = "kong"
 	// unmanagedGatewayClassName is the name of the default GatewayClass created during the test environment setup.
 	unmanagedGatewayClassName = "kong-unmanaged"
-	// unmanagedControllerName is the name of the controller used for those gateways that are not supported
+	// unsupportedControllerName is the name of the controller used for those gateways that are not supported
 	// by an actual controller (i.e., they won't be scheduled).
-	unmanagedControllerName gatewayv1beta1.GatewayController = "example.com/unmanaged-gateway-controller"
+	unsupportedControllerName gatewayv1beta1.GatewayController = "example.com/unsupported-gateway-controller"
 )
 
 // DeployGateway creates a default gatewayClass, accepts a variadic set of options,

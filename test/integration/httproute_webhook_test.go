@@ -57,7 +57,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 
 	t.Log("creating an unmanaged gatewayclass")
 	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = unmanagedControllerName
+		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGatewayClass)

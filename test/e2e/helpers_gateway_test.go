@@ -53,7 +53,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kong",
 			Annotations: map[string]string{
-				annotations.GatewayClassUnmanagedAnnotation: "true", // trigger the unmanaged gateway mode
+				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder, // trigger the unmanaged gateway mode
 			},
 		},
 		Spec: gatewayv1beta1.GatewaySpec{

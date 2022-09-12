@@ -32,8 +32,6 @@ const (
 	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
 	// parent Service to fully resolve into ready state.
 	gatewayUpdateWaitTime = time.Minute * 3
-
-	unmanagedAnnotation = annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedAnnotationSuffix
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
@@ -59,7 +57,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gw.Annotations[unmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
+		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway address is populated from the publish service")
@@ -136,7 +134,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	t.Log("deploying a new gateway using the default gateway")
+	t.Log("deploying a new Gateway using the default GatewayClass")
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
@@ -362,7 +360,7 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 
 	t.Log("deploying an unsupported gatewayclass to the test cluster")
 	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = unmanagedControllerName
+		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
 	cleaner.Add(unsupportedGatewayClass)

@@ -53,10 +53,15 @@
 
 ## [2.6.0]
 
-> Release date: TBD
+> Release date: 2022-09-14
 
 ### Breaking changes
 
+- Kong 3.x changes regular expression configuration and the controller does not
+  handle these changes automatically. You will need to enable compatibility
+  features initially and then update Ingress configuration before disabling
+  them. This procedure is covered in the [Kong 3.x upgrade guide for the
+  controller](https://docs.konghq.com/kubernetes-ingress-controller/2.6.x/guides/upgrade-kong-3x).
 - When using the `CombinedRoutes=true` feature gate, Ingress rules with no
   PathType now use ImplementationSpecific instead of Prefix. While Kong's
   ImplementationSpecific handling is similar to Prefix, it does not require

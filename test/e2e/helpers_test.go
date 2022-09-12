@@ -218,7 +218,12 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		}
 		return adminOutput.Version != ""
 	}, adminAPIWait, time.Second)
-	require.Contains(t, adminOutput.Version, "enterprise-edition")
+	if string(adminOutput.Version[0]) == "3" {
+		// 3.x removed the "-enterprise-edition" string but provided no other indication that something is enterprise
+		require.Len(t, strings.Split(adminOutput.Version, "."), 4)
+	} else {
+		require.Contains(t, adminOutput.Version, "enterprise-edition")
+	}
 }
 
 func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {

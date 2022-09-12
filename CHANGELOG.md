@@ -66,6 +66,12 @@
   to preserve existing behavior, add `PathType=prefix` configuration to those
   rules.
   [#2883](https://github.com/Kong/kubernetes-ingress-controller/pull/2883)
+- The GatewayClass objects now require the annotation
+  "konghq.com/gatewayclass-unmanaged" to be reconciled by the controller.
+  The annotation "konghq.com/gateway-unmanaged" is not considered anymore and
+  doesn't need to be set on Gateways to be reconciled. Only the Gateways using
+  an unmanaged GatewayClass are reconciled.
+  [2917](https://github.com/Kong/kubernetes-ingress-controller/pull/2917)
 
 #### Added
 

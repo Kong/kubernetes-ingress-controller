@@ -339,25 +339,23 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// any Gateway object that comes to us is configured appropriately, and if not reject it
 	// with a clear status condition and message.
 	debug(log, gateway, "validating management mode for gateway") // this will also be done by the validating webhook, this is a fallback
-	existingGatewayEnabled := annotations.ExtractUnmanagedGatewayClassMode(gateway.GetAnnotations())
-	if existingGatewayEnabled != annotations.GatewayClassUnmanagedAnnotationValuePlaceholder && existingGatewayEnabled != r.PublishService {
-		return ctrl.Result{}, ErrUnmanagedAnnotation
-	}
 
-	// allow for Gateway resources to be configured with "true" in place of the publish service
-	// reference as a placeholder to automatically populate the annotation with the namespace/name
-	// that was provided to the controller manager via --publish-service.
+	// enforce the service reference as the annotation value for the key UnmanagedGateway.
 	debug(log, gateway, "initializing admin service annotation if unset")
-	if existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
+	if !isObjectUnmanaged(gateway.GetAnnotations()) {
 		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", annotations.GatewayClassUnmanagedAnnotation, r.PublishService))
-		annotations.UpdateUnmanagedGatewayClassMode(gateway.Annotations, r.PublishService)
+		if gateway.Annotations == nil {
+			gateway.Annotations = map[string]string{}
+		}
+		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, r.PublishService)
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
 
+	serviceRef := annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations)
 	// validation check of the Gateway to ensure that the publish service is actually available
 	// in the cluster. If it is not the object will be requeued until it exists (or is otherwise retrievable).
 	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
-	svc, err := r.determineServiceForGateway(ctx, existingGatewayEnabled)
+	svc, err := r.determineServiceForGateway(ctx, serviceRef)
 	if err != nil {
 		log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
 		return ctrl.Result{Requeue: true}, err

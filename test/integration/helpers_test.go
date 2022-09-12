@@ -20,14 +20,15 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 )
 
 const (
 	// defaultGatewayName is the default name for the Gateways created during tests.
 	defaultGatewayName = "kong"
-	// managedGatewayClassName is the name of the default GatewayClass created during the test environment setup.
-	managedGatewayClassName = "kong-managed"
+	// unmanagedGatewayClassName is the name of the default GatewayClass created during the test environment setup.
+	unmanagedGatewayClassName = "kong-unmanaged"
 	// unmanagedControllerName is the name of the controller used for those gateways that are not supported
 	// by an actual controller (i.e., they won't be scheduled).
 	unmanagedControllerName gatewayv1beta1.GatewayController = "example.com/unmanaged-gateway-controller"
@@ -39,6 +40,9 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 	gwc := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gatewayClassName,
+			Annotations: map[string]string{
+				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
 			ControllerName: gateway.ControllerName,
@@ -67,9 +71,6 @@ func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespa
 	gw := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: defaultGatewayName,
-			Annotations: map[string]string{
-				unmanagedAnnotation: "true", // trigger the unmanaged gateway mode
-			},
 		},
 		Spec: gatewayv1beta1.GatewaySpec{
 			GatewayClassName: gatewayv1beta1.ObjectName(gatewayClassName),

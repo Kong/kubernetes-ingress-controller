@@ -459,7 +459,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(secret2)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
 		otherHostname := gatewayv1beta1.Hostname(tlsRouteExtraHostname)
 		otherNamespace := gatewayv1beta1.Namespace(otherNs.Name)

@@ -49,7 +49,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a new gateway")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName)
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -137,7 +137,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a new gateway using the default gateway")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName)
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -443,7 +443,7 @@ func TestGatewayFilters(t *testing.T) {
 	t.Log("deploying a gateway that allows routes in all namespaces")
 	gatewayName := uuid.NewString()
 	fromAll := gatewayv1beta1.NamespacesFromAll
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayv1beta1.Listener{
 			{

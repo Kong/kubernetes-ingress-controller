@@ -258,7 +258,7 @@ func ExtractUnmanagedGatewayClassMode(anns map[string]string) string {
 	return anns[GatewayClassUnmanagedAnnotation]
 }
 
-// UpdateUnmanagedGatewayClassMode updates the value of the annotation konghq.com/gatewayclass-unmanaged.
-func UpdateUnmanagedGatewayClassMode(anns map[string]string, annotationValue string) {
+// UpdateUnmanagedAnnotation updates the value of the annotation konghq.com/gatewayclass-unmanaged.
+func UpdateUnmanagedAnnotation(anns map[string]string, annotationValue string) {
 	anns[GatewayClassUnmanagedAnnotation] = annotationValue
 }

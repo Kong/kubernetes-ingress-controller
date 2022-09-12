@@ -74,7 +74,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 					},
 				},
 				Spec: gatewayv1beta1.GatewaySpec{
-					GatewayClassName: gatewayv1beta1.ObjectName(managedGatewayClassName),
+					GatewayClassName: gatewayv1beta1.ObjectName(unmanagedGatewayClassName),
 					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Protocol: gatewayv1beta1.HTTPProtocolType,

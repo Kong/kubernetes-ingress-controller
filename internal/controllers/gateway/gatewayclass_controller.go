@@ -72,7 +72,7 @@ func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool
 		return false
 	}
 
-	return isGatewayClassUnmanaged(gatewayClass.Annotations)
+	return isObjectUnmanaged(gatewayClass.Annotations)
 }
 
 // -----------------------------------------------------------------------------

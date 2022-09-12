@@ -49,7 +49,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("creating a managed gateway")
-	managedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
+	managedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)

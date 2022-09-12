@@ -310,7 +310,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// ensure that the GatewayClass matches the ControllerName and is unmanaged.
-	// This check has already been performed by predicates, but we need to ensure this condtion
+	// This check has already been performed by predicates, but we need to ensure this condition
 	// as the reconciliation loop may be triggered by objects in which predicates we
 	// cannot check the ControllerName and the unmanaged mode (e.g., ReferenceGrants).
 	if !isGatewayClassControlledAndUmanaged(gwc) {

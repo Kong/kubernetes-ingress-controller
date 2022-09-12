@@ -424,6 +424,56 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 	}, gatewayUpdateWaitTime, time.Second)
 }
 
+func TestManagedGatewayClass(t *testing.T) {
+	ns, cleaner := setup(t)
+	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+
+	t.Log("generating a gateway kubernetes client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a gateway to the test cluster, but with no valid gatewayclass yet")
+	gatewayClassName := uuid.NewString()
+	gatewayName := uuid.NewString()
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("verifying that the Gateway object does not get scheduled by the controller due to missing its GatewayClass")
+	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
+	for timeout.After(time.Now()) {
+		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Len(t, gateway.Status.Conditions, 1)
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
+	}
+
+	t.Log("deploying a missing managed gatewayclass to the test cluster")
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName, func(gc *gatewayv1beta1.GatewayClass) {
+		gc.Annotations = nil
+	})
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	finished := make(chan struct{})
+
+	// Let's wait for one minute and check that the Gateway hasn't reconciled by the operator. It should never get ready.
+	t.Log("the Gateway must not be reconciled as it is using a managed GatewayClass")
+	time.AfterFunc(time.Minute, func() {
+		defer close(finished)
+		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, cond := range gateway.Status.Conditions {
+			if cond.Type == string(gatewayv1beta1.GatewayConditionReady) {
+				require.Equal(t, cond.Status, metav1.ConditionFalse)
+			}
+		}
+	})
+	<-finished
+}
+
 func TestGatewayFilters(t *testing.T) {
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()

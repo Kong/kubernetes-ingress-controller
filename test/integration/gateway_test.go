@@ -33,7 +33,7 @@ const (
 	// parent Service to fully resolve into ready state.
 	gatewayUpdateWaitTime = time.Minute * 3
 
-	unmanagedAnnotation = annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
+	unmanagedAnnotation = annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedAnnotationSuffix
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {

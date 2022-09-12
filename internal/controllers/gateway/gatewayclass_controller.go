@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -11,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -52,11 +55,28 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return c.Watch(
 		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
 		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.GatewayClassIsUnmanaged),
 	)
 }
 
 // -----------------------------------------------------------------------------
-// Gateway Controller - Reconciliation
+// GatewayClass Controller - Watch Predicates
+// -----------------------------------------------------------------------------
+
+// GatewayClassIsUnmanaged is a watch predicate which filters out reconciliation events for
+// gateway objects which aren't annotated as unmanaged.
+func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool {
+	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
+	if !ok {
+		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
+		return false
+	}
+
+	return isGatewayClassUnmanaged(gatewayClass.Annotations)
+}
+
+// -----------------------------------------------------------------------------
+// GatewayClass Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
@@ -77,7 +97,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	log.V(util.DebugLevel).Info("processing gatewayclass", "name", req.Name)
 
-	if gwc.Spec.ControllerName == ControllerName {
+	if isGatewayClassControlledAndUmanaged(gwc) {
 		alreadyAccepted := false
 		for _, cond := range gwc.Status.Conditions {
 			if cond.Reason == string(gatewayv1beta1.GatewayClassConditionStatusAccepted) {

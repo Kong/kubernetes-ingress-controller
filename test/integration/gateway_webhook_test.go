@@ -70,7 +70,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation: "true",
+						annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedAnnotationSuffix: "true",
 					},
 				},
 				Spec: gatewayv1beta1.GatewaySpec{

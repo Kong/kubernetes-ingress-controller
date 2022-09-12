@@ -66,11 +66,17 @@ func isGatewayReady(gateway *Gateway) bool {
 	return false
 }
 
-// isGatewayInClassAndUnmanaged returns boolean if the provided combination of gateway and class
-// is controlled by this controller and the gateway is configured for unmanaged mode.
-func isGatewayInClassAndUnmanaged(gatewayClass *GatewayClass, gateway Gateway) bool {
-	_, ok := annotations.ExtractUnmanagedGatewayMode(gateway.Annotations)
-	return ok && gatewayClass.Spec.ControllerName == ControllerName
+// isGatewayClassUnmanaged returns boolean if the GatewayClass is configured
+// for unmanaged mode.
+func isGatewayClassUnmanaged(anns map[string]string) bool {
+	annotationValue := annotations.ExtractUnmanagedGatewayClassMode(anns)
+	return annotationValue != ""
+}
+
+// isGatewayClassControlledAndUmanaged returns boolean if the GatewayClass
+// is controlled by this controller and is configured for unmanaged mode.
+func isGatewayClassControlledAndUmanaged(gatewayClass *GatewayClass) bool {
+	return gatewayClass.Spec.ControllerName == ControllerName && isGatewayClassUnmanaged(gatewayClass.Annotations)
 }
 
 // getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName

@@ -11,7 +11,6 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -345,21 +344,9 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 		},
 	}
 
-	t.Log("creating an unmanaged mode enabled gateway")
-	unmanagedGateway := gatewayv1beta1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation: "true",
-			},
-		},
-	}
-
-	t.Log("verifying the results for several gateways")
-	assert.False(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, gatewayv1beta1.Gateway{}))
-	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, gatewayv1beta1.Gateway{}))
-	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, unmanagedGateway))
-	assert.True(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, unmanagedGateway))
+	t.Log("verifying the results for some gatewayClasses")
+	assert.False(t, isGatewayClassControlledAndUmanaged(uncontrolledGatewayClass))
+	assert.True(t, isGatewayClassControlledAndUmanaged(controlledGatewayClass))
 }
 
 func Test_areAllowedRoutesConsistentByProtocol(t *testing.T) {

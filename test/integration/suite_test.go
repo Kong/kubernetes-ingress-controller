@@ -224,7 +224,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 
 	fmt.Println("INFO: Deploying the default GatewayClass")
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, managedGatewayClassName)
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, unmanagedGatewayClassName)
 	exitOnErr(err)
 	cleaner.Add(gwc)
 

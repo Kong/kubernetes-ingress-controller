@@ -325,41 +325,76 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 }
 
 func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
-	t.Log("generating a gatewayclass controlled by this controller implementation")
-	controlledGatewayClass := &gatewayv1beta1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "us",
-		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: ControllerName,
-		},
-	}
+	var testControllerName gatewayv1beta1.GatewayController = "acme.io/gateway-controller"
 
-	t.Log("generating a gatewayclass not controlled by this implementation")
-	uncontrolledGatewayClass := &gatewayv1beta1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "eu",
-		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: "acme.io/gateway-controller",
-		},
-	}
-
-	t.Log("creating an unmanaged mode enabled gateway")
-	unmanagedGateway := gatewayv1beta1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation: "true",
+	testCases := []struct {
+		name           string
+		GatewayClass   *gatewayv1beta1.GatewayClass
+		expectedResult bool
+	}{
+		{
+			name: "uncontrolled managed GatewayClass",
+			GatewayClass: &gatewayv1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "uncontrolled-managed",
+				},
+				Spec: gatewayv1beta1.GatewayClassSpec{
+					ControllerName: testControllerName,
+				},
 			},
+			expectedResult: false,
+		},
+		{
+			name: "uncontrolled unmanaged GatewayClass",
+			GatewayClass: &gatewayv1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "uncontrolled-unmanaged",
+					Annotations: map[string]string{
+						annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+					},
+				},
+				Spec: gatewayv1beta1.GatewayClassSpec{
+					ControllerName: testControllerName,
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name: "controlled managed GatewayClass",
+			GatewayClass: &gatewayv1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "controlled-managed",
+				},
+				Spec: gatewayv1beta1.GatewayClassSpec{
+					ControllerName: ControllerName,
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name: "controlled unmanaged GatewayClass",
+			GatewayClass: &gatewayv1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "controlled-unmanaged",
+					Annotations: map[string]string{
+						annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+					},
+				},
+				Spec: gatewayv1beta1.GatewayClassSpec{
+					ControllerName: ControllerName,
+				},
+			},
+			expectedResult: true,
 		},
 	}
 
-	t.Log("verifying the results for several gateways")
-	assert.False(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, gatewayv1beta1.Gateway{}))
-	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, gatewayv1beta1.Gateway{}))
-	assert.False(t, isGatewayInClassAndUnmanaged(uncontrolledGatewayClass, unmanagedGateway))
-	assert.True(t, isGatewayInClassAndUnmanaged(controlledGatewayClass, unmanagedGateway))
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.expectedResult, isGatewayClassControlledAndUmanaged(tc.GatewayClass))
+		})
+	}
 }
 
 func Test_areAllowedRoutesConsistentByProtocol(t *testing.T) {

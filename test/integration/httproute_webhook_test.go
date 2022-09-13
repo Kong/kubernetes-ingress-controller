@@ -49,7 +49,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("creating a managed gateway")
-	managedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
+	managedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 
 	t.Log("creating an unmanaged gatewayclass")
 	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = unmanagedControllerName
+		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGatewayClass)

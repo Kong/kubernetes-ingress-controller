@@ -32,8 +32,6 @@ const (
 	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
 	// parent Service to fully resolve into ready state.
 	gatewayUpdateWaitTime = time.Minute * 3
-
-	unmanagedAnnotation = annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
@@ -49,7 +47,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a new gateway")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName)
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -59,7 +57,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gw.Annotations[unmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
+		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway address is populated from the publish service")
@@ -136,8 +134,8 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	t.Log("deploying a new gateway using the default gateway")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName)
+	t.Log("deploying a new Gateway using the default GatewayClass")
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -362,7 +360,7 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 
 	t.Log("deploying an unsupported gatewayclass to the test cluster")
 	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = unmanagedControllerName
+		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
 	cleaner.Add(unsupportedGatewayClass)
@@ -426,6 +424,56 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 	}, gatewayUpdateWaitTime, time.Second)
 }
 
+func TestManagedGatewayClass(t *testing.T) {
+	ns, cleaner := setup(t)
+	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+
+	t.Log("generating a gateway kubernetes client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a gateway to the test cluster, but with no valid gatewayclass yet")
+	gatewayClassName := uuid.NewString()
+	gatewayName := uuid.NewString()
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("verifying that the Gateway object does not get scheduled by the controller due to missing its GatewayClass")
+	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
+	for timeout.After(time.Now()) {
+		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Len(t, gateway.Status.Conditions, 1)
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
+	}
+
+	t.Log("deploying a missing managed gatewayclass to the test cluster")
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName, func(gc *gatewayv1beta1.GatewayClass) {
+		gc.Annotations = nil
+	})
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	finished := make(chan struct{})
+
+	// Let's wait for one minute and check that the Gateway hasn't reconciled by the operator. It should never get ready.
+	t.Log("the Gateway must not be reconciled as it is using a managed GatewayClass")
+	time.AfterFunc(time.Minute, func() {
+		defer close(finished)
+		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, cond := range gateway.Status.Conditions {
+			if cond.Type == string(gatewayv1beta1.GatewayConditionReady) {
+				require.Equal(t, cond.Status, metav1.ConditionFalse)
+			}
+		}
+	})
+	<-finished
+}
+
 func TestGatewayFilters(t *testing.T) {
 	ns, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
@@ -443,7 +491,7 @@ func TestGatewayFilters(t *testing.T) {
 	t.Log("deploying a gateway that allows routes in all namespaces")
 	gatewayName := uuid.NewString()
 	fromAll := gatewayv1beta1.NamespacesFromAll
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, managedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayv1beta1.Listener{
 			{

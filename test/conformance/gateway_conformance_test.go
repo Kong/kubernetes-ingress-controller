@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
@@ -40,6 +41,9 @@ func TestGatewayConformance(t *testing.T) {
 	gwc := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
 			ControllerName: gateway.ControllerName,

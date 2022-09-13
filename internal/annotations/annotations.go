@@ -17,6 +17,7 @@ limitations under the License.
 package annotations
 
 import (
+	"fmt"
 	"strings"
 
 	netv1 "k8s.io/api/networking/v1"
@@ -55,18 +56,26 @@ const (
 	ResponseBuffering    = "/response-buffering"
 	HostAliasesKey       = "/host-aliases"
 
-	// GatewayUnmanagedAnnotation is an annotation used on a Gateway resource to
-	// indicate that the Gateway should be reconciled according to unmanaged
+	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
+	// indicate that the GatewayClass should be reconciled according to unmanaged
 	// mode.
 	//
-	// NOTE: it's currently required that this annotation be present on all Gateway
+	// NOTE: it's currently required that this annotation be present on all GatewayClass
 	// resources: "unmanaged" mode is the only supported mode at this time.
-	GatewayUnmanagedAnnotation = "/gateway-unmanaged"
+	GatewayClassUnmanagedAnnotationSuffix = "gatewayclass-unmanaged"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
+
+	// GatewayClassUnmanagedAnnotationPlaceholder is intended to be used as placeholder value for the
+	// GatewayClassUnmanagedAnnotation annotation.
+	GatewayClassUnmanagedAnnotationValuePlaceholder = "true"
 )
+
+// GatewayClassUnmanagedAnnotation is the complete annotations for unmanaged mode made by the konhq.com prefix
+// followed by the gatewayclass-unmanaged GatewayClass suffix.
+var GatewayClassUnmanagedAnnotation = fmt.Sprintf("%s/%s", AnnotationPrefix, GatewayClassUnmanagedAnnotationSuffix)
 
 func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMatching) bool {
 	switch handling {
@@ -243,9 +252,16 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 	return strings.Split(val, ","), true
 }
 
-// ExtractUnmanagedGatewayMode extracts the value of the unmanaged gateway
+// ExtractUnmanagedGatewayClassMode extracts the value of the unmanaged gateway
 // mode annotation.
-func ExtractUnmanagedGatewayMode(anns map[string]string) (string, bool) {
-	s, ok := anns[AnnotationPrefix+GatewayUnmanagedAnnotation]
-	return s, ok
+func ExtractUnmanagedGatewayClassMode(anns map[string]string) string {
+	if anns == nil {
+		return ""
+	}
+	return anns[GatewayClassUnmanagedAnnotation]
+}
+
+// UpdateUnmanagedAnnotation updates the value of the annotation konghq.com/gatewayclass-unmanaged.
+func UpdateUnmanagedAnnotation(anns map[string]string, annotationValue string) {
+	anns[GatewayClassUnmanagedAnnotation] = annotationValue
 }

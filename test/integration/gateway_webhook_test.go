@@ -70,11 +70,11 @@ func TestGatewayValidationWebhook(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation: "true",
+						annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 					},
 				},
 				Spec: gatewayv1beta1.GatewaySpec{
-					GatewayClassName: gatewayv1beta1.ObjectName(managedGatewayClassName),
+					GatewayClassName: gatewayv1beta1.ObjectName(unmanagedGatewayClassName),
 					Listeners: []gatewayv1beta1.Listener{{
 						Name:     "http",
 						Protocol: gatewayv1beta1.HTTPProtocolType,

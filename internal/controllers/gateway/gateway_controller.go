@@ -2,13 +2,14 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,10 +32,8 @@ import (
 // -----------------------------------------------------------------------------
 
 var (
-	// ErrManagedGatewaysUnsupported is an error used whenever a failure occurs
-	// due to a Gateway that is not properly configured for unmanaged mode.
-	ErrManagedGatewaysUnsupported = fmt.Errorf("invalid gateway spec: managed gateways are not currently supported")
-	gatewayV1beta1Group           = gatewayv1beta1.Group(gatewayv1beta1.GroupName)
+	ErrUnmanagedAnnotation = errors.New("invalid unmanaged annotation value")
+	gatewayV1beta1Group    = gatewayv1beta1.Group(gatewayv1beta1.GroupName)
 )
 
 // -----------------------------------------------------------------------------
@@ -135,7 +134,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 // gatewayHasMatchingGatewayClass is a watch predicate which filters out reconciliation events for
-// gateway objects which aren't supported by this controller.
+// gateway objects which aren't supported by this controller or not using an unmanaged GatewayClass.
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	gateway, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
@@ -147,18 +146,18 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		r.Log.Error(err, "could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
-	return gatewayClass.Spec.ControllerName == ControllerName
+	return isGatewayClassControlledAndUmanaged(gatewayClass)
 }
 
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
-// aren't configured with the required ControllerName, e.g. they are not supported by this controller.
+// aren't configured with the required ControllerName or not annotated as unmanaged.
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
 	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
 		r.Log.Error(fmt.Errorf("unexpected object type in gatewayclass watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
 		return false
 	}
-	return gatewayClass.Spec.ControllerName == ControllerName
+	return isGatewayClassControlledAndUmanaged(gatewayClass)
 }
 
 // listGatewaysForGatewayClass is a watch predicate which finds all the gateway objects reference
@@ -221,7 +220,7 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}
-		if isGatewayInClassAndUnmanaged(gatewayClass, gateway) {
+		if isGatewayClassControlledAndUmanaged(gatewayClass) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: gateway.Namespace,
@@ -268,7 +267,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// to be gone at this point in which case it will be ignored.
 	gateway := new(gatewayv1beta1.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			debug(log, gateway, "reconciliation triggered but gateway does not exist, ignoring")
 			return ctrl.Result{Requeue: false}, nil
 		}
@@ -310,6 +309,14 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{Requeue: false}, nil
 	}
 
+	// ensure that the GatewayClass matches the ControllerName and is unmanaged.
+	// This check has already been performed by predicates, but we need to ensure this condition
+	// as the reconciliation loop may be triggered by objects in which predicates we
+	// cannot check the ControllerName and the unmanaged mode (e.g., ReferenceGrants).
+	if !isGatewayClassControlledAndUmanaged(gwc) {
+		return reconcile.Result{}, nil
+	}
+
 	// reconciliation assumes unmanaged mode, in the future we may have a slot here for
 	// other gateway management modes.
 	result, err := r.reconcileUnmanagedGateway(ctx, log, gateway)
@@ -332,26 +339,23 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// any Gateway object that comes to us is configured appropriately, and if not reject it
 	// with a clear status condition and message.
 	debug(log, gateway, "validating management mode for gateway") // this will also be done by the validating webhook, this is a fallback
-	unmanagedAnnotation := annotations.AnnotationPrefix + annotations.GatewayUnmanagedAnnotation
-	existingGatewayEnabled, ok := annotations.ExtractUnmanagedGatewayMode(gateway.GetAnnotations())
 
-	// allow for Gateway resources to be configured with "true" in place of the publish service
-	// reference as a placeholder to automatically populate the annotation with the namespace/name
-	// that was provided to the controller manager via --publish-service.
+	// enforce the service reference as the annotation value for the key UnmanagedGateway.
 	debug(log, gateway, "initializing admin service annotation if unset")
-	if !ok || existingGatewayEnabled == "true" { // true is a placeholder which triggers auto-initialization of the ref
-		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", unmanagedAnnotation, r.PublishService))
+	if !isObjectUnmanaged(gateway.GetAnnotations()) {
+		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", annotations.GatewayClassUnmanagedAnnotation, r.PublishService))
 		if gateway.Annotations == nil {
-			gateway.Annotations = make(map[string]string)
+			gateway.Annotations = map[string]string{}
 		}
-		gateway.Annotations[unmanagedAnnotation] = r.PublishService
+		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, r.PublishService)
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
 
+	serviceRef := annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations)
 	// validation check of the Gateway to ensure that the publish service is actually available
 	// in the cluster. If it is not the object will be requeued until it exists (or is otherwise retrievable).
 	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
-	svc, err := r.determineServiceForGateway(ctx, existingGatewayEnabled)
+	svc, err := r.determineServiceForGateway(ctx, serviceRef)
 	if err != nil {
 		log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
 		return ctrl.Result{Requeue: true}, err
@@ -394,7 +398,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		debug(log, gateway, "updating addresses to match Kong proxy Service")
 		gateway.Spec.Addresses = kongAddresses
 		if err := r.Update(ctx, gateway); err != nil {
-			if errors.IsConflict(err) {
+			if k8serrors.IsConflict(err) {
 				// if there's a conflict that's normal just requeue to retry, no need to make noise.
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -427,7 +431,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "updating the gateway status if necessary")
 	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses)
 	if err != nil {
-		if errors.IsConflict(err) {
+		if k8serrors.IsConflict(err) {
 			// if there's a conflict that's normal just requeue to retry, no need to make noise.
 			return ctrl.Result{Requeue: true}, nil
 		}

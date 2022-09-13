@@ -1798,8 +1798,8 @@ spec:
       - command:
         - /bin/bash
         - -c
-        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db';
-          sleep 1; done
+        - until timeout 1 bash 9<>/dev/tcp/${KONG_PG_HOST}/${KONG_PG_PORT}; do echo
+          'waiting for db'; sleep 1; done
         env:
         - name: KONG_PG_HOST
           value: postgres

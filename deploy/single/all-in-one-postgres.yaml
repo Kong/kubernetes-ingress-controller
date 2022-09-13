@@ -1805,7 +1805,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: busybox
+        image: kong:2.8
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

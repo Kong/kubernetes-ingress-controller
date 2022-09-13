@@ -134,7 +134,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 // gatewayHasMatchingGatewayClass is a watch predicate which filters out reconciliation events for
-// gateway objects which aren't supported by this controller and not using an unmanaged GatewayClass.
+// gateway objects which aren't supported by this controller or not using an unmanaged GatewayClass.
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	gateway, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
@@ -150,7 +150,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 }
 
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
-// aren't configured with the required ControllerName and not annotated as unmanaged.
+// aren't configured with the required ControllerName or not annotated as unmanaged.
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
 	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {

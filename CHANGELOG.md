@@ -71,7 +71,7 @@
   The annotation "konghq.com/gateway-unmanaged" is not considered anymore and
   doesn't need to be set on Gateways to be reconciled. Only the Gateways using
   an unmanaged GatewayClass are reconciled.
-  [2917](https://github.com/Kong/kubernetes-ingress-controller/pull/2917)
+  [#2917](https://github.com/Kong/kubernetes-ingress-controller/pull/2917)
 
 #### Added
 

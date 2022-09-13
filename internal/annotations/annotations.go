@@ -255,6 +255,9 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 // ExtractUnmanagedGatewayClassMode extracts the value of the unmanaged gateway
 // mode annotation.
 func ExtractUnmanagedGatewayClassMode(anns map[string]string) string {
+	if anns == nil {
+		return ""
+	}
 	return anns[GatewayClassUnmanagedAnnotation]
 }
 

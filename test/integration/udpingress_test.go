@@ -154,14 +154,14 @@ func TestUDPIngressEssentials(t *testing.T) {
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kernel.org")
+		_, err := resolver.LookupHost(ctx, "kong.hq")
 		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
 	assert.NoError(t, gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kernel.org")
+		_, err := resolver.LookupHost(ctx, "kong.hq")
 		if err != nil {
 			if strings.Contains(err.Error(), "i/o timeout") {
 				return true
@@ -268,7 +268,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	query := new(dns.Msg)
 	query.Id = dns.Id()
 	query.Question = make([]dns.Question, 1)
-	query.Question[0] = dns.Question{Name: "kernel.org.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+	query.Question[0] = dns.Question{Name: "kong.hq.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
 	dnsUDPClient := new(dns.Client)
 	dnsTCPClient := dns.Client{Net: "tcp"}
 
@@ -402,7 +402,7 @@ const corefile = `
     reload
     loadbalance
     hosts {
-      10.0.0.1 kernel.org
+      10.0.0.1 konghq.com
       fallthrough
     }
 }
@@ -425,7 +425,7 @@ const corefile = `
     reload
     loadbalance
     hosts {
-      10.0.0.1 kernel.org
+      10.0.0.1 konghq.com
       fallthrough
     }
 }

@@ -1,0 +1,223 @@
+name: Kong 3.0 compatibility
+
+on:
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  integration-tests:
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false ## run through all the options in matrix even some of them failed.
+      matrix:
+        database-mode:
+          - 'dbless'
+          - 'postgres'
+        kong-edition:
+          - 'OSS'
+          - 'enterprise'
+    steps:
+    - name: setup golang
+      id: setup_golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      id: go_modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      id: checkout_repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: setup test kong image for OSS edition
+      id: setup_env_oss
+      if: ${{ matrix.kong-edition == 'OSS' }}
+      run: |
+        echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.0" >> $GITHUB_ENV
+
+    - name: setup test kong image and env for enterprise edition
+      id: setup_env_ee
+      if: ${{ matrix.kong-edition == 'enterprise' }}
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.0" >> $GITHUB_ENV
+        echo "TEST_KONG_ENTERPRISE=true" >> $GITHUB_ENV
+
+    - name: setup database mode for dbless
+      id: setup_env_dbless
+      if: ${{ matrix.database-mode == 'dbless' }}
+      run: echo "TEST_DATABASE_MODE=off" >> $GITHUB_ENV
+
+    - name: setup database mode for postgres
+      id: setup_env_postgres
+      if: ${{ matrix.database-mode == 'postgres' }}
+      run: echo "TEST_DATABASE_MODE=postgres" >> $GITHUB_ENV
+
+    - uses: Kong/kong-license@master
+      id: license
+      with:
+        # PULP_PASSWORD secret is set in "Configure ci" environment
+        password: ${{ secrets.PULP_PASSWORD }}
+
+    - name: run integration tests
+      id: run_integration_tests
+      run: make _test.integration
+      continue-on-error: true
+      ## skip enterprise-dbless option.
+      if: ${{ matrix.kong-edition == 'OSS' || matrix.database-mode == 'postgres' }} 
+      env:
+        TEST_KONG_IMAGE: ${{ env.TEST_KONG_IMAGE }}
+        TEST_KONG_TAG: ${{ env.TEST_KONG_TAG }}
+        TEST_KONG_ENTERPRISE: ${{ env.TEST_KONG_ENTERPRISE }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        DBMODE: ${{ env.TEST_DATABASE_MODE }}
+        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+        NCPU: 1
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-${{ matrix.database-mode }}-${{ matrix.kong-edition }}
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+  e2e-tests-oss:
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    steps:
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        driver-opts: network=host
+
+    - name: Build and push to local registry
+      id: docker_build
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        load: true
+        file: Dockerfile
+        tags: kong/kubernetes-ingress-controller:ci
+        target: distroless
+
+    - name: run non-enterprise cases of e2e test
+      run: make test.e2e
+      ## run tests without KONG_LICENSE_DATA env to skip enterprise tests.
+      env:
+        TEST_KONG_CONTROLLER_IMAGE_LOAD: kong/kubernetes-ingress-controller:ci
+        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: kong/kubernetes-ingress-controller:ci
+        TEST_KONG_IMAGE_OVERRIDE: kong:3.0
+        KONG_CLUSTER_VERSION: "v1.24.2"
+        ISTIO_VERSION: "v1.14.1"
+        NCPU: 1
+
+    - name: upload diagnostics for e2e OSS 
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-e2e-tests-oss
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+  e2e-tests-enterprise:
+    environment: "Configure ci"
+    runs-on: ubuntu-latest
+    steps:
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+  
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        driver-opts: network=host
+
+    - name: Build and push to local registry
+      id: docker_build
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        load: true
+        file: Dockerfile
+        tags: kong/kubernetes-ingress-controller:ci
+        target: distroless
+
+    - name: setup kong enterprise license
+      uses: Kong/kong-license@master
+      id: license
+      with:
+        # PULP_PASSWORD secret is set in "Configure ci" environment
+        password: ${{ secrets.PULP_PASSWORD }}
+
+    - name: run enterprise cases of e2e test
+      run: make test.e2e
+      env:
+        TEST_KONG_CONTROLLER_IMAGE_LOAD: kong/kubernetes-ingress-controller:ci
+        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: kong/kubernetes-ingress-controller:ci
+        TEST_KONG_IMAGE_OVERRIDE: kong/kong-gateway:3.0
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+        KONG_CLUSTER_VERSION: "v1.24.2"
+        ISTIO_VERSION: "v1.14.1"
+        NCPU: 1
+
+    - name: upload diagnostics for e2e enterprise 
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-e2e-tests-enterprise
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore

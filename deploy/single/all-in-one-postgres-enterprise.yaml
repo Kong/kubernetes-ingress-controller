@@ -1659,7 +1659,7 @@ spec:
           preStop:
             exec:
               command:
-              - /bin/sh
+              - /bin/bash
               - -c
               - kong quit
         livenessProbe:
@@ -1759,7 +1759,7 @@ spec:
       - name: kong-enterprise-edition-docker
       initContainers:
       - command:
-        - /bin/sh
+        - /bin/bash
         - -c
         - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
           sleep 2;  done;
@@ -1845,7 +1845,7 @@ spec:
     spec:
       containers:
       - command:
-        - /bin/sh
+        - /bin/bash
         - -c
         - kong migrations bootstrap
         env:
@@ -1871,16 +1871,16 @@ spec:
       - name: kong-enterprise-edition-docker
       initContainers:
       - command:
-        - /bin/sh
+        - /bin/bash
         - -c
-        - until nc -zv $KONG_PG_HOST $KONG_PG_PORT -w1; do echo 'waiting for db';
-          sleep 1; done
+        - until timeout 1 bash 9<>/dev/tcp/${KONG_PG_HOST}/${KONG_PG_PORT}; do echo
+          'waiting for db'; sleep 1; done
         env:
         - name: KONG_PG_HOST
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: busybox
+        image: kong/kong-gateway:2.8
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

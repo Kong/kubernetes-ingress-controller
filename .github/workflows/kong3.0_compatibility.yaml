@@ -44,15 +44,15 @@ jobs:
       id: setup_env_oss
       if: ${{ matrix.kong-edition == 'OSS' }}
       run: |
-        echo "TEST_KONG_IMAGE=kong/kong" >> $GITHUB_ENV
-        echo "TEST_KONG_TAG=3.0.0-alpha.14-alpine" >> $GITHUB_ENV
+        echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.0" >> $GITHUB_ENV
 
     - name: setup test kong image and env for enterprise edition
       id: setup_env_ee
       if: ${{ matrix.kong-edition == 'enterprise' }}
       run: |
-        echo "TEST_KONG_IMAGE=kong/kong-gateway-internal" >> $GITHUB_ENV
-        echo "TEST_KONG_TAG=3.0.x.x-alpine" >> $GITHUB_ENV
+        echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.0" >> $GITHUB_ENV
         echo "TEST_KONG_ENTERPRISE=true" >> $GITHUB_ENV
 
     - name: setup database mode for dbless
@@ -141,7 +141,7 @@ jobs:
       env:
         TEST_KONG_CONTROLLER_IMAGE_LOAD: kong/kubernetes-ingress-controller:ci
         TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: kong/kubernetes-ingress-controller:ci
-        TEST_KONG_IMAGE_OVERRIDE: kong/kong:3.0.0-alpha.14-alpine
+        TEST_KONG_IMAGE_OVERRIDE: kong:3.0
         KONG_CLUSTER_VERSION: "v1.24.2"
         ISTIO_VERSION: "v1.14.1"
         NCPU: 1
@@ -206,7 +206,7 @@ jobs:
       env:
         TEST_KONG_CONTROLLER_IMAGE_LOAD: kong/kubernetes-ingress-controller:ci
         TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: kong/kubernetes-ingress-controller:ci
-        TEST_KONG_IMAGE_OVERRIDE: kong/kong-gateway-internal:3.0.x.x-alpine
+        TEST_KONG_IMAGE_OVERRIDE: kong/kong-gateway:3.0
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}

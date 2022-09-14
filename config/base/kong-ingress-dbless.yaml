@@ -69,7 +69,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: [ "/bin/sh", "-c", "kong quit" ]
+              command: [ "/bin/bash", "-c", "kong quit" ]
         ports:
         - name: proxy
           containerPort: 8000

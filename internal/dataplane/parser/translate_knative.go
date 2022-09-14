@@ -22,7 +22,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	// well use the stock Kubernetes resource.
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound{}) {
+		if errors.As(err, &store.ErrNotFound{}) {
 			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
 			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
 		} else {

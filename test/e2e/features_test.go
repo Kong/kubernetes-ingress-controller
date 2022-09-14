@@ -161,14 +161,16 @@ func TestWebhookUpdate(t *testing.T) {
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
-	}()
 
 	t.Logf("build a cleaner to dump diagnostics...")
 	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")
@@ -310,9 +312,15 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
+	t.Logf("build a cleaner to dump diagnostics...")
+	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		t.Logf("cleaning up environment for cluster %s", env.Cluster().Name())
-		assert.NoError(t, env.Cleanup(ctx))
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")
@@ -490,8 +498,14 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")
@@ -570,9 +584,6 @@ func TestDefaultIngressClass(t *testing.T) {
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
-	}()
 
 	t.Logf("build a cleaner to dump diagnostics...")
 	cleaner := clusters.NewCleaner(env.Cluster())

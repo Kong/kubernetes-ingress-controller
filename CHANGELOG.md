@@ -111,6 +111,9 @@
   [#2889](https://github.com/Kong/kubernetes-ingress-controller/issues/2889)
   [#2894](https://github.com/Kong/kubernetes-ingress-controller/issues/2894)
   [#2900](https://github.com/Kong/kubernetes-ingress-controller/issues/2900)
+- Manifests now use `/bin/bash` instead of `/bin/sh` and use bash-based
+  connectivity checks for compatibility with the new Debian Kong images.
+  [#2923](https://github.com/Kong/kubernetes-ingress-controller/issues/2923)
 
 #### Fixed
 

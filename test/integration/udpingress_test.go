@@ -306,7 +306,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		},
 		Spec: kongv1beta1.TCPIngressSpec{Rules: []kongv1beta1.IngressRule{
 			{
-				Port: 8888,
+				Port: ktfkong.DefaultTCPServicePort,
 				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[1].Port),
@@ -372,7 +372,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	t.Logf("tearing down TCPIngress %s and ensuring backends are torn down", tcp.Name)
 	assert.NoError(t, gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsTCPClient.Exchange(query, fmt.Sprintf("%s:8888", proxyURL.Hostname()))
+		_, _, err := dnsTCPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort))
 		if err != nil {
 			if strings.Contains(err.Error(), "connection reset by peer") {
 				return true
@@ -402,7 +402,7 @@ const corefile = `
     reload
     loadbalance
     hosts {
-      10.0.0.1 konghq.com
+      10.0.0.1 kernel.org
       fallthrough
     }
 }
@@ -425,7 +425,7 @@ const corefile = `
     reload
     loadbalance
     hosts {
-      10.0.0.1 konghq.com
+      10.0.0.1 kernel.org
       fallthrough
     }
 }

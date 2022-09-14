@@ -40,6 +40,10 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 	supportedGatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				// annotate the gatewayclass to unmanaged.
+				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
 			ControllerName: gateway.ControllerName,
@@ -52,9 +56,6 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 	gw := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kong",
-			Annotations: map[string]string{
-				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder, // trigger the unmanaged gateway mode
-			},
 		},
 		Spec: gatewayv1beta1.GatewaySpec{
 			GatewayClassName: gatewayv1beta1.ObjectName(supportedGatewayClass.Name),
@@ -84,6 +85,7 @@ func verifyGateway(ctx context.Context, t *testing.T, env environments.Environme
 				return true
 			}
 		}
+		t.Logf("conditions: %v", gw.Status.Conditions)
 		return false
 	}, gatewayUpdateWaitTime, time.Second)
 }
@@ -97,6 +99,10 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 	supportedGatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				// annotate the gatewayclass to unmanaged.
+				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
 			ControllerName: gateway.ControllerName,

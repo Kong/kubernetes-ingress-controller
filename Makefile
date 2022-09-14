@@ -315,7 +315,7 @@ test.integration.enterprise.postgres.pretty:
 
 .PHONY: test.e2e
 test.e2e:
-	GOFLAGS="-tags=e2e_tests" go test -v \
+	GOFLAGS="-tags=e2e_tests" go test -v $(GOTESTFLAGS) \
 		-race \
 		-parallel $(NCPU) \
 		-timeout $(E2E_TEST_TIMEOUT) \

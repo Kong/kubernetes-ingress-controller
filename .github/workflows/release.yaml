@@ -235,7 +235,6 @@ jobs:
     strategy:
       matrix:
         minor:
-          - '20'
           - '21'
           - '22'
           - '23'

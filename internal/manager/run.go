@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -103,7 +104,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	if err != nil {
 		setupLog.V(util.WarnLevel).Info("could not parse Kong version, version-specific behavior disabled", "error", err)
 	} else {
-		versions.SetKongVersion(kongVersion)
+		versions.SetKongVersion(semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()})
 	}
 	kongRootConfig, ok := kongRoot["configuration"].(map[string]interface{})
 	if !ok {

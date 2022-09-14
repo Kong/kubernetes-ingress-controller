@@ -60,7 +60,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	// pollutes E2E logs with a bunch of controller log nonsense and a boatload of goroutines that litter the panic
 	// logs. Temporarily skip it because it's not failing and it's making it harder to read the failure results.
 	// Ultimately we should probably move it elsewhere.
-	t.Skip("quiet Istio")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

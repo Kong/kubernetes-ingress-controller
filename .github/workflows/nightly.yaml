@@ -1,0 +1,214 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch: {}
+
+env:
+  RH_SCAN_REGISTRY: scan.connect.redhat.com
+  RH_SCAN_REGISTRY_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/nightly-ingress-controller
+
+jobs:
+  build-push-images:
+    environment: 'Docker Push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Add standard tags
+        run: |
+          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=raw,value=nightly' >> $GITHUB_ENV
+          echo "type=raw,value={{date 'YYYY-MM-DD'}}" >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Add Red Hat standard tags
+        run: |
+          echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=raw,value=nightly,suffix=-redhat' >> $GITHUB_ENV
+          echo "type=raw,value={{date 'YYYY-MM-DD'}},suffix=-redhat" >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Login to RH Scan Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.RH_SCAN_REGISTRY }}
+          username: ${{ secrets.RH_USERNAME }}
+          password: ${{ secrets.RH_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4.0.1
+        with:
+          images: kong/nightly-ingress-controller
+          tags: ${{ env.TAGS_STANDARD }}
+      - name: Docker meta (redhat)
+        id: meta_redhat
+        uses: docker/metadata-action@v4.0.1
+        with:
+          images: kong/nightly-ingress-controller
+          flavor: |
+            latest=false
+          tags: ${{ env.REDHAT_STANDARD }}
+      - name: Docker meta (redhat scan registry)
+        id: meta_redhat_scan_registry
+        uses: docker/metadata-action@v4.0.1
+        with:
+          images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
+      - name: Build binary
+        id: docker_build_binary
+        uses: docker/build-push-action@v3
+        with:
+          push: false
+          file: Dockerfile
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          target: builder
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: distroless
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Build and push Red Hat image
+        id: docker_build_redhat
+        env:
+          TAG: ${{ steps.meta.outputs.version }}
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          file: Dockerfile
+          tags: ${{ steps.meta_redhat.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: redhat
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Build image for local Preflight scan
+        id: docker_build_redhat_scan_registry
+        env:
+          TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}
+        uses: docker/build-push-action@v3.1.1
+        with:
+          push: false
+          file: Dockerfile
+          tags: ${{ steps.meta_redhat_scan_registry.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          target: redhat
+          # RedHat scan registry does not support multiarch images
+          platforms: linux/amd64
+          build-args: |
+            TAG=${{ steps.meta_redhat_scan_registry.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+      - name: Run local Red Hat Certification Preflight scan
+        uses: ./.github/actions/redhat-opdev-preflight-action
+        with:
+          image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}:${{ steps.meta_redhat_scan_registry.outputs.version }}
+          username: ${{ secrets.RH_USERNAME }}
+          password: ${{ secrets.RH_TOKEN }}
+          submit: false
+
+  
+  # run integration test in latest version of kubernetes.
+  test-current-kubernetes:
+    runs-on: ubuntu-latest
+    needs: build-push-images
+    strategy:
+      matrix:
+        kubernetes-version:
+          - 'v1.24.2'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
+  # run integration tests in previous versions of kubernetes 
+  test-previous-kubernetes:
+    environment: gcloud
+    runs-on: ubuntu-latest
+    needs: build-push-images
+    strategy:
+      matrix:
+        minor:
+          - '20'
+          - '21'
+          - '22'
+          - '23'
+        dbmode:
+          - 'dbless'
+          - 'postgres'
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
+        run: ./hack/e2e/run-tests.sh
+        env:
+          KUBERNETES_MAJOR_VERSION: 1
+          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}

@@ -48,7 +48,7 @@ body:
     label: "**For all releases** Publish images to Red Hat Catalog"
     options:
       - label: Verify the image was pushed by a pipeline to the [KIC project in Red Hat partners portal](https://connect.redhat.com/projects/5eab1b8ea165648bd1353266/images) to confirm that E2E tests are succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml).
-      - label: Click publish button for all tags to publish the image to Red Hat Catalog.
+      - label: Click publish button for all tags related to the release that were pushed to the portal. That will publish the image to Red Hat Catalog.
       - label: Make sure the latest tag was added when asked. If forgot, the tag can be added from a dropdown menu.
 - type: checkboxes
   id: release_documents

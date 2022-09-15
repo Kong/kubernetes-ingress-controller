@@ -432,5 +432,5 @@ const (
 }
 `
 	// Querying this hostname should save coredns querying external DNS.
-	corednsKnownHostname = "konghq.com"
+	corednsKnownHostname = "konghq.com."
 )

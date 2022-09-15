@@ -154,14 +154,14 @@ func TestUDPIngressEssentials(t *testing.T) {
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kong.hq")
+		_, err := resolver.LookupHost(ctx, corednsKnownHostname)
 		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
 	assert.NoError(t, gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kong.hq")
+		_, err := resolver.LookupHost(ctx, corednsKnownHostname)
 		if err != nil {
 			if strings.Contains(err.Error(), "i/o timeout") {
 				return true
@@ -268,7 +268,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	query := new(dns.Msg)
 	query.Id = dns.Id()
 	query.Question = make([]dns.Question, 1)
-	query.Question[0] = dns.Question{Name: "kong.hq.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+	query.Question[0] = dns.Question{Name: corednsKnownHostname, Qtype: dns.TypeA, Qclass: dns.ClassINET}
 	dnsUDPClient := new(dns.Client)
 	dnsTCPClient := dns.Client{Net: "tcp"}
 
@@ -382,7 +382,8 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-const corefile = `
+const (
+	corefile = `
 .:53 {
     errors
     health {
@@ -430,3 +431,6 @@ const corefile = `
     }
 }
 `
+	// Querying this hostname should save coredns querying external DNS.
+	corednsKnownHostname = "konghq.com"
+)

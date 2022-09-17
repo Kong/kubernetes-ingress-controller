@@ -225,8 +225,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
-        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes_version }} make test.integration.${{ matrix.dbmode }}
+      - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
 
   test-previous-kubernetes:
     environment: gcloud
@@ -258,7 +258,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: ./hack/e2e/run-tests.sh
+        run: make test.integration.gke
         env:
           KUBERNETES_MAJOR_VERSION: 1
           KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}

@@ -70,7 +70,7 @@ jobs:
       with:
         # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
-    
+
     - name: run integration tests
       id: run_integration_tests
       run: make _test.integration
@@ -94,7 +94,7 @@ jobs:
         name: diagnostics-integration-${{ matrix.database-mode }}-${{ matrix.kong-edition }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
-    
+
   e2e-tests-oss:
     environment: "Configure ci"
     runs-on: ubuntu-latest

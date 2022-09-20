@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
@@ -161,13 +162,13 @@ func NewKongClient(
 	}
 
 	// validate the proxy version
-	proxySemver, err := kong.ParseSemanticVersion(kong.VersionFromInfo(root))
+	proxyVersion, err := kong.ParseSemanticVersion(kong.VersionFromInfo(root))
 	if err != nil {
 		return nil, err
 	}
 
 	// store the gathered configuration options
-	c.kongConfig.Version = proxySemver
+	c.kongConfig.Version = semver.Version{Major: proxyVersion.Major(), Minor: proxyVersion.Minor(), Patch: proxyVersion.Patch()}
 	c.dbmode = dbmode
 
 	return c, nil

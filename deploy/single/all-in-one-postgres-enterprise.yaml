@@ -1654,7 +1654,7 @@ spec:
           value: /dev/stderr
         - name: KONG_ROUTER_FLAVOR
           value: traditional
-        image: kong/kong-gateway:2.8
+        image: kong/kong-gateway:3.0
         lifecycle:
           preStop:
             exec:
@@ -1721,7 +1721,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.5.0
+        image: kong/kubernetes-ingress-controller:2.6.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -1773,7 +1773,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong/kong-gateway:2.8
+        image: kong/kong-gateway:3.0
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
@@ -1865,7 +1865,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:2.8
+        image: kong/kong-gateway:3.0
         name: kong-migrations
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
@@ -1880,7 +1880,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:2.8
+        image: kong/kong-gateway:3.0
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

@@ -205,7 +205,7 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.24.2'
+          - 'v1.24.3'
         dbmode:
           - 'dbless'
           - 'postgres'
@@ -235,7 +235,6 @@ jobs:
     strategy:
       matrix:
         minor:
-          - '20'
           - '21'
           - '22'
           - '23'

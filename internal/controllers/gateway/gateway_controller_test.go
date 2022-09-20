@@ -392,7 +392,7 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tc.expectedResult, isGatewayClassControlledAndUmanaged(tc.GatewayClass))
+			assert.Equal(t, tc.expectedResult, isGatewayClassControlledAndUnmanaged(tc.GatewayClass))
 		})
 	}
 }

@@ -28,6 +28,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
@@ -80,11 +81,16 @@ func verifyGateway(ctx context.Context, t *testing.T, env environments.Environme
 	require.Eventually(t, func() bool {
 		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		for _, cond := range gw.Status.Conditions {
-			if cond.Reason == string(gatewayv1beta1.GatewayReasonReady) {
-				return true
-			}
+		if ready := util.CheckCondition(
+			gw.Status.Conditions,
+			util.ConditionType(gatewayv1beta1.GatewayConditionReady),
+			util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+			metav1.ConditionTrue,
+			gw.Generation,
+		); ready {
+			return true
 		}
+
 		t.Logf("conditions: %v", gw.Status.Conditions)
 		return false
 	}, gatewayUpdateWaitTime, time.Second)

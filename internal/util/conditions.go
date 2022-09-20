@@ -21,7 +21,7 @@ func CheckCondition(
 		if cond.Type == string(typ) &&
 			cond.Reason == string(reason) &&
 			cond.Status == status &&
-			cond.ObservedGeneration >= resourceGeneration {
+			cond.ObservedGeneration == resourceGeneration {
 			return true
 		}
 	}

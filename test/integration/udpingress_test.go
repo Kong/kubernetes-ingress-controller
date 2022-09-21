@@ -154,14 +154,14 @@ func TestUDPIngressEssentials(t *testing.T) {
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kernel.org")
+		_, err := resolver.LookupHost(ctx, corednsKnownHostname)
 		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
 	assert.NoError(t, gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kernel.org")
+		_, err := resolver.LookupHost(ctx, corednsKnownHostname)
 		if err != nil {
 			if strings.Contains(err.Error(), "i/o timeout") {
 				return true
@@ -268,7 +268,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	query := new(dns.Msg)
 	query.Id = dns.Id()
 	query.Question = make([]dns.Question, 1)
-	query.Question[0] = dns.Question{Name: "kernel.org.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+	query.Question[0] = dns.Question{Name: corednsKnownHostname, Qtype: dns.TypeA, Qclass: dns.ClassINET}
 	dnsUDPClient := new(dns.Client)
 	dnsTCPClient := dns.Client{Net: "tcp"}
 
@@ -306,7 +306,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		},
 		Spec: kongv1beta1.TCPIngressSpec{Rules: []kongv1beta1.IngressRule{
 			{
-				Port: 8888,
+				Port: ktfkong.DefaultTCPServicePort,
 				Backend: kongv1beta1.IngressBackend{
 					ServiceName: service.Name,
 					ServicePort: int(service.Spec.Ports[1].Port),
@@ -372,7 +372,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	t.Logf("tearing down TCPIngress %s and ensuring backends are torn down", tcp.Name)
 	assert.NoError(t, gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsTCPClient.Exchange(query, fmt.Sprintf("%s:8888", proxyURL.Hostname()))
+		_, _, err := dnsTCPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort))
 		if err != nil {
 			if strings.Contains(err.Error(), "connection reset by peer") {
 				return true
@@ -382,7 +382,8 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-const corefile = `
+const (
+	corefile = `
 .:53 {
     errors
     health {
@@ -430,3 +431,6 @@ const corefile = `
     }
 }
 `
+	// Querying this hostname should save coredns querying external DNS.
+	corednsKnownHostname = "konghq.com."
+)

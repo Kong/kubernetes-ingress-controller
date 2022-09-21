@@ -16,6 +16,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -45,25 +46,25 @@ func setGatewayCondition(gateway *Gateway, newCondition metav1.Condition) {
 // isGatewayScheduled returns boolean whether or not the gateway object was scheduled
 // previously by the gateway controller.
 func isGatewayScheduled(gateway *Gateway) bool {
-	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1beta1.GatewayConditionScheduled) &&
-			cond.Reason == string(gatewayv1beta1.GatewayReasonScheduled) &&
-			cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
+	return util.CheckCondition(
+		gateway.Status.Conditions,
+		util.ConditionType(gatewayv1beta1.GatewayConditionScheduled),
+		util.ConditionReason(gatewayv1beta1.GatewayReasonScheduled),
+		metav1.ConditionTrue,
+		gateway.Generation,
+	)
 }
 
 // isGatewayReady returns boolean whether the ready condition exists
 // for the given gateway object if it matches the currently known generation of that object.
 func isGatewayReady(gateway *Gateway) bool {
-	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1beta1.GatewayConditionReady) && cond.Reason == string(gatewayv1beta1.GatewayReasonReady) && cond.ObservedGeneration == gateway.Generation {
-			return true
-		}
-	}
-	return false
+	return util.CheckCondition(
+		gateway.Status.Conditions,
+		util.ConditionType(gatewayv1beta1.GatewayConditionReady),
+		util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+		metav1.ConditionTrue,
+		gateway.Generation,
+	)
 }
 
 // isObjectUnmanaged returns boolean if the object is configured
@@ -73,9 +74,9 @@ func isObjectUnmanaged(anns map[string]string) bool {
 	return annotationValue != ""
 }
 
-// isGatewayClassControlledAndUmanaged returns boolean if the GatewayClass
+// isGatewayClassControlledAndUnmanaged returns boolean if the GatewayClass
 // is controlled by this controller and is configured for unmanaged mode.
-func isGatewayClassControlledAndUmanaged(gatewayClass *GatewayClass) bool {
+func isGatewayClassControlledAndUnmanaged(gatewayClass *GatewayClass) bool {
 	return gatewayClass.Spec.ControllerName == ControllerName && isObjectUnmanaged(gatewayClass.Annotations)
 }
 

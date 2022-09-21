@@ -146,7 +146,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		r.Log.Error(err, "could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
-	return isGatewayClassControlledAndUmanaged(gatewayClass)
+	return isGatewayClassControlledAndUnmanaged(gatewayClass)
 }
 
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
@@ -157,7 +157,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 		r.Log.Error(fmt.Errorf("unexpected object type in gatewayclass watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
 		return false
 	}
-	return isGatewayClassControlledAndUmanaged(gatewayClass)
+	return isGatewayClassControlledAndUnmanaged(gatewayClass)
 }
 
 // listGatewaysForGatewayClass is a watch predicate which finds all the gateway objects reference
@@ -220,7 +220,7 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}
-		if isGatewayClassControlledAndUmanaged(gatewayClass) {
+		if isGatewayClassControlledAndUnmanaged(gatewayClass) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: gateway.Namespace,
@@ -313,7 +313,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// This check has already been performed by predicates, but we need to ensure this condition
 	// as the reconciliation loop may be triggered by objects in which predicates we
 	// cannot check the ControllerName and the unmanaged mode (e.g., ReferenceGrants).
-	if !isGatewayClassControlledAndUmanaged(gwc) {
+	if !isGatewayClassControlledAndUnmanaged(gwc) {
 		return reconcile.Result{}, nil
 	}
 

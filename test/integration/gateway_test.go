@@ -21,6 +21,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
@@ -94,13 +95,14 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		// The conditions should be snapshots, so we judge by the observed status of condition with type Ready.
-		for _, cond := range gw.Status.Conditions {
-			if cond.Type == string(gatewayv1beta1.GatewayConditionReady) {
-				return cond.Reason == string(gatewayv1beta1.GatewayReasonReady)
-			}
-		}
-		return false
+		ready := util.CheckCondition(
+			gw.Status.Conditions,
+			util.ConditionType(gatewayv1beta1.GatewayConditionReady),
+			util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+			metav1.ConditionTrue,
+			gw.Generation,
+		)
+		return ready
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway listeners reach the ready condition")
@@ -108,15 +110,13 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
-			// we may have several conditions but only care about one, so loop through each and mark ready only if
-			// we find the correct one with the correct status
-			ready := false
-			for _, condition := range lstatus.Conditions {
-				if condition.Type == string(gatewayv1beta1.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
-					ready = true
-				}
-			}
-			if !ready {
+			if listenerReady := util.CheckCondition(
+				lstatus.Conditions,
+				util.ConditionType(gatewayv1beta1.ListenerConditionReady),
+				util.ConditionReason(gatewayv1beta1.ListenerReasonReady),
+				metav1.ConditionTrue,
+				gw.Generation,
+			); !listenerReady {
 				return false
 			}
 		}
@@ -146,14 +146,13 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
-			// we may have several conditions but only care about one, so loop through each and mark ready only if
-			// we find the correct one with the correct status
-			ready := false
-			for _, condition := range lstatus.Conditions {
-				if condition.Type == string(gatewayv1beta1.ListenerConditionReady) && condition.Status == metav1.ConditionTrue {
-					ready = true
-				}
-			}
+			ready := util.CheckCondition(
+				lstatus.Conditions,
+				util.ConditionType(gatewayv1beta1.GatewayConditionReady),
+				util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+				metav1.ConditionTrue,
+				gw.Generation,
+			)
 			if !ready {
 				return false
 			}

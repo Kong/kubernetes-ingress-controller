@@ -26,6 +26,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
@@ -611,12 +612,14 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 	invalid := false
 	for _, status := range gateway.Status.Listeners {
-		for _, condition := range status.Conditions {
-			if condition.Type == string(gatewayv1alpha2.ListenerConditionResolvedRefs) &&
-				condition.Status == metav1.ConditionFalse &&
-				condition.Reason == string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef) {
-				invalid = true
-			}
+		if ok := util.CheckCondition(
+			status.Conditions,
+			util.ConditionType(gatewayv1alpha2.ListenerConditionResolvedRefs),
+			util.ConditionReason(gatewayv1alpha2.ListenerReasonInvalidCertificateRef),
+			metav1.ConditionFalse,
+			gateway.Generation,
+		); ok {
+			invalid = true
 		}
 	}
 	require.True(t, invalid)

@@ -433,12 +433,14 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 					"gateway":  gateway.Name,
 					"listener": listener.Name,
 				}).Debug("listener missing status information")
-				for _, c := range status.Conditions {
-					if c.Type == string(gatewayv1alpha2.ListenerConditionReady) {
-						if c.Status == metav1.ConditionTrue {
-							ready = true
-						}
-					}
+				if ok := util.CheckCondition(
+					status.Conditions,
+					util.ConditionType(gatewayv1alpha2.ListenerConditionReady),
+					util.ConditionReason(gatewayv1alpha2.ListenerReasonReady),
+					metav1.ConditionTrue,
+					gateway.Generation,
+				); ok {
+					ready = true
 				}
 			}
 			if !ready {

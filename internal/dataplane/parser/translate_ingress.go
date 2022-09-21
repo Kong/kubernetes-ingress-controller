@@ -11,6 +11,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -39,6 +40,10 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
+		regexPrefix := translators.ControllerPathRegexPrefix
+		if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
+			regexPrefix = prefix
+		}
 		ingressSpec := ingress.Spec
 		log := p.logger.WithFields(logrus.Fields{
 			"ingress_namespace": ingress.Namespace,
@@ -64,7 +69,10 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					log.Errorf("rule skipped: invalid path: '%v'", path)
 					continue
 				}
-				if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+				if strings.HasPrefix(path, regexPrefix) {
+					path = strings.Replace(path, regexPrefix,
+						translators.KongPathRegexPrefix, 1)
+				} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
 					path = maybePrependRegexPrefix(path)
 				}
 				if path == "" {
@@ -200,6 +208,10 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
+		regexPrefix := translators.ControllerPathRegexPrefix
+		if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
+			regexPrefix = prefix
+		}
 		ingressSpec := ingress.Spec
 		log := p.logger.WithFields(logrus.Fields{
 			"ingress_namespace": ingress.Namespace,
@@ -216,17 +228,21 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 		if p.featureEnabledCombinedServiceRoutes {
 			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
-				if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
-					for _, route := range kongStateService.Routes {
-						for i, path := range route.Paths {
-							newPath := maybePrependRegexPrefix(*path)
-							route.Paths[i] = &newPath
+				for _, route := range kongStateService.Routes {
+					for i, path := range route.Paths {
+						newPath := *path
+						if strings.HasPrefix(*path, regexPrefix) {
+							newPath = strings.Replace(*path, regexPrefix,
+								translators.KongPathRegexPrefix, 1)
+						} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+							newPath = maybePrependRegexPrefix(*path)
 						}
+						route.Paths[i] = &newPath
 					}
 				}
 				result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
+				objectSuccessfullyParsed = true
 			}
-			objectSuccessfullyParsed = true
 		} else {
 			for i, rule := range ingressSpec.Rules {
 				if rule.HTTP == nil {
@@ -251,7 +267,10 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 					for i, path := range paths {
 						newPath := *path
-						if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+						if strings.HasPrefix(*path, regexPrefix) {
+							newPath = strings.Replace(*path, regexPrefix,
+								translators.KongPathRegexPrefix, 1)
+						} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
 							newPath = maybePrependRegexPrefix(*path)
 						}
 						paths[i] = &newPath

@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
@@ -262,6 +263,36 @@ func TestFromIngressV1beta1(t *testing.T) {
 				},
 			},
 		},
+		// 8
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "regex-prefix",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: netv1beta1.IngressSpec{
+				Rules: []netv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1beta1.IngressRuleValue{
+							HTTP: &netv1beta1.HTTPIngressRuleValue{
+								Paths: []netv1beta1.HTTPIngressPath{
+									{
+										Path: translators.ControllerPathRegexPrefix + "/foo/\\d{3}",
+										Backend: netv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
@@ -398,6 +429,18 @@ func TestFromIngressV1beta1(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Empty(parsedInfo.ServiceNameToServices)
+	})
+	t.Run("Ingress rule with regex prefixed path creates route with Kong regex prefix", func(t *testing.T) {
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1beta1: []*netv1beta1.Ingress{
+				ingressList[8],
+			},
+		})
+		require.NoError(t, err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 	})
 }
 
@@ -704,6 +747,38 @@ func TestFromIngressV1(t *testing.T) {
 				},
 			},
 		},
+		// 9
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "regex-prefix",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: netv1.IngressSpec{
+				Rules: []netv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: translators.ControllerPathRegexPrefix + "/foo/\\d{3}",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	t.Run("no ingress returns empty info", func(t *testing.T) {
@@ -849,17 +924,27 @@ func TestFromIngressV1(t *testing.T) {
 	t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
 			IngressesV1: []*netv1.Ingress{
-				ingressList[8],
+				ingressList[9],
 			},
 		})
 		require.NoError(t, err)
 		p := NewParser(logrus.New(), store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
-		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-http"]
+		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"]
 		assert.True(ok)
-		_, ok = parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pname-ws"]
-		assert.True(ok)
+	})
+	t.Run("Ingress rule with regex prefixed path creates route with Kong regex prefix", func(t *testing.T) {
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*netv1.Ingress{
+				ingressList[9],
+			},
+		})
+		require.NoError(t, err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromIngressV1()
+		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 	})
 }
 

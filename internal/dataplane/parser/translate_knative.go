@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -45,6 +48,10 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	secretToSNIs := newSecretNameToSNIs()
 
 	for _, ingress := range ingressList {
+		regexPrefix := translators.ControllerPathRegexPrefix
+		if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
+			regexPrefix = prefix
+		}
 		ingressSpec := ingress.Spec
 
 		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
@@ -61,7 +68,10 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				if path == "" {
 					path = "/"
 				}
-				if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
+				if strings.HasPrefix(path, regexPrefix) {
+					path = strings.Replace(path, regexPrefix,
+						translators.KongPathRegexPrefix, 1)
+				} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
 					path = maybePrependRegexPrefix(path)
 				}
 				r := kongstate.Route{

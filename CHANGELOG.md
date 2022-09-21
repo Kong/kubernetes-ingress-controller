@@ -51,6 +51,34 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.7.0]
+
+> Release date: TBD
+
+### Breaking changes
+
+- Ingress paths that begin with `/~` are now treated as regular expressions,
+  and are translated into a Kong route path that begins with `~` instead of
+  `/~`. To preserve the existing translation, set `konghq.com/regex-prefix` to
+  some value. For example, if you set `konghq.com/regex-prefix: /@`, paths
+  beginning with `/~` will result in route paths beginning in `/~`, whereas
+  paths beginning in `/@` will result in route paths beginning in `~`.
+  [#2956](https://github.com/Kong/kubernetes-ingress-controller/pull/2956)
+
+### Added
+
+- The controller-specific `/~` prefix translates to the Kong `~` prefix, as
+  Ingress does not allow paths that do not begin in `/`. The prefix can be
+  overriden by setting a `konghq.com/regex-prefix` annotation, for routes that
+  need their paths to actually begin with `/~`
+  [#2956](https://github.com/Kong/kubernetes-ingress-controller/pull/2956)
+
+### Fixed
+
+- The legacy regex heuristic toggle on IngressClassParameters now works when
+  the combined routes feature flag is enabled.
+  [#2942](https://github.com/Kong/kubernetes-ingress-controller/pull/2942)
+
 ## [2.6.0]
 
 > Release date: 2022-09-14
@@ -1934,6 +1962,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.4.2

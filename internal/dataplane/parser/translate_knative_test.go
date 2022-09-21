@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
@@ -176,6 +177,43 @@ func TestFromKnativeIngress(t *testing.T) {
 				},
 			},
 		},
+		// 4
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "regex-prefix",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.KnativeIngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: knative.IngressSpec{
+				Rules: []knative.IngressRule{
+					{
+						Hosts: []string{"my-func.example.com"},
+						HTTP: &knative.HTTPIngressRuleValue{
+							Paths: []knative.HTTPIngressPath{
+								{
+									Path: translators.ControllerPathRegexPrefix + "/foo/\\d{3}",
+									AppendHeaders: map[string]string{
+										"foo": "bar",
+									},
+									Splits: []knative.IngressBackendSplit{
+										{
+											IngressBackend: knative.IngressBackend{
+												ServiceNamespace: "foo-ns",
+												ServiceName:      "foo-svc",
+												ServicePort:      intstr.FromInt(42),
+											},
+											Percent: 100,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	t.Run("no ingress returns empty info", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -303,6 +341,22 @@ func TestFromKnativeIngress(t *testing.T) {
 				},
 			},
 		}, svc.Plugins[0])
+
+		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+	})
+	t.Run("regex prefix translated to Kong form", func(t *testing.T) {
+		store, err := store.NewFakeStore(store.FakeObjects{
+			KnativeIngresses: []*knative.Ingress{
+				ingressList[4],
+			},
+		})
+		assert.NoError(err)
+		p := NewParser(logrus.New(), store)
+
+		parsedInfo := p.ingressRulesFromKnativeIngress()
+		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
+		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *svc.Routes[0].Route.Paths[0])
 
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
 	})

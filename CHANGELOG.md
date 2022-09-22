@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.7.0](#270)
  - [2.6.0](#260)
  - [2.5.0](#250)
  - [2.4.2](#242)
@@ -50,6 +51,16 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.7.0]
+
+> Release date: TBD 
+
+### Added
+
+- On configuration push to the data plane failure, `ingress_controller_configuration_push_count` Prometheus metric
+  is now reported with `success="false"` and `failure_reason="conflict|other"` labels, enabling distinguishing 
+  configuration conflicts from others errors (e.g. transient network errors). 
 
 ## [2.6.0]
 

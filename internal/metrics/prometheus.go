@@ -19,7 +19,7 @@ type CtrlFuncMetrics struct {
 const (
 	// SuccessTrue indicates that the operation was successful.
 	SuccessTrue string = "true"
-	// SuccessTrue indicates that the operation was not successful.
+	// SuccessFalse indicates that the operation was not successful.
 	SuccessFalse string = "false"
 
 	// SuccessKey defines the key of the metric label indicating success/failure of an operation.
@@ -34,6 +34,17 @@ const (
 
 	// ProtocolKey defines the key of the metric label indicating which protocol KIC used to configure Kong.
 	ProtocolKey string = "protocol"
+)
+
+const (
+	// FailureReasonConflict indicates that the config push failed due to configuration conflicts.
+	FailureReasonConflict string = "conflict"
+
+	// FailureReasonOther indicates that the config push failed due to other reasons.
+	FailureReasonOther string = "other"
+
+	// FailureReasonKey defines the key of the metric label indicating failure reason.
+	FailureReasonKey string = "failure_reason"
 )
 
 const (
@@ -52,9 +63,12 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 				ProtocolKey + "` describes the configuration protocol (" + ProtocolDBLess + " or " +
 				ProtocolDeck + ") in use. `" +
 				SuccessKey + "` describes whether there were unrecoverable errors (`" +
-				SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
+				SuccessFalse + "`) or not (`" + SuccessTrue + "`). `" +
+				FailureReasonKey + "` is populated in case of `" + SuccessKey +
+				"=\"" + SuccessFalse + "\"` " + "and describes the reason of failure (one of `" +
+				FailureReasonConflict + "`, `" + FailureReasonOther + "`).",
 		},
-		[]string{SuccessKey, ProtocolKey},
+		[]string{SuccessKey, ProtocolKey, FailureReasonKey},
 	)
 
 	controllerMetrics.TranslationCount = prometheus.NewCounterVec(

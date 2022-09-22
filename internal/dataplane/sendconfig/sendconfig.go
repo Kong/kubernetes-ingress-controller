@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -16,6 +17,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
+	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -85,8 +87,9 @@ func PerformUpdate(ctx context.Context,
 
 	if err != nil {
 		promMetrics.ConfigPushCount.With(prometheus.Labels{
-			metrics.SuccessKey:  metrics.SuccessFalse,
-			metrics.ProtocolKey: metricsProtocol,
+			metrics.SuccessKey:       metrics.SuccessFalse,
+			metrics.ProtocolKey:      metricsProtocol,
+			metrics.FailureReasonKey: pushFailureReason(err),
 		}).Inc()
 		promMetrics.ConfigPushDuration.With(prometheus.Labels{
 			metrics.SuccessKey:  metrics.SuccessFalse,
@@ -96,8 +99,9 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
-		metrics.SuccessKey:  metrics.SuccessTrue,
-		metrics.ProtocolKey: metricsProtocol,
+		metrics.SuccessKey:       metrics.SuccessTrue,
+		metrics.ProtocolKey:      metricsProtocol,
+		metrics.FailureReasonKey: "",
 	}).Inc()
 	promMetrics.ConfigPushDuration.With(prometheus.Labels{
 		metrics.SuccessKey:  metrics.SuccessTrue,
@@ -272,4 +276,14 @@ func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 	}
 	latestReportedSHA = latestUpdateSHA
 	return false
+}
+
+// pushFailureReason extracts config push failure reason from an error returned from onUpdateInMemoryMode or onUpdateDBMode.
+func pushFailureReason(err error) string {
+	var apiErr *kong.APIError
+	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict {
+		return metrics.FailureReasonConflict
+	}
+
+	return metrics.FailureReasonOther
 }

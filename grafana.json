@@ -235,7 +235,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "ingress_controller_configuration_push_count{success=\"false\"}",
+          "expr": "sum by (failure_reason) (ingress_controller_configuration_push_count{success=\"false\"})",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -375,6 +375,5 @@
   "timezone": "",
   "title": "Kong ingress controller",
   "uid": "SaGwMOtnz",
-  "version": 1,
-  "weekStart": ""
+  "version": 2
 }

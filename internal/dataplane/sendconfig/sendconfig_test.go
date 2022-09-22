@@ -1,6 +1,9 @@
 package sendconfig
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -8,6 +11,9 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
 func Test_renderConfigWithCustomEntities(t *testing.T) {
@@ -127,4 +133,39 @@ func Test_updateReportingUtilities(t *testing.T) {
 	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
 	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
 	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
+}
+
+func Test_pushFailureReason(t *testing.T) {
+	apiConflictErr := kong.NewAPIError(http.StatusConflict, "conflict in configuration")
+
+	testCases := []struct {
+		name           string
+		err            error
+		expectedReason string
+	}{
+		{
+			name:           "generic_error",
+			err:            errors.New("some generic error"),
+			expectedReason: metrics.FailureReasonOther,
+		},
+		{
+			name:           "api_conflict_error",
+			err:            apiConflictErr,
+			expectedReason: metrics.FailureReasonConflict,
+		},
+		{
+			name:           "api_conflict_error_wrapped",
+			err:            fmt.Errorf("wrapped conflict api err: %w", apiConflictErr),
+			expectedReason: metrics.FailureReasonConflict,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			reason := pushFailureReason(testCase.err)
+			require.Equal(t, testCase.expectedReason, reason)
+		})
+	}
 }

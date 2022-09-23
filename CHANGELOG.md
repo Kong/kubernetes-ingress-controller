@@ -61,6 +61,7 @@
 - On configuration push to the data plane failure, `ingress_controller_configuration_push_count` Prometheus metric
   is now reported with `success="false"` and `failure_reason="conflict|other"` labels, enabling distinguishing 
   configuration conflicts from other errors (e.g. transient network errors). 
+  [#2965](https://github.com/Kong/kubernetes-ingress-controller/pull/2965)
 
 ## [2.6.0]
 

@@ -849,7 +849,8 @@ func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassPa
 		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s doesn't reference any parameters", s.ingressClass)}
 	}
 
-	if *ingressClass.Spec.Parameters.APIGroup != kongv1alpha1.GroupVersion.Group {
+	if ingressClass.Spec.Parameters.APIGroup == nil ||
+		*ingressClass.Spec.Parameters.APIGroup != kongv1alpha1.GroupVersion.Group {
 		return nil, ErrNotFound{fmt.Sprintf(
 			"IngressClass %s should reference parameters in apiGroup:%s",
 			s.ingressClass,
@@ -863,6 +864,12 @@ func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassPa
 			s.ingressClass,
 			kongv1alpha1.IngressClassParametersKind,
 		)}
+	}
+
+	if ingressClass.Spec.Parameters.Scope == nil || ingressClass.Spec.Parameters.Namespace == nil {
+		return nil, ErrNotFound{
+			message: fmt.Sprintf("IngressClass %s should reference namespaced parameters", ingressClass),
+		}
 	}
 
 	key := fmt.Sprintf("%v/%v", *ingressClass.Spec.Parameters.Namespace, ingressClass.Spec.Parameters.Name)

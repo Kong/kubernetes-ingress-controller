@@ -55,6 +55,12 @@
 
 > Release date: TBD
 
+2.7 patches several bugs in 2.6.0. One of these required a breaking change. The
+breaking change is not expected to affect most configurations, but does require
+a minor version bump to comply with semver. If you have not already upgraded to
+2.6, you should upgrade directly from 2.5 to 2.7, and follow the 2.6 upgrade
+instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq.com/kubernetes-ingress-controller/2.7.x/guides/upgrade-kong-3x).
+
 ### Breaking changes
 
 - Ingress paths that begin with `/~` are now treated as regular expressions,
@@ -78,6 +84,14 @@
 - The legacy regex heuristic toggle on IngressClassParameters now works when
   the combined routes feature flag is enabled.
   [#2942](https://github.com/Kong/kubernetes-ingress-controller/pull/2942)
+- Handles Kubernetes versions that do not support namespaced
+  IngressClassParameters without panicking. Although the controller will run on
+  clusters without the `IngressClassNamespacedParams` feature gate enabled
+  (1.21) or without it available (<1.21), these clusters do not support the
+  legacy regular expression heuristic IngressClassParameters option. These
+  versions are EOL, and we advise users to upgrade to Kubernetes 1.22 or later
+  before upgrading to KIC 2.6+ or Kong 3.0+.
+  [#2970](https://github.com/Kong/kubernetes-ingress-controller/pull/2970)
 
 ## [2.6.0]
 

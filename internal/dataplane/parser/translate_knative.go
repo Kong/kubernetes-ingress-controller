@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/kong/go-kong/kong"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -65,14 +64,9 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
+				path = maybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 				if path == "" {
 					path = "/"
-				}
-				if strings.HasPrefix(path, regexPrefix) {
-					path = strings.Replace(path, regexPrefix,
-						translators.KongPathRegexPrefix, 1)
-				} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
-					path = maybePrependRegexPrefix(path)
 				}
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),

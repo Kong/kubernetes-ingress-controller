@@ -69,12 +69,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					log.Errorf("rule skipped: invalid path: '%v'", path)
 					continue
 				}
-				if strings.HasPrefix(path, regexPrefix) {
-					path = strings.Replace(path, regexPrefix,
-						translators.KongPathRegexPrefix, 1)
-				} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
-					path = maybePrependRegexPrefix(path)
-				}
+				path = maybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 				if path == "" {
 					path = "/"
 				}
@@ -230,13 +225,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
 				for _, route := range kongStateService.Routes {
 					for i, path := range route.Paths {
-						newPath := *path
-						if strings.HasPrefix(*path, regexPrefix) {
-							newPath = strings.Replace(*path, regexPrefix,
-								translators.KongPathRegexPrefix, 1)
-						} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
-							newPath = maybePrependRegexPrefix(*path)
-						}
+						newPath := maybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 						route.Paths[i] = &newPath
 					}
 				}
@@ -266,13 +255,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					}
 
 					for i, path := range paths {
-						newPath := *path
-						if strings.HasPrefix(*path, regexPrefix) {
-							newPath = strings.Replace(*path, regexPrefix,
-								translators.KongPathRegexPrefix, 1)
-						} else if icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix {
-							newPath = maybePrependRegexPrefix(*path)
-						}
+						newPath := maybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 						paths[i] = &newPath
 					}
 

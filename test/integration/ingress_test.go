@@ -854,6 +854,18 @@ func TestIngressRegexPrefix(t *testing.T) {
 										},
 									},
 								},
+								{
+									Path:     `/~/test_ingress_regex_prefix_nonstandard_default`,
+									PathType: &pathTypeImplementationSpecific,
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -883,6 +895,22 @@ func TestIngressRegexPrefix(t *testing.T) {
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/test_ingress_regex_prefix_nonstandard/999", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/~/test_ingress_regex_prefix_nonstandard_default", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false

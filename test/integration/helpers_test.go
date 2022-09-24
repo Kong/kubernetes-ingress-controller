@@ -22,6 +22,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 const (
@@ -120,12 +121,14 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 			ch <- func() bool {
 				gw, err := client.GatewayV1beta1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
 				exitOnErr(err)
-				for _, cond := range gw.Status.Conditions {
-					if cond.Reason == string(gatewayv1beta1.GatewayReasonReady) {
-						return true
-					}
-				}
-				return false
+				ok := util.CheckCondition(
+					gw.Status.Conditions,
+					util.ConditionType(gatewayv1beta1.GatewayConditionReady),
+					util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+					metav1.ConditionTrue,
+					gw.Generation,
+				)
+				return ok
 			}()
 		case v := <-ch:
 			if v {

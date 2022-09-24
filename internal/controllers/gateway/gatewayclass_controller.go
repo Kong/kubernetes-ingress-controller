@@ -72,7 +72,7 @@ func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool
 		return false
 	}
 
-	return isGatewayClassControlledAndUmanaged(gatewayClass)
+	return isGatewayClassControlledAndUnmanaged(gatewayClass)
 }
 
 // -----------------------------------------------------------------------------
@@ -97,15 +97,14 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	log.V(util.DebugLevel).Info("processing gatewayclass", "name", req.Name)
 
-	if isGatewayClassControlledAndUmanaged(gwc) {
-		alreadyAccepted := false
-		for _, cond := range gwc.Status.Conditions {
-			if cond.Reason == string(gatewayv1beta1.GatewayClassConditionStatusAccepted) {
-				if cond.ObservedGeneration == gwc.Generation {
-					alreadyAccepted = true
-				}
-			}
-		}
+	if isGatewayClassControlledAndUnmanaged(gwc) {
+		alreadyAccepted := util.CheckCondition(
+			gwc.Status.Conditions,
+			util.ConditionType(gatewayv1beta1.GatewayClassConditionStatusAccepted),
+			util.ConditionReason(gatewayv1beta1.GatewayClassReasonAccepted),
+			metav1.ConditionTrue,
+			gwc.Generation,
+		)
 
 		if !alreadyAccepted {
 			acceptedCondtion := metav1.Condition{

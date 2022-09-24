@@ -33,6 +33,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -412,27 +413,35 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		var http, udp bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "badhttp" {
-				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionDetached) {
-						if condition.Reason == string(gatewayv1alpha2.ListenerReasonPortUnavailable) {
-							http = true
-						}
-					}
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionDetached) {
-						if condition.Reason == string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol) {
-							return false
-						}
-					}
+				if util.CheckCondition(
+					lstatus.Conditions,
+					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
+					util.ConditionReason(gatewayv1alpha2.ListenerReasonPortUnavailable),
+					metav1.ConditionTrue,
+					gw.Generation,
+				) {
+					http = true
+				}
+
+				if util.CheckCondition(
+					lstatus.Conditions,
+					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
+					util.ConditionReason(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+					metav1.ConditionTrue,
+					gw.Generation,
+				) {
+					return false
 				}
 			}
 			if lstatus.Name == "badudp" {
-				for _, condition := range lstatus.Conditions {
-					// no check against the other reason here: this gets both the port and protocol condition
-					if condition.Type == string(gatewayv1alpha2.ListenerConditionDetached) {
-						if condition.Reason == string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol) {
-							udp = true
-						}
-					}
+				if util.CheckCondition(
+					lstatus.Conditions,
+					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
+					util.ConditionReason(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+					metav1.ConditionTrue,
+					gw.Generation,
+				) {
+					udp = true
 				}
 			}
 		}

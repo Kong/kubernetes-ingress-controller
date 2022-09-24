@@ -148,10 +148,11 @@ jobs:
   test-current-kubernetes:
     runs-on: ubuntu-latest
     needs: build-push-images
+    name: Run integration tests in KinD
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.24.2'
+          - 'v1.25.0'
         dbmode:
           - 'dbless'
           - 'postgres'
@@ -174,17 +175,18 @@ jobs:
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests
         run: TEST_KONG_CONTROLLER_IMAGE_OVERRIDE="kong/nightly-ingress-controller:nightly" KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
   # run integration tests in previous versions of kubernetes 
-  test-previous-kubernetes:
+  test-previous-kubernetes-gke:
+    name: Run integration tests on GKE
     environment: gcloud
     runs-on: ubuntu-latest
     needs: build-push-images
     strategy:
       matrix:
         minor:
-          - '20'
           - '21'
           - '22'
           - '23'
+          - '24'
         dbmode:
           - 'dbless'
           - 'postgres'

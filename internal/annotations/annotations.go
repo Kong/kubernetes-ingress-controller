@@ -55,6 +55,7 @@ const (
 	RequestBuffering     = "/request-buffering"
 	ResponseBuffering    = "/response-buffering"
 	HostAliasesKey       = "/host-aliases"
+	RegexPrefixKey       = "/regex-prefix"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged

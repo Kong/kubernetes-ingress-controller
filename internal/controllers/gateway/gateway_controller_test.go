@@ -167,6 +167,7 @@ func Test_setGatewayCondtion(t *testing.T) {
 func Test_isGatewayMarkedAsScheduled(t *testing.T) {
 	t.Log("verifying scheduled check for gateway object which has been scheduled")
 	scheduledGateway := &gatewayv1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Generation: 1},
 		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1beta1.GatewayConditionScheduled),
@@ -392,7 +393,7 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tc.expectedResult, isGatewayClassControlledAndUmanaged(tc.GatewayClass))
+			assert.Equal(t, tc.expectedResult, isGatewayClassControlledAndUnmanaged(tc.GatewayClass))
 		})
 	}
 }

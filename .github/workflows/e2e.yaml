@@ -10,6 +10,7 @@ jobs:
     environment: "Configure ci"
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         kubernetes-version:
           - 'v1.21.12'

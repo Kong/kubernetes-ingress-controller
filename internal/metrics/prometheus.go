@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -59,14 +61,15 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 	controllerMetrics.ConfigPushCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: MetricNameConfigPushCount,
-			Help: "Count of successful/failed configuration pushes to Kong. `" +
-				ProtocolKey + "` describes the configuration protocol (" + ProtocolDBLess + " or " +
-				ProtocolDeck + ") in use. `" +
-				SuccessKey + "` describes whether there were unrecoverable errors (`" +
-				SuccessFalse + "`) or not (`" + SuccessTrue + "`). `" +
-				FailureReasonKey + "` is populated in case of `" + SuccessKey +
-				"=\"" + SuccessFalse + "\"` " + "and describes the reason of failure (one of `" +
-				FailureReasonConflict + "`, `" + FailureReasonOther + "`).",
+			Help: fmt.Sprintf(
+				"Count of successful/failed configuration pushes to Kong. "+
+					"`%s` describes the configuration protocol (%s or %s) in use. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
+					"`%s` is populated in case of `%s=\"%s\"` and describes the reason of failure "+
+					"(one of `%s`, `%s`).",
+				ProtocolKey, ProtocolDBLess, ProtocolDeck, SuccessKey, SuccessFalse, SuccessTrue,
+				FailureReasonKey, SuccessKey, SuccessFalse, FailureReasonConflict, FailureReasonOther,
+			),
 		},
 		[]string{SuccessKey, ProtocolKey, FailureReasonKey},
 	)

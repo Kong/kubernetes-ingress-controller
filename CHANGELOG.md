@@ -1,5 +1,13 @@
 # Table of Contents
 
+<!---
+Adding a new version? You'll need three changes:
+* Add the ToC link, like "[1.2.3](#123]".
+* Add the section header, like "## [1.2.3]".
+* Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
+  This is all the way at the bottom. It's the thing we always forget.
+--->
+
  - [2.7.0](#270)
  - [2.6.0](#260)
  - [2.5.0](#250)

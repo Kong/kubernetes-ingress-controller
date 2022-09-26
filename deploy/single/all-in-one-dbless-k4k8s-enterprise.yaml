@@ -1652,7 +1652,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.7.0
+        image: kong/kubernetes-ingress-controller:2.6.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

@@ -1,6 +1,5 @@
 # Table of Contents
 
- - [2.8.0](#280)
  - [2.7.0](#270)
  - [2.6.0](#260)
  - [2.5.0](#250)
@@ -53,17 +52,6 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.8.0]
-
-> Release date: TBD
-
-### Added
-
-- On configuration push to the data plane failure, `ingress_controller_configuration_push_count` 
-  Prometheus metric is now reported with `failure_reason="conflict|network|other"` 
-  labels, enabling distinguishing reasons of the failure.
-  [#2965](https://github.com/Kong/kubernetes-ingress-controller/pull/2965)
-
 ## [2.7.0]
 
 > Release date: 2022-09-26
@@ -91,6 +79,12 @@ instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq
   overriden by setting a `konghq.com/regex-prefix` annotation, for routes that
   need their paths to actually begin with `/~`
   [#2956](https://github.com/Kong/kubernetes-ingress-controller/pull/2956)
+- Prometheus metrics now highlight configuration push failures caused by
+  conflicts. The `ingress_controller_configuration_push_count` Prometheus
+  metric now reports `success="false"` with a `failure_reason="conflict|other"`
+  label, distinguishing configuration conflicts from other errors (transient
+  network errors, Kong offline, Kong reported non-conflict error, etc.).
+  [#2965](https://github.com/Kong/kubernetes-ingress-controller/pull/2965)
 
 ### Fixed
 

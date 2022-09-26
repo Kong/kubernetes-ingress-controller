@@ -3,11 +3,13 @@ package sendconfig
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/kong/deck/file"
+	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -136,7 +138,9 @@ func Test_updateReportingUtilities(t *testing.T) {
 }
 
 func Test_pushFailureReason(t *testing.T) {
-	apiConflictErr := kong.NewAPIError(http.StatusConflict, "conflict in configuration")
+	apiConflictErr := kong.NewAPIError(http.StatusConflict, "conflict api error")
+	networkErr := net.UnknownNetworkError("network error")
+	genericError := errors.New("generic error")
 
 	testCases := []struct {
 		name           string
@@ -145,7 +149,7 @@ func Test_pushFailureReason(t *testing.T) {
 	}{
 		{
 			name:           "generic_error",
-			err:            errors.New("some generic error"),
+			err:            genericError,
 			expectedReason: metrics.FailureReasonOther,
 		},
 		{
@@ -157,6 +161,46 @@ func Test_pushFailureReason(t *testing.T) {
 			name:           "api_conflict_error_wrapped",
 			err:            fmt.Errorf("wrapped conflict api err: %w", apiConflictErr),
 			expectedReason: metrics.FailureReasonConflict,
+		},
+		{
+			name:           "deck_config_conflict_error_empty",
+			err:            deckConfigConflictError{},
+			expectedReason: metrics.FailureReasonConflict,
+		},
+		{
+			name:           "deck_config_conflict_error_with_generic_error",
+			err:            deckConfigConflictError{genericError},
+			expectedReason: metrics.FailureReasonConflict,
+		},
+		{
+			name:           "deck_err_array_with_api_conflict_error",
+			err:            deckutils.ErrArray{Errors: []error{apiConflictErr}},
+			expectedReason: metrics.FailureReasonConflict,
+		},
+		{
+			name:           "wrapped_deck_err_array_with_api_conflict_error",
+			err:            fmt.Errorf("wrapped: %w", deckutils.ErrArray{Errors: []error{apiConflictErr}}),
+			expectedReason: metrics.FailureReasonConflict,
+		},
+		{
+			name:           "deck_err_array_with_generic_error",
+			err:            deckutils.ErrArray{Errors: []error{genericError}},
+			expectedReason: metrics.FailureReasonOther,
+		},
+		{
+			name:           "deck_err_array_empty",
+			err:            deckutils.ErrArray{Errors: []error{genericError}},
+			expectedReason: metrics.FailureReasonOther,
+		},
+		{
+			name:           "network_error",
+			err:            networkErr,
+			expectedReason: metrics.FailureReasonNetwork,
+		},
+		{
+			name:           "network_error_wrapped_in_deck_config_conflict_error",
+			err:            deckConfigConflictError{networkErr},
+			expectedReason: metrics.FailureReasonNetwork,
 		},
 	}
 

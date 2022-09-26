@@ -42,6 +42,9 @@ const (
 	// FailureReasonConflict indicates that the config push failed due to configuration conflicts.
 	FailureReasonConflict string = "conflict"
 
+	// FailureReasonNetwork indicates that the config push failed due to network issues.
+	FailureReasonNetwork string = "network"
+
 	// FailureReasonOther indicates that the config push failed due to other reasons.
 	FailureReasonOther string = "other"
 
@@ -66,9 +69,9 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 					"`%s` describes the configuration protocol (%s or %s) in use. "+
 					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
 					"`%s` is populated in case of `%s=\"%s\"` and describes the reason of failure "+
-					"(one of `%s`, `%s`).",
+					"(one of `%s`, `%s`, `%s`).",
 				ProtocolKey, ProtocolDBLess, ProtocolDeck, SuccessKey, SuccessFalse, SuccessTrue,
-				FailureReasonKey, SuccessKey, SuccessFalse, FailureReasonConflict, FailureReasonOther,
+				FailureReasonKey, SuccessKey, SuccessFalse, FailureReasonConflict, FailureReasonNetwork, FailureReasonOther,
 			),
 		},
 		[]string{SuccessKey, ProtocolKey, FailureReasonKey},

@@ -632,6 +632,14 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("legacy regex detection is only relevant for Kong 3.0+")
 	}
+
+	// skip the test if the cluster does not support namespaced ingress class parameter (<=1.21).
+	// since 1.21 is End of Life now.
+	namespacedIngressClassParameterMinKubernetesVersion := semver.MustParse("1.22.0")
+	if clusterVersion.LT(namespacedIngressClassParameterMinKubernetesVersion) {
+		t.Skipf("kubernetes cluster version %s does not support namespaced ingress class parameters", clusterVersion.String())
+	}
+
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
 	defer func() {

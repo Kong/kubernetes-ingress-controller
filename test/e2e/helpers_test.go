@@ -153,9 +153,10 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
+			_, err := b.ReadFrom(resp.Body)
+			if err != nil {
+				return false
+			}
 			if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
 				return false
 			}

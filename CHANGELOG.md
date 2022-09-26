@@ -1,4 +1,5 @@
 # Table of Contents
+
  - [2.8.0](#280)
  - [2.7.0](#270)
  - [2.6.0](#260)
@@ -58,9 +59,9 @@
 
 ### Added
 
-- On configuration push to the data plane failure, `ingress_controller_configuration_push_count` Prometheus metric
-  is now reported with `success="false"` and `failure_reason="conflict|other"` labels, enabling distinguishing
-  configuration conflicts from other errors (e.g. transient network errors).
+- On configuration push to the data plane failure, `ingress_controller_configuration_push_count` 
+  Prometheus metric is now reported with `failure_reason="conflict|network|other"` 
+  labels, enabling distinguishing reasons of the failure.
   [#2965](https://github.com/Kong/kubernetes-ingress-controller/pull/2965)
 
 ## [2.7.0]
@@ -1988,6 +1989,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.4.2

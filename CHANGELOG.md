@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.7.0](#270)
  - [2.6.0](#260)
  - [2.5.0](#250)
  - [2.4.2](#242)
@@ -53,7 +54,7 @@
 
 ## [2.7.0]
 
-> Release date: TBD
+> Release date: 2022-09-26
 
 2.7 patches several bugs in 2.6.0. One of these required a breaking change. The
 breaking change is not expected to affect most configurations, but does require

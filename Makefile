@@ -321,6 +321,16 @@ test.e2e:
 		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...
 
+.PHONY: test.istio
+test.istio:
+	ISTIO_TEST_ENABLED="true" \
+	GOFLAGS="-tags=e2e_tests" go test -v $(GOTESTFLAGS) \
+		-race \
+		-parallel $(NCPU) \
+		-timeout $(E2E_TEST_TIMEOUT) \
+		-run "^TestIstio" \
+		./test/e2e/...
+
 # ------------------------------------------------------------------------------
 # Operations - Local Deployment
 # ------------------------------------------------------------------------------

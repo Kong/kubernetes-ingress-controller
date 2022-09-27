@@ -79,6 +79,12 @@ instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq
   overriden by setting a `konghq.com/regex-prefix` annotation, for routes that
   need their paths to actually begin with `/~`
   [#2956](https://github.com/Kong/kubernetes-ingress-controller/pull/2956)
+- Prometheus metrics now highlight configuration push failures caused by
+  conflicts. The `ingress_controller_configuration_push_count` Prometheus
+  metric now reports `success="false"` with a `failure_reason="conflict|other"`
+  label, distinguishing configuration conflicts from other errors (transient
+  network errors, Kong offline, Kong reported non-conflict error, etc.).
+  [#2965](https://github.com/Kong/kubernetes-ingress-controller/pull/2965)
 
 ### Fixed
 

@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"sync"
@@ -16,6 +18,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
+	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -85,8 +88,9 @@ func PerformUpdate(ctx context.Context,
 
 	if err != nil {
 		promMetrics.ConfigPushCount.With(prometheus.Labels{
-			metrics.SuccessKey:  metrics.SuccessFalse,
-			metrics.ProtocolKey: metricsProtocol,
+			metrics.SuccessKey:       metrics.SuccessFalse,
+			metrics.ProtocolKey:      metricsProtocol,
+			metrics.FailureReasonKey: pushFailureReason(err),
 		}).Inc()
 		promMetrics.ConfigPushDuration.With(prometheus.Labels{
 			metrics.SuccessKey:  metrics.SuccessFalse,
@@ -96,8 +100,9 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
-		metrics.SuccessKey:  metrics.SuccessTrue,
-		metrics.ProtocolKey: metricsProtocol,
+		metrics.SuccessKey:       metrics.SuccessTrue,
+		metrics.ProtocolKey:      metricsProtocol,
+		metrics.FailureReasonKey: "",
 	}).Inc()
 	promMetrics.ConfigPushDuration.With(prometheus.Labels{
 		metrics.SuccessKey:  metrics.SuccessTrue,
@@ -204,43 +209,53 @@ func onUpdateDBMode(ctx context.Context,
 	skipCACertificates bool,
 ) error {
 	dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-	// read the current state
-	rawState, err := dump.Get(ctx, kongConfig.Client, dumpConfig)
-	if err != nil {
-		return fmt.Errorf("loading configuration from kong: %w", err)
-	}
-	currentState, err := state.Get(rawState)
+
+	cs, err := currentState(ctx, kongConfig, dumpConfig)
 	if err != nil {
 		return err
 	}
 
-	// read the target state
-	rawState, err = file.Get(ctx, targetContent, file.RenderConfig{
-		CurrentState: currentState,
-		KongVersion:  kongConfig.Version,
-	}, dumpConfig, kongConfig.Client)
+	ts, err := targetState(ctx, targetContent, cs, kongConfig, dumpConfig)
 	if err != nil {
-		return err
-	}
-	targetState, err := state.Get(rawState)
-	if err != nil {
-		return err
+		return deckConfigConflictError{err}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
-		CurrentState:    currentState,
-		TargetState:     targetState,
+		CurrentState:    cs,
+		TargetState:     ts,
 		KongClient:      kongConfig.Client,
 		SilenceWarnings: true,
 	})
 	if err != nil {
 		return fmt.Errorf("creating a new syncer: %w", err)
 	}
+
 	_, errs := syncer.Solve(ctx, kongConfig.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}
 	return nil
+}
+
+func currentState(ctx context.Context, kongConfig *Kong, dumpConfig dump.Config) (*state.KongState, error) {
+	rawState, err := dump.Get(ctx, kongConfig.Client, dumpConfig)
+	if err != nil {
+		return nil, fmt.Errorf("loading configuration from kong: %w", err)
+	}
+
+	return state.Get(rawState)
+}
+
+func targetState(ctx context.Context, targetContent *file.Content, currentState *state.KongState, kongConfig *Kong, dumpConfig dump.Config) (*state.KongState, error) {
+	rawState, err := file.Get(ctx, targetContent, file.RenderConfig{
+		CurrentState: currentState,
+		KongVersion:  kongConfig.Version,
+	}, dumpConfig, kongConfig.Client)
+	if err != nil {
+		return nil, err
+	}
+
+	return state.Get(rawState)
 }
 
 func equalSHA(a, b []byte) bool {
@@ -271,5 +286,57 @@ func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 		return true
 	}
 	latestReportedSHA = latestUpdateSHA
+	return false
+}
+
+// deckConfigConflictError is an error used to wrap deck config conflict errors returned from deck functions
+// transforming KongRawState to KongState (e.g. state.Get, dump.Get).
+type deckConfigConflictError struct {
+	err error
+}
+
+func (e deckConfigConflictError) Error() string {
+	return e.err.Error()
+}
+
+func (e deckConfigConflictError) Is(target error) bool {
+	_, ok := target.(deckConfigConflictError)
+	return ok
+}
+
+func (e deckConfigConflictError) Unwrap() error {
+	return e.err
+}
+
+// pushFailureReason extracts config push failure reason from an error returned from onUpdateInMemoryMode or onUpdateDBMode.
+func pushFailureReason(err error) string {
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return metrics.FailureReasonNetwork
+	}
+
+	if isConflictErr(err) {
+		return metrics.FailureReasonConflict
+	}
+
+	return metrics.FailureReasonOther
+}
+
+func isConflictErr(err error) bool {
+	var apiErr *kong.APIError
+	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict ||
+		errors.Is(err, deckConfigConflictError{}) {
+		return true
+	}
+
+	var deckErrArray deckutils.ErrArray
+	if errors.As(err, &deckErrArray) {
+		for _, err := range deckErrArray.Errors {
+			if isConflictErr(err) {
+				return true
+			}
+		}
+	}
+
 	return false
 }

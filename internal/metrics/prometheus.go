@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -19,7 +21,7 @@ type CtrlFuncMetrics struct {
 const (
 	// SuccessTrue indicates that the operation was successful.
 	SuccessTrue string = "true"
-	// SuccessTrue indicates that the operation was not successful.
+	// SuccessFalse indicates that the operation was not successful.
 	SuccessFalse string = "false"
 
 	// SuccessKey defines the key of the metric label indicating success/failure of an operation.
@@ -37,6 +39,20 @@ const (
 )
 
 const (
+	// FailureReasonConflict indicates that the config push failed due to configuration conflicts.
+	FailureReasonConflict string = "conflict"
+
+	// FailureReasonNetwork indicates that the config push failed due to network issues.
+	FailureReasonNetwork string = "network"
+
+	// FailureReasonOther indicates that the config push failed due to other reasons.
+	FailureReasonOther string = "other"
+
+	// FailureReasonKey defines the key of the metric label indicating failure reason.
+	FailureReasonKey string = "failure_reason"
+)
+
+const (
 	MetricNameConfigPushCount    = "ingress_controller_configuration_push_count"
 	MetricNameTranslationCount   = "ingress_controller_translation_count"
 	MetricNameConfigPushDuration = "ingress_controller_configuration_push_duration_milliseconds"
@@ -48,21 +64,27 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 	controllerMetrics.ConfigPushCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: MetricNameConfigPushCount,
-			Help: "Count of successful/failed configuration pushes to Kong. `" +
-				ProtocolKey + "` describes the configuration protocol (" + ProtocolDBLess + " or " +
-				ProtocolDeck + ") in use. `" +
-				SuccessKey + "` describes whether there were unrecoverable errors (`" +
-				SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
+			Help: fmt.Sprintf(
+				"Count of successful/failed configuration pushes to Kong. "+
+					"`%s` describes the configuration protocol (`%s` or `%s`) in use. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
+					"`%s` is populated in case of `%s=\"%s\"` and describes the reason of failure "+
+					"(one of `%s`, `%s`, `%s`).",
+				ProtocolKey, ProtocolDBLess, ProtocolDeck, SuccessKey, SuccessFalse, SuccessTrue, FailureReasonKey, SuccessKey,
+				SuccessFalse, FailureReasonConflict, FailureReasonNetwork, FailureReasonOther,
+			),
 		},
-		[]string{SuccessKey, ProtocolKey},
+		[]string{SuccessKey, ProtocolKey, FailureReasonKey},
 	)
 
 	controllerMetrics.TranslationCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: MetricNameTranslationCount,
-			Help: "Count of translations from Kubernetes state to Kong state. `" +
-				SuccessKey + "` describes whether there were unrecoverable errors (`" +
-				SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
+			Help: fmt.Sprintf(
+				"Count of translations from Kubernetes state to Kong state. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`).",
+				SuccessKey, SuccessFalse, SuccessTrue,
+			),
 		},
 		[]string{SuccessKey},
 	)
@@ -70,11 +92,12 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 	controllerMetrics.ConfigPushDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: MetricNameConfigPushDuration,
-			Help: "How long it took to push the configuration to Kong, in milliseconds. `" +
-				ProtocolKey + "` describes the configuration protocol (" + ProtocolDBLess + " or " +
-				ProtocolDeck + ") in use. `" +
-				SuccessKey + "` describes whether there were unrecoverable errors (`" +
-				SuccessFalse + "`) or not (`" + SuccessTrue + "`).",
+			Help: fmt.Sprintf(
+				"How long it took to push the configuration to Kong, in milliseconds. "+
+					"`%s` describes the configuration protocol (`%s` or `%s`) in use. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`).",
+				ProtocolKey, ProtocolDBLess, ProtocolDeck, SuccessKey, SuccessFalse, SuccessTrue,
+			),
 			Buckets: prometheus.ExponentialBuckets(100, 1.33, 30),
 		},
 		[]string{SuccessKey, ProtocolKey},

@@ -39,6 +39,9 @@ var (
 	// If not provided, the latest version of Istio will be tested.
 	istioVersionStr = os.Getenv("ISTIO_VERSION")
 
+	// enableIstioTest skips Istio tests if not set.
+	enableIstioTest = os.Getenv("ISTIO_TEST_ENABLED")
+
 	// kialiAPIPort is the port number that the Kiali API will use.
 	kialiAPIPort = 20001
 
@@ -55,11 +58,15 @@ var (
 // See: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/version-compatibility/#istio
 func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Parallel()
+
 	// Istio's test is unique in that it operates like the integration tests, and runs the controller manager from the
 	// test, whereas most E2E tests deploy it to the cluster normally. The upshot of this is that the Istio test
 	// pollutes E2E logs with a bunch of controller log nonsense and a boatload of goroutines that litter the panic
-	// logs. Temporarily skip it because it's not failing and it's making it harder to read the failure results.
-	// Ultimately we should probably move it elsewhere.
+	// logs. It uses a different make target that enables this and only runs tests beginning with "TestIstio" as such.
+	if len(enableIstioTest) == 0 {
+		t.Log("Istio test disabled, skipping...")
+		t.Skip()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -324,11 +324,10 @@ test.e2e:
 .PHONY: test.istio
 test.istio:
 	ISTIO_TEST_ENABLED="true" \
-	GOFLAGS="-tags=e2e_tests" go test -v $(GOTESTFLAGS) \
+	GOFLAGS="-tags=istio_tests" go test -v $(GOTESTFLAGS) \
 		-race \
 		-parallel $(NCPU) \
 		-timeout $(E2E_TEST_TIMEOUT) \
-		-run "^TestIstio" \
 		./test/e2e/...
 
 # ------------------------------------------------------------------------------

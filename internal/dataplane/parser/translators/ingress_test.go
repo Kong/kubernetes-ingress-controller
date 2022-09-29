@@ -868,7 +868,7 @@ func TestTranslateIngress(t *testing.T) {
 	}
 }
 
-func Test_PathsFromIngressPaths(t *testing.T) {
+func TestPathsFromIngressPaths(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   netv1.HTTPIngressPath
@@ -944,7 +944,7 @@ func Test_PathsFromIngressPaths(t *testing.T) {
 	}
 }
 
-func Test_flattenMultipleSlashes(t *testing.T) {
+func TestFlattenMultipleSlashes(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   string
@@ -1087,7 +1087,7 @@ func TestTranslateIngressRegexPrefix(t *testing.T) {
 	}
 }
 
-func Test_PathsFromIngressPathsRegexPrefix(t *testing.T) {
+func TestPathsFromIngressPathsRegexPrefix(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   netv1.HTTPIngressPath

@@ -4212,7 +4212,7 @@ func TestGetEndpoints(t *testing.T) {
 	}
 }
 
-func Test_knativeSelectSplit(t *testing.T) {
+func TestKnativeSelectSplit(t *testing.T) {
 	type args struct {
 		splits []knative.IngressBackendSplit
 	}

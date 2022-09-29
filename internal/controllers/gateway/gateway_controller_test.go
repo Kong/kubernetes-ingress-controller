@@ -15,7 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
+func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
 	t.Log("checking ready condition for currently ready gateway")
 	currentlyReadyGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
@@ -60,7 +60,7 @@ func Test_readyConditionExistsForObservedGeneration(t *testing.T) {
 	assert.False(t, isGatewayReady(neverBeenReadyGateway))
 }
 
-func Test_setGatewayCondtion(t *testing.T) {
+func TestSetGatewayCondtion(t *testing.T) {
 	testCases := []struct {
 		name            string
 		gw              *gatewayv1beta1.Gateway
@@ -164,7 +164,7 @@ func Test_setGatewayCondtion(t *testing.T) {
 	}
 }
 
-func Test_isGatewayMarkedAsScheduled(t *testing.T) {
+func TestIsGatewayMarkedAsScheduled(t *testing.T) {
 	t.Log("verifying scheduled check for gateway object which has been scheduled")
 	scheduledGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{Generation: 1},
@@ -185,7 +185,7 @@ func Test_isGatewayMarkedAsScheduled(t *testing.T) {
 	assert.False(t, isGatewayScheduled(unscheduledGateway))
 }
 
-func Test_getRefFromPublishService(t *testing.T) {
+func TestGetRefFromPublishService(t *testing.T) {
 	t.Log("verifying refs for valid publish services")
 	valid := "california/sanfrancisco"
 	nsn, err := getRefFromPublishService(valid)
@@ -202,7 +202,7 @@ func Test_getRefFromPublishService(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func Test_pruneStatusConditions(t *testing.T) {
+func TestPruneStatusConditions(t *testing.T) {
 	t.Log("verifying that a gateway with minimal status conditions is not pruned")
 	gateway := &gatewayv1beta1.Gateway{}
 	for i := 0; i < 4; i++ {
@@ -230,7 +230,7 @@ func Test_pruneStatusConditions(t *testing.T) {
 	assert.Equal(t, int64(11), gateway.Status.Conditions[7].ObservedGeneration)
 }
 
-func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
+func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("generating a gatewayclass to test reconciliation filters")
 	gatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -325,7 +325,7 @@ func Test_reconcileGatewaysIfClassMatches(t *testing.T) {
 	assert.Equal(t, expected, reconcileGatewaysIfClassMatches(gatewayClass, matching))
 }
 
-func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
+func TestIsGatewayControlledAndUnmanagedMode(t *testing.T) {
 	var testControllerName gatewayv1beta1.GatewayController = "acme.io/gateway-controller"
 
 	testCases := []struct {
@@ -398,7 +398,7 @@ func Test_isGatewayControlledAndUnmanagedMode(t *testing.T) {
 	}
 }
 
-func Test_areAllowedRoutesConsistentByProtocol(t *testing.T) {
+func TestAreAllowedRoutesConsistentByProtocol(t *testing.T) {
 	same := gatewayv1alpha2.NamespacesFromSame
 	all := gatewayv1alpha2.NamespacesFromAll
 	selector := gatewayv1alpha2.NamespacesFromSelector
@@ -549,7 +549,7 @@ func Test_areAllowedRoutesConsistentByProtocol(t *testing.T) {
 	}
 }
 
-func Test_getReferenceGrantConditionReason(t *testing.T) {
+func TestGetReferenceGrantConditionReason(t *testing.T) {
 	testCases := []struct {
 		name             string
 		gatewayNamespace string

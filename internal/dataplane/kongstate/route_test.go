@@ -427,7 +427,7 @@ func TestUseSSLProtocol(t *testing.T) {
 	}
 }
 
-func Test_overrideRouteStripPath(t *testing.T) {
+func TestOverrideRouteStripPath(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -516,7 +516,7 @@ func Test_overrideRouteStripPath(t *testing.T) {
 	}
 }
 
-func Test_overrideRouteHTTPSRedirectCode(t *testing.T) {
+func TestOverrideRouteHTTPSRedirectCode(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -624,7 +624,7 @@ func Test_overrideRouteHTTPSRedirectCode(t *testing.T) {
 	}
 }
 
-func Test_overrideRoutePreserveHost(t *testing.T) {
+func TestOverrideRoutePreserveHost(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -688,7 +688,7 @@ func Test_overrideRoutePreserveHost(t *testing.T) {
 	}
 }
 
-func Test_overrideRouteRegexPriority(t *testing.T) {
+func TestOverrideRouteRegexPriority(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -752,7 +752,7 @@ func Test_overrideRouteRegexPriority(t *testing.T) {
 	}
 }
 
-func Test_overrideRouteMethods(t *testing.T) {
+func TestOverrideRouteMethods(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -795,7 +795,7 @@ func Test_overrideRouteMethods(t *testing.T) {
 	}
 }
 
-func Test_overrideRouteSNIs(t *testing.T) {
+func TestOverrideRouteSNIs(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -846,7 +846,7 @@ func Test_overrideRouteSNIs(t *testing.T) {
 	}
 }
 
-func Test_overrideRequestBuffering(t *testing.T) {
+func TestOverrideRequestBuffering(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -919,7 +919,7 @@ func Test_overrideRequestBuffering(t *testing.T) {
 	}
 }
 
-func Test_overrideResponseBuffering(t *testing.T) {
+func TestOverrideResponseBuffering(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string
@@ -992,7 +992,7 @@ func Test_overrideResponseBuffering(t *testing.T) {
 	}
 }
 
-func Test_overrideHosts(t *testing.T) {
+func TestOverrideHosts(t *testing.T) {
 	type args struct {
 		route Route
 		anns  map[string]string

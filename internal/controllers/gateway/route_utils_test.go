@@ -9,7 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-func Test_filterHostnames(t *testing.T) {
+func TestFilterHostnames(t *testing.T) {
 	commonGateway := &gatewayv1beta1.Gateway{
 		Spec: gatewayv1beta1.GatewaySpec{
 			Listeners: []Listener{

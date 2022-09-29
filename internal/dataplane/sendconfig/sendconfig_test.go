@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
-func Test_renderConfigWithCustomEntities(t *testing.T) {
+func TestRenderConfigWithCustomEntities(t *testing.T) {
 	type args struct {
 		state                   *file.Content
 		customEntitiesJSONBytes []byte
@@ -126,7 +126,7 @@ func Test_renderConfigWithCustomEntities(t *testing.T) {
 	}
 }
 
-func Test_updateReportingUtilities(t *testing.T) {
+func TestUpdateReportingUtilities(t *testing.T) {
 	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("fake-sha")))
 	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("fake-sha")))
 	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("another-fake-sha")))
@@ -137,7 +137,7 @@ func Test_updateReportingUtilities(t *testing.T) {
 	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
 }
 
-func Test_pushFailureReason(t *testing.T) {
+func TestPushFailureReason(t *testing.T) {
 	apiConflictErr := kong.NewAPIError(http.StatusConflict, "conflict api error")
 	networkErr := net.UnknownNetworkError("network error")
 	genericError := errors.New("generic error")

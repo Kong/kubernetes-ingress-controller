@@ -293,7 +293,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 	}
 }
 
-func Test_getKongIngressForServices(t *testing.T) {
+func TestGetKongIngressForServices(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		services            map[string]*corev1.Service
@@ -577,7 +577,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 	}
 }
 
-func Test_prettyPrintServiceList(t *testing.T) {
+func TestPrettyPrintServiceList(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		services map[string]*corev1.Service

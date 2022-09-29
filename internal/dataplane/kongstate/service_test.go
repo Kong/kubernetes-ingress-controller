@@ -382,7 +382,7 @@ func TestOverrideService(t *testing.T) {
 	})
 }
 
-func Test_overrideServicePath(t *testing.T) {
+func TestOverrideServicePath(t *testing.T) {
 	type args struct {
 		service Service
 		anns    map[string]string

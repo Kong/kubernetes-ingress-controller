@@ -19,7 +19,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
-func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *testing.T) {
+func TestConvertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *testing.T) {
 	regexType := gatewayv1beta1.HeaderMatchRegularExpression
 
 	type Case struct {
@@ -86,7 +86,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *te
 	}
 }
 
-func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
+func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 	regexType := gatewayv1beta1.HeaderMatchRegularExpression
 	exactType := gatewayv1beta1.HeaderMatchExact
 	versions.SetKongVersion(semver.MustParse("2.8.0"))
@@ -179,7 +179,7 @@ func Test_convertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 	}
 }
 
-func Test_isRefAllowedByGrant(t *testing.T) {
+func TestIsRefAllowedByGrant(t *testing.T) {
 	fitrat := gatewayv1beta1.Namespace("fitrat")
 	cholpon := gatewayv1beta1.Namespace("cholpon")
 	behbudiy := gatewayv1beta1.Namespace("behbudiy")
@@ -293,7 +293,7 @@ func Test_isRefAllowedByGrant(t *testing.T) {
 	}
 }
 
-func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
+func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	grants := []*gatewayv1alpha2.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -443,7 +443,7 @@ func Test_getPermittedForReferenceGrantFrom(t *testing.T) {
 	}
 }
 
-func Test_generateKongServiceFromBackendRef(t *testing.T) {
+func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	grants := []*gatewayv1alpha2.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{

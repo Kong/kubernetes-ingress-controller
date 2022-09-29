@@ -19,7 +19,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
-func Test_networkingIngressV1Beta1(t *testing.T) {
+func TestNetworkingIngressV1Beta1(t *testing.T) {
 	type args struct {
 		obj interface{}
 	}
@@ -204,7 +204,7 @@ spec:
 	assert.True(t, exists)
 }
 
-func Test_getIngressClassHandling(t *testing.T) {
+func TestGetIngressClassHandling(t *testing.T) {
 	tests := []struct {
 		name string
 		objs FakeObjects
